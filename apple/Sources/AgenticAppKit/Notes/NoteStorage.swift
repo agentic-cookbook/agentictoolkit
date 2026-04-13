@@ -6,7 +6,7 @@ import Foundation
 ///
 /// All methods are synchronous and may throw on I/O failure.
 /// Thread safety is the implementor's responsibility.
-public protocol NoteStorage: Sendable {
+public protocol NoteStorage {
     func fetchAllNotes() throws -> [Note]
     func insertNote(_ note: Note) throws
     func updateNote(_ note: Note) throws
