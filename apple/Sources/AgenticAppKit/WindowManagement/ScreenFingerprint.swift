@@ -1,0 +1,41 @@
+import AppKit
+
+/// Identifies a screen across app relaunches using layered matching.
+public struct ScreenFingerprint: Codable, Equatable {
+    public let displayUUID: String?
+    public let localizedName: String?
+    public let resolutionWidth: CGFloat
+    public let resolutionHeight: CGFloat
+    public let isMain: Bool
+
+    public init(
+        displayUUID: String?,
+        localizedName: String?,
+        resolutionWidth: CGFloat,
+        resolutionHeight: CGFloat,
+        isMain: Bool
+    ) {
+        self.displayUUID = displayUUID
+        self.localizedName = localizedName
+        self.resolutionWidth = resolutionWidth
+        self.resolutionHeight = resolutionHeight
+        self.isMain = isMain
+    }
+
+    /// Creates a fingerprint for a real NSScreen.
+    public static func from(_ screen: NSScreen) -> ScreenFingerprint {
+        var uuidString: String?
+        if let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
+            if let uuid = CGDisplayCreateUUIDFromDisplayID(screenNumber) {
+                uuidString = CFUUIDCreateString(nil, uuid.takeUnretainedValue()) as String?
+            }
+        }
+        return ScreenFingerprint(
+            displayUUID: uuidString,
+            localizedName: screen.localizedName,
+            resolutionWidth: screen.frame.width,
+            resolutionHeight: screen.frame.height,
+            isMain: screen == NSScreen.main
+        )
+    }
+}

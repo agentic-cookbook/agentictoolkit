@@ -1,0 +1,214 @@
+import AppKit
+import os
+
+/// Centralized window frame persistence using proportional positioning.
+///
+/// Instead of absolute pixel coordinates, positions are stored as proportions
+/// of the screen's visible frame. A window at "80% from left, 85% from bottom"
+/// stays in the upper-right area regardless of screen resolution or size changes.
+///
+/// Usage:
+///   1. Register window specs at app startup via `register(id:spec:)`
+///   2. After creating a window, call `restoreFrame(for:id:)`
+///   3. Before hiding/closing, call `saveFrame(for:id:)`
+@MainActor
+public final class WindowManager {
+
+    public static let shared = WindowManager()
+
+    public private(set) var specs: [String: WindowSpec] = [:]
+    public let screenProvider: ScreenProvider
+    public let storage: WindowStateStorage
+
+    private let logger: Logger
+
+    /// Creates a WindowManager with injectable dependencies.
+    /// - Parameters:
+    ///   - screenProvider: Provides current screen geometry. Defaults to real NSScreen data.
+    ///   - storage: Persists window state. Defaults to UserDefaults.
+    ///   - logger: Logger for debug output. Defaults to AgenticAppKit subsystem.
+    public init(
+        screenProvider: ScreenProvider = RealScreenProvider(),
+        storage: WindowStateStorage = UserDefaultsWindowStateStorage(),
+        logger: Logger = Logger(subsystem: "AgenticAppKit", category: "WindowManager")
+    ) {
+        self.screenProvider = screenProvider
+        self.storage = storage
+        self.logger = logger
+    }
+
+    /// Starts observing screen change notifications.
+    public func startObservingScreenChanges() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screensDidChange),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+    }
+
+    // MARK: - Registration
+
+    /// Registers a window spec. Call once per window identifier at app startup.
+    public func register(id: String, spec: WindowSpec) {
+        specs[id] = spec
+    }
+
+    // MARK: - Frame Restoration
+
+    /// Restores a window's frame from saved proportional state, or applies defaults.
+    /// Tags the window with an identifier so screen-change events can find it.
+    @discardableResult
+    public func restoreFrame(for window: NSWindow, id: String) -> Bool {
+        window.identifier = NSUserInterfaceItemIdentifier("wm_\(id)")
+
+        guard let spec = specs[id] else {
+            logger.warning("WindowManager: no spec for '\(id, privacy: .public)'")
+            window.center()
+            return false
+        }
+
+        window.minSize = spec.minSize
+
+        guard spec.persistsFrame, let saved = storage.loadState(for: id) else {
+            applyDefaultPosition(to: window, spec: spec)
+            return false
+        }
+
+        let screens = screenProvider.screens
+        guard !screens.isEmpty else {
+            window.center()
+            return false
+        }
+
+        // Find best matching screen, fall back to main
+        let match = ScreenMatcher.findBestMatch(for: saved.screenFingerprint, among: screens)
+        let targetScreen = match?.screen ?? screenProvider.mainScreen ?? screens[0]
+
+        let frame = FrameCalculator.absoluteFrame(
+            proportionalX: saved.proportionalX,
+            proportionalY: saved.proportionalY,
+            width: saved.width,
+            height: saved.height,
+            screenVisibleFrame: targetScreen.visibleFrame,
+            minSize: spec.minSize
+        )
+        let validated = FrameCalculator.validateFrame(
+            frame,
+            screenVisibleFrame: targetScreen.visibleFrame,
+            minSize: spec.minSize
+        )
+
+        window.setFrame(validated, display: true)
+        logger.debug("WindowManager: restored '\(id, privacy: .public)' quality=\(match?.quality.rawValue ?? 0)")
+        return true
+    }
+
+    // MARK: - Frame Saving
+
+    /// Saves the window's current frame as proportional coordinates.
+    public func saveFrame(for window: NSWindow, id: String) {
+        guard let spec = specs[id], spec.persistsFrame else { return }
+
+        let screens = screenProvider.screens
+        guard let screen = Self.bestScreen(for: window, among: screens) else { return }
+
+        let pos = FrameCalculator.proportionalPosition(
+            windowFrame: window.frame,
+            screenVisibleFrame: screen.visibleFrame
+        )
+
+        let state = PersistedWindowState(
+            proportionalX: pos.x,
+            proportionalY: pos.y,
+            width: window.frame.width,
+            height: window.frame.height,
+            screenFingerprint: screen.fingerprint,
+            savedAt: Date()
+        )
+
+        storage.saveState(state, for: id)
+    }
+
+    // MARK: - Reset
+
+    /// Clears saved state for a window and applies its default position.
+    public func resetFrame(for window: NSWindow, id: String) {
+        storage.removeState(for: id)
+        if let spec = specs[id] {
+            applyDefaultPosition(to: window, spec: spec)
+        } else {
+            window.center()
+        }
+    }
+
+    /// Clears all saved window states.
+    public func resetAllFrames() {
+        for id in specs.keys {
+            storage.removeState(for: id)
+        }
+    }
+
+    /// Clears saved state for a single window.
+    public func clearSavedState(for id: String) {
+        storage.removeState(for: id)
+    }
+
+    // MARK: - Default Position
+
+    private func applyDefaultPosition(to window: NSWindow, spec: WindowSpec) {
+        guard let screen = screenProvider.mainScreen ?? screenProvider.screens.first else {
+            window.center()
+            return
+        }
+        let frame = FrameCalculator.defaultFrame(spec: spec, screenVisibleFrame: screen.visibleFrame)
+        window.setFrame(frame, display: true)
+    }
+
+    // MARK: - Screen Change Handling
+
+    @objc private func screensDidChange() {
+        let screens = screenProvider.screens
+        for (id, spec) in specs {
+            let wmId = "wm_\(id)"
+            for window in NSApp.windows {
+                guard window.isVisible,
+                      window.identifier?.rawValue == wmId,
+                      let screen = Self.bestScreen(for: window, among: screens) else { continue }
+                let validated = FrameCalculator.validateFrame(
+                    window.frame,
+                    screenVisibleFrame: screen.visibleFrame,
+                    minSize: spec.minSize
+                )
+                if validated != window.frame {
+                    window.setFrame(validated, display: true, animate: true)
+                    logger.debug("WindowManager: pushed '\(id, privacy: .public)' on-screen after display change")
+                }
+            }
+        }
+    }
+
+    // MARK: - Screen Helpers
+
+    /// Returns the screen containing the largest portion of the window.
+    public static func bestScreen(for window: NSWindow, among screens: [ScreenInfo]) -> ScreenInfo? {
+        var bestScreen: ScreenInfo?
+        var bestArea: CGFloat = 0
+        for screen in screens {
+            let intersection = window.frame.intersection(screen.visibleFrame)
+            if !intersection.isNull {
+                let area = intersection.width * intersection.height
+                if area > bestArea {
+                    bestArea = area
+                    bestScreen = screen
+                }
+            }
+        }
+        if let best = bestScreen { return best }
+        // Fall back to window's own screen or main
+        if let ws = window.screen {
+            return RealScreenInfo(screen: ws)
+        }
+        return NSScreen.main.map { RealScreenInfo(screen: $0) }
+    }
+}
