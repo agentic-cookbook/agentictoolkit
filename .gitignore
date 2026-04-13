@@ -10,3 +10,6 @@
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
+
+# graphify output (generated)
+graphify-out/
