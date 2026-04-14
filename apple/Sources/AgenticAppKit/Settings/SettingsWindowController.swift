@@ -1,23 +1,26 @@
 import AppKit
 
-/// A reusable settings window controller that hosts a `SettingsView`.
+/// A settings window controller that hosts a `SettingsView`.
 ///
-/// Generic over any `SettingsTopic` type. The app provides a closure that builds
-/// the `SettingsView` when the window is first shown.
+/// Implemented as a thin specialization over `SingleWindowController` — the
+/// window lifecycle and frame persistence come from the shared base; this
+/// wrapper narrows the content-view type and keeps a typed reference to the
+/// settings view for callers that need programmatic tab selection.
 @MainActor
-public final class SettingsWindowController<Topic: SettingsTopic>: NSObject, NSWindowDelegate {
+public final class SettingsWindowController {
 
-    // MARK: - Properties
+    private let inner: SingleWindowController
 
-    private var window: NSWindow?
-    private(set) public var settingsView: SettingsView<Topic>?
+    /// Captures the settings view when the inner controller instantiates it.
+    /// Reference type so the view-builder closure can mutate it post-init.
+    private final class Box { var value: SettingsView? }
+    private let viewBox = Box()
 
-    private let windowTitle: String
-    private let windowSize: NSSize
-    private let windowID: String
-    private let viewBuilder: () -> SettingsView<Topic>
+    /// The hosted settings view, available once `showSettings()` has been called at least once.
+    public var settingsView: SettingsView? { viewBox.value }
 
-    // MARK: - Initialization
+    /// Whether the settings window is currently visible.
+    public var isVisible: Bool { inner.isVisible }
 
     /// Creates a settings window controller.
     ///
@@ -30,67 +33,20 @@ public final class SettingsWindowController<Topic: SettingsTopic>: NSObject, NSW
         title: String,
         size: NSSize = NSSize(width: 600, height: 480),
         windowID: String = "settings",
-        viewBuilder: @escaping () -> SettingsView<Topic>
+        viewBuilder: @escaping () -> SettingsView
     ) {
-        self.windowTitle = title
-        self.windowSize = size
-        self.windowID = windowID
-        self.viewBuilder = viewBuilder
+        let box = viewBox
+        self.inner = SingleWindowController(
+            windowID: windowID,
+            title: title,
+            contentRect: NSRect(origin: .zero, size: size)
+        ) {
+            let sv = viewBuilder()
+            box.value = sv
+            return sv
+        }
     }
-
-    // MARK: - Show / Hide
 
     /// Shows the settings window. Creates it lazily on first call.
-    public func showSettings() {
-        if let window = window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let settingsWindow = NSWindow(
-            contentRect: NSRect(origin: .zero, size: windowSize),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        settingsWindow.title = windowTitle
-        settingsWindow.isReleasedWhenClosed = false
-        settingsWindow.delegate = self
-
-        let sv = viewBuilder()
-        self.settingsView = sv
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        let container = settingsWindow.contentView!
-        container.addSubview(sv)
-        NSLayoutConstraint.activate([
-            sv.topAnchor.constraint(equalTo: container.topAnchor),
-            sv.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            sv.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            sv.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
-
-        WindowManager.shared.restoreFrame(for: settingsWindow, id: windowID)
-
-        self.window = settingsWindow
-        settingsWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
-    /// Whether the settings window is currently visible.
-    public var isVisible: Bool {
-        window?.isVisible ?? false
-    }
-
-    // MARK: - NSWindowDelegate
-
-    public func windowDidMove(_ notification: Notification) {
-        guard let window = notification.object as? NSWindow else { return }
-        WindowManager.shared.saveFrame(for: window, id: windowID)
-    }
-
-    public func windowDidResize(_ notification: Notification) {
-        guard let window = notification.object as? NSWindow else { return }
-        WindowManager.shared.saveFrame(for: window, id: windowID)
-    }
+    public func showSettings() { inner.showWindow() }
 }

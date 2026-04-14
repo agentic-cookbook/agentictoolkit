@@ -164,6 +164,9 @@ extension NotesListViewController: NSTableViewDelegate {
     public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 60 }
 
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        // NSTableView can request a row that's just been removed (e.g. between
+        // a data mutation and the next reload). Guard rather than crash.
+        guard row >= 0, row < filteredNotes.count else { return nil }
         let note = filteredNotes[row]
         let id = NSUserInterfaceItemIdentifier("NoteCell")
         let cell = tableView.makeView(withIdentifier: id, owner: nil) as? NoteListCellView

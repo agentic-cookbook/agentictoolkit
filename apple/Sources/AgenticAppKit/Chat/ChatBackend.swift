@@ -22,12 +22,24 @@ public struct ChatBackendMessage: Sendable, Equatable {
 /// request into whatever concrete API they use (LLM plugin, direct HTTP, mock, etc).
 ///
 /// The chat UI depends only on this protocol — not on any specific plugin or SDK.
-@MainActor
-public protocol ChatBackend: AnyObject {
+///
+/// Conformers choose their own actor isolation. A UI-driven backend may be
+/// `@MainActor`; an HTTP-driven backend may be an `actor` of its own. The
+/// chat UI awaits both `isReady` and `sendMessages`, so either works.
+public protocol ChatBackend: AnyObject, Sendable {
     /// Whether the backend is currently ready to accept messages. The chat UI
     /// uses this to enable or disable the input field (e.g. disable when no
     /// provider is configured or credentials are missing).
-    var isReady: Bool { get }
+    var isReady: Bool { get async }
+
+    /// An async stream of `isReady` values. Yields the current value first,
+    /// then a new value whenever readiness changes (e.g. credentials arrive,
+    /// network state changes, the user picks a different provider).
+    ///
+    /// The stream ends when the backend is deinitialized or the consumer
+    /// cancels the iterating task. Backends that never change readiness may
+    /// yield the initial value once and finish.
+    var isReadyChanges: AsyncStream<Bool> { get }
 
     /// Streams an assistant response for the given conversation.
     ///
@@ -36,5 +48,5 @@ public protocol ChatBackend: AnyObject {
     /// - Returns: An async stream of text chunks. Concatenate to form the full
     ///   assistant reply. The stream finishes when the response is complete, or
     ///   throws if the backend fails.
-    func sendMessages(_ messages: [ChatBackendMessage]) -> AsyncThrowingStream<String, Error>
+    func sendMessages(_ messages: [ChatBackendMessage]) async -> AsyncThrowingStream<String, Error>
 }

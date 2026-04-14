@@ -14,7 +14,7 @@ import os
 @MainActor
 public final class WindowManager {
 
-    public static var shared = WindowManager()
+    public static let shared = WindowManager()
 
     public private(set) var specs: [String: WindowSpec] = [:]
     public let screenProvider: ScreenProvider
