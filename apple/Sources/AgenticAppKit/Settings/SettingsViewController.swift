@@ -61,6 +61,15 @@ public final class SettingsViewController: NSViewController {
         }
     }
 
+    public override func viewWillAppear() {
+        super.viewWillAppear()
+        // Auto-select the first panel on first show so the edit pane is never
+        // blank when panels are available.
+        if editViewController.currentPanel == nil, let first = storedPanels.first {
+            selectPanel(first)
+        }
+    }
+
     // MARK: - Mutation
 
     public func addPanel(_ panel: any SettingsPanelViewController) {
@@ -80,5 +89,22 @@ public final class SettingsViewController: NSViewController {
         storedPanels.removeAll()
         listViewController.setPanels(storedPanels)
         editViewController.show(nil)
+    }
+
+    // MARK: - Selection
+
+    /// Selects the given panel by object identity. Panel must already have
+    /// been added via `addPanel(_:)`; otherwise the call is a no-op.
+    public func selectPanel(_ panel: any SettingsPanelViewController) {
+        guard let index = storedPanels.firstIndex(where: { $0 === panel }) else { return }
+        selectPanel(at: index)
+    }
+
+    /// Selects the panel at `index` in the order it was added. Out-of-range
+    /// indices are ignored.
+    public func selectPanel(at index: Int) {
+        guard index >= 0, index < storedPanels.count else { return }
+        listViewController.selectRow(index)
+        editViewController.show(storedPanels[index])
     }
 }
