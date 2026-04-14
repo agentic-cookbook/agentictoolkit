@@ -2,15 +2,15 @@ import AppKit
 
 /// A reusable split-pane settings view with a sidebar topic list and a detail area.
 ///
-/// Generic over any `SettingsTopic` type. The app provides a closure that maps
-/// each topic to its detail pane.
+/// The app provides a list of `SettingsTopic` value objects and a closure that
+/// maps each topic to its detail pane (matched by the topic's `id`).
 @MainActor
-public final class SettingsView<Topic: SettingsTopic>: NSView,
+public final class SettingsView: NSView,
     NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate
 {
-    private let topics: [Topic]
-    private let paneBuilder: (Topic) -> NSView
-    private var selectedTopic: Topic
+    private let topics: [SettingsTopic]
+    private let paneBuilder: (SettingsTopic) -> NSView
+    private var selectedTopic: SettingsTopic
 
     private let splitView = NSSplitView()
     private let sidebarTableView = NSTableView()
@@ -22,9 +22,9 @@ public final class SettingsView<Topic: SettingsTopic>: NSView,
     private var currentDetailView: NSView?
     private var needsInitialDividerPosition = true
 
-    /// Topics that should have their detail wrapper pinned to the full height
-    /// of the scroll view (e.g. panes with their own split views).
-    public var fullHeightTopics: Set<Topic> = []
+    /// Topic IDs whose detail wrapper should be pinned to the full height of
+    /// the scroll view (e.g. panes containing their own split view).
+    public var fullHeightTopicIDs: Set<String> = []
 
     private static var sidebarWidth: CGFloat { 180 }
 
@@ -32,18 +32,20 @@ public final class SettingsView<Topic: SettingsTopic>: NSView,
     ///
     /// - Parameters:
     ///   - topics: The ordered list of sidebar topics. Must not be empty.
-    ///   - initialTopic: The topic to select on first display. Defaults to the first topic.
+    ///   - initialTopicID: The ID of the topic to select on first display.
+    ///     Defaults to the first topic's ID.
     ///   - paneBuilder: A closure that returns the detail pane for a given topic.
     /// - Precondition: `topics` must contain at least one element.
     public init(
-        topics: [Topic],
-        initialTopic: Topic? = nil,
-        paneBuilder: @escaping (Topic) -> NSView
+        topics: [SettingsTopic],
+        initialTopicID: String? = nil,
+        paneBuilder: @escaping (SettingsTopic) -> NSView
     ) {
         precondition(!topics.isEmpty, "SettingsView requires at least one topic")
         self.topics = topics
         self.paneBuilder = paneBuilder
-        self.selectedTopic = initialTopic ?? topics[0]
+        let initial = initialTopicID.flatMap { id in topics.first { $0.id == id } } ?? topics[0]
+        self.selectedTopic = initial
         super.init(frame: .zero)
         setupViews()
         selectTopic(selectedTopic)
@@ -108,7 +110,7 @@ public final class SettingsView<Topic: SettingsTopic>: NSView,
 
     // MARK: - Topic Selection
 
-    private func selectTopic(_ topic: Topic) {
+    private func selectTopic(_ topic: SettingsTopic) {
         selectedTopic = topic
         currentDetailView?.removeFromSuperview()
 
@@ -130,16 +132,17 @@ public final class SettingsView<Topic: SettingsTopic>: NSView,
 
         let clipView = detailContainer.contentView
         wrapper.widthAnchor.constraint(equalTo: clipView.widthAnchor).isActive = true
-        if fullHeightTopics.contains(topic) {
+        if fullHeightTopicIDs.contains(topic.id) {
             wrapper.heightAnchor.constraint(equalTo: clipView.heightAnchor).isActive = true
         }
 
         currentDetailView = wrapper
     }
 
-    /// Programmatically select a topic.
-    public func select(topic: Topic) {
-        guard let idx = topics.firstIndex(of: topic) else { return }
+    /// Programmatically selects the topic with the given ID. No-op if not found.
+    public func selectTopic(id: String) {
+        guard let topic = topics.first(where: { $0.id == id }),
+              let idx = topics.firstIndex(of: topic) else { return }
         sidebarTableView.selectRowIndexes(IndexSet(integer: idx), byExtendingSelection: false)
         selectTopic(topic)
     }
@@ -151,6 +154,7 @@ public final class SettingsView<Topic: SettingsTopic>: NSView,
     // MARK: - NSTableViewDelegate
 
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        guard row >= 0, row < topics.count else { return nil }
         let topic = topics[row]
         let identifier = NSUserInterfaceItemIdentifier("TopicCell")
         let cell = tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTableCellView ?? {
