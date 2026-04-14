@@ -5,6 +5,7 @@ import AgenticUI
 
 /// Generates AI-powered summaries for Claude Code sessions by reading stored events
 /// and sending a summarization prompt to the configured AI plugin.
+@MainActor
 final class SessionSummarizer {
 
     // MARK: - Properties

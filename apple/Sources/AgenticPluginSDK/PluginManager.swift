@@ -6,6 +6,7 @@ import os
 /// Plugins are macOS `.bundle` files containing a principal class that conforms
 /// to `AgenticLLMPlugin`. The manager reads `Info.plist` metadata from each
 /// bundle at discovery time (cheap) and only loads the binary on demand (lazy).
+@MainActor
 public final class PluginManager {
 
     // MARK: - Properties
@@ -124,7 +125,7 @@ public final class PluginManager {
             }
         }
 
-        availablePlugins = discovered
+        availablePlugins.append(contentsOf: discovered)
     }
 
     // MARK: - Loading

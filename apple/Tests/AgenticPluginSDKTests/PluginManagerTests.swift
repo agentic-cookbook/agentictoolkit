@@ -3,6 +3,7 @@ import Foundation
 @testable import AgenticPluginSDK
 
 @Suite("PluginManager")
+@MainActor
 struct PluginManagerTests {
 
     @Test("discovers no plugins from empty directory")

@@ -16,7 +16,7 @@ struct PluginDescriptor {
     let description: String
 
     /// Builds descriptors from live PluginManager data.
-    static func fromPluginManager(_ pm: PluginManager) -> [PluginDescriptor] {
+    @MainActor static func fromPluginManager(_ pm: PluginManager) -> [PluginDescriptor] {
         pm.availablePlugins.map { meta in
             let plugin = pm.plugin(for: meta.identifier)
             let caps = capabilityStrings(plugin?.capabilities)
@@ -76,6 +76,7 @@ struct PluginDescriptor {
 
 /// Settings pane showing installed plugins with a detail view for each.
 /// Left: scrolling plugin list. Right: info card + plugin-supplied settings view.
+@MainActor
 final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
 
     private let plugins: [PluginDescriptor]

@@ -4,6 +4,7 @@ import Foundation
 @testable import AgenticBuiltInPlugins
 
 @Suite("Built-in Plugins")
+@MainActor
 struct BuiltInPluginTests {
 
     private func makeContext() -> PluginContext {
