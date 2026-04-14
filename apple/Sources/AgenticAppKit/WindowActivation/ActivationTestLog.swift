@@ -9,7 +9,9 @@ public final class ActivationTestLog {
 
     private let queue = DispatchQueue(label: "AgenticAppKit.ActivationTestLog")
     private var _entries: [String] = []
-    private let logURL: URL
+
+    /// Where (if anywhere) entries are mirrored to disk. `nil` for in-memory-only logs.
+    private let logURL: URL?
 
     /// Reused per-instance formatter — `ISO8601DateFormatter` is expensive to construct.
     /// Access is serialized through `queue`.
@@ -24,18 +26,25 @@ public final class ActivationTestLog {
     ///
     /// If the Application Support directory cannot be located, logging becomes
     /// in-memory only (file writes silently no-op) rather than crashing.
-    public init(appSupportSubdirectory: String) {
+    public convenience init(appSupportSubdirectory: String) {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let url: URL?
         if let appSupport {
             let dir = appSupport.appendingPathComponent(appSupportSubdirectory)
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            self.logURL = dir.appendingPathComponent("activation-test.log")
+            url = dir.appendingPathComponent("activation-test.log")
         } else {
-            // Fall back to a tmp path. File writes will likely still succeed;
-            // if not, appendToFile handles the failure honestly.
-            self.logURL = URL(fileURLWithPath: NSTemporaryDirectory())
-                .appendingPathComponent("activation-test.log")
+            url = nil
         }
+        self.init(fileURL: url)
+    }
+
+    /// Creates a log that mirrors entries to the given file URL, or to memory only
+    /// if `fileURL` is nil. Useful for tests that want to assert on `text`
+    /// without writing to disk, and for callers that want full control over
+    /// the log path.
+    public init(fileURL: URL?) {
+        self.logURL = fileURL
     }
 
     /// Appends a timestamped entry. Safe to call from any thread.
@@ -50,10 +59,12 @@ public final class ActivationTestLog {
         appendToFile(line)
     }
 
-    /// Empties both the in-memory buffer and the file.
+    /// Empties both the in-memory buffer and (if present) the file.
     public func clear() {
         queue.sync { _entries.removeAll() }
-        try? "".write(to: logURL, atomically: true, encoding: .utf8)
+        if let logURL {
+            try? "".write(to: logURL, atomically: true, encoding: .utf8)
+        }
     }
 
     /// The current log contents joined by newlines.
@@ -61,15 +72,17 @@ public final class ActivationTestLog {
         queue.sync { _entries.joined(separator: "\n") }
     }
 
-    /// The on-disk path to the log file.
-    public var logPath: String { logURL.path }
+    /// The on-disk path to the log file, or nil if this log is in-memory only.
+    public var logPath: String? { logURL?.path }
 
     // MARK: - Private
 
     /// Appends a line to the log file, creating it if it doesn't yet exist.
     /// Never overwrites existing content — if the file exists but can't be
     /// opened for append, the write is dropped rather than truncating history.
+    /// No-op if this log was constructed without a file URL.
     private func appendToFile(_ line: String) {
+        guard let logURL else { return }
         let data = Data((line + "\n").utf8)
 
         // Create the file on first write.
