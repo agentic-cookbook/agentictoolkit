@@ -14,6 +14,8 @@ if !isRunningTests {
 }
 
 let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
+MainActor.assumeIsolated {
+    let delegate = AppDelegate()
+    app.delegate = delegate
+}
 app.run()

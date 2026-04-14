@@ -3,6 +3,7 @@ import AgenticUI
 
 /// Bridges `AISettingsPersistence` to the TestApp's `DatabaseManager`.
 /// Handles key translation so the library's key names map to the existing DB schema.
+@MainActor
 final class DatabaseManagerPersistence: AISettingsPersistence {
 
     private let databaseManager: DatabaseManager

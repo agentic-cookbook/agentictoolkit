@@ -3,6 +3,7 @@ import ApplicationServices
 import AgenticPluginSDK
 import AgenticBuiltInPlugins
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!

@@ -3,6 +3,7 @@ import AgenticPluginSDK
 import AgenticUI
 
 /// Manages a standalone AI Chat window using AgenticUI's ChatView and ChatViewModel.
+@MainActor
 final class AIChatWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var chatView: ChatView?

@@ -5,6 +5,7 @@ import AgenticUI
 /// Manages the Settings window lifecycle. Creates the window lazily on first open,
 /// hosts the AppKit SettingsView directly, and wires up the SettingsViewModel
 /// callbacks to apply changes to the session panel in real time.
+@MainActor
 final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - Properties
