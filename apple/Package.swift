@@ -23,6 +23,18 @@ let package = Package(
             name: "AgenticUIKit",
             targets: ["AgenticUIKit"]
         ),
+        .library(
+            name: "AgenticPluginSDK",
+            targets: ["AgenticPluginSDK"]
+        ),
+        .library(
+            name: "AgenticBuiltInPlugins",
+            targets: ["AgenticBuiltInPlugins"]
+        ),
+        .library(
+            name: "AgenticUI",
+            targets: ["AgenticUI"]
+        ),
     ],
     targets: [
         // Cross-platform (Foundation only)
@@ -52,6 +64,31 @@ let package = Package(
         .testTarget(
             name: "AgenticUIKitTests",
             dependencies: ["AgenticUIKit"]
+        ),
+
+        // macOS — Plugin SDK & Plugins
+        .target(
+            name: "AgenticPluginSDK"
+        ),
+        .testTarget(
+            name: "AgenticPluginSDKTests",
+            dependencies: ["AgenticPluginSDK"]
+        ),
+        .target(
+            name: "AgenticBuiltInPlugins",
+            dependencies: ["AgenticPluginSDK"]
+        ),
+        .testTarget(
+            name: "AgenticBuiltInPluginsTests",
+            dependencies: ["AgenticBuiltInPlugins", "AgenticPluginSDK"]
+        ),
+        .target(
+            name: "AgenticUI",
+            dependencies: ["AgenticPluginSDK"]
+        ),
+        .testTarget(
+            name: "AgenticUITests",
+            dependencies: ["AgenticUI", "AgenticPluginSDK"]
         ),
     ]
 )
