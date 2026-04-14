@@ -25,7 +25,7 @@ public final class PluginManager {
     /// App name used for the per-plugin data directory.
     private let appName: String
 
-    private let logger = Logger(subsystem: "com.agenticplugins", category: "PluginManager")
+    private let logger = Logger(subsystem: "com.agentictoolkit", category: "PluginManager")
 
     // MARK: - Errors
 
@@ -235,7 +235,7 @@ public final class PluginManager {
     // MARK: - Private
 
     private func makeContext(for identifier: String) -> PluginContext {
-        let logger = Logger(subsystem: "com.agenticplugins.plugin", category: identifier)
+        let logger = Logger(subsystem: "com.agentictoolkit.plugin", category: identifier)
 
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dataDir = appSupport

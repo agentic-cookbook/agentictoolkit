@@ -8,7 +8,7 @@ import AppKit
 /// first used.
 public protocol AgenticLLMPlugin: AnyObject, Sendable {
 
-    /// Unique reverse-DNS identifier (e.g. "com.agenticplugins.plugin.anthropic").
+    /// Unique reverse-DNS identifier (e.g. "com.agentictoolkit.plugin.anthropic").
     /// Must match the `AgenticPluginIdentifier` in the bundle's Info.plist.
     static var identifier: String { get }
 

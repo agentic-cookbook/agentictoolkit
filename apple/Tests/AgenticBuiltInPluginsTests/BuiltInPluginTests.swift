@@ -17,7 +17,7 @@ struct BuiltInPluginTests {
 
     @Test("ClaudeLocalPlugin has correct identifier")
     func claudeLocalIdentifier() {
-        #expect(ClaudeLocalPlugin.identifier == "com.agenticplugins.plugin.claude-local")
+        #expect(ClaudeLocalPlugin.identifier == "com.agentictoolkit.plugin.claude-local")
     }
 
     @Test("ClaudeLocalPlugin does not require API key")
@@ -32,7 +32,7 @@ struct BuiltInPluginTests {
 
     @Test("ClaudeAPIPlugin has correct identifier")
     func claudeAPIIdentifier() {
-        #expect(ClaudeAPIPlugin.identifier == "com.agenticplugins.plugin.claude-api")
+        #expect(ClaudeAPIPlugin.identifier == "com.agentictoolkit.plugin.claude-api")
     }
 
     @Test("ClaudeAPIPlugin has correct properties")
@@ -51,7 +51,7 @@ struct BuiltInPluginTests {
 
     @Test("OpenAIPlugin has correct identifier")
     func openaiIdentifier() {
-        #expect(OpenAIPlugin.identifier == "com.agenticplugins.plugin.openai")
+        #expect(OpenAIPlugin.identifier == "com.agentictoolkit.plugin.openai")
     }
 
     @Test("OpenAIPlugin has correct properties")
@@ -68,7 +68,7 @@ struct BuiltInPluginTests {
 
     @Test("GooglePlugin has correct identifier")
     func googleIdentifier() {
-        #expect(GooglePlugin.identifier == "com.agenticplugins.plugin.google")
+        #expect(GooglePlugin.identifier == "com.agentictoolkit.plugin.google")
     }
 
     @Test("GooglePlugin has correct properties")
@@ -84,7 +84,7 @@ struct BuiltInPluginTests {
 
     @Test("OpenAICompatiblePlugin has correct identifier")
     func compatibleIdentifier() {
-        #expect(OpenAICompatiblePlugin.identifier == "com.agenticplugins.plugin.openai-compatible")
+        #expect(OpenAICompatiblePlugin.identifier == "com.agentictoolkit.plugin.openai-compatible")
     }
 
     @Test("OpenAICompatiblePlugin has empty model list")

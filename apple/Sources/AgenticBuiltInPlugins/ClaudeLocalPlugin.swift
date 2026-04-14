@@ -7,7 +7,7 @@ import AgenticPluginSDK
 /// Streams output incrementally as the subprocess produces it.
 public final class ClaudeLocalPlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agenticplugins.plugin.claude-local"
+    public static let identifier = "com.agentictoolkit.plugin.claude-local"
 
     public let displayName = "Claude (Local)"
 

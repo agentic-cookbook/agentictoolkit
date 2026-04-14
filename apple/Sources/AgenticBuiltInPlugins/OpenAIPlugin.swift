@@ -6,7 +6,7 @@ import AgenticPluginSDK
 /// LLM plugin for the OpenAI Chat Completions API.
 public final class OpenAIPlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agenticplugins.plugin.openai"
+    public static let identifier = "com.agentictoolkit.plugin.openai"
 
     public let displayName = "OpenAI (ChatGPT)"
 
