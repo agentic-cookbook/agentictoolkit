@@ -312,18 +312,15 @@ public final class WindowActivationTester {
     }
 
     private func runAppleScript(_ source: String) -> String? {
-        guard let script = NSAppleScript(source: source) else {
+        switch AppleScriptRunner.run(source) {
+        case .success(let value):
+            return value
+        case .compileFailed:
             log.append("  AppleScript compile failed (malformed source)")
             return nil
-        }
-        var error: NSDictionary?
-        let result = script.executeAndReturnError(&error)
-        if let error {
-            let message = error[NSAppleScript.errorMessage] as? String ?? "unknown error"
-            let number = error[NSAppleScript.errorNumber] as? Int ?? 0
+        case .runtimeFailed(let message, let number):
             log.append("  AppleScript failed: \(message) (error \(number))")
             return nil
         }
-        return result.stringValue
     }
 }
