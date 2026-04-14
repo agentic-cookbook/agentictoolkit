@@ -7,9 +7,9 @@ import os
 public enum KeychainHelper {
 
     /// The Keychain service identifier. Defaults to the main bundle identifier.
-    nonisolated(unsafe) public static var service: String = Bundle.main.bundleIdentifier ?? "com.agenticplugins"
+    nonisolated(unsafe) public static var service: String = Bundle.main.bundleIdentifier ?? "com.agentictoolkit"
 
-    private static let logger = Logger(subsystem: "com.agenticplugins", category: "Keychain")
+    private static let logger = Logger(subsystem: "com.agentictoolkit", category: "Keychain")
 
     /// Stores a value in the Keychain for the given account key.
     /// Overwrites any existing value for the same key.

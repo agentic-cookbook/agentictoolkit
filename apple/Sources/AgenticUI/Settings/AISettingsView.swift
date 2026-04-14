@@ -186,7 +186,7 @@ public final class AISettingsView: NSView {
         apiKeyStatusLabel.isHidden = !needsKey
 
         // Show base URL for OpenAI-compatible plugin
-        let isCustom = viewModel.selectedPluginIdentifier == "com.agenticplugins.plugin.openai-compatible"
+        let isCustom = viewModel.selectedPluginIdentifier == "com.agentictoolkit.plugin.openai-compatible"
         baseURLLabel.isHidden = !isCustom
         baseURLRow.isHidden = !isCustom
     }

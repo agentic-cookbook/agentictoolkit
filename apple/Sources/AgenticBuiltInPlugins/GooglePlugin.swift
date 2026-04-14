@@ -6,7 +6,7 @@ import AgenticPluginSDK
 /// LLM plugin for the Google Gemini `generateContent` API.
 public final class GooglePlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agenticplugins.plugin.google"
+    public static let identifier = "com.agentictoolkit.plugin.google"
 
     public let displayName = "Google (Gemini)"
 

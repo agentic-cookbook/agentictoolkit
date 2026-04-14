@@ -17,7 +17,7 @@ public final class ChatViewModel: ObservableObject {
     private var queue: [String] = []
     private var isProcessing = false
 
-    private let logger = Logger(subsystem: "com.agenticplugins", category: "Chat")
+    private let logger = Logger(subsystem: "com.agentictoolkit", category: "Chat")
 
     public init(pluginManager: PluginManager, configProvider: ChatConfigProvider) {
         self.pluginManager = pluginManager

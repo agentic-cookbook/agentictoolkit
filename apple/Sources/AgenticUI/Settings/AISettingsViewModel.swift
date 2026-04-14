@@ -101,7 +101,7 @@ public final class AISettingsViewModel: ObservableObject, ChatConfigProvider {
     private weak var persistence: AISettingsPersistence?
     private var isLoading = true
 
-    private let logger = Logger(subsystem: "com.agenticplugins", category: "AISettings")
+    private let logger = Logger(subsystem: "com.agentictoolkit", category: "AISettings")
 
     // MARK: - ChatConfigProvider
 

@@ -7,7 +7,7 @@ import AgenticPluginSDK
 /// Provides a custom settings view with a base URL text field.
 public final class OpenAICompatiblePlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agenticplugins.plugin.openai-compatible"
+    public static let identifier = "com.agentictoolkit.plugin.openai-compatible"
 
     public let displayName = "Custom (OpenAI-compatible)"
 

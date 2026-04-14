@@ -7,7 +7,7 @@ import AgenticPluginSDK
 /// Requires an API key from console.anthropic.com.
 public final class ClaudeAPIPlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agenticplugins.plugin.claude-api"
+    public static let identifier = "com.agentictoolkit.plugin.claude-api"
 
     public let displayName = "Claude (API)"
 
