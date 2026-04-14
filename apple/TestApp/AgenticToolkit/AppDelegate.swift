@@ -124,7 +124,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             applyAppearanceMode(mode)
         }
 
-        // Always show the AI chat window on launch
+        // Show the AI chat window on launch
         aiChatWindowController?.showWindow()
 
         Log.app.debug("Post-database setup complete")

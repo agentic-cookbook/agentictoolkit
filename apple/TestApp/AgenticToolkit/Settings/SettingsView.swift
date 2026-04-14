@@ -136,12 +136,23 @@ final class SettingsView: NSView, NSTableViewDataSource, NSTableViewDelegate, NS
 
         detailContainer.documentView = wrapper
 
-        // Pin wrapper width to clip view so content fills available width
+        // Pin wrapper to clip view so content fills available space
         if let clipView = detailContainer.contentView as? NSClipView {
             wrapper.widthAnchor.constraint(equalTo: clipView.widthAnchor).isActive = true
+            // Panes with their own split views need explicit height to fill the container
+            if topic == .plugins {
+                wrapper.heightAnchor.constraint(equalTo: clipView.heightAnchor).isActive = true
+            }
         }
 
         currentDetailView = wrapper
+    }
+
+    /// Programmatically select a tab by topic.
+    func select(topic: SettingsTopic) {
+        guard let idx = topics.firstIndex(of: topic) else { return }
+        sidebarTableView.selectRowIndexes(IndexSet(integer: idx), byExtendingSelection: false)
+        selectTopic(topic)
     }
 
     // MARK: - NSTableViewDataSource

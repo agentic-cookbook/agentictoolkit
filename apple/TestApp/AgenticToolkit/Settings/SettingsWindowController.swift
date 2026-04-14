@@ -25,6 +25,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// The plugin manager for AI provider access.
     private var pluginManager: PluginManager?
 
+    /// The settings view (for programmatic tab selection).
+    private(set) var settingsView: SettingsView?
+
     // MARK: - Initialization
 
     override init() {}
@@ -102,15 +105,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         settingsWindow.isReleasedWhenClosed = false
         settingsWindow.delegate = self
 
-        let settingsView = SettingsView(viewModel: vm, aiSettingsViewModel: aiVM)
-        settingsView.translatesAutoresizingMaskIntoConstraints = false
+        let sv = SettingsView(viewModel: vm, aiSettingsViewModel: aiVM)
+        self.settingsView = sv
+        sv.translatesAutoresizingMaskIntoConstraints = false
         let container = settingsWindow.contentView!
-        container.addSubview(settingsView)
+        container.addSubview(sv)
         NSLayoutConstraint.activate([
-            settingsView.topAnchor.constraint(equalTo: container.topAnchor),
-            settingsView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            settingsView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            settingsView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            sv.topAnchor.constraint(equalTo: container.topAnchor),
+            sv.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            sv.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            sv.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
         // Restore frame via proportional window manager
