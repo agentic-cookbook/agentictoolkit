@@ -8,7 +8,8 @@ public final class QuickNoteWindowController: NSWindowController {
     // MARK: - Callback
 
     /// Called when the user saves. Provides (title, content).
-    public var onSave: ((String, String) -> Void)?
+    /// Required at init time — a silently-dropped save is a terrible UX.
+    private let onSave: (String, String) -> Void
 
     // MARK: - Views
 
@@ -62,8 +63,9 @@ public final class QuickNoteWindowController: NSWindowController {
 
     // MARK: - Initialization
 
-    public init(logger: Logger? = nil) {
+    public init(logger: Logger? = nil, onSave: @escaping (String, String) -> Void) {
         self.logger = logger
+        self.onSave = onSave
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 260),
@@ -123,18 +125,22 @@ public final class QuickNoteWindowController: NSWindowController {
 
         guard let window else { return }
         let wSize = window.frame.size
-        let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
 
-        var origin = NSPoint(
-            x: buttonFrame.maxX - wSize.width,
-            y: buttonFrame.minY - wSize.height - 4
-        )
-
-        // Clamp to screen bounds
-        origin.x = max(screenFrame.minX + 8, min(origin.x, screenFrame.maxX - wSize.width - 8))
-        origin.y = max(screenFrame.minY + 8, origin.y)
-
-        window.setFrameOrigin(origin)
+        // Choose the screen containing the button, falling back to main.
+        // If neither is available (headless, screensaver), just center the window.
+        let targetScreen = NSScreen.screens.first(where: { $0.frame.contains(buttonFrame) })
+            ?? NSScreen.main
+        if let screenFrame = targetScreen?.visibleFrame {
+            var origin = NSPoint(
+                x: buttonFrame.maxX - wSize.width,
+                y: buttonFrame.minY - wSize.height - 4
+            )
+            origin.x = max(screenFrame.minX + 8, min(origin.x, screenFrame.maxX - wSize.width - 8))
+            origin.y = max(screenFrame.minY + 8, origin.y)
+            window.setFrameOrigin(origin)
+        } else {
+            window.center()
+        }
         showWindow(nil)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -151,7 +157,7 @@ public final class QuickNoteWindowController: NSWindowController {
             close()
             return
         }
-        onSave?(title.isEmpty ? "Quick Note" : title, content)
+        onSave(title.isEmpty ? "Quick Note" : title, content)
         close()
     }
 
