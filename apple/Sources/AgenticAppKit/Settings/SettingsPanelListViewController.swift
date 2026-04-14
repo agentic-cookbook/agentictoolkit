@@ -31,6 +31,13 @@ final class SettingsPanelListViewController: NSViewController {
         self.panels = panels
         tableView.reloadData()
     }
+
+    /// Selects the row at `index` without triggering the `onSelect` callback,
+    /// since programmatic selection flows through `SettingsViewController.selectPanel`.
+    func selectRow(_ index: Int) {
+        guard index >= 0, index < panels.count else { return }
+        tableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
+    }
 }
 
 extension SettingsPanelListViewController: NSTableViewDataSource, NSTableViewDelegate {

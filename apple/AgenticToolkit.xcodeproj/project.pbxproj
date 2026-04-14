@@ -33,6 +33,7 @@
 		6693A51E14D9C858A82A0C3F /* WindowActivationStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C14219EDDCBE98560DB8C3 /* WindowActivationStrategy.swift */; };
 		67EA42A8E50AAF0F63785CB0 /* UserDefaultsWindowStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70FB3A1645E98CCA1AFA46C /* UserDefaultsWindowStateStorage.swift */; };
 		6A59B4F014C62E87AF1EC9A1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E671E7A44A1E23822A5B2C16 /* SettingsView.swift */; };
+		6AAA868AC0C6F00F90801053 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE24C4B38B8C0A3E281D4A93 /* KeychainHelper.swift */; };
 		7646D7069C0A0844720B181E /* AgenticToolkit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1E274069423241BDF21B68 /* AgenticToolkit.framework */; };
 		7A1979D795B40411B9347ADE /* ChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD49B58BB4BC7B36EA0D167B /* ChatBackend.swift */; };
 		7A6A46BFBB4052DE6301EC73 /* AppleScriptRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C448BBCF81A5F3818D147A /* AppleScriptRunner.swift */; };
@@ -212,6 +213,7 @@
 		A217AFB5A6940F0DB5CBEB38 /* SettingsPanelEditViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelEditViewController.swift; sourceTree = "<group>"; };
 		A3AB07C5710F64CAA4EE23F6 /* AgenticUIKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticUIKitTests.swift; sourceTree = "<group>"; };
 		AB4B2C4E904AB67229C93587 /* WindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowStateStorage.swift; sourceTree = "<group>"; };
+		AE24C4B38B8C0A3E281D4A93 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		B70FB3A1645E98CCA1AFA46C /* UserDefaultsWindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsWindowStateStorage.swift; sourceTree = "<group>"; };
 		B91B758C0A9BF047CFFB5101 /* ScreenFingerprint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFingerprint.swift; sourceTree = "<group>"; };
 		B94E764D3342F46C46D02DFF /* WindowManagerSimulatedRelaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerSimulatedRelaunchTests.swift; sourceTree = "<group>"; };
@@ -453,6 +455,7 @@
 			isa = PBXGroup;
 			children = (
 				5B62E054181FEA4E88D3DE79 /* AgenticToolkit.swift */,
+				AE24C4B38B8C0A3E281D4A93 /* KeychainHelper.swift */,
 			);
 			path = AgenticToolkit;
 			sourceTree = "<group>";
@@ -729,6 +732,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B9EF31CF2A3EAB817927A0A9 /* AgenticToolkit.swift in Sources */,
+				6AAA868AC0C6F00F90801053 /* KeychainHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
