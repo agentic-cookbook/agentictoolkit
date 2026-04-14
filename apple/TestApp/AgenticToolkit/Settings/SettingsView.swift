@@ -117,7 +117,7 @@ final class SettingsView: NSView, NSTableViewDataSource, NSTableViewDelegate, NS
         case .appearance: pane = AppearanceSettingsPane(viewModel: viewModel)
         case .ai: pane = AISettingsView(viewModel: aiSettingsViewModel)
         case .profiles: pane = ProfilesSettingsView()
-        case .plugins: pane = PluginsSettingsPane(pluginManager: viewModel.pluginManager)
+        case .plugins: pane = PluginsSettingsPane(pluginManager: viewModel.pluginManager, aiSettingsViewModel: aiSettingsViewModel)
         case .system: pane = SystemSettingsPane(viewModel: viewModel)
         }
 

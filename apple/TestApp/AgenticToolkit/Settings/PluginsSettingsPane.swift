@@ -1,10 +1,10 @@
 import AppKit
 import AgenticPluginSDK
+import AgenticUI
 
 // MARK: - PluginDescriptor
 
 /// Lightweight description of an installed plugin used by the settings UI.
-/// Built from live PluginManager data at display time.
 struct PluginDescriptor {
     let identifier: String
     let displayName: String
@@ -13,9 +13,9 @@ struct PluginDescriptor {
     let requiresAPIKey: Bool
     let capabilities: [String]
     let availableModels: [String]
+    let recommendedModel: String
     let description: String
 
-    /// Builds descriptors from live PluginManager data.
     @MainActor static func fromPluginManager(_ pm: PluginManager) -> [PluginDescriptor] {
         pm.availablePlugins.map { meta in
             let plugin = pm.plugin(for: meta.identifier)
@@ -28,6 +28,7 @@ struct PluginDescriptor {
                 requiresAPIKey: plugin?.requiresAPIKey ?? true,
                 capabilities: caps,
                 availableModels: plugin?.availableModels ?? [],
+                recommendedModel: plugin?.recommendedModel ?? "",
                 description: descriptionForIdentifier(meta.identifier)
             )
         }
@@ -47,13 +48,13 @@ struct PluginDescriptor {
     private static func descriptionForIdentifier(_ identifier: String) -> String {
         switch identifier {
         case "com.agentictoolkit.plugin.claude-local":
-            return "Runs Claude via your local Claude Code CLI — no API key needed."
+            return "Runs Claude via your local Claude Code CLI \u{2014} no API key needed."
         case "com.agentictoolkit.plugin.claude-api":
             return "Direct API access to Claude models via the Anthropic Messages API with streaming."
         case "com.agentictoolkit.plugin.openai":
-            return "OpenAI Chat Completions API — GPT-4 and ChatGPT models."
+            return "OpenAI Chat Completions API \u{2014} GPT-4 and ChatGPT models."
         case "com.agentictoolkit.plugin.google":
-            return "Google Generative Language API — Gemini models with a free tier available."
+            return "Google Generative Language API \u{2014} Gemini models with a free tier available."
         case "com.agentictoolkit.plugin.openai-compatible":
             return "Any server implementing the OpenAI Chat Completions API (/v1/chat/completions)."
         default:
@@ -74,20 +75,20 @@ struct PluginDescriptor {
 
 // MARK: - PluginsSettingsPane
 
-/// Settings pane showing installed plugins with a detail view for each.
-/// Left: scrolling plugin list. Right: info card + plugin-supplied settings view.
 @MainActor
 final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
 
     private let plugins: [PluginDescriptor]
     private let pluginManager: PluginManager
+    private let aiSettingsViewModel: AISettingsViewModel
     private let splitView = NSSplitView()
     private let tableView = NSTableView()
     private let detailScroll = NSScrollView()
     private var selectedIndex: Int = 0
 
-    init(pluginManager: PluginManager) {
+    init(pluginManager: PluginManager, aiSettingsViewModel: AISettingsViewModel) {
         self.pluginManager = pluginManager
+        self.aiSettingsViewModel = aiSettingsViewModel
         self.plugins = PluginDescriptor.fromPluginManager(pluginManager)
         super.init(frame: .zero)
         setupViews()
@@ -103,7 +104,6 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
     // MARK: - Layout
 
     private func setupViews() {
-        // Sidebar list
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("plugin"))
         column.resizingMask = .autoresizingMask
         tableView.addTableColumn(column)
@@ -121,7 +121,6 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
         sidebarScroll.drawsBackground = false
         sidebarScroll.translatesAutoresizingMaskIntoConstraints = false
 
-        // Detail scroll
         let detailClip = FlippedPluginClipView()
         detailScroll.contentView = detailClip
         detailScroll.hasVerticalScroller = true
@@ -129,7 +128,6 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
         detailScroll.drawsBackground = false
         detailScroll.translatesAutoresizingMaskIntoConstraints = false
 
-        // Split view
         splitView.isVertical = true
         splitView.dividerStyle = .thin
         splitView.delegate = self
@@ -159,7 +157,16 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
 
     private func showDetail(for plugin: PluginDescriptor) {
         let livePlugin = pluginManager.plugin(for: plugin.identifier)
-        let detail = PluginDetailView(plugin: plugin, settingsView: livePlugin?.settingsView())
+        let isActive = aiSettingsViewModel.selectedPluginIdentifier == plugin.identifier
+        let detail = PluginDetailView(
+            plugin: plugin,
+            livePlugin: livePlugin,
+            isActive: isActive,
+            onActivate: { [weak self] in self?.activatePlugin(plugin) },
+            onModelChanged: { [weak self] model in self?.setModel(model, for: plugin) },
+            onAPIKeyChanged: { [weak self] key in self?.setAPIKey(key, for: plugin) },
+            onTestCredentials: { [weak self] in self?.testCredentials(for: plugin) }
+        )
         detail.translatesAutoresizingMaskIntoConstraints = false
 
         let wrapper = NSView()
@@ -181,6 +188,56 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
         }
     }
 
+    // MARK: - Actions
+
+    private func activatePlugin(_ plugin: PluginDescriptor) {
+        aiSettingsViewModel.selectedPluginIdentifier = plugin.identifier
+        if !plugin.availableModels.contains(aiSettingsViewModel.selectedModel) {
+            aiSettingsViewModel.selectedModel = plugin.recommendedModel
+        }
+        // Refresh to update the "Active" badge
+        showDetail(for: plugin)
+    }
+
+    private func setModel(_ model: String, for plugin: PluginDescriptor) {
+        // If this plugin is active, update the global model selection
+        if aiSettingsViewModel.selectedPluginIdentifier == plugin.identifier {
+            aiSettingsViewModel.selectedModel = model
+        }
+    }
+
+    private func setAPIKey(_ key: String, for plugin: PluginDescriptor) {
+        guard !key.isEmpty else { return }
+        // Store per-plugin key in keychain
+        KeychainHelper.set(key, forKey: keychainKey(for: plugin))
+        // Also set as the global key if this plugin is active
+        if aiSettingsViewModel.selectedPluginIdentifier == plugin.identifier {
+            aiSettingsViewModel.apiKey = key
+        }
+    }
+
+    private func testCredentials(for plugin: PluginDescriptor) {
+        guard let livePlugin = pluginManager.plugin(for: plugin.identifier) else { return }
+        let storedKey = KeychainHelper.get(forKey: keychainKey(for: plugin)) ?? ""
+        guard !storedKey.isEmpty || !plugin.requiresAPIKey else { return }
+        let creds = PluginCredentials(apiKey: storedKey, baseURL: aiSettingsViewModel.baseURL.isEmpty ? nil : aiSettingsViewModel.baseURL)
+
+        Task {
+            let error = await livePlugin.validateCredentials(creds)
+            if let error {
+                showDetail(for: plugin) // Refresh with error state
+                Log.settings.warning("Credential test failed for \(plugin.displayName): \(error)")
+            } else {
+                showDetail(for: plugin) // Refresh with success state
+                Log.settings.info("Credential test passed for \(plugin.displayName)")
+            }
+        }
+    }
+
+    private func keychainKey(for plugin: PluginDescriptor) -> String {
+        "ai_api_key.\(plugin.identifier)"
+    }
+
     // MARK: - NSTableViewDataSource
 
     func numberOfRows(in tableView: NSTableView) -> Int { plugins.count }
@@ -200,7 +257,9 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
             tf.font = .systemFont(ofSize: 13)
         }
         if let sub = cell.viewWithTag(99) as? NSTextField {
-            sub.stringValue = plugin.version
+            let isActive = aiSettingsViewModel.selectedPluginIdentifier == plugin.identifier
+            sub.stringValue = isActive ? "Active" : plugin.version
+            sub.textColor = isActive ? .systemGreen : .tertiaryLabelColor
         }
 
         return cell
@@ -268,9 +327,37 @@ final class PluginsSettingsPane: NSView, NSTableViewDataSource, NSTableViewDeleg
 
 // MARK: - PluginDetailView
 
+@MainActor
 private final class PluginDetailView: NSView {
 
-    init(plugin: PluginDescriptor, settingsView: NSView? = nil) {
+    private let plugin: PluginDescriptor
+    private let modelPopup = NSPopUpButton()
+    private let apiKeyField = NSSecureTextField()
+    private let testButton: NSButton
+    private let statusLabel = NSTextField(labelWithString: "")
+    private let activateButton: NSButton
+
+    private let onActivate: () -> Void
+    private let onModelChanged: (String) -> Void
+    private let onAPIKeyChanged: (String) -> Void
+    private let onTestCredentials: () -> Void
+
+    init(
+        plugin: PluginDescriptor,
+        livePlugin: AgenticLLMPlugin?,
+        isActive: Bool,
+        onActivate: @escaping () -> Void,
+        onModelChanged: @escaping (String) -> Void,
+        onAPIKeyChanged: @escaping (String) -> Void,
+        onTestCredentials: @escaping () -> Void
+    ) {
+        self.plugin = plugin
+        self.onActivate = onActivate
+        self.onModelChanged = onModelChanged
+        self.onAPIKeyChanged = onAPIKeyChanged
+        self.onTestCredentials = onTestCredentials
+        self.testButton = NSButton(title: "Test Credentials", target: nil, action: nil)
+        self.activateButton = NSButton(title: isActive ? "Active Provider" : "Use This Provider", target: nil, action: nil)
         super.init(frame: .zero)
 
         let stack = NSStackView()
@@ -279,7 +366,69 @@ private final class PluginDetailView: NSView {
         stack.spacing = 16
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        // Header — icon + name
+        // Header — icon + name + active badge
+        stack.addArrangedSubview(buildHeader(isActive: isActive))
+        stack.addArrangedSubview(makeSeparator())
+
+        // Description
+        let descLabel = NSTextField(wrappingLabelWithString: plugin.description)
+        descLabel.font = .systemFont(ofSize: 13)
+        descLabel.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(descLabel)
+
+        // Capabilities
+        if !plugin.capabilities.isEmpty {
+            stack.addArrangedSubview(makeSectionHeader("Capabilities"))
+            stack.addArrangedSubview(makeCapabilityBadges(plugin.capabilities))
+        }
+
+        // Model selector
+        if !plugin.availableModels.isEmpty {
+            stack.addArrangedSubview(makeSeparator())
+            stack.addArrangedSubview(makeSectionHeader("Model"))
+            stack.addArrangedSubview(buildModelSelector())
+        }
+
+        // Authentication
+        stack.addArrangedSubview(makeSeparator())
+        if plugin.requiresAPIKey {
+            stack.addArrangedSubview(makeSectionHeader("Authentication"))
+            stack.addArrangedSubview(buildAuthSection())
+        } else {
+            let noAuthLabel = NSTextField(wrappingLabelWithString: "This plugin uses your local Claude Code installation \u{2014} no API key required.")
+            noAuthLabel.font = .systemFont(ofSize: 12)
+            noAuthLabel.textColor = .secondaryLabelColor
+            stack.addArrangedSubview(noAuthLabel)
+        }
+
+        // Plugin-provided settings view
+        if let customView = livePlugin?.settingsView() {
+            stack.addArrangedSubview(makeSeparator())
+            stack.addArrangedSubview(makeSectionHeader("Plugin Settings"))
+            customView.translatesAutoresizingMaskIntoConstraints = false
+            stack.addArrangedSubview(customView)
+        }
+
+        // Activate button
+        stack.addArrangedSubview(makeSeparator())
+        stack.addArrangedSubview(buildActivateSection(isActive: isActive))
+
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            descLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: - Header
+
+    private func buildHeader(isActive: Bool) -> NSView {
         let iconView = NSImageView()
         iconView.image = NSImage(systemSymbolName: plugin.iconName, accessibilityDescription: nil)
         iconView.symbolConfiguration = .init(pointSize: 32, weight: .regular)
@@ -294,15 +443,28 @@ private final class PluginDetailView: NSView {
         nameLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         nameLabel.lineBreakMode = .byTruncatingTail
 
-        let versionLabel = NSTextField(labelWithString: "v\(plugin.version)")
-        versionLabel.font = .systemFont(ofSize: 12)
-        versionLabel.textColor = .secondaryLabelColor
-
         let identifierLabel = NSTextField(labelWithString: plugin.identifier)
         identifierLabel.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
         identifierLabel.textColor = .tertiaryLabelColor
 
-        let nameStack = NSStackView(views: [nameLabel, versionLabel, identifierLabel])
+        var nameItems: [NSView] = [nameLabel]
+        if isActive {
+            let badge = NSTextField(labelWithString: " Active ")
+            badge.font = .systemFont(ofSize: 10, weight: .semibold)
+            badge.textColor = .white
+            badge.wantsLayer = true
+            badge.layer?.cornerRadius = 4
+            badge.layer?.backgroundColor = NSColor.systemGreen.cgColor
+            badge.setContentHuggingPriority(.required, for: .horizontal)
+
+            let badgeRow = NSStackView(views: [nameLabel, badge])
+            badgeRow.orientation = .horizontal
+            badgeRow.spacing = 8
+            badgeRow.alignment = .firstBaseline
+            nameItems = [badgeRow]
+        }
+
+        let nameStack = NSStackView(views: nameItems + [identifierLabel])
         nameStack.orientation = .vertical
         nameStack.alignment = .leading
         nameStack.spacing = 2
@@ -311,67 +473,129 @@ private final class PluginDetailView: NSView {
         headerRow.orientation = .horizontal
         headerRow.spacing = 12
         headerRow.alignment = .centerY
-        stack.addArrangedSubview(headerRow)
-
-        // Separator
-        stack.addArrangedSubview(makeSeparator())
-
-        // Description
-        let descLabel = NSTextField(wrappingLabelWithString: plugin.description)
-        descLabel.font = .systemFont(ofSize: 13)
-        descLabel.textColor = .secondaryLabelColor
-        stack.addArrangedSubview(descLabel)
-
-        // Capabilities
-        if !plugin.capabilities.isEmpty {
-            stack.addArrangedSubview(makeSectionHeader("Capabilities"))
-            let capRow = makeCapabilityBadges(plugin.capabilities)
-            stack.addArrangedSubview(capRow)
-        }
-
-        // Models
-        if !plugin.availableModels.isEmpty {
-            stack.addArrangedSubview(makeSectionHeader("Available Models"))
-            for model in plugin.availableModels {
-                let label = NSTextField(labelWithString: model)
-                label.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-                label.textColor = .labelColor
-                stack.addArrangedSubview(label)
-            }
-        }
-
-        // API key requirement
-        stack.addArrangedSubview(makeSeparator())
-        let authLabel = NSTextField(wrappingLabelWithString: plugin.requiresAPIKey
-            ? "This plugin requires an API key. Configure credentials in Settings \u{2192} AI."
-            : "This plugin uses your local Claude Code installation \u{2014} no API key required."
-        )
-        authLabel.font = .systemFont(ofSize: 12)
-        authLabel.textColor = .secondaryLabelColor
-        stack.addArrangedSubview(authLabel)
-
-        // Plugin-provided settings view
-        if let settingsView {
-            stack.addArrangedSubview(makeSeparator())
-            stack.addArrangedSubview(makeSectionHeader("Plugin Settings"))
-            settingsView.translatesAutoresizingMaskIntoConstraints = false
-            stack.addArrangedSubview(settingsView)
-        }
-
-        addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            descLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            authLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            headerRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
-        ])
+        return headerRow
     }
 
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    // MARK: - Model Selector
+
+    private func buildModelSelector() -> NSView {
+        modelPopup.removeAllItems()
+        for model in plugin.availableModels {
+            modelPopup.addItem(withTitle: model)
+        }
+        // Mark the recommended model
+        if let recIdx = plugin.availableModels.firstIndex(of: plugin.recommendedModel) {
+            modelPopup.selectItem(at: recIdx)
+            let item = modelPopup.item(at: recIdx)
+            item?.title = "\(plugin.recommendedModel) (default)"
+        }
+        modelPopup.target = self
+        modelPopup.action = #selector(modelChanged)
+        modelPopup.translatesAutoresizingMaskIntoConstraints = false
+        modelPopup.widthAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
+        return modelPopup
+    }
+
+    @objc private func modelChanged() {
+        guard let title = modelPopup.selectedItem?.title else { return }
+        // Strip "(default)" suffix if present
+        let model = title.replacingOccurrences(of: " (default)", with: "")
+        onModelChanged(model)
+    }
+
+    // MARK: - Authentication
+
+    private func buildAuthSection() -> NSView {
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 8
+
+        // Check if there's an existing key
+        let keychainKey = "ai_api_key.\(plugin.identifier)"
+        let hasKey = KeychainHelper.exists(forKey: keychainKey)
+
+        apiKeyField.placeholderString = hasKey ? "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022} (stored)" : "Enter API key..."
+        apiKeyField.translatesAutoresizingMaskIntoConstraints = false
+        apiKeyField.widthAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
+        apiKeyField.target = self
+        apiKeyField.action = #selector(apiKeyEntered)
+
+        testButton.target = self
+        testButton.action = #selector(testTapped)
+        testButton.bezelStyle = .rounded
+        testButton.isEnabled = hasKey
+
+        let clearButton = NSButton(title: "Clear", target: self, action: #selector(clearAPIKey))
+        clearButton.bezelStyle = .rounded
+        clearButton.isEnabled = hasKey
+
+        let buttonRow = NSStackView(views: [apiKeyField, testButton, clearButton])
+        buttonRow.orientation = .horizontal
+        buttonRow.spacing = 8
+        stack.addArrangedSubview(buttonRow)
+
+        statusLabel.font = .systemFont(ofSize: 11)
+        statusLabel.textColor = .secondaryLabelColor
+        if hasKey {
+            statusLabel.stringValue = "API key stored in Keychain"
+        }
+        stack.addArrangedSubview(statusLabel)
+
+        return stack
+    }
+
+    @objc private func apiKeyEntered() {
+        let key = apiKeyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return }
+        onAPIKeyChanged(key)
+        apiKeyField.stringValue = ""
+        apiKeyField.placeholderString = "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022} (stored)"
+        testButton.isEnabled = true
+        statusLabel.stringValue = "API key saved"
+        statusLabel.textColor = .systemGreen
+    }
+
+    @objc private func testTapped() {
+        // Save any pending key first
+        let key = apiKeyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !key.isEmpty {
+            onAPIKeyChanged(key)
+            apiKeyField.stringValue = ""
+        }
+        statusLabel.stringValue = "Testing..."
+        statusLabel.textColor = .secondaryLabelColor
+        testButton.isEnabled = false
+        onTestCredentials()
+    }
+
+    @objc private func clearAPIKey() {
+        let keychainKey = "ai_api_key.\(plugin.identifier)"
+        KeychainHelper.delete(forKey: keychainKey)
+        apiKeyField.placeholderString = "Enter API key..."
+        testButton.isEnabled = false
+        statusLabel.stringValue = "API key removed"
+        statusLabel.textColor = .secondaryLabelColor
+    }
+
+    // MARK: - Activate
+
+    private func buildActivateSection(isActive: Bool) -> NSView {
+        activateButton.target = self
+        activateButton.action = #selector(activateTapped)
+        activateButton.bezelStyle = .rounded
+        activateButton.controlSize = .large
+        if isActive {
+            activateButton.isEnabled = false
+        }
+        return activateButton
+    }
+
+    @objc private func activateTapped() {
+        onActivate()
+    }
+
+    // MARK: - Helpers
 
     private func makeSectionHeader(_ title: String) -> NSTextField {
         let label = NSTextField(labelWithString: title)
