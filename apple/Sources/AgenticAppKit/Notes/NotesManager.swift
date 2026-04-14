@@ -112,12 +112,22 @@ public final class NotesManager {
         }
     }
 
-    /// Immediately persists any pending debounced saves. Call before app termination.
-    public func flushPendingSaves() {
+    /// Immediately persists any pending debounced saves. Cancels the scheduled
+    /// tasks and awaits their completion to avoid racing writes, then performs
+    /// a single synchronous write per affected note.
+    ///
+    /// Call before app termination.
+    public func flushPendingSaves() async {
         let pending = saveTasks
         saveTasks.removeAll()
-        for (noteID, task) in pending {
-            task.cancel()
+
+        // Cancel everyone first, then wait for each to observe cancellation
+        // before writing — this guarantees at most one write per note during
+        // flush, regardless of where the task was in its lifecycle.
+        for (_, task) in pending { task.cancel() }
+        for (_, task) in pending { await task.value }
+
+        for (noteID, _) in pending {
             guard let note = notes.first(where: { $0.id == noteID }) else { continue }
             do {
                 try storage.updateNote(note)

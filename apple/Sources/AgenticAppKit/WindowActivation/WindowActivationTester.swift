@@ -14,6 +14,7 @@ public final class WindowActivationTester {
     private let targets: [WindowActivationTarget]
     private let strategies: [WindowActivationStrategy]
     private let log: ActivationTestLog
+    private let runningApps: RunningAppsProvider
 
     /// Default cascade: iTerm-by-TTY → AX-title-match → bring-terminal-to-front.
     public static let defaultStrategies: [WindowActivationStrategy] = [
@@ -25,25 +26,13 @@ public final class WindowActivationTester {
     public init(
         targets: [WindowActivationTarget],
         log: ActivationTestLog,
-        strategies: [WindowActivationStrategy] = WindowActivationTester.defaultStrategies
+        strategies: [WindowActivationStrategy] = WindowActivationTester.defaultStrategies,
+        runningApps: RunningAppsProvider = RealRunningAppsProvider()
     ) {
         self.targets = targets
         self.log = log
         self.strategies = strategies
-    }
-
-    // MARK: - Known Terminals
-
-    /// Terminal apps the harness enumerates for diagnostic context.
-    private struct TerminalApp {
-        let displayName: String
-        let bundleID: String
-        static let allKnown: [TerminalApp] = [
-            TerminalApp(displayName: "iTerm2",       bundleID: "com.googlecode.iterm2"),
-            TerminalApp(displayName: "Terminal.app", bundleID: "com.apple.Terminal"),
-            TerminalApp(displayName: "Warp",         bundleID: "dev.warp.Warp-Stable"),
-            TerminalApp(displayName: "VS Code",      bundleID: "com.microsoft.VSCode"),
-        ]
+        self.runningApps = runningApps
     }
 
     // MARK: - Run
@@ -90,8 +79,8 @@ public final class WindowActivationTester {
 
     private func enumerateTerminalWindows() {
         log.append("--- Terminal Window Inventory ---")
-        for term in TerminalApp.allKnown {
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
+        for term in KnownTerminals.all {
+            guard let app = runningApps.runningApplications(withBundleIdentifier: term.bundleID).first else {
                 log.append("\(term.displayName): not running")
                 continue
             }
@@ -159,8 +148,14 @@ public final class WindowActivationTester {
 
         var activated = false
         for strategy in strategies {
-            guard !activated else { break }
-            guard strategy.appliesTo(target) else { continue }
+            guard !activated else {
+                log.append("  Strategy \(strategy.name): skipped (already activated)")
+                continue
+            }
+            guard strategy.appliesTo(target) else {
+                log.append("  Strategy \(strategy.name): skipped (not applicable)")
+                continue
+            }
             let success = strategy.activate(target, log: log)
             log.append("  Strategy \(strategy.name): \(success ? "SUCCESS" : "FAILED")")
             if success { activated = true }
@@ -179,7 +174,7 @@ public final class WindowActivationTester {
     // MARK: - Helpers
 
     private func frontmostWindowTitle() -> String {
-        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return "" }
+        guard let frontApp = runningApps.frontmostApplication else { return "" }
         if frontApp.bundleIdentifier == Bundle.main.bundleIdentifier { return "Sessions" }
 
         let axApp = AXUIElementCreateApplication(frontApp.processIdentifier)
