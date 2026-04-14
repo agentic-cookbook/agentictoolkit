@@ -18,6 +18,36 @@ public final class WindowActivationTester {
         self.log = log
     }
 
+    // MARK: - Known Terminals
+
+    /// A known terminal app the tester can enumerate and activate.
+    /// Centralizes the mapping between `$TERM_PROGRAM` values and macOS bundle IDs.
+    private struct TerminalApp {
+        let displayName: String
+        let bundleID: String
+        /// The values of `$TERM_PROGRAM` that identify this terminal (may be multiple).
+        let termProgramValues: [String]
+
+        static let allKnown: [TerminalApp] = [
+            TerminalApp(displayName: "iTerm2",
+                        bundleID: "com.googlecode.iterm2",
+                        termProgramValues: ["iTerm.app"]),
+            TerminalApp(displayName: "Terminal.app",
+                        bundleID: "com.apple.Terminal",
+                        termProgramValues: ["Apple_Terminal"]),
+            TerminalApp(displayName: "Warp",
+                        bundleID: "dev.warp.Warp-Stable",
+                        termProgramValues: ["WarpTerminal"]),
+            TerminalApp(displayName: "VS Code",
+                        bundleID: "com.microsoft.VSCode",
+                        termProgramValues: ["vscode"]),
+        ]
+
+        static func match(termProgram: String) -> TerminalApp? {
+            allKnown.first { $0.termProgramValues.contains(termProgram) }
+        }
+    }
+
     // MARK: - Run
 
     /// Runs activation tests against every target. Call from a background thread.
@@ -61,37 +91,17 @@ public final class WindowActivationTester {
 
     private func enumerateTerminalWindows() {
         log.append("--- Terminal Window Inventory ---")
-
-        // iTerm2
-        if let iterm = NSRunningApplication.runningApplications(withBundleIdentifier: "com.googlecode.iterm2").first {
-            log.append("iTerm2: PID=\(iterm.processIdentifier)")
-            enumerateITermWindows()
-        } else {
-            log.append("iTerm2: not running")
-        }
-
-        // Terminal.app
-        if let terminal = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Terminal").first {
-            log.append("Terminal.app: PID=\(terminal.processIdentifier)")
-            enumerateAXWindows(for: terminal)
-        } else {
-            log.append("Terminal.app: not running")
-        }
-
-        // Warp
-        if let warp = NSRunningApplication.runningApplications(withBundleIdentifier: "dev.warp.Warp-Stable").first {
-            log.append("Warp: PID=\(warp.processIdentifier)")
-            enumerateAXWindows(for: warp)
-        } else {
-            log.append("Warp: not running")
-        }
-
-        // VS Code
-        if let vscode = NSRunningApplication.runningApplications(withBundleIdentifier: "com.microsoft.VSCode").first {
-            log.append("VS Code: PID=\(vscode.processIdentifier)")
-            enumerateAXWindows(for: vscode)
-        } else {
-            log.append("VS Code: not running")
+        for term in TerminalApp.allKnown {
+            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
+                log.append("\(term.displayName): not running")
+                continue
+            }
+            log.append("\(term.displayName): PID=\(app.processIdentifier)")
+            if term.bundleID == "com.googlecode.iterm2" {
+                enumerateITermWindows()
+            } else {
+                enumerateAXWindows(for: app)
+            }
         }
     }
 
@@ -255,18 +265,10 @@ public final class WindowActivationTester {
     // MARK: - Strategy C: Bring App to Front
 
     private func activateTerminalApp(termProgram: String) -> Bool {
-        let bundleIDs: [String: String] = [
-            "iTerm.app": "com.googlecode.iterm2",
-            "Apple_Terminal": "com.apple.Terminal",
-            "WarpTerminal": "dev.warp.Warp-Stable",
-            "vscode": "com.microsoft.VSCode",
-        ]
-
-        guard let bundleID = bundleIDs[termProgram],
-              let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else {
+        guard let term = TerminalApp.match(termProgram: termProgram),
+              let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
             return false
         }
-
         app.activate()
         return true
     }
