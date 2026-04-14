@@ -15,7 +15,10 @@ public final class NotesManager {
 
     private let storage: NoteStorage
     private let logger: Logger?
-    private var saveWorkItems: [UUID: DispatchWorkItem] = [:]
+    private var saveTasks: [UUID: Task<Void, Never>] = [:]
+
+    /// Debounce interval for auto-save.
+    private static let saveDebounce: Duration = .seconds(1)
 
     // MARK: - Initialization
 
@@ -91,37 +94,36 @@ public final class NotesManager {
 
     // MARK: - Debounced Save
 
+    /// Schedules a save after `saveDebounce`. Subsequent calls for the same
+    /// note ID cancel the pending task and reschedule.
     private func scheduleSave(_ note: Note) {
-        saveWorkItems[note.id]?.cancel()
         let noteID = note.id
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            Task { @MainActor in
-                self.saveWorkItems.removeValue(forKey: noteID)
-                guard let current = self.notes.first(where: { $0.id == noteID }) else { return }
-                do {
-                    try self.storage.updateNote(current)
-                } catch {
-                    self.logger?.error("Auto-save failed: \(error.localizedDescription, privacy: .public)")
-                }
+        saveTasks[noteID]?.cancel()
+        saveTasks[noteID] = Task { [weak self] in
+            try? await Task.sleep(for: Self.saveDebounce)
+            guard !Task.isCancelled, let self else { return }
+            self.saveTasks.removeValue(forKey: noteID)
+            guard let current = self.notes.first(where: { $0.id == noteID }) else { return }
+            do {
+                try self.storage.updateNote(current)
+            } catch {
+                self.logger?.error("Auto-save failed: \(error.localizedDescription, privacy: .public)")
             }
         }
-        saveWorkItems[noteID] = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
     }
 
     /// Immediately persists any pending debounced saves. Call before app termination.
     public func flushPendingSaves() {
-        for (noteID, workItem) in saveWorkItems {
-            workItem.cancel()
-            if let note = notes.first(where: { $0.id == noteID }) {
-                do {
-                    try storage.updateNote(note)
-                } catch {
-                    logger?.error("Flush save failed: \(error.localizedDescription, privacy: .public)")
-                }
+        let pending = saveTasks
+        saveTasks.removeAll()
+        for (noteID, task) in pending {
+            task.cancel()
+            guard let note = notes.first(where: { $0.id == noteID }) else { continue }
+            do {
+                try storage.updateNote(note)
+            } catch {
+                logger?.error("Flush save failed: \(error.localizedDescription, privacy: .public)")
             }
         }
-        saveWorkItems.removeAll()
     }
 }
