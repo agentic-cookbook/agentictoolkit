@@ -5,9 +5,7 @@ import AppKit
 /// The app provides a list of `SettingsTopic` value objects and a closure that
 /// maps each topic to its detail pane (matched by the topic's `id`).
 @MainActor
-public final class SettingsView: NSView,
-    NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate
-{
+public final class SettingsView: NSView {
     private let topics: [SettingsTopic]
     private let paneBuilder: (SettingsTopic) -> NSView
     private var selectedTopic: SettingsTopic
@@ -147,11 +145,13 @@ public final class SettingsView: NSView,
         selectTopic(topic)
     }
 
-    // MARK: - NSTableViewDataSource
+}
+
+// MARK: - Sidebar Table
+
+extension SettingsView: NSTableViewDataSource, NSTableViewDelegate {
 
     public func numberOfRows(in tableView: NSTableView) -> Int { topics.count }
-
-    // MARK: - NSTableViewDelegate
 
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard row >= 0, row < topics.count else { return nil }
@@ -191,8 +191,11 @@ public final class SettingsView: NSView,
         guard row >= 0, row < topics.count else { return }
         selectTopic(topics[row])
     }
+}
 
-    // MARK: - NSSplitViewDelegate
+// MARK: - Split View
+
+extension SettingsView: NSSplitViewDelegate {
 
     public func splitView(_ splitView: NSSplitView, canCollapseSubview subview: NSView) -> Bool { false }
 
