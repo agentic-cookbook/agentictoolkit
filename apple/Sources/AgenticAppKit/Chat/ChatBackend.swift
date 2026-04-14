@@ -32,6 +32,15 @@ public protocol ChatBackend: AnyObject, Sendable {
     /// provider is configured or credentials are missing).
     var isReady: Bool { get async }
 
+    /// An async stream of `isReady` values. Yields the current value first,
+    /// then a new value whenever readiness changes (e.g. credentials arrive,
+    /// network state changes, the user picks a different provider).
+    ///
+    /// The stream ends when the backend is deinitialized or the consumer
+    /// cancels the iterating task. Backends that never change readiness may
+    /// yield the initial value once and finish.
+    var isReadyChanges: AsyncStream<Bool> { get }
+
     /// Streams an assistant response for the given conversation.
     ///
     /// - Parameter messages: The full conversation so far, user/assistant turns
