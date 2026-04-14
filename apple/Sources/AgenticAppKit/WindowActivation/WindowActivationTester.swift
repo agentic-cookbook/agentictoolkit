@@ -2,50 +2,48 @@ import AppKit
 import ApplicationServices
 
 /// Diagnostic harness that attempts to activate a list of target windows using
-/// a cascade of strategies (iTerm2 TTY matching, AX title matching, bring-app-to-front)
-/// and logs detailed results. Intended for developer/QA use to diagnose why
-/// a specific terminal window won't come to the front.
+/// a cascade of `WindowActivationStrategy` implementations and logs detailed
+/// results. Intended for developer/QA use to diagnose why a specific terminal
+/// window won't come to the front.
 ///
-/// Not tied to any particular app or data source — callers build `WindowActivationTarget`
-/// values from whatever they have (SQLite sessions, file paths, running processes).
+/// Not tied to any particular app or data source — callers build
+/// `WindowActivationTarget` values from whatever they have (SQLite sessions,
+/// file paths, running processes).
 public final class WindowActivationTester {
 
     private let targets: [WindowActivationTarget]
+    private let strategies: [WindowActivationStrategy]
     private let log: ActivationTestLog
 
-    public init(targets: [WindowActivationTarget], log: ActivationTestLog) {
+    /// Default cascade: iTerm-by-TTY → AX-title-match → bring-terminal-to-front.
+    public static let defaultStrategies: [WindowActivationStrategy] = [
+        ITermTTYStrategy(),
+        AXTitleMatchStrategy(),
+        BringTerminalToFrontStrategy(),
+    ]
+
+    public init(
+        targets: [WindowActivationTarget],
+        log: ActivationTestLog,
+        strategies: [WindowActivationStrategy] = WindowActivationTester.defaultStrategies
+    ) {
         self.targets = targets
         self.log = log
+        self.strategies = strategies
     }
 
     // MARK: - Known Terminals
 
-    /// A known terminal app the tester can enumerate and activate.
-    /// Centralizes the mapping between `$TERM_PROGRAM` values and macOS bundle IDs.
+    /// Terminal apps the harness enumerates for diagnostic context.
     private struct TerminalApp {
         let displayName: String
         let bundleID: String
-        /// The values of `$TERM_PROGRAM` that identify this terminal (may be multiple).
-        let termProgramValues: [String]
-
         static let allKnown: [TerminalApp] = [
-            TerminalApp(displayName: "iTerm2",
-                        bundleID: "com.googlecode.iterm2",
-                        termProgramValues: ["iTerm.app"]),
-            TerminalApp(displayName: "Terminal.app",
-                        bundleID: "com.apple.Terminal",
-                        termProgramValues: ["Apple_Terminal"]),
-            TerminalApp(displayName: "Warp",
-                        bundleID: "dev.warp.Warp-Stable",
-                        termProgramValues: ["WarpTerminal"]),
-            TerminalApp(displayName: "VS Code",
-                        bundleID: "com.microsoft.VSCode",
-                        termProgramValues: ["vscode"]),
+            TerminalApp(displayName: "iTerm2",       bundleID: "com.googlecode.iterm2"),
+            TerminalApp(displayName: "Terminal.app", bundleID: "com.apple.Terminal"),
+            TerminalApp(displayName: "Warp",         bundleID: "dev.warp.Warp-Stable"),
+            TerminalApp(displayName: "VS Code",      bundleID: "com.microsoft.VSCode"),
         ]
-
-        static func match(termProgram: String) -> TerminalApp? {
-            allKnown.first { $0.termProgramValues.contains(termProgram) }
-        }
     }
 
     // MARK: - Run
@@ -64,6 +62,7 @@ public final class WindowActivationTester {
         }
 
         log.append("Targets: \(targets.count)")
+        log.append("Strategies: \(strategies.map(\.name).joined(separator: ", "))")
         log.append("")
 
         enumerateTerminalWindows()
@@ -122,10 +121,13 @@ public final class WindowActivationTester {
             return output
         end tell
         """
-        if let result = runAppleScript(script) {
-            log.append(result)
-        } else {
-            log.append("  (AppleScript failed)")
+        switch AppleScriptRunner.run(script) {
+        case .success(let value):
+            log.append(value ?? "  (no output)")
+        case .compileFailed:
+            log.append("  (AppleScript compile failed)")
+        case .runtimeFailed(let message, let number):
+            log.append("  (AppleScript failed: \(message), error \(number))")
         }
     }
 
@@ -155,30 +157,13 @@ public final class WindowActivationTester {
         log.append("  pid: \(target.pid)")
         log.append("  termProgram: \(target.termProgram)")
 
-        let tty = ttyForPid(target.pid)
-        log.append("  tty: \(tty ?? "UNKNOWN")")
-
-        let termApp = target.termProgram.isEmpty ? "unknown" : target.termProgram
         var activated = false
-
-        // Strategy A: iTerm2 — use AppleScript to select by TTY
-        if termApp == "iTerm.app" || termApp == "unknown" {
-            if let tty = tty {
-                activated = activateITermByTTY(tty: tty)
-                log.append("  Strategy A (iTerm TTY): \(activated ? "SUCCESS" : "FAILED")")
-            }
-        }
-
-        // Strategy B: AX matching by window title containing project name or cwd
-        if !activated {
-            activated = activateByAXTitleMatch(target: target)
-            log.append("  Strategy B (AX title match): \(activated ? "SUCCESS" : "FAILED")")
-        }
-
-        // Strategy C: Just bring the terminal app to front
-        if !activated {
-            activated = activateTerminalApp(termProgram: termApp)
-            log.append("  Strategy C (bring app to front): \(activated ? "SUCCESS" : "FAILED")")
+        for strategy in strategies {
+            guard !activated else { break }
+            guard strategy.appliesTo(target) else { continue }
+            let success = strategy.activate(target, log: log)
+            log.append("  Strategy \(strategy.name): \(success ? "SUCCESS" : "FAILED")")
+            if success { activated = true }
         }
 
         // Verify
@@ -191,109 +176,7 @@ public final class WindowActivationTester {
         return verified
     }
 
-    // MARK: - Strategy A: iTerm2 TTY Matching
-
-    private func activateITermByTTY(tty: String) -> Bool {
-        let devTTY = tty.hasPrefix("/dev/") ? tty : "/dev/\(tty)"
-
-        let script = """
-        tell application "iTerm2"
-            repeat with w in windows
-                repeat with t in tabs of w
-                    set s to current session of t
-                    if tty of s is "\(devTTY)" then
-                        select t
-                        activate
-                        return "found"
-                    end if
-                end repeat
-            end repeat
-            return "not_found"
-        end tell
-        """
-
-        guard let result = runAppleScript(script) else {
-            log.append("  iTerm TTY script failed")
-            return false
-        }
-
-        if result.trimmingCharacters(in: .whitespacesAndNewlines) == "found" {
-            return true
-        }
-
-        log.append("  TTY \(devTTY) not directly found in iTerm, trying parent lookup")
-        return false
-    }
-
-    // MARK: - Strategy B: AX Title Match
-
-    private func activateByAXTitleMatch(target: WindowActivationTarget) -> Bool {
-        let projectName = target.projectName
-        let cwdLast = (target.cwd as NSString).lastPathComponent
-
-        guard projectName != "Unknown" else { return false }
-
-        for app in NSWorkspace.shared.runningApplications {
-            guard app.activationPolicy == .regular else { continue }
-            let axApp = AXUIElementCreateApplication(app.processIdentifier)
-            var windowsRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
-                  let windows = windowsRef as? [AXUIElement] else { continue }
-
-            for window in windows {
-                var titleRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
-                guard let title = titleRef as? String, !title.isEmpty else { continue }
-
-                let matches = title.localizedCaseInsensitiveContains(projectName)
-                    || title.localizedCaseInsensitiveContains(cwdLast)
-                    || title.localizedCaseInsensitiveContains(target.cwd)
-
-                if matches {
-                    log.append("  AX match: \"\(title)\" in \(app.localizedName ?? "?")")
-                    app.activate()
-                    Thread.sleep(forTimeInterval: 0.15)
-                    AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-                    AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, true as CFTypeRef)
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    // MARK: - Strategy C: Bring App to Front
-
-    private func activateTerminalApp(termProgram: String) -> Bool {
-        guard let term = TerminalApp.match(termProgram: termProgram),
-              let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
-            return false
-        }
-        app.activate()
-        return true
-    }
-
     // MARK: - Helpers
-
-    private func ttyForPid(_ pid: Int32) -> String? {
-        guard pid > 0 else { return nil }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-p", "\(pid)", "-o", "tty="]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let tty = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return tty.isEmpty ? nil : tty
-        } catch {
-            return nil
-        }
-    }
 
     private func frontmostWindowTitle() -> String {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return "" }
@@ -309,18 +192,5 @@ public final class WindowActivationTester {
         var titleRef: CFTypeRef?
         AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &titleRef)
         return (titleRef as? String) ?? ""
-    }
-
-    private func runAppleScript(_ source: String) -> String? {
-        switch AppleScriptRunner.run(source) {
-        case .success(let value):
-            return value
-        case .compileFailed:
-            log.append("  AppleScript compile failed (malformed source)")
-            return nil
-        case .runtimeFailed(let message, let number):
-            log.append("  AppleScript failed: \(message) (error \(number))")
-            return nil
-        }
     }
 }
