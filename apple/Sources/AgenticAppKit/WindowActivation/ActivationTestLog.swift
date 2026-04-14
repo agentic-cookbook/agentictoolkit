@@ -67,9 +67,14 @@ public final class ActivationTestLog {
         }
     }
 
-    /// The current log contents joined by newlines.
+    /// The current log contents: each entry followed by a trailing newline, to
+    /// match the on-disk file format exactly (`text` and the file contents are
+    /// byte-identical when both have seen the same append sequence).
     public var text: String {
-        queue.sync { _entries.joined(separator: "\n") }
+        queue.sync {
+            guard !_entries.isEmpty else { return "" }
+            return _entries.map { $0 + "\n" }.joined()
+        }
     }
 
     /// The on-disk path to the log file, or nil if this log is in-memory only.

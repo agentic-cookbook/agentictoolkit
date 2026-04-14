@@ -63,7 +63,18 @@ open class SingleWindowController: NSObject, NSWindowDelegate {
 
         let contentView = contentViewProvider()
         contentView.translatesAutoresizingMaskIntoConstraints = false
-        let container = newWindow.contentView!
+
+        // NSWindow created via init(contentRect:...) always has a contentView,
+        // but the property is typed optional. Install one explicitly if it
+        // somehow isn't there rather than crashing.
+        let container: NSView
+        if let existing = newWindow.contentView {
+            container = existing
+        } else {
+            let fresh = NSView()
+            newWindow.contentView = fresh
+            container = fresh
+        }
         container.addSubview(contentView)
         NSLayoutConstraint.activate([
             contentView.topAnchor.constraint(equalTo: container.topAnchor),

@@ -111,28 +111,22 @@ public struct BringTerminalToFrontStrategy: WindowActivationStrategy {
 
     public let name = "bring terminal to front"
 
-    /// Mapping from `$TERM_PROGRAM` value to bundle ID. Defaults to the same
-    /// terminals `WindowActivationTester` enumerates.
-    private let termProgramToBundleID: [String: String]
+    /// Catalog used to match `termProgram` → bundle ID. Defaults to
+    /// `KnownTerminals.all`; pass a custom catalog to support additional
+    /// terminals without patching the toolkit.
+    private let catalog: [KnownTerminal]
 
-    public init(termProgramToBundleID: [String: String] = Self.defaultMapping) {
-        self.termProgramToBundleID = termProgramToBundleID
+    public init(catalog: [KnownTerminal] = KnownTerminals.all) {
+        self.catalog = catalog
     }
 
-    public static let defaultMapping: [String: String] = [
-        "iTerm.app": "com.googlecode.iterm2",
-        "Apple_Terminal": "com.apple.Terminal",
-        "WarpTerminal": "dev.warp.Warp-Stable",
-        "vscode": "com.microsoft.VSCode",
-    ]
-
     public func appliesTo(_ target: WindowActivationTarget) -> Bool {
-        termProgramToBundleID[target.termProgram] != nil
+        KnownTerminals.match(termProgram: target.termProgram, in: catalog) != nil
     }
 
     public func activate(_ target: WindowActivationTarget, log: ActivationTestLog) -> Bool {
-        guard let bundleID = termProgramToBundleID[target.termProgram],
-              let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else {
+        guard let term = KnownTerminals.match(termProgram: target.termProgram, in: catalog),
+              let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
             return false
         }
         app.activate()

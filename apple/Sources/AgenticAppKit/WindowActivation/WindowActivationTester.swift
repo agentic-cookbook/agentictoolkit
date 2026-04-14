@@ -32,20 +32,6 @@ public final class WindowActivationTester {
         self.strategies = strategies
     }
 
-    // MARK: - Known Terminals
-
-    /// Terminal apps the harness enumerates for diagnostic context.
-    private struct TerminalApp {
-        let displayName: String
-        let bundleID: String
-        static let allKnown: [TerminalApp] = [
-            TerminalApp(displayName: "iTerm2",       bundleID: "com.googlecode.iterm2"),
-            TerminalApp(displayName: "Terminal.app", bundleID: "com.apple.Terminal"),
-            TerminalApp(displayName: "Warp",         bundleID: "dev.warp.Warp-Stable"),
-            TerminalApp(displayName: "VS Code",      bundleID: "com.microsoft.VSCode"),
-        ]
-    }
-
     // MARK: - Run
 
     /// Runs activation tests against every target. Call from a background thread.
@@ -90,7 +76,7 @@ public final class WindowActivationTester {
 
     private func enumerateTerminalWindows() {
         log.append("--- Terminal Window Inventory ---")
-        for term in TerminalApp.allKnown {
+        for term in KnownTerminals.all {
             guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
                 log.append("\(term.displayName): not running")
                 continue
@@ -159,8 +145,14 @@ public final class WindowActivationTester {
 
         var activated = false
         for strategy in strategies {
-            guard !activated else { break }
-            guard strategy.appliesTo(target) else { continue }
+            guard !activated else {
+                log.append("  Strategy \(strategy.name): skipped (already activated)")
+                continue
+            }
+            guard strategy.appliesTo(target) else {
+                log.append("  Strategy \(strategy.name): skipped (not applicable)")
+                continue
+            }
             let success = strategy.activate(target, log: log)
             log.append("  Strategy \(strategy.name): \(success ? "SUCCESS" : "FAILED")")
             if success { activated = true }
