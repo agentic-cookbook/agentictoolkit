@@ -300,18 +300,28 @@ public final class WindowActivationTester {
         let axApp = AXUIElementCreateApplication(frontApp.processIdentifier)
         var windowRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRef) == .success,
-              let window = windowRef else { return "" }
+              let window = windowRef,
+              CFGetTypeID(window) == AXUIElementGetTypeID() else { return "" }
 
+        let axWindow = window as! AXUIElement  // Safe: verified via CFGetTypeID check above.
         var titleRef: CFTypeRef?
-        AXUIElementCopyAttributeValue(window as! AXUIElement, kAXTitleAttribute as CFString, &titleRef)
+        AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &titleRef)
         return (titleRef as? String) ?? ""
     }
 
     private func runAppleScript(_ source: String) -> String? {
+        guard let script = NSAppleScript(source: source) else {
+            log.append("  AppleScript compile failed (malformed source)")
+            return nil
+        }
         var error: NSDictionary?
-        guard let script = NSAppleScript(source: source) else { return nil }
         let result = script.executeAndReturnError(&error)
-        if error != nil { return nil }
+        if let error {
+            let message = error[NSAppleScript.errorMessage] as? String ?? "unknown error"
+            let number = error[NSAppleScript.errorNumber] as? Int ?? 0
+            log.append("  AppleScript failed: \(message) (error \(number))")
+            return nil
+        }
         return result.stringValue
     }
 }

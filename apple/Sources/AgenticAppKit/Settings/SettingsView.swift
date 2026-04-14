@@ -31,14 +31,16 @@ public final class SettingsView<Topic: SettingsTopic>: NSView,
     /// Creates a settings view.
     ///
     /// - Parameters:
-    ///   - topics: The ordered list of sidebar topics.
+    ///   - topics: The ordered list of sidebar topics. Must not be empty.
     ///   - initialTopic: The topic to select on first display. Defaults to the first topic.
     ///   - paneBuilder: A closure that returns the detail pane for a given topic.
+    /// - Precondition: `topics` must contain at least one element.
     public init(
         topics: [Topic],
         initialTopic: Topic? = nil,
         paneBuilder: @escaping (Topic) -> NSView
     ) {
+        precondition(!topics.isEmpty, "SettingsView requires at least one topic")
         self.topics = topics
         self.paneBuilder = paneBuilder
         self.selectedTopic = initialTopic ?? topics[0]
