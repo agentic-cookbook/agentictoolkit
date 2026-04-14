@@ -32,14 +32,16 @@ public protocol ChatBackend: AnyObject, Sendable {
     /// provider is configured or credentials are missing).
     var isReady: Bool { get async }
 
-    /// An async stream of `isReady` values. Yields the current value first,
-    /// then a new value whenever readiness changes (e.g. credentials arrive,
-    /// network state changes, the user picks a different provider).
+    /// Returns a fresh async stream of `isReady` values. Each call produces an
+    /// independent stream, so multiple consumers can observe readiness
+    /// concurrently. Each stream yields the current value first, then a new
+    /// value whenever readiness changes (credentials arrive, network state
+    /// changes, the user picks a different provider).
     ///
-    /// The stream ends when the backend is deinitialized or the consumer
-    /// cancels the iterating task. Backends that never change readiness may
-    /// yield the initial value once and finish.
-    var isReadyChanges: AsyncStream<Bool> { get }
+    /// A stream ends when its consumer cancels the iterating task or when the
+    /// backend is deinitialized. Backends that never change readiness may
+    /// yield the initial value once and finish immediately.
+    func isReadyChanges() -> AsyncStream<Bool>
 
     /// Streams an assistant response for the given conversation.
     ///
