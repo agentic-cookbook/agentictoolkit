@@ -14,6 +14,7 @@ public final class WindowActivationTester {
     private let targets: [WindowActivationTarget]
     private let strategies: [WindowActivationStrategy]
     private let log: ActivationTestLog
+    private let runningApps: RunningAppsProvider
 
     /// Default cascade: iTerm-by-TTY → AX-title-match → bring-terminal-to-front.
     public static let defaultStrategies: [WindowActivationStrategy] = [
@@ -25,11 +26,13 @@ public final class WindowActivationTester {
     public init(
         targets: [WindowActivationTarget],
         log: ActivationTestLog,
-        strategies: [WindowActivationStrategy] = WindowActivationTester.defaultStrategies
+        strategies: [WindowActivationStrategy] = WindowActivationTester.defaultStrategies,
+        runningApps: RunningAppsProvider = RealRunningAppsProvider()
     ) {
         self.targets = targets
         self.log = log
         self.strategies = strategies
+        self.runningApps = runningApps
     }
 
     // MARK: - Run
@@ -77,7 +80,7 @@ public final class WindowActivationTester {
     private func enumerateTerminalWindows() {
         log.append("--- Terminal Window Inventory ---")
         for term in KnownTerminals.all {
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
+            guard let app = runningApps.runningApplications(withBundleIdentifier: term.bundleID).first else {
                 log.append("\(term.displayName): not running")
                 continue
             }
@@ -171,7 +174,7 @@ public final class WindowActivationTester {
     // MARK: - Helpers
 
     private func frontmostWindowTitle() -> String {
-        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return "" }
+        guard let frontApp = runningApps.frontmostApplication else { return "" }
         if frontApp.bundleIdentifier == Bundle.main.bundleIdentifier { return "Sessions" }
 
         let axApp = AXUIElementCreateApplication(frontApp.processIdentifier)

@@ -63,7 +63,11 @@ public struct AXTitleMatchStrategy: WindowActivationStrategy {
 
     public let name = "AX title match"
 
-    public init() {}
+    private let runningApps: RunningAppsProvider
+
+    public init(runningApps: RunningAppsProvider = RealRunningAppsProvider()) {
+        self.runningApps = runningApps
+    }
 
     public func appliesTo(_ target: WindowActivationTarget) -> Bool {
         target.projectName != "Unknown"
@@ -73,7 +77,7 @@ public struct AXTitleMatchStrategy: WindowActivationStrategy {
         let projectName = target.projectName
         let cwdLast = (target.cwd as NSString).lastPathComponent
 
-        for app in NSWorkspace.shared.runningApplications {
+        for app in runningApps.runningApplications {
             guard app.activationPolicy == .regular else { continue }
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
             var windowsRef: CFTypeRef?
@@ -115,9 +119,14 @@ public struct BringTerminalToFrontStrategy: WindowActivationStrategy {
     /// `KnownTerminals.all`; pass a custom catalog to support additional
     /// terminals without patching the toolkit.
     private let catalog: [KnownTerminal]
+    private let runningApps: RunningAppsProvider
 
-    public init(catalog: [KnownTerminal] = KnownTerminals.all) {
+    public init(
+        catalog: [KnownTerminal] = KnownTerminals.all,
+        runningApps: RunningAppsProvider = RealRunningAppsProvider()
+    ) {
         self.catalog = catalog
+        self.runningApps = runningApps
     }
 
     public func appliesTo(_ target: WindowActivationTarget) -> Bool {
@@ -126,7 +135,7 @@ public struct BringTerminalToFrontStrategy: WindowActivationStrategy {
 
     public func activate(_ target: WindowActivationTarget, log: ActivationTestLog) -> Bool {
         guard let term = KnownTerminals.match(termProgram: target.termProgram, in: catalog),
-              let app = NSRunningApplication.runningApplications(withBundleIdentifier: term.bundleID).first else {
+              let app = runningApps.runningApplications(withBundleIdentifier: term.bundleID).first else {
             return false
         }
         app.activate()
