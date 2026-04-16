@@ -13,3 +13,6 @@ DerivedData/
 
 # graphify output (generated)
 graphify-out/
+
+# Claude Code scheduled tasks runtime lock
+.claude/scheduled_tasks.lock
