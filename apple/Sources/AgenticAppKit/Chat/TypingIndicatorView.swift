@@ -12,6 +12,7 @@ final class TypingIndicatorView: NSView {
         return dot
     }
     private var timer: Timer?
+    private var step: Int = 0
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -49,18 +50,23 @@ final class TypingIndicatorView: NSView {
 
     func startAnimating() {
         for dot in dots { dot.alphaValue = 0.3 }
-        var step = 0
+        step = 0
         timer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            let active = step % 3
-            for (i, dot) in self.dots.enumerated() {
-                NSAnimationContext.runAnimationGroup { ctx in
-                    ctx.duration = 0.2
-                    dot.animator().alphaValue = (i == active) ? 1.0 : 0.3
-                }
+            MainActor.assumeIsolated {
+                self?.tick()
             }
-            step += 1
         }
+    }
+
+    private func tick() {
+        let active = step % 3
+        for (i, dot) in dots.enumerated() {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.2
+                dot.animator().alphaValue = (i == active) ? 1.0 : 0.3
+            }
+        }
+        step += 1
     }
 
     override func removeFromSuperview() {
