@@ -1,19 +1,36 @@
 import AppKit
 import os
 
-/// Manages the Notes window lifecycle using SingleWindowController.
-/// Hosts a NotesSplitViewController with list + editor panes.
+/// Manages the Notes window lifecycle. Hosts a `NotesSplitViewController`
+/// with list + editor panes.
 @MainActor
-public final class NotesWindowController {
+public final class NotesWindowController: SingleWindowController {
 
     private let notesManager: NotesManager
-    private var splitVC: NotesSplitViewController?
-    private var windowController: SingleWindowController?
     private let logger: Logger?
+    private var splitVC: NotesSplitViewController?
 
     public init(notesManager: NotesManager, logger: Logger? = nil) {
         self.notesManager = notesManager
         self.logger = logger
+        super.init(windowID: "notes")
+    }
+
+    public override var windowTitle: String { "Notes" }
+    public override var defaultContentRect: NSRect {
+        NSRect(x: 0, y: 0, width: 700, height: 500)
+    }
+    public override var windowStyleMask: NSWindow.StyleMask {
+        [.titled, .closable, .miniaturizable, .resizable]
+    }
+    public override var minSize: NSSize? {
+        NSSize(width: 480, height: 300)
+    }
+
+    public override func makeContentViewController() -> NSViewController? {
+        let svc = NotesSplitViewController(notesManager: notesManager)
+        splitVC = svc
+        return svc
     }
 
     /// Shows (or brings forward) the notes window, loading notes if needed.
@@ -24,32 +41,7 @@ public final class NotesWindowController {
                 splitVC?.reload()
             }
         }
-
-        if let wc = windowController {
-            wc.showWindow()
-            return
-        }
-
-        let svc = NotesSplitViewController(notesManager: notesManager)
-        self.splitVC = svc
-
-        let wc = SingleWindowController(
-            windowID: "notes",
-            title: "Notes",
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable]
-        ) {
-            svc.view
-        }
-
-        self.windowController = wc
-        wc.showWindow()
-        wc.window?.contentViewController = svc
-        wc.window?.minSize = NSSize(width: 480, height: 300)
+        showWindow()
         logger?.debug("Notes window shown")
-    }
-
-    public var isVisible: Bool {
-        windowController?.isVisible ?? false
     }
 }
