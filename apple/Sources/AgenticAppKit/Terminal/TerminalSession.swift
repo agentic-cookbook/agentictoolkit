@@ -1,0 +1,309 @@
+import AppKit
+import Combine
+import Foundation
+import SwiftTerm
+import os
+
+private let kMaxProcPathSize: Int32 = 4096
+
+private let terminalLog = Logger(subsystem: "com.agentictoolkit.AgenticAppKit", category: "Terminal")
+
+public enum TerminalSessionState: Sendable {
+    case running
+    case terminated
+}
+
+/// Manages a single terminal session backed by a shell process via PTY.
+@MainActor
+public final class TerminalSession: ObservableObject, Identifiable {
+    public let id = UUID()
+
+    @Published public var name: String
+    @Published public var title: String?
+    @Published public var currentDirectory: String?
+    @Published public var gitBranch: String?
+    @Published public var foregroundProcess: String?
+    @Published public var dotColor: NSColor = .green
+    @Published public var customSubtitles: [TerminalSubtitle] = []
+    @Published public var summary: String?
+    @Published public var state: TerminalSessionState = .running
+
+    public var displayTitle: String {
+        if let title { return title }
+        if let dir = currentDirectory {
+            let home = FileManager.default.homeDirectoryForCurrentUser.path
+            let folder = dir == home ? "~" : (dir as NSString).lastPathComponent
+            if let branch = gitBranch {
+                return "\(folder): \(branch)"
+            }
+            return folder
+        }
+        return name
+    }
+
+    public var tildeAbbreviatedDirectory: String? {
+        guard let dir = currentDirectory else { return nil }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if dir == home { return "~" }
+        if dir.hasPrefix(home + "/") { return "~" + dir.dropFirst(home.count) }
+        return dir
+    }
+
+    public func recentScrollbackText(lineCount: Int = 200) -> String {
+        let terminal = terminalView.getTerminal()
+        let data = terminal.getBufferAsData()
+        guard let fullText = String(data: data, encoding: .utf8) else { return "" }
+
+        let allLines = fullText.components(separatedBy: "\n")
+        let nonEmpty = allLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        let recentLines = nonEmpty.suffix(lineCount)
+
+        var result: [String] = []
+        var charCount = 0
+        let charBudget = 20_000
+
+        for line in recentLines {
+            charCount += line.count
+            if charCount > charBudget { break }
+            result.append(line)
+        }
+
+        return result.joined(separator: "\n")
+    }
+
+    public private(set) lazy var terminalView: LocalProcessTerminalView = {
+        let view = LocalProcessTerminalView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        view.processDelegate = processHandler
+        startShellProcess(in: view)
+        return view
+    }()
+
+    private let processHandler: ProcessHandler
+    private var gitBranchRequestID: UUID?
+    private var processPollingTimer: Timer?
+    private let workingDirectory: String?
+
+    public init(name: String, workingDirectory: String? = nil) {
+        self.name = name
+        self.workingDirectory = workingDirectory
+        self.processHandler = ProcessHandler()
+        self.processHandler.session = self
+    }
+
+    private func startShellProcess(in view: LocalProcessTerminalView) {
+        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        let startDir = workingDirectory ?? FileManager.default.homeDirectoryForCurrentUser.path
+        terminalLog.info("Starting shell '\(shell, privacy: .public)' for session '\(self.name)' in \(startDir, privacy: .public)")
+
+        var env = Terminal.getEnvironmentVariables(termName: "xterm-256color")
+        let processEnv = ProcessInfo.processInfo.environment
+        let keysToInclude = ["HOME", "USER", "LOGNAME", "PATH", "LANG", "LC_ALL", "LC_CTYPE"]
+        for key in keysToInclude {
+            if let value = processEnv[key] {
+                if let index = env.firstIndex(where: { $0.hasPrefix("\(key)=") }) {
+                    env[index] = "\(key)=\(value)"
+                } else {
+                    env.append("\(key)=\(value)")
+                }
+            }
+        }
+
+        let shellName = (shell as NSString).lastPathComponent
+        view.startProcess(
+            executable: shell,
+            args: [],
+            environment: env,
+            execName: "-\(shellName)",
+            currentDirectory: startDir
+        )
+
+        view.getTerminal().registerOscHandler(code: 7770) { [weak self] data in
+            guard let payload = String(bytes: data, encoding: .utf8) else { return }
+            DispatchQueue.main.async {
+                self?.handleOsc7770(payload: payload)
+            }
+        }
+
+        startProcessPolling()
+    }
+
+    private func handleOsc7770(payload: String) {
+        terminalLog.debug("OSC 7770 received: \(payload, privacy: .public)")
+        if payload.hasPrefix("color=") {
+            let hex = String(payload.dropFirst("color=".count))
+            if let color = NSColor(hex: hex) {
+                dotColor = color
+            }
+        } else if payload.hasPrefix("subtitle:") {
+            let rest = String(payload.dropFirst("subtitle:".count))
+            guard let equalsIndex = rest.firstIndex(of: "=") else { return }
+            let key = String(rest[rest.startIndex..<equalsIndex])
+            let value = String(rest[rest.index(after: equalsIndex)...])
+            guard !key.isEmpty else { return }
+            if let index = customSubtitles.firstIndex(where: { $0.key == key }) {
+                customSubtitles[index] = TerminalSubtitle(key: key, value: value)
+            } else {
+                customSubtitles.append(TerminalSubtitle(key: key, value: value))
+            }
+        } else if payload.hasPrefix("clear-subtitle:") {
+            let key = String(payload.dropFirst("clear-subtitle:".count))
+            customSubtitles.removeAll { $0.key == key }
+        } else if payload == "clear-all-subtitles" {
+            customSubtitles.removeAll()
+        }
+    }
+
+    private func startProcessPolling() {
+        processPollingTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.pollForegroundProcess()
+            }
+        }
+    }
+
+    private func pollForegroundProcess() {
+        guard state == .running else {
+            processPollingTimer?.invalidate()
+            processPollingTimer = nil
+            return
+        }
+
+        let fd = terminalView.process.childfd
+        guard fd >= 0 else { return }
+
+        let fgpid = tcgetpgrp(fd)
+        guard fgpid > 0 else { return }
+
+        let pathBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(kMaxProcPathSize))
+        defer { pathBuffer.deallocate() }
+
+        let pathLength = proc_pidpath(fgpid, pathBuffer, UInt32(kMaxProcPathSize))
+        guard pathLength > 0 else { return }
+
+        let fullPath = String(cString: pathBuffer)
+        let processName = (fullPath as NSString).lastPathComponent
+
+        if foregroundProcess != processName {
+            foregroundProcess = processName
+        }
+    }
+
+    public func detectGitBranch(for directory: String) {
+        let requestID = UUID()
+        gitBranchRequestID = requestID
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            process.arguments = ["rev-parse", "--abbrev-ref", "HEAD"]
+            process.currentDirectoryURL = URL(fileURLWithPath: directory)
+
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = Pipe()
+
+            do {
+                try process.run()
+            } catch {
+                DispatchQueue.main.async { [weak self] in
+                    MainActor.assumeIsolated {
+                        guard self?.gitBranchRequestID == requestID else { return }
+                        self?.gitBranch = nil
+                    }
+                }
+                return
+            }
+
+            let timeoutItem = DispatchWorkItem {
+                if process.isRunning { process.terminate() }
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 2, execute: timeoutItem)
+
+            process.waitUntilExit()
+            timeoutItem.cancel()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let branch = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let status = process.terminationStatus
+
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated {
+                    guard self?.gitBranchRequestID == requestID else { return }
+                    if status == 0, let branch = branch, !branch.isEmpty {
+                        self?.gitBranch = branch
+                    } else {
+                        self?.gitBranch = nil
+                    }
+                }
+            }
+        }
+    }
+
+    public func stopProcessPolling() {
+        processPollingTimer?.invalidate()
+        processPollingTimer = nil
+    }
+
+    public func terminateProcess() {
+        stopProcessPolling()
+        if state == .running {
+            terminalLog.info("Terminating shell process for session '\(self.name)'")
+            terminalView.terminate()
+        }
+    }
+}
+
+/// A key/value pair shown as a subtitle line on a terminal session cell.
+public struct TerminalSubtitle: Sendable, Equatable {
+    public let key: String
+    public let value: String
+
+    public init(key: String, value: String) {
+        self.key = key
+        self.value = value
+    }
+}
+
+// MARK: - Process Delegate Handler
+
+@MainActor
+private final class ProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
+    weak var session: TerminalSession?
+
+    nonisolated func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
+
+    nonisolated func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                self.session?.title = title
+            }
+        }
+    }
+
+    nonisolated func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
+        guard let directory = directory else { return }
+        let path: String
+        if let url = URL(string: directory), url.scheme == "file" {
+            path = url.path
+        } else {
+            path = directory
+        }
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                self.session?.currentDirectory = path
+                self.session?.detectGitBranch(for: path)
+            }
+        }
+    }
+
+    nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
+        let code = exitCode
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                terminalLog.info("Shell process terminated with exit code \(code.map { String($0) } ?? "nil")")
+                self.session?.stopProcessPolling()
+                self.session?.state = .terminated
+            }
+        }
+    }
+}
