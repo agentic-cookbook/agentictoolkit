@@ -1,26 +1,41 @@
 // swift-tools-version: 5.10
 import PackageDescription
 
-// SwiftPM wrapper that exposes AgenticFileBrowser (and its dependency
-// AgenticToolkit) as library products, so host apps whose Xcode projects
-// are not XcodeGen-managed can add this directory as a local SwiftPM
-// dependency. XcodeGen (project.yml) remains the canonical build for
-// in-repo development and testing.
+// SwiftPM wrapper exposing AgenticToolkit, AgenticAppKit, AgenticTerminalKit,
+// and AgenticFileBrowser as library products. XcodeGen (project.yml) remains
+// the canonical build for in-repo development and testing.
 let package = Package(
     name: "AgenticToolkitPackages",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "AgenticToolkit", targets: ["AgenticToolkit"]),
+        .library(name: "AgenticAppKit", targets: ["AgenticAppKit"]),
+        .library(name: "AgenticTerminalKit", targets: ["AgenticTerminalKit"]),
         .library(name: "AgenticFileBrowser", targets: ["AgenticFileBrowser"])
     ],
     dependencies: [
         .package(url: "https://github.com/CodeEditApp/CodeEditSourceEditor.git", from: "0.15.2"),
-        .package(url: "https://github.com/CodeEditApp/CodeEditLanguages.git", exact: "0.1.20")
+        .package(url: "https://github.com/CodeEditApp/CodeEditLanguages.git", exact: "0.1.20"),
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0")
     ],
     targets: [
         .target(
             name: "AgenticToolkit",
             path: "Sources/AgenticToolkit"
+        ),
+        .target(
+            name: "AgenticAppKit",
+            dependencies: ["AgenticToolkit"],
+            path: "Sources/AgenticAppKit"
+        ),
+        .target(
+            name: "AgenticTerminalKit",
+            dependencies: [
+                "AgenticToolkit",
+                "AgenticAppKit",
+                .product(name: "SwiftTerm", package: "SwiftTerm")
+            ],
+            path: "Sources/AgenticTerminalKit"
         ),
         .target(
             name: "AgenticFileBrowser",

@@ -8,7 +8,9 @@
 .build/
 .swiftpm/
 *.xcodeproj/xcuserdata/
+**/project.xcworkspace/xcshareddata/
 *.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
 DerivedData/
 
 # graphify output (generated)
