@@ -314,10 +314,10 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
     private var fileIconName: String {
         let ext = url.pathExtension.lowercased()
 
-        // Task B4 will restore this once CustomFileTypeMappings is moved.
-        // if !ext.isEmpty, let custom = CustomFileTypeMappings.mapping(for: ext) {
-        //     return custom.iconName
-        // }
+        // Check custom mappings first
+        if !ext.isEmpty, let custom = CustomFileTypeMappings.mapping(for: ext) {
+            return custom.iconName
+        }
 
         switch ext {
         case "swift":
