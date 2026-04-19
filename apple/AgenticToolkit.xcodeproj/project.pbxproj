@@ -98,6 +98,7 @@
 		D9E0714D587D911B2261D583 /* LogBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA23D30463E8A54C8AF596D /* LogBufferTests.swift */; };
 		DC82175C1FD7F30AE6E625C6 /* LogCellValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED59B8961D959EE4048CEDD /* LogCellValue.swift */; };
 		DC9F274FCDA28B0231F10B24 /* AgenticToolkit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1E274069423241BDF21B68 /* AgenticToolkit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		DD572F664FA13C627384A5E5 /* IDEDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB08FDD3A975EE0AFD8ED87 /* IDEDetector.swift */; };
 		E1DF90584D87E7F0405F51B7 /* LogColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAEB1B6D8EBED960085C753E /* LogColumn.swift */; };
 		E5B494CD18DF642DD003A46E /* AgenticToolkitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC3149EB0D18E027D03567C /* AgenticToolkitTests.swift */; };
 		E5F98557541B08521DACBB48 /* AgenticAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 12F5848358AE9AE3065E15DC /* AgenticAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -244,6 +245,7 @@
 		12F5848358AE9AE3065E15DC /* AgenticAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1943CC58A345A8FF26B3D813 /* QuickNoteWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteWindowController.swift; sourceTree = "<group>"; };
 		1A1E274069423241BDF21B68 /* AgenticToolkit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticToolkit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		1AB08FDD3A975EE0AFD8ED87 /* IDEDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IDEDetector.swift; sourceTree = "<group>"; };
 		1B859D4ACC6D7F3EA06CC4B7 /* RunningAppsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningAppsProvider.swift; sourceTree = "<group>"; };
 		1BC58E1E871BA397511AB5E7 /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		1DF8370EA2B642FA0519A119 /* FileTreeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeConfig.swift; sourceTree = "<group>"; };
@@ -469,6 +471,7 @@
 		26F7039BAE4F1282579B7A1C /* Detection */ = {
 			isa = PBXGroup;
 			children = (
+				1AB08FDD3A975EE0AFD8ED87 /* IDEDetector.swift */,
 				C3454EDA9CB205FE90DAAED4 /* LanguageDetection.swift */,
 			);
 			path = Detection;
@@ -944,6 +947,7 @@
 				0E9248F1B0A4D9D5ED5A972E /* FileTypesSettingsView.swift in Sources */,
 				3A05B3AC5AB1DFD27A0B9948 /* GitFileStatus.swift in Sources */,
 				8DDFC3A961AA130130BA5897 /* GitStatusProvider.swift in Sources */,
+				DD572F664FA13C627384A5E5 /* IDEDetector.swift in Sources */,
 				6F16A210DB7EEED85BF47FF7 /* LanguageDetection.swift in Sources */,
 				D7FC2232DC0AF5B8D61BE482 /* Log.swift in Sources */,
 			);
