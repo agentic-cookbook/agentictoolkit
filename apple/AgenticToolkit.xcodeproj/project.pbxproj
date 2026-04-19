@@ -37,6 +37,7 @@
 		5EE9E2D0BF6E24FB1BCE0EA1 /* LogViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18CB1565EDCB3159244023D /* LogViewTests.swift */; };
 		6693A51E14D9C858A82A0C3F /* WindowActivationStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C14219EDDCBE98560DB8C3 /* WindowActivationStrategy.swift */; };
 		67EA42A8E50AAF0F63785CB0 /* UserDefaultsWindowStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70FB3A1645E98CCA1AFA46C /* UserDefaultsWindowStateStorage.swift */; };
+		69FFB5756073AA2482AEBEEE /* FileTreeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF8370EA2B642FA0519A119 /* FileTreeConfig.swift */; };
 		6A59B4F014C62E87AF1EC9A1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E671E7A44A1E23822A5B2C16 /* SettingsView.swift */; };
 		6AAA868AC0C6F00F90801053 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE24C4B38B8C0A3E281D4A93 /* KeychainHelper.swift */; };
 		6FA90B84C0C608C908CD3F9F /* LogWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970238BF00792C3015AD174A /* LogWindowController.swift */; };
@@ -237,6 +238,7 @@
 		1A1E274069423241BDF21B68 /* AgenticToolkit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticToolkit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1B859D4ACC6D7F3EA06CC4B7 /* RunningAppsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningAppsProvider.swift; sourceTree = "<group>"; };
 		1BC58E1E871BA397511AB5E7 /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
+		1DF8370EA2B642FA0519A119 /* FileTreeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeConfig.swift; sourceTree = "<group>"; };
 		1F7B6CD7C9E98A81ACBF1F19 /* NotesListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesListViewController.swift; sourceTree = "<group>"; };
 		21A59F3FB15950F4014DE352 /* ChatWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWindowController.swift; sourceTree = "<group>"; };
 		2780C433AC4CC085AF9EDB76 /* SettingsPanelListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelListItem.swift; sourceTree = "<group>"; };
@@ -573,6 +575,7 @@
 		B72C3D512502FFC2AF96B690 /* AgenticFileBrowser */ = {
 			isa = PBXGroup;
 			children = (
+				E5E46E9D12295B553A3069FA /* Core */,
 				1B10E8ADB1B4B08CDE30CE2B /* Logging */,
 			);
 			path = AgenticFileBrowser;
@@ -643,6 +646,14 @@
 				AB4B2C4E904AB67229C93587 /* WindowStateStorage.swift */,
 			);
 			path = WindowManagement;
+			sourceTree = "<group>";
+		};
+		E5E46E9D12295B553A3069FA /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				1DF8370EA2B642FA0519A119 /* FileTreeConfig.swift */,
+			);
+			path = Core;
 			sourceTree = "<group>";
 		};
 		F24B901088C2D8372D9FB272 /* Scripting */ = {
@@ -876,6 +887,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69FFB5756073AA2482AEBEEE /* FileTreeConfig.swift in Sources */,
 				D7FC2232DC0AF5B8D61BE482 /* Log.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
