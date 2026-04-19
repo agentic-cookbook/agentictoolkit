@@ -16,6 +16,12 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
 
 packages:
+  CodeEditSourceEditor:
+    url: https://github.com/CodeEditApp/CodeEditSourceEditor.git
+    from: 0.15.2
+  CodeEditLanguages:
+    url: https://github.com/CodeEditApp/CodeEditLanguages.git
+    exactVersion: 0.1.20
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm
     from: "1.2.0"
@@ -84,6 +90,31 @@ targets:
       - target: AgenticUIKit
       - target: AgenticToolkit
 
+  # macOS — File browser subsystem extracted from Catnip IDE.
+  AgenticFileBrowser:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/AgenticFileBrowser
+    dependencies:
+      - target: AgenticToolkit
+      - package: CodeEditSourceEditor
+        product: CodeEditSourceEditor
+      - package: CodeEditLanguages
+        product: CodeEditLanguages
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticFileBrowser
+
+  AgenticFileBrowserTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/AgenticFileBrowserTests
+    dependencies:
+      - target: AgenticFileBrowser
+      - target: AgenticToolkit
+
 schemes:
   AgenticToolkit:
     build:
@@ -108,3 +139,11 @@ schemes:
     test:
       targets:
         - AgenticUIKitTests
+
+  AgenticFileBrowser:
+    build:
+      targets:
+        AgenticFileBrowser: all
+    test:
+      targets:
+        - AgenticFileBrowserTests
