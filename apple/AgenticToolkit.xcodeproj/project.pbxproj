@@ -13,6 +13,7 @@
 		047A3620EBB168EB9C7FB952 /* MockScreenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCB5E6D6D5CE5D2B9F04BA4 /* MockScreenProvider.swift */; };
 		0B5B23E77497D817F678AB29 /* SettingsTopic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFDA280FD664A21EF34EBD2D /* SettingsTopic.swift */; };
 		0E9248F1B0A4D9D5ED5A972E /* FileTypesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F72F839E9D39E77C8489D47 /* FileTypesSettingsView.swift */; };
+		1CE91CA72EA2DA927B3DF5FB /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFB2109CB1F52FBC571951C /* FileTreeView.swift */; };
 		1DA80E7A45E51614EB405680 /* PerIDWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4FCFAE6564C470BFB8A3A85 /* PerIDWindowControllerTests.swift */; };
 		20280453BCCD5A9B6BFB97BF /* MockScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921D9DAB9C3CEB74FD06DC0E /* MockScreen.swift */; };
 		210D8F156F1664A98A6FF0E8 /* AgenticToolkit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1E274069423241BDF21B68 /* AgenticToolkit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -299,6 +300,7 @@
 		A217AFB5A6940F0DB5CBEB38 /* SettingsPanelEditViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelEditViewController.swift; sourceTree = "<group>"; };
 		A3AB07C5710F64CAA4EE23F6 /* AgenticUIKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticUIKitTests.swift; sourceTree = "<group>"; };
 		AB4B2C4E904AB67229C93587 /* WindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowStateStorage.swift; sourceTree = "<group>"; };
+		ADFB2109CB1F52FBC571951C /* FileTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeView.swift; sourceTree = "<group>"; };
 		AE24C4B38B8C0A3E281D4A93 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		B18CB1565EDCB3159244023D /* LogViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewTests.swift; sourceTree = "<group>"; };
 		B4E07D8549E196D5635856CE /* AgenticFileBrowser.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticFileBrowser.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -480,6 +482,7 @@
 		298BAB38A352BB49070F4F11 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				ADFB2109CB1F52FBC571951C /* FileTreeView.swift */,
 				4F72F839E9D39E77C8489D47 /* FileTypesSettingsView.swift */,
 			);
 			path = Views;
@@ -944,6 +947,7 @@
 				305CBF846DFC8DC8980F445D /* FileTreeCache.swift in Sources */,
 				69FFB5756073AA2482AEBEEE /* FileTreeConfig.swift in Sources */,
 				5EECB7912262A5663774B426 /* FileTreeNode.swift in Sources */,
+				1CE91CA72EA2DA927B3DF5FB /* FileTreeView.swift in Sources */,
 				0E9248F1B0A4D9D5ED5A972E /* FileTypesSettingsView.swift in Sources */,
 				3A05B3AC5AB1DFD27A0B9948 /* GitFileStatus.swift in Sources */,
 				8DDFC3A961AA130130BA5897 /* GitStatusProvider.swift in Sources */,
