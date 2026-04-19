@@ -1,7 +1,8 @@
+import AgenticAppKit
 import AppKit
 import os
 
-private let windowLog = Logger(subsystem: "com.agentictoolkit.AgenticAppKit", category: "Terminal")
+private let windowLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "Terminal")
 
 /// Lifecycle callbacks for a `TerminalWindowController`. Apps own the
 /// lifecycle of terminal windows; the controller notifies the delegate

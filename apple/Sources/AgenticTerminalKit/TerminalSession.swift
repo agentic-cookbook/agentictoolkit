@@ -6,7 +6,7 @@ import os
 
 private let kMaxProcPathSize: Int32 = 4096
 
-private let terminalLog = Logger(subsystem: "com.agentictoolkit.AgenticAppKit", category: "Terminal")
+private let terminalLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "Terminal")
 
 public enum TerminalSessionState: Sendable {
     case running
