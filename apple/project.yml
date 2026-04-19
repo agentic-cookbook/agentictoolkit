@@ -19,6 +19,9 @@ packages:
   CodeEditSourceEditor:
     url: https://github.com/CodeEditApp/CodeEditSourceEditor.git
     from: 0.15.2
+  CodeEditLanguages:
+    url: https://github.com/CodeEditApp/CodeEditLanguages.git
+    exactVersion: 0.1.20
 
 targets:
 
@@ -93,7 +96,7 @@ targets:
       - target: AgenticToolkit
       - package: CodeEditSourceEditor
         product: CodeEditSourceEditor
-      - package: CodeEditSourceEditor
+      - package: CodeEditLanguages
         product: CodeEditLanguages
     settings:
       base:

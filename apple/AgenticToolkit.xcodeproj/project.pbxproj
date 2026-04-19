@@ -847,6 +847,7 @@
 			mainGroup = 637EC6675C95972365E5FBBD;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				E58B5BAEECC2C487314900CB /* XCRemoteSwiftPackageReference "CodeEditLanguages" */,
 				B466523291BC469045331DE7 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -1570,12 +1571,20 @@
 				minimumVersion = 0.15.2;
 			};
 		};
+		E58B5BAEECC2C487314900CB /* XCRemoteSwiftPackageReference "CodeEditLanguages" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CodeEditApp/CodeEditLanguages.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.1.20;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		3D74B1EF05FF8E9C8E152C23 /* CodeEditLanguages */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B466523291BC469045331DE7 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */;
+			package = E58B5BAEECC2C487314900CB /* XCRemoteSwiftPackageReference "CodeEditLanguages" */;
 			productName = CodeEditLanguages;
 		};
 		D6283F9FB9EB4396B76C0B00 /* CodeEditSourceEditor */ = {
