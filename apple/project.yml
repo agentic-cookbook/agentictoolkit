@@ -22,6 +22,9 @@ packages:
   CodeEditLanguages:
     url: https://github.com/CodeEditApp/CodeEditLanguages.git
     exactVersion: 0.1.20
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: "1.2.0"
 
 targets:
 
@@ -51,6 +54,7 @@ targets:
       - path: Sources/AgenticAppKit
     dependencies:
       - target: AgenticToolkit
+      - package: SwiftTerm
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticAppKit
