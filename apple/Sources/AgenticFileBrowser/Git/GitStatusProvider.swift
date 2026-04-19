@@ -44,61 +44,7 @@ public final class GitStatusProvider: @unchecked Sendable {
 
             guard self.requestID == requestID else { return }  // stale
 
-            var fileStatuses: [String: GitFileStatus] = [:]
-
-            for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
-                guard line.count >= 3 else { continue }
-                let statusChars = String(line.prefix(2))
-                let filePath = String(line.dropFirst(3))
-
-                // Parse XY format: X=index status, Y=worktree status
-                let x = statusChars.first ?? " "
-                let y = statusChars.last ?? " "
-
-                let status: GitFileStatus?
-                if x == "?" || y == "?" {
-                    status = .untracked
-                } else if x == "U" || y == "U" {
-                    status = .conflicted
-                } else if x == "!" || y == "!" {
-                    status = .ignored
-                } else if y == "M" || x == "M" {
-                    status = .modified
-                } else if y == "A" || x == "A" {
-                    status = .added
-                } else if y == "D" || x == "D" {
-                    status = .deleted
-                } else if x == "R" {
-                    status = .renamed
-                    // For renames, path format is "old -> new", use new path
-                    if let arrowRange = filePath.range(of: " -> ") {
-                        let newPath = String(filePath[arrowRange.upperBound...])
-                        fileStatuses[newPath] = status
-                        continue
-                    }
-                } else {
-                    status = nil
-                }
-
-                if let s = status {
-                    fileStatuses[filePath] = s
-                }
-            }
-
-            // Propagate to directories
-            var dirStatuses: [String: GitFileStatus] = [:]
-            for (path, status) in fileStatuses {
-                var components = path.split(separator: "/")
-                components.removeLast() // remove filename
-                var dirPath = ""
-                for component in components {
-                    dirPath += (dirPath.isEmpty ? "" : "/") + component
-                    let existing = dirStatuses[dirPath]
-                    if existing == nil || status.priority > (existing?.priority ?? -1) {
-                        dirStatuses[dirPath] = status
-                    }
-                }
-            }
+            let (fileStatuses, dirStatuses) = Self.parse(porcelain: output)
 
             Log.fileTree.info("Git status: \(fileStatuses.count) files, \(dirStatuses.count) directories")
 
@@ -107,5 +53,63 @@ public final class GitStatusProvider: @unchecked Sendable {
                 completion(fileStatuses, dirStatuses)
             }
         }
+    }
+
+    /// Parses `git status --porcelain=v1` output into file and directory status maps.
+    public static func parse(porcelain output: String) -> (files: [String: GitFileStatus], dirs: [String: GitFileStatus]) {
+        var fileStatuses: [String: GitFileStatus] = [:]
+
+        for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
+            guard line.count >= 3 else { continue }
+            let statusChars = String(line.prefix(2))
+            let filePath = String(line.dropFirst(3))
+
+            let x = statusChars.first ?? " "
+            let y = statusChars.last ?? " "
+
+            let status: GitFileStatus?
+            if x == "?" || y == "?" {
+                status = .untracked
+            } else if x == "U" || y == "U" {
+                status = .conflicted
+            } else if x == "!" || y == "!" {
+                status = .ignored
+            } else if y == "M" || x == "M" {
+                status = .modified
+            } else if y == "A" || x == "A" {
+                status = .added
+            } else if y == "D" || x == "D" {
+                status = .deleted
+            } else if x == "R" {
+                status = .renamed
+                if let arrowRange = filePath.range(of: " -> ") {
+                    let newPath = String(filePath[arrowRange.upperBound...])
+                    fileStatuses[newPath] = status
+                    continue
+                }
+            } else {
+                status = nil
+            }
+
+            if let s = status {
+                fileStatuses[filePath] = s
+            }
+        }
+
+        var dirStatuses: [String: GitFileStatus] = [:]
+        for (path, status) in fileStatuses {
+            var components = path.split(separator: "/")
+            components.removeLast()
+            var dirPath = ""
+            for component in components {
+                dirPath += (dirPath.isEmpty ? "" : "/") + component
+                let existing = dirStatuses[dirPath]
+                if existing == nil || status.priority > (existing?.priority ?? -1) {
+                    dirStatuses[dirPath] = status
+                }
+            }
+        }
+
+        return (fileStatuses, dirStatuses)
     }
 }
