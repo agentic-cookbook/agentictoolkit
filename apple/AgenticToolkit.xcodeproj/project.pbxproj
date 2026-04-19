@@ -11,6 +11,7 @@
 		024B63906D23CD566765A39E /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576473466547AAA7CE6B9666 /* ChatViewModel.swift */; };
 		02592243842B6F0BBA6B22A4 /* PerIDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96FD277D30E5F7BB71D50E66 /* PerIDWindowController.swift */; };
 		047A3620EBB168EB9C7FB952 /* MockScreenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCB5E6D6D5CE5D2B9F04BA4 /* MockScreenProvider.swift */; };
+		0494696BC68F815887DB82FE /* ContentViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F48466571F2C49E4025091 /* ContentViewerView.swift */; };
 		0B5B23E77497D817F678AB29 /* SettingsTopic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFDA280FD664A21EF34EBD2D /* SettingsTopic.swift */; };
 		0E9248F1B0A4D9D5ED5A972E /* FileTypesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F72F839E9D39E77C8489D47 /* FileTypesSettingsView.swift */; };
 		1CE91CA72EA2DA927B3DF5FB /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFB2109CB1F52FBC571951C /* FileTreeView.swift */; };
@@ -325,6 +326,7 @@
 		DBA23D30463E8A54C8AF596D /* LogBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBufferTests.swift; sourceTree = "<group>"; };
 		DFDA280FD664A21EF34EBD2D /* SettingsTopic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTopic.swift; sourceTree = "<group>"; };
 		E3836DFD36E843F850ADB150 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		E3F48466571F2C49E4025091 /* ContentViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewerView.swift; sourceTree = "<group>"; };
 		E43BD70136F4923BF6F907EC /* MainActorScriptCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorScriptCommandTests.swift; sourceTree = "<group>"; };
 		E671E7A44A1E23822A5B2C16 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E7255C0AB6E8FE1DFA79C58E /* AgenticUIKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticUIKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -482,6 +484,7 @@
 		298BAB38A352BB49070F4F11 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E3F48466571F2C49E4025091 /* ContentViewerView.swift */,
 				ADFB2109CB1F52FBC571951C /* FileTreeView.swift */,
 				4F72F839E9D39E77C8489D47 /* FileTypesSettingsView.swift */,
 			);
@@ -942,6 +945,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0494696BC68F815887DB82FE /* ContentViewerView.swift in Sources */,
 				82055F6D1C001FCFB1917A4D /* DirectoryWatchCoordinator.swift in Sources */,
 				CA39B708580870B5E436DDC2 /* FileSystemWatcher.swift in Sources */,
 				305CBF846DFC8DC8980F445D /* FileTreeCache.swift in Sources */,
