@@ -26,6 +26,7 @@
 		2E0C9AF7A996EA2AE6C8D04B /* TypingIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9080A14E4844BDE2B294DB /* TypingIndicatorView.swift */; };
 		305CBF846DFC8DC8980F445D /* FileTreeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDEFE6677428B97648149B6 /* FileTreeCache.swift */; };
 		3190A6D0C87F44A064127679 /* MockStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E5F26B82B89569EE8E98CC7 /* MockStorage.swift */; };
+		3235AF6D8A6F7919CF325550 /* FileEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CF651FB722728A0F23696A /* FileEditorView.swift */; };
 		349EF81AD75DF368575781B2 /* AgenticFileBrowser.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4E07D8549E196D5635856CE /* AgenticFileBrowser.framework */; };
 		371DF1AC3F2BB593C382882F /* ScreenMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF813587FC8EE70BE7DE306 /* ScreenMatcherTests.swift */; };
 		37F2993DB8E663A06330CFFF /* ActivationTestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E860842D63CEAF17BC25D577 /* ActivationTestLog.swift */; };
@@ -323,6 +324,7 @@
 		D4FCFAE6564C470BFB8A3A85 /* PerIDWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerIDWindowControllerTests.swift; sourceTree = "<group>"; };
 		D5CB74449F4B34BDF63AD3F0 /* SettingsPanelListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelListViewController.swift; sourceTree = "<group>"; };
 		D88775FC5958416729CB3296 /* NoteEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorViewController.swift; sourceTree = "<group>"; };
+		D9CF651FB722728A0F23696A /* FileEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileEditorView.swift; sourceTree = "<group>"; };
 		DBA23D30463E8A54C8AF596D /* LogBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBufferTests.swift; sourceTree = "<group>"; };
 		DFDA280FD664A21EF34EBD2D /* SettingsTopic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTopic.swift; sourceTree = "<group>"; };
 		E3836DFD36E843F850ADB150 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
@@ -485,6 +487,7 @@
 			isa = PBXGroup;
 			children = (
 				E3F48466571F2C49E4025091 /* ContentViewerView.swift */,
+				D9CF651FB722728A0F23696A /* FileEditorView.swift */,
 				ADFB2109CB1F52FBC571951C /* FileTreeView.swift */,
 				4F72F839E9D39E77C8489D47 /* FileTypesSettingsView.swift */,
 			);
@@ -947,6 +950,7 @@
 			files = (
 				0494696BC68F815887DB82FE /* ContentViewerView.swift in Sources */,
 				82055F6D1C001FCFB1917A4D /* DirectoryWatchCoordinator.swift in Sources */,
+				3235AF6D8A6F7919CF325550 /* FileEditorView.swift in Sources */,
 				CA39B708580870B5E436DDC2 /* FileSystemWatcher.swift in Sources */,
 				305CBF846DFC8DC8980F445D /* FileTreeCache.swift in Sources */,
 				69FFB5756073AA2482AEBEEE /* FileTreeConfig.swift in Sources */,
