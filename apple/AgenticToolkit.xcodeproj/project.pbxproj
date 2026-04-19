@@ -81,6 +81,7 @@
 		8D70EE99E71C2AD712DEB7F3 /* AgenticFileBrowserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAF229B65355DCCDB23F7AB /* AgenticFileBrowserTests.swift */; };
 		8D7D12B577E5668ADECEA957 /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2AB72ED55E9624A6207ED1 /* AppearanceSettingsPanelViewController.swift */; };
 		8DDFC3A961AA130130BA5897 /* GitStatusProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F6B62AC54CF122EE293D68 /* GitStatusProvider.swift */; };
+		937246BF862EC0A20A3A9177 /* TopicListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF51C34171A07E73E391B68 /* TopicListViewController.swift */; };
 		96F17B8A18017548C25449AA /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CB56F832C12AE3CACCFAC94 /* SettingsWindowController.swift */; };
 		996C474D6E00C3078BFF9DF7 /* AIRequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A1F54EC3229977F55A36DE /* AIRequestBuilder.swift */; };
 		9BF96784ED83A58115C83D8D /* AgenticUIKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 98233EFC608C4C757E27F08C /* AgenticUIKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -345,6 +346,7 @@
 		2AF813587FC8EE70BE7DE306 /* ScreenMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMatcherTests.swift; sourceTree = "<group>"; };
 		2C0A9A47ADC49BF24A9F3E48 /* WindowScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowScreenshotTests.swift; sourceTree = "<group>"; };
 		2CB56F832C12AE3CACCFAC94 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		2DF51C34171A07E73E391B68 /* TopicListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicListViewController.swift; sourceTree = "<group>"; };
 		2E9FFC8A92F84EB62A67E130 /* FileTreeNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeNode.swift; sourceTree = "<group>"; };
 		35A12E5476233F08D7254FD6 /* GitStatusProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStatusProviderTests.swift; sourceTree = "<group>"; };
 		3B2F41235EA5A10D6D00B4EA /* TerminalContentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalContentViewController.swift; sourceTree = "<group>"; };
@@ -836,6 +838,7 @@
 			children = (
 				6196D2943614B0BDFA1ABDAC /* AI */,
 				0C4956D0EDDAEB590AEA2B16 /* Chat */,
+				E201EDEA8EC53CCF88CE411A /* Controls */,
 				CFC79CBA64BDF8051C190C62 /* Log */,
 				2B598C18E242EDD7783BC5F0 /* Notes */,
 				93CF01D88F4E5EF7992379C0 /* Scripting */,
@@ -844,6 +847,14 @@
 				DE6695EED76E711108BFCA9C /* WindowManagement */,
 			);
 			path = AgenticAppKit;
+			sourceTree = "<group>";
+		};
+		CFB8B73499CC279A328AFAA4 /* TopicList */ = {
+			isa = PBXGroup;
+			children = (
+				2DF51C34171A07E73E391B68 /* TopicListViewController.swift */,
+			);
+			path = TopicList;
 			sourceTree = "<group>";
 		};
 		CFC79CBA64BDF8051C190C62 /* Log */ = {
@@ -897,6 +908,14 @@
 				AB4B2C4E904AB67229C93587 /* WindowStateStorage.swift */,
 			);
 			path = WindowManagement;
+			sourceTree = "<group>";
+		};
+		E201EDEA8EC53CCF88CE411A /* Controls */ = {
+			isa = PBXGroup;
+			children = (
+				CFB8B73499CC279A328AFAA4 /* TopicList */,
+			);
+			path = Controls;
 			sourceTree = "<group>";
 		};
 		E5BABF753D8FABADBC7A6925 /* AgenticTerminalKitTests */ = {
@@ -1291,6 +1310,7 @@
 				D5D8695D2A65CD7C0B84D1BA /* SingleWindowController.swift in Sources */,
 				F838266DB91F832447047FDB /* TTYResolver.swift in Sources */,
 				206FE210B3086C758E929955 /* TextSize.swift in Sources */,
+				937246BF862EC0A20A3A9177 /* TopicListViewController.swift in Sources */,
 				2E0C9AF7A996EA2AE6C8D04B /* TypingIndicatorView.swift in Sources */,
 				67EA42A8E50AAF0F63785CB0 /* UserDefaultsWindowStateStorage.swift in Sources */,
 				6693A51E14D9C858A82A0C3F /* WindowActivationStrategy.swift in Sources */,
