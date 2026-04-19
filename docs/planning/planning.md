@@ -1,3 +1,3 @@
-# agentic-toolkit — Planning
+# agentictoolkit — Planning
 
 (to be determined)

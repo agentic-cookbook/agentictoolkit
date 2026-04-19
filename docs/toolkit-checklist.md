@@ -34,7 +34,7 @@ A checklist to review against when writing or reviewing toolkit code. Invoke thi
 - [ ] **Value types for data crossing the boundary.** Clients pass in plain structs (`WindowActivationTarget`, `ChatBackendMessage`, `WindowSpec`) — not their domain objects.
 - [ ] **Generic over client types where appropriate.** `SettingsView<Topic>`, `SettingsWindowController<Topic>` — let clients bring their own type without casting.
 - [ ] **Documentation comments include usage examples** for anything non-obvious (registration flow, window lifecycle, stream lifetimes).
-- [ ] **Tests exist.** Public types have at least smoke tests in `agentic-toolkit/apple/Tests/`. Pure-math and value types get unit tests; UI types get construction tests.
+- [ ] **Tests exist.** Public types have at least smoke tests in `agentictoolkit/apple/Tests/`. Pure-math and value types get unit tests; UI types get construction tests.
 - [ ] **Builds clean with `cd apple && swift build`.** No errors, no new warnings.
 
 ## 4. Client Code

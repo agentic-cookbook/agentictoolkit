@@ -1,4 +1,4 @@
-# agentic-toolkit
+# agentictoolkit
 
 A cross-platform toolkit for agentic development workflows.
 

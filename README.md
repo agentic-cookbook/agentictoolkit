@@ -1,4 +1,4 @@
-# agentic-toolkit
+# agentictoolkit
 
 A cross-platform toolkit for agentic development workflows.
 
@@ -21,7 +21,7 @@ Add this repo as a git submodule, then in Xcode: **File > Add Package Dependenci
 ### As a remote dependency
 
 ```swift
-.package(url: "https://github.com/agentic-cookbook/agentic-toolkit.git", from: "0.1.0")
+.package(url: "https://github.com/agentic-cookbook/agentictoolkit.git", from: "0.1.0")
 ```
 
 A root-level `Package.swift` symlink enables SPM resolution from the repo URL.
