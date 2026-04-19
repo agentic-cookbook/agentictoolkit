@@ -27,6 +27,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
     @Published public var customSubtitles: [TerminalSubtitle] = []
     @Published public var summary: String?
     @Published public var state: TerminalSessionState = .running
+    @Published public var layoutState: SessionLayoutState = SessionLayoutState()
 
     public var displayTitle: String {
         if let title { return title }
