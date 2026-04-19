@@ -54,7 +54,6 @@ targets:
       - path: Sources/AgenticAppKit
     dependencies:
       - target: AgenticToolkit
-      - package: SwiftTerm
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticAppKit
@@ -65,6 +64,34 @@ targets:
     sources:
       - path: Tests/AgenticAppKitTests
     dependencies:
+      - target: AgenticAppKit
+      - target: AgenticToolkit
+
+  # Terminal emulator built on SwiftTerm. Split from AgenticAppKit so consumers
+  # that only need AppKit don't inherit the SwiftTerm SPM package transitively.
+  AgenticTerminalKit:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/AgenticTerminalKit
+    dependencies:
+      - target: AgenticToolkit
+      - target: AgenticAppKit
+      - package: SwiftTerm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticTerminalKit
+        # SwiftTerm lacks library evolution support; disable it here so we
+        # don't warn on every build about binary-compat not being guaranteed.
+        BUILD_LIBRARY_FOR_DISTRIBUTION: NO
+
+  AgenticTerminalKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/AgenticTerminalKitTests
+    dependencies:
+      - target: AgenticTerminalKit
       - target: AgenticAppKit
       - target: AgenticToolkit
 
@@ -131,6 +158,14 @@ schemes:
     test:
       targets:
         - AgenticAppKitTests
+
+  AgenticTerminalKit:
+    build:
+      targets:
+        AgenticTerminalKit: all
+    test:
+      targets:
+        - AgenticTerminalKitTests
 
   AgenticUIKit:
     build:

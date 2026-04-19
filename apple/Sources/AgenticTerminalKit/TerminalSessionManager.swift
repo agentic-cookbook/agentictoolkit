@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import os
 
-private let managerLog = Logger(subsystem: "com.agentictoolkit.AgenticAppKit", category: "Terminal")
+private let managerLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "Terminal")
 
 /// Manages an ordered list of terminal sessions for a single window.
 @MainActor
