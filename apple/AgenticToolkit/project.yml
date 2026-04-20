@@ -261,6 +261,34 @@ targets:
       - target: FileBrowser
       - target: Core
 
+  # --- Plugin SDK (LLM provider plugins + their chat/settings UI) ---
+  AgenticPluginSDK:
+    type: framework
+    platform: macOS
+    sources:
+      - path: PluginsSDK
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+      - target: CoreUI
+      - target: SettingsWindow
+      - target: ChatWindow
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticPluginSDK
+
+  AgenticPluginSDKTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: PluginsSDK
+        includes:
+          - "**/Tests/**"
+    dependencies:
+      - target: AgenticPluginSDK
+      - target: Core
+
 schemes:
   Core:
     build:
@@ -332,3 +360,11 @@ schemes:
     test:
       targets:
         - FileBrowserTests
+
+  AgenticPluginSDK:
+    build:
+      targets:
+        AgenticPluginSDK: all
+    test:
+      targets:
+        - AgenticPluginSDKTests
