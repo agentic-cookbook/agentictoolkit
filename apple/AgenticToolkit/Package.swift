@@ -28,12 +28,7 @@ let package = Package(
             name: "AgenticAppKit",
             dependencies: ["AgenticToolkit"],
             path: "AgenticAppKit",
-            exclude: [
-                "AI/Tests",
-                "Log/Tests",
-                "Scripting/Tests",
-                "WindowManagement/Tests"
-            ]
+            exclude: ["Tests"]
         ),
         .target(
             name: "AgenticTerminalKit",
@@ -53,12 +48,7 @@ let package = Package(
                 .product(name: "CodeEditLanguages", package: "CodeEditLanguages")
             ],
             path: "AgenticFileBrowser",
-            exclude: [
-                "Tests",
-                "Core/Tests",
-                "Detection/Tests",
-                "Git/Tests"
-            ]
+            exclude: ["Tests"]
         )
     ]
 )
