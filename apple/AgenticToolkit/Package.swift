@@ -1,14 +1,14 @@
 // swift-tools-version: 5.10
 import PackageDescription
 
-// SwiftPM wrapper exposing AgenticToolkit, AgenticAppKit, AgenticTerminalKit,
+// SwiftPM wrapper exposing Core, AgenticAppKit, AgenticTerminalKit,
 // and AgenticFileBrowser as library products. XcodeGen (project.yml) remains
 // the canonical build for in-repo development and testing.
 let package = Package(
     name: "AgenticToolkitPackages",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "AgenticToolkit", targets: ["AgenticToolkit"]),
+        .library(name: "Core", targets: ["Core"]),
         .library(name: "AgenticAppKit", targets: ["AgenticAppKit"]),
         .library(name: "AgenticTerminalKit", targets: ["AgenticTerminalKit"]),
         .library(name: "AgenticFileBrowser", targets: ["AgenticFileBrowser"])
@@ -20,20 +20,20 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AgenticToolkit",
-            path: "AgenticToolkit",
+            name: "Core",
+            path: "Core",
             exclude: ["Tests"]
         ),
         .target(
             name: "AgenticAppKit",
-            dependencies: ["AgenticToolkit"],
+            dependencies: ["Core"],
             path: "AgenticAppKit",
             exclude: ["Tests"]
         ),
         .target(
             name: "AgenticTerminalKit",
             dependencies: [
-                "AgenticToolkit",
+                "Core",
                 "AgenticAppKit",
                 .product(name: "SwiftTerm", package: "SwiftTerm")
             ],
@@ -43,7 +43,7 @@ let package = Package(
         .target(
             name: "AgenticFileBrowser",
             dependencies: [
-                "AgenticToolkit",
+                "Core",
                 .product(name: "CodeEditSourceEditor", package: "CodeEditSourceEditor"),
                 .product(name: "CodeEditLanguages", package: "CodeEditLanguages")
             ],

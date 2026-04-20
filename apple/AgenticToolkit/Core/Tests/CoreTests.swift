@@ -1,8 +1,8 @@
 import Testing
-@testable import AgenticToolkit
+@testable import Core
 
-@Suite("AgenticToolkit")
-struct AgenticToolkitTests {
+@Suite("Core")
+struct CoreTests {
     @Test func placeholder() {
         // Replace with real tests as code is added.
     }

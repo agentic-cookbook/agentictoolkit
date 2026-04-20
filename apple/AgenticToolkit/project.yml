@@ -29,26 +29,26 @@ packages:
 targets:
 
   # Cross-platform — Foundation only (macOS build for this stack)
-  AgenticToolkit:
+  Core:
     type: framework
     platform: macOS
     sources:
-      - path: AgenticToolkit
+      - path: Core
         excludes:
           - "**/Tests/**"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticToolkit
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.Core
 
-  AgenticToolkitTests:
+  CoreTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: AgenticToolkit
+      - path: Core
         includes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticToolkit
+      - target: Core
 
   # macOS — AppKit
   AgenticAppKit:
@@ -59,7 +59,7 @@ targets:
         excludes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticToolkit
+      - target: Core
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticAppKit
@@ -73,7 +73,7 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: AgenticAppKit
-      - target: AgenticToolkit
+      - target: Core
 
   # Terminal emulator built on SwiftTerm. Split from AgenticAppKit so consumers
   # that only need AppKit don't inherit the SwiftTerm SPM package transitively.
@@ -85,7 +85,7 @@ targets:
         excludes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticToolkit
+      - target: Core
       - target: AgenticAppKit
       - package: SwiftTerm
     settings:
@@ -105,7 +105,7 @@ targets:
     dependencies:
       - target: AgenticTerminalKit
       - target: AgenticAppKit
-      - target: AgenticToolkit
+      - target: Core
 
   # iOS/tvOS UIKit — built as macOS-only here (UIKit imports are #if canImport-guarded).
   # iOS/tvOS product support deferred until the stack needs it.
@@ -117,7 +117,7 @@ targets:
         excludes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticToolkit
+      - target: Core
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticUIKit
@@ -131,7 +131,7 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: AgenticUIKit
-      - target: AgenticToolkit
+      - target: Core
 
   # macOS — File browser subsystem extracted from Catnip IDE.
   AgenticFileBrowser:
@@ -142,7 +142,7 @@ targets:
         excludes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticToolkit
+      - target: Core
       - package: CodeEditSourceEditor
         product: CodeEditSourceEditor
       - package: CodeEditLanguages
@@ -160,16 +160,16 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: AgenticFileBrowser
-      - target: AgenticToolkit
+      - target: Core
 
 schemes:
-  AgenticToolkit:
+  Core:
     build:
       targets:
-        AgenticToolkit: all
+        Core: all
     test:
       targets:
-        - AgenticToolkitTests
+        - CoreTests
 
   AgenticAppKit:
     build:

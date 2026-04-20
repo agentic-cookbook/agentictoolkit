@@ -1,4 +1,5 @@
 import AppKit
+import Core
 
 /// Pure functions for proportional frame math. No side effects, fully testable.
 public enum FrameCalculator {
