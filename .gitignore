@@ -7,10 +7,10 @@
 # Swift
 .build/
 .swiftpm/
-*.xcodeproj/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 **/project.xcworkspace/xcshareddata/
-*.xcworkspace/xcuserdata/
-*.xcworkspace/xcshareddata/
+**/*.xcworkspace/xcuserdata/
+**/*.xcworkspace/xcshareddata/
 DerivedData/
 
 # graphify output (generated)
