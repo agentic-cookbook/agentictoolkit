@@ -1,7 +1,7 @@
 // swift-tools-version: 5.10
 import PackageDescription
 
-// SwiftPM wrapper exposing Core, AgenticAppKit, AgenticTerminalKit,
+// SwiftPM wrapper exposing Core, CoreUI, AgenticAppKit, AgenticTerminalKit,
 // and AgenticFileBrowser as library products. XcodeGen (project.yml) remains
 // the canonical build for in-repo development and testing.
 let package = Package(
@@ -9,6 +9,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "Core", targets: ["Core"]),
+        .library(name: "CoreUI", targets: ["CoreUI"]),
         .library(name: "AgenticAppKit", targets: ["AgenticAppKit"]),
         .library(name: "AgenticTerminalKit", targets: ["AgenticTerminalKit"]),
         .library(name: "AgenticFileBrowser", targets: ["AgenticFileBrowser"])
@@ -25,8 +26,14 @@ let package = Package(
             exclude: ["Tests"]
         ),
         .target(
-            name: "AgenticAppKit",
+            name: "CoreUI",
             dependencies: ["Core"],
+            path: "CoreUI",
+            exclude: ["Tests"]
+        ),
+        .target(
+            name: "AgenticAppKit",
+            dependencies: ["Core", "CoreUI"],
             path: "AgenticAppKit",
             exclude: ["Tests"]
         ),

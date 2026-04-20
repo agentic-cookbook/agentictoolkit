@@ -50,6 +50,31 @@ targets:
     dependencies:
       - target: Core
 
+  # macOS — cross-cutting AppKit UI utilities (windowing, shared view types).
+  CoreUI:
+    type: framework
+    platform: macOS
+    sources:
+      - path: CoreUI
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.CoreUI
+
+  CoreUITests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: CoreUI
+        includes:
+          - "**/Tests/**"
+    dependencies:
+      - target: CoreUI
+      - target: Core
+
   # macOS — AppKit
   AgenticAppKit:
     type: framework
@@ -60,6 +85,7 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: Core
+      - target: CoreUI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticAppKit
@@ -73,6 +99,7 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: AgenticAppKit
+      - target: CoreUI
       - target: Core
 
   # Terminal emulator built on SwiftTerm. Split from AgenticAppKit so consumers
@@ -170,6 +197,14 @@ schemes:
     test:
       targets:
         - CoreTests
+
+  CoreUI:
+    build:
+      targets:
+        CoreUI: all
+    test:
+      targets:
+        - CoreUITests
 
   AgenticAppKit:
     build:
