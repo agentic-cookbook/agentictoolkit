@@ -14,8 +14,8 @@ if !isRunningTests {
 }
 
 let app = NSApplication.shared
-MainActor.assumeIsolated {
-    let delegate = AppDelegate()
-    app.delegate = delegate
-}
+// NSApplication.delegate is weak; hold a strong module-scope reference so
+// the delegate survives past the assumeIsolated block.
+let delegate = MainActor.assumeIsolated { AppDelegate() }
+app.delegate = delegate
 app.run()
