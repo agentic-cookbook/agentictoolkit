@@ -33,7 +33,9 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/AgenticToolkit
+      - path: AgenticToolkit
+        excludes:
+          - "**/Tests/**"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticToolkit
@@ -42,7 +44,9 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: Tests/AgenticToolkitTests
+      - path: AgenticToolkit
+        includes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticToolkit
 
@@ -51,7 +55,9 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/AgenticAppKit
+      - path: AgenticAppKit
+        excludes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticToolkit
     settings:
@@ -62,7 +68,9 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: Tests/AgenticAppKitTests
+      - path: AgenticAppKit
+        includes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticAppKit
       - target: AgenticToolkit
@@ -73,7 +81,9 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/AgenticTerminalKit
+      - path: AgenticTerminalKit
+        excludes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticToolkit
       - target: AgenticAppKit
@@ -89,7 +99,9 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: Tests/AgenticTerminalKitTests
+      - path: AgenticTerminalKit
+        includes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticTerminalKit
       - target: AgenticAppKit
@@ -101,7 +113,9 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/AgenticUIKit
+      - path: AgenticUIKit
+        excludes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticToolkit
     settings:
@@ -112,7 +126,9 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: Tests/AgenticUIKitTests
+      - path: AgenticUIKit
+        includes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticUIKit
       - target: AgenticToolkit
@@ -122,7 +138,9 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/AgenticFileBrowser
+      - path: AgenticFileBrowser
+        excludes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticToolkit
       - package: CodeEditSourceEditor
@@ -137,7 +155,9 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: Tests/AgenticFileBrowserTests
+      - path: AgenticFileBrowser
+        includes:
+          - "**/Tests/**"
     dependencies:
       - target: AgenticFileBrowser
       - target: AgenticToolkit

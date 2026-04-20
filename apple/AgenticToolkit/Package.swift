@@ -21,12 +21,19 @@ let package = Package(
     targets: [
         .target(
             name: "AgenticToolkit",
-            path: "Sources/AgenticToolkit"
+            path: "AgenticToolkit",
+            exclude: ["Tests"]
         ),
         .target(
             name: "AgenticAppKit",
             dependencies: ["AgenticToolkit"],
-            path: "Sources/AgenticAppKit"
+            path: "AgenticAppKit",
+            exclude: [
+                "AI/Tests",
+                "Log/Tests",
+                "Scripting/Tests",
+                "WindowManagement/Tests"
+            ]
         ),
         .target(
             name: "AgenticTerminalKit",
@@ -35,7 +42,8 @@ let package = Package(
                 "AgenticAppKit",
                 .product(name: "SwiftTerm", package: "SwiftTerm")
             ],
-            path: "Sources/AgenticTerminalKit"
+            path: "AgenticTerminalKit",
+            exclude: ["Tests"]
         ),
         .target(
             name: "AgenticFileBrowser",
@@ -44,7 +52,13 @@ let package = Package(
                 .product(name: "CodeEditSourceEditor", package: "CodeEditSourceEditor"),
                 .product(name: "CodeEditLanguages", package: "CodeEditLanguages")
             ],
-            path: "Sources/AgenticFileBrowser"
+            path: "AgenticFileBrowser",
+            exclude: [
+                "Tests",
+                "Core/Tests",
+                "Detection/Tests",
+                "Git/Tests"
+            ]
         )
     ]
 )

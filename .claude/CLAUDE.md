@@ -10,18 +10,25 @@ A cross-platform toolkit for agentic development workflows.
 ## Build
 
 ```bash
-cd apple && swift build
-cd apple && swift test
+cd apple/AgenticToolkit && swift build
+cd apple/AgenticToolkit && swift test
+```
+
+The canonical in-repo build is XcodeGen-based:
+
+```bash
+cd apple/AgenticToolkit && cc-xcgen            # regenerate xcodeproj from project.yml
+open apple/AgenticToolkit/AgenticToolkit.xcworkspace
 ```
 
 ## Architecture
 
 Cross-platform repo with per-platform directories:
-- `apple/` — Swift Package (`AgenticToolkit` library + tests)
+- `apple/AgenticToolkit/` — Swift Package + XcodeGen project (targets as top-level dirs, tests colocated under `<Feature>/Tests/`)
 - `windows/` — TBD
 - `android/` — TBD
 
-Root `Package.swift` is a symlink to `apple/Package.swift` for remote SPM resolution.
+Root `Package.swift` is a symlink to `apple/AgenticToolkit/Package.swift` for remote SPM resolution.
 
 ## Conventions
 
