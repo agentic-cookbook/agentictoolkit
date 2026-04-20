@@ -1,4 +1,4 @@
-name: TestApp
+name: AgenticToolkitApp
 options:
   deploymentTarget:
     macOS: "14.0"
@@ -6,7 +6,7 @@ options:
 
 settings:
   base:
-    # Swift 5 language mode: TestApp predates the migration and has existing
+    # Swift 5 language mode: AgenticToolkitApp predates the migration and has existing
     # Sendable/isolation patterns we don't want to rewrite right now.
     SWIFT_VERSION: "5.0"
     SWIFT_STRICT_CONCURRENCY: minimal
@@ -35,18 +35,18 @@ projectReferences:
 
 targets:
 
-  TestApp:
+  AgenticToolkitApp:
     type: application
     platform: macOS
     sources:
-      - path: TestApp
+      - path: AgenticToolkitApp
         excludes:
           - "Info.plist"
-          - "TestApp.entitlements"
+          - "AgenticToolkitApp.entitlements"
           # Parked pending per-plugin secret storage design.
           - "Settings/DatabaseManagerPersistence.swift"
     resources:
-      - path: TestApp/Assets.xcassets
+      - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
       - framework: AgenticPluginSDK.framework
         implicit: true
@@ -60,38 +60,38 @@ targets:
       - target: Plugins/AllPlugins
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.TestApp
-        INFOPLIST_FILE: TestApp/Info.plist
-        CODE_SIGN_ENTITLEMENTS: TestApp/TestApp.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app
+        INFOPLIST_FILE: AgenticToolkitApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: AgenticToolkitApp/AgenticToolkitApp.entitlements
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
 
-  TestAppTests:
+  AgenticToolkitAppTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: TestAppTests
+      - path: AgenticToolkitAppTests
         excludes:
           # Parked with the chat wiring.
           - "MiniChatViewModelTests.swift"
     dependencies:
-      - target: TestApp
+      - target: AgenticToolkitApp
       - framework: AgenticPluginSDK.framework
         implicit: true
         project: AgenticToolkit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.TestAppTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app.tests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  TestApp:
+  AgenticToolkitApp:
     build:
       targets:
-        TestApp: all
+        AgenticToolkitApp: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - TestAppTests
+        - AgenticToolkitAppTests

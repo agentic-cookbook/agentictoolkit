@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "BED194980D56484BC288A866"
-               BuildableName = "TestApp.app"
-               BlueprintName = "TestApp"
-               ReferencedContainer = "container:TestApp.xcodeproj">
+               BlueprintIdentifier = "810918565CAE23E364AEA726"
+               BuildableName = "AgenticToolkitApp.app"
+               BlueprintName = "AgenticToolkitApp"
+               ReferencedContainer = "container:AgenticToolkitApp.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BED194980D56484BC288A866"
-            BuildableName = "TestApp.app"
-            BlueprintName = "TestApp"
-            ReferencedContainer = "container:TestApp.xcodeproj">
+            BlueprintIdentifier = "810918565CAE23E364AEA726"
+            BuildableName = "AgenticToolkitApp.app"
+            BlueprintName = "AgenticToolkitApp"
+            ReferencedContainer = "container:AgenticToolkitApp.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -44,10 +44,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C589E7D7FFA65D936752BB02"
-               BuildableName = "TestAppTests.xctest"
-               BlueprintName = "TestAppTests"
-               ReferencedContainer = "container:TestApp.xcodeproj">
+               BlueprintIdentifier = "29E6204B8EC89F3C494268DB"
+               BuildableName = "AgenticToolkitAppTests.xctest"
+               BlueprintName = "AgenticToolkitAppTests"
+               ReferencedContainer = "container:AgenticToolkitApp.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -68,10 +68,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BED194980D56484BC288A866"
-            BuildableName = "TestApp.app"
-            BlueprintName = "TestApp"
-            ReferencedContainer = "container:TestApp.xcodeproj">
+            BlueprintIdentifier = "810918565CAE23E364AEA726"
+            BuildableName = "AgenticToolkitApp.app"
+            BlueprintName = "AgenticToolkitApp"
+            ReferencedContainer = "container:AgenticToolkitApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -87,10 +87,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BED194980D56484BC288A866"
-            BuildableName = "TestApp.app"
-            BlueprintName = "TestApp"
-            ReferencedContainer = "container:TestApp.xcodeproj">
+            BlueprintIdentifier = "810918565CAE23E364AEA726"
+            BuildableName = "AgenticToolkitApp.app"
+            BlueprintName = "AgenticToolkitApp"
+            ReferencedContainer = "container:AgenticToolkitApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
