@@ -1,0 +1,122 @@
+name: Plugins
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGNING_ALLOWED: NO
+
+targetTemplates:
+  Plugin:
+    type: bundle
+    platform: macOS
+    dependencies:
+      - framework: AgenticPluginSDK.framework
+        implicit: true
+        project: PluginSDK
+      - framework: AgenticAppKit.framework
+        implicit: true
+        project: AgenticToolkit
+      - framework: AgenticToolkit.framework
+        implicit: true
+        project: AgenticToolkit
+    settings:
+      base:
+        # Plugin bundles land in ~/.agenticplugins/; framework deps stay in
+        # the normal workspace build dir and are added to search paths.
+        CONFIGURATION_BUILD_DIR: "$(HOME)/.agenticplugins"
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(BUILD_DIR)/$(CONFIGURATION)"
+        SWIFT_INCLUDE_PATHS:
+          - "$(inherited)"
+          - "$(BUILD_DIR)/$(CONFIGURATION)"
+
+projectReferences:
+  AgenticToolkit:
+    path: ../../../agentictoolkit/apple/AgenticToolkit.xcodeproj
+  PluginSDK:
+    path: ../PluginSDK/PluginSDK.xcodeproj
+
+targets:
+
+  ClaudeAPIPlugin:
+    templates: [Plugin]
+    sources:
+      - path: ClaudeAPIPlugin
+    settings:
+      base:
+        INFOPLIST_FILE: ClaudeAPIPlugin/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.claude-api
+
+  ClaudeLocalPlugin:
+    templates: [Plugin]
+    sources:
+      - path: ClaudeLocalPlugin
+    settings:
+      base:
+        INFOPLIST_FILE: ClaudeLocalPlugin/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.claude-local
+
+  OpenAIPlugin:
+    templates: [Plugin]
+    sources:
+      - path: OpenAIPlugin
+    settings:
+      base:
+        INFOPLIST_FILE: OpenAIPlugin/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai
+
+  GooglePlugin:
+    templates: [Plugin]
+    sources:
+      - path: GooglePlugin
+    settings:
+      base:
+        INFOPLIST_FILE: GooglePlugin/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.google
+
+  OpenAICompatiblePlugin:
+    templates: [Plugin]
+    sources:
+      - path: OpenAICompatiblePlugin
+    settings:
+      base:
+        INFOPLIST_FILE: OpenAICompatiblePlugin/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai-compatible
+
+# AgenticBuiltInPluginsTests disabled: `@testable import <PluginName>` does
+# not work against Bundle targets. Needs a new test strategy (load bundles
+# through PluginManager, or add test-only framework targets alongside the
+# bundles). Source is kept in Tests/ for when the strategy is decided.
+
+schemes:
+  Plugins:
+    build:
+      targets:
+        ClaudeAPIPlugin: all
+        ClaudeLocalPlugin: all
+        OpenAIPlugin: all
+        GooglePlugin: all
+        OpenAICompatiblePlugin: all
+
+# Client-facing aggregate target. Clients depend on `Plugins/AllPlugins` and
+# never enumerate individual plugins. When a new plugin target is added to
+# `targets:` above, also add it here — the only place that enumerates the
+# full plugin list for client builds.
+aggregateTargets:
+  AllPlugins:
+    targets:
+      - ClaudeAPIPlugin
+      - ClaudeLocalPlugin
+      - OpenAIPlugin
+      - GooglePlugin
+      - OpenAICompatiblePlugin

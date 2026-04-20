@@ -1,0 +1,110 @@
+name: AgenticPluginTester
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    # Swift 5 language mode: TestApp predates the migration and has existing
+    # Sendable/isolation patterns we don't want to rewrite right now.
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: K2NA732JAX
+    LD_RUNPATH_SEARCH_PATHS:
+      - "$(inherited)"
+      - "@executable_path/../Frameworks"
+      - "$(HOME)/.agenticplugins"
+
+packages:
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: "1.2.0"
+
+projectReferences:
+  AgenticToolkit:
+    path: ../../../agentictoolkit/apple/AgenticToolkit.xcodeproj
+  PluginSDK:
+    path: ../PluginSDK/PluginSDK.xcodeproj
+  Plugins:
+    path: ../Plugins/Plugins.xcodeproj
+    # App target depends on the Plugins/AllPlugins aggregate, which fans out
+    # to every built-in plugin. Deployment happens automatically via each
+    # plugin's CONFIGURATION_BUILD_DIR = $HOME/.agenticplugins. Clients
+    # never enumerate individual plugins here.
+
+targets:
+
+  AgenticPluginTester:
+    type: application
+    platform: macOS
+    sources:
+      - path: AgenticPluginTester
+        excludes:
+          - "Info.plist"
+          - "AgenticPluginTester.entitlements"
+          # Parked pending per-plugin secret storage design.
+          - "Settings/DatabaseManagerPersistence.swift"
+    resources:
+      - path: AgenticPluginTester/Assets.xcassets
+    dependencies:
+      - framework: AgenticPluginSDK.framework
+        implicit: true
+        project: PluginSDK
+        embed: true
+      - framework: AgenticAppKit.framework
+        implicit: true
+        project: AgenticToolkit
+        embed: true
+      - framework: AgenticToolkit.framework
+        implicit: true
+        project: AgenticToolkit
+        embed: true
+      - package: SwiftTerm
+      # Single aggregate dep fans out to every built-in plugin bundle. Each
+      # bundle deploys to ~/.agenticplugins/ via its own
+      # CONFIGURATION_BUILD_DIR, so the install dir is always fresh before
+      # the app launches.
+      - target: Plugins/AllPlugins
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.AgenticPluginTester
+        INFOPLIST_FILE: AgenticPluginTester/Info.plist
+        CODE_SIGN_ENTITLEMENTS: AgenticPluginTester/AgenticPluginTester.entitlements
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+
+  AgenticPluginTesterTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: AgenticPluginTesterTests
+        excludes:
+          # Parked with the chat wiring.
+          - "MiniChatViewModelTests.swift"
+    dependencies:
+      - target: AgenticPluginTester
+      - framework: AgenticPluginSDK.framework
+        implicit: true
+        project: PluginSDK
+      - framework: AgenticAppKit.framework
+        implicit: true
+        project: AgenticToolkit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.AgenticPluginTesterTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  AgenticPluginTester:
+    build:
+      targets:
+        AgenticPluginTester: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticPluginTesterTests
