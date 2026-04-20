@@ -28,7 +28,7 @@ packages:
 
 targets:
 
-  # Cross-platform — Foundation only (macOS build for this stack)
+  # --- Foundation-only utilities ---
   Core:
     type: framework
     platform: macOS
@@ -50,7 +50,32 @@ targets:
     dependencies:
       - target: Core
 
-  # macOS — cross-cutting AppKit UI utilities (windowing, shared view types).
+  # --- AppleScript and NSScriptCommand helpers ---
+  Scripting:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Scripting
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.Scripting
+
+  ScriptingTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Scripting
+        includes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Scripting
+      - target: Core
+
+  # --- Cross-cutting AppKit UI utilities (windowing, shared view types) ---
   CoreUI:
     type: framework
     platform: macOS
@@ -60,6 +85,7 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: Core
+      - target: Scripting
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.CoreUI
@@ -73,99 +99,145 @@ targets:
           - "**/Tests/**"
     dependencies:
       - target: CoreUI
+      - target: Scripting
       - target: Core
 
-  # macOS — AppKit
-  AgenticAppKit:
+  # --- AI provider / request builder (Foundation-only) ---
+  AIProvider:
     type: framework
     platform: macOS
     sources:
-      - path: AgenticAppKit
+      - path: AIProvider
         excludes:
           - "**/Tests/**"
     dependencies:
       - target: Core
-      - target: CoreUI
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticAppKit
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AIProvider
 
-  AgenticAppKitTests:
+  AIProviderTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: AgenticAppKit
+      - path: AIProvider
         includes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticAppKit
-      - target: CoreUI
+      - target: AIProvider
       - target: Core
 
-  # Terminal emulator built on SwiftTerm. Split from AgenticAppKit so consumers
-  # that only need AppKit don't inherit the SwiftTerm SPM package transitively.
-  AgenticTerminalKit:
+  # --- Feature: logging window ---
+  LoggingWindow:
     type: framework
     platform: macOS
     sources:
-      - path: AgenticTerminalKit
+      - path: LoggingWindow
         excludes:
           - "**/Tests/**"
     dependencies:
       - target: Core
-      - target: AgenticAppKit
+      - target: CoreUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.LoggingWindow
+
+  LoggingWindowTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: LoggingWindow
+        includes:
+          - "**/Tests/**"
+    dependencies:
+      - target: LoggingWindow
+      - target: CoreUI
+      - target: Core
+
+  # --- Feature: chat window ---
+  ChatWindow:
+    type: framework
+    platform: macOS
+    sources:
+      - path: ChatWindow
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+      - target: CoreUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.ChatWindow
+
+  # --- Feature: notes window ---
+  NotesWindow:
+    type: framework
+    platform: macOS
+    sources:
+      - path: NotesWindow
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+      - target: CoreUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.NotesWindow
+
+  # --- Feature: settings window ---
+  SettingsWindow:
+    type: framework
+    platform: macOS
+    sources:
+      - path: SettingsWindow
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+      - target: CoreUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.SettingsWindow
+
+  # --- Feature: terminal window (SwiftTerm-based) ---
+  TerminalWindow:
+    type: framework
+    platform: macOS
+    sources:
+      - path: TerminalWindow
+        excludes:
+          - "**/Tests/**"
+    dependencies:
+      - target: Core
+      - target: CoreUI
+      - target: AIProvider
       - package: SwiftTerm
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticTerminalKit
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.TerminalWindow
         # SwiftTerm lacks library evolution support; disable it here so we
         # don't warn on every build about binary-compat not being guaranteed.
         BUILD_LIBRARY_FOR_DISTRIBUTION: NO
 
-  AgenticTerminalKitTests:
+  TerminalWindowTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: AgenticTerminalKit
+      - path: TerminalWindow
         includes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticTerminalKit
-      - target: AgenticAppKit
+      - target: TerminalWindow
+      - target: AIProvider
+      - target: CoreUI
       - target: Core
 
-  # iOS/tvOS UIKit — built as macOS-only here (UIKit imports are #if canImport-guarded).
-  # iOS/tvOS product support deferred until the stack needs it.
-  AgenticUIKit:
+  # --- Feature: file browser (extracted from Catnip IDE) ---
+  FileBrowser:
     type: framework
     platform: macOS
     sources:
-      - path: AgenticUIKit
-        excludes:
-          - "**/Tests/**"
-    dependencies:
-      - target: Core
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticUIKit
-
-  AgenticUIKitTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: AgenticUIKit
-        includes:
-          - "**/Tests/**"
-    dependencies:
-      - target: AgenticUIKit
-      - target: Core
-
-  # macOS — File browser subsystem extracted from Catnip IDE.
-  AgenticFileBrowser:
-    type: framework
-    platform: macOS
-    sources:
-      - path: AgenticFileBrowser
+      - path: FileBrowser
         excludes:
           - "**/Tests/**"
     dependencies:
@@ -176,17 +248,17 @@ targets:
         product: CodeEditLanguages
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AgenticFileBrowser
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.FileBrowser
 
-  AgenticFileBrowserTests:
+  FileBrowserTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: AgenticFileBrowser
+      - path: FileBrowser
         includes:
           - "**/Tests/**"
     dependencies:
-      - target: AgenticFileBrowser
+      - target: FileBrowser
       - target: Core
 
 schemes:
@@ -198,6 +270,14 @@ schemes:
       targets:
         - CoreTests
 
+  Scripting:
+    build:
+      targets:
+        Scripting: all
+    test:
+      targets:
+        - ScriptingTests
+
   CoreUI:
     build:
       targets:
@@ -206,34 +286,49 @@ schemes:
       targets:
         - CoreUITests
 
-  AgenticAppKit:
+  AIProvider:
     build:
       targets:
-        AgenticAppKit: all
+        AIProvider: all
     test:
       targets:
-        - AgenticAppKitTests
+        - AIProviderTests
 
-  AgenticTerminalKit:
+  LoggingWindow:
     build:
       targets:
-        AgenticTerminalKit: all
+        LoggingWindow: all
     test:
       targets:
-        - AgenticTerminalKitTests
+        - LoggingWindowTests
 
-  AgenticUIKit:
+  ChatWindow:
     build:
       targets:
-        AgenticUIKit: all
-    test:
-      targets:
-        - AgenticUIKitTests
+        ChatWindow: all
 
-  AgenticFileBrowser:
+  NotesWindow:
     build:
       targets:
-        AgenticFileBrowser: all
+        NotesWindow: all
+
+  SettingsWindow:
+    build:
+      targets:
+        SettingsWindow: all
+
+  TerminalWindow:
+    build:
+      targets:
+        TerminalWindow: all
     test:
       targets:
-        - AgenticFileBrowserTests
+        - TerminalWindowTests
+
+  FileBrowser:
+    build:
+      targets:
+        FileBrowser: all
+    test:
+      targets:
+        - FileBrowserTests

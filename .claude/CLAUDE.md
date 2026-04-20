@@ -30,6 +30,23 @@ Cross-platform repo with per-platform directories:
 
 Root `Package.swift` is a symlink to `apple/AgenticToolkit/Package.swift` for remote SPM resolution.
 
+### Apple targets
+
+| Target           | Source dir        | Depends on                |
+|------------------|-------------------|---------------------------|
+| `Core`           | `Core/`           | —                         |
+| `Scripting`      | `Scripting/`      | `Core`                    |
+| `CoreUI`         | `CoreUI/`         | `Core`, `Scripting`       |
+| `AIProvider`     | `AIProvider/`     | `Core`                    |
+| `LoggingWindow`  | `LoggingWindow/`  | `Core`, `CoreUI`          |
+| `ChatWindow`     | `ChatWindow/`     | `Core`, `CoreUI`          |
+| `NotesWindow`    | `NotesWindow/`    | `Core`, `CoreUI`          |
+| `SettingsWindow` | `SettingsWindow/` | `Core`, `CoreUI`          |
+| `TerminalWindow` | `TerminalWindow/` | `Core`, `CoreUI`, `AIProvider`, `SwiftTerm` |
+| `FileBrowser`    | `FileBrowser/`    | `Core`, CodeEdit packages |
+
+Targets with no `Agentic` prefix. `Core` is Foundation-only; `CoreUI` holds cross-cutting AppKit utilities (windowing, shared views); feature targets are named after their most general function.
+
 ## Conventions
 
 - AppKit only for macOS UI (no SwiftUI except widgets)

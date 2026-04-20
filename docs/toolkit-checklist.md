@@ -9,7 +9,7 @@ A checklist to review against when writing or reviewing toolkit code. Invoke thi
 - [ ] **App-agnostic.** Toolkit code does not name, reference, or assume any specific app. No `"AgenticPluginTester"` strings, no `Bundle.main.bundleIdentifier` assumptions beyond what clients opt into.
 - [ ] **Reusable across apps.** The code solves a problem more than one app would have. If it's only ever useful for one app, it stays in the app.
 - [ ] **Decouple before moving.** Before lifting something into the toolkit, introduce a value type or protocol at the boundary so the toolkit doesn't absorb app-specific dependencies (e.g. `WindowActivationTarget` instead of a concrete `Session` struct; `ChatBackend` instead of `PluginManager`).
-- [ ] **Layering respected.** `AgenticAppKit` must not depend on `AgenticPluginSDK`, `AgenticBuiltInPlugins`, `AgenticUI`, or any client code. Dependencies point inward only.
+- [ ] **Layering respected.** Toolkit targets must not depend on client code. Dependencies point inward only: `Core` ← `Scripting`/`AIProvider` ← `CoreUI` ← feature targets (`LoggingWindow`, `ChatWindow`, `NotesWindow`, `SettingsWindow`, `TerminalWindow`, `FileBrowser`).
 - [ ] **Minimal, intentional public surface.** Every `public` symbol is a commitment. Start `internal` and promote deliberately.
 - [ ] **Testable in isolation.** Hard dependencies (screens, filesystem, keychain, network) are abstracted behind protocols with injectable alternatives.
 
@@ -27,8 +27,8 @@ A checklist to review against when writing or reviewing toolkit code. Invoke thi
 
 ## 3. Agentic-Toolkit Code
 
-- [ ] **Lives in the right module.** `AgenticToolkit` for Foundation-only cross-platform code; `AgenticAppKit` for macOS UI; `AgenticUIKit` for iOS/tvOS UI.
-- [ ] **No app-specific strings or identifiers.** Logger subsystems use toolkit-owned namespaces (`"AgenticAppKit"`, not `"com.mikefullerton.AgenticPluginTester"`). File paths are parameterized, not hardcoded.
+- [ ] **Lives in the right module.** `Core` for Foundation-only cross-platform utilities; `CoreUI` for cross-cutting AppKit UI (windowing, shared views); a feature target (`LoggingWindow`, `ChatWindow`, etc.) for standalone features; `Scripting`/`AIProvider` for Foundation-only services.
+- [ ] **No app-specific strings or identifiers.** Logger subsystems use toolkit-owned namespaces (`"CoreUI"`, `"TerminalWindow"`, not `"com.mikefullerton.AgenticPluginTester"`). File paths are parameterized, not hardcoded.
 - [ ] **Dependency injection for I/O.** Screens, storage, clocks, loggers, network — all injectable. Defaults are convenience, not requirements.
 - [ ] **Protocols define behaviors clients implement.** If the toolkit needs data from the client, it asks via a protocol (e.g. `ScreenProvider`, `ChatBackend`, `SettingsTopic`, `AISettingsPersistence`).
 - [ ] **Value types for data crossing the boundary.** Clients pass in plain structs (`WindowActivationTarget`, `ChatBackendMessage`, `WindowSpec`) — not their domain objects.
@@ -39,7 +39,7 @@ A checklist to review against when writing or reviewing toolkit code. Invoke thi
 
 ## 4. Client Code
 
-- [ ] **Imports only what it uses.** `import AgenticAppKit` only in files that touch toolkit AppKit types.
+- [ ] **Imports only what it uses.** `import CoreUI` / `import LoggingWindow` / etc. only in files that touch those toolkit types.
 - [ ] **Implements toolkit protocols, doesn't fork them.** If a toolkit protocol doesn't fit, discuss extending the toolkit — don't work around it by copying code.
 - [ ] **Translates at the boundary.** App domain types (e.g. `Session`) are mapped to toolkit value types (e.g. `WindowActivationTarget`) at the call site. The toolkit never sees app types.
 - [ ] **Respects toolkit actor isolation.** If a toolkit type is `@MainActor`, the caller lives on the main actor or hops with `Task { @MainActor in ... }`.
