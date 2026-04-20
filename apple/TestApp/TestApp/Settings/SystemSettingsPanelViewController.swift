@@ -1,8 +1,11 @@
 import AppKit
-import AgenticAppKit
+import Core
+import CoreUI
+import ChatWindow
+import SettingsWindow
 
 @MainActor
-final class AppearanceSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+final class SystemSettingsPanelViewController: NSViewController, SettingsPanelViewController {
     private let viewModel: SettingsViewModel
 
     init(viewModel: SettingsViewModel) {
@@ -15,14 +18,14 @@ final class AppearanceSettingsPanelViewController: NSViewController, SettingsPan
 
     var listItem: SettingsPanelListItem {
         SettingsPanelListItem(
-            title: "Appearance",
-            image: NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
+            title: "System",
+            image: NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
         )
     }
 
     override func loadView() {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 400))
-        let pane = AppearanceSettingsPane(viewModel: viewModel)
+        let pane = SystemSettingsPane(viewModel: viewModel)
         pane.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(pane)
         NSLayoutConstraint.activate([

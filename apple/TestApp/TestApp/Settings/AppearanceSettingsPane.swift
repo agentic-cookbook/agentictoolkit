@@ -1,6 +1,9 @@
 import AppKit
 import Combine
-import AgenticAppKit
+import Core
+import CoreUI
+import ChatWindow
+import SettingsWindow
 
 final class AppearanceSettingsPane: NSView {
     private let viewModel: SettingsViewModel

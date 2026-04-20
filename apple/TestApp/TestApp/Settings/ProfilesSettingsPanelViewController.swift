@@ -1,5 +1,8 @@
 import AppKit
-import AgenticAppKit
+import Core
+import CoreUI
+import ChatWindow
+import SettingsWindow
 
 @MainActor
 final class ProfilesSettingsPanelViewController: NSViewController, SettingsPanelViewController {

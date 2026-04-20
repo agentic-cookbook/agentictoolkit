@@ -1,5 +1,6 @@
 import AppKit
-import AgenticAppKit
+import CoreUI
+import SettingsWindow
 import AgenticPluginSDK
 
 /// Settings panel for `OpenAIPlugin`.

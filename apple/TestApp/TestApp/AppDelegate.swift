@@ -1,7 +1,10 @@
 import AppKit
 import ApplicationServices
 import AgenticPluginSDK
-import AgenticAppKit
+import Core
+import CoreUI
+import ChatWindow
+import SettingsWindow
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {

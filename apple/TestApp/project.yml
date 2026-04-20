@@ -1,4 +1,4 @@
-name: AgenticPluginTester
+name: TestApp
 options:
   deploymentTarget:
     macOS: "14.0"
@@ -25,9 +25,7 @@ packages:
 
 projectReferences:
   AgenticToolkit:
-    path: ../../../agentictoolkit/apple/AgenticToolkit.xcodeproj
-  PluginSDK:
-    path: ../PluginSDK/PluginSDK.xcodeproj
+    path: ../AgenticToolkit/AgenticToolkit.xcodeproj
   Plugins:
     path: ../Plugins/Plugins.xcodeproj
     # App target depends on the Plugins/AllPlugins aggregate, which fans out
@@ -37,28 +35,20 @@ projectReferences:
 
 targets:
 
-  AgenticPluginTester:
+  TestApp:
     type: application
     platform: macOS
     sources:
-      - path: AgenticPluginTester
+      - path: TestApp
         excludes:
           - "Info.plist"
-          - "AgenticPluginTester.entitlements"
+          - "TestApp.entitlements"
           # Parked pending per-plugin secret storage design.
           - "Settings/DatabaseManagerPersistence.swift"
     resources:
-      - path: AgenticPluginTester/Assets.xcassets
+      - path: TestApp/Assets.xcassets
     dependencies:
       - framework: AgenticPluginSDK.framework
-        implicit: true
-        project: PluginSDK
-        embed: true
-      - framework: AgenticAppKit.framework
-        implicit: true
-        project: AgenticToolkit
-        embed: true
-      - framework: AgenticToolkit.framework
         implicit: true
         project: AgenticToolkit
         embed: true
@@ -70,41 +60,38 @@ targets:
       - target: Plugins/AllPlugins
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.AgenticPluginTester
-        INFOPLIST_FILE: AgenticPluginTester/Info.plist
-        CODE_SIGN_ENTITLEMENTS: AgenticPluginTester/AgenticPluginTester.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.TestApp
+        INFOPLIST_FILE: TestApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TestApp/TestApp.entitlements
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
 
-  AgenticPluginTesterTests:
+  TestAppTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: AgenticPluginTesterTests
+      - path: TestAppTests
         excludes:
           # Parked with the chat wiring.
           - "MiniChatViewModelTests.swift"
     dependencies:
-      - target: AgenticPluginTester
+      - target: TestApp
       - framework: AgenticPluginSDK.framework
-        implicit: true
-        project: PluginSDK
-      - framework: AgenticAppKit.framework
         implicit: true
         project: AgenticToolkit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.AgenticPluginTesterTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikefullerton.TestAppTests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  AgenticPluginTester:
+  TestApp:
     build:
       targets:
-        AgenticPluginTester: all
+        TestApp: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - AgenticPluginTesterTests
+        - TestAppTests
