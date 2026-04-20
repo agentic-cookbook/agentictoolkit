@@ -88,6 +88,7 @@
 		9C12CD009937AA8A85B11305 /* AgenticToolkit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1E274069423241BDF21B68 /* AgenticToolkit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9F8CC3E678E1C703D4776368 /* SettingsPanelEditViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A217AFB5A6940F0DB5CBEB38 /* SettingsPanelEditViewController.swift */; };
 		9FA8B44F581E774EB9DCA824 /* AIRequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 497E02A491B06AF8E5CBF389 /* AIRequestBuilderTests.swift */; };
+		9FDE8917E8505D16188D67FB /* LogController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74F01E56F94E8B627CF9F9D /* LogController.swift */; };
 		9FF77AAE056D5D7B50D7DAE0 /* FileTreeNodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFD8578D9C14CF02882FF49 /* FileTreeNodeTests.swift */; };
 		A0DEC096251FA92955D6D1E0 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F45A57C235FD7221914F0951 /* PlaceholderTests.swift */; };
 		A1395CC0B11D53926FFC9543 /* TerminalSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F73DCF8CF53B8BF87C4362 /* TerminalSession.swift */; };
@@ -124,6 +125,7 @@
 		CA39B708580870B5E436DDC2 /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A6145BF6F643FA173B90CDF /* FileSystemWatcher.swift */; };
 		CA7EAF2398F7AF6165EAB5C3 /* SingleWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B7E33B79928DA9BE3B2904 /* SingleWindowControllerTests.swift */; };
 		CB015B966F47D67D927630A7 /* TerminalContentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B2F41235EA5A10D6D00B4EA /* TerminalContentViewController.swift */; };
+		CF88DD5CAA1220D58346EC62 /* LogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51023B122523EBDF2D4FB860 /* LogViewController.swift */; };
 		D5D8695D2A65CD7C0B84D1BA /* SingleWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F3B8E21BBB9C559F2EECB4 /* SingleWindowController.swift */; };
 		D60B26960531352CABB615D3 /* NoteEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D88775FC5958416729CB3296 /* NoteEditorViewController.swift */; };
 		D6D973E009FC851EADB95E1A /* WindowManagerSimulatedRelaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B94E764D3342F46C46D02DFF /* WindowManagerSimulatedRelaunchTests.swift */; };
@@ -361,6 +363,7 @@
 		4A45DF556E0F2F1B317D87B6 /* WorkspaceDirectoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceDirectoryManager.swift; sourceTree = "<group>"; };
 		4B5997EA8644ED647B41C2A9 /* AppearanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceMode.swift; sourceTree = "<group>"; };
 		4F72F839E9D39E77C8489D47 /* FileTypesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypesSettingsView.swift; sourceTree = "<group>"; };
+		51023B122523EBDF2D4FB860 /* LogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewController.swift; sourceTree = "<group>"; };
 		517B69D32AF6F855B9D23E38 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		52F3B8E21BBB9C559F2EECB4 /* SingleWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleWindowController.swift; sourceTree = "<group>"; };
 		535E1222580E5C9C2339D17F /* SummarizationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizationCoordinator.swift; sourceTree = "<group>"; };
@@ -441,6 +444,7 @@
 		E43BD70136F4923BF6F907EC /* MainActorScriptCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorScriptCommandTests.swift; sourceTree = "<group>"; };
 		E671E7A44A1E23822A5B2C16 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E7255C0AB6E8FE1DFA79C58E /* AgenticUIKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticUIKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E74F01E56F94E8B627CF9F9D /* LogController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogController.swift; sourceTree = "<group>"; };
 		E860842D63CEAF17BC25D577 /* ActivationTestLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationTestLog.swift; sourceTree = "<group>"; };
 		F45A57C235FD7221914F0951 /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		F586877F88E3F0691DF2438A /* TerminalProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProfile.swift; sourceTree = "<group>"; };
@@ -863,9 +867,11 @@
 				734BE4EF81A2FA84965A16A4 /* LogBuffer.swift */,
 				BED59B8961D959EE4048CEDD /* LogCellValue.swift */,
 				CAEB1B6D8EBED960085C753E /* LogColumn.swift */,
+				E74F01E56F94E8B627CF9F9D /* LogController.swift */,
 				F8C5BC2058780E7C82F208CB /* LogLine.swift */,
 				010619891E1CF004427FD34F /* LogProvider.swift */,
 				E3836DFD36E843F850ADB150 /* LogView.swift */,
+				51023B122523EBDF2D4FB860 /* LogViewController.swift */,
 				970238BF00792C3015AD174A /* LogWindowController.swift */,
 			);
 			path = Log;
@@ -1277,9 +1283,11 @@
 				00D3234A49A0FE4238D0B2D2 /* LogBuffer.swift in Sources */,
 				DC82175C1FD7F30AE6E625C6 /* LogCellValue.swift in Sources */,
 				E1DF90584D87E7F0405F51B7 /* LogColumn.swift in Sources */,
+				9FDE8917E8505D16188D67FB /* LogController.swift in Sources */,
 				73DA78284D65813971B7B345 /* LogLine.swift in Sources */,
 				AD15F327855CF8EB1257496C /* LogProvider.swift in Sources */,
 				C58139505D5A450099B08C03 /* LogView.swift in Sources */,
+				CF88DD5CAA1220D58346EC62 /* LogViewController.swift in Sources */,
 				6FA90B84C0C608C908CD3F9F /* LogWindowController.swift in Sources */,
 				D850AA9FB133EACD7CFD0283 /* MainActorScriptCommand.swift in Sources */,
 				F6C837E325914CCD5E511F8B /* MessageBubbleView.swift in Sources */,

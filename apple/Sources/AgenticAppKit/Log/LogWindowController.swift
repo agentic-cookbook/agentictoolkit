@@ -1,51 +1,34 @@
 import AppKit
 
-/// Thin window wrapper around any content view — typically a
-/// ``LogView`` composed alongside a caller-supplied toolbar.
+/// `SingleWindowController` that hosts a ``LogViewController`` backed
+/// by a caller-supplied ``LogController``. Handles the AppKit window
+/// shell (title, size, style mask, frame persistence via
+/// `WindowManager`) so callers only need a log source.
 ///
-/// The controller does not own the ``LogProvider``; callers wire the
-/// provider into whatever view they pass in. Keeping it generic over
-/// `NSView` lets consumers stack their own filter / action controls
-/// above the scrolling log without this type learning about them.
+/// Subclasses can override ``makeContentViewController()`` to swap in a
+/// `LogViewController` subclass that contributes extra toolbar items.
+/// Callers that want singleton semantics layer their own static on top
+/// — this base intentionally stays non-singleton.
 @MainActor
-public final class LogWindowController: NSObject, NSWindowDelegate {
-    public let window: NSWindow
-    private let onClose: (() -> Void)?
+open class LogWindowController: SingleWindowController {
+    public let controller: any LogController
 
-    public init(
-        contentView: NSView,
-        title: String,
-        defaultSize: NSSize = NSSize(width: 900, height: 600),
-        onClose: (() -> Void)? = nil
-    ) {
-        let styleMask: NSWindow.StyleMask = [.titled, .closable, .resizable, .miniaturizable]
-        let window = NSWindow(
-            contentRect: NSRect(origin: .zero, size: defaultSize),
-            styleMask: styleMask,
-            backing: .buffered,
-            defer: false
-        )
-        window.title = title
-        window.contentView = contentView
-        window.setContentSize(defaultSize)
-        window.center()
-        window.isReleasedWhenClosed = false
-        self.window = window
-        self.onClose = onClose
-        super.init()
-        window.delegate = self
+    public init(windowID: String, controller: any LogController) {
+        self.controller = controller
+        super.init(windowID: windowID)
     }
 
-    public func show() {
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    open override var windowTitle: String { "Log" }
+
+    open override var defaultContentRect: NSRect {
+        NSRect(x: 0, y: 0, width: 900, height: 600)
     }
 
-    public func close() {
-        window.performClose(nil)
+    open override var windowStyleMask: NSWindow.StyleMask {
+        [.titled, .closable, .resizable, .miniaturizable]
     }
 
-    public func windowWillClose(_ notification: Notification) {
-        onClose?()
+    open override func makeContentViewController() -> NSViewController? {
+        LogViewController(controller: controller)
     }
 }
