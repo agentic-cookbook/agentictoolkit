@@ -1,5 +1,5 @@
 import AppKit
-import AgenticAppKit
+import SettingsWindow
 
 /// Protocol that all LLM provider plugins must conform to.
 ///
