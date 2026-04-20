@@ -7,4 +7,7 @@
    <FileRef
       location = "group:Plugins/Plugins.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+   </FileRef>
 </Workspace>

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		027AE9BF5F3080A798B20168 /* Core.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92342024863D5F7B5C7A7F32 /* Core.framework */; };
 		0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */; };
 		092A8C9410C7030D78C8EC5F /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = DD008136BF230803F4AE8BA3 /* SwiftTerm */; };
 		0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */; };
@@ -23,36 +24,115 @@
 		2A45B55B84C262AD02853890 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */; };
 		2AC6C41C100B7F9648E0E7BB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 51CE909ED7161772EFA48042 /* Assets.xcassets */; };
 		319AF16A3DD48803293B31FB /* DatabaseManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */; };
-		32979F74301C007A811EF2CB /* AgenticPluginSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 059B71694B2DA4CC2B9ACCE9 /* AgenticPluginSDK.framework */; };
 		33F0A3F6A865939447A091B4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8283AC5130D2A9E9DDBF1A8F /* Models.swift */; };
 		3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */; };
+		41076C529DCE5661458D6281 /* AgenticPluginSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 30AC6A2B5518506A581EC1FF /* AgenticPluginSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		461186254E10F3049F09FB72 /* Scripting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0E3DA7F11C786CB5FC132AE1 /* Scripting.framework */; };
 		499F8B9FCE527F30A6B5365D /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */; };
 		5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512312A712C04F53A999F7C0 /* DatabaseManager.swift */; };
-		57FC17E9C8DD56EC66BEC4AC /* AgenticPluginSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 059B71694B2DA4CC2B9ACCE9 /* AgenticPluginSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5AD18A78E7D0520AED9D6FF3 /* LaunchAtLoginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */; };
+		5AF1FEFFA38CD12247A96DF7 /* SettingsWindow.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C53F82AA04167A6F003AD974 /* SettingsWindow.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5C93B57CC3AA17DC451C7755 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */; };
 		64A41F0EB817449E6CAC40A7 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6840232F51664749DA0337AE /* NotificationManagerTests.swift */; };
 		6A46586C789FDE350E9C87EC /* TerminalProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */; };
+		70F4BED03E57A437D8952FE1 /* Core.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 92342024863D5F7B5C7A7F32 /* Core.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7511B3757B0C59DD5064849A /* (null) in Resources */ = {isa = PBXBuildFile; fileRef = 147082FDC4A96AD4FF7669DA; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */; };
 		81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */; };
 		865F9C152B023315757CDC7E /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B6DC92661757FBD7B84F01 /* Log.swift */; };
+		884025C37B2629792B49CDAA /* CoreUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5FE92BC800D547C3F3950C17 /* CoreUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		94AAA9EB9296B56AFFD93305 /* CoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5FE92BC800D547C3F3950C17 /* CoreUI.framework */; };
 		95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711244F8F5F5CCE26995F087 /* AppDelegate.swift */; };
+		9C7E21ABDE18E32F3589BFCA /* SettingsWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C53F82AA04167A6F003AD974 /* SettingsWindow.framework */; };
 		9D795E93C9EF32CC59DB86EB /* AgenticPluginSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 059B71694B2DA4CC2B9ACCE9 /* AgenticPluginSDK.framework */; };
 		A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */; };
 		A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */; };
 		AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */; };
+		B1AB9F8A3D32B182ADCF66CE /* AgenticPluginSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30AC6A2B5518506A581EC1FF /* AgenticPluginSDK.framework */; };
 		B244E6B2269EDB8926DAC32C /* IngestionIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120C2AC2F0A9618EB42E8D6F /* IngestionIntegrationTests.swift */; };
 		C1E0EB18CAE31DE340144DE0 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45645C3494432F8D87A2E036 /* SettingsWindowController.swift */; };
+		C34AC156064DBC1E79AB6B6F /* ChatWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A891C0C9456CA2AB324F4DA1 /* ChatWindow.framework */; };
 		C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */; };
 		CAA1364A8E1864ED945DC07C /* AgenticPluginSDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 059B71694B2DA4CC2B9ACCE9 /* AgenticPluginSDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D1D80ABC4FC73D715D8DFDF6 /* ChatWindow.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A891C0C9456CA2AB324F4DA1 /* ChatWindow.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */; };
 		DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */; };
 		F3AA21376FE50406F5D3819A /* SessionLivenessMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */; };
+		F3C55CD7A45CCACFC277A4AC /* Scripting.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0E3DA7F11C786CB5FC132AE1 /* Scripting.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = A778DFB22825D8D9E9729472 /* AppPermission.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		08DA7FC8C49813E4463D07B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = 7FC86FAD5CED54A0288A7859;
+			remoteInfo = CoreUI;
+		};
+		16C41D770847A89373B44951 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = 09D8197B87D96467C7A3576A;
+			remoteInfo = Scripting;
+		};
+		22FA020A19B2C2C397423B60 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = 21E4E444BCFA753C15BE79F6;
+			remoteInfo = SettingsWindow;
+		};
+		2C05415A183BB42F32B3D9EA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = C9C6A9B4DB0C9D75AE0281D0;
+			remoteInfo = Core;
+		};
+		542086537742F6D656B88C1B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 658C7D82B51C0513C3BE021F;
+			remoteInfo = AgenticPluginSDK;
+		};
+		56B1DA2C7875E69B4174AD1A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = F82E5A8D810E0953436636C3;
+			remoteInfo = CoreUI;
+		};
+		58BF7B4B0EF3EE809E3DA643 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = C99FFB61054DF82924CFAA47;
+			remoteInfo = Scripting;
+		};
+		5F612752BCD08237CA17C514 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 23B7041492D3ED977F601A46;
+			remoteInfo = ChatWindow;
+		};
+		7CBA29E8CC840EAC4EDB6D28 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = 0219F0C88365540A74212294;
+			remoteInfo = AgenticPluginSDK;
+		};
+		837791B88CEB0822818E7C2F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = E97CEAA1A0D35B1FB04588C1;
+			remoteInfo = SettingsWindow;
+		};
 		8BFF4FBC8DC470E99EA803C5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 38A120F76DA82703D078F904 /* Plugins */;
@@ -60,12 +140,26 @@
 			remoteGlobalIDString = A4C4490619CDF1995ABBDCC1;
 			remoteInfo = AllPlugins;
 		};
+		AE9D30EDBF36F2F9FAC8BC2E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = 7320B09EB8207F6A2199624F;
+			remoteInfo = ChatWindow;
+		};
 		BE17A5B031C7FCC3ECE87DBF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 94127FA6B27A717E4CA845C5 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 810918565CAE23E364AEA726;
 			remoteInfo = AgenticToolkitApp;
+		};
+		BEFB17D12B16655AE290A0B0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 197AE256063908DE304C069C /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = F6D8D4241EEF1BEBDD81DE2E;
+			remoteInfo = Core;
 		};
 		F83178A5E3594F275F645B10 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -82,7 +176,12 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				57FC17E9C8DD56EC66BEC4AC /* AgenticPluginSDK.framework in Embed Frameworks */,
+				41076C529DCE5661458D6281 /* AgenticPluginSDK.framework in Embed Frameworks */,
+				70F4BED03E57A437D8952FE1 /* Core.framework in Embed Frameworks */,
+				884025C37B2629792B49CDAA /* CoreUI.framework in Embed Frameworks */,
+				F3C55CD7A45CCACFC277A4AC /* Scripting.framework in Embed Frameworks */,
+				5AF1FEFFA38CD12247A96DF7 /* SettingsWindow.framework in Embed Frameworks */,
+				D1D80ABC4FC73D715D8DFDF6 /* ChatWindow.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -150,7 +249,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				32979F74301C007A811EF2CB /* AgenticPluginSDK.framework in Frameworks */,
+				B1AB9F8A3D32B182ADCF66CE /* AgenticPluginSDK.framework in Frameworks */,
+				027AE9BF5F3080A798B20168 /* Core.framework in Frameworks */,
+				94AAA9EB9296B56AFFD93305 /* CoreUI.framework in Frameworks */,
+				461186254E10F3049F09FB72 /* Scripting.framework in Frameworks */,
+				9C7E21ABDE18E32F3589BFCA /* SettingsWindow.framework in Frameworks */,
+				C34AC156064DBC1E79AB6B6F /* ChatWindow.framework in Frameworks */,
 				092A8C9410C7030D78C8EC5F /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -291,6 +395,12 @@
 		F20FCBB43CB47D4324D2148E /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				30AC6A2B5518506A581EC1FF /* AgenticPluginSDK.framework */,
+				92342024863D5F7B5C7A7F32 /* Core.framework */,
+				5FE92BC800D547C3F3950C17 /* CoreUI.framework */,
+				0E3DA7F11C786CB5FC132AE1 /* Scripting.framework */,
+				C53F82AA04167A6F003AD974 /* SettingsWindow.framework */,
+				A891C0C9456CA2AB324F4DA1 /* ChatWindow.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -352,6 +462,12 @@
 			buildRules = (
 			);
 			dependencies = (
+				5A6C4B5BCD11178EF4AE4C3A /* PBXTargetDependency */,
+				E519F7A72FB6ECA7DBBC84AB /* PBXTargetDependency */,
+				16214F5C210C8B51DAD34397 /* PBXTargetDependency */,
+				ECD5B08734E4C21765FEA2C1 /* PBXTargetDependency */,
+				FD72D2CF9A54FA994E74A698 /* PBXTargetDependency */,
+				0E4BBCE4FFF6C08E6B0CA55F /* PBXTargetDependency */,
 				14001612A0AAFA35856C740D /* PBXTargetDependency */,
 			);
 			name = AgenticToolkitApp;
@@ -414,9 +530,51 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
+		0E3DA7F11C786CB5FC132AE1 /* Scripting.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Scripting.framework;
+			remoteRef = 16C41D770847A89373B44951 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 		147082FDC4A96AD4FF7669DA = {
 			isa = PBXReferenceProxy;
 			remoteRef = F83178A5E3594F275F645B10 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		30AC6A2B5518506A581EC1FF /* AgenticPluginSDK.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = AgenticPluginSDK.framework;
+			remoteRef = 7CBA29E8CC840EAC4EDB6D28 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5FE92BC800D547C3F3950C17 /* CoreUI.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = CoreUI.framework;
+			remoteRef = 08DA7FC8C49813E4463D07B9 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		92342024863D5F7B5C7A7F32 /* Core.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Core.framework;
+			remoteRef = BEFB17D12B16655AE290A0B0 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		A891C0C9456CA2AB324F4DA1 /* ChatWindow.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = ChatWindow.framework;
+			remoteRef = AE9D30EDBF36F2F9FAC8BC2E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C53F82AA04167A6F003AD974 /* SettingsWindow.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SettingsWindow.framework;
+			remoteRef = 22FA020A19B2C2C397423B60 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -487,15 +645,45 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0E4BBCE4FFF6C08E6B0CA55F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ChatWindow;
+			targetProxy = 5F612752BCD08237CA17C514 /* PBXContainerItemProxy */;
+		};
 		14001612A0AAFA35856C740D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AllPlugins;
 			targetProxy = 8BFF4FBC8DC470E99EA803C5 /* PBXContainerItemProxy */;
 		};
+		16214F5C210C8B51DAD34397 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CoreUI;
+			targetProxy = 56B1DA2C7875E69B4174AD1A /* PBXContainerItemProxy */;
+		};
+		5A6C4B5BCD11178EF4AE4C3A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticPluginSDK;
+			targetProxy = 542086537742F6D656B88C1B /* PBXContainerItemProxy */;
+		};
 		5D0D967BD0C56EE4F199F0DA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 810918565CAE23E364AEA726 /* AgenticToolkitApp */;
 			targetProxy = BE17A5B031C7FCC3ECE87DBF /* PBXContainerItemProxy */;
+		};
+		E519F7A72FB6ECA7DBBC84AB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Core;
+			targetProxy = 2C05415A183BB42F32B3D9EA /* PBXContainerItemProxy */;
+		};
+		ECD5B08734E4C21765FEA2C1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Scripting;
+			targetProxy = 58BF7B4B0EF3EE809E3DA643 /* PBXContainerItemProxy */;
+		};
+		FD72D2CF9A54FA994E74A698 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SettingsWindow;
+			targetProxy = 837791B88CEB0822818E7C2F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

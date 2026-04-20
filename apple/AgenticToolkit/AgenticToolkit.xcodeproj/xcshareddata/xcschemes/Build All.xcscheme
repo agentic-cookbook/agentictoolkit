@@ -301,6 +301,34 @@
                ReferencedContainer = "container:../Plugins/Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "810918565CAE23E364AEA726"
+               BuildableName = "AgenticToolkitApp.app"
+               BlueprintName = "AgenticToolkitApp"
+               ReferencedContainer = "container:../AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "29E6204B8EC89F3C494268DB"
+               BuildableName = "AgenticToolkitAppTests.xctest"
+               BlueprintName = "AgenticToolkitAppTests"
+               ReferencedContainer = "container:../AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

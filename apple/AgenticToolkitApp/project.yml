@@ -48,9 +48,19 @@ targets:
     resources:
       - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
-      - framework: AgenticPluginSDK.framework
-        implicit: true
-        project: AgenticToolkit
+      # AgenticPluginSDK dynamically links Core/CoreUI/SettingsWindow/ChatWindow,
+      # so all four must also be embedded for dyld to resolve them at launch.
+      - target: AgenticToolkit/AgenticPluginSDK
+        embed: true
+      - target: AgenticToolkit/Core
+        embed: true
+      - target: AgenticToolkit/CoreUI
+        embed: true
+      - target: AgenticToolkit/Scripting
+        embed: true
+      - target: AgenticToolkit/SettingsWindow
+        embed: true
+      - target: AgenticToolkit/ChatWindow
         embed: true
       - package: SwiftTerm
       # Single aggregate dep fans out to every built-in plugin bundle. Each
