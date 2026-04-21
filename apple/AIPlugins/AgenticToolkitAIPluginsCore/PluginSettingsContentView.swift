@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitAIPlugins
 

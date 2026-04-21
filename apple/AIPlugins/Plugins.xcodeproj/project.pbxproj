@@ -20,48 +20,24 @@
 		A3C29FA2811BF4725B2BA541 /* ClaudeAPIPlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 56A1FA4FEA05223A149C50C0 /* ClaudeAPIPlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AAA65C7B6E84250A1B1C187F /* BuiltInPluginTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD236D79ECCA53BED1A74D88 /* BuiltInPluginTests.swift */; };
 		ABFDD8EB00092E964FE76961 /* ClaudeLocalPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE7001B0214C7943A1E81A1 /* ClaudeLocalPlugin.swift */; };
-		B2B9F4B52F97D1D90062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4B82F97D1D90062DE4E /* AgenticToolkitCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4BB2F97D1D90062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4BF2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4C22F97DC180062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4C02F97DC180062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4C62F97DC7D0062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4C42F97DC7D0062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4CA2F97DC840062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4C82F97DC840062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4CE2F97DC890062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4CC2F97DC890062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4D02F97DC9C0062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		B2B9F4D42F97DCA70062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		B2B9F4D62F97DCAA0062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		B2B9F4D82F97DCAE0062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		B2B9F4DA2F97DCB10062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		B2B9F4EE2F97DD430062DE4E /* AgenticToolkitCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 800544F545A2D72E1E4349FB /* AgenticToolkitCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4EF2F97DD440062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 94C8DBD6BE3EC89E0AB4A47F /* AgenticToolkitCoreUI */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F02F97DD460062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 0A5F10CB8C12B531D2369A5A /* AgenticToolkitSettingsWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F42F97DD520062DE4E /* AgenticToolkitCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = DDCDBC92A9156A9381942A11 /* AgenticToolkitCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F52F97DD540062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 6D5B66731A0F8DC1DF423F9C /* AgenticToolkitCoreUI */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F62F97DD550062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7313FF23C8C1F2FF171CC07F /* AgenticToolkitSettingsWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F72F97DD580062DE4E /* AgenticToolkitCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 9F7A04781E431E6DD3B2EF2A /* AgenticToolkitCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F82F97DD5A0062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 5EE318FF0C0549A947614E4E /* AgenticToolkitCoreUI */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4F92F97DD5B0062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 0F3A25F5C82BA1071151B9BB /* AgenticToolkitSettingsWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B2B9F4FD2F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */; };
-		B2B9F4FE2F97DE450062DE4E /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */; };
-		B2B9F4FF2F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */; };
-		B2B9F5002F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */; };
-		B2B9F5012F97DE450062DE4E /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 800544F545A2D72E1E4349FB /* AgenticToolkitCore */; };
-		B2B9F5022F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 94C8DBD6BE3EC89E0AB4A47F /* AgenticToolkitCoreUI */; };
-		B2B9F5032F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 0A5F10CB8C12B531D2369A5A /* AgenticToolkitSettingsWindow */; };
-		B2B9F5042F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4C02F97DC180062DE4E /* AgenticToolkitAIPlugins */; };
-		B2B9F5052F97DE450062DE4E /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9F7A04781E431E6DD3B2EF2A /* AgenticToolkitCore */; };
-		B2B9F5062F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EE318FF0C0549A947614E4E /* AgenticToolkitCoreUI */; };
-		B2B9F5072F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 0F3A25F5C82BA1071151B9BB /* AgenticToolkitSettingsWindow */; };
-		B2B9F5082F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4CC2F97DC890062DE4E /* AgenticToolkitAIPlugins */; };
-		B2B9F50C2F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4C42F97DC7D0062DE4E /* AgenticToolkitAIPlugins */; };
-		B2B9F50D2F97DE450062DE4E /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = DDCDBC92A9156A9381942A11 /* AgenticToolkitCore */; };
-		B2B9F50E2F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 6D5B66731A0F8DC1DF423F9C /* AgenticToolkitCoreUI */; };
-		B2B9F50F2F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7313FF23C8C1F2FF171CC07F /* AgenticToolkitSettingsWindow */; };
-		B2B9F5102F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4C82F97DC840062DE4E /* AgenticToolkitAIPlugins */; };
 		B2B9F5112F97DE9D0062DE4E /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2C163488BA4828F513677431 /* AgenticToolkitCore */; };
 		B2B9F5122F97DE9D0062DE4E /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 9D29539EC6C45F45B689B35F /* AgenticToolkitSettingsWindow */; };
 		B2EC08A72F97E50E00587CAB /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2EC08A62F97E50E00587CAB /* AgenticToolkitAIPlugins */; };
+		B2EC08A92F97E67100587CAB /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2EC08A82F97E67100587CAB /* AgenticToolkitAIPlugins */; };
+		B2EC08AA2F97E67100587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
+		B2EC08AB2F97E67100587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B2EC08AF2F97E70A00587CAB /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2EC08AE2F97E70A00587CAB /* AgenticToolkitAIPlugins */; };
+		B2EC08B02F97E70C00587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
+		B2EC08B12F97E70C00587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B2EC08B52F97E71F00587CAB /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2EC08B42F97E71F00587CAB /* AgenticToolkitAIPlugins */; };
+		B2EC08B62F97E72200587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
+		B2EC08B72F97E72200587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B2EC08BB2F97E73100587CAB /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2EC08BA2F97E73100587CAB /* AgenticToolkitAIPlugins */; };
+		B2EC08BC2F97E73400587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
+		B2EC08BD2F97E73400587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B2EC08C12F97E74000587CAB /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2EC08C02F97E74000587CAB /* AgenticToolkitAIPlugins */; };
+		B2EC08C22F97E74000587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
+		B2EC08C32F97E74000587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BC47F1924AE6869F835786AA /* OpenAISettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCCC3DD0CC55FBA3DE7C6E14 /* OpenAISettingsPanelViewController.swift */; };
 		C6DA22070F4D11353847C926 /* ClaudeLocalPlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 2B7E1879B023360D18610262 /* ClaudeLocalPlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D31BA78529D6E37487FF05FF /* OpenAIResponseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEE29BDE4953B57953257DD /* OpenAIResponseParser.swift */; };
@@ -71,26 +47,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		5BB12F82F7F945446B065ABA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
-			remoteInfo = AgenticToolkitAIPluginsCore;
-		};
 		60D0BCBFEFA7D8592A018EE1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = DD6FF554DDAD90DDAE763E96;
 			remoteInfo = ClaudeLocalPlugin;
-		};
-		7E59EA27142F36BF535D8095 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
-			remoteInfo = AgenticToolkitAIPluginsCore;
 		};
 		A09958B21B144C55701CBB47 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -99,7 +61,35 @@
 			remoteGlobalIDString = A2ECE035EE056BC5AD8A181C;
 			remoteInfo = OpenAICompatiblePlugin;
 		};
-		B2B9F4D22F97DC9C0062DE4E /* PBXContainerItemProxy */ = {
+		B2EC08AC2F97E67100587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
+		B2EC08B22F97E70C00587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
+		B2EC08B82F97E72200587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
+		B2EC08BE2F97E73400587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
+		B2EC08C42F97E74000587CAB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
 			proxyType = 1;
@@ -127,20 +117,6 @@
 			remoteGlobalIDString = 01C0239ED5F1FCE7E13292E3;
 			remoteInfo = GooglePlugin;
 		};
-		EC824300339409866E0882B7 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
-			remoteInfo = AgenticToolkitAIPluginsCore;
-		};
-		F39CD9F5E2001D4A2E300D6E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
-			remoteInfo = AgenticToolkitAIPluginsCore;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -160,10 +136,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B2B9F4BB2F97D1D90062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */,
-				B2B9F4B82F97D1D90062DE4E /* AgenticToolkitCore in Embed Frameworks */,
-				B2B9F4BF2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */,
-				B2B9F4B52F97D1D90062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
+				B2EC08B12F97E70C00587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -174,10 +147,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B2B9F4EF2F97DD440062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */,
-				B2B9F4C22F97DC180062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
-				B2B9F4F02F97DD460062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */,
-				B2B9F4EE2F97DD430062DE4E /* AgenticToolkitCore in Embed Frameworks */,
+				B2EC08B72F97E72200587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -188,7 +158,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B2B9F4C62F97DC7D0062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
+				B2EC08AB2F97E67100587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -199,10 +169,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B2B9F4F52F97DD540062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */,
-				B2B9F4CA2F97DC840062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
-				B2B9F4F62F97DD550062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */,
-				B2B9F4F42F97DD520062DE4E /* AgenticToolkitCore in Embed Frameworks */,
+				B2EC08BD2F97E73400587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -213,10 +180,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B2B9F4F82F97DD5A0062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */,
-				B2B9F4CE2F97DC890062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
-				B2B9F4F92F97DD5B0062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */,
-				B2B9F4F72F97DD580062DE4E /* AgenticToolkitCore in Embed Frameworks */,
+				B2EC08C32F97E74000587CAB /* AgenticToolkitAIPluginsCore.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -257,11 +221,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2B9F5082F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */,
-				B2B9F5072F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */,
-				B2B9F5062F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */,
-				B2B9F5052F97DE450062DE4E /* AgenticToolkitCore in Frameworks */,
-				B2B9F4DA2F97DCB10062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
+				B2EC08C12F97E74000587CAB /* AgenticToolkitAIPlugins in Frameworks */,
+				B2EC08C22F97E74000587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,8 +248,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2B9F50C2F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */,
-				B2B9F4D62F97DCAA0062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
+				B2EC08A92F97E67100587CAB /* AgenticToolkitAIPlugins in Frameworks */,
+				B2EC08AA2F97E67100587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,11 +257,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2B9F5102F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */,
-				B2B9F50F2F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */,
-				B2B9F50E2F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */,
-				B2B9F50D2F97DE450062DE4E /* AgenticToolkitCore in Frameworks */,
-				B2B9F4D82F97DCAE0062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
+				B2EC08BB2F97E73100587CAB /* AgenticToolkitAIPlugins in Frameworks */,
+				B2EC08BC2F97E73400587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,11 +266,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2B9F5002F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */,
-				B2B9F4FF2F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */,
-				B2B9F4FE2F97DE450062DE4E /* AgenticToolkitCore in Frameworks */,
-				B2B9F4FD2F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */,
-				B2B9F4D02F97DC9C0062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
+				B2EC08AF2F97E70A00587CAB /* AgenticToolkitAIPlugins in Frameworks */,
+				B2EC08B02F97E70C00587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,11 +275,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2B9F5042F97DE450062DE4E /* AgenticToolkitAIPlugins in Frameworks */,
-				B2B9F5032F97DE450062DE4E /* AgenticToolkitSettingsWindow in Frameworks */,
-				B2B9F5022F97DE450062DE4E /* AgenticToolkitCoreUI in Frameworks */,
-				B2B9F5012F97DE450062DE4E /* AgenticToolkitCore in Frameworks */,
-				B2B9F4D42F97DCA70062DE4E /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
+				B2EC08B52F97E71F00587CAB /* AgenticToolkitAIPlugins in Frameworks */,
+				B2EC08B62F97E72200587CAB /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -457,11 +409,11 @@
 			buildRules = (
 			);
 			dependencies = (
-				82D5D8A0C0B56DCB8957EEB1 /* PBXTargetDependency */,
+				B2EC08AD2F97E67100587CAB /* PBXTargetDependency */,
 			);
 			name = GooglePlugin;
 			packageProductDependencies = (
-				B2B9F4C42F97DC7D0062DE4E /* AgenticToolkitAIPlugins */,
+				B2EC08A82F97E67100587CAB /* AgenticToolkitAIPlugins */,
 			);
 			productName = GooglePlugin;
 			productReference = FAB58D670AFD20239E1B07A4 /* GooglePlugin.bundle */;
@@ -478,14 +430,11 @@
 			buildRules = (
 			);
 			dependencies = (
-				3B80A7DA7AC4FE21827AD8E4 /* PBXTargetDependency */,
+				B2EC08C52F97E74000587CAB /* PBXTargetDependency */,
 			);
 			name = OpenAIPlugin;
 			packageProductDependencies = (
-				9F7A04781E431E6DD3B2EF2A /* AgenticToolkitCore */,
-				5EE318FF0C0549A947614E4E /* AgenticToolkitCoreUI */,
-				0F3A25F5C82BA1071151B9BB /* AgenticToolkitSettingsWindow */,
-				B2B9F4CC2F97DC890062DE4E /* AgenticToolkitAIPlugins */,
+				B2EC08C02F97E74000587CAB /* AgenticToolkitAIPlugins */,
 			);
 			productName = OpenAIPlugin;
 			productReference = 9C738860ACF7E63F78BE0E24 /* OpenAIPlugin.bundle */;
@@ -524,14 +473,11 @@
 			buildRules = (
 			);
 			dependencies = (
-				B2B9F4D32F97DC9C0062DE4E /* PBXTargetDependency */,
+				B2EC08B32F97E70C00587CAB /* PBXTargetDependency */,
 			);
 			name = ClaudeAPIPlugin;
 			packageProductDependencies = (
-				B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */,
-				B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */,
-				B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */,
-				B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */,
+				B2EC08AE2F97E70A00587CAB /* AgenticToolkitAIPlugins */,
 			);
 			productName = ClaudeAPIPlugin;
 			productReference = 56A1FA4FEA05223A149C50C0 /* ClaudeAPIPlugin.bundle */;
@@ -548,14 +494,11 @@
 			buildRules = (
 			);
 			dependencies = (
-				44CA5978228FFE53CB5FB84F /* PBXTargetDependency */,
+				B2EC08BF2F97E73400587CAB /* PBXTargetDependency */,
 			);
 			name = OpenAICompatiblePlugin;
 			packageProductDependencies = (
-				DDCDBC92A9156A9381942A11 /* AgenticToolkitCore */,
-				6D5B66731A0F8DC1DF423F9C /* AgenticToolkitCoreUI */,
-				7313FF23C8C1F2FF171CC07F /* AgenticToolkitSettingsWindow */,
-				B2B9F4C82F97DC840062DE4E /* AgenticToolkitAIPlugins */,
+				B2EC08BA2F97E73100587CAB /* AgenticToolkitAIPlugins */,
 			);
 			productName = OpenAICompatiblePlugin;
 			productReference = 6B0A4C1251A5F8170D7C5C3C /* OpenAICompatiblePlugin.bundle */;
@@ -597,14 +540,11 @@
 			buildRules = (
 			);
 			dependencies = (
-				EDD3761BFEF40A8B1F7619ED /* PBXTargetDependency */,
+				B2EC08B92F97E72200587CAB /* PBXTargetDependency */,
 			);
 			name = ClaudeLocalPlugin;
 			packageProductDependencies = (
-				800544F545A2D72E1E4349FB /* AgenticToolkitCore */,
-				94C8DBD6BE3EC89E0AB4A47F /* AgenticToolkitCoreUI */,
-				0A5F10CB8C12B531D2369A5A /* AgenticToolkitSettingsWindow */,
-				B2B9F4C02F97DC180062DE4E /* AgenticToolkitAIPlugins */,
+				B2EC08B42F97E71F00587CAB /* AgenticToolkitAIPlugins */,
 			);
 			productName = ClaudeLocalPlugin;
 			productReference = 2B7E1879B023360D18610262 /* ClaudeLocalPlugin.bundle */;
@@ -733,16 +673,6 @@
 			target = 01C0239ED5F1FCE7E13292E3 /* GooglePlugin */;
 			targetProxy = E1CDE3FAA75643A35A2AED6C /* PBXContainerItemProxy */;
 		};
-		3B80A7DA7AC4FE21827AD8E4 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
-			targetProxy = EC824300339409866E0882B7 /* PBXContainerItemProxy */;
-		};
-		44CA5978228FFE53CB5FB84F /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
-			targetProxy = 5BB12F82F7F945446B065ABA /* PBXContainerItemProxy */;
-		};
 		4C424DA5C1FEE42D01AB9B6D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = DD6FF554DDAD90DDAE763E96 /* ClaudeLocalPlugin */;
@@ -753,25 +683,35 @@
 			target = A2ECE035EE056BC5AD8A181C /* OpenAICompatiblePlugin */;
 			targetProxy = A09958B21B144C55701CBB47 /* PBXContainerItemProxy */;
 		};
-		82D5D8A0C0B56DCB8957EEB1 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
-			targetProxy = F39CD9F5E2001D4A2E300D6E /* PBXContainerItemProxy */;
-		};
 		8579D6DF50839DFD71FBB2A0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 2C9C0A1F708502BF49559738 /* OpenAIPlugin */;
 			targetProxy = C55DB931A023AC095101A7A7 /* PBXContainerItemProxy */;
 		};
-		B2B9F4D32F97DC9C0062DE4E /* PBXTargetDependency */ = {
+		B2EC08AD2F97E67100587CAB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
-			targetProxy = B2B9F4D22F97DC9C0062DE4E /* PBXContainerItemProxy */;
+			targetProxy = B2EC08AC2F97E67100587CAB /* PBXContainerItemProxy */;
 		};
-		EDD3761BFEF40A8B1F7619ED /* PBXTargetDependency */ = {
+		B2EC08B32F97E70C00587CAB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
-			targetProxy = 7E59EA27142F36BF535D8095 /* PBXContainerItemProxy */;
+			targetProxy = B2EC08B22F97E70C00587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08B92F97E72200587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
+			targetProxy = B2EC08B82F97E72200587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08BF2F97E73400587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
+			targetProxy = B2EC08BE2F97E73400587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08C52F97E74000587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
+			targetProxy = B2EC08C42F97E74000587CAB /* PBXContainerItemProxy */;
 		};
 		F065372D7ED81F87E0E61CD9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1233,14 +1173,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		0A5F10CB8C12B531D2369A5A /* AgenticToolkitSettingsWindow */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitSettingsWindow;
-		};
-		0F3A25F5C82BA1071151B9BB /* AgenticToolkitSettingsWindow */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitSettingsWindow;
-		};
 		2BA6047BBAEDB79C54C9A2DC /* AgenticToolkitAIPlugins */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitAIPlugins;
@@ -1249,73 +1181,33 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitCore;
 		};
-		5EE318FF0C0549A947614E4E /* AgenticToolkitCoreUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCoreUI;
-		};
-		6D5B66731A0F8DC1DF423F9C /* AgenticToolkitCoreUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCoreUI;
-		};
-		7313FF23C8C1F2FF171CC07F /* AgenticToolkitSettingsWindow */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitSettingsWindow;
-		};
-		800544F545A2D72E1E4349FB /* AgenticToolkitCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCore;
-		};
-		94C8DBD6BE3EC89E0AB4A47F /* AgenticToolkitCoreUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCoreUI;
-		};
 		9D29539EC6C45F45B689B35F /* AgenticToolkitSettingsWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitSettingsWindow;
-		};
-		9F7A04781E431E6DD3B2EF2A /* AgenticToolkitCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCore;
-		};
-		B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitAIPlugins;
-		};
-		B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCore;
-		};
-		B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCoreUI;
-		};
-		B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitSettingsWindow;
-		};
-		B2B9F4C02F97DC180062DE4E /* AgenticToolkitAIPlugins */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitAIPlugins;
-		};
-		B2B9F4C42F97DC7D0062DE4E /* AgenticToolkitAIPlugins */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitAIPlugins;
-		};
-		B2B9F4C82F97DC840062DE4E /* AgenticToolkitAIPlugins */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitAIPlugins;
-		};
-		B2B9F4CC2F97DC890062DE4E /* AgenticToolkitAIPlugins */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitAIPlugins;
 		};
 		B2EC08A62F97E50E00587CAB /* AgenticToolkitAIPlugins */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitAIPlugins;
 		};
-		DDCDBC92A9156A9381942A11 /* AgenticToolkitCore */ = {
+		B2EC08A82F97E67100587CAB /* AgenticToolkitAIPlugins */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCore;
+			productName = AgenticToolkitAIPlugins;
+		};
+		B2EC08AE2F97E70A00587CAB /* AgenticToolkitAIPlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitAIPlugins;
+		};
+		B2EC08B42F97E71F00587CAB /* AgenticToolkitAIPlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitAIPlugins;
+		};
+		B2EC08BA2F97E73100587CAB /* AgenticToolkitAIPlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitAIPlugins;
+		};
+		B2EC08C02F97E74000587CAB /* AgenticToolkitAIPlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitAIPlugins;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
