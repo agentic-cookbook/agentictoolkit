@@ -31,7 +31,7 @@ final class SystemSettingsPane: NSView {
         stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        stack.addArrangedSubview(makeSettingsHeader("Permissions"))
+        stack.addArrangedSubview(SettingsPanelView.makeHeader("Permissions"))
 
         let hint = NSTextField(wrappingLabelWithString:
             "AgenticPluginTester needs the following permissions to monitor and activate Claude Code sessions.")

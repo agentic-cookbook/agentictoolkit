@@ -26,7 +26,7 @@ final class AppearanceSettingsPane: NSView {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         // Appearance mode
-        let modeHeader = makeSettingsHeader("Appearance")
+        let modeHeader = SettingsPanelView.makeHeader("Appearance")
 
         let lightRadio = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(modeChanged(_:)))
         lightRadio.tag = 0
@@ -50,7 +50,7 @@ final class AppearanceSettingsPane: NSView {
         divider.boxType = .separator
 
         // Text size
-        let sizeHeader = makeSettingsHeader("Text Size")
+        let sizeHeader = SettingsPanelView.makeHeader("Text Size")
 
         let slider = NSSlider(value: viewModel.textSize, minValue: -4, maxValue: 4, target: self, action: #selector(textSizeChanged(_:)))
         slider.numberOfTickMarks = 9

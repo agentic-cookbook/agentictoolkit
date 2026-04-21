@@ -1,11 +1,24 @@
 import AppKit
 
-/// A view controller that can be hosted in a `SettingsViewController` as one
-/// entry in its panel list. Conformers are guaranteed to be `NSViewController`s.
-///
-/// Plugins and host apps both vend panels through this protocol.
+/// Base class for every settings panel. One instance is hosted in the
+/// right-hand detail pane of a `SettingsViewController`; the sidebar metadata
+/// lives on the panel itself via the open overrides below. The panel *is* the
+/// list item — no wrapper struct.
 @MainActor
-public protocol SettingsPanelViewController: NSViewController {
-    /// Describes how this panel appears in the sidebar list.
-    var listItem: SettingsPanelListItem { get }
+open class SettingsPanelViewController: NSViewController {
+
+    /// Title shown in the sidebar row. Subclasses override.
+    open var panelTitle: String { "" }
+
+    /// Optional icon shown alongside the sidebar title.
+    open var icon: NSImage? { nil }
+
+    /// Optional section grouping. Panels sharing a non-nil section render
+    /// under a common header; nil-section panels form the leading unsectioned
+    /// block. When no panel declares a section, the list is flat.
+    open var section: String? { nil }
+
+    open override func loadView() {
+        view = SettingsPanelView()
+    }
 }

@@ -5,7 +5,7 @@ import AgenticToolkitAIPluginsCore
 
 /// Settings panel for `OpenAICompatiblePlugin`.
 @MainActor
-final class OpenAICompatibleSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+final class OpenAICompatibleSettingsPanelViewController: SettingsPanelViewController {
 
     private let plugin: OpenAICompatiblePlugin
 
@@ -17,11 +17,9 @@ final class OpenAICompatibleSettingsPanelViewController: NSViewController, Setti
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "Custom (OpenAI-compatible)",
-            image: NSImage(systemSymbolName: "server.rack", accessibilityDescription: nil)
-        )
+    override var panelTitle: String { "Custom (OpenAI-compatible)" }
+    override var icon: NSImage? {
+        NSImage(systemSymbolName: "server.rack", accessibilityDescription: nil)
     }
 
     override func loadView() {

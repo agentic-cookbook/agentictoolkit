@@ -5,7 +5,7 @@ import AppKit
 /// the selected `NSApp.appearance` immediately, and notifies the host via
 /// `onTextSizeChange` so it can re-render any dependent UI.
 @MainActor
-public final class AppearanceSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+public final class AppearanceSettingsPanelViewController: SettingsPanelViewController {
 
     /// UserDefaults keys used to persist the panel's three settings. Override
     /// to namespace per-app or to migrate from a legacy schema.
@@ -32,11 +32,9 @@ public final class AppearanceSettingsPanelViewController: NSViewController, Sett
     private var sizeStack: NSStackView?
     private var sizeValueLabel: NSTextField?
 
-    public var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "Appearance",
-            image: NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
-        )
+    public override var panelTitle: String { "Appearance" }
+    public override var icon: NSImage? {
+        NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
     }
 
     public init(
@@ -56,7 +54,7 @@ public final class AppearanceSettingsPanelViewController: NSViewController, Sett
     }
 
     public override func loadView() {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        let container = SettingsPanelView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
 
         let stack = NSStackView()
         stack.orientation = .vertical

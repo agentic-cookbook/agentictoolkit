@@ -5,7 +5,7 @@ import AgenticToolkitAIPluginsCore
 
 /// Settings panel for `GooglePlugin`.
 @MainActor
-final class GoogleSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+final class GoogleSettingsPanelViewController: SettingsPanelViewController {
 
     private let plugin: GooglePlugin
 
@@ -17,11 +17,9 @@ final class GoogleSettingsPanelViewController: NSViewController, SettingsPanelVi
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "Google (Gemini)",
-            image: NSImage(systemSymbolName: "g.circle", accessibilityDescription: nil)
-        )
+    override var panelTitle: String { "Google (Gemini)" }
+    override var icon: NSImage? {
+        NSImage(systemSymbolName: "g.circle", accessibilityDescription: nil)
     }
 
     override func loadView() {

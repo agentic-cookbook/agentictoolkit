@@ -56,7 +56,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     @MainActor
-    public func settingsPanelViewController() -> (any SettingsPanelViewController)? {
+    public func settingsPanelViewController() -> SettingsPanelViewController? {
         ClaudeAPISettingsPanelViewController(plugin: self)
     }
 

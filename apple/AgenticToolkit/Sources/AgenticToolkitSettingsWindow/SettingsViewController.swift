@@ -1,110 +1,101 @@
 import AppKit
 
-/// A split-pane settings container.
-///
-/// Hosts a list of `SettingsPanelViewController`s in a left sidebar and shows
-/// the selected panel's content on the right. Panels are added/removed
-/// dynamically by the host.
+/// Split-pane settings container. Subclass and populate in `viewDidLoad` by
+/// calling `addPanel(_:)`. Sidebar is a `SettingsPanelListViewController`; the
+/// detail pane hosts the currently selected `SettingsPanelViewController`.
 @MainActor
-public final class SettingsViewController: NSViewController {
+open class SettingsViewController: NSSplitViewController {
 
-    // MARK: - Panel Storage
+    public private(set) var panels: [SettingsPanelViewController] = []
 
-    private var storedPanels: [any SettingsPanelViewController] = []
+    /// The sidebar list controller. Inject a subclass to customize row
+    /// presentation; defaults to a stock `SettingsPanelListViewController`.
+    public let listViewController: SettingsPanelListViewController
 
-    /// Read-only snapshot of the current panel list, in insertion order.
-    public var panels: [any SettingsPanelViewController] { storedPanels }
+    private let detailContainer = NSViewController()
 
-    // MARK: - Child Controllers
-
-    private let splitViewController = NSSplitViewController()
-    private let listViewController = SettingsPanelListViewController()
-    private let editViewController = SettingsPanelEditViewController()
-
-    // MARK: - Lifecycle
-
-    public init() {
+    public init(listViewController: SettingsPanelListViewController = SettingsPanelListViewController()) {
+        self.listViewController = listViewController
         super.init(nibName: nil, bundle: nil)
     }
 
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError() }
 
-    public override func loadView() {
-        self.view = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
-    }
-
-    public override func viewDidLoad() {
+    open override func viewDidLoad() {
         super.viewDidLoad()
 
-        let listItem = NSSplitViewItem(sidebarWithViewController: listViewController)
-        listItem.minimumThickness = 180
-        listItem.maximumThickness = 220
+        detailContainer.view = NSView()
 
-        let editItem = NSSplitViewItem(viewController: editViewController)
+        let sidebarItem = NSSplitViewItem(sidebarWithViewController: listViewController)
+        sidebarItem.minimumThickness = 180
+        sidebarItem.maximumThickness = 220
+        addSplitViewItem(sidebarItem)
+        addSplitViewItem(NSSplitViewItem(viewController: detailContainer))
 
-        splitViewController.addSplitViewItem(listItem)
-        splitViewController.addSplitViewItem(editItem)
-
-        addChild(splitViewController)
-        splitViewController.view.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(splitViewController.view)
-        NSLayoutConstraint.activate([
-            splitViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
-            splitViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            splitViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            splitViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
-
-        listViewController.onSelect = { [weak self] panel in
-            self?.editViewController.show(panel)
+        listViewController.onSelectPanel = { [weak self] panel in
+            self?.show(panel)
         }
     }
 
-    public override func viewWillAppear() {
+    open override func viewWillAppear() {
         super.viewWillAppear()
-        // Auto-select the first panel on first show so the edit pane is never
-        // blank when panels are available.
-        if editViewController.currentPanel == nil, let first = storedPanels.first {
+        // Auto-select the first panel so the detail pane is never blank.
+        if currentPanel == nil, let first = panels.first {
             selectPanel(first)
         }
     }
 
-    // MARK: - Mutation
+    // MARK: - Panel management
 
-    public func addPanel(_ panel: any SettingsPanelViewController) {
-        storedPanels.append(panel)
-        listViewController.setPanels(storedPanels)
+    public func addPanel(_ panel: SettingsPanelViewController) {
+        panels.append(panel)
+        listViewController.setPanels(panels)
     }
 
-    public func removePanel(_ panel: any SettingsPanelViewController) {
-        storedPanels.removeAll { $0 === panel }
-        listViewController.setPanels(storedPanels)
-        if editViewController.currentPanel === panel {
-            editViewController.show(nil)
-        }
+    public func removePanel(_ panel: SettingsPanelViewController) {
+        panels.removeAll { $0 === panel }
+        listViewController.setPanels(panels)
+        if currentPanel === panel { show(nil) }
     }
 
     public func clear() {
-        storedPanels.removeAll()
-        listViewController.setPanels(storedPanels)
-        editViewController.show(nil)
+        panels.removeAll()
+        listViewController.setPanels(panels)
+        show(nil)
     }
 
-    // MARK: - Selection
-
-    /// Selects the given panel by object identity. Panel must already have
-    /// been added via `addPanel(_:)`; otherwise the call is a no-op.
-    public func selectPanel(_ panel: any SettingsPanelViewController) {
-        guard let index = storedPanels.firstIndex(where: { $0 === panel }) else { return }
+    public func selectPanel(_ panel: SettingsPanelViewController) {
+        guard let index = panels.firstIndex(where: { $0 === panel }) else { return }
         selectPanel(at: index)
     }
 
-    /// Selects the panel at `index` in the order it was added. Out-of-range
-    /// indices are ignored.
     public func selectPanel(at index: Int) {
-        guard index >= 0, index < storedPanels.count else { return }
-        listViewController.selectRow(index)
-        editViewController.show(storedPanels[index])
+        guard panels.indices.contains(index) else { return }
+        listViewController.selectPanel(at: index)
+        show(panels[index])
+    }
+
+    // MARK: - Detail pane
+
+    private var currentPanel: SettingsPanelViewController? {
+        detailContainer.children.first as? SettingsPanelViewController
+    }
+
+    private func show(_ panel: SettingsPanelViewController?) {
+        for child in detailContainer.children {
+            child.view.removeFromSuperview()
+            child.removeFromParent()
+        }
+        guard let panel else { return }
+        detailContainer.addChild(panel)
+        panel.view.translatesAutoresizingMaskIntoConstraints = false
+        detailContainer.view.addSubview(panel.view)
+        NSLayoutConstraint.activate([
+            panel.view.topAnchor.constraint(equalTo: detailContainer.view.topAnchor),
+            panel.view.leadingAnchor.constraint(equalTo: detailContainer.view.leadingAnchor),
+            panel.view.trailingAnchor.constraint(equalTo: detailContainer.view.trailingAnchor),
+            panel.view.bottomAnchor.constraint(equalTo: detailContainer.view.bottomAnchor),
+        ])
     }
 }

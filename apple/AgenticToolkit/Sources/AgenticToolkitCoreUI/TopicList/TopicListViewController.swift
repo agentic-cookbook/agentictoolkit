@@ -34,7 +34,7 @@ public struct TopicListSection: Sendable {
 /// host app, or any specific data domain — supply items via `setItems` (flat)
 /// or `setSections` (grouped) and observe selection via `onSelect`.
 @MainActor
-public final class TopicListViewController: NSViewController {
+open class TopicListViewController: NSViewController {
 
     /// Fired when the user changes the selection. Nil when nothing is selected.
     public var onSelect: ((TopicListItem?) -> Void)?
@@ -48,7 +48,7 @@ public final class TopicListViewController: NSViewController {
     private let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
 
-    public override func loadView() {
+    open override func loadView() {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TopicListColumn"))
         column.title = ""
         outlineView.addTableColumn(column)
@@ -66,13 +66,13 @@ public final class TopicListViewController: NSViewController {
     }
 
     /// Populate the list as a flat sequence with no section headers.
-    public func setItems(_ items: [TopicListItem]) {
+    open func setItems(_ items: [TopicListItem]) {
         setSections([TopicListSection(title: nil, items: items)])
     }
 
     /// Populate the list with grouped sections. Sections whose `title` is nil
     /// render their items without a header row.
-    public func setSections(_ sections: [TopicListSection]) {
+    open func setSections(_ sections: [TopicListSection]) {
         self.sections = sections
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
@@ -80,7 +80,7 @@ public final class TopicListViewController: NSViewController {
 
     /// Selects the row matching `id` without firing `onSelect`.
     /// No-op if the id isn't present.
-    public func selectItem(withId id: String) {
+    open func selectItem(withId id: String) {
         guard let item = findItem(withId: id) else { return }
         let row = outlineView.row(forItem: TopicListNode.item(item))
         guard row >= 0 else { return }
