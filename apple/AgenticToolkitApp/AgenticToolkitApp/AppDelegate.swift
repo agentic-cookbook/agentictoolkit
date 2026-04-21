@@ -16,8 +16,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hookInstaller: HookInstaller?
     private var livenessMonitor: SessionLivenessMonitor?
     private var notificationManager: NotificationManager?
-    private var settingsWindowController = SettingsWindowController()
-    private var aiChatWindowController = AIChatWindowController()
+    private var settingsWindowController = AppSettingsWindowController()
+    private lazy var aiChatWindowController: AIChatWindowController = {
+        AIChatWindowController(viewModel: ChatViewModel(backend: StubChatBackend()))
+    }()
     private var permissionWalkthrough = PermissionWalkthrough()
 
     // MARK: - App Lifecycle
@@ -332,7 +334,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         Log.ui.debug("Menu action: Settings")
-        settingsWindowController.showSettings()
+        settingsWindowController.showWindow()
     }
 
     @objc private func showAIChat() {
