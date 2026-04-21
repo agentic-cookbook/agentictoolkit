@@ -1,7 +1,7 @@
 import Foundation
 
 /// A single message in an LLM conversation.
-public struct LLMMessage: Sendable {
+public struct AIPluginMessage: Sendable {
     public let role: Role
     public let content: String
 

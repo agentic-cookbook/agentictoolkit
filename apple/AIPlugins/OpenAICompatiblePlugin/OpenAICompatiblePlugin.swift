@@ -28,7 +28,7 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
     }
 
     public func sendMessages(
-        _ messages: [LLMMessage],
+        _ messages: [AIPluginMessage],
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
@@ -74,7 +74,7 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
             return "Base URL is required for custom endpoints"
         }
         do {
-            let messages = [LLMMessage(role: .user, content: "Hi")]
+            let messages = [AIPluginMessage(role: .user, content: "Hi")]
             let request = try buildRequest(
                 messages: messages, model: "", systemPrompt: nil,
                 maxTokens: 1, credentials: credentials, baseURL: baseURL
@@ -92,7 +92,7 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
     // MARK: - Private
 
     private func buildRequest(
-        messages: [LLMMessage],
+        messages: [AIPluginMessage],
         model: String,
         systemPrompt: String?,
         maxTokens: Int,

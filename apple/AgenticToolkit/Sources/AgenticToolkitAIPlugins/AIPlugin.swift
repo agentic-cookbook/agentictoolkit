@@ -36,7 +36,7 @@ public protocol AIPlugin: AnyObject, Sendable {
     /// Streaming plugins yield chunks as they arrive. Non-streaming plugins
     /// yield a single result and finish. Callers should concatenate all chunks.
     func sendMessages(
-        _ messages: [LLMMessage],
+        _ messages: [AIPluginMessage],
         model: String,
         systemPrompt: String?,
         maxTokens: Int,

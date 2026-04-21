@@ -28,7 +28,7 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     public func sendMessages(
-        _ messages: [LLMMessage],
+        _ messages: [AIPluginMessage],
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
@@ -66,7 +66,7 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
     /// Builds a prompt string from message history.
     /// For multi-turn conversations, formats prior turns so Claude sees the full context.
     /// Single messages are passed through directly.
-    private static func buildPrompt(messages: [LLMMessage]) -> String {
+    private static func buildPrompt(messages: [AIPluginMessage]) -> String {
         let nonSystem = messages.filter { $0.role != .system }
         guard nonSystem.count > 1 else {
             return nonSystem.last?.content ?? ""

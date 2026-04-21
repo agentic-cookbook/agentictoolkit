@@ -120,8 +120,8 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
             return (model, creds, plugin)
         }
 
-        let history: [LLMMessage] = messages.map { msg in
-            LLMMessage(role: Self.llmRole(for: msg.role), content: msg.content)
+        let history: [AIPluginMessage] = messages.map { msg in
+            AIPluginMessage(role: Self.llmRole(for: msg.role), content: msg.content)
         }
 
         return AsyncThrowingStream { continuation in
@@ -156,7 +156,7 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
         case pluginNotAvailable
     }
 
-    private static func llmRole(for role: ChatBackendMessage.Role) -> LLMMessage.Role {
+    private static func llmRole(for role: ChatBackendMessage.Role) -> AIPluginMessage.Role {
         switch role {
         case .user: return .user
         case .assistant: return .assistant

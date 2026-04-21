@@ -33,7 +33,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     public func sendMessages(
-        _ messages: [LLMMessage],
+        _ messages: [AIPluginMessage],
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
@@ -62,7 +62,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public func validateCredentials(_ credentials: PluginCredentials) async -> String? {
         do {
-            let messages = [LLMMessage(role: .user, content: "Hi")]
+            let messages = [AIPluginMessage(role: .user, content: "Hi")]
             let request = try buildRequest(
                 messages: messages, model: recommendedModel, systemPrompt: nil,
                 maxTokens: 1, credentials: credentials, stream: false
@@ -81,7 +81,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
     // MARK: - Request Building
 
     private func buildRequest(
-        messages: [LLMMessage],
+        messages: [AIPluginMessage],
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
