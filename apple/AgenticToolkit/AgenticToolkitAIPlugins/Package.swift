@@ -27,13 +27,15 @@ let package = Package(
                 .product(name: "AgenticToolkitCoreUI", package: "AgenticToolkitCoreUI"),
                 .product(name: "AgenticToolkitSettingsWindow", package: "AgenticToolkitSettingsWindow"),
                 .product(name: "AgenticToolkitChatWindow", package: "AgenticToolkitChatWindow"),
-            ]
+            ],
+            path: "Source"
         ),
         .testTarget(
             name: "AgenticToolkitAIPluginsTests",
             dependencies: [
                 "AgenticToolkitAIPlugins",
-            ]
+            ],
+            path: "Tests"
         ),
     ]
 )
