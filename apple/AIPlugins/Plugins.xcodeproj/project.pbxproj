@@ -386,6 +386,7 @@
 			buildPhases = (
 				7D525431FEE2564F7D0B034D /* Sources */,
 				AA6B071420BFFEC25CD0AE01 /* Frameworks */,
+				DDD1EF6DB7757DE5CFA2A9A5 /* Install to ~/.agenticplugins */,
 			);
 			buildRules = (
 			);
@@ -406,6 +407,7 @@
 			buildPhases = (
 				05A2BFC4E2EB59D4ABA5C74E /* Sources */,
 				2491ED1EEBF0ECAE836B79E0 /* Frameworks */,
+				AC5331A1E6AE29E40AED426B /* Install to ~/.agenticplugins */,
 			);
 			buildRules = (
 			);
@@ -447,6 +449,7 @@
 			buildPhases = (
 				B6651507DDAC378DAB30E0AD /* Sources */,
 				E717255EEF3C0E7B228F6748 /* Frameworks */,
+				20A7FFB02725B520739E79C4 /* Install to ~/.agenticplugins */,
 			);
 			buildRules = (
 			);
@@ -467,6 +470,7 @@
 			buildPhases = (
 				F24B0A2BA33506DD11EBDCBF /* Sources */,
 				DA6CDEE28ED974DC3233430A /* Frameworks */,
+				DE303E916F51F8B0F622E03E /* Install to ~/.agenticplugins */,
 			);
 			buildRules = (
 			);
@@ -512,6 +516,7 @@
 			buildPhases = (
 				F21DD4A61E5B0E06121D40D8 /* Sources */,
 				FFB695DF09C223A99397663A /* Frameworks */,
+				56787464E8D366B580C9D3B2 /* Install to ~/.agenticplugins */,
 			);
 			buildRules = (
 			);
@@ -580,6 +585,99 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		20A7FFB02725B520739E79C4 /* Install to ~/.agenticplugins */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Install to ~/.agenticplugins";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+		56787464E8D366B580C9D3B2 /* Install to ~/.agenticplugins */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Install to ~/.agenticplugins";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+		AC5331A1E6AE29E40AED426B /* Install to ~/.agenticplugins */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Install to ~/.agenticplugins";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+		DDD1EF6DB7757DE5CFA2A9A5 /* Install to ~/.agenticplugins */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Install to ~/.agenticplugins";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+		DE303E916F51F8B0F622E03E /* Install to ~/.agenticplugins */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Install to ~/.agenticplugins";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		05A2BFC4E2EB59D4ABA5C74E /* Sources */ = {
