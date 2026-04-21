@@ -78,4 +78,19 @@ final class SingleWindowControllerTests: XCTestCase {
         wc.dismiss()
         XCTAssertFalse(wc.isVisible)
     }
+
+    func testWindowWithNoSavedGeometryIsCenteredOnMainScreen() throws {
+        let wc = ViewControllerBasedWC(windowID: "test.center.\(UUID().uuidString)")
+        wc.showWindow()
+
+        let window = try XCTUnwrap(wc.window)
+        let screen = try XCTUnwrap(window.screen ?? NSScreen.main)
+        let visible = screen.visibleFrame
+
+        let expectedX = visible.origin.x + (visible.width - window.frame.width) / 2
+        XCTAssertEqual(window.frame.origin.x, expectedX, accuracy: 2.0,
+            "window with no saved geometry should be horizontally centered on main screen")
+        XCTAssertNotEqual(window.frame.origin, .zero,
+            "window with no saved geometry should not stay at its default (0,0) origin")
+    }
 }

@@ -101,7 +101,10 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         }
 
         self.window = newWindow
-        WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
+        let restored = WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
+        if !restored {
+            newWindow.center()
+        }
         configureWindow(newWindow)
     }
 
