@@ -19,6 +19,7 @@ Package.resolved
 **/*.xcworkspace/xcshareddata/*
 !**/*.xcworkspace/xcshareddata/xcschemes
 DerivedData/
+Package.resolved
 
 # graphify output (generated)
 graphify-out/
