@@ -1,5 +1,5 @@
 import Testing
-@testable import AgenticToolkitAIPluginsCore
+@testable import AgenticToolkitAIPlugins
 
 @Suite("AIPluginCapability")
 struct PluginCapabilityTests {

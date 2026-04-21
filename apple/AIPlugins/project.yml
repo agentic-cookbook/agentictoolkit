@@ -41,8 +41,6 @@ targets:
     platform: macOS
     sources:
       - path: AgenticToolkitAIPluginsCore
-        excludes:
-          - "Tests"
     dependencies:
       - package: AgenticToolkit
         product: AgenticToolkitCore
@@ -101,24 +99,6 @@ targets:
         INFOPLIST_FILE: OpenAICompatiblePlugin/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai-compatible
 
-  # Note: `@testable import <PluginName>` against Bundle targets is known to
-  # be unreliable. If this fails to compile, the plugins likely need
-  # test-only framework twins or the tests need to load bundles at runtime
-  # via AIPluginManager.
-  PluginsTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: Tests
-    dependencies:
-      - target: ClaudeAPIPlugin
-      - target: ClaudeLocalPlugin
-      - target: OpenAIPlugin
-      - target: GooglePlugin
-      - target: OpenAICompatiblePlugin
-      - package: AgenticToolkit
-        product: AgenticToolkitAIPlugins
-
 schemes:
   AgenticToolkitAIPluginsCore:
     build:
@@ -133,9 +113,6 @@ schemes:
         OpenAIPlugin: all
         GooglePlugin: all
         OpenAICompatiblePlugin: all
-    test:
-      targets:
-        - PluginsTests
   AllPlugins:
     build:
       targets:

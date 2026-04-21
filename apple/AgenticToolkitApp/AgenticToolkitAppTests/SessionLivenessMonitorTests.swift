@@ -33,7 +33,8 @@ final class SessionLivenessMonitorTests: XCTestCase {
     private func createSession(
         sessionId: String,
         status: SessionStatus = .active,
-        lastActivitySecondsAgo: TimeInterval = 0
+        lastActivitySecondsAgo: TimeInterval = 0,
+        pid: Int32 = 0
     ) throws -> Session {
         let activityDate = Date().addingTimeInterval(-lastActivitySecondsAgo)
         let formatter = ISO8601DateFormatter()
@@ -46,7 +47,8 @@ final class SessionLivenessMonitorTests: XCTestCase {
             startedAt: timestamp,
             lastActivityAt: timestamp,
             lastTool: "Read",
-            status: status
+            status: status,
+            pid: pid
         )
         return try dbManager.upsertSession(session)
     }
@@ -152,11 +154,28 @@ final class SessionLivenessMonitorTests: XCTestCase {
         XCTAssertEqual(session?.status, .ended)
     }
 
-    func testAlreadyStaleSessionNotAffected() throws {
-        // Create a session already marked stale
+    func testAlreadyStalePidlessSessionIsEnded() throws {
+        // Stale sessions with pid <= 0 can't be verified as alive, so the
+        // pidless-stale sweep in performPidLivenessCheck ends them.
         try createSession(sessionId: "stale-session", status: .stale, lastActivitySecondsAgo: 300)
 
-        // Should not error or change anything
+        monitor.performLivenessCheck()
+
+        let session = try dbManager.fetchSession(bySessionId: "stale-session")
+        XCTAssertEqual(session?.status, .ended)
+    }
+
+    func testAlreadyStaleSessionWithLivePidRemainsStale() throws {
+        // A stale session whose originating process is still running (we use
+        // our own pid) must not be re-transitioned — neither ended by the PID
+        // sweep nor re-marked stale by the timeout sweep.
+        try createSession(
+            sessionId: "stale-session",
+            status: .stale,
+            lastActivitySecondsAgo: 300,
+            pid: getpid()
+        )
+
         monitor.performLivenessCheck()
 
         let session = try dbManager.fetchSession(bySessionId: "stale-session")
