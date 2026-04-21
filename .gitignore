@@ -6,6 +6,7 @@
 
 # Swift
 .build/
+Package.resolved
 .swiftpm/*
 !.swiftpm/xcode
 .swiftpm/xcode/*
