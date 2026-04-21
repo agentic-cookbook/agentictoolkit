@@ -20,11 +20,7 @@ targetTemplates:
     platform: macOS
     dependencies:
       - package: AgenticToolkit
-        product: AgenticToolkitCore
-      - package: AgenticToolkit
-        product: AgenticToolkitCoreUI
-      - package: AgenticToolkit
-        product: AgenticToolkitSettingsWindow
+        product: AgenticToolkitAIPlugins
       - target: AgenticToolkitAIPluginsCore
 
 packages:
@@ -37,12 +33,16 @@ targets:
     type: framework
     platform: macOS
     sources:
-      - path: AgenticToolkitAIPluginsCore/Source
+      - path: AgenticToolkitAIPluginsCore
+        excludes:
+          - "Tests"
     dependencies:
       - package: AgenticToolkit
         product: AgenticToolkitCore
       - package: AgenticToolkit
         product: AgenticToolkitSettingsWindow
+      - package: AgenticToolkit
+        product: AgenticToolkitAIPlugins
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin-core

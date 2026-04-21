@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2640"
+   LastUpgradeVersion = "1430"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
-      buildArchitectures = "Automatic">
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -15,23 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B2EC08D72F97EB2100587CAB"
-               BuildableName = "All Plugins"
-               BlueprintName = "All Plugins"
-               ReferencedContainer = "container:Plugins.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C3F6B2B2D78AB68A57D77BDA"
-               BuildableName = "PluginsTests.xctest"
-               BlueprintName = "PluginsTests"
+               BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+               BuildableName = "AgenticToolkitAIPluginsCore.framework"
+               BlueprintName = "AgenticToolkitAIPluginsCore"
                ReferencedContainer = "container:Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -42,7 +28,18 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+            BuildableName = "AgenticToolkitAIPluginsCore.framework"
+            BlueprintName = "AgenticToolkitAIPluginsCore"
+            ReferencedContainer = "container:Plugins.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+      <Testables>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -53,8 +50,16 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES"
-      queueDebuggingEnableBacktraceRecording = "Yes">
+      allowLocationSimulation = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+            BuildableName = "AgenticToolkitAIPluginsCore.framework"
+            BlueprintName = "AgenticToolkitAIPluginsCore"
+            ReferencedContainer = "container:Plugins.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -65,9 +70,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B2EC08D72F97EB2100587CAB"
-            BuildableName = "All Plugins"
-            BlueprintName = "All Plugins"
+            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+            BuildableName = "AgenticToolkitAIPluginsCore.framework"
+            BlueprintName = "AgenticToolkitAIPluginsCore"
             ReferencedContainer = "container:Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

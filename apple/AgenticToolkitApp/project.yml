@@ -38,38 +38,46 @@ targets:
     dependencies:
       - package: AgenticToolkit
         product: AgenticToolkitCore
-        embed: true
+        embed: false
       - package: AgenticToolkit
         product: AgenticToolkitScripting
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitCoreUI
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitAIProvider
-        embed: true
+        embed: false
       - package: AgenticToolkit
         product: AgenticToolkitLoggingWindow
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitChatWindow
-        embed: true
+        embed: false
       - package: AgenticToolkit
         product: AgenticToolkitNotesWindow
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitSettingsWindow
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitTerminalWindow
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitFileBrowser
-        embed: true
+        embed: false
+        link: false
       - package: AgenticToolkit
         product: AgenticToolkitAIPlugins
-        embed: true
+        embed: false
       - package: SwiftTerm
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app

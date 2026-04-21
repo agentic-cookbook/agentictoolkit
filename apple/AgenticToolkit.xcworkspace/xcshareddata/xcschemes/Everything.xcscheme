@@ -42,9 +42,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B2EC08D72F97EB2100587CAB"
-               BuildableName = "All Plugins"
-               BlueprintName = "All Plugins"
+               BlueprintIdentifier = "A4C4490619CDF1995ABBDCC1"
+               BuildableName = "AllPlugins"
+               BlueprintName = "AllPlugins"
                ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
