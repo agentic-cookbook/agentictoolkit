@@ -1,9 +1,9 @@
 import AppKit
 
-/// A reusable base class that lazily manages a single `NSWindow` with
-/// `WindowManager` frame persistence. Subclasses provide the window's title,
-/// size, style mask, and content by overriding the open properties and
-/// factory methods below.
+/// A reusable `NSWindowController` base that lazily builds a single
+/// `NSWindow` from subclass-supplied configuration and persists its frame
+/// through `WindowManager`. Subclasses provide title, size, style mask, and
+/// content by overriding the open properties and factory methods below.
 ///
 /// Usage:
 /// ```swift
@@ -18,19 +18,24 @@ import AppKit
 /// }
 /// ```
 ///
-/// The window is created on the first `showWindow()` call and reused on
-/// subsequent calls. Override `makeContentViewController()` to host an
-/// `NSViewController` (preferred — the view controller lifecycle fires
-/// correctly). Override `makeContentView()` if you only need an `NSView`.
+/// The window is created on the first access that triggers `loadWindow()`
+/// (e.g. `showWindow()`, reading `window`, checking `isWindowLoaded`) and
+/// reused on subsequent calls. Prefer `makeContentViewController()` — the
+/// NSViewController lifecycle fires correctly. Override `makeContentView()`
+/// if you only need an `NSView`.
 @MainActor
-open class SingleWindowController: NSObject, NSWindowDelegate {
+open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     public let windowID: String
 
-    public private(set) var window: NSWindow?
-
     public init(windowID: String) {
         self.windowID = windowID
+        super.init(window: nil)
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported for SingleWindowController")
     }
 
     // MARK: - Overridable configuration
@@ -71,17 +76,9 @@ open class SingleWindowController: NSObject, NSWindowDelegate {
     /// observers). Runs *before* the window is ordered in.
     open func configureWindow(_ window: NSWindow) {}
 
-    // MARK: - Public API
+    // MARK: - NSWindowController lazy-load hook
 
-    /// Shows the window, creating it lazily on first call. Subsequent
-    /// calls bring the existing window to front.
-    open func showWindow() {
-        if let window = window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
+    open override func loadWindow() {
         let newWindow = NSWindow(
             contentRect: defaultContentRect,
             styleMask: windowStyleMask,
@@ -103,11 +100,23 @@ open class SingleWindowController: NSObject, NSWindowDelegate {
             fatalError("\(type(of: self)) must override makeContentViewController() or makeContentView()")
         }
 
-        WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
-
         self.window = newWindow
+        WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
         configureWindow(newWindow)
-        newWindow.makeKeyAndOrderFront(nil)
+    }
+
+    // MARK: - Public API
+
+    /// Shows the window, creating it lazily on first call. Subsequent calls
+    /// bring the existing window to front. Thin no-arg wrapper over
+    /// `NSWindowController.showWindow(_:)` so existing call sites keep
+    /// working.
+    open func showWindow() {
+        showWindow(nil)
+    }
+
+    open override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
         NSApp.activate(ignoringOtherApps: true)
     }
 
