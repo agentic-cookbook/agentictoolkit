@@ -38,8 +38,8 @@ packages:
     path: ../AgenticToolkit/AgenticToolkitTerminalWindow
   AgenticToolkitFileBrowser:
     path: ../AgenticToolkit/AgenticToolkitFileBrowser
-  AgenticToolkitPluginSDK:
-    path: ../AgenticToolkit/AgenticToolkitPluginSDK
+  AgenticToolkitAIPlugins:
+    path: ../AgenticToolkit/AgenticToolkitAIPlugins
 
 targets:
 
@@ -86,8 +86,8 @@ targets:
       - package: AgenticToolkitFileBrowser
         product: AgenticToolkitFileBrowser
         embed: true
-      - package: AgenticToolkitPluginSDK
-        product: AgenticToolkitPluginSDK
+      - package: AgenticToolkitAIPlugins
+        product: AgenticToolkitAIPlugins
         embed: true
       - package: SwiftTerm
     settings:
@@ -119,8 +119,8 @@ targets:
       - target: AgenticToolkitApp
       - package: AgenticToolkitCoreUI
         product: AgenticToolkitCoreUI
-      - package: AgenticToolkitPluginSDK
-        product: AgenticToolkitPluginSDK
+      - package: AgenticToolkitAIPlugins
+        product: AgenticToolkitAIPlugins
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app.tests

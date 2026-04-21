@@ -1,5 +1,5 @@
 import XCTest
-import AgenticToolkitPluginSDK
+import AgenticToolkitAIPlugins
 @testable import AgenticToolkitApp
 
 @MainActor

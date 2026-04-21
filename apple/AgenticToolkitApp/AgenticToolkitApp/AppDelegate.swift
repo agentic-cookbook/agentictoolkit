@@ -1,6 +1,6 @@
 import AppKit
 import ApplicationServices
-import AgenticToolkitPluginSDK
+import AgenticToolkitAIPlugins
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitChatWindow

@@ -1,5 +1,5 @@
 import Foundation
-import AgenticToolkitPluginSDK
+import AgenticToolkitAIPlugins
 
 /// Bridges `AISettingsPersistence` to the TestApp's `DatabaseManager`.
 /// Handles key translation so the library's key names map to the existing DB schema.

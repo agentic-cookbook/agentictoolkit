@@ -1,5 +1,5 @@
 import AppKit
-import AgenticToolkitPluginSDK
+import AgenticToolkitAIPlugins
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitChatWindow
