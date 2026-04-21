@@ -119,9 +119,14 @@ targets:
         product: AgenticToolkitAIPlugins
 
 schemes:
+  AgenticToolkitAIPluginsCore:
+    build:
+      targets:
+        AgenticToolkitAIPluginsCore: all
   Plugins:
     build:
       targets:
+        AgenticToolkitAIPluginsCore: all
         ClaudeAPIPlugin: all
         ClaudeLocalPlugin: all
         OpenAIPlugin: all
@@ -130,6 +135,10 @@ schemes:
     test:
       targets:
         - PluginsTests
+  AllPlugins:
+    build:
+      targets:
+        AllPlugins: all
 
 # Client-facing aggregate target. Clients depend on `Plugins/AllPlugins` and
 # never enumerate individual plugins. When a new plugin target is added to
@@ -138,6 +147,7 @@ schemes:
 aggregateTargets:
   AllPlugins:
     targets:
+      - AgenticToolkitAIPluginsCore
       - ClaudeAPIPlugin
       - ClaudeLocalPlugin
       - OpenAIPlugin

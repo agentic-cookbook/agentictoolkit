@@ -13,6 +13,7 @@
 			buildPhases = (
 			);
 			dependencies = (
+				A216852237B41E39832FE55E /* PBXTargetDependency */,
 				FFFBE8963C78F6EF4077E349 /* PBXTargetDependency */,
 				B1B89CBDE03514C1E92A2541 /* PBXTargetDependency */,
 				C8B0DFEF1A7C654261B04CAF /* PBXTargetDependency */,
@@ -78,6 +79,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		174B0608FC700BC891499C39 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
 		5BB12F82F7F945446B065ABA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
@@ -755,6 +763,11 @@
 			isa = PBXTargetDependency;
 			target = 2C9C0A1F708502BF49559738 /* OpenAIPlugin */;
 			targetProxy = C55DB931A023AC095101A7A7 /* PBXContainerItemProxy */;
+		};
+		A216852237B41E39832FE55E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
+			targetProxy = 174B0608FC700BC891499C39 /* PBXContainerItemProxy */;
 		};
 		B1B89CBDE03514C1E92A2541 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;

@@ -15,6 +15,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+               BuildableName = "AgenticToolkitAIPluginsCore.framework"
+               BlueprintName = "AgenticToolkitAIPluginsCore"
+               ReferencedContainer = "container:Plugins.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
                BuildableName = "ClaudeAPIPlugin.bundle"
                BlueprintName = "ClaudeAPIPlugin"
@@ -88,9 +102,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
-            BuildableName = "ClaudeAPIPlugin.bundle"
-            BlueprintName = "ClaudeAPIPlugin"
+            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+            BuildableName = "AgenticToolkitAIPluginsCore.framework"
+            BlueprintName = "AgenticToolkitAIPluginsCore"
             ReferencedContainer = "container:Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -123,9 +137,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
-            BuildableName = "ClaudeAPIPlugin.bundle"
-            BlueprintName = "ClaudeAPIPlugin"
+            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+            BuildableName = "AgenticToolkitAIPluginsCore.framework"
+            BlueprintName = "AgenticToolkitAIPluginsCore"
             ReferencedContainer = "container:Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -139,9 +153,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
-            BuildableName = "ClaudeAPIPlugin.bundle"
-            BlueprintName = "ClaudeAPIPlugin"
+            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
+            BuildableName = "AgenticToolkitAIPluginsCore.framework"
+            BlueprintName = "AgenticToolkitAIPluginsCore"
             ReferencedContainer = "container:Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
