@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import AgenticToolkitAIPluginsCore
+import AgenticToolkitAIPlugins
 @testable import ClaudeAPIPlugin
 @testable import ClaudeLocalPlugin
 @testable import GooglePlugin

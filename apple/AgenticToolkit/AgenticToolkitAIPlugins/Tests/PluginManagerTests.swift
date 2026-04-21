@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import AgenticToolkitAIPluginsCore
 @testable import AgenticToolkitAIPlugins
 
 @Suite("PluginManager")
@@ -34,11 +35,11 @@ struct PluginManagerTests {
         }
     }
 
-    @Test("metadata returns nil for unknown identifier")
-    func metadataUnknown() {
+    @Test("info returns nil for unknown identifier")
+    func infoUnknown() {
         let manager = PluginManager(searchPaths: [])
         manager.discoverPlugins()
-        #expect(manager.metadata(for: "com.nonexistent.plugin") == nil)
+        #expect(manager.info(for: "com.nonexistent.plugin") == nil)
     }
 
     @Test("plugin returns nil when not loaded")
@@ -71,7 +72,7 @@ struct PluginManagerTests {
             "AgenticPluginIdentifier": "com.test.plugin",
             "AgenticPluginDisplayName": "Test Plugin",
             "AgenticPluginVersion": "1.0.0",
-            "AgenticSDKVersion": PluginMetadata.currentSDKVersion,
+            "AgenticSDKVersion": AgenticLLMPluginInfoRegistry.currentSDKVersion,
             "NSPrincipalClass": "TestPlugin",
         ]
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)

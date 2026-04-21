@@ -5,18 +5,23 @@ import AgenticToolkitAIPluginsCore
 /// Discovers, loads, and manages LLM plugin bundles.
 ///
 /// Plugins are macOS `.bundle` files containing a principal class that conforms
-/// to `AgenticLLMPlugin`. The manager reads `Info.plist` metadata from each
-/// bundle at discovery time (cheap) and only loads the binary on demand (lazy).
+/// to `AgenticLLMPlugin`. The manager reads `Info.plist` metadata at discovery
+/// time (cheap) and only loads the binary on demand (lazy). All public
+/// accessors return protocol types; the concrete storage is internal.
 @MainActor
 public final class PluginManager {
 
     // MARK: - Properties
 
-    /// Metadata for all discovered plugins (binary not yet loaded).
-    public private(set) var availablePlugins: [PluginMetadata] = []
+    /// Info records for every discovered plugin. Binaries are not yet loaded.
+    public var availablePlugins: [any AgenticLLMPluginInfo] { records }
+
+    /// Internal storage. Kept as the concrete type so the manager can read
+    /// per-record fields (e.g. `bundlePath`) without downcasting.
+    private var records: [PluginRecord] = []
 
     /// Loaded plugin instances, keyed by identifier.
-    private var loadedPlugins: [String: AgenticLLMPlugin] = [:]
+    private var loadedPlugins: [String: any AgenticLLMPlugin] = [:]
 
     /// Loaded bundles, keyed by identifier (kept alive so the binary stays mapped).
     private var loadedBundles: [String: Bundle] = [:]
@@ -60,26 +65,19 @@ public final class PluginManager {
     ///
     /// Default search paths:
     /// - `Contents/PlugIns/` inside the app bundle
+    /// - `~/.agenticplugins/`
     /// - `~/Library/Application Support/<appName>/Plugins/`
-    ///
-    /// - Parameters:
-    ///   - appName: Application name, used for the Application Support subdirectory.
-    ///   - additionalSearchPaths: Extra directories to scan for plugin bundles.
     public init(appName: String, additionalSearchPaths: [URL] = []) {
         self.appName = appName
 
         var paths: [URL] = []
 
-        // App bundle's PlugIns directory
         if let builtInPath = Bundle.main.builtInPlugInsURL {
             paths.append(builtInPath)
         }
 
-        // ~/.agenticplugins/ — canonical location for plugins deployed by
-        // the Plugins xcodeproj.
         paths.append(URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".agenticplugins"))
 
-        // ~/Library/Application Support/<appName>/Plugins/
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             let userPlugins = appSupport.appendingPathComponent(appName).appendingPathComponent("Plugins")
             paths.append(userPlugins)
@@ -101,7 +99,7 @@ public final class PluginManager {
     /// Scans all search paths for `.bundle` files and reads their metadata.
     /// Does not load any plugin binaries.
     public func discoverPlugins() {
-        var discovered: [PluginMetadata] = []
+        var discovered: [PluginRecord] = []
         let fm = FileManager.default
 
         for searchPath in searchPaths {
@@ -115,48 +113,45 @@ public final class PluginManager {
 
             for url in contents where url.pathExtension == "bundle" {
                 guard let bundle = Bundle(url: url),
-                      let metadata = PluginMetadata.from(bundle: bundle) else {
+                      let record = PluginRecord.fromBundle(bundle) else {
                     logger.warning("Skipping invalid plugin bundle: \(url.lastPathComponent, privacy: .public)")
                     continue
                 }
 
-                if metadata.sdkVersion != PluginMetadata.currentSDKVersion {
-                    logger.warning("Skipping incompatible plugin '\(metadata.displayName, privacy: .public)': SDK \(metadata.sdkVersion, privacy: .public) != \(PluginMetadata.currentSDKVersion, privacy: .public)")
+                if record.sdkVersion != AgenticLLMPluginInfoRegistry.currentSDKVersion {
+                    logger.warning("Skipping incompatible plugin '\(record.displayName, privacy: .public)': SDK \(record.sdkVersion, privacy: .public) != \(AgenticLLMPluginInfoRegistry.currentSDKVersion, privacy: .public)")
                     continue
                 }
 
-                discovered.append(metadata)
-                logger.info("Discovered plugin: \(metadata.displayName, privacy: .public) (\(metadata.identifier, privacy: .public))")
+                discovered.append(record)
+                logger.info("Discovered plugin: \(record.displayName, privacy: .public) (\(record.identifier, privacy: .public))")
             }
         }
 
-        availablePlugins.append(contentsOf: discovered)
+        records.append(contentsOf: discovered)
     }
 
     // MARK: - Loading
 
     /// Loads a plugin's binary and instantiates it. Returns a cached instance if already loaded.
-    ///
-    /// - Parameter identifier: The plugin's reverse-DNS identifier.
-    /// - Returns: The instantiated plugin.
-    public func loadPlugin(identifier: String) throws -> AgenticLLMPlugin {
+    public func loadPlugin(identifier: String) throws -> any AgenticLLMPlugin {
         if let existing = loadedPlugins[identifier] {
             return existing
         }
 
-        guard let metadata = availablePlugins.first(where: { $0.identifier == identifier }) else {
+        guard let record = records.first(where: { $0.identifier == identifier }) else {
             throw PluginError.notFound(identifier)
         }
 
-        if metadata.sdkVersion != PluginMetadata.currentSDKVersion {
+        if record.sdkVersion != AgenticLLMPluginInfoRegistry.currentSDKVersion {
             throw PluginError.incompatibleSDK(
                 plugin: identifier,
-                required: PluginMetadata.currentSDKVersion,
-                found: metadata.sdkVersion
+                required: AgenticLLMPluginInfoRegistry.currentSDKVersion,
+                found: record.sdkVersion
             )
         }
 
-        guard let bundle = Bundle(url: metadata.bundlePath) else {
+        guard let bundle = Bundle(url: record.bundlePath) else {
             throw PluginError.loadFailed(identifier)
         }
 
@@ -170,7 +165,7 @@ public final class PluginManager {
             throw PluginError.noPrincipalClass(identifier)
         }
 
-        guard let pluginClass = principalClass as? AgenticLLMPlugin.Type else {
+        guard let pluginClass = principalClass as? any AgenticLLMPlugin.Type else {
             throw PluginError.principalClassNotPlugin(identifier)
         }
 
@@ -179,7 +174,7 @@ public final class PluginManager {
 
         loadedPlugins[identifier] = instance
         loadedBundles[identifier] = bundle
-        logger.info("Loaded plugin: \(metadata.displayName, privacy: .public)")
+        logger.info("Loaded plugin: \(record.displayName, privacy: .public)")
 
         return instance
     }
@@ -194,33 +189,29 @@ public final class PluginManager {
     // MARK: - Built-in Plugin Registration
 
     /// Registers a built-in plugin type (compiled into the app, not loaded from a bundle).
-    ///
-    /// Use this for providers that ship with the app. The plugin is instantiated immediately
-    /// and added to both `availablePlugins` (metadata) and the loaded cache.
-    public func registerBuiltIn(_ pluginType: AgenticLLMPlugin.Type) {
+    public func registerBuiltIn(_ pluginType: any AgenticLLMPlugin.Type) {
         let identifier = pluginType.identifier
 
-        // Skip if already registered
-        guard !availablePlugins.contains(where: { $0.identifier == identifier }) else { return }
+        guard !records.contains(where: { $0.identifier == identifier }) else { return }
 
         let context = makeContext(for: identifier)
         let instance = pluginType.init(context: context)
 
-        let metadata = PluginMetadata(
+        let record = PluginRecord(
             identifier: identifier,
             displayName: instance.displayName,
             version: "built-in",
-            sdkVersion: PluginMetadata.currentSDKVersion,
+            sdkVersion: AgenticLLMPluginInfoRegistry.currentSDKVersion,
             bundlePath: Bundle.main.bundleURL
         )
 
-        availablePlugins.append(metadata)
+        records.append(record)
         loadedPlugins[identifier] = instance
         logger.info("Registered built-in plugin: \(instance.displayName, privacy: .public)")
     }
 
     /// Registers multiple built-in plugin types.
-    public func registerBuiltIns(_ pluginTypes: [AgenticLLMPlugin.Type]) {
+    public func registerBuiltIns(_ pluginTypes: [any AgenticLLMPlugin.Type]) {
         for pluginType in pluginTypes {
             registerBuiltIn(pluginType)
         }
@@ -228,13 +219,13 @@ public final class PluginManager {
 
     // MARK: - Query
 
-    /// Returns metadata for a plugin without loading it.
-    public func metadata(for identifier: String) -> PluginMetadata? {
-        availablePlugins.first { $0.identifier == identifier }
+    /// Returns info for a plugin without loading it.
+    public func info(for identifier: String) -> (any AgenticLLMPluginInfo)? {
+        records.first { $0.identifier == identifier }
     }
 
     /// Returns a loaded plugin instance, or nil if not loaded.
-    public func plugin(for identifier: String) -> AgenticLLMPlugin? {
+    public func plugin(for identifier: String) -> (any AgenticLLMPlugin)? {
         loadedPlugins[identifier]
     }
 
@@ -247,8 +238,6 @@ public final class PluginManager {
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             baseDir = appSupport
         } else {
-            // Sandbox misconfiguration or exotic environment: fall back to temp so the
-            // plugin can at least run without a crash, and surface the degraded state.
             logger.warning("Application Support directory unavailable; falling back to temporary directory for plugin \(identifier, privacy: .public)")
             baseDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         }
@@ -261,5 +250,34 @@ public final class PluginManager {
         try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
 
         return PluginContext(logger: pluginLogger, dataDirectory: dataDir)
+    }
+}
+
+// MARK: - Internal record
+
+/// Internal record backing `AgenticLLMPluginInfo`. Holds the bundle path the
+/// manager needs for lazy loading; callers see only the protocol.
+private struct PluginRecord: AgenticLLMPluginInfo, Sendable {
+    let identifier: String
+    let displayName: String
+    let version: String
+    let sdkVersion: String
+    let bundlePath: URL
+
+    static func fromBundle(_ bundle: Bundle) -> PluginRecord? {
+        guard let info = bundle.infoDictionary,
+              let identifier = info["AgenticPluginIdentifier"] as? String,
+              let displayName = info["AgenticPluginDisplayName"] as? String,
+              let version = info["AgenticPluginVersion"] as? String,
+              let sdkVersion = info["AgenticSDKVersion"] as? String else {
+            return nil
+        }
+        return PluginRecord(
+            identifier: identifier,
+            displayName: displayName,
+            version: version,
+            sdkVersion: sdkVersion,
+            bundlePath: bundle.bundleURL
+        )
     }
 }

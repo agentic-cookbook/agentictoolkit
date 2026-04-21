@@ -32,9 +32,9 @@ public final class PluginsSettingsPanelViewController: NSViewController, Setting
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        for metadata in pluginManager.availablePlugins {
+        for info in pluginManager.availablePlugins {
             do {
-                let plugin = try pluginManager.loadPlugin(identifier: metadata.identifier)
+                let plugin = try pluginManager.loadPlugin(identifier: info.identifier)
                 if let panel = plugin.settingsPanelViewController() {
                     innerSettings.addPanel(panel)
                 }

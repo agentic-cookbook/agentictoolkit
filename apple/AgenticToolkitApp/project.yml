@@ -40,6 +40,8 @@ packages:
     path: ../AgenticToolkit/AgenticToolkitFileBrowser
   AgenticToolkitAIPlugins:
     path: ../AgenticToolkit/AgenticToolkitAIPlugins
+  AgenticToolkitAIPluginsCore:
+    path: ../AIPlugins/AgenticToolkitAIPluginsCore
 
 targets:
 
@@ -88,6 +90,9 @@ targets:
         embed: true
       - package: AgenticToolkitAIPlugins
         product: AgenticToolkitAIPlugins
+        embed: true
+      - package: AgenticToolkitAIPluginsCore
+        product: AgenticToolkitAIPluginsCore
         embed: true
       - package: SwiftTerm
     settings:

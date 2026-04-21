@@ -37,6 +37,8 @@ packages:
     path: ../AgenticToolkit/AgenticToolkitSettingsWindow
   AgenticToolkitAIPluginsCore:
     path: AgenticToolkitAIPluginsCore
+  AgenticToolkitAIPlugins:
+    path: ../AgenticToolkit/AgenticToolkitAIPlugins
 
 targets:
 
@@ -102,6 +104,8 @@ targets:
       - target: OpenAICompatiblePlugin
       - package: AgenticToolkitAIPluginsCore
         product: AgenticToolkitAIPluginsCore
+      - package: AgenticToolkitAIPlugins
+        product: AgenticToolkitAIPlugins
 
 schemes:
   Plugins:
