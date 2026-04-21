@@ -2,6 +2,7 @@ import AppKit
 import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
 import AgenticToolkitAIPluginsCore
+import AgenticToolkitAIPlugins
 
 /// Settings panel for `ClaudeAPIPlugin`.
 @MainActor

@@ -1,5 +1,5 @@
 import AppKit
-import AgenticToolkitCore
+import Age
 import AgenticToolkitAIPlugins
 
 /// Reusable settings view for a single `AIPlugin`. Renders API key

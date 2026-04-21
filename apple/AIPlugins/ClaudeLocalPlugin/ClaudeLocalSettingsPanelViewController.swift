@@ -2,14 +2,15 @@ import AppKit
 import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
 import AgenticToolkitAIPluginsCore
+import AgenticToolkitAIPlugins
 
 /// Settings panel for `ClaudeLocalPlugin`.
 @MainActor
 final class ClaudeLocalSettingsPanelViewController: NSViewController, SettingsPanelViewController {
 
-    private let plugin: any AIPlugin
+    private let plugin: ClaudeLocalPlugin
 
-    init(plugin: any AIPlugin) {
+    init(plugin: ClaudeLocalPlugin) {
         self.plugin = plugin
         super.init(nibName: nil, bundle: nil)
     }

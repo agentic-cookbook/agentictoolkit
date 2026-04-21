@@ -4,6 +4,7 @@ import os
 import AgenticToolkitAIPluginsCore
 import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
+import AgenticToolkitAIPlugins
 
 /// LLM plugin for the OpenAI Chat Completions API.
 public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {

@@ -7,9 +7,9 @@ import AgenticToolkitAIPluginsCore
 @MainActor
 final class OpenAICompatibleSettingsPanelViewController: NSViewController, SettingsPanelViewController {
 
-    private let plugin: any AIPlugin
+    private let plugin: OpenAICompatiblePlugin
 
-    init(plugin: any AIPlugin) {
+    init(plugin: OpenAICompatiblePlugin) {
         self.plugin = plugin
         super.init(nibName: nil, bundle: nil)
     }

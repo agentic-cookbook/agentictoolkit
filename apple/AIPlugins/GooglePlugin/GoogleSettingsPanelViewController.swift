@@ -7,9 +7,9 @@ import AgenticToolkitAIPluginsCore
 @MainActor
 final class GoogleSettingsPanelViewController: NSViewController, SettingsPanelViewController {
 
-    private let plugin: any AIPlugin
+    private let plugin: GooglePlugin
 
-    init(plugin: any AIPlugin) {
+    init(plugin: GooglePlugin) {
         self.plugin = plugin
         super.init(nibName: nil, bundle: nil)
     }
