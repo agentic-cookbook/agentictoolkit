@@ -1,7 +1,8 @@
 import XCTest
 import AgenticPluginSDK
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
+@MainActor
 final class SettingsViewModelTests: XCTestCase {
 
     private var databaseManager: DatabaseManager!

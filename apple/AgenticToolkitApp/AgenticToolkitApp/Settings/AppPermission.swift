@@ -1,6 +1,13 @@
 import AppKit
 import ApplicationServices
+import os
 import UserNotifications
+
+// `kAXTrustedCheckOptionPrompt` is imported from ApplicationServices as a mutable
+// global, which Swift 6 flags as concurrency-unsafe. The underlying C value is a
+// stable `CFSTR("AXTrustedCheckOptionPrompt")`; CFString is immutable at runtime,
+// but Swift doesn't know it's Sendable.
+nonisolated(unsafe) private let axTrustedCheckOptionPrompt = "AXTrustedCheckOptionPrompt" as CFString
 
 /// Enumerates the macOS permissions that AgenticPluginTester requires to function.
 enum AppPermission: Int, CaseIterable {
@@ -54,15 +61,16 @@ enum AppPermission: Int, CaseIterable {
         case .notifications:
             // Synchronous check — the actual async result is cached by NotificationManager,
             // but for the settings pane we do a synchronous snapshot.
-            var granted = false
+            let granted = OSAllocatedUnfairLock<Bool>(initialState: false)
             let semaphore = DispatchSemaphore(value: 0)
             UNUserNotificationCenter.current().getNotificationSettings { settings in
-                granted = settings.authorizationStatus == .authorized
+                let authorized = settings.authorizationStatus == .authorized
+                granted.withLock { $0 = authorized }
                 semaphore.signal()
             }
             // Timeout after 1 second to avoid blocking UI forever
             _ = semaphore.wait(timeout: .now() + 1)
-            return granted
+            return granted.withLock { $0 }
         case .automation:
             // There's no direct API to check Automation permission.
             // We return true optimistically; if it fails at runtime, the caller
@@ -75,7 +83,7 @@ enum AppPermission: Int, CaseIterable {
     func openSettings() {
         switch self {
         case .accessibility:
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            let options = [axTrustedCheckOptionPrompt: true] as CFDictionary
             AXIsProcessTrustedWithOptions(options)
         case .notifications:
             if let bundleId = Bundle.main.bundleIdentifier,
@@ -92,10 +100,10 @@ enum AppPermission: Int, CaseIterable {
     /// Requests this permission from the user. For accessibility, this shows
     /// the system prompt. For notifications, this triggers the authorization
     /// request. For automation, we open System Settings (no programmatic request).
-    func request(completion: @escaping (Bool) -> Void) {
+    func request(completion: @escaping @Sendable (Bool) -> Void) {
         switch self {
         case .accessibility:
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            let options = [axTrustedCheckOptionPrompt: true] as CFDictionary
             let trusted = AXIsProcessTrustedWithOptions(options)
             // AX prompt is async — the user has to toggle it in Settings.
             // Return current state; the caller should poll.

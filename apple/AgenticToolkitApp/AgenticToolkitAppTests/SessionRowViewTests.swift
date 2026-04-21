@@ -1,5 +1,5 @@
 import XCTest
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
 final class SessionRowViewTests: XCTestCase {
 

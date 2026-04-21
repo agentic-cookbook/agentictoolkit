@@ -4,6 +4,7 @@ import ApplicationServices
 /// Walks the user through granting each required permission on first launch.
 /// Shows one modal sheet per permission, waits for the user to grant it (polling),
 /// then advances to the next. Skips permissions already granted.
+@MainActor
 final class PermissionWalkthrough {
 
     /// UserDefaults key tracking whether the walkthrough has completed.
@@ -179,8 +180,9 @@ final class PermissionWalkthrough {
         self.window = w
 
         // Request the permission (triggers system prompt for notifications, opens settings for others)
-        permission.request { [weak self] granted in
-            if granted {
+        permission.request { granted in
+            guard granted else { return }
+            Task { @MainActor [weak self] in
                 self?.handleGranted()
             }
         }
@@ -192,9 +194,9 @@ final class PermissionWalkthrough {
     private func startPolling(for permission: AppPermission) {
         pollingTimer?.invalidate()
         pollingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            if permission.isGranted {
-                self.handleGranted()
+            guard permission.isGranted else { return }
+            MainActor.assumeIsolated {
+                self?.handleGranted()
             }
         }
     }

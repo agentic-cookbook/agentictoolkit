@@ -3,7 +3,12 @@ import Foundation
 /// Watches the drop directory for new JSON event files, parses them, inserts events
 /// into the database, creates/updates session records, and deletes consumed files.
 /// Malformed files are moved to an `errors/` subdirectory.
-final class EventIngestionManager {
+///
+/// Thread-safety: all mutation runs on the serial `processingQueue`; the dispatch
+/// source handlers are the only external entry points that fire off-queue, and they
+/// immediately hop back via `processingQueue.asyncAfter`. Marked `@unchecked Sendable`
+/// so those handlers can capture `self` without triggering Swift 6 isolation errors.
+final class EventIngestionManager: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -129,8 +134,9 @@ final class EventIngestionManager {
         source.setEventHandler { [weak self] in
             // Coalesce: delay to let files finish writing, then process the whole batch.
             // Suspend the source during processing to avoid re-triggering from our own deletes.
-            self?.processingQueue.asyncAfter(deadline: .now() + 0.3) {
-                guard let self = self else { return }
+            guard let self else { return }
+            self.processingQueue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self else { return }
                 self.directorySource?.suspend()
                 self.processExistingFiles()
                 self.directorySource?.resume()

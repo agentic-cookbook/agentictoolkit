@@ -20,7 +20,8 @@ extension UNUserNotificationCenter: NotificationCenterProtocol {}
 /// - Posts notifications for SessionStart, SessionEnd, and Stale events
 /// - Respects per-event-type toggles from the settings database
 /// - Handles notification click actions (brings floating window to front)
-final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
+@MainActor
+final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCenterDelegate {
 
     // MARK: - Category Identifiers
 
@@ -66,22 +67,26 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     /// Requests notification authorization with alert and sound options.
     /// Should be called once during app launch.
     func requestAuthorization() {
-        notificationCenter.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
-            self?.isAuthorized = granted
-            if let error = error {
-                Log.notifications.error("Authorization error: \(error.localizedDescription, privacy: .public)")
-            } else {
-                Log.notifications.info("Authorization \(granted ? "granted" : "denied", privacy: .public)")
+        notificationCenter.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            Task { @MainActor [weak self] in
+                self?.isAuthorized = granted
+                if let error = error {
+                    Log.notifications.error("Authorization error: \(error.localizedDescription, privacy: .public)")
+                } else {
+                    Log.notifications.info("Authorization \(granted ? "granted" : "denied", privacy: .public)")
+                }
             }
         }
     }
 
     /// Checks the current authorization status and updates `isAuthorized`.
-    func checkAuthorization(completion: ((Bool) -> Void)? = nil) {
-        notificationCenter.getNotificationSettings { [weak self] settings in
+    func checkAuthorization(completion: (@MainActor @Sendable (Bool) -> Void)? = nil) {
+        notificationCenter.getNotificationSettings { settings in
             let authorized = settings.authorizationStatus == .authorized
-            self?.isAuthorized = authorized
-            completion?(authorized)
+            Task { @MainActor [weak self] in
+                self?.isAuthorized = authorized
+                completion?(authorized)
+            }
         }
     }
 

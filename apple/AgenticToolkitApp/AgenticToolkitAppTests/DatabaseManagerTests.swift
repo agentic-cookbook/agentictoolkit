@@ -1,6 +1,7 @@
 import XCTest
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
+@MainActor
 final class DatabaseManagerTests: XCTestCase {
 
     private var dbManager: DatabaseManager!

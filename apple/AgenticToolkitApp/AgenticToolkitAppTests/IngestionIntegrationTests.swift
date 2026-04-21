@@ -1,8 +1,9 @@
 import XCTest
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
 /// Integration tests for the full ingestion pipeline:
 /// hook writes JSON file → EventIngestionManager detects → parses → inserts into DB → deletes file.
+@MainActor
 final class IngestionIntegrationTests: XCTestCase {
 
     private var tempDir: URL!

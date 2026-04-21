@@ -1,6 +1,7 @@
 import XCTest
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
+@MainActor
 final class HookInstallerTests: XCTestCase {
 
     private var tempDir: URL!

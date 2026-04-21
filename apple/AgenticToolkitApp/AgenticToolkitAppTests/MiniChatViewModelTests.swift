@@ -1,7 +1,7 @@
 import XCTest
 import AgenticPluginSDK
 import AgenticPluginSDK
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
 final class ChatViewModelIntegrationTests: XCTestCase {
 

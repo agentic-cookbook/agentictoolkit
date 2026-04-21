@@ -20,7 +20,7 @@ final class SystemSettingsPane: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    deinit {
+    isolated deinit {
         refreshTimer?.invalidate()
     }
 
@@ -170,7 +170,9 @@ final class SystemSettingsPane: NSView {
 
     private func startPolling() {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.updateStatuses()
+            MainActor.assumeIsolated {
+                self?.updateStatuses()
+            }
         }
     }
 

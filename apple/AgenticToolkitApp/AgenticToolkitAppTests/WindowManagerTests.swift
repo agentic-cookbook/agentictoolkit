@@ -1,6 +1,6 @@
 import XCTest
-@testable import AgenticPluginTester
-@testable import AgenticAppKit
+@testable import AgenticToolkitApp
+@testable import CoreUI
 
 // MARK: - Mock Screen
 
@@ -64,6 +64,7 @@ class MockStorage: WindowStateStorage {
 
 // MARK: - Frame Calculator Tests
 
+@MainActor
 final class FrameCalculatorTests: XCTestCase {
 
     // MARK: - Proportional Position
@@ -295,6 +296,7 @@ final class FrameCalculatorTests: XCTestCase {
 
 // MARK: - Screen Matcher Tests
 
+@MainActor
 final class ScreenMatcherTests: XCTestCase {
 
     func testExactMatchByUUIDAndResolution() {
@@ -431,6 +433,7 @@ final class ScreenMatcherTests: XCTestCase {
 
 // MARK: - Simulated Relaunch Tests
 
+@MainActor
 final class WindowManagerSimulatedRelaunchTests: XCTestCase {
 
     /// Simulates saving on one screen config, then restoring on a different one.
@@ -648,7 +651,7 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
 
         // Should be centered within the visible frame (which starts at y=70)
         XCTAssertEqual(restored.origin.x, (1920 - 600) / 2, accuracy: 1)
-        let expectedY = 70 + (985 - 480) / 2
+        let expectedY: CGFloat = 70 + (985 - 480) / 2
         XCTAssertEqual(restored.origin.y, expectedY, accuracy: 1)
         XCTAssertGreaterThanOrEqual(restored.origin.y, 70) // Above dock
         XCTAssertLessThanOrEqual(restored.maxY, 70 + 985)   // Below menu bar
@@ -711,6 +714,7 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
 
 // MARK: - Mock Storage Tests
 
+@MainActor
 final class MockStorageTests: XCTestCase {
 
     func testSaveAndLoad() {

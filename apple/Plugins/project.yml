@@ -6,7 +6,7 @@ options:
 
 settings:
   base:
-    SWIFT_VERSION: "6.0"
+    SWIFT_VERSION: "6.3"
     SWIFT_STRICT_CONCURRENCY: complete
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -19,24 +19,15 @@ targetTemplates:
     type: bundle
     platform: macOS
     dependencies:
-      - framework: AgenticPluginSDK.framework
-        implicit: true
-        project: AgenticToolkit
-    settings:
-      base:
-        # Plugin bundles land in ~/.agenticplugins/; framework deps stay in
-        # the normal workspace build dir and are added to search paths.
-        CONFIGURATION_BUILD_DIR: "$(HOME)/.agenticplugins"
-        FRAMEWORK_SEARCH_PATHS:
-          - "$(inherited)"
-          - "$(BUILD_DIR)/$(CONFIGURATION)"
-        SWIFT_INCLUDE_PATHS:
-          - "$(inherited)"
-          - "$(BUILD_DIR)/$(CONFIGURATION)"
+      # Single dynamic library product — dyld resolves `@rpath/
+      # AgenticToolkit.framework` to the app-loaded copy, preserving type
+      # identity across the plugin boundary.
+      - package: AgenticToolkit
+        product: AgenticToolkit
 
-projectReferences:
+packages:
   AgenticToolkit:
-    path: ../AgenticToolkit/AgenticToolkit.xcodeproj
+    path: ../AgenticToolkit
 
 targets:
 
@@ -100,9 +91,8 @@ targets:
       - target: OpenAIPlugin
       - target: GooglePlugin
       - target: OpenAICompatiblePlugin
-      - framework: AgenticPluginSDK.framework
-        implicit: true
-        project: AgenticToolkit
+      - package: AgenticToolkit
+        product: AgenticToolkit
 
 schemes:
   Plugins:

@@ -1,10 +1,11 @@
 import XCTest
 import AgenticPluginSDK
 import UserNotifications
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
 /// Tests for NotificationManager covering authorization, per-event-type toggles,
 /// notification content, and notification click handling.
+@MainActor
 final class NotificationManagerTests: XCTestCase {
 
     private var databaseManager: DatabaseManager!

@@ -9,22 +9,25 @@ A cross-platform toolkit for agentic development workflows.
 
 ## Build
 
-```bash
-cd apple/AgenticToolkit && swift build
-cd apple/AgenticToolkit && swift test
-```
-
-The canonical in-repo build is XcodeGen-based:
+The framework tier is a Swift Package; the app and plugin bundles remain
+XcodeGen-generated Xcode projects that consume the package.
 
 ```bash
-cd apple/AgenticToolkit && cc-xcgen            # regenerate xcodeproj from project.yml
-open apple/AgenticToolkit/AgenticToolkit.xcworkspace
+cd apple/AgenticToolkit && swift build         # package-level build
+cd apple/AgenticToolkit && swift test          # package tests
+
+# Full workspace (app + plugins + package):
+cd apple/AgenticToolkitApp && cc-xcgen         # regenerate app xcodeproj
+cd apple/Plugins && cc-xcgen                   # regenerate plugins xcodeproj
+open apple/AgenticToolkit.xcworkspace
 ```
 
 ## Architecture
 
 Cross-platform repo with per-platform directories:
-- `apple/AgenticToolkit/` — Swift Package + XcodeGen project (targets as top-level dirs, tests colocated under `<Feature>/Tests/`)
+- `apple/AgenticToolkit/` — Swift Package (`Package.swift`); framework sources at the top level, tests under `Tests/<Module>Tests/`
+- `apple/AgenticToolkitApp/` — XcodeGen Xcode project, consumes the package as an SPM dependency
+- `apple/Plugins/` — XcodeGen Xcode project (NSBundle plugins), consumes the `AgenticToolkit` SPM product; each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`
 - `windows/` — TBD
 - `android/` — TBD
 

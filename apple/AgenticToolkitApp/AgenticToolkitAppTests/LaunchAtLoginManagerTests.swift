@@ -1,7 +1,7 @@
 import XCTest
 import AgenticPluginSDK
 import ServiceManagement
-@testable import AgenticPluginTester
+@testable import AgenticToolkitApp
 
 /// Mock implementation of LaunchAtLoginServiceProtocol for unit testing.
 final class MockLaunchAtLoginService: LaunchAtLoginServiceProtocol {
@@ -28,6 +28,7 @@ final class MockLaunchAtLoginService: LaunchAtLoginServiceProtocol {
     }
 }
 
+@MainActor
 final class LaunchAtLoginManagerTests: XCTestCase {
 
     private var databaseManager: DatabaseManager!

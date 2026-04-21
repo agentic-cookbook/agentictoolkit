@@ -2,12 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:AgenticToolkit/AgenticToolkit.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:Plugins/Plugins.xcodeproj">
-   </FileRef>
-   <FileRef
       location = "group:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
    </FileRef>
 </Workspace>
