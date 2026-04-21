@@ -41,8 +41,6 @@ targets:
     platform: macOS
     sources:
       - path: AgenticToolkitAIPluginsCore
-        excludes:
-          - "Tests"
     dependencies:
       - package: AgenticToolkit
         product: AgenticToolkitCore
