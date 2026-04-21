@@ -5,7 +5,7 @@ import AgenticToolkitChatWindow
 import AgenticToolkitSettingsWindow
 
 @MainActor
-final class SystemSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+final class SystemSettingsPanelViewController: SettingsPanelViewController {
     private let viewModel: SettingsViewModel
 
     init(viewModel: SettingsViewModel) {
@@ -16,15 +16,13 @@ final class SystemSettingsPanelViewController: NSViewController, SettingsPanelVi
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "System",
-            image: NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
-        )
+    override var panelTitle: String { "System" }
+    override var icon: NSImage? {
+        NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
     }
 
     override func loadView() {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 400))
+        let container = SettingsPanelView(frame: NSRect(x: 0, y: 0, width: 480, height: 400))
         let pane = SystemSettingsPane(viewModel: viewModel)
         pane.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(pane)

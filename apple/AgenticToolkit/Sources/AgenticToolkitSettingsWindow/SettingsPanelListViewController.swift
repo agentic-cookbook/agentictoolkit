@@ -1,85 +1,79 @@
 import AppKit
 import AgenticToolkitCoreUI
 
-/// Sidebar list of settings panel entries. Internal to the Settings subsystem;
-/// callers never touch this directly — they work with `SettingsViewController`.
-///
-/// Backed by a `TopicListViewController`. When any panel declares
-/// `listItem.section`, panels are grouped under that header in declaration
-/// order; nil-section panels form a leading anonymous section. When no panel
-/// declares a section, the list renders flat (today's behavior).
+/// Sidebar list of settings panels. Subclass of `TopicListViewController` that
+/// maps `[SettingsPanelViewController]` to `TopicListSection`s and translates
+/// row selection back to the owning panel. Open so client apps can customize
+/// row presentation or add secondary actions.
 @MainActor
-final class SettingsPanelListViewController: NSViewController {
+open class SettingsPanelListViewController: TopicListViewController {
 
-    var onSelect: ((any SettingsPanelViewController)?) -> Void = { _ in }
+    /// Fired when the user picks a row. Nil when nothing is selected.
+    public var onSelectPanel: ((SettingsPanelViewController?) -> Void)?
 
-    private var panels: [any SettingsPanelViewController] = []
-    private let topicList = TopicListViewController()
+    private var panels: [SettingsPanelViewController] = []
 
-    override func loadView() {
-        topicList.onSelect = { [weak self] item in
+    public override init(nibName: NSNib.Name?, bundle: Bundle?) {
+        super.init(nibName: nibName, bundle: bundle)
+        // onSelect is a superclass implementation hook owned by this subclass;
+        // external consumers should use `onSelectPanel`.
+        onSelect = { [weak self] item in
             guard let self else { return }
-            self.onSelect(item.flatMap { self.panel(forId: $0.id) })
+            self.onSelectPanel?(item.flatMap { self.panel(forId: $0.id) })
         }
-        addChild(topicList)
-        self.view = topicList.view
     }
 
-    func setPanels(_ panels: [any SettingsPanelViewController]) {
+    public required init?(coder: NSCoder) { super.init(coder: coder) }
+
+    public func setPanels(_ panels: [SettingsPanelViewController]) {
         self.panels = panels
-        topicList.setSections(buildSections(from: panels))
+        setSections(Self.buildSections(from: panels))
     }
 
-    /// Selects the row at `index` without triggering the `onSelect` callback,
-    /// since programmatic selection flows through `SettingsViewController.selectPanel`.
-    func selectRow(_ index: Int) {
-        guard index >= 0, index < panels.count else { return }
-        topicList.selectItem(withId: id(forIndex: index))
+    /// Selects the row at `index` without firing `onSelectPanel`, since
+    /// programmatic selection flows through `SettingsViewController.selectPanel`.
+    public func selectPanel(at index: Int) {
+        guard panels.indices.contains(index) else { return }
+        selectItem(withId: String(index))
     }
 
-    // MARK: - Mapping
+    // MARK: - Internals
 
-    private func id(forIndex index: Int) -> String { String(index) }
-
-    private func panel(forId id: String) -> (any SettingsPanelViewController)? {
-        guard let index = Int(id), index >= 0, index < panels.count else { return nil }
+    private func panel(forId id: String) -> SettingsPanelViewController? {
+        guard let index = Int(id), panels.indices.contains(index) else { return nil }
         return panels[index]
     }
 
-    private func buildSections(from panels: [any SettingsPanelViewController]) -> [TopicListSection] {
+    private static func buildSections(from panels: [SettingsPanelViewController]) -> [TopicListSection] {
         let items = panels.enumerated().map { index, panel in
-            TopicListItem(
-                id: id(forIndex: index),
-                title: panel.listItem.title,
-                icon: panel.listItem.image
-            )
+            TopicListItem(id: String(index), title: panel.panelTitle, icon: panel.icon)
         }
 
-        let hasSections = panels.contains { $0.listItem.section != nil }
+        let hasSections = panels.contains { $0.section != nil }
         guard hasSections else {
             return [TopicListSection(title: nil, items: items)]
         }
 
-        var leadingItems: [TopicListItem] = []
-        var orderedTitles: [String] = []
+        var leading: [TopicListItem] = []
+        var ordered: [String] = []
         var grouped: [String: [TopicListItem]] = [:]
         for (index, panel) in panels.enumerated() {
-            guard let section = panel.listItem.section else {
-                leadingItems.append(items[index])
+            guard let section = panel.section else {
+                leading.append(items[index])
                 continue
             }
             if grouped[section] == nil {
-                orderedTitles.append(section)
+                ordered.append(section)
                 grouped[section] = []
             }
             grouped[section]?.append(items[index])
         }
 
         var sections: [TopicListSection] = []
-        if !leadingItems.isEmpty {
-            sections.append(TopicListSection(title: nil, items: leadingItems))
+        if !leading.isEmpty {
+            sections.append(TopicListSection(title: nil, items: leading))
         }
-        for title in orderedTitles {
+        for title in ordered {
             sections.append(TopicListSection(title: title, items: grouped[title] ?? []))
         }
         return sections

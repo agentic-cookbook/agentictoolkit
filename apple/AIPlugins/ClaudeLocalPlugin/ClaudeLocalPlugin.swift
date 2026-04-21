@@ -58,7 +58,7 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     @MainActor
-    public func settingsPanelViewController() -> (any SettingsPanelViewController)? {
+    public func settingsPanelViewController() -> SettingsPanelViewController? {
         ClaudeLocalSettingsPanelViewController(plugin: self)
     }
 

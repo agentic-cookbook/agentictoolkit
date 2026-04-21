@@ -394,11 +394,11 @@
 /* Begin PBXTargetDependency section */
 		36E7AD8413004A711379C2E6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_67760870-6B1A-4B53-BAAF-3936947D8809" /* AgenticToolkitScripting */;
+			productRef = "TEMP_858E9115-660E-47FE-B03C-C9EECB99306D" /* AgenticToolkitScripting */;
 		};
 		59B82B1CDF48C8E8119AD9EE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_3BB78517-3510-49E7-A663-512B49650844" /* AgenticToolkitFileBrowser */;
+			productRef = "TEMP_84A6D8FA-E306-47F0-953C-1264504A4064" /* AgenticToolkitFileBrowser */;
 		};
 		5D0D967BD0C56EE4F199F0DA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -407,23 +407,23 @@
 		};
 		5E65611E7443D2F39CE9F114 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_86B7949F-A3E5-4CF8-A9B0-E91661ECCDCC" /* AgenticToolkitLoggingWindow */;
+			productRef = "TEMP_659CC10C-45A4-47BD-AA57-0DD603A6EA7F" /* AgenticToolkitLoggingWindow */;
 		};
 		6C91223924803DAB6C667DC1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_8ADA1046-F831-45A2-9AD6-7302967F74C3" /* AgenticToolkitNotesWindow */;
+			productRef = "TEMP_B4088071-5B80-44B4-A7F7-B618B6CDEFC3" /* AgenticToolkitNotesWindow */;
 		};
 		74781C8EC84222E2D0226087 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_C13D62A1-5C4C-40FA-84F3-523E31154E0A" /* AgenticToolkitTerminalWindow */;
+			productRef = "TEMP_9945489B-EC86-41C8-B79B-FD4825A9F293" /* AgenticToolkitTerminalWindow */;
 		};
 		B03E207DE87D56AAF883C34C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_5A59B21F-47DF-4DA3-9C55-32BBB7290F27" /* AgenticToolkitCoreUI */;
+			productRef = "TEMP_EEBF957D-B36C-4237-85B7-70218C86A655" /* AgenticToolkitCoreUI */;
 		};
 		B9CDB7477AF00986AB00E706 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_2178691F-8E6C-4598-94FD-AA6640BCA0AB" /* AgenticToolkitSettingsWindow */;
+			productRef = "TEMP_1005FA09-4B17-496C-B436-8437AC318EC5" /* AgenticToolkitSettingsWindow */;
 		};
 /* End PBXTargetDependency section */
 
@@ -713,33 +713,33 @@
 			package = 0681363B5F733F9660CE8C7C /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
 		};
-		"TEMP_2178691F-8E6C-4598-94FD-AA6640BCA0AB" /* AgenticToolkitSettingsWindow */ = {
+		"TEMP_1005FA09-4B17-496C-B436-8437AC318EC5" /* AgenticToolkitSettingsWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitSettingsWindow;
 		};
-		"TEMP_3BB78517-3510-49E7-A663-512B49650844" /* AgenticToolkitFileBrowser */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitFileBrowser;
-		};
-		"TEMP_5A59B21F-47DF-4DA3-9C55-32BBB7290F27" /* AgenticToolkitCoreUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCoreUI;
-		};
-		"TEMP_67760870-6B1A-4B53-BAAF-3936947D8809" /* AgenticToolkitScripting */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitScripting;
-		};
-		"TEMP_86B7949F-A3E5-4CF8-A9B0-E91661ECCDCC" /* AgenticToolkitLoggingWindow */ = {
+		"TEMP_659CC10C-45A4-47BD-AA57-0DD603A6EA7F" /* AgenticToolkitLoggingWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitLoggingWindow;
 		};
-		"TEMP_8ADA1046-F831-45A2-9AD6-7302967F74C3" /* AgenticToolkitNotesWindow */ = {
+		"TEMP_84A6D8FA-E306-47F0-953C-1264504A4064" /* AgenticToolkitFileBrowser */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitFileBrowser;
+		};
+		"TEMP_858E9115-660E-47FE-B03C-C9EECB99306D" /* AgenticToolkitScripting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitScripting;
+		};
+		"TEMP_9945489B-EC86-41C8-B79B-FD4825A9F293" /* AgenticToolkitTerminalWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitTerminalWindow;
+		};
+		"TEMP_B4088071-5B80-44B4-A7F7-B618B6CDEFC3" /* AgenticToolkitNotesWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitNotesWindow;
 		};
-		"TEMP_C13D62A1-5C4C-40FA-84F3-523E31154E0A" /* AgenticToolkitTerminalWindow */ = {
+		"TEMP_EEBF957D-B36C-4237-85B7-70218C86A655" /* AgenticToolkitCoreUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitTerminalWindow;
+			productName = AgenticToolkitCoreUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

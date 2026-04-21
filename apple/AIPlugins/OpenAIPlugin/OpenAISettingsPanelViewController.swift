@@ -5,7 +5,7 @@ import AgenticToolkitAIPluginsCore
 
 /// Settings panel for `OpenAIPlugin`.
 @MainActor
-final class OpenAISettingsPanelViewController: NSViewController, SettingsPanelViewController {
+final class OpenAISettingsPanelViewController: SettingsPanelViewController {
 
     private let plugin: OpenAIPlugin
 
@@ -17,11 +17,9 @@ final class OpenAISettingsPanelViewController: NSViewController, SettingsPanelVi
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "OpenAI (ChatGPT)",
-            image: NSImage(systemSymbolName: "sparkle", accessibilityDescription: nil)
-        )
+    override var panelTitle: String { "OpenAI (ChatGPT)" }
+    override var icon: NSImage? {
+        NSImage(systemSymbolName: "sparkle", accessibilityDescription: nil)
     }
 
     override func loadView() {

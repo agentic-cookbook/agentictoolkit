@@ -5,7 +5,7 @@ import AgenticToolkitSettingsWindow
 /// whose sidebar lists every discovered plugin; selecting one shows the
 /// plugin's own vended settings panel.
 @MainActor
-public final class AIPluginsSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+public final class AIPluginsSettingsPanelViewController: SettingsPanelViewController {
 
     private let pluginManager: AIPluginManager
     private let innerSettings = SettingsViewController()
@@ -18,15 +18,9 @@ public final class AIPluginsSettingsPanelViewController: NSViewController, Setti
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError() }
 
-    public var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "Plugins",
-            image: NSImage(systemSymbolName: "puzzlepiece.fill", accessibilityDescription: nil)
-        )
-    }
-
-    public override func loadView() {
-        self.view = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
+    public override var panelTitle: String { "Plugins" }
+    public override var icon: NSImage? {
+        NSImage(systemSymbolName: "puzzlepiece.fill", accessibilityDescription: nil)
     }
 
     public override func viewDidLoad() {
@@ -39,7 +33,6 @@ public final class AIPluginsSettingsPanelViewController: NSViewController, Setti
                     innerSettings.addPanel(panel)
                 }
             } catch {
-                // Skip plugins that fail to load — they shouldn't appear in the sidebar.
                 continue
             }
         }

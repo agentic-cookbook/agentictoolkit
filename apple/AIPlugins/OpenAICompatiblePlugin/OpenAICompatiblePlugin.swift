@@ -66,7 +66,7 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
     }
 
     @MainActor
-    public func settingsPanelViewController() -> (any SettingsPanelViewController)? {
+    public func settingsPanelViewController() -> SettingsPanelViewController? {
         OpenAICompatibleSettingsPanelViewController(plugin: self)
     }
 

@@ -5,16 +5,14 @@ import AgenticToolkitChatWindow
 import AgenticToolkitSettingsWindow
 
 @MainActor
-final class ProfilesSettingsPanelViewController: NSViewController, SettingsPanelViewController {
-    var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "Profiles",
-            image: NSImage(systemSymbolName: "swatchpalette", accessibilityDescription: nil)
-        )
+final class ProfilesSettingsPanelViewController: SettingsPanelViewController {
+    override var panelTitle: String { "Profiles" }
+    override var icon: NSImage? {
+        NSImage(systemSymbolName: "swatchpalette", accessibilityDescription: nil)
     }
 
     override func loadView() {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
+        let container = SettingsPanelView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
         let pane = ProfilesSettingsView(frame: .zero)
         pane.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(pane)

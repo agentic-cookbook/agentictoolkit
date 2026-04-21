@@ -6,7 +6,7 @@ import AgenticToolkitAIPlugins
 
 /// Settings panel for `ClaudeLocalPlugin`.
 @MainActor
-final class ClaudeLocalSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+final class ClaudeLocalSettingsPanelViewController: SettingsPanelViewController {
 
     private let plugin: ClaudeLocalPlugin
 
@@ -18,11 +18,9 @@ final class ClaudeLocalSettingsPanelViewController: NSViewController, SettingsPa
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    var listItem: SettingsPanelListItem {
-        SettingsPanelListItem(
-            title: "Claude (Local)",
-            image: NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
-        )
+    override var panelTitle: String { "Claude (Local)" }
+    override var icon: NSImage? {
+        NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
     }
 
     override func loadView() {
