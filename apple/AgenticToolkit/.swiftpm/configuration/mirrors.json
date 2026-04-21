@@ -1,0 +1,9 @@
+{
+  "object" : [
+    {
+      "mirror" : "https://github.com/mikefullerton/CodeEditSymbols.git",
+      "original" : "https://github.com/CodeEditApp/CodeEditSymbols.git"
+    }
+  ],
+  "version" : 1
+}

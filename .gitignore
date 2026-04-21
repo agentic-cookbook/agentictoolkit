@@ -8,6 +8,9 @@
 .build/
 Package.resolved
 **/.swiftpm/*
+!**/.swiftpm/configuration
+**/.swiftpm/configuration/*
+!**/.swiftpm/configuration/mirrors.json
 !**/.swiftpm/xcode
 **/.swiftpm/xcode/*
 !**/.swiftpm/xcode/xcshareddata
