@@ -2,9 +2,9 @@ import Testing
 import Foundation
 @testable import AgenticToolkitAIPlugins
 
-@Suite("PluginManager")
+@Suite("AIPluginManager")
 @MainActor
-struct PluginManagerTests {
+struct AIPluginManagerTests {
 
     @Test("discovers no plugins from empty directory")
     func emptyDiscovery() throws {
@@ -13,43 +13,43 @@ struct PluginManagerTests {
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmpDir) }
 
-        let manager = PluginManager(searchPaths: [tmpDir])
+        let manager = AIPluginManager(searchPaths: [tmpDir])
         manager.discoverPlugins()
         #expect(manager.availablePlugins.isEmpty)
     }
 
     @Test("discovers no plugins from nonexistent directory")
     func nonexistentPath() {
-        let manager = PluginManager(searchPaths: [URL(fileURLWithPath: "/nonexistent/path")])
+        let manager = AIPluginManager(searchPaths: [URL(fileURLWithPath: "/nonexistent/path")])
         manager.discoverPlugins()
         #expect(manager.availablePlugins.isEmpty)
     }
 
     @Test("loadPlugin throws notFound for unknown identifier")
     func loadUnknownPlugin() {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         manager.discoverPlugins()
-        #expect(throws: PluginManager.PluginError.self) {
+        #expect(throws: AIPluginManager.AIPluginError.self) {
             try manager.loadPlugin(identifier: "com.nonexistent.plugin")
         }
     }
 
     @Test("info returns nil for unknown identifier")
     func infoUnknown() {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         manager.discoverPlugins()
         #expect(manager.info(for: "com.nonexistent.plugin") == nil)
     }
 
     @Test("plugin returns nil when not loaded")
     func pluginNotLoaded() {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         #expect(manager.plugin(for: "com.nonexistent.plugin") == nil)
     }
 
     @Test("unloadPlugin removes cached instance")
     func unloadRemovesCached() {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         // Unloading a non-existent plugin should not crash
         manager.unloadPlugin(identifier: "com.nonexistent.plugin")
         #expect(manager.plugin(for: "com.nonexistent.plugin") == nil)
@@ -77,7 +77,7 @@ struct PluginManagerTests {
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))
 
-        let manager = PluginManager(searchPaths: [tmpDir])
+        let manager = AIPluginManager(searchPaths: [tmpDir])
         manager.discoverPlugins()
 
         #expect(manager.availablePlugins.count == 1)
@@ -106,7 +106,7 @@ struct PluginManagerTests {
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))
 
-        let manager = PluginManager(searchPaths: [tmpDir])
+        let manager = AIPluginManager(searchPaths: [tmpDir])
         manager.discoverPlugins()
 
         #expect(manager.availablePlugins.isEmpty)
@@ -132,7 +132,7 @@ struct PluginManagerTests {
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))
 
-        let manager = PluginManager(searchPaths: [tmpDir])
+        let manager = AIPluginManager(searchPaths: [tmpDir])
         manager.discoverPlugins()
 
         #expect(manager.availablePlugins.isEmpty)

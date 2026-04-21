@@ -24,7 +24,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Default Values
 
     func testDefaultValuesWhenDatabaseEmpty() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.stalenessTimeout, SettingsViewModel.defaultStalenessTimeout)
         XCTAssertEqual(vm.alwaysOnTop, SettingsViewModel.defaultAlwaysOnTop)
@@ -39,7 +39,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Staleness Timeout
 
     func testStalenessTimeoutPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.stalenessTimeout = 120
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.stalenessTimeoutKey)
@@ -48,13 +48,13 @@ final class SettingsViewModelTests: XCTestCase {
 
     func testStalenessTimeoutLoadsFromDatabase() throws {
         try databaseManager.setSetting(key: SettingsViewModel.stalenessTimeoutKey, value: "300")
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.stalenessTimeout, 300)
     }
 
     func testStalenessTimeoutDisplay() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         vm.stalenessTimeout = 30
         XCTAssertEqual(vm.stalenessTimeoutDisplay, "30 seconds")
@@ -76,7 +76,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Always On Top
 
     func testAlwaysOnTopPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.alwaysOnTop = false
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.alwaysOnTopKey)
@@ -85,13 +85,13 @@ final class SettingsViewModelTests: XCTestCase {
 
     func testAlwaysOnTopLoadsFromDatabase() throws {
         try databaseManager.setSetting(key: SettingsViewModel.alwaysOnTopKey, value: "false")
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.alwaysOnTop, false)
     }
 
     func testAlwaysOnTopCallbackFires() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         var callbackValue: Bool?
         vm.onAlwaysOnTopChanged = { value in
             callbackValue = value
@@ -107,7 +107,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Transparency
 
     func testTransparencyPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.transparency = 0.75
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.transparencyKey)
@@ -116,27 +116,27 @@ final class SettingsViewModelTests: XCTestCase {
 
     func testTransparencyLoadsFromDatabase() throws {
         try databaseManager.setSetting(key: SettingsViewModel.transparencyKey, value: "0.80")
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.transparency, 0.80, accuracy: 0.01)
     }
 
     func testTransparencyClampedToMinimum() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.transparency = 0.1
 
         XCTAssertEqual(vm.transparency, 0.3, accuracy: 0.01)
     }
 
     func testTransparencyClampedToMaximum() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.transparency = 1.5
 
         XCTAssertEqual(vm.transparency, 1.0, accuracy: 0.01)
     }
 
     func testTransparencyCallbackFires() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         var callbackValue: CGFloat?
         vm.onTransparencyChanged = { value in
             callbackValue = value
@@ -150,7 +150,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Notification Toggles
 
     func testNotifySessionStartPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.notifySessionStart = true
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.notifySessionStartKey)
@@ -158,7 +158,7 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func testNotifySessionEndPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.notifySessionEnd = true
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.notifySessionEndKey)
@@ -166,7 +166,7 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func testNotifyStalePersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.notifyStale = true
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.notifyStaleKey)
@@ -178,7 +178,7 @@ final class SettingsViewModelTests: XCTestCase {
         try databaseManager.setSetting(key: SettingsViewModel.notifySessionEndKey, value: "true")
         try databaseManager.setSetting(key: SettingsViewModel.notifyStaleKey, value: "true")
 
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertTrue(vm.notifySessionStart)
         XCTAssertTrue(vm.notifySessionEnd)
@@ -188,7 +188,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Click Action
 
     func testClickActionPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.clickAction = .copySessionId
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.clickActionKey)
@@ -197,13 +197,13 @@ final class SettingsViewModelTests: XCTestCase {
 
     func testClickActionLoadsFromDatabase() throws {
         try databaseManager.setSetting(key: SettingsViewModel.clickActionKey, value: SessionClickAction.openTranscript.rawValue)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.clickAction, .openTranscript)
     }
 
     func testAllClickActionsCanBeSelected() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         for action in SessionClickAction.allCases {
             vm.clickAction = action
@@ -215,7 +215,7 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - Custom Command
 
     func testCustomCommandPersists() throws {
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.customCommand = "open -a 'Visual Studio Code' $CWD"
 
         let value = try databaseManager.getSetting(key: SettingsViewModel.customCommandKey)
@@ -224,7 +224,7 @@ final class SettingsViewModelTests: XCTestCase {
 
     func testCustomCommandLoadsFromDatabase() throws {
         try databaseManager.setSetting(key: SettingsViewModel.customCommandKey, value: "code $CWD")
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.customCommand, "code $CWD")
     }
@@ -236,7 +236,7 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(SettingsViewModel.stalenessTimeoutKey, SessionLivenessMonitor.stalenessTimeoutKey)
 
         // Set via view model, read via liveness monitor's mechanism
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.stalenessTimeout = 180
 
         let monitor = SessionLivenessMonitor(databaseManager: databaseManager)
@@ -248,7 +248,7 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(SettingsViewModel.clickActionKey, SessionActionHandler.clickActionKey)
 
         // Set via view model, read via action handler
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.clickAction = .copySessionId
 
         let handler = SessionActionHandler(databaseManager: databaseManager)
@@ -258,7 +258,7 @@ final class SettingsViewModelTests: XCTestCase {
     func testCustomCommandSharedWithActionHandler() throws {
         XCTAssertEqual(SettingsViewModel.customCommandKey, SessionActionHandler.customCommandKey)
 
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
         vm.customCommand = "my-script $SESSION_ID"
 
         let handler = SessionActionHandler(databaseManager: databaseManager)
@@ -277,7 +277,7 @@ final class SettingsViewModelTests: XCTestCase {
         try databaseManager.setSetting(key: SettingsViewModel.clickActionKey, value: "copy_session_id")
         try databaseManager.setSetting(key: SettingsViewModel.customCommandKey, value: "my-cmd")
 
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: PluginManager(searchPaths: []))
+        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertEqual(vm.stalenessTimeout, 200)
         XCTAssertEqual(vm.alwaysOnTop, false)

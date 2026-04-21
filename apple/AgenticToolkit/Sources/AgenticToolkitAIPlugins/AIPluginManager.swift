@@ -8,7 +8,7 @@ import os
 /// time (cheap) and only loads the binary on demand (lazy). All public
 /// accessors return protocol types; the concrete storage is internal.
 @MainActor
-public final class PluginManager {
+public final class AIPluginManager {
 
     // MARK: - Properties
 
@@ -17,7 +17,7 @@ public final class PluginManager {
 
     /// Internal storage. Kept as the concrete type so the manager can read
     /// per-record fields (e.g. `bundlePath`) without downcasting.
-    private var records: [PluginRecord] = []
+    private var records: [AIPluginRecord] = []
 
     /// Loaded plugin instances, keyed by identifier.
     private var loadedPlugins: [String: any AIPlugin] = [:]
@@ -31,11 +31,11 @@ public final class PluginManager {
     /// App name used for the per-plugin data directory.
     private let appName: String
 
-    private let logger = Logger(subsystem: "com.agentictoolkit", category: "PluginManager")
+    private let logger = Logger(subsystem: "com.agentictoolkit", category: "AIPluginManager")
 
     // MARK: - Errors
 
-    public enum PluginError: Error, LocalizedError {
+    public enum AIPluginError: Error, LocalizedError {
         case notFound(String)
         case incompatibleSDK(plugin: String, required: String, found: String)
         case loadFailed(String)
@@ -98,7 +98,7 @@ public final class PluginManager {
     /// Scans all search paths for `.bundle` files and reads their metadata.
     /// Does not load any plugin binaries.
     public func discoverPlugins() {
-        var discovered: [PluginRecord] = []
+        var discovered: [AIPluginRecord] = []
         let fm = FileManager.default
 
         for searchPath in searchPaths {
@@ -112,7 +112,7 @@ public final class PluginManager {
 
             for url in contents where url.pathExtension == "bundle" {
                 guard let bundle = Bundle(url: url),
-                      let record = PluginRecord.fromBundle(bundle) else {
+                      let record = AIPluginRecord.fromBundle(bundle) else {
                     logger.warning("Skipping invalid plugin bundle: \(url.lastPathComponent, privacy: .public)")
                     continue
                 }
@@ -139,11 +139,11 @@ public final class PluginManager {
         }
 
         guard let record = records.first(where: { $0.identifier == identifier }) else {
-            throw PluginError.notFound(identifier)
+            throw AIPluginError.notFound(identifier)
         }
 
         if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
-            throw PluginError.incompatibleSDK(
+            throw AIPluginError.incompatibleSDK(
                 plugin: identifier,
                 required: AIPluginInfoRegistry.currentSDKVersion,
                 found: record.sdkVersion
@@ -151,21 +151,21 @@ public final class PluginManager {
         }
 
         guard let bundle = Bundle(url: record.bundlePath) else {
-            throw PluginError.loadFailed(identifier)
+            throw AIPluginError.loadFailed(identifier)
         }
 
         if !bundle.isLoaded {
             guard bundle.load() else {
-                throw PluginError.loadFailed(identifier)
+                throw AIPluginError.loadFailed(identifier)
             }
         }
 
         guard let principalClass = bundle.principalClass else {
-            throw PluginError.noPrincipalClass(identifier)
+            throw AIPluginError.noPrincipalClass(identifier)
         }
 
         guard let pluginClass = principalClass as? any AIPlugin.Type else {
-            throw PluginError.principalClassNotPlugin(identifier)
+            throw AIPluginError.principalClassNotPlugin(identifier)
         }
 
         let context = makeContext(for: identifier)
@@ -196,7 +196,7 @@ public final class PluginManager {
         let context = makeContext(for: identifier)
         let instance = pluginType.init(context: context)
 
-        let record = PluginRecord(
+        let record = AIPluginRecord(
             identifier: identifier,
             displayName: instance.displayName,
             version: "built-in",
@@ -230,7 +230,7 @@ public final class PluginManager {
 
     // MARK: - Private
 
-    private func makeContext(for identifier: String) -> PluginContext {
+    private func makeContext(for identifier: String) -> AIPluginContext {
         let pluginLogger = Logger(subsystem: "com.agentictoolkit.plugin", category: identifier)
 
         let baseDir: URL
@@ -248,7 +248,7 @@ public final class PluginManager {
 
         try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
 
-        return PluginContext(logger: pluginLogger, dataDirectory: dataDir)
+        return AIPluginContext(logger: pluginLogger, dataDirectory: dataDir)
     }
 }
 
@@ -256,14 +256,14 @@ public final class PluginManager {
 
 /// Internal record backing `AIPluginInfo`. Holds the bundle path the
 /// manager needs for lazy loading; callers see only the protocol.
-private struct PluginRecord: AIPluginInfo, Sendable {
+private struct AIPluginRecord: AIPluginInfo, Sendable {
     let identifier: String
     let displayName: String
     let version: String
     let sdkVersion: String
     let bundlePath: URL
 
-    static func fromBundle(_ bundle: Bundle) -> PluginRecord? {
+    static func fromBundle(_ bundle: Bundle) -> AIPluginRecord? {
         guard let info = bundle.infoDictionary,
               let identifier = info["AgenticPluginIdentifier"] as? String,
               let displayName = info["AgenticPluginDisplayName"] as? String,
@@ -271,7 +271,7 @@ private struct PluginRecord: AIPluginInfo, Sendable {
               let sdkVersion = info["AgenticSDKVersion"] as? String else {
             return nil
         }
-        return PluginRecord(
+        return AIPluginRecord(
             identifier: identifier,
             displayName: displayName,
             version: version,

@@ -137,7 +137,7 @@ final class SettingsViewModel: ObservableObject {
     // MARK: - Plugin Access
 
     /// The plugin manager providing access to all registered plugins.
-    let pluginManager: PluginManager
+    let pluginManager: AIPluginManager
 
     // MARK: - Callbacks
 
@@ -165,7 +165,7 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(databaseManager: DatabaseManager, pluginManager: PluginManager, launchAtLoginManager: LaunchAtLoginManager? = nil) {
+    init(databaseManager: DatabaseManager, pluginManager: AIPluginManager, launchAtLoginManager: LaunchAtLoginManager? = nil) {
         self.databaseManager = databaseManager
         self.pluginManager = pluginManager
         self.launchAtLoginManager = launchAtLoginManager

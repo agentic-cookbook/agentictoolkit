@@ -1,7 +1,7 @@
 import Foundation
 
 /// Common errors for HTTP-based plugin requests.
-public enum PluginRequestError: Error, LocalizedError {
+public enum AIPluginRequestError: Error, LocalizedError {
     case invalidResponse
     case invalidURL
     case missingBaseURL

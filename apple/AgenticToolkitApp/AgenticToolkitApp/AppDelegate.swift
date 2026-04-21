@@ -11,7 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
     private var databaseManager: DatabaseManager?
-    private var pluginManager: PluginManager?
+    private var pluginManager: AIPluginManager?
     private var ingestionManager: EventIngestionManager?
     private var hookInstaller: HookInstaller?
     private var livenessMonitor: SessionLivenessMonitor?
@@ -99,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Initialize the plugin system
-        let pm = PluginManager(appName: "AgenticPluginTester")
+        let pm = AIPluginManager(appName: "AgenticPluginTester")
         // No plugins registered for now — per-plugin registration is pending.
         pm.discoverPlugins()
         self.pluginManager = pm

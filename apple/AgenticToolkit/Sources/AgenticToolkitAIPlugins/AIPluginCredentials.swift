@@ -1,7 +1,7 @@
 import Foundation
 
 /// Credentials passed to a plugin for authentication.
-public struct PluginCredentials: Sendable {
+public struct AIPluginCredentials: Sendable {
     public let apiKey: String
     public let baseURL: String?
 

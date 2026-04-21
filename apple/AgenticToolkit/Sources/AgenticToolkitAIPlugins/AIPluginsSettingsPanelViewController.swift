@@ -5,12 +5,12 @@ import AgenticToolkitSettingsWindow
 /// whose sidebar lists every discovered plugin; selecting one shows the
 /// plugin's own vended settings panel.
 @MainActor
-public final class PluginsSettingsPanelViewController: NSViewController, SettingsPanelViewController {
+public final class AIPluginsSettingsPanelViewController: NSViewController, SettingsPanelViewController {
 
-    private let pluginManager: PluginManager
+    private let pluginManager: AIPluginManager
     private let innerSettings = SettingsViewController()
 
-    public init(pluginManager: PluginManager) {
+    public init(pluginManager: AIPluginManager) {
         self.pluginManager = pluginManager
         super.init(nibName: nil, bundle: nil)
     }

@@ -3,16 +3,16 @@ import os
 import AgenticToolkitChatWindow
 
 /// Supplies the currently-selected plugin identifier, model, and credentials
-/// to a `PluginChatBackend`. Apps typically conform their settings view model
+/// to a `AIPluginChatBackend`. Apps typically conform their settings view model
 /// to this protocol so backend selection tracks the UI live.
 @MainActor
 public protocol ChatConfigProvider: AnyObject {
     var selectedPluginIdentifier: String { get }
     var selectedModel: String { get }
-    var pluginCredentials: PluginCredentials { get }
+    var pluginCredentials: AIPluginCredentials { get }
 }
 
-/// A `ChatBackend` that routes messages through an `AgenticPluginSDK.PluginManager`,
+/// A `ChatBackend` that routes messages through an `AgenticPluginSDK.AIPluginManager`,
 /// using the currently selected plugin, model, and credentials from a `ChatConfigProvider`.
 ///
 /// Not main-actor isolated itself — the per-call work (resolving the plugin and
@@ -31,9 +31,9 @@ public protocol ChatConfigProvider: AnyObject {
 /// - `subscribers` is mutated only while holding `lock` (`NSLock`).
 /// - `configProvider` is `weak` and dereferenced only inside `MainActor.run`.
 /// No mutable state escapes these barriers.
-public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
+public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
 
-    private let pluginManager: PluginManager
+    private let pluginManager: AIPluginManager
     private weak var configProvider: ChatConfigProvider?
 
     /// Multicast subscriber registry for `isReadyChanges()`. Protected by `lock`.
@@ -42,7 +42,7 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
 
     /// Initializer is implicitly main-actor: both inputs are `@MainActor` types.
     @MainActor
-    public init(pluginManager: PluginManager, configProvider: ChatConfigProvider) {
+    public init(pluginManager: AIPluginManager, configProvider: ChatConfigProvider) {
         self.pluginManager = pluginManager
         self.configProvider = configProvider
     }
@@ -112,10 +112,10 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
 
     public func sendMessages(_ messages: [ChatBackendMessage]) async -> AsyncThrowingStream<String, Error> {
         // Snapshot config and resolve the plugin on the main actor.
-        let snapshot: (model: String, creds: PluginCredentials, plugin: AIPlugin?) = await MainActor.run {
+        let snapshot: (model: String, creds: AIPluginCredentials, plugin: AIPlugin?) = await MainActor.run {
             let pluginId = configProvider?.selectedPluginIdentifier ?? ""
             let model = configProvider?.selectedModel ?? ""
-            let creds = configProvider?.pluginCredentials ?? PluginCredentials(apiKey: "", baseURL: nil)
+            let creds = configProvider?.pluginCredentials ?? AIPluginCredentials(apiKey: "", baseURL: nil)
             let plugin = try? pluginManager.loadPlugin(identifier: pluginId)
             return (model, creds, plugin)
         }
@@ -126,7 +126,7 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
 
         return AsyncThrowingStream { continuation in
             guard let plugin = snapshot.plugin else {
-                continuation.finish(throwing: PluginChatError.pluginNotAvailable)
+                continuation.finish(throwing: AIPluginChatError.pluginNotAvailable)
                 return
             }
             let task = Task {
@@ -151,7 +151,7 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
     }
 
     /// Errors specific to the plugin-backed chat path.
-    public enum PluginChatError: Error {
+    public enum AIPluginChatError: Error {
         /// No plugin available for the currently selected identifier.
         case pluginNotAvailable
     }

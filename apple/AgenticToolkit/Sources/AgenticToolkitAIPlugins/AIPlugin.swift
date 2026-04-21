@@ -17,7 +17,7 @@ public protocol AIPlugin: AnyObject, Sendable {
     var displayName: String { get }
 
     /// Capability flags this plugin supports.
-    var capabilities: PluginCapability { get }
+    var capabilities: AIPluginCapability { get }
 
     /// Available models, ordered cheapest first.
     var availableModels: [String] { get }
@@ -29,7 +29,7 @@ public protocol AIPlugin: AnyObject, Sendable {
     var requiresAPIKey: Bool { get }
 
     /// Initialize with a context providing a logger and data directory.
-    init(context: PluginContext)
+    init(context: AIPluginContext)
 
     /// Send messages and receive a response as a stream.
     ///
@@ -40,7 +40,7 @@ public protocol AIPlugin: AnyObject, Sendable {
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
-        credentials: PluginCredentials
+        credentials: AIPluginCredentials
     ) -> AsyncThrowingStream<String, Error>
 
     /// Optional: provide a settings panel view controller for this plugin.
@@ -51,7 +51,7 @@ public protocol AIPlugin: AnyObject, Sendable {
 
     /// Validate credentials by making a minimal API call.
     /// Returns nil on success, or an error message string on failure.
-    func validateCredentials(_ credentials: PluginCredentials) async -> String?
+    func validateCredentials(_ credentials: AIPluginCredentials) async -> String?
 }
 
 // MARK: - Default Implementations
@@ -59,5 +59,5 @@ public protocol AIPlugin: AnyObject, Sendable {
 public extension AIPlugin {
     @MainActor
     func settingsPanelViewController() -> (any SettingsPanelViewController)? { nil }
-    func validateCredentials(_ credentials: PluginCredentials) async -> String? { nil }
+    func validateCredentials(_ credentials: AIPluginCredentials) async -> String? { nil }
 }
