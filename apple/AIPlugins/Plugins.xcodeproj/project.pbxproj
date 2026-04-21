@@ -6,6 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		B2EC08D72F97EB2100587CAB /* All Plugins */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = B2EC08D82F97EB2100587CAB /* Build configuration list for PBXAggregateTarget "All Plugins" */;
+			buildPhases = (
+			);
+			dependencies = (
+				B2EC08E82F97EB6500587CAB /* PBXTargetDependency */,
+				B2EC08DC2F97EB4100587CAB /* PBXTargetDependency */,
+				B2EC08DE2F97EB4100587CAB /* PBXTargetDependency */,
+				B2EC08E02F97EB4100587CAB /* PBXTargetDependency */,
+				B2EC08E22F97EB4100587CAB /* PBXTargetDependency */,
+				B2EC08E42F97EB4100587CAB /* PBXTargetDependency */,
+			);
+			name = "All Plugins";
+			packageProductDependencies = (
+			);
+			productName = "All Plugins";
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		122829574D5BFAAA28BA1FE9 /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = 2BA6047BBAEDB79C54C9A2DC /* AgenticToolkitAIPlugins */; };
 		1964207B6A2B90F77A141FD0 /* GooglePlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = FAB58D670AFD20239E1B07A4 /* GooglePlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -90,6 +111,55 @@
 			remoteInfo = AgenticToolkitAIPluginsCore;
 		};
 		B2EC08C42F97E74000587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
+		B2EC08DB2F97EB4100587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8D343B47D3E5D15FEFD120B9;
+			remoteInfo = ClaudeAPIPlugin;
+		};
+		B2EC08DD2F97EB4100587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD6FF554DDAD90DDAE763E96;
+			remoteInfo = ClaudeLocalPlugin;
+		};
+		B2EC08DF2F97EB4100587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 01C0239ED5F1FCE7E13292E3;
+			remoteInfo = GooglePlugin;
+		};
+		B2EC08E12F97EB4100587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A2ECE035EE056BC5AD8A181C;
+			remoteInfo = OpenAICompatiblePlugin;
+		};
+		B2EC08E32F97EB4100587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2C9C0A1F708502BF49559738;
+			remoteInfo = OpenAIPlugin;
+		};
+		B2EC08E52F97EB5E00587CAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50163564F0DC9E34EE000DCB;
+			remoteInfo = AgenticToolkitAIPluginsCore;
+		};
+		B2EC08E72F97EB6500587CAB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E3AEA0FE64679066A9AA8D7B /* Project object */;
 			proxyType = 1;
@@ -515,6 +585,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B2EC08E62F97EB5E00587CAB /* PBXTargetDependency */,
 				F065372D7ED81F87E0E61CD9 /* PBXTargetDependency */,
 				4C424DA5C1FEE42D01AB9B6D /* PBXTargetDependency */,
 				8579D6DF50839DFD71FBB2A0 /* PBXTargetDependency */,
@@ -558,6 +629,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					B2EC08D72F97EB2100587CAB = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
 			};
 			buildConfigurationList = 0FAED1FB6919022B19422D04 /* Build configuration list for PBXProject "Plugins" */;
 			developmentRegion = en;
@@ -583,6 +659,7 @@
 				A2ECE035EE056BC5AD8A181C /* OpenAICompatiblePlugin */,
 				2C9C0A1F708502BF49559738 /* OpenAIPlugin */,
 				C3F6B2B2D78AB68A57D77BDA /* PluginsTests */,
+				B2EC08D72F97EB2100587CAB /* All Plugins */,
 			);
 		};
 /* End PBXProject section */
@@ -712,6 +789,41 @@
 			isa = PBXTargetDependency;
 			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
 			targetProxy = B2EC08C42F97E74000587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08DC2F97EB4100587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8D343B47D3E5D15FEFD120B9 /* ClaudeAPIPlugin */;
+			targetProxy = B2EC08DB2F97EB4100587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08DE2F97EB4100587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD6FF554DDAD90DDAE763E96 /* ClaudeLocalPlugin */;
+			targetProxy = B2EC08DD2F97EB4100587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08E02F97EB4100587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 01C0239ED5F1FCE7E13292E3 /* GooglePlugin */;
+			targetProxy = B2EC08DF2F97EB4100587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08E22F97EB4100587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A2ECE035EE056BC5AD8A181C /* OpenAICompatiblePlugin */;
+			targetProxy = B2EC08E12F97EB4100587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08E42F97EB4100587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2C9C0A1F708502BF49559738 /* OpenAIPlugin */;
+			targetProxy = B2EC08E32F97EB4100587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08E62F97EB5E00587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
+			targetProxy = B2EC08E52F97EB5E00587CAB /* PBXContainerItemProxy */;
+		};
+		B2EC08E82F97EB6500587CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50163564F0DC9E34EE000DCB /* AgenticToolkitAIPluginsCore */;
+			targetProxy = B2EC08E72F97EB6500587CAB /* PBXContainerItemProxy */;
 		};
 		F065372D7ED81F87E0E61CD9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -910,6 +1022,24 @@
 				SDKROOT = macosx;
 			};
 			name = Debug;
+		};
+		B2EC08D92F97EB2100587CAB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		B2EC08DA2F97EB2100587CAB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
 		};
 		B84C58DA70F150C5264A1005 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1141,6 +1271,15 @@
 			buildConfigurations = (
 				D0CAB24CEF7D2E8460FF0997 /* Debug */,
 				337A08D9681E5A98486949DC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B2EC08D82F97EB2100587CAB /* Build configuration list for PBXAggregateTarget "All Plugins" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B2EC08D92F97EB2100587CAB /* Debug */,
+				B2EC08DA2F97EB2100587CAB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

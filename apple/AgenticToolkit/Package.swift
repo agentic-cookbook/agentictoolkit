@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "AgenticToolkitTerminalWindow", targets: ["AgenticToolkitTerminalWindow"]),
         .library(name: "AgenticToolkitFileBrowser", targets: ["AgenticToolkitFileBrowser"]),
         .library(name: "AgenticToolkitAIPlugins", targets: ["AgenticToolkitAIPlugins"]),
+        .library(name: "AgenticToolkitAll", targets: ["AgenticToolkitAll"]),
     ],
     dependencies: [
         .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0"),
@@ -126,6 +127,24 @@ let package = Package(
         .testTarget(
             name: "AgenticToolkitAIPluginsTests",
             dependencies: ["AgenticToolkitAIPlugins"]
+        ),
+
+        .target(
+            name: "AgenticToolkitAll",
+            dependencies: [
+                "AgenticToolkitCore",
+                "AgenticToolkitScripting",
+                "AgenticToolkitCoreUI",
+                "AgenticToolkitAIProvider",
+                "AgenticToolkitChatWindow",
+                "AgenticToolkitLoggingWindow",
+                "AgenticToolkitNotesWindow",
+                "AgenticToolkitSettingsWindow",
+                "AgenticToolkitTerminalWindow",
+                "AgenticToolkitFileBrowser",
+                "AgenticToolkitAIPlugins",
+            ],
+            path: "Sources/AgenticToolkitAll"
         ),
     ]
 )

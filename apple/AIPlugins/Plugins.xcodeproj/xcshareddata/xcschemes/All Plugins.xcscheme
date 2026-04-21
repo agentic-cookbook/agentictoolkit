@@ -15,9 +15,23 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
-               BuildableName = "ClaudeAPIPlugin.bundle"
-               BlueprintName = "ClaudeAPIPlugin"
+               BlueprintIdentifier = "B2EC08D72F97EB2100587CAB"
+               BuildableName = "All Plugins"
+               BlueprintName = "All Plugins"
+               ReferencedContainer = "container:Plugins.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C3F6B2B2D78AB68A57D77BDA"
+               BuildableName = "PluginsTests.xctest"
+               BlueprintName = "PluginsTests"
                ReferencedContainer = "container:Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -51,9 +65,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
-            BuildableName = "ClaudeAPIPlugin.bundle"
-            BlueprintName = "ClaudeAPIPlugin"
+            BlueprintIdentifier = "B2EC08D72F97EB2100587CAB"
+            BuildableName = "All Plugins"
+            BlueprintName = "All Plugins"
             ReferencedContainer = "container:Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

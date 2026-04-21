@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A2ECE035EE056BC5AD8A181C"
-               BuildableName = "OpenAICompatiblePlugin.bundle"
-               BlueprintName = "OpenAICompatiblePlugin"
-               ReferencedContainer = "container:Plugins.xcodeproj">
+               BlueprintIdentifier = "2C9C0A1F708502BF49559738"
+               BuildableName = "OpenAIPlugin.bundle"
+               BlueprintName = "OpenAIPlugin"
+               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -51,10 +51,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A2ECE035EE056BC5AD8A181C"
-            BuildableName = "OpenAICompatiblePlugin.bundle"
-            BlueprintName = "OpenAICompatiblePlugin"
-            ReferencedContainer = "container:Plugins.xcodeproj">
+            BlueprintIdentifier = "2C9C0A1F708502BF49559738"
+            BuildableName = "OpenAIPlugin.bundle"
+            BlueprintName = "OpenAIPlugin"
+            ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

@@ -17,7 +17,7 @@
                BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
                BuildableName = "AgenticToolkitAIPluginsCore.framework"
                BlueprintName = "AgenticToolkitAIPluginsCore"
-               ReferencedContainer = "container:Plugins.xcodeproj">
+               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,7 +33,7 @@
             BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
             BuildableName = "AgenticToolkitAIPluginsCore.framework"
             BlueprintName = "AgenticToolkitAIPluginsCore"
-            ReferencedContainer = "container:Plugins.xcodeproj">
+            ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -55,7 +55,7 @@
             BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
             BuildableName = "AgenticToolkitAIPluginsCore.framework"
             BlueprintName = "AgenticToolkitAIPluginsCore"
-            ReferencedContainer = "container:Plugins.xcodeproj">
+            ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </LaunchAction>
@@ -71,7 +71,7 @@
             BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
             BuildableName = "AgenticToolkitAIPluginsCore.framework"
             BlueprintName = "AgenticToolkitAIPluginsCore"
-            ReferencedContainer = "container:Plugins.xcodeproj">
+            ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>
