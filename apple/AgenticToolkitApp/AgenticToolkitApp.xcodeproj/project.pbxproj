@@ -1,0 +1,657 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */; };
+		0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */; };
+		0DC275DA6694E2437C49E4E5 /* AgenticToolkit in Frameworks */ = {isa = PBXBuildFile; productRef = D06F99936A9362D3D09F505C /* AgenticToolkit */; };
+		0DC7F7FD363ABE567B1E1360 /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */; };
+		11B14394CAACC62C14A15AEE /* AIChatWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */; };
+		1393FDCF04CECF541CA66569 /* GitMetadataResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */; };
+		13C95AB4373CF504402F2E4C /* EventIngestionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB93182F125477FDEC658631 /* EventIngestionManager.swift */; };
+		1FC41AEBD1DC178C5E72667D /* EventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8A55879A8C839347DC495 /* EventFile.swift */; };
+		222BA6C1367EF2A572416AA6 /* ProfilesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */; };
+		24ED1EE749ABB6DFD85D9181 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3E5EDF5F3976D706679DA4 /* main.swift */; };
+		2A45B55B84C262AD02853890 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */; };
+		319AF16A3DD48803293B31FB /* DatabaseManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */; };
+		33F0A3F6A865939447A091B4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8283AC5130D2A9E9DDBF1A8F /* Models.swift */; };
+		3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */; };
+		499F8B9FCE527F30A6B5365D /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */; };
+		5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512312A712C04F53A999F7C0 /* DatabaseManager.swift */; };
+		5AD18A78E7D0520AED9D6FF3 /* LaunchAtLoginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */; };
+		5C93B57CC3AA17DC451C7755 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */; };
+		64A41F0EB817449E6CAC40A7 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6840232F51664749DA0337AE /* NotificationManagerTests.swift */; };
+		6A46586C789FDE350E9C87EC /* TerminalProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */; };
+		6E4DEAA83334E02B57215C48 /* AgenticToolkit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B9E1D7C7E2B43A9C9C774FFD /* AgenticToolkit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */; };
+		81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */; };
+		865F9C152B023315757CDC7E /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B6DC92661757FBD7B84F01 /* Log.swift */; };
+		95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711244F8F5F5CCE26995F087 /* AppDelegate.swift */; };
+		A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */; };
+		A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */; };
+		AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */; };
+		B2447D292F96F257007A7ABE /* AgenticToolkit in Frameworks */ = {isa = PBXBuildFile; productRef = B2447D282F96F257007A7ABE /* AgenticToolkit */; };
+		C1E0EB18CAE31DE340144DE0 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45645C3494432F8D87A2E036 /* SettingsWindowController.swift */; };
+		C65FA5BC8D8371F9D29D3DEB /* AgenticToolkitAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */; };
+		C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */; };
+		D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */; };
+		DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */; };
+		F3AA21376FE50406F5D3819A /* SessionLivenessMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */; };
+		F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = A778DFB22825D8D9E9729472 /* AppPermission.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		BE17A5B031C7FCC3ECE87DBF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 94127FA6B27A717E4CA845C5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 810918565CAE23E364AEA726;
+			remoteInfo = AgenticToolkitApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7B6EBCEC3AFC2D9ED7B035BF /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				6E4DEAA83334E02B57215C48 /* AgenticToolkit in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManagerTests.swift; sourceTree = "<group>"; };
+		258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticToolkitAppTests.swift; sourceTree = "<group>"; };
+		2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		34B6DC92661757FBD7B84F01 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatWindowController.swift; sourceTree = "<group>"; };
+		4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		45645C3494432F8D87A2E036 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManagerTests.swift; sourceTree = "<group>"; };
+		4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMetadataResolver.swift; sourceTree = "<group>"; };
+		50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerTests.swift; sourceTree = "<group>"; };
+		512312A712C04F53A999F7C0 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
+		5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPane.swift; sourceTree = "<group>"; };
+		6840232F51664749DA0337AE /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
+		68C69C566432A6C267AE692E /* AgenticToolkitApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgenticToolkitApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitorTests.swift; sourceTree = "<group>"; };
+		711244F8F5F5CCE26995F087 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsView.swift; sourceTree = "<group>"; };
+		7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		8283AC5130D2A9E9DDBF1A8F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		8B3E5EDF5F3976D706679DA4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPane.swift; sourceTree = "<group>"; };
+		9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstallerTests.swift; sourceTree = "<group>"; };
+		A20BEEA83D3D826F4BC4DADC /* AgenticToolkitAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A778DFB22825D8D9E9729472 /* AppPermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPermission.swift; sourceTree = "<group>"; };
+		AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManagerTests.swift; sourceTree = "<group>"; };
+		ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubChatBackend.swift; sourceTree = "<group>"; };
+		AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProfile.swift; sourceTree = "<group>"; };
+		B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		B3B8A55879A8C839347DC495 /* EventFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventFile.swift; sourceTree = "<group>"; };
+		B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstaller.swift; sourceTree = "<group>"; };
+		D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		EB93182F125477FDEC658631 /* EventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManager.swift; sourceTree = "<group>"; };
+		EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionWalkthrough.swift; sourceTree = "<group>"; };
+		F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitor.swift; sourceTree = "<group>"; };
+		F9712E3E8DF7826CD3930306 /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkit; path = ../AgenticToolkit; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		232495A4EFF935D3E216C771 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2447D292F96F257007A7ABE /* AgenticToolkit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D1F7894C51790C9AD7AC4B9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0DC275DA6694E2437C49E4E5 /* AgenticToolkit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		04932E3F0A0C7E427D201620 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */,
+				983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */,
+				7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */,
+				A778DFB22825D8D9E9729472 /* AppPermission.swift */,
+				E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */,
+				EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */,
+				4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */,
+				79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */,
+				2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */,
+				45645C3494432F8D87A2E036 /* SettingsWindowController.swift */,
+				ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */,
+				5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */,
+				D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		0E80E86E8F5A65A989CD7E46 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		1AA012ADA86DA328C9532E41 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				F9712E3E8DF7826CD3930306 /* AgenticToolkit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		244EA2B2C56B314F80F02F80 /* AgenticToolkitAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */,
+				46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */,
+				AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */,
+				9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */,
+				240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */,
+				6840232F51664749DA0337AE /* NotificationManagerTests.swift */,
+				6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */,
+				50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */,
+			);
+			path = AgenticToolkitAppTests;
+			sourceTree = "<group>";
+		};
+		298A6FA3C06CDB6DA4A9CE8F /* Terminal */ = {
+			isa = PBXGroup;
+			children = (
+				AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */,
+			);
+			path = Terminal;
+			sourceTree = "<group>";
+		};
+		584B3DED23A04B1041292AAB /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				512312A712C04F53A999F7C0 /* DatabaseManager.swift */,
+				8283AC5130D2A9E9DDBF1A8F /* Models.swift */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		6E485070C3A9DFE3E6E8E4C4 /* Hooks */ = {
+			isa = PBXGroup;
+			children = (
+				B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */,
+			);
+			path = Hooks;
+			sourceTree = "<group>";
+		};
+		9F34FF9C21DDE9B101A095DC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				68C69C566432A6C267AE692E /* AgenticToolkitApp.app */,
+				A20BEEA83D3D826F4BC4DADC /* AgenticToolkitAppTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D48921ADD798648282D09DA5 /* AgenticToolkitApp */ = {
+			isa = PBXGroup;
+			children = (
+				711244F8F5F5CCE26995F087 /* AppDelegate.swift */,
+				34B6DC92661757FBD7B84F01 /* Log.swift */,
+				8B3E5EDF5F3976D706679DA4 /* main.swift */,
+				584B3DED23A04B1041292AAB /* Database */,
+				6E485070C3A9DFE3E6E8E4C4 /* Hooks */,
+				FB1D44D42FF9974AA70E104B /* Ingestion */,
+				0E80E86E8F5A65A989CD7E46 /* Notifications */,
+				04932E3F0A0C7E427D201620 /* Settings */,
+				298A6FA3C06CDB6DA4A9CE8F /* Terminal */,
+			);
+			path = AgenticToolkitApp;
+			sourceTree = "<group>";
+		};
+		FB1D44D42FF9974AA70E104B /* Ingestion */ = {
+			isa = PBXGroup;
+			children = (
+				B3B8A55879A8C839347DC495 /* EventFile.swift */,
+				EB93182F125477FDEC658631 /* EventIngestionManager.swift */,
+				4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */,
+				F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */,
+			);
+			path = Ingestion;
+			sourceTree = "<group>";
+		};
+		FE3DE8096C026B9CCC1C918F = {
+			isa = PBXGroup;
+			children = (
+				D48921ADD798648282D09DA5 /* AgenticToolkitApp */,
+				244EA2B2C56B314F80F02F80 /* AgenticToolkitAppTests */,
+				1AA012ADA86DA328C9532E41 /* Packages */,
+				9F34FF9C21DDE9B101A095DC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		29E6204B8EC89F3C494268DB /* AgenticToolkitAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1C57E820C07F7825C6A9DC7E /* Build configuration list for PBXNativeTarget "AgenticToolkitAppTests" */;
+			buildPhases = (
+				A680996EF1890D5501CA84D8 /* Sources */,
+				7D1F7894C51790C9AD7AC4B9 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5D0D967BD0C56EE4F199F0DA /* PBXTargetDependency */,
+			);
+			name = AgenticToolkitAppTests;
+			packageProductDependencies = (
+				D06F99936A9362D3D09F505C /* AgenticToolkit */,
+			);
+			productName = AgenticToolkitAppTests;
+			productReference = A20BEEA83D3D826F4BC4DADC /* AgenticToolkitAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		810918565CAE23E364AEA726 /* AgenticToolkitApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AF20017E82E7C8946E2BBDB8 /* Build configuration list for PBXNativeTarget "AgenticToolkitApp" */;
+			buildPhases = (
+				A5EF2E27F0973AD78A78D8F3 /* Sources */,
+				232495A4EFF935D3E216C771 /* Frameworks */,
+				7B6EBCEC3AFC2D9ED7B035BF /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AgenticToolkitApp;
+			packageProductDependencies = (
+				B9E1D7C7E2B43A9C9C774FFD /* AgenticToolkit */,
+				B2447D282F96F257007A7ABE /* AgenticToolkit */,
+			);
+			productName = AgenticToolkitApp;
+			productReference = 68C69C566432A6C267AE692E /* AgenticToolkitApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		94127FA6B27A717E4CA845C5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					29E6204B8EC89F3C494268DB = {
+						DevelopmentTeam = K2NA732JAX;
+					};
+					810918565CAE23E364AEA726 = {
+						DevelopmentTeam = K2NA732JAX;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 9CAAABD7BDB026CFE52A008D /* Build configuration list for PBXProject "AgenticToolkitApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = FE3DE8096C026B9CCC1C918F;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B2447D272F96F257007A7ABE /* XCLocalSwiftPackageReference "../AgenticToolkit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9F34FF9C21DDE9B101A095DC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				810918565CAE23E364AEA726 /* AgenticToolkitApp */,
+				29E6204B8EC89F3C494268DB /* AgenticToolkitAppTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A5EF2E27F0973AD78A78D8F3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				11B14394CAACC62C14A15AEE /* AIChatWindowController.swift in Sources */,
+				95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */,
+				F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */,
+				81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */,
+				7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */,
+				5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */,
+				1FC41AEBD1DC178C5E72667D /* EventFile.swift in Sources */,
+				13C95AB4373CF504402F2E4C /* EventIngestionManager.swift in Sources */,
+				1393FDCF04CECF541CA66569 /* GitMetadataResolver.swift in Sources */,
+				0DC7F7FD363ABE567B1E1360 /* HookInstaller.swift in Sources */,
+				5C93B57CC3AA17DC451C7755 /* LaunchAtLoginManager.swift in Sources */,
+				865F9C152B023315757CDC7E /* Log.swift in Sources */,
+				33F0A3F6A865939447A091B4 /* Models.swift in Sources */,
+				2A45B55B84C262AD02853890 /* NotificationManager.swift in Sources */,
+				499F8B9FCE527F30A6B5365D /* PermissionWalkthrough.swift in Sources */,
+				0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */,
+				222BA6C1367EF2A572416AA6 /* ProfilesSettingsView.swift in Sources */,
+				DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */,
+				A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */,
+				C1E0EB18CAE31DE340144DE0 /* SettingsWindowController.swift in Sources */,
+				D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */,
+				3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */,
+				C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */,
+				6A46586C789FDE350E9C87EC /* TerminalProfile.swift in Sources */,
+				24ED1EE749ABB6DFD85D9181 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A680996EF1890D5501CA84D8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C65FA5BC8D8371F9D29D3DEB /* AgenticToolkitAppTests.swift in Sources */,
+				319AF16A3DD48803293B31FB /* DatabaseManagerTests.swift in Sources */,
+				AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */,
+				A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */,
+				5AD18A78E7D0520AED9D6FF3 /* LaunchAtLoginManagerTests.swift in Sources */,
+				64A41F0EB817449E6CAC40A7 /* NotificationManagerTests.swift in Sources */,
+				F3AA21376FE50406F5D3819A /* SessionLivenessMonitorTests.swift in Sources */,
+				0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5D0D967BD0C56EE4F199F0DA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 810918565CAE23E364AEA726 /* AgenticToolkitApp */;
+			targetProxy = BE17A5B031C7FCC3ECE87DBF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		22EB66859A72BDDDD9DADACE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.3;
+			};
+			name = Debug;
+		};
+		2ABE5E58AE9D93BF542672F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.3;
+			};
+			name = Release;
+		};
+		B4B736B29D09941551181172 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.agentic-toolkit.app.tests";
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AgenticToolkitApp.app/Contents/MacOS/AgenticToolkitApp";
+			};
+			name = Release;
+		};
+		D81C378A0A01D18F4E174764 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.agentic-toolkit.app.tests";
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AgenticToolkitApp.app/Contents/MacOS/AgenticToolkitApp";
+			};
+			name = Debug;
+		};
+		DE9584B9791B4EA614CDD8D5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = AgenticToolkitApp/AgenticToolkitApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = AgenticToolkitApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.agentic-toolkit.app";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E5A40ADB001A856E14916269 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = AgenticToolkitApp/AgenticToolkitApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = AgenticToolkitApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.agentic-toolkit.app";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1C57E820C07F7825C6A9DC7E /* Build configuration list for PBXNativeTarget "AgenticToolkitAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D81C378A0A01D18F4E174764 /* Debug */,
+				B4B736B29D09941551181172 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9CAAABD7BDB026CFE52A008D /* Build configuration list for PBXProject "AgenticToolkitApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				22EB66859A72BDDDD9DADACE /* Debug */,
+				2ABE5E58AE9D93BF542672F0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AF20017E82E7C8946E2BBDB8 /* Build configuration list for PBXNativeTarget "AgenticToolkitApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE9584B9791B4EA614CDD8D5 /* Debug */,
+				E5A40ADB001A856E14916269 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B2447D272F96F257007A7ABE /* XCLocalSwiftPackageReference "../AgenticToolkit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B2447D282F96F257007A7ABE /* AgenticToolkit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkit;
+		};
+		B9E1D7C7E2B43A9C9C774FFD /* AgenticToolkit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkit;
+		};
+		D06F99936A9362D3D09F505C /* AgenticToolkit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 94127FA6B27A717E4CA845C5 /* Project object */;
+}

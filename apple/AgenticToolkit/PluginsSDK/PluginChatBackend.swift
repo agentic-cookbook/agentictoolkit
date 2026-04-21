@@ -1,7 +1,16 @@
 import Foundation
 import os
-import AgenticPluginSDK
-import AgenticAppKit
+import ChatWindow
+
+/// Supplies the currently-selected plugin identifier, model, and credentials
+/// to a `PluginChatBackend`. Apps typically conform their settings view model
+/// to this protocol so backend selection tracks the UI live.
+@MainActor
+public protocol ChatConfigProvider: AnyObject {
+    var selectedPluginIdentifier: String { get }
+    var selectedModel: String { get }
+    var pluginCredentials: PluginCredentials { get }
+}
 
 /// A `ChatBackend` that routes messages through an `AgenticPluginSDK.PluginManager`,
 /// using the currently selected plugin, model, and credentials from a `ChatConfigProvider`.

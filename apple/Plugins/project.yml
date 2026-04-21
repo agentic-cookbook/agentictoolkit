@@ -6,7 +6,7 @@ options:
 
 settings:
   base:
-    SWIFT_VERSION: "6.0"
+    SWIFT_VERSION: "6.3"
     SWIFT_STRICT_CONCURRENCY: complete
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -19,32 +19,15 @@ targetTemplates:
     type: bundle
     platform: macOS
     dependencies:
-      - framework: AgenticPluginSDK.framework
-        implicit: true
-        project: PluginSDK
-      - framework: AgenticAppKit.framework
-        implicit: true
-        project: AgenticToolkit
-      - framework: AgenticToolkit.framework
-        implicit: true
-        project: AgenticToolkit
-    settings:
-      base:
-        # Plugin bundles land in ~/.agenticplugins/; framework deps stay in
-        # the normal workspace build dir and are added to search paths.
-        CONFIGURATION_BUILD_DIR: "$(HOME)/.agenticplugins"
-        FRAMEWORK_SEARCH_PATHS:
-          - "$(inherited)"
-          - "$(BUILD_DIR)/$(CONFIGURATION)"
-        SWIFT_INCLUDE_PATHS:
-          - "$(inherited)"
-          - "$(BUILD_DIR)/$(CONFIGURATION)"
+      # Single dynamic library product — dyld resolves `@rpath/
+      # AgenticToolkit.framework` to the app-loaded copy, preserving type
+      # identity across the plugin boundary.
+      - package: AgenticToolkit
+        product: AgenticToolkit
 
-projectReferences:
+packages:
   AgenticToolkit:
-    path: ../../../agentictoolkit/apple/AgenticToolkit.xcodeproj
-  PluginSDK:
-    path: ../PluginSDK/PluginSDK.xcodeproj
+    path: ../AgenticToolkit
 
 targets:
 
@@ -93,10 +76,23 @@ targets:
         INFOPLIST_FILE: OpenAICompatiblePlugin/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai-compatible
 
-# AgenticBuiltInPluginsTests disabled: `@testable import <PluginName>` does
-# not work against Bundle targets. Needs a new test strategy (load bundles
-# through PluginManager, or add test-only framework targets alongside the
-# bundles). Source is kept in Tests/ for when the strategy is decided.
+  # Note: `@testable import <PluginName>` against Bundle targets is known to
+  # be unreliable. If this fails to compile, the plugins likely need
+  # test-only framework twins or the tests need to load bundles at runtime
+  # via PluginManager.
+  PluginsTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: ClaudeAPIPlugin
+      - target: ClaudeLocalPlugin
+      - target: OpenAIPlugin
+      - target: GooglePlugin
+      - target: OpenAICompatiblePlugin
+      - package: AgenticToolkit
+        product: AgenticToolkit
 
 schemes:
   Plugins:
@@ -107,6 +103,9 @@ schemes:
         OpenAIPlugin: all
         GooglePlugin: all
         OpenAICompatiblePlugin: all
+    test:
+      targets:
+        - PluginsTests
 
 # Client-facing aggregate target. Clients depend on `Plugins/AllPlugins` and
 # never enumerate individual plugins. When a new plugin target is added to

@@ -2,7 +2,8 @@ import AppKit
 import Foundation
 import os
 import AgenticPluginSDK
-import AgenticAppKit
+import CoreUI
+import SettingsWindow
 
 /// LLM plugin for OpenAI-compatible API endpoints (e.g. self-hosted, LM Studio, etc.).
 /// Provides a custom settings view with a base URL text field.

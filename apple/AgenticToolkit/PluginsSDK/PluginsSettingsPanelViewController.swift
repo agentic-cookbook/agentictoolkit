@@ -1,5 +1,5 @@
 import AppKit
-import AgenticAppKit
+import SettingsWindow
 
 /// Top-level "Plugins" settings panel. Hosts a nested `SettingsViewController`
 /// whose sidebar lists every discovered plugin; selecting one shows the
