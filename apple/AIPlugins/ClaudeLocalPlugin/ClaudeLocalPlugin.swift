@@ -7,7 +7,7 @@ import AgenticToolkitSettingsWindow
 /// LLM plugin that runs Claude locally via the Claude Code CLI (`claude -p`).
 /// Uses the user's existing Claude Code installation — no API key required.
 /// Streams output incrementally as the subprocess produces it.
-public final class ClaudeLocalPlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
+public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public static let identifier = "com.agentictoolkit.plugin.claude-local"
 

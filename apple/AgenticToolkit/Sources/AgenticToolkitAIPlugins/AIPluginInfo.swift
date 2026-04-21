@@ -2,7 +2,7 @@ import Foundation
 
 /// Identity and version information about a plugin — available before (and
 /// independently of) the plugin's binary being loaded.
-public protocol AgenticLLMPluginInfo: Sendable {
+public protocol AIPluginInfo: Sendable {
 
     /// Unique reverse-DNS identifier. Matches `AgenticPluginIdentifier` in the
     /// bundle's Info.plist.
@@ -16,12 +16,12 @@ public protocol AgenticLLMPluginInfo: Sendable {
     var version: String { get }
 
     /// SDK version the plugin was built against. Must equal
-    /// `AgenticLLMPluginInfoRegistry.currentSDKVersion` to load.
+    /// `AIPluginInfoRegistry.currentSDKVersion` to load.
     var sdkVersion: String { get }
 }
 
 /// SDK-version gate used by the host when deciding whether a discovered
 /// plugin is loadable.
-public enum AgenticLLMPluginInfoRegistry {
+public enum AIPluginInfoRegistry {
     public static let currentSDKVersion = "1"
 }

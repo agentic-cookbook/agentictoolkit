@@ -6,7 +6,7 @@ import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
 
 /// LLM plugin for the Google Gemini `generateContent` API.
-public final class GooglePlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
+public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public static let identifier = "com.agentictoolkit.plugin.google"
 

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "2640"
-   version = "1.3">
+   version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES">
+      buildImplicitDependencies = "YES"
+      buildArchitectures = "Automatic">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -14,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
-               BuildableName = "AgenticToolkitAIPluginsCore.framework"
-               BlueprintName = "AgenticToolkitAIPluginsCore"
+               BlueprintIdentifier = "2C9C0A1F708502BF49559738"
+               BuildableName = "OpenAIPlugin.bundle"
+               BlueprintName = "OpenAIPlugin"
                ReferencedContainer = "container:Plugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -26,18 +27,8 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
-            BuildableName = "AgenticToolkitAIPluginsCore.framework"
-            BlueprintName = "AgenticToolkitAIPluginsCore"
-            ReferencedContainer = "container:Plugins.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
-      <Testables>
-      </Testables>
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldAutocreateTestPlan = "YES">
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -48,16 +39,8 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
-            BuildableName = "AgenticToolkitAIPluginsCore.framework"
-            BlueprintName = "AgenticToolkitAIPluginsCore"
-            ReferencedContainer = "container:Plugins.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
+      allowLocationSimulation = "YES"
+      queueDebuggingEnableBacktraceRecording = "Yes">
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -68,9 +51,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "50163564F0DC9E34EE000DCB"
-            BuildableName = "AgenticToolkitAIPluginsCore.framework"
-            BlueprintName = "AgenticToolkitAIPluginsCore"
+            BlueprintIdentifier = "2C9C0A1F708502BF49559738"
+            BuildableName = "OpenAIPlugin.bundle"
+            BlueprintName = "OpenAIPlugin"
             ReferencedContainer = "container:Plugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

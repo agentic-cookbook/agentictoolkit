@@ -112,7 +112,7 @@ public final class PluginChatBackend: ChatBackend, @unchecked Sendable {
 
     public func sendMessages(_ messages: [ChatBackendMessage]) async -> AsyncThrowingStream<String, Error> {
         // Snapshot config and resolve the plugin on the main actor.
-        let snapshot: (model: String, creds: PluginCredentials, plugin: AgenticLLMPlugin?) = await MainActor.run {
+        let snapshot: (model: String, creds: PluginCredentials, plugin: AIPlugin?) = await MainActor.run {
             let pluginId = configProvider?.selectedPluginIdentifier ?? ""
             let model = configProvider?.selectedModel ?? ""
             let creds = configProvider?.pluginCredentials ?? PluginCredentials(apiKey: "", baseURL: nil)

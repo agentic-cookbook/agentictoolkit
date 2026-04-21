@@ -6,7 +6,7 @@ import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
 
 /// LLM plugin for the OpenAI Chat Completions API.
-public final class OpenAIPlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
+public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public static let identifier = "com.agentictoolkit.plugin.openai"
 

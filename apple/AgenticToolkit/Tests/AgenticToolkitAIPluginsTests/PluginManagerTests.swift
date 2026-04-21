@@ -71,7 +71,7 @@ struct PluginManagerTests {
             "AgenticPluginIdentifier": "com.test.plugin",
             "AgenticPluginDisplayName": "Test Plugin",
             "AgenticPluginVersion": "1.0.0",
-            "AgenticSDKVersion": AgenticLLMPluginInfoRegistry.currentSDKVersion,
+            "AgenticSDKVersion": AIPluginInfoRegistry.currentSDKVersion,
             "NSPrincipalClass": "TestPlugin",
         ]
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)

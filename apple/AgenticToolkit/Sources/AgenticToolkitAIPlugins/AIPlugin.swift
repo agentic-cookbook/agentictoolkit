@@ -7,7 +7,7 @@ import AgenticToolkitSettingsWindow
 /// conforms to this protocol. The plugin manager discovers bundles by reading
 /// their `Info.plist` metadata and only loads the binary when the plugin is
 /// first used.
-public protocol AgenticLLMPlugin: AnyObject, Sendable {
+public protocol AIPlugin: AnyObject, Sendable {
 
     /// Unique reverse-DNS identifier (e.g. "com.agentictoolkit.plugin.anthropic").
     /// Must match the `AgenticPluginIdentifier` in the bundle's Info.plist.
@@ -56,7 +56,7 @@ public protocol AgenticLLMPlugin: AnyObject, Sendable {
 
 // MARK: - Default Implementations
 
-public extension AgenticLLMPlugin {
+public extension AIPlugin {
     @MainActor
     func settingsPanelViewController() -> (any SettingsPanelViewController)? { nil }
     func validateCredentials(_ credentials: PluginCredentials) async -> String? { nil }

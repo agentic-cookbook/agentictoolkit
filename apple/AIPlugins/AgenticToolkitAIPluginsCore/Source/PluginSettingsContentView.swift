@@ -2,14 +2,14 @@ import AppKit
 import AgenticToolkitCore
 import AgenticToolkitAIPlugins
 
-/// Reusable settings view for a single `AgenticLLMPlugin`. Renders API key
+/// Reusable settings view for a single `AIPlugin`. Renders API key
 /// entry + validate, model selection, and (for the OpenAI-compatible plugin)
 /// a base URL field. Persists per-plugin values under keys scoped by the
 /// plugin's identifier so each plugin gets its own credentials/config.
 @MainActor
 public final class PluginSettingsContentView: NSView {
 
-    private let plugin: any AgenticLLMPlugin
+    private let plugin: any AIPlugin
 
     private let modelPopup = NSPopUpButton()
     private let apiKeyField = NSSecureTextField()
@@ -30,7 +30,7 @@ public final class PluginSettingsContentView: NSView {
         type(of: plugin).identifier == "com.agentictoolkit.plugin.openai-compatible"
     }
 
-    public init(plugin: any AgenticLLMPlugin) {
+    public init(plugin: any AIPlugin) {
         self.plugin = plugin
         super.init(frame: .zero)
         setupViews()

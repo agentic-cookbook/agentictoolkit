@@ -7,7 +7,7 @@ import AgenticToolkitSettingsWindow
 
 /// LLM plugin for OpenAI-compatible API endpoints (e.g. self-hosted, LM Studio, etc.).
 /// Provides a custom settings view with a base URL text field.
-public final class OpenAICompatiblePlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
+public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public static let identifier = "com.agentictoolkit.plugin.openai-compatible"
 

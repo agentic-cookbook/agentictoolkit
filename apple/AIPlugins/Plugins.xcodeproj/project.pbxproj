@@ -28,46 +28,35 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		053D162C3500731AAD15ECD2 /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 785154F19010E10C45D0BEC6 /* AgenticToolkitCoreUI */; };
 		122829574D5BFAAA28BA1FE9 /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = 2BA6047BBAEDB79C54C9A2DC /* AgenticToolkitAIPlugins */; };
 		1964207B6A2B90F77A141FD0 /* GooglePlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = FAB58D670AFD20239E1B07A4 /* GooglePlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		1AE75869EB2C98ED06B41A15 /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 6D5B66731A0F8DC1DF423F9C /* AgenticToolkitCoreUI */; };
 		1BACFAD3DFC98FB0F43E89F8 /* ClaudeLocalSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1134D044EA28695D0DCA8C15 /* ClaudeLocalSettingsPanelViewController.swift */; };
-		4230A9030B06DF8E765199D0 /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 9D29539EC6C45F45B689B35F /* AgenticToolkitSettingsWindow */; };
 		50CAB4C53CAF5837DEC6C002 /* OpenAICompatiblePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E44B6E02584096E8BEAFBE /* OpenAICompatiblePlugin.swift */; };
-		5A5EDA07B864DB37370AFFE6 /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7313FF23C8C1F2FF171CC07F /* AgenticToolkitSettingsWindow */; };
 		5F02E61A844BF1A0FD957D1A /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		61B6F514ED06D7497D2418E5 /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = B240E88E68A5775A9128AF07 /* AgenticToolkitSettingsWindow */; };
 		6D2AF2F632AFA6B0C360F693 /* PluginSettingsContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03A08E3E884EC5CB7350BF5F /* PluginSettingsContentView.swift */; };
 		74CF29B4329E3B9A8C74E1A6 /* OpenAIPlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 9C738860ACF7E63F78BE0E24 /* OpenAIPlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7613E89710ECCFE83E0EF09B /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
 		7769B9530488638B61762C95 /* ClaudeAPIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D83DB39D123557ABF9C7DE /* ClaudeAPIPlugin.swift */; };
-		7877BC4E21360E601AA238CE /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = DDCDBC92A9156A9381942A11 /* AgenticToolkitCore */; };
 		7A7DB3E6D20D2D59DBD345F3 /* OpenAICompatiblePlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 6B0A4C1251A5F8170D7C5C3C /* OpenAICompatiblePlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7BD38F75BB15ACEAF27BDB9A /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
-		82B710577AD8055D25E83A1D /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 8D192D6211AB8828C86C3DF0 /* AgenticToolkitCore */; };
 		84D9325B21B76C4FFB6CDCD6 /* GoogleSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 936EEE16C155D98184BEAF05 /* GoogleSettingsPanelViewController.swift */; };
-		895330B259803E6B3C15300B /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4687A653D7CE0DC52883C7F9 /* AgenticToolkitCoreUI */; };
-		8EA68436A1A400A14E3A9313 /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 94C8DBD6BE3EC89E0AB4A47F /* AgenticToolkitCoreUI */; };
-		8F79B8F9C434B9F969DD230A /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9F7A04781E431E6DD3B2EF2A /* AgenticToolkitCore */; };
 		9739C7EB9515A6E442DCA9F9 /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
 		9A1680AADA82926FFE803C4E /* OpenAICompatibleSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7400CD05E0D34DF9221406 /* OpenAICompatibleSettingsPanelViewController.swift */; };
 		A3C29FA2811BF4725B2BA541 /* ClaudeAPIPlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 56A1FA4FEA05223A149C50C0 /* ClaudeAPIPlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AAA65C7B6E84250A1B1C187F /* BuiltInPluginTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD236D79ECCA53BED1A74D88 /* BuiltInPluginTests.swift */; };
 		ABFDD8EB00092E964FE76961 /* ClaudeLocalPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE7001B0214C7943A1E81A1 /* ClaudeLocalPlugin.swift */; };
-		AE0D1314F6329053336117A8 /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 800544F545A2D72E1E4349FB /* AgenticToolkitCore */; };
-		BA0784E9217954A34BDD899B /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EE318FF0C0549A947614E4E /* AgenticToolkitCoreUI */; };
+		B2B9F4B02F97D10D0062DE4E /* AgenticToolkitAIPlugins in Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4AF2F97D10D0062DE4E /* AgenticToolkitAIPlugins */; };
+		B2B9F4B12F97D10D0062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4AF2F97D10D0062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B2B9F4B52F97D1D90062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B2B9F4B82F97D1D90062DE4E /* AgenticToolkitCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B2B9F4BB2F97D1D90062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B2B9F4BF2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BC47F1924AE6869F835786AA /* OpenAISettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCCC3DD0CC55FBA3DE7C6E14 /* OpenAISettingsPanelViewController.swift */; };
 		C6DA22070F4D11353847C926 /* ClaudeLocalPlugin.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 2B7E1879B023360D18610262 /* ClaudeLocalPlugin.bundle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		C999AA8D114AC0F440E96922 /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = C93248E03FF335B352DD006C /* AgenticToolkitCore */; };
-		C9ACA5CAC87283809BF2D5C4 /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 0F3A25F5C82BA1071151B9BB /* AgenticToolkitSettingsWindow */; };
 		D31BA78529D6E37487FF05FF /* OpenAIResponseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEE29BDE4953B57953257DD /* OpenAIResponseParser.swift */; };
 		E46D33D1E47938580DEE4D86 /* GooglePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8AE171E173D260108D29042 /* GooglePlugin.swift */; };
 		E8DE31D6B43EB94C0D580442 /* OpenAIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D99872AFFF7816BBCFF4CAD9 /* OpenAIPlugin.swift */; };
-		ECEEC4B44B9B72F2F295DBBF /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2C163488BA4828F513677431 /* AgenticToolkitCore */; };
 		F2FD07091CF97821518D5FDD /* ClaudeAPISettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E973678766B7019A9EF80B65 /* ClaudeAPISettingsPanelViewController.swift */; };
-		F586A58D0FD74E6B915958CC /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 0A5F10CB8C12B531D2369A5A /* AgenticToolkitSettingsWindow */; };
-		F66B7848979831F658FEA790 /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 0256EF6D1BD2A19C4151B360 /* AgenticToolkitSettingsWindow */; };
 		F6D4524F8F760FF9E3ADAD5E /* AgenticToolkitAIPluginsCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */; };
 /* End PBXBuildFile section */
 
@@ -186,6 +175,34 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		B2B9F4B22F97D10D0062DE4E /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				B2B9F4B12F97D10D0062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B2B9F4BC2F97D1D90062DE4E /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				B2B9F4BB2F97D1D90062DE4E /* AgenticToolkitCoreUI in Embed Frameworks */,
+				B2B9F4B82F97D1D90062DE4E /* AgenticToolkitCore in Embed Frameworks */,
+				B2B9F4BF2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow in Embed Frameworks */,
+				B2B9F4B52F97D1D90062DE4E /* AgenticToolkitAIPlugins in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		03A08E3E884EC5CB7350BF5F /* PluginSettingsContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsContentView.swift; sourceTree = "<group>"; };
 		1134D044EA28695D0DCA8C15 /* ClaudeLocalSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLocalSettingsPanelViewController.swift; sourceTree = "<group>"; };
@@ -220,9 +237,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8F79B8F9C434B9F969DD230A /* AgenticToolkitCore in Frameworks */,
-				BA0784E9217954A34BDD899B /* AgenticToolkitCoreUI in Frameworks */,
-				C9ACA5CAC87283809BF2D5C4 /* AgenticToolkitSettingsWindow in Frameworks */,
 				5F02E61A844BF1A0FD957D1A /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -231,8 +245,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ECEEC4B44B9B72F2F295DBBF /* AgenticToolkitCore in Frameworks */,
-				4230A9030B06DF8E765199D0 /* AgenticToolkitSettingsWindow in Frameworks */,
+				B2B9F4B02F97D10D0062DE4E /* AgenticToolkitAIPlugins in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -248,9 +261,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C999AA8D114AC0F440E96922 /* AgenticToolkitCore in Frameworks */,
-				895330B259803E6B3C15300B /* AgenticToolkitCoreUI in Frameworks */,
-				F66B7848979831F658FEA790 /* AgenticToolkitSettingsWindow in Frameworks */,
 				7BD38F75BB15ACEAF27BDB9A /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -259,9 +269,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7877BC4E21360E601AA238CE /* AgenticToolkitCore in Frameworks */,
-				1AE75869EB2C98ED06B41A15 /* AgenticToolkitCoreUI in Frameworks */,
-				5A5EDA07B864DB37370AFFE6 /* AgenticToolkitSettingsWindow in Frameworks */,
 				7613E89710ECCFE83E0EF09B /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -270,9 +277,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				82B710577AD8055D25E83A1D /* AgenticToolkitCore in Frameworks */,
-				053D162C3500731AAD15ECD2 /* AgenticToolkitCoreUI in Frameworks */,
-				61B6F514ED06D7497D2418E5 /* AgenticToolkitSettingsWindow in Frameworks */,
 				F6D4524F8F760FF9E3ADAD5E /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -281,9 +285,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AE0D1314F6329053336117A8 /* AgenticToolkitCore in Frameworks */,
-				8EA68436A1A400A14E3A9313 /* AgenticToolkitCoreUI in Frameworks */,
-				F586A58D0FD74E6B915958CC /* AgenticToolkitSettingsWindow in Frameworks */,
 				9739C7EB9515A6E442DCA9F9 /* AgenticToolkitAIPluginsCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -332,6 +333,7 @@
 				AC9D3EEFAF1E4E3E7F186F9A /* OpenAIPlugin */,
 				3459E36B64C567FEB8EF7C91 /* Packages */,
 				44C4A2604367D288F0BFC38A /* Tests */,
+				B2B9F4AE2F97D10D0062DE4E /* Frameworks */,
 				64AFAD6B7AF9BF4BBD7FD124 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -372,6 +374,13 @@
 				FCCC3DD0CC55FBA3DE7C6E14 /* OpenAISettingsPanelViewController.swift */,
 			);
 			path = OpenAIPlugin;
+			sourceTree = "<group>";
+		};
+		B2B9F4AE2F97D10D0062DE4E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		BC1FF5DC6D654FBEDF205913 /* OpenAICompatiblePlugin */ = {
@@ -456,6 +465,7 @@
 			buildPhases = (
 				72E97EDC835ED7100AE4B87E /* Sources */,
 				41494014D0D8BAFD9FA40411 /* Frameworks */,
+				B2B9F4B22F97D10D0062DE4E /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -465,6 +475,7 @@
 			packageProductDependencies = (
 				2C163488BA4828F513677431 /* AgenticToolkitCore */,
 				9D29539EC6C45F45B689B35F /* AgenticToolkitSettingsWindow */,
+				B2B9F4AF2F97D10D0062DE4E /* AgenticToolkitAIPlugins */,
 			);
 			productName = AgenticToolkitAIPluginsCore;
 			productReference = CCAB68A761FC568FE8345E8A /* AgenticToolkitAIPluginsCore.framework */;
@@ -476,6 +487,7 @@
 			buildPhases = (
 				B6651507DDAC378DAB30E0AD /* Sources */,
 				E717255EEF3C0E7B228F6748 /* Frameworks */,
+				B2B9F4BC2F97D1D90062DE4E /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -484,9 +496,10 @@
 			);
 			name = ClaudeAPIPlugin;
 			packageProductDependencies = (
-				8D192D6211AB8828C86C3DF0 /* AgenticToolkitCore */,
-				785154F19010E10C45D0BEC6 /* AgenticToolkitCoreUI */,
-				B240E88E68A5775A9128AF07 /* AgenticToolkitSettingsWindow */,
+				B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */,
+				B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */,
+				B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */,
+				B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */,
 			);
 			productName = ClaudeAPIPlugin;
 			productReference = 56A1FA4FEA05223A149C50C0 /* ClaudeAPIPlugin.bundle */;
@@ -568,9 +581,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
+				LastUpgradeCheck = 2640;
 			};
 			buildConfigurationList = 0FAED1FB6919022B19422D04 /* Build configuration list for PBXProject "Plugins" */;
 			developmentRegion = en;
@@ -771,15 +782,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin-core";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -791,6 +805,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeLocalPlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -805,6 +820,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = GooglePlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -821,15 +837,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin-core";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -842,6 +861,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -889,9 +909,11 @@
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -906,6 +928,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -917,6 +940,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeAPIPlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -930,6 +954,7 @@
 		A398A401C2F4159DCC1CBD8D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Debug;
 		};
@@ -937,6 +962,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAICompatiblePlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -950,6 +976,7 @@
 		B73A07FE84975D5E97E79627 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Release;
 		};
@@ -957,6 +984,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeLocalPlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -971,6 +999,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeAPIPlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -985,6 +1014,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAIPlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1000,6 +1030,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1047,9 +1078,11 @@
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1071,6 +1104,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1082,6 +1116,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAICompatiblePlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1096,6 +1131,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = GooglePlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1110,6 +1146,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAIPlugin/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1250,15 +1287,7 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitSettingsWindow;
 		};
-		785154F19010E10C45D0BEC6 /* AgenticToolkitCoreUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCoreUI;
-		};
 		800544F545A2D72E1E4349FB /* AgenticToolkitCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitCore;
-		};
-		8D192D6211AB8828C86C3DF0 /* AgenticToolkitCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitCore;
 		};
@@ -1274,7 +1303,23 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitCore;
 		};
-		B240E88E68A5775A9128AF07 /* AgenticToolkitSettingsWindow */ = {
+		B2B9F4AF2F97D10D0062DE4E /* AgenticToolkitAIPlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitAIPlugins;
+		};
+		B2B9F4B32F97D1D90062DE4E /* AgenticToolkitAIPlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitAIPlugins;
+		};
+		B2B9F4B62F97D1D90062DE4E /* AgenticToolkitCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitCore;
+		};
+		B2B9F4B92F97D1D90062DE4E /* AgenticToolkitCoreUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitCoreUI;
+		};
+		B2B9F4BD2F97D1DF0062DE4E /* AgenticToolkitSettingsWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitSettingsWindow;
 		};

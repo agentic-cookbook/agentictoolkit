@@ -4,7 +4,7 @@ import os
 /// Discovers, loads, and manages LLM plugin bundles.
 ///
 /// Plugins are macOS `.bundle` files containing a principal class that conforms
-/// to `AgenticLLMPlugin`. The manager reads `Info.plist` metadata at discovery
+/// to `AIPlugin`. The manager reads `Info.plist` metadata at discovery
 /// time (cheap) and only loads the binary on demand (lazy). All public
 /// accessors return protocol types; the concrete storage is internal.
 @MainActor
@@ -13,14 +13,14 @@ public final class PluginManager {
     // MARK: - Properties
 
     /// Info records for every discovered plugin. Binaries are not yet loaded.
-    public var availablePlugins: [any AgenticLLMPluginInfo] { records }
+    public var availablePlugins: [any AIPluginInfo] { records }
 
     /// Internal storage. Kept as the concrete type so the manager can read
     /// per-record fields (e.g. `bundlePath`) without downcasting.
     private var records: [PluginRecord] = []
 
     /// Loaded plugin instances, keyed by identifier.
-    private var loadedPlugins: [String: any AgenticLLMPlugin] = [:]
+    private var loadedPlugins: [String: any AIPlugin] = [:]
 
     /// Loaded bundles, keyed by identifier (kept alive so the binary stays mapped).
     private var loadedBundles: [String: Bundle] = [:]
@@ -53,7 +53,7 @@ public final class PluginManager {
             case .noPrincipalClass(let id):
                 return "Plugin '\(id)' has no NSPrincipalClass"
             case .principalClassNotPlugin(let id):
-                return "Plugin '\(id)' principal class does not conform to AgenticLLMPlugin"
+                return "Plugin '\(id)' principal class does not conform to AIPlugin"
             }
         }
     }
@@ -117,8 +117,8 @@ public final class PluginManager {
                     continue
                 }
 
-                if record.sdkVersion != AgenticLLMPluginInfoRegistry.currentSDKVersion {
-                    logger.warning("Skipping incompatible plugin '\(record.displayName, privacy: .public)': SDK \(record.sdkVersion, privacy: .public) != \(AgenticLLMPluginInfoRegistry.currentSDKVersion, privacy: .public)")
+                if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
+                    logger.warning("Skipping incompatible plugin '\(record.displayName, privacy: .public)': SDK \(record.sdkVersion, privacy: .public) != \(AIPluginInfoRegistry.currentSDKVersion, privacy: .public)")
                     continue
                 }
 
@@ -133,7 +133,7 @@ public final class PluginManager {
     // MARK: - Loading
 
     /// Loads a plugin's binary and instantiates it. Returns a cached instance if already loaded.
-    public func loadPlugin(identifier: String) throws -> any AgenticLLMPlugin {
+    public func loadPlugin(identifier: String) throws -> any AIPlugin {
         if let existing = loadedPlugins[identifier] {
             return existing
         }
@@ -142,10 +142,10 @@ public final class PluginManager {
             throw PluginError.notFound(identifier)
         }
 
-        if record.sdkVersion != AgenticLLMPluginInfoRegistry.currentSDKVersion {
+        if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
             throw PluginError.incompatibleSDK(
                 plugin: identifier,
-                required: AgenticLLMPluginInfoRegistry.currentSDKVersion,
+                required: AIPluginInfoRegistry.currentSDKVersion,
                 found: record.sdkVersion
             )
         }
@@ -164,7 +164,7 @@ public final class PluginManager {
             throw PluginError.noPrincipalClass(identifier)
         }
 
-        guard let pluginClass = principalClass as? any AgenticLLMPlugin.Type else {
+        guard let pluginClass = principalClass as? any AIPlugin.Type else {
             throw PluginError.principalClassNotPlugin(identifier)
         }
 
@@ -188,7 +188,7 @@ public final class PluginManager {
     // MARK: - Built-in Plugin Registration
 
     /// Registers a built-in plugin type (compiled into the app, not loaded from a bundle).
-    public func registerBuiltIn(_ pluginType: any AgenticLLMPlugin.Type) {
+    public func registerBuiltIn(_ pluginType: any AIPlugin.Type) {
         let identifier = pluginType.identifier
 
         guard !records.contains(where: { $0.identifier == identifier }) else { return }
@@ -200,7 +200,7 @@ public final class PluginManager {
             identifier: identifier,
             displayName: instance.displayName,
             version: "built-in",
-            sdkVersion: AgenticLLMPluginInfoRegistry.currentSDKVersion,
+            sdkVersion: AIPluginInfoRegistry.currentSDKVersion,
             bundlePath: Bundle.main.bundleURL
         )
 
@@ -210,7 +210,7 @@ public final class PluginManager {
     }
 
     /// Registers multiple built-in plugin types.
-    public func registerBuiltIns(_ pluginTypes: [any AgenticLLMPlugin.Type]) {
+    public func registerBuiltIns(_ pluginTypes: [any AIPlugin.Type]) {
         for pluginType in pluginTypes {
             registerBuiltIn(pluginType)
         }
@@ -219,12 +219,12 @@ public final class PluginManager {
     // MARK: - Query
 
     /// Returns info for a plugin without loading it.
-    public func info(for identifier: String) -> (any AgenticLLMPluginInfo)? {
+    public func info(for identifier: String) -> (any AIPluginInfo)? {
         records.first { $0.identifier == identifier }
     }
 
     /// Returns a loaded plugin instance, or nil if not loaded.
-    public func plugin(for identifier: String) -> (any AgenticLLMPlugin)? {
+    public func plugin(for identifier: String) -> (any AIPlugin)? {
         loadedPlugins[identifier]
     }
 
@@ -254,9 +254,9 @@ public final class PluginManager {
 
 // MARK: - Internal record
 
-/// Internal record backing `AgenticLLMPluginInfo`. Holds the bundle path the
+/// Internal record backing `AIPluginInfo`. Holds the bundle path the
 /// manager needs for lazy loading; callers see only the protocol.
-private struct PluginRecord: AgenticLLMPluginInfo, Sendable {
+private struct PluginRecord: AIPluginInfo, Sendable {
     let identifier: String
     let displayName: String
     let version: String

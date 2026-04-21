@@ -4,10 +4,11 @@ import os
 import AgenticToolkitAIPluginsCore
 import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
+import AgenticToolkitAIPlugins
 
 /// LLM plugin for the Anthropic Messages API with SSE streaming.
 /// Requires an API key from console.anthropic.com.
-public final class ClaudeAPIPlugin: NSObject, AgenticLLMPlugin, @unchecked Sendable {
+public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public static let identifier = "com.agentictoolkit.plugin.claude-api"
 
