@@ -12,11 +12,6 @@ let package = Package(
             type: .dynamic,
             targets: ["AgenticToolkitAIPlugins"]
         ),
-        .library(
-            name: "AgenticToolkitAIPluginsCore",
-            type: .dynamic,
-            targets: ["AgenticToolkitAIPluginsCore"]
-        ),
     ],
     dependencies: [
         .package(path: "../AgenticToolkitCore"),
@@ -26,16 +21,8 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AgenticToolkitAIPluginsCore",
-            dependencies: [
-                .product(name: "AgenticToolkitCore", package: "AgenticToolkitCore"),
-                .product(name: "AgenticToolkitSettingsWindow", package: "AgenticToolkitSettingsWindow"),
-            ]
-        ),
-        .target(
             name: "AgenticToolkitAIPlugins",
             dependencies: [
-                "AgenticToolkitAIPluginsCore",
                 .product(name: "AgenticToolkitCore", package: "AgenticToolkitCore"),
                 .product(name: "AgenticToolkitCoreUI", package: "AgenticToolkitCoreUI"),
                 .product(name: "AgenticToolkitSettingsWindow", package: "AgenticToolkitSettingsWindow"),
@@ -43,14 +30,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "AgenticToolkitAIPluginsCoreTests",
-            dependencies: ["AgenticToolkitAIPluginsCore"]
-        ),
-        .testTarget(
             name: "AgenticToolkitAIPluginsTests",
             dependencies: [
                 "AgenticToolkitAIPlugins",
-                "AgenticToolkitAIPluginsCore",
             ]
         ),
     ]
