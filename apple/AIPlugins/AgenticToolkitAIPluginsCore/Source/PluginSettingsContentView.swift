@@ -187,7 +187,7 @@ public final class PluginSettingsContentView: NSView {
         let baseURL = isOpenAICompatible
             ? baseURLField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             : ""
-        let creds = PluginCredentials(apiKey: stored, baseURL: baseURL.isEmpty ? nil : baseURL)
+        let creds = AIPluginCredentials(apiKey: stored, baseURL: baseURL.isEmpty ? nil : baseURL)
 
         apiKeyStatusLabel.stringValue = "Testing..."
         apiKeyStatusLabel.textColor = .secondaryLabelColor

@@ -7,9 +7,9 @@ import AgenticToolkitAIPluginsCore
 @MainActor
 final class ClaudeAPISettingsPanelViewController: NSViewController, SettingsPanelViewController {
 
-    private let plugin: any AIPlugin
+    private let plugin: ClaudeAPIPlugin
 
-    init(plugin: any AIPlugin) {
+    init(plugin: ClaudeAPIPlugin) {
         self.plugin = plugin
         super.init(nibName: nil, bundle: nil)
     }
