@@ -1,6 +1,5 @@
 import Foundation
 import os
-import AgenticToolkitAIPluginsCore
 
 /// Discovers, loads, and manages LLM plugin bundles.
 ///

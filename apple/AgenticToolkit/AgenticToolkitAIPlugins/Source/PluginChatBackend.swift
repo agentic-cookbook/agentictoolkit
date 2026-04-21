@@ -1,7 +1,6 @@
 import Foundation
 import os
 import AgenticToolkitChatWindow
-import AgenticToolkitAIPluginsCore
 
 /// Supplies the currently-selected plugin identifier, model, and credentials
 /// to a `PluginChatBackend`. Apps typically conform their settings view model

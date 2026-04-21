@@ -1,6 +1,5 @@
 import Testing
 import Foundation
-import AgenticToolkitAIPluginsCore
 @testable import AgenticToolkitAIPlugins
 
 @Suite("PluginManager")
