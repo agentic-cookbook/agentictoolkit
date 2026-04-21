@@ -109,20 +109,7 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C3F6B2B2D78AB68A57D77BDA"
-               BuildableName = "PluginsTests.xctest"
-               BlueprintName = "PluginsTests"
-               ReferencedContainer = "container:Plugins.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
