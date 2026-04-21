@@ -19,23 +19,17 @@ targetTemplates:
     type: bundle
     platform: macOS
     dependencies:
-      - package: AgenticToolkitCore
+      - package: AgenticToolkit
         product: AgenticToolkitCore
-      - package: AgenticToolkitCoreUI
+      - package: AgenticToolkit
         product: AgenticToolkitCoreUI
-      - package: AgenticToolkitSettingsWindow
+      - package: AgenticToolkit
         product: AgenticToolkitSettingsWindow
       - target: AgenticToolkitAIPluginsCore
 
 packages:
-  AgenticToolkitCore:
-    path: ../AgenticToolkit/AgenticToolkitCore
-  AgenticToolkitCoreUI:
-    path: ../AgenticToolkit/AgenticToolkitCoreUI
-  AgenticToolkitSettingsWindow:
-    path: ../AgenticToolkit/AgenticToolkitSettingsWindow
-  AgenticToolkitAIPlugins:
-    path: ../AgenticToolkit/AgenticToolkitAIPlugins
+  AgenticToolkit:
+    path: ../AgenticToolkit
 
 targets:
 
@@ -45,9 +39,9 @@ targets:
     sources:
       - path: AgenticToolkitAIPluginsCore/Source
     dependencies:
-      - package: AgenticToolkitCore
+      - package: AgenticToolkit
         product: AgenticToolkitCore
-      - package: AgenticToolkitSettingsWindow
+      - package: AgenticToolkit
         product: AgenticToolkitSettingsWindow
     settings:
       base:
@@ -115,7 +109,7 @@ targets:
       - target: OpenAIPlugin
       - target: GooglePlugin
       - target: OpenAICompatiblePlugin
-      - package: AgenticToolkitAIPlugins
+      - package: AgenticToolkit
         product: AgenticToolkitAIPlugins
 
 schemes:

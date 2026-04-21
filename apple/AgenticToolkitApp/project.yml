@@ -18,28 +18,8 @@ packages:
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm
     from: "1.2.0"
-  AgenticToolkitCore:
-    path: ../AgenticToolkit/AgenticToolkitCore
-  AgenticToolkitScripting:
-    path: ../AgenticToolkit/AgenticToolkitScripting
-  AgenticToolkitCoreUI:
-    path: ../AgenticToolkit/AgenticToolkitCoreUI
-  AgenticToolkitAIProvider:
-    path: ../AgenticToolkit/AgenticToolkitAIProvider
-  AgenticToolkitLoggingWindow:
-    path: ../AgenticToolkit/AgenticToolkitLoggingWindow
-  AgenticToolkitChatWindow:
-    path: ../AgenticToolkit/AgenticToolkitChatWindow
-  AgenticToolkitNotesWindow:
-    path: ../AgenticToolkit/AgenticToolkitNotesWindow
-  AgenticToolkitSettingsWindow:
-    path: ../AgenticToolkit/AgenticToolkitSettingsWindow
-  AgenticToolkitTerminalWindow:
-    path: ../AgenticToolkit/AgenticToolkitTerminalWindow
-  AgenticToolkitFileBrowser:
-    path: ../AgenticToolkit/AgenticToolkitFileBrowser
-  AgenticToolkitAIPlugins:
-    path: ../AgenticToolkit/AgenticToolkitAIPlugins
+  AgenticToolkit:
+    path: ../AgenticToolkit
 
 targets:
 
@@ -56,37 +36,37 @@ targets:
     resources:
       - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
-      - package: AgenticToolkitCore
+      - package: AgenticToolkit
         product: AgenticToolkitCore
         embed: true
-      - package: AgenticToolkitScripting
+      - package: AgenticToolkit
         product: AgenticToolkitScripting
         embed: true
-      - package: AgenticToolkitCoreUI
+      - package: AgenticToolkit
         product: AgenticToolkitCoreUI
         embed: true
-      - package: AgenticToolkitAIProvider
+      - package: AgenticToolkit
         product: AgenticToolkitAIProvider
         embed: true
-      - package: AgenticToolkitLoggingWindow
+      - package: AgenticToolkit
         product: AgenticToolkitLoggingWindow
         embed: true
-      - package: AgenticToolkitChatWindow
+      - package: AgenticToolkit
         product: AgenticToolkitChatWindow
         embed: true
-      - package: AgenticToolkitNotesWindow
+      - package: AgenticToolkit
         product: AgenticToolkitNotesWindow
         embed: true
-      - package: AgenticToolkitSettingsWindow
+      - package: AgenticToolkit
         product: AgenticToolkitSettingsWindow
         embed: true
-      - package: AgenticToolkitTerminalWindow
+      - package: AgenticToolkit
         product: AgenticToolkitTerminalWindow
         embed: true
-      - package: AgenticToolkitFileBrowser
+      - package: AgenticToolkit
         product: AgenticToolkitFileBrowser
         embed: true
-      - package: AgenticToolkitAIPlugins
+      - package: AgenticToolkit
         product: AgenticToolkitAIPlugins
         embed: true
       - package: SwiftTerm
@@ -117,9 +97,9 @@ targets:
           - "IngestionIntegrationTests.swift"
     dependencies:
       - target: AgenticToolkitApp
-      - package: AgenticToolkitCoreUI
+      - package: AgenticToolkit
         product: AgenticToolkitCoreUI
-      - package: AgenticToolkitAIPlugins
+      - package: AgenticToolkit
         product: AgenticToolkitAIPlugins
     settings:
       base:

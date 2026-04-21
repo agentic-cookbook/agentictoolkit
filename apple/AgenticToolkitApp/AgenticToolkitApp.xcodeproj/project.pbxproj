@@ -102,28 +102,22 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		081CDC42F6C09E1687B5E45A /* AgenticToolkitSettingsWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitSettingsWindow; path = ../AgenticToolkit/AgenticToolkitSettingsWindow; sourceTree = SOURCE_ROOT; };
-		0FFCDA3B1880E8BC11D12877 /* AgenticToolkitNotesWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitNotesWindow; path = ../AgenticToolkit/AgenticToolkitNotesWindow; sourceTree = SOURCE_ROOT; };
 		240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManagerTests.swift; sourceTree = "<group>"; };
 		258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticToolkitAppTests.swift; sourceTree = "<group>"; };
 		2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		34B6DC92661757FBD7B84F01 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatWindowController.swift; sourceTree = "<group>"; };
 		4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		438F94E61F3D47FAF0F89003 /* AgenticToolkitFileBrowser */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitFileBrowser; path = ../AgenticToolkit/AgenticToolkitFileBrowser; sourceTree = SOURCE_ROOT; };
 		45645C3494432F8D87A2E036 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManagerTests.swift; sourceTree = "<group>"; };
 		4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMetadataResolver.swift; sourceTree = "<group>"; };
 		50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerTests.swift; sourceTree = "<group>"; };
 		512312A712C04F53A999F7C0 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
 		5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPane.swift; sourceTree = "<group>"; };
-		5B0C0A3389F9AB6100E87DF8 /* AgenticToolkitCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitCore; path = ../AgenticToolkit/AgenticToolkitCore; sourceTree = SOURCE_ROOT; };
 		6840232F51664749DA0337AE /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
 		68C69C566432A6C267AE692E /* AgenticToolkitApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgenticToolkitApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitorTests.swift; sourceTree = "<group>"; };
-		6EF353F19E1D11DB98885C48 /* AgenticToolkitAIPlugins */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitAIPlugins; path = ../AgenticToolkit/AgenticToolkitAIPlugins; sourceTree = SOURCE_ROOT; };
 		711244F8F5F5CCE26995F087 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		767FFFD8936EC15FDDD70291 /* AgenticToolkitAIProvider */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitAIProvider; path = ../AgenticToolkit/AgenticToolkitAIProvider; sourceTree = SOURCE_ROOT; };
 		79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsView.swift; sourceTree = "<group>"; };
 		7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		8283AC5130D2A9E9DDBF1A8F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -137,17 +131,13 @@
 		AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProfile.swift; sourceTree = "<group>"; };
 		B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		B3B8A55879A8C839347DC495 /* EventFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventFile.swift; sourceTree = "<group>"; };
-		B6CCF7127A906EE36B38769C /* AgenticToolkitScripting */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitScripting; path = ../AgenticToolkit/AgenticToolkitScripting; sourceTree = SOURCE_ROOT; };
 		B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstaller.swift; sourceTree = "<group>"; };
-		CEE151C96BFFCFAD7968A801 /* AgenticToolkitLoggingWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitLoggingWindow; path = ../AgenticToolkit/AgenticToolkitLoggingWindow; sourceTree = SOURCE_ROOT; };
 		D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		E0883FDB6D726ADA63C67EB3 /* AgenticToolkitCoreUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitCoreUI; path = ../AgenticToolkit/AgenticToolkitCoreUI; sourceTree = SOURCE_ROOT; };
 		E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		EB93182F125477FDEC658631 /* EventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManager.swift; sourceTree = "<group>"; };
-		ED576A0754AE347205DFF840 /* AgenticToolkitChatWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitChatWindow; path = ../AgenticToolkit/AgenticToolkitChatWindow; sourceTree = SOURCE_ROOT; };
-		EDFF03BBBD29BF4CC451CBB0 /* AgenticToolkitTerminalWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitTerminalWindow; path = ../AgenticToolkit/AgenticToolkitTerminalWindow; sourceTree = SOURCE_ROOT; };
 		EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionWalkthrough.swift; sourceTree = "<group>"; };
 		F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitor.swift; sourceTree = "<group>"; };
+		F9712E3E8DF7826CD3930306 /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkit; path = ../AgenticToolkit; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -213,17 +203,7 @@
 		1AA012ADA86DA328C9532E41 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				6EF353F19E1D11DB98885C48 /* AgenticToolkitAIPlugins */,
-				767FFFD8936EC15FDDD70291 /* AgenticToolkitAIProvider */,
-				ED576A0754AE347205DFF840 /* AgenticToolkitChatWindow */,
-				5B0C0A3389F9AB6100E87DF8 /* AgenticToolkitCore */,
-				E0883FDB6D726ADA63C67EB3 /* AgenticToolkitCoreUI */,
-				438F94E61F3D47FAF0F89003 /* AgenticToolkitFileBrowser */,
-				CEE151C96BFFCFAD7968A801 /* AgenticToolkitLoggingWindow */,
-				0FFCDA3B1880E8BC11D12877 /* AgenticToolkitNotesWindow */,
-				B6CCF7127A906EE36B38769C /* AgenticToolkitScripting */,
-				081CDC42F6C09E1687B5E45A /* AgenticToolkitSettingsWindow */,
-				EDFF03BBBD29BF4CC451CBB0 /* AgenticToolkitTerminalWindow */,
+				F9712E3E8DF7826CD3930306 /* AgenticToolkit */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -398,17 +378,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0681363B5F733F9660CE8C7C /* XCRemoteSwiftPackageReference "SwiftTerm" */,
-				2D0D3DF090B5D9EE660C5C9D /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitAIPlugins" */,
-				72225BA9F027A95DC16CBB47 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitAIProvider" */,
-				460763D64C56F117AC389CAD /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitChatWindow" */,
-				1242407E9E4E10C34C92EA13 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCore" */,
-				4EB767D182B9CAFACC0DFA8D /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCoreUI" */,
-				F0DECAFEF89608080BFB496E /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitFileBrowser" */,
-				072278B7876A0ED4C445A2CC /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitLoggingWindow" */,
-				36A4DB89469EA56652359535 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitNotesWindow" */,
-				93408DC09522875AAE809085 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitScripting" */,
-				B3C4A3F49CC06E1833F8C0FB /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitSettingsWindow" */,
-				1AA9EA2C44BBE4D42EA41109 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitTerminalWindow" */,
+				9A9470BE38414EA055F14C91 /* XCLocalSwiftPackageReference "../AgenticToolkit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9F34FF9C21DDE9B101A095DC /* Products */;
@@ -718,49 +688,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		072278B7876A0ED4C445A2CC /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitLoggingWindow" */ = {
+		9A9470BE38414EA055F14C91 /* XCLocalSwiftPackageReference "../AgenticToolkit" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitLoggingWindow;
-		};
-		1242407E9E4E10C34C92EA13 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitCore;
-		};
-		1AA9EA2C44BBE4D42EA41109 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitTerminalWindow" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitTerminalWindow;
-		};
-		2D0D3DF090B5D9EE660C5C9D /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitAIPlugins" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitAIPlugins;
-		};
-		36A4DB89469EA56652359535 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitNotesWindow" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitNotesWindow;
-		};
-		460763D64C56F117AC389CAD /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitChatWindow" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitChatWindow;
-		};
-		4EB767D182B9CAFACC0DFA8D /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCoreUI" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitCoreUI;
-		};
-		72225BA9F027A95DC16CBB47 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitAIProvider" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitAIProvider;
-		};
-		93408DC09522875AAE809085 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitScripting" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitScripting;
-		};
-		B3C4A3F49CC06E1833F8C0FB /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitSettingsWindow" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitSettingsWindow;
-		};
-		F0DECAFEF89608080BFB496E /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitFileBrowser" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit/AgenticToolkitFileBrowser;
+			relativePath = ../AgenticToolkit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
