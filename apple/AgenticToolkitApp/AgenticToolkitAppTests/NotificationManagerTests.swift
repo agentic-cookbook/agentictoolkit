@@ -1,5 +1,5 @@
 import XCTest
-import AgenticPluginSDK
+import AgenticToolkitPluginSDK
 import UserNotifications
 @testable import AgenticToolkitApp
 

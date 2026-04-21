@@ -1,9 +1,9 @@
 import AppKit
-import AgenticPluginSDK
-import Core
-import CoreUI
-import ChatWindow
-import SettingsWindow
+import AgenticToolkitPluginSDK
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitChatWindow
+import AgenticToolkitSettingsWindow
 
 /// Hosts the new protocol-driven settings UI.
 ///

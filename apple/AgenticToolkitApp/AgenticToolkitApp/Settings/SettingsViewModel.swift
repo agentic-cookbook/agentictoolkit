@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 import os
-import AgenticPluginSDK
+import AgenticToolkitPluginSDK
 
 /// View model for the Settings window. Reads and writes all configurable settings
 /// to the SQLite `settings` table via DatabaseManager. Changes are persisted

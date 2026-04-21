@@ -1,9 +1,9 @@
 import AppKit
 import Foundation
 import os
-import AgenticPluginSDK
-import CoreUI
-import SettingsWindow
+import AgenticToolkitPluginSDK
+import AgenticToolkitCoreUI
+import AgenticToolkitSettingsWindow
 
 /// LLM plugin for the Anthropic Messages API with SSE streaming.
 /// Requires an API key from console.anthropic.com.

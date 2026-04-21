@@ -18,8 +18,28 @@ packages:
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm
     from: "1.2.0"
-  AgenticToolkit:
-    path: ../AgenticToolkit
+  AgenticToolkitCore:
+    path: ../AgenticToolkit/AgenticToolkitCore
+  AgenticToolkitScripting:
+    path: ../AgenticToolkit/AgenticToolkitScripting
+  AgenticToolkitCoreUI:
+    path: ../AgenticToolkit/AgenticToolkitCoreUI
+  AgenticToolkitAIProvider:
+    path: ../AgenticToolkit/AgenticToolkitAIProvider
+  AgenticToolkitLoggingWindow:
+    path: ../AgenticToolkit/AgenticToolkitLoggingWindow
+  AgenticToolkitChatWindow:
+    path: ../AgenticToolkit/AgenticToolkitChatWindow
+  AgenticToolkitNotesWindow:
+    path: ../AgenticToolkit/AgenticToolkitNotesWindow
+  AgenticToolkitSettingsWindow:
+    path: ../AgenticToolkit/AgenticToolkitSettingsWindow
+  AgenticToolkitTerminalWindow:
+    path: ../AgenticToolkit/AgenticToolkitTerminalWindow
+  AgenticToolkitFileBrowser:
+    path: ../AgenticToolkit/AgenticToolkitFileBrowser
+  AgenticToolkitPluginSDK:
+    path: ../AgenticToolkit/AgenticToolkitPluginSDK
 
 targets:
 
@@ -36,12 +56,38 @@ targets:
     resources:
       - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
-      # Single dynamic library product bundles every target; Xcode wraps it
-      # as `AgenticToolkit.framework` in Contents/Frameworks/. Plugin bundles
-      # load the same framework image for type identity across the plugin
-      # boundary.
-      - package: AgenticToolkit
-        product: AgenticToolkit
+      - package: AgenticToolkitCore
+        product: AgenticToolkitCore
+        embed: true
+      - package: AgenticToolkitScripting
+        product: AgenticToolkitScripting
+        embed: true
+      - package: AgenticToolkitCoreUI
+        product: AgenticToolkitCoreUI
+        embed: true
+      - package: AgenticToolkitAIProvider
+        product: AgenticToolkitAIProvider
+        embed: true
+      - package: AgenticToolkitLoggingWindow
+        product: AgenticToolkitLoggingWindow
+        embed: true
+      - package: AgenticToolkitChatWindow
+        product: AgenticToolkitChatWindow
+        embed: true
+      - package: AgenticToolkitNotesWindow
+        product: AgenticToolkitNotesWindow
+        embed: true
+      - package: AgenticToolkitSettingsWindow
+        product: AgenticToolkitSettingsWindow
+        embed: true
+      - package: AgenticToolkitTerminalWindow
+        product: AgenticToolkitTerminalWindow
+        embed: true
+      - package: AgenticToolkitFileBrowser
+        product: AgenticToolkitFileBrowser
+        embed: true
+      - package: AgenticToolkitPluginSDK
+        product: AgenticToolkitPluginSDK
         embed: true
       - package: SwiftTerm
     settings:
@@ -71,8 +117,10 @@ targets:
           - "IngestionIntegrationTests.swift"
     dependencies:
       - target: AgenticToolkitApp
-      - package: AgenticToolkit
-        product: AgenticToolkit
+      - package: AgenticToolkitCoreUI
+        product: AgenticToolkitCoreUI
+      - package: AgenticToolkitPluginSDK
+        product: AgenticToolkitPluginSDK
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app.tests

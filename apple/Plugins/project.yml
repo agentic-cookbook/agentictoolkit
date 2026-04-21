@@ -19,15 +19,28 @@ targetTemplates:
     type: bundle
     platform: macOS
     dependencies:
-      # Single dynamic library product — dyld resolves `@rpath/
-      # AgenticToolkit.framework` to the app-loaded copy, preserving type
-      # identity across the plugin boundary.
-      - package: AgenticToolkit
-        product: AgenticToolkit
+      - package: AgenticToolkitCore
+        product: AgenticToolkitCore
+      - package: AgenticToolkitCoreUI
+        product: AgenticToolkitCoreUI
+      - package: AgenticToolkitSettingsWindow
+        product: AgenticToolkitSettingsWindow
+      - package: AgenticToolkitChatWindow
+        product: AgenticToolkitChatWindow
+      - package: AgenticToolkitPluginSDK
+        product: AgenticToolkitPluginSDK
 
 packages:
-  AgenticToolkit:
-    path: ../AgenticToolkit
+  AgenticToolkitCore:
+    path: ../AgenticToolkit/AgenticToolkitCore
+  AgenticToolkitCoreUI:
+    path: ../AgenticToolkit/AgenticToolkitCoreUI
+  AgenticToolkitSettingsWindow:
+    path: ../AgenticToolkit/AgenticToolkitSettingsWindow
+  AgenticToolkitChatWindow:
+    path: ../AgenticToolkit/AgenticToolkitChatWindow
+  AgenticToolkitPluginSDK:
+    path: ../AgenticToolkit/AgenticToolkitPluginSDK
 
 targets:
 
@@ -91,8 +104,8 @@ targets:
       - target: OpenAIPlugin
       - target: GooglePlugin
       - target: OpenAICompatiblePlugin
-      - package: AgenticToolkit
-        product: AgenticToolkit
+      - package: AgenticToolkitPluginSDK
+        product: AgenticToolkitPluginSDK
 
 schemes:
   Plugins:

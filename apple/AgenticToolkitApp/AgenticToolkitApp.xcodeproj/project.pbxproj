@@ -8,41 +8,63 @@
 
 /* Begin PBXBuildFile section */
 		0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */; };
+		092A8C9410C7030D78C8EC5F /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1D312BE6EBC90D37DB718691 /* AgenticToolkitCore */; };
 		0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */; };
-		0DC275DA6694E2437C49E4E5 /* AgenticToolkit in Frameworks */ = {isa = PBXBuildFile; productRef = D06F99936A9362D3D09F505C /* AgenticToolkit */; };
+		0DC275DA6694E2437C49E4E5 /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 52854775352C988FC622489B /* AgenticToolkitCoreUI */; };
 		0DC7F7FD363ABE567B1E1360 /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */; };
+		0E5F9743F9CD8DE1C734C361 /* AgenticToolkitAIProvider in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 401570397FBAB28357D20D5D /* AgenticToolkitAIProvider */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0FE0A8D40CA4B4C673C1C87F /* AgenticToolkitSettingsWindow in Frameworks */ = {isa = PBXBuildFile; productRef = DDC92F2D5B3339A5E71E29BC /* AgenticToolkitSettingsWindow */; };
 		11B14394CAACC62C14A15AEE /* AIChatWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */; };
 		1393FDCF04CECF541CA66569 /* GitMetadataResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */; };
 		13C95AB4373CF504402F2E4C /* EventIngestionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB93182F125477FDEC658631 /* EventIngestionManager.swift */; };
 		1FC41AEBD1DC178C5E72667D /* EventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8A55879A8C839347DC495 /* EventFile.swift */; };
 		222BA6C1367EF2A572416AA6 /* ProfilesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */; };
+		247E2236080287B07C5EA647 /* AgenticToolkitTerminalWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 79C868029B7CC88C6EC78820 /* AgenticToolkitTerminalWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		24ED1EE749ABB6DFD85D9181 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3E5EDF5F3976D706679DA4 /* main.swift */; };
 		2A45B55B84C262AD02853890 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */; };
+		2F3B22AC93FD893D018B7058 /* AgenticToolkitChatWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 169A561A7BBDC0162B680B20 /* AgenticToolkitChatWindow */; };
 		319AF16A3DD48803293B31FB /* DatabaseManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */; };
+		3209B8770739AE008F5A472F /* AgenticToolkitScripting in Frameworks */ = {isa = PBXBuildFile; productRef = E02548BEA1EC82497FFA2FB6 /* AgenticToolkitScripting */; };
 		33F0A3F6A865939447A091B4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8283AC5130D2A9E9DDBF1A8F /* Models.swift */; };
+		38C8664491026FC64641D552 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = DD008136BF230803F4AE8BA3 /* SwiftTerm */; };
+		3C0B45F825DE64521533E051 /* AgenticToolkitNotesWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 6412B0559E2A11EB9493F3E4 /* AgenticToolkitNotesWindow */; };
+		3D1742D9A5CD3467F51378E5 /* AgenticToolkitLoggingWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = EF11A0828C270BF3BAF71889 /* AgenticToolkitLoggingWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */; };
 		499F8B9FCE527F30A6B5365D /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */; };
+		4E8E10DAC4A8F498515F8E55 /* AgenticToolkitNotesWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 6412B0559E2A11EB9493F3E4 /* AgenticToolkitNotesWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512312A712C04F53A999F7C0 /* DatabaseManager.swift */; };
+		546EC80A3377DC05AF807791 /* AgenticToolkitPluginSDK in Frameworks */ = {isa = PBXBuildFile; productRef = A8D3DFE98762A0B8ED5B2EEB /* AgenticToolkitPluginSDK */; };
 		5AD18A78E7D0520AED9D6FF3 /* LaunchAtLoginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */; };
 		5C93B57CC3AA17DC451C7755 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */; };
+		611C6EB1E59B5428120829E7 /* AgenticToolkitTerminalWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 79C868029B7CC88C6EC78820 /* AgenticToolkitTerminalWindow */; };
 		64A41F0EB817449E6CAC40A7 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6840232F51664749DA0337AE /* NotificationManagerTests.swift */; };
+		66CDA84AEB8D767C2D05A415 /* AgenticToolkitChatWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 169A561A7BBDC0162B680B20 /* AgenticToolkitChatWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		670A2C609B582ED747D8EB97 /* AgenticToolkitFileBrowser in Frameworks */ = {isa = PBXBuildFile; productRef = F877688E7CB7D6D15ADC8137 /* AgenticToolkitFileBrowser */; };
 		6A46586C789FDE350E9C87EC /* TerminalProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */; };
-		6E4DEAA83334E02B57215C48 /* AgenticToolkit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = B9E1D7C7E2B43A9C9C774FFD /* AgenticToolkit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		6E4DEAA83334E02B57215C48 /* AgenticToolkitCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 1D312BE6EBC90D37DB718691 /* AgenticToolkitCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */; };
 		81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */; };
 		865F9C152B023315757CDC7E /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B6DC92661757FBD7B84F01 /* Log.swift */; };
+		8FF987C4E1C11ECCEF8FDC7B /* AgenticToolkitAIProvider in Frameworks */ = {isa = PBXBuildFile; productRef = 401570397FBAB28357D20D5D /* AgenticToolkitAIProvider */; };
+		91A9E186026A7B67572A9860 /* AgenticToolkitPluginSDK in Embed Frameworks */ = {isa = PBXBuildFile; productRef = A8D3DFE98762A0B8ED5B2EEB /* AgenticToolkitPluginSDK */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711244F8F5F5CCE26995F087 /* AppDelegate.swift */; };
+		9AA81EFF47D9C821D4DFC6BD /* AgenticToolkitLoggingWindow in Frameworks */ = {isa = PBXBuildFile; productRef = EF11A0828C270BF3BAF71889 /* AgenticToolkitLoggingWindow */; };
+		A1B739A9613FB33F83973B7D /* AgenticToolkitFileBrowser in Embed Frameworks */ = {isa = PBXBuildFile; productRef = F877688E7CB7D6D15ADC8137 /* AgenticToolkitFileBrowser */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */; };
 		A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */; };
 		AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */; };
-		B2447D292F96F257007A7ABE /* AgenticToolkit in Frameworks */ = {isa = PBXBuildFile; productRef = B2447D282F96F257007A7ABE /* AgenticToolkit */; };
 		C1E0EB18CAE31DE340144DE0 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45645C3494432F8D87A2E036 /* SettingsWindowController.swift */; };
 		C65FA5BC8D8371F9D29D3DEB /* AgenticToolkitAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */; };
 		C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */; };
+		CB6A98D1200371698956D868 /* AgenticToolkitScripting in Embed Frameworks */ = {isa = PBXBuildFile; productRef = E02548BEA1EC82497FFA2FB6 /* AgenticToolkitScripting */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CD7CC74CD54726BEDC8EDAF9 /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = CA4425BEAAD48F0975AF6C42 /* AgenticToolkitCoreUI */; };
+		D17DD1552EBEEBBD3D2F0CBB /* AgenticToolkitCoreUI in Embed Frameworks */ = {isa = PBXBuildFile; productRef = CA4425BEAAD48F0975AF6C42 /* AgenticToolkitCoreUI */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D337BC70F03A01817E641EF4 /* AgenticToolkitPluginSDK in Frameworks */ = {isa = PBXBuildFile; productRef = CD72F013441D97A4AB5029F7 /* AgenticToolkitPluginSDK */; };
 		D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */; };
 		DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */; };
 		F3AA21376FE50406F5D3819A /* SessionLivenessMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */; };
 		F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = A778DFB22825D8D9E9729472 /* AppPermission.swift */; };
+		FC30F6D48B21807C264375ED /* AgenticToolkitSettingsWindow in Embed Frameworks */ = {isa = PBXBuildFile; productRef = DDC92F2D5B3339A5E71E29BC /* AgenticToolkitSettingsWindow */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,7 +84,17 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				6E4DEAA83334E02B57215C48 /* AgenticToolkit in Embed Frameworks */,
+				6E4DEAA83334E02B57215C48 /* AgenticToolkitCore in Embed Frameworks */,
+				CB6A98D1200371698956D868 /* AgenticToolkitScripting in Embed Frameworks */,
+				D17DD1552EBEEBBD3D2F0CBB /* AgenticToolkitCoreUI in Embed Frameworks */,
+				0E5F9743F9CD8DE1C734C361 /* AgenticToolkitAIProvider in Embed Frameworks */,
+				3D1742D9A5CD3467F51378E5 /* AgenticToolkitLoggingWindow in Embed Frameworks */,
+				66CDA84AEB8D767C2D05A415 /* AgenticToolkitChatWindow in Embed Frameworks */,
+				4E8E10DAC4A8F498515F8E55 /* AgenticToolkitNotesWindow in Embed Frameworks */,
+				FC30F6D48B21807C264375ED /* AgenticToolkitSettingsWindow in Embed Frameworks */,
+				247E2236080287B07C5EA647 /* AgenticToolkitTerminalWindow in Embed Frameworks */,
+				A1B739A9613FB33F83973B7D /* AgenticToolkitFileBrowser in Embed Frameworks */,
+				91A9E186026A7B67572A9860 /* AgenticToolkitPluginSDK in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -70,22 +102,28 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		081CDC42F6C09E1687B5E45A /* AgenticToolkitSettingsWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitSettingsWindow; path = ../AgenticToolkit/AgenticToolkitSettingsWindow; sourceTree = SOURCE_ROOT; };
+		0FFCDA3B1880E8BC11D12877 /* AgenticToolkitNotesWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitNotesWindow; path = ../AgenticToolkit/AgenticToolkitNotesWindow; sourceTree = SOURCE_ROOT; };
 		240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManagerTests.swift; sourceTree = "<group>"; };
 		258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticToolkitAppTests.swift; sourceTree = "<group>"; };
 		2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		34B6DC92661757FBD7B84F01 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatWindowController.swift; sourceTree = "<group>"; };
 		4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		438F94E61F3D47FAF0F89003 /* AgenticToolkitFileBrowser */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitFileBrowser; path = ../AgenticToolkit/AgenticToolkitFileBrowser; sourceTree = SOURCE_ROOT; };
+		44D2356D91CB6DB1990B1946 /* AgenticToolkitPluginSDK */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitPluginSDK; path = ../AgenticToolkit/AgenticToolkitPluginSDK; sourceTree = SOURCE_ROOT; };
 		45645C3494432F8D87A2E036 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManagerTests.swift; sourceTree = "<group>"; };
 		4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMetadataResolver.swift; sourceTree = "<group>"; };
 		50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerTests.swift; sourceTree = "<group>"; };
 		512312A712C04F53A999F7C0 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
 		5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPane.swift; sourceTree = "<group>"; };
+		5B0C0A3389F9AB6100E87DF8 /* AgenticToolkitCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitCore; path = ../AgenticToolkit/AgenticToolkitCore; sourceTree = SOURCE_ROOT; };
 		6840232F51664749DA0337AE /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
 		68C69C566432A6C267AE692E /* AgenticToolkitApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgenticToolkitApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitorTests.swift; sourceTree = "<group>"; };
 		711244F8F5F5CCE26995F087 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		767FFFD8936EC15FDDD70291 /* AgenticToolkitAIProvider */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitAIProvider; path = ../AgenticToolkit/AgenticToolkitAIProvider; sourceTree = SOURCE_ROOT; };
 		79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsView.swift; sourceTree = "<group>"; };
 		7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		8283AC5130D2A9E9DDBF1A8F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -99,13 +137,17 @@
 		AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProfile.swift; sourceTree = "<group>"; };
 		B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		B3B8A55879A8C839347DC495 /* EventFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventFile.swift; sourceTree = "<group>"; };
+		B6CCF7127A906EE36B38769C /* AgenticToolkitScripting */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitScripting; path = ../AgenticToolkit/AgenticToolkitScripting; sourceTree = SOURCE_ROOT; };
 		B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstaller.swift; sourceTree = "<group>"; };
+		CEE151C96BFFCFAD7968A801 /* AgenticToolkitLoggingWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitLoggingWindow; path = ../AgenticToolkit/AgenticToolkitLoggingWindow; sourceTree = SOURCE_ROOT; };
 		D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		E0883FDB6D726ADA63C67EB3 /* AgenticToolkitCoreUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitCoreUI; path = ../AgenticToolkit/AgenticToolkitCoreUI; sourceTree = SOURCE_ROOT; };
 		E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		EB93182F125477FDEC658631 /* EventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManager.swift; sourceTree = "<group>"; };
+		ED576A0754AE347205DFF840 /* AgenticToolkitChatWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitChatWindow; path = ../AgenticToolkit/AgenticToolkitChatWindow; sourceTree = SOURCE_ROOT; };
+		EDFF03BBBD29BF4CC451CBB0 /* AgenticToolkitTerminalWindow */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkitTerminalWindow; path = ../AgenticToolkit/AgenticToolkitTerminalWindow; sourceTree = SOURCE_ROOT; };
 		EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionWalkthrough.swift; sourceTree = "<group>"; };
 		F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitor.swift; sourceTree = "<group>"; };
-		F9712E3E8DF7826CD3930306 /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AgenticToolkit; path = ../AgenticToolkit; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,7 +155,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2447D292F96F257007A7ABE /* AgenticToolkit in Frameworks */,
+				092A8C9410C7030D78C8EC5F /* AgenticToolkitCore in Frameworks */,
+				3209B8770739AE008F5A472F /* AgenticToolkitScripting in Frameworks */,
+				CD7CC74CD54726BEDC8EDAF9 /* AgenticToolkitCoreUI in Frameworks */,
+				8FF987C4E1C11ECCEF8FDC7B /* AgenticToolkitAIProvider in Frameworks */,
+				9AA81EFF47D9C821D4DFC6BD /* AgenticToolkitLoggingWindow in Frameworks */,
+				2F3B22AC93FD893D018B7058 /* AgenticToolkitChatWindow in Frameworks */,
+				3C0B45F825DE64521533E051 /* AgenticToolkitNotesWindow in Frameworks */,
+				0FE0A8D40CA4B4C673C1C87F /* AgenticToolkitSettingsWindow in Frameworks */,
+				611C6EB1E59B5428120829E7 /* AgenticToolkitTerminalWindow in Frameworks */,
+				670A2C609B582ED747D8EB97 /* AgenticToolkitFileBrowser in Frameworks */,
+				546EC80A3377DC05AF807791 /* AgenticToolkitPluginSDK in Frameworks */,
+				38C8664491026FC64641D552 /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,7 +174,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0DC275DA6694E2437C49E4E5 /* AgenticToolkit in Frameworks */,
+				0DC275DA6694E2437C49E4E5 /* AgenticToolkitCoreUI in Frameworks */,
+				D337BC70F03A01817E641EF4 /* AgenticToolkitPluginSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,7 +213,17 @@
 		1AA012ADA86DA328C9532E41 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				F9712E3E8DF7826CD3930306 /* AgenticToolkit */,
+				767FFFD8936EC15FDDD70291 /* AgenticToolkitAIProvider */,
+				ED576A0754AE347205DFF840 /* AgenticToolkitChatWindow */,
+				5B0C0A3389F9AB6100E87DF8 /* AgenticToolkitCore */,
+				E0883FDB6D726ADA63C67EB3 /* AgenticToolkitCoreUI */,
+				438F94E61F3D47FAF0F89003 /* AgenticToolkitFileBrowser */,
+				CEE151C96BFFCFAD7968A801 /* AgenticToolkitLoggingWindow */,
+				0FFCDA3B1880E8BC11D12877 /* AgenticToolkitNotesWindow */,
+				44D2356D91CB6DB1990B1946 /* AgenticToolkitPluginSDK */,
+				B6CCF7127A906EE36B38769C /* AgenticToolkitScripting */,
+				081CDC42F6C09E1687B5E45A /* AgenticToolkitSettingsWindow */,
+				EDFF03BBBD29BF4CC451CBB0 /* AgenticToolkitTerminalWindow */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -267,7 +331,8 @@
 			);
 			name = AgenticToolkitAppTests;
 			packageProductDependencies = (
-				D06F99936A9362D3D09F505C /* AgenticToolkit */,
+				52854775352C988FC622489B /* AgenticToolkitCoreUI */,
+				CD72F013441D97A4AB5029F7 /* AgenticToolkitPluginSDK */,
 			);
 			productName = AgenticToolkitAppTests;
 			productReference = A20BEEA83D3D826F4BC4DADC /* AgenticToolkitAppTests.xctest */;
@@ -287,8 +352,18 @@
 			);
 			name = AgenticToolkitApp;
 			packageProductDependencies = (
-				B9E1D7C7E2B43A9C9C774FFD /* AgenticToolkit */,
-				B2447D282F96F257007A7ABE /* AgenticToolkit */,
+				1D312BE6EBC90D37DB718691 /* AgenticToolkitCore */,
+				E02548BEA1EC82497FFA2FB6 /* AgenticToolkitScripting */,
+				CA4425BEAAD48F0975AF6C42 /* AgenticToolkitCoreUI */,
+				401570397FBAB28357D20D5D /* AgenticToolkitAIProvider */,
+				EF11A0828C270BF3BAF71889 /* AgenticToolkitLoggingWindow */,
+				169A561A7BBDC0162B680B20 /* AgenticToolkitChatWindow */,
+				6412B0559E2A11EB9493F3E4 /* AgenticToolkitNotesWindow */,
+				DDC92F2D5B3339A5E71E29BC /* AgenticToolkitSettingsWindow */,
+				79C868029B7CC88C6EC78820 /* AgenticToolkitTerminalWindow */,
+				F877688E7CB7D6D15ADC8137 /* AgenticToolkitFileBrowser */,
+				A8D3DFE98762A0B8ED5B2EEB /* AgenticToolkitPluginSDK */,
+				DD008136BF230803F4AE8BA3 /* SwiftTerm */,
 			);
 			productName = AgenticToolkitApp;
 			productReference = 68C69C566432A6C267AE692E /* AgenticToolkitApp.app */;
@@ -322,7 +397,18 @@
 			mainGroup = FE3DE8096C026B9CCC1C918F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B2447D272F96F257007A7ABE /* XCLocalSwiftPackageReference "../AgenticToolkit" */,
+				0681363B5F733F9660CE8C7C /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				72225BA9F027A95DC16CBB47 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitAIProvider" */,
+				460763D64C56F117AC389CAD /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitChatWindow" */,
+				1242407E9E4E10C34C92EA13 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCore" */,
+				4EB767D182B9CAFACC0DFA8D /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCoreUI" */,
+				F0DECAFEF89608080BFB496E /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitFileBrowser" */,
+				072278B7876A0ED4C445A2CC /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitLoggingWindow" */,
+				36A4DB89469EA56652359535 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitNotesWindow" */,
+				889D99650DCEEFD603693868 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitPluginSDK" */,
+				93408DC09522875AAE809085 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitScripting" */,
+				B3C4A3F49CC06E1833F8C0FB /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitSettingsWindow" */,
+				1AA9EA2C44BBE4D42EA41109 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitTerminalWindow" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9F34FF9C21DDE9B101A095DC /* Products */;
@@ -632,24 +718,120 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		B2447D272F96F257007A7ABE /* XCLocalSwiftPackageReference "../AgenticToolkit" */ = {
+		072278B7876A0ED4C445A2CC /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitLoggingWindow" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../AgenticToolkit;
+			relativePath = ../AgenticToolkit/AgenticToolkitLoggingWindow;
+		};
+		1242407E9E4E10C34C92EA13 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitCore;
+		};
+		1AA9EA2C44BBE4D42EA41109 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitTerminalWindow" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitTerminalWindow;
+		};
+		36A4DB89469EA56652359535 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitNotesWindow" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitNotesWindow;
+		};
+		460763D64C56F117AC389CAD /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitChatWindow" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitChatWindow;
+		};
+		4EB767D182B9CAFACC0DFA8D /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitCoreUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitCoreUI;
+		};
+		72225BA9F027A95DC16CBB47 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitAIProvider" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitAIProvider;
+		};
+		889D99650DCEEFD603693868 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitPluginSDK" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitPluginSDK;
+		};
+		93408DC09522875AAE809085 /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitScripting" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitScripting;
+		};
+		B3C4A3F49CC06E1833F8C0FB /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitSettingsWindow" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitSettingsWindow;
+		};
+		F0DECAFEF89608080BFB496E /* XCLocalSwiftPackageReference "../AgenticToolkit/AgenticToolkitFileBrowser" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgenticToolkit/AgenticToolkitFileBrowser;
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		0681363B5F733F9660CE8C7C /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
-		B2447D282F96F257007A7ABE /* AgenticToolkit */ = {
+		169A561A7BBDC0162B680B20 /* AgenticToolkitChatWindow */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkit;
+			productName = AgenticToolkitChatWindow;
 		};
-		B9E1D7C7E2B43A9C9C774FFD /* AgenticToolkit */ = {
+		1D312BE6EBC90D37DB718691 /* AgenticToolkitCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkit;
+			productName = AgenticToolkitCore;
 		};
-		D06F99936A9362D3D09F505C /* AgenticToolkit */ = {
+		401570397FBAB28357D20D5D /* AgenticToolkitAIProvider */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkit;
+			productName = AgenticToolkitAIProvider;
+		};
+		52854775352C988FC622489B /* AgenticToolkitCoreUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitCoreUI;
+		};
+		6412B0559E2A11EB9493F3E4 /* AgenticToolkitNotesWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitNotesWindow;
+		};
+		79C868029B7CC88C6EC78820 /* AgenticToolkitTerminalWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitTerminalWindow;
+		};
+		A8D3DFE98762A0B8ED5B2EEB /* AgenticToolkitPluginSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitPluginSDK;
+		};
+		CA4425BEAAD48F0975AF6C42 /* AgenticToolkitCoreUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitCoreUI;
+		};
+		CD72F013441D97A4AB5029F7 /* AgenticToolkitPluginSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitPluginSDK;
+		};
+		DD008136BF230803F4AE8BA3 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0681363B5F733F9660CE8C7C /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+		DDC92F2D5B3339A5E71E29BC /* AgenticToolkitSettingsWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitSettingsWindow;
+		};
+		E02548BEA1EC82497FFA2FB6 /* AgenticToolkitScripting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitScripting;
+		};
+		EF11A0828C270BF3BAF71889 /* AgenticToolkitLoggingWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitLoggingWindow;
+		};
+		F877688E7CB7D6D15ADC8137 /* AgenticToolkitFileBrowser */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitFileBrowser;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

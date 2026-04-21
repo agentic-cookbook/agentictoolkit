@@ -1,6 +1,6 @@
 import XCTest
 @testable import AgenticToolkitApp
-@testable import CoreUI
+@testable import AgenticToolkitCoreUI
 
 // MARK: - Mock Screen
 

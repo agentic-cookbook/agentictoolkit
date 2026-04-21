@@ -1,7 +1,7 @@
 import AppKit
-import CoreUI
-import SettingsWindow
-import AgenticPluginSDK
+import AgenticToolkitCoreUI
+import AgenticToolkitSettingsWindow
+import AgenticToolkitPluginSDK
 
 /// Settings panel for `OpenAICompatiblePlugin`.
 @MainActor

@@ -1,8 +1,8 @@
 import Foundation
-import Core
-import CoreUI
-import ChatWindow
-import SettingsWindow
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitChatWindow
+import AgenticToolkitSettingsWindow
 
 /// Placeholder `ChatBackend` used while `PluginChatBackend` is parked pending
 /// the per-plugin-secrets redesign. Reports "not ready" so the input stays
