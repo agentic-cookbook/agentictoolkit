@@ -25,8 +25,7 @@ targetTemplates:
         product: AgenticToolkitCoreUI
       - package: AgenticToolkitSettingsWindow
         product: AgenticToolkitSettingsWindow
-      - package: AgenticToolkitAIPlugins
-        product: AgenticToolkitAIPluginsCore
+      - target: AgenticToolkitAIPluginsCore
 
 packages:
   AgenticToolkitCore:
@@ -39,6 +38,22 @@ packages:
     path: ../AgenticToolkit/AgenticToolkitAIPlugins
 
 targets:
+
+  AgenticToolkitAIPluginsCore:
+    type: framework
+    platform: macOS
+    sources:
+      - path: AgenticToolkitAIPluginsCore/Source
+    dependencies:
+      - package: AgenticToolkitCore
+        product: AgenticToolkitCore
+      - package: AgenticToolkitSettingsWindow
+        product: AgenticToolkitSettingsWindow
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin-core
+        DEFINES_MODULE: YES
+
 
   ClaudeAPIPlugin:
     templates: [Plugin]
