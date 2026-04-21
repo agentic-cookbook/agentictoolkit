@@ -15,7 +15,8 @@
 **/*.xcodeproj/xcuserdata/
 **/project.xcworkspace/xcshareddata/
 **/*.xcworkspace/xcuserdata/
-**/*.xcworkspace/xcshareddata/
+**/*.xcworkspace/xcshareddata/*
+!**/*.xcworkspace/xcshareddata/xcschemes
 DerivedData/
 
 # graphify output (generated)
