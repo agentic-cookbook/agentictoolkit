@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "AgenticToolkitTerminalWindow", targets: ["AgenticToolkitTerminalWindow"]),
         .library(name: "AgenticToolkitFileBrowser", targets: ["AgenticToolkitFileBrowser"]),
         .library(name: "AgenticToolkitAIPlugins", targets: ["AgenticToolkitAIPlugins"]),
+        .library(name: "AgenticToolkitDocument", targets: ["AgenticToolkitDocument"]),
         .library(name: "AgenticToolkitAll", targets: ["AgenticToolkitAll"]),
     ],
     dependencies: [
@@ -130,6 +131,19 @@ let package = Package(
         ),
 
         .target(
+            name: "AgenticToolkitDocument",
+            dependencies: [
+                "AgenticToolkitCore",
+                "AgenticToolkitFileBrowser",
+                "AgenticToolkitTerminalWindow",
+            ]
+        ),
+        .testTarget(
+            name: "AgenticToolkitDocumentTests",
+            dependencies: ["AgenticToolkitDocument"]
+        ),
+
+        .target(
             name: "AgenticToolkitAll",
             dependencies: [
                 "AgenticToolkitCore",
@@ -143,6 +157,7 @@ let package = Package(
                 "AgenticToolkitTerminalWindow",
                 "AgenticToolkitFileBrowser",
                 "AgenticToolkitAIPlugins",
+                "AgenticToolkitDocument",
             ],
             path: "Sources/AgenticToolkitAll"
         ),
