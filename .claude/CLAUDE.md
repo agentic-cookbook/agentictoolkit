@@ -20,7 +20,7 @@ cd apple/AgenticToolkit/AgenticToolkitCore && swift test
 
 # Full workspace (app + plugins + packages):
 cd apple/AgenticToolkitApp && cc-xcgen         # regenerate app xcodeproj
-cd apple/Plugins && cc-xcgen                   # regenerate plugins xcodeproj
+cd apple/AIPlugins && cc-xcgen                 # regenerate plugins xcodeproj
 open apple/AgenticToolkit.xcworkspace
 ```
 
@@ -29,7 +29,7 @@ open apple/AgenticToolkit.xcworkspace
 Cross-platform repo with per-platform directories:
 - `apple/AgenticToolkit/AgenticToolkit<Module>/` — one Swift Package per module, laid out as `Package.swift` + `Source/` + `Tests/`
 - `apple/AgenticToolkitApp/` — XcodeGen Xcode project, consumes each module package as a local SPM dependency
-- `apple/AIPlugins/` — XcodeGen Xcode project (NSBundle plugins). Hosts the `AgenticToolkitAIPluginsCore` Swift Package (plugin-facing API) alongside the plugin bundles, which depend on it. Each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`
+- `apple/AIPlugins/` — XcodeGen Xcode project (NSBundle plugins). Each plugin bundle depends on the `AgenticToolkitAIPluginsCore` product of the `AgenticToolkitAIPlugins` package. Each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`
 - `windows/` — TBD
 - `android/` — TBD
 
@@ -47,9 +47,13 @@ Cross-platform repo with per-platform directories:
 | `AgenticToolkitSettingsWindow`  | `AgenticToolkitSettingsWindow/`         | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
 | `AgenticToolkitTerminalWindow`  | `AgenticToolkitTerminalWindow/`         | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitAIProvider`, `SwiftTerm` |
 | `AgenticToolkitFileBrowser`     | `AgenticToolkitFileBrowser/`            | `AgenticToolkitCore`, CodeEdit packages                                      |
-| `AgenticToolkitAIPlugins`       | `AgenticToolkitAIPlugins/`              | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitSettingsWindow`, `AgenticToolkitChatWindow`, `AgenticToolkitAIPluginsCore` |
+| `AgenticToolkitAIPlugins`       | `AgenticToolkitAIPlugins/`              | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitSettingsWindow`, `AgenticToolkitChatWindow` |
 
-The plugin-facing API lives under `apple/AIPlugins/AgenticToolkitAIPluginsCore/` (package `AgenticToolkitAIPluginsCore`, depends on `AgenticToolkitCore` and `AgenticToolkitSettingsWindow`). Plugin bundles and the host-side `AgenticToolkitAIPlugins` package both depend on it.
+The `AgenticToolkitAIPlugins` package ships two library products built from two targets in the same package:
+- `AgenticToolkitAIPluginsCore` — the plugin-facing API (protocols, message/credential types). Plugin bundles in `apple/AIPlugins/` depend on this product. Depends on `AgenticToolkitCore` and `AgenticToolkitSettingsWindow`.
+- `AgenticToolkitAIPlugins` — the host-side `PluginManager` and chat wiring. Depends on `AgenticToolkitAIPluginsCore` internally and is consumed by the app.
+
+Keeping both targets in one package (rather than splitting `AgenticToolkitAIPluginsCore` into `apple/AIPlugins/`) avoids a circular `AgenticToolkit → AIPlugins` dependency.
 
 `AgenticToolkitCore` is Foundation-only; `AgenticToolkitCoreUI` holds cross-cutting AppKit utilities (windowing, shared views); feature packages are named after their most general function.
 

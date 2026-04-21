@@ -25,7 +25,7 @@ targetTemplates:
         product: AgenticToolkitCoreUI
       - package: AgenticToolkitSettingsWindow
         product: AgenticToolkitSettingsWindow
-      - package: AgenticToolkitAIPluginsCore
+      - package: AgenticToolkitAIPlugins
         product: AgenticToolkitAIPluginsCore
 
 packages:
@@ -35,8 +35,6 @@ packages:
     path: ../AgenticToolkit/AgenticToolkitCoreUI
   AgenticToolkitSettingsWindow:
     path: ../AgenticToolkit/AgenticToolkitSettingsWindow
-  AgenticToolkitAIPluginsCore:
-    path: AgenticToolkitAIPluginsCore
   AgenticToolkitAIPlugins:
     path: ../AgenticToolkit/AgenticToolkitAIPlugins
 
@@ -102,8 +100,6 @@ targets:
       - target: OpenAIPlugin
       - target: GooglePlugin
       - target: OpenAICompatiblePlugin
-      - package: AgenticToolkitAIPluginsCore
-        product: AgenticToolkitAIPluginsCore
       - package: AgenticToolkitAIPlugins
         product: AgenticToolkitAIPlugins
 

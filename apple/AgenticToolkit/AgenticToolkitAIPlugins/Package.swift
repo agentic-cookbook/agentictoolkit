@@ -12,33 +12,46 @@ let package = Package(
             type: .dynamic,
             targets: ["AgenticToolkitAIPlugins"]
         ),
+        .library(
+            name: "AgenticToolkitAIPluginsCore",
+            type: .dynamic,
+            targets: ["AgenticToolkitAIPluginsCore"]
+        ),
     ],
     dependencies: [
         .package(path: "../AgenticToolkitCore"),
         .package(path: "../AgenticToolkitCoreUI"),
         .package(path: "../AgenticToolkitSettingsWindow"),
         .package(path: "../AgenticToolkitChatWindow"),
-        .package(path: "../../AIPlugins/AgenticToolkitAIPluginsCore"),
     ],
     targets: [
         .target(
+            name: "AgenticToolkitAIPluginsCore",
+            dependencies: [
+                .product(name: "AgenticToolkitCore", package: "AgenticToolkitCore"),
+                .product(name: "AgenticToolkitSettingsWindow", package: "AgenticToolkitSettingsWindow"),
+            ]
+        ),
+        .target(
             name: "AgenticToolkitAIPlugins",
             dependencies: [
+                "AgenticToolkitAIPluginsCore",
                 .product(name: "AgenticToolkitCore", package: "AgenticToolkitCore"),
                 .product(name: "AgenticToolkitCoreUI", package: "AgenticToolkitCoreUI"),
                 .product(name: "AgenticToolkitSettingsWindow", package: "AgenticToolkitSettingsWindow"),
                 .product(name: "AgenticToolkitChatWindow", package: "AgenticToolkitChatWindow"),
-                .product(name: "AgenticToolkitAIPluginsCore", package: "AgenticToolkitAIPluginsCore"),
-            ],
-            path: "Source"
+            ]
+        ),
+        .testTarget(
+            name: "AgenticToolkitAIPluginsCoreTests",
+            dependencies: ["AgenticToolkitAIPluginsCore"]
         ),
         .testTarget(
             name: "AgenticToolkitAIPluginsTests",
             dependencies: [
                 "AgenticToolkitAIPlugins",
-                .product(name: "AgenticToolkitCore", package: "AgenticToolkitCore"),
-            ],
-            path: "Tests"
+                "AgenticToolkitAIPluginsCore",
+            ]
         ),
     ]
 )
