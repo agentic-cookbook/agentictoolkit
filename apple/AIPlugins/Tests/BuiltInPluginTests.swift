@@ -12,8 +12,8 @@ import AgenticToolkitAIPlugins
 @MainActor
 struct BuiltInPluginTests {
 
-    private func makeContext() -> PluginContext {
-        PluginContext(
+    private func makeContext() -> AIPluginContext {
+        AIPluginContext(
             logger: .init(subsystem: "test", category: "test"),
             dataDirectory: FileManager.default.temporaryDirectory
         )
@@ -101,11 +101,11 @@ struct BuiltInPluginTests {
         #expect(plugin.requiresAPIKey)
     }
 
-    // MARK: - PluginManager Registration
+    // MARK: - AIPluginManager Registration
 
     @Test("registerBuiltIn adds plugin to available and loaded")
     func registerBuiltIn() {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         manager.registerBuiltIn(ClaudeAPIPlugin.self)
 
         #expect(manager.availablePlugins.count == 1)
@@ -115,7 +115,7 @@ struct BuiltInPluginTests {
 
     @Test("registerBuiltIn skips duplicate registration")
     func registerBuiltInDuplicate() {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         manager.registerBuiltIn(ClaudeAPIPlugin.self)
         manager.registerBuiltIn(ClaudeAPIPlugin.self)
 
@@ -124,7 +124,7 @@ struct BuiltInPluginTests {
 
     @Test("loadPlugin returns registered built-in plugin")
     func loadRegisteredPlugin() throws {
-        let manager = PluginManager(searchPaths: [])
+        let manager = AIPluginManager(searchPaths: [])
         manager.registerBuiltIn(ClaudeAPIPlugin.self)
 
         let plugin = try manager.loadPlugin(identifier: ClaudeAPIPlugin.identifier)

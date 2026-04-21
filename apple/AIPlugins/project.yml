@@ -97,7 +97,7 @@ targets:
   # Note: `@testable import <PluginName>` against Bundle targets is known to
   # be unreliable. If this fails to compile, the plugins likely need
   # test-only framework twins or the tests need to load bundles at runtime
-  # via PluginManager.
+  # via AIPluginManager.
   PluginsTests:
     type: bundle.unit-test
     platform: macOS

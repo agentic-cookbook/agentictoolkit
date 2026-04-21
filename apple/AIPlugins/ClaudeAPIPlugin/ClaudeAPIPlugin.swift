@@ -14,7 +14,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public let displayName = "Claude (API)"
 
-    public let capabilities: PluginCapability = [.textCompletion, .streaming]
+    public let capabilities: AIPluginCapability = [.textCompletion, .streaming]
 
     public let availableModels = [
         "claude-haiku-4-5-20251001",
@@ -26,9 +26,9 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public let requiresAPIKey = true
 
-    private let context: PluginContext
+    private let context: AIPluginContext
 
-    public required init(context: PluginContext) {
+    public required init(context: AIPluginContext) {
         self.context = context
     }
 
@@ -37,7 +37,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
-        credentials: PluginCredentials
+        credentials: AIPluginCredentials
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
@@ -60,7 +60,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         ClaudeAPISettingsPanelViewController(plugin: self)
     }
 
-    public func validateCredentials(_ credentials: PluginCredentials) async -> String? {
+    public func validateCredentials(_ credentials: AIPluginCredentials) async -> String? {
         do {
             let messages = [AIPluginMessage(role: .user, content: "Hi")]
             let request = try buildRequest(
@@ -85,7 +85,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
-        credentials: PluginCredentials,
+        credentials: AIPluginCredentials,
         stream: Bool
     ) throws -> URLRequest {
         guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
@@ -127,7 +127,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
 
         guard let http = response as? HTTPURLResponse else {
-            throw PluginRequestError.invalidResponse
+            throw AIPluginRequestError.invalidResponse
         }
 
         // Non-2xx: read the full body for the error message
@@ -137,7 +137,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
                 errorBody += line
             }
             let message = parseErrorMessage(from: errorBody)
-            throw PluginRequestError.httpError(http.statusCode, message)
+            throw AIPluginRequestError.httpError(http.statusCode, message)
         }
 
         // Parse SSE: each event is prefixed with "data: "
@@ -162,7 +162,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
             case "error":
                 if let error = json["error"] as? [String: Any],
                    let message = error["message"] as? String {
-                    throw PluginRequestError.httpError(0, message)
+                    throw AIPluginRequestError.httpError(0, message)
                 }
             default:
                 break

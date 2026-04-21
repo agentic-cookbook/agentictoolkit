@@ -13,7 +13,7 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public let displayName = "Claude (Local)"
 
-    public let capabilities: PluginCapability = [.textCompletion, .streaming]
+    public let capabilities: AIPluginCapability = [.textCompletion, .streaming]
 
     public let availableModels = ["haiku", "sonnet", "opus"]
 
@@ -21,9 +21,9 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public let requiresAPIKey = false
 
-    private let context: PluginContext
+    private let context: AIPluginContext
 
-    public required init(context: PluginContext) {
+    public required init(context: AIPluginContext) {
         self.context = context
     }
 
@@ -32,7 +32,7 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
-        credentials: PluginCredentials
+        credentials: AIPluginCredentials
     ) -> AsyncThrowingStream<String, Error> {
         // claude -p is single-shot: stdin is the user prompt.
         // Build a combined prompt from the full conversation history.

@@ -12,7 +12,7 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public let displayName = "OpenAI (ChatGPT)"
 
-    public let capabilities: PluginCapability = [.textCompletion]
+    public let capabilities: AIPluginCapability = [.textCompletion]
 
     public let availableModels = [
         "gpt-4.1-nano",
@@ -25,9 +25,9 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
     public let requiresAPIKey = true
 
-    private let context: PluginContext
+    private let context: AIPluginContext
 
-    public required init(context: PluginContext) {
+    public required init(context: AIPluginContext) {
         self.context = context
     }
 
@@ -36,7 +36,7 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
-        credentials: PluginCredentials
+        credentials: AIPluginCredentials
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
@@ -49,11 +49,11 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
                     let (data, response) = try await URLSession.shared.data(for: request)
 
                     guard let http = response as? HTTPURLResponse else {
-                        throw PluginRequestError.invalidResponse
+                        throw AIPluginRequestError.invalidResponse
                     }
                     guard http.statusCode == 200 || http.statusCode == 201 else {
                         let body = String(data: data, encoding: .utf8) ?? ""
-                        throw PluginRequestError.httpError(http.statusCode, OpenAIResponseParser.parseErrorMessage(from: body))
+                        throw AIPluginRequestError.httpError(http.statusCode, OpenAIResponseParser.parseErrorMessage(from: body))
                     }
 
                     let reply = OpenAIResponseParser.parseReply(from: data)
@@ -71,7 +71,7 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         OpenAISettingsPanelViewController(plugin: self)
     }
 
-    public func validateCredentials(_ credentials: PluginCredentials) async -> String? {
+    public func validateCredentials(_ credentials: AIPluginCredentials) async -> String? {
         do {
             let messages = [AIPluginMessage(role: .user, content: "Hi")]
             let request = try buildRequest(
@@ -96,11 +96,11 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         model: String,
         systemPrompt: String?,
         maxTokens: Int,
-        credentials: PluginCredentials,
+        credentials: AIPluginCredentials,
         baseURL: String
     ) throws -> URLRequest {
         guard let url = URL(string: baseURL)?.appendingPathComponent("v1/chat/completions") else {
-            throw PluginRequestError.invalidURL
+            throw AIPluginRequestError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
