@@ -351,7 +351,8 @@
 		9282B20718DDC0959862C22E /* AgenticToolkitAIPluginsCore */ = {
 			isa = PBXGroup;
 			children = (
-				E0F31449632B571743CA13C5 /* Source */,
+				8CEE29BDE4953B57953257DD /* OpenAIResponseParser.swift */,
+				03A08E3E884EC5CB7350BF5F /* PluginSettingsContentView.swift */,
 			);
 			path = AgenticToolkitAIPluginsCore;
 			sourceTree = "<group>";
@@ -391,15 +392,6 @@
 				EF7400CD05E0D34DF9221406 /* OpenAICompatibleSettingsPanelViewController.swift */,
 			);
 			path = OpenAICompatiblePlugin;
-			sourceTree = "<group>";
-		};
-		E0F31449632B571743CA13C5 /* Source */ = {
-			isa = PBXGroup;
-			children = (
-				8CEE29BDE4953B57953257DD /* OpenAIResponseParser.swift */,
-				03A08E3E884EC5CB7350BF5F /* PluginSettingsContentView.swift */,
-			);
-			path = Source;
 			sourceTree = "<group>";
 		};
 		FD88239511945EF06AFDD012 /* ClaudeAPIPlugin */ = {
