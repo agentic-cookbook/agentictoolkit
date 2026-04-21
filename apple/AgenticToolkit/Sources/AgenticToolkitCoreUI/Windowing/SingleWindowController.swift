@@ -142,6 +142,8 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         WindowManager.shared.saveFrame(for: window, id: windowID)
     }
 
+    open func windowWillClose(_ notification: Notification) {}
+
     // MARK: - Helpers
 
     private func installContentView(_ contentView: NSView, in window: NSWindow) {

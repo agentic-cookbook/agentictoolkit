@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */; };
+		0775BDA92190F652F49C96D4 /* AppSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8928F67D5B434995A11F9F57 /* AppSettingsWindowController.swift */; };
 		092A8C9410C7030D78C8EC5F /* AgenticToolkitCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1D312BE6EBC90D37DB718691 /* AgenticToolkitCore */; };
 		0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */; };
 		0DC275DA6694E2437C49E4E5 /* AgenticToolkitCoreUI in Frameworks */ = {isa = PBXBuildFile; productRef = 52854775352C988FC622489B /* AgenticToolkitCoreUI */; };
 		0DC7F7FD363ABE567B1E1360 /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */; };
-		11B14394CAACC62C14A15AEE /* AIChatWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */; };
 		1393FDCF04CECF541CA66569 /* GitMetadataResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */; };
 		13C95AB4373CF504402F2E4C /* EventIngestionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB93182F125477FDEC658631 /* EventIngestionManager.swift */; };
 		1FC41AEBD1DC178C5E72667D /* EventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8A55879A8C839347DC495 /* EventFile.swift */; };
@@ -38,7 +38,6 @@
 		A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */; };
 		A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */; };
 		AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */; };
-		C1E0EB18CAE31DE340144DE0 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45645C3494432F8D87A2E036 /* SettingsWindowController.swift */; };
 		C65FA5BC8D8371F9D29D3DEB /* AgenticToolkitAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */; };
 		C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */; };
 		CD7CC74CD54726BEDC8EDAF9 /* AgenticToolkitChatWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 169A561A7BBDC0162B680B20 /* AgenticToolkitChatWindow */; };
@@ -64,9 +63,7 @@
 		258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticToolkitAppTests.swift; sourceTree = "<group>"; };
 		2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		34B6DC92661757FBD7B84F01 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
-		396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatWindowController.swift; sourceTree = "<group>"; };
 		4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		45645C3494432F8D87A2E036 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManagerTests.swift; sourceTree = "<group>"; };
 		4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMetadataResolver.swift; sourceTree = "<group>"; };
 		50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerTests.swift; sourceTree = "<group>"; };
@@ -79,6 +76,7 @@
 		79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsView.swift; sourceTree = "<group>"; };
 		7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		8283AC5130D2A9E9DDBF1A8F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		8928F67D5B434995A11F9F57 /* AppSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsWindowController.swift; sourceTree = "<group>"; };
 		8B3E5EDF5F3976D706679DA4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPane.swift; sourceTree = "<group>"; };
 		9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstallerTests.swift; sourceTree = "<group>"; };
@@ -126,16 +124,15 @@
 		04932E3F0A0C7E427D201620 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				396E2FF1A8088508B77D94EB /* AIChatWindowController.swift */,
 				983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */,
 				7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */,
 				A778DFB22825D8D9E9729472 /* AppPermission.swift */,
+				8928F67D5B434995A11F9F57 /* AppSettingsWindowController.swift */,
 				E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */,
 				EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */,
 				4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */,
 				79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */,
 				2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */,
-				45645C3494432F8D87A2E036 /* SettingsWindowController.swift */,
 				ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */,
 				5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */,
 				D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */,
@@ -346,9 +343,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				11B14394CAACC62C14A15AEE /* AIChatWindowController.swift in Sources */,
 				95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */,
 				F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */,
+				0775BDA92190F652F49C96D4 /* AppSettingsWindowController.swift in Sources */,
 				81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */,
 				7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */,
 				5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */,
@@ -365,7 +362,6 @@
 				222BA6C1367EF2A572416AA6 /* ProfilesSettingsView.swift in Sources */,
 				DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */,
 				A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */,
-				C1E0EB18CAE31DE340144DE0 /* SettingsWindowController.swift in Sources */,
 				D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */,
 				3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */,
 				C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */,
@@ -394,11 +390,11 @@
 /* Begin PBXTargetDependency section */
 		36E7AD8413004A711379C2E6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_858E9115-660E-47FE-B03C-C9EECB99306D" /* AgenticToolkitScripting */;
+			productRef = "TEMP_7CB9A80E-FC20-45A5-9331-316600F65DA2" /* AgenticToolkitScripting */;
 		};
 		59B82B1CDF48C8E8119AD9EE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_84A6D8FA-E306-47F0-953C-1264504A4064" /* AgenticToolkitFileBrowser */;
+			productRef = "TEMP_387E67B3-A872-4CD8-8E35-0ECB5D81C209" /* AgenticToolkitFileBrowser */;
 		};
 		5D0D967BD0C56EE4F199F0DA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -407,23 +403,23 @@
 		};
 		5E65611E7443D2F39CE9F114 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_659CC10C-45A4-47BD-AA57-0DD603A6EA7F" /* AgenticToolkitLoggingWindow */;
+			productRef = "TEMP_3E8F7D22-EF0A-4599-8796-0D1E70FA21F7" /* AgenticToolkitLoggingWindow */;
 		};
 		6C91223924803DAB6C667DC1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_B4088071-5B80-44B4-A7F7-B618B6CDEFC3" /* AgenticToolkitNotesWindow */;
+			productRef = "TEMP_8C005D9F-0D15-4C19-BFBF-D4913F3C89BB" /* AgenticToolkitNotesWindow */;
 		};
 		74781C8EC84222E2D0226087 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_9945489B-EC86-41C8-B79B-FD4825A9F293" /* AgenticToolkitTerminalWindow */;
+			productRef = "TEMP_D6B8B6D6-7F88-44B6-B399-49C9CED7F8E1" /* AgenticToolkitTerminalWindow */;
 		};
 		B03E207DE87D56AAF883C34C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_EEBF957D-B36C-4237-85B7-70218C86A655" /* AgenticToolkitCoreUI */;
+			productRef = "TEMP_A64EC35B-660C-4A29-A864-2443D72ADBB5" /* AgenticToolkitCoreUI */;
 		};
 		B9CDB7477AF00986AB00E706 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = "TEMP_1005FA09-4B17-496C-B436-8437AC318EC5" /* AgenticToolkitSettingsWindow */;
+			productRef = "TEMP_1DDF5E16-D0E9-45DF-9335-8CDF44A5FD6D" /* AgenticToolkitSettingsWindow */;
 		};
 /* End PBXTargetDependency section */
 
@@ -713,33 +709,33 @@
 			package = 0681363B5F733F9660CE8C7C /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
 		};
-		"TEMP_1005FA09-4B17-496C-B436-8437AC318EC5" /* AgenticToolkitSettingsWindow */ = {
+		"TEMP_1DDF5E16-D0E9-45DF-9335-8CDF44A5FD6D" /* AgenticToolkitSettingsWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitSettingsWindow;
 		};
-		"TEMP_659CC10C-45A4-47BD-AA57-0DD603A6EA7F" /* AgenticToolkitLoggingWindow */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitLoggingWindow;
-		};
-		"TEMP_84A6D8FA-E306-47F0-953C-1264504A4064" /* AgenticToolkitFileBrowser */ = {
+		"TEMP_387E67B3-A872-4CD8-8E35-0ECB5D81C209" /* AgenticToolkitFileBrowser */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitFileBrowser;
 		};
-		"TEMP_858E9115-660E-47FE-B03C-C9EECB99306D" /* AgenticToolkitScripting */ = {
+		"TEMP_3E8F7D22-EF0A-4599-8796-0D1E70FA21F7" /* AgenticToolkitLoggingWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitLoggingWindow;
+		};
+		"TEMP_7CB9A80E-FC20-45A5-9331-316600F65DA2" /* AgenticToolkitScripting */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitScripting;
 		};
-		"TEMP_9945489B-EC86-41C8-B79B-FD4825A9F293" /* AgenticToolkitTerminalWindow */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AgenticToolkitTerminalWindow;
-		};
-		"TEMP_B4088071-5B80-44B4-A7F7-B618B6CDEFC3" /* AgenticToolkitNotesWindow */ = {
+		"TEMP_8C005D9F-0D15-4C19-BFBF-D4913F3C89BB" /* AgenticToolkitNotesWindow */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitNotesWindow;
 		};
-		"TEMP_EEBF957D-B36C-4237-85B7-70218C86A655" /* AgenticToolkitCoreUI */ = {
+		"TEMP_A64EC35B-660C-4A29-A864-2443D72ADBB5" /* AgenticToolkitCoreUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AgenticToolkitCoreUI;
+		};
+		"TEMP_D6B8B6D6-7F88-44B6-B399-49C9CED7F8E1" /* AgenticToolkitTerminalWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgenticToolkitTerminalWindow;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

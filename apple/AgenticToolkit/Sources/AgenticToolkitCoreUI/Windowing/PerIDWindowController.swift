@@ -66,7 +66,7 @@ open class PerIDWindowController<ID: Hashable>: SingleWindowController {
         PerIDRegistry.shared.get(type: ObjectIdentifier(Self.self), id: id)
     }
 
-    open func windowWillClose(_ notification: Notification) {
+    open override func windowWillClose(_ notification: Notification) {
         PerIDRegistry.shared.remove(type: ObjectIdentifier(Self.self), id: id)
     }
 }
