@@ -7,4 +7,40 @@
    <FileRef
       location = "group:AIPlugins/Plugins.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:AIPlugins/AgenticToolkitAIPluginsCore">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitCore">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitScripting">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitCoreUI">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitAIProvider">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitLoggingWindow">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitChatWindow">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitNotesWindow">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitSettingsWindow">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitTerminalWindow">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitFileBrowser">
+   </FileRef>
+   <FileRef
+      location = "group:AgenticToolkit/AgenticToolkitAIPlugins">
+   </FileRef>
 </Workspace>
