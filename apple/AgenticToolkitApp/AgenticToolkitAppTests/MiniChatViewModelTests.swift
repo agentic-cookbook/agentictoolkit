@@ -1,6 +1,6 @@
 import XCTest
-import AgenticPluginSDK
-import AgenticPluginSDK
+import AgenticToolkitAIPlugins
+import AgenticToolkitAIPlugins
 @testable import AgenticToolkitApp
 
 final class ChatViewModelIntegrationTests: XCTestCase {
@@ -22,7 +22,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
     }
 
     private func makeViewModel() -> ChatViewModel {
-        let pm = PluginManager(searchPaths: [])
+        let pm = AIPluginManager(searchPaths: [])
         let persistence = DatabaseManagerPersistence(databaseManager: databaseManager)
         let aiSettings = AISettingsViewModel(pluginManager: pm, persistence: persistence)
         return ChatViewModel(pluginManager: pm, configProvider: aiSettings)

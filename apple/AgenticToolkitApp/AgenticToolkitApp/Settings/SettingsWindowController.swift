@@ -1,9 +1,9 @@
 import AppKit
-import AgenticPluginSDK
-import Core
-import CoreUI
-import ChatWindow
-import SettingsWindow
+import AgenticToolkitAIPlugins
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitChatWindow
+import AgenticToolkitSettingsWindow
 
 /// Hosts the new protocol-driven settings UI.
 ///
@@ -19,14 +19,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var settingsVC: SettingsViewController?
 
     private var databaseManager: DatabaseManager?
-    private var pluginManager: PluginManager?
+    private var pluginManager: AIPluginManager?
 
     private(set) var viewModel: SettingsViewModel?
 
     // MARK: - Configuration
 
     /// Sets the database and plugin managers. Must be called before showing the window.
-    func configure(databaseManager: DatabaseManager, pluginManager: PluginManager) {
+    func configure(databaseManager: DatabaseManager, pluginManager: AIPluginManager) {
         self.databaseManager = databaseManager
         self.pluginManager = pluginManager
     }
@@ -64,7 +64,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             settingsVC.addPanel(ProfilesSettingsPanelViewController())
             settingsVC.addPanel(SystemSettingsPanelViewController(viewModel: vm))
         }
-        settingsVC.addPanel(PluginsSettingsPanelViewController(pluginManager: pluginManager))
+        settingsVC.addPanel(AIPluginsSettingsPanelViewController(pluginManager: pluginManager))
 
         let w = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 480),

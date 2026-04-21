@@ -1,11 +1,11 @@
 import AppKit
-import Core
-import CoreUI
-import ChatWindow
-import SettingsWindow
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitChatWindow
+import AgenticToolkitSettingsWindow
 
 /// Manages a standalone AI Chat window using the toolkit's `ChatView` +
-/// `ChatViewModel`. The live plugin-backed chat path (`PluginChatBackend`) is
+/// `ChatViewModel`. The live plugin-backed chat path (`AIPluginChatBackend`) is
 /// parked pending the per-plugin-secrets redesign, so this wires a
 /// `StubChatBackend` that keeps the UI visible but rejects sends.
 @MainActor

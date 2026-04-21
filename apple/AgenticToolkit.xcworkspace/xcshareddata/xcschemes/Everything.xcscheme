@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "2640"
+   version = "1.3">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitAll"
+               BuildableName = "AgenticToolkitAll"
+               BlueprintName = "AgenticToolkitAll"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "810918565CAE23E364AEA726"
+               BuildableName = "AgenticToolkitApp.app"
+               BlueprintName = "AgenticToolkitApp"
+               ReferencedContainer = "container:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A4C4490619CDF1995ABBDCC1"
+               BuildableName = "AllPlugins"
+               BlueprintName = "AllPlugins"
+               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C3F6B2B2D78AB68A57D77BDA"
+               BuildableName = "PluginsTests.xctest"
+               BlueprintName = "PluginsTests"
+               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "29E6204B8EC89F3C494268DB"
+               BuildableName = "AgenticToolkitAppTests.xctest"
+               BlueprintName = "AgenticToolkitAppTests"
+               ReferencedContainer = "container:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitLoggingWindowTests"
+               BuildableName = "AgenticToolkitLoggingWindowTests"
+               BlueprintName = "AgenticToolkitLoggingWindowTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitAIProviderTests"
+               BuildableName = "AgenticToolkitAIProviderTests"
+               BlueprintName = "AgenticToolkitAIProviderTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitScriptingTests"
+               BuildableName = "AgenticToolkitScriptingTests"
+               BlueprintName = "AgenticToolkitScriptingTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitCoreUITests"
+               BuildableName = "AgenticToolkitCoreUITests"
+               BlueprintName = "AgenticToolkitCoreUITests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitAIPluginsTests"
+               BuildableName = "AgenticToolkitAIPluginsTests"
+               BlueprintName = "AgenticToolkitAIPluginsTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitFileBrowserTests"
+               BuildableName = "AgenticToolkitFileBrowserTests"
+               BlueprintName = "AgenticToolkitFileBrowserTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitTerminalWindowTests"
+               BuildableName = "AgenticToolkitTerminalWindowTests"
+               BlueprintName = "AgenticToolkitTerminalWindowTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AgenticToolkitCoreTests"
+               BuildableName = "AgenticToolkitCoreTests"
+               BlueprintName = "AgenticToolkitCoreTests"
+               ReferencedContainer = "container:AgenticToolkit">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "810918565CAE23E364AEA726"
+            BuildableName = "AgenticToolkitApp.app"
+            BlueprintName = "AgenticToolkitApp"
+            ReferencedContainer = "container:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+      <Testables>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "810918565CAE23E364AEA726"
+            BuildableName = "AgenticToolkitApp.app"
+            BlueprintName = "AgenticToolkitApp"
+            ReferencedContainer = "container:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "810918565CAE23E364AEA726"
+            BuildableName = "AgenticToolkitApp.app"
+            BlueprintName = "AgenticToolkitApp"
+            ReferencedContainer = "container:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>

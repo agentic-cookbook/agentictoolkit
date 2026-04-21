@@ -36,14 +36,48 @@ targets:
     resources:
       - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
-      # Single dynamic library product bundles every target; Xcode wraps it
-      # as `AgenticToolkit.framework` in Contents/Frameworks/. Plugin bundles
-      # load the same framework image for type identity across the plugin
-      # boundary.
       - package: AgenticToolkit
-        product: AgenticToolkit
-        embed: true
+        product: AgenticToolkitCore
+        embed: false
+      - package: AgenticToolkit
+        product: AgenticToolkitScripting
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitCoreUI
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitAIProvider
+        embed: false
+      - package: AgenticToolkit
+        product: AgenticToolkitLoggingWindow
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitChatWindow
+        embed: false
+      - package: AgenticToolkit
+        product: AgenticToolkitNotesWindow
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitSettingsWindow
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitTerminalWindow
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitFileBrowser
+        embed: false
+        link: false
+      - package: AgenticToolkit
+        product: AgenticToolkitAIPlugins
+        embed: false
       - package: SwiftTerm
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app
@@ -72,7 +106,9 @@ targets:
     dependencies:
       - target: AgenticToolkitApp
       - package: AgenticToolkit
-        product: AgenticToolkit
+        product: AgenticToolkitCoreUI
+      - package: AgenticToolkit
+        product: AgenticToolkitAIPlugins
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app.tests
