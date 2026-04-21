@@ -76,6 +76,10 @@ targets:
       - package: AgenticToolkit
         product: AgenticToolkitAIPlugins
         embed: false
+      - package: AgenticToolkit
+        product: AgenticToolkitDocument
+        embed: false
+        link: false
       - package: SwiftTerm
         embed: false
     settings:

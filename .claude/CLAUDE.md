@@ -48,6 +48,7 @@ Cross-platform repo with per-platform directories:
 | `AgenticToolkitTerminalWindow`  | `AgenticToolkitTerminalWindow/`         | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitAIProvider`, `SwiftTerm` |
 | `AgenticToolkitFileBrowser`     | `AgenticToolkitFileBrowser/`            | `AgenticToolkitCore`, CodeEdit packages                                      |
 | `AgenticToolkitAIPlugins`       | `AgenticToolkitAIPlugins/`              | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitSettingsWindow`, `AgenticToolkitChatWindow` |
+| `AgenticToolkitDocument`        | `AgenticToolkitDocument/`               | `AgenticToolkitCore`, `AgenticToolkitFileBrowser`, `AgenticToolkitTerminalWindow` |
 
 The `AgenticToolkitAIPlugins` package ships two library products built from two targets in the same package:
 - `AgenticToolkitAIPluginsCore` — the plugin-facing API (protocols, message/credential types). Plugin bundles in `apple/AIPlugins/` depend on this product. Depends on `AgenticToolkitCore` and `AgenticToolkitSettingsWindow`.
