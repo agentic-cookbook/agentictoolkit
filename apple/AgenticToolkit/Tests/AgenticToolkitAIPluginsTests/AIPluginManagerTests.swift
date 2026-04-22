@@ -62,8 +62,8 @@ struct AIPluginManagerTests {
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmpDir) }
 
-        // Create a minimal .bundle directory with Info.plist
-        let bundleDir = tmpDir.appendingPathComponent("TestPlugin.bundle")
+        // Create a minimal .aiplugin directory with Info.plist
+        let bundleDir = tmpDir.appendingPathComponent("TestPlugin.aiplugin")
         let contentsDir = bundleDir.appendingPathComponent("Contents")
         try FileManager.default.createDirectory(at: contentsDir, withIntermediateDirectories: true)
 
@@ -92,7 +92,7 @@ struct AIPluginManagerTests {
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmpDir) }
 
-        let bundleDir = tmpDir.appendingPathComponent("OldPlugin.bundle")
+        let bundleDir = tmpDir.appendingPathComponent("OldPlugin.aiplugin")
         let contentsDir = bundleDir.appendingPathComponent("Contents")
         try FileManager.default.createDirectory(at: contentsDir, withIntermediateDirectories: true)
 
@@ -119,7 +119,7 @@ struct AIPluginManagerTests {
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmpDir) }
 
-        let bundleDir = tmpDir.appendingPathComponent("BadPlugin.bundle")
+        let bundleDir = tmpDir.appendingPathComponent("BadPlugin.aiplugin")
         let contentsDir = bundleDir.appendingPathComponent("Contents")
         try FileManager.default.createDirectory(at: contentsDir, withIntermediateDirectories: true)
 

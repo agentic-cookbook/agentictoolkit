@@ -3,10 +3,10 @@ import AgenticToolkitSettingsWindow
 
 /// Protocol that all LLM provider plugins must conform to.
 ///
-/// Each plugin is a compiled macOS `.bundle` with an `NSPrincipalClass` that
-/// conforms to this protocol. The plugin manager discovers bundles by reading
-/// their `Info.plist` metadata and only loads the binary when the plugin is
-/// first used.
+/// Each plugin is a compiled macOS `.aiplugin` bundle with an
+/// `NSPrincipalClass` that conforms to this protocol. The plugin manager
+/// discovers bundles by reading their `Info.plist` metadata and only loads
+/// the binary when the plugin is first used.
 public protocol AIPlugin: AnyObject, Sendable {
 
     /// Unique reverse-DNS identifier (e.g. "com.agentictoolkit.plugin.anthropic").

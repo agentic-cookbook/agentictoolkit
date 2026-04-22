@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		B417D4C5F1E47358DAFB600D /* AllAIPlugins */ = {
+		B417D4C5F1E47358DAFB600D /* AllPlugins */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllAIPlugins" */;
+			buildConfigurationList = 8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllPlugins" */;
 			buildPhases = (
 			);
 			dependencies = (
@@ -19,7 +19,7 @@
 				AC354DC70C7425B4962DC64A /* PBXTargetDependency */,
 				8A7519A2F8FB23327A5F027D /* PBXTargetDependency */,
 			);
-			name = AllAIPlugins;
+			name = AllPlugins;
 			packageProductDependencies = (
 			);
 			productName = AllPlugins;
@@ -344,6 +344,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 2312467F2C7A6F62BE9A00A7 /* Build configuration list for PBXProject "AIPlugins" */;
 			developmentRegion = en;
@@ -362,7 +364,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B417D4C5F1E47358DAFB600D /* AllAIPlugins */,
+				B417D4C5F1E47358DAFB600D /* AllPlugins */,
 				ADFCB2E3C7792BB90F43F274 /* ClaudeAPIPlugin */,
 				473ED4BC1C0ADBBAC18CAAFC /* ClaudeLocalPlugin */,
 				DECA72941EE8EBE472B3865C /* GooglePlugin */,
@@ -558,6 +560,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.google;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -572,6 +575,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-api";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -656,6 +660,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-api";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -670,6 +675,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.openai-compatible";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -690,6 +696,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.openai;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -767,6 +774,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.openai-compatible";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -781,6 +789,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.google;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -795,6 +804,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-local";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -809,6 +819,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.openai;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -823,6 +834,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-local";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -871,7 +883,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllAIPlugins" */ = {
+		8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllPlugins" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D8097E575C23E06BBA281024 /* Debug */,
