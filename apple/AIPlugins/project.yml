@@ -1,4 +1,4 @@
-name: Plugins
+name: AIPlugins
 options:
   deploymentTarget:
     macOS: "14.0"
@@ -101,7 +101,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai-compatible
 
 schemes:
-  Plugins:
+  AIPlugins:
     build:
       targets:
         ClaudeAPIPlugin: all
@@ -114,7 +114,7 @@ schemes:
       targets:
         AllPlugins: all
 
-# Client-facing aggregate target. Clients depend on `Plugins/AllPlugins` and
+# Client-facing aggregate target. Clients depend on `AIPlugins/AllPlugins` and
 # never enumerate individual plugins. When a new plugin target is added to
 # `targets:` above, also add it here — the only place that enumerates the
 # full plugin list for client builds.

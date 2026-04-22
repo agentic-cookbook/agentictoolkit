@@ -42,24 +42,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A4C4490619CDF1995ABBDCC1"
+               BlueprintIdentifier = "B417D4C5F1E47358DAFB600D"
                BuildableName = "AllPlugins"
                BlueprintName = "AllPlugins"
-               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C3F6B2B2D78AB68A57D77BDA"
-               BuildableName = "PluginsTests.xctest"
-               BlueprintName = "PluginsTests"
-               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
+               ReferencedContainer = "container:AIPlugins/AIPlugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
