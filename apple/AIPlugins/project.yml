@@ -19,9 +19,22 @@ targetTemplates:
     type: bundle
     platform: macOS
     dependencies:
+      # Link-without-embed against the host's dynamic umbrella. Resolved at
+      # runtime via the host's @rpath when the plugin bundle is loaded.
+      # See docs/research/spm-dynamic-linking.md for the full rationale.
       - package: AgenticToolkit
-        product: AgenticToolkitAIPlugins
-      - target: AgenticToolkitAIPluginsCore
+        product: AgenticToolkitPluginHost
+        embed: false
+        link: true
+    settings:
+      base:
+        # Host app has the framework at Contents/Frameworks; a plugin at
+        # Contents/MacOS/<name> resolves it via four `..` hops to
+        # PluginName.bundle/Contents/MacOS → Contents/Resources/../..
+        # → AgenticToolkitApp.app/Contents/Frameworks.
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@loader_path/../../../../Frameworks"
     postBuildScripts:
       - name: Install to ~/.agenticplugins
         script: |
@@ -35,24 +48,6 @@ packages:
     path: ../AgenticToolkit
 
 targets:
-
-  AgenticToolkitAIPluginsCore:
-    type: framework
-    platform: macOS
-    sources:
-      - path: AgenticToolkitAIPluginsCore
-    dependencies:
-      - package: AgenticToolkit
-        product: AgenticToolkitCore
-      - package: AgenticToolkit
-        product: AgenticToolkitSettingsWindow
-      - package: AgenticToolkit
-        product: AgenticToolkitAIPlugins
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin-core
-        DEFINES_MODULE: YES
-
 
   ClaudeAPIPlugin:
     templates: [Plugin]
@@ -100,14 +95,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai-compatible
 
 schemes:
-  AgenticToolkitAIPluginsCore:
-    build:
-      targets:
-        AgenticToolkitAIPluginsCore: all
   Plugins:
     build:
       targets:
-        AgenticToolkitAIPluginsCore: all
         ClaudeAPIPlugin: all
         ClaudeLocalPlugin: all
         OpenAIPlugin: all
@@ -125,7 +115,6 @@ schemes:
 aggregateTargets:
   AllPlugins:
     targets:
-      - AgenticToolkitAIPluginsCore
       - ClaudeAPIPlugin
       - ClaudeLocalPlugin
       - OpenAIPlugin

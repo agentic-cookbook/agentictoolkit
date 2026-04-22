@@ -33,20 +33,16 @@ targets:
           - "AgenticToolkitApp.entitlements"
           # Parked pending per-plugin secret storage design.
           - "Settings/DatabaseManagerPersistence.swift"
-    resources:
-      - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
+      # Dynamic umbrella for the host/plugin boundary. Embedded so plugin
+      # bundles (loaded via NSBundle) resolve these modules through the
+      # host's @rpath at runtime, sharing one loaded image. Bundles
+      # Core, Scripting, CoreUI, SettingsWindow, ChatWindow, AIPlugins.
       - package: AgenticToolkit
-        product: AgenticToolkitCore
-        embed: false
-      - package: AgenticToolkit
-        product: AgenticToolkitScripting
-        embed: false
-        link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitCoreUI
-        embed: false
-        link: false
+        product: AgenticToolkitPluginHost
+        embed: true
+        link: true
+      # Non-boundary modules — automatic products, Xcode picks static.
       - package: AgenticToolkit
         product: AgenticToolkitAIProvider
         embed: false
@@ -55,14 +51,7 @@ targets:
         embed: false
         link: false
       - package: AgenticToolkit
-        product: AgenticToolkitChatWindow
-        embed: false
-      - package: AgenticToolkit
         product: AgenticToolkitNotesWindow
-        embed: false
-        link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitSettingsWindow
         embed: false
         link: false
       - package: AgenticToolkit
@@ -73,9 +62,6 @@ targets:
         product: AgenticToolkitFileBrowser
         embed: false
         link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitAIPlugins
-        embed: false
       - package: AgenticToolkit
         product: AgenticToolkitDocument
         embed: false

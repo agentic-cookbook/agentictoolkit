@@ -20,6 +20,31 @@ let package = Package(
         .library(name: "AgenticToolkitAIPlugins", targets: ["AgenticToolkitAIPlugins"]),
         .library(name: "AgenticToolkitDocument", targets: ["AgenticToolkitDocument"]),
         .library(name: "AgenticToolkitAll", targets: ["AgenticToolkitAll"]),
+
+        // Dynamic umbrella. Bundles the modules that cross the host/plugin
+        // boundary so the host app and NSBundle plugin bundles resolve to
+        // the same loaded image at runtime (avoids duplicate class
+        // registrations, singleton duplication, and type-identity mismatches
+        // that static-linking both ends produces).
+        //
+        // Name is intentionally distinct from every target and every other
+        // product — sharing a name with a target triggers SPM's
+        // "cannot be built dynamically because there is a package product
+        // with the same name" error.
+        //
+        // See docs/research/spm-dynamic-linking.md for the full rationale.
+        .library(
+            name: "AgenticToolkitPluginHost",
+            type: .dynamic,
+            targets: [
+                "AgenticToolkitCore",
+                "AgenticToolkitScripting",
+                "AgenticToolkitCoreUI",
+                "AgenticToolkitSettingsWindow",
+                "AgenticToolkitChatWindow",
+                "AgenticToolkitAIPlugins",
+            ]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0"),

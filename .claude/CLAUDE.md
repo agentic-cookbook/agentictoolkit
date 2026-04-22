@@ -9,14 +9,16 @@ A cross-platform toolkit for agentic development workflows.
 
 ## Build
 
-Each framework module under `apple/AgenticToolkit/` is its own Swift Package.
-The app and plugin bundles are XcodeGen-generated Xcode projects that consume
-those packages as local SPM dependencies.
+`apple/AgenticToolkit/` is a single Swift Package. Each module is a target
+under `Sources/AgenticToolkit<Module>/` with tests under
+`Tests/AgenticToolkit<Module>Tests/`. The app and plugin bundles are
+XcodeGen-generated Xcode projects that consume the umbrella package as a
+local SPM dependency.
 
 ```bash
-# Per-package build/test (pick any module):
-cd apple/AgenticToolkit/AgenticToolkitCore && swift build
-cd apple/AgenticToolkit/AgenticToolkitCore && swift test
+# Package build/test (single command covers every module):
+cd apple/AgenticToolkit && swift build
+cd apple/AgenticToolkit && swift test
 
 # Full workspace (app + plugins + packages):
 cd apple/AgenticToolkitApp && cc-xcgen         # regenerate app xcodeproj
@@ -27,36 +29,38 @@ open apple/AgenticToolkit.xcworkspace
 ## Architecture
 
 Cross-platform repo with per-platform directories:
-- `apple/AgenticToolkit/AgenticToolkit<Module>/` — one Swift Package per module, laid out as `Package.swift` + `Source/` + `Tests/`
-- `apple/AgenticToolkitApp/` — XcodeGen Xcode project, consumes each module package as a local SPM dependency
-- `apple/AIPlugins/` — XcodeGen Xcode project (NSBundle plugins). Each plugin bundle depends on the `AgenticToolkitAIPluginsCore` product of the `AgenticToolkitAIPlugins` package. Each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`
+- `apple/AgenticToolkit/` — umbrella Swift Package. `Package.swift` at the root, modules as targets under `Sources/AgenticToolkit<Module>/`, tests under `Tests/AgenticToolkit<Module>Tests/`
+- `apple/AgenticToolkitApp/` — XcodeGen Xcode project, embeds the dynamic `AgenticToolkitPluginHost` product (for the host/plugin boundary) and links the other automatic products
+- `apple/AIPlugins/` — XcodeGen Xcode project (NSBundle plugins). Each plugin bundle links (without embedding) the `AgenticToolkitPluginHost` product so it shares one loaded image with the host at runtime. Each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`
 - `windows/` — TBD
 - `android/` — TBD
 
-### Apple packages
+### Apple modules (targets in the umbrella package)
 
-| Package                         | Source dir                              | Depends on                                                                   |
-|---------------------------------|-----------------------------------------|------------------------------------------------------------------------------|
-| `AgenticToolkitCore`            | `AgenticToolkitCore/`                   | —                                                                            |
-| `AgenticToolkitScripting`       | `AgenticToolkitScripting/`              | `AgenticToolkitCore`                                                         |
-| `AgenticToolkitCoreUI`          | `AgenticToolkitCoreUI/`                 | `AgenticToolkitCore`, `AgenticToolkitScripting`                              |
-| `AgenticToolkitAIProvider`      | `AgenticToolkitAIProvider/`             | `AgenticToolkitCore`                                                         |
-| `AgenticToolkitLoggingWindow`   | `AgenticToolkitLoggingWindow/`          | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
-| `AgenticToolkitChatWindow`      | `AgenticToolkitChatWindow/`             | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
-| `AgenticToolkitNotesWindow`     | `AgenticToolkitNotesWindow/`            | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
-| `AgenticToolkitSettingsWindow`  | `AgenticToolkitSettingsWindow/`         | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
-| `AgenticToolkitTerminalWindow`  | `AgenticToolkitTerminalWindow/`         | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitAIProvider`, `SwiftTerm` |
-| `AgenticToolkitFileBrowser`     | `AgenticToolkitFileBrowser/`            | `AgenticToolkitCore`, CodeEdit packages                                      |
-| `AgenticToolkitAIPlugins`       | `AgenticToolkitAIPlugins/`              | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitSettingsWindow`, `AgenticToolkitChatWindow` |
-| `AgenticToolkitDocument`        | `AgenticToolkitDocument/`               | `AgenticToolkitCore`, `AgenticToolkitFileBrowser`, `AgenticToolkitTerminalWindow` |
+| Target                          | Source dir                                         | Depends on                                                                   |
+|---------------------------------|----------------------------------------------------|------------------------------------------------------------------------------|
+| `AgenticToolkitCore`            | `Sources/AgenticToolkitCore/`                      | —                                                                            |
+| `AgenticToolkitScripting`       | `Sources/AgenticToolkitScripting/`                 | `AgenticToolkitCore`                                                         |
+| `AgenticToolkitCoreUI`          | `Sources/AgenticToolkitCoreUI/`                    | `AgenticToolkitCore`, `AgenticToolkitScripting`                              |
+| `AgenticToolkitAIProvider`      | `Sources/AgenticToolkitAIProvider/`                | `AgenticToolkitCore`                                                         |
+| `AgenticToolkitLoggingWindow`   | `Sources/AgenticToolkitLoggingWindow/`             | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
+| `AgenticToolkitChatWindow`      | `Sources/AgenticToolkitChatWindow/`                | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
+| `AgenticToolkitNotesWindow`     | `Sources/AgenticToolkitNotesWindow/`               | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
+| `AgenticToolkitSettingsWindow`  | `Sources/AgenticToolkitSettingsWindow/`            | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                                 |
+| `AgenticToolkitTerminalWindow`  | `Sources/AgenticToolkitTerminalWindow/`            | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitAIProvider`, `SwiftTerm` |
+| `AgenticToolkitFileBrowser`     | `Sources/AgenticToolkitFileBrowser/`               | `AgenticToolkitCore`, CodeEdit packages                                      |
+| `AgenticToolkitAIPlugins`       | `Sources/AgenticToolkitAIPlugins/`                 | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitSettingsWindow`, `AgenticToolkitChatWindow` |
+| `AgenticToolkitDocument`        | `Sources/AgenticToolkitDocument/`                  | `AgenticToolkitCore`, `AgenticToolkitFileBrowser`, `AgenticToolkitTerminalWindow` |
 
-The `AgenticToolkitAIPlugins` package ships two library products built from two targets in the same package:
-- `AgenticToolkitAIPluginsCore` — the plugin-facing API (protocols, message/credential types). Plugin bundles in `apple/AIPlugins/` depend on this product. Depends on `AgenticToolkitCore` and `AgenticToolkitSettingsWindow`.
-- `AgenticToolkitAIPlugins` — the host-side `PluginManager` and chat wiring. Depends on `AgenticToolkitAIPluginsCore` internally and is consumed by the app.
+`AgenticToolkitCore` is Foundation-only; `AgenticToolkitCoreUI` holds cross-cutting AppKit utilities (windowing, shared views); feature targets are named after their most general function.
 
-Keeping both targets in one package (rather than splitting `AgenticToolkitAIPluginsCore` into `apple/AIPlugins/`) avoids a circular `AgenticToolkit → AIPlugins` dependency.
+### Product layout
 
-`AgenticToolkitCore` is Foundation-only; `AgenticToolkitCoreUI` holds cross-cutting AppKit utilities (windowing, shared views); feature packages are named after their most general function.
+Each target has an automatic `.library` product of the same name — consumers (host app, tests, Whippet, Stenographer) can reference any module by its target name. Xcode picks linkage per build-graph (usually static).
+
+One additional **dynamic** product, `AgenticToolkitPluginHost`, bundles the 6 modules that cross the host/plugin boundary (`Core`, `Scripting`, `CoreUI`, `SettingsWindow`, `ChatWindow`, `AIPlugins`). The host app embeds it; plugin bundles link it without embedding. At runtime both ends resolve the bundled types to the same loaded image, preventing the duplicate class registrations and type-identity mismatches that static-linking the same SPM modules into both host and plugin would produce.
+
+Adding a module to the host/plugin boundary means adding its target name to `AgenticToolkitPluginHost`'s `targets:` list in `Package.swift`. See `docs/research/spm-dynamic-linking.md` for the full rationale — the asymmetric automatic-plus-one-dynamic-umbrella shape is a deliberate workaround for an SPM limitation, not an invented pattern.
 
 ## Conventions
 

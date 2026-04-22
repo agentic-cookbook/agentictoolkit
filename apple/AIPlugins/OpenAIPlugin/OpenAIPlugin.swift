@@ -1,7 +1,6 @@
 import AppKit
 import Foundation
 import os
-import AgenticToolkitAIPluginsCore
 import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
 import AgenticToolkitAIPlugins
