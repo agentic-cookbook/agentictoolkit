@@ -125,4 +125,51 @@ final class SingleWindowControllerTests: XCTestCase {
         XCTAssertEqual(window.frame.midX, visible.midX, accuracy: 2.0)
         XCTAssertEqual(window.frame.midY, visible.midY, accuracy: 2.0)
     }
+
+    func testDelegateIsInstalledAfterRestoreFrameSoConstructionEventsDontClobberSavedState() throws {
+        // Regression: setting `contentViewController` posts
+        // NSWindowDidResizeNotification synchronously. If the delegate is
+        // attached before that, `windowDidResize` calls
+        // `WindowManager.saveFrame` with the default-NSWindow pre-restore
+        // frame, overwriting any prior saved state. Then `restoreFrame`
+        // reads back that just-saved default frame and applies it —
+        // producing a window positioned at AppKit's initial cascade, not
+        // the spec's geometric center.
+        //
+        // With the delegate installed last, construction-time resize events
+        // never reach `saveFrame`, so `restoreFrame` sees a clean "no saved
+        // state" and applies the spec's default center.
+        let id = "test.delegate.order.\(UUID().uuidString)"
+        WindowManager.shared.register(
+            id: id,
+            spec: WindowSpec(
+                defaultSize: NSSize(width: 800, height: 500),
+                minSize: NSSize(width: 200, height: 200),
+                defaultPosition: .center,
+                persistsFrame: true
+            )
+        )
+        WindowManager.shared.clearSavedState(for: id)
+
+        let wc = ViewControllerBasedWC(windowID: id)
+        wc.showWindow()
+
+        let window = try XCTUnwrap(wc.window)
+        // After construction the persisted state — if anything was saved —
+        // must correspond to the spec's default position, not the pre-
+        // restore default NSWindow frame. Read the raw persisted state via
+        // the shared storage.
+        if let saved = WindowManager.shared.storage.loadState(for: id) {
+            XCTAssertEqual(saved.width, 800, accuracy: 2.0,
+                "saved width must reflect spec default, not pre-restore NSWindow default")
+            XCTAssertEqual(saved.height, 500, accuracy: 2.0,
+                "saved height must reflect spec default, not pre-restore NSWindow default")
+        }
+        // And the live window frame must match the spec — proving the
+        // construction-time delegate events didn't clobber the restore.
+        XCTAssertEqual(window.frame.width, 800, accuracy: 2.0,
+            "window width must come from spec, not pre-restore default")
+        XCTAssertEqual(window.frame.height, 500, accuracy: 2.0,
+            "window height must come from spec, not pre-restore default")
+    }
 }
