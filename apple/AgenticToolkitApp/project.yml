@@ -95,6 +95,14 @@ targets:
           - "IngestionIntegrationTests.swift"
     dependencies:
       - target: AgenticToolkitApp
+      # Xcode 16's explicit-module scanner warns when a consumer links a
+      # product whose Swift module interface references modules not
+      # listed as explicit edges on the consumer. Declare the transitive
+      # closure through CoreUI/AIPlugins so the scanner sees all edges.
+      - package: AgenticToolkit
+        product: AgenticToolkitCore
+      - package: AgenticToolkit
+        product: AgenticToolkitScripting
       - package: AgenticToolkit
         product: AgenticToolkitCoreUI
       - package: AgenticToolkit
