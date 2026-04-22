@@ -3,10 +3,9 @@ import Combine
 import Foundation
 import SwiftTerm
 import os
+import AgenticToolkitCore
 
 private let kMaxProcPathSize: Int32 = 4096
-
-private let terminalLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "Terminal")
 
 public enum TerminalSessionState: Sendable {
     case running
@@ -94,7 +93,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
     private func startShellProcess(in view: LocalProcessTerminalView) {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let startDir = workingDirectory ?? FileManager.default.homeDirectoryForCurrentUser.path
-        terminalLog.info("Starting shell '\(shell, privacy: .public)' for session '\(self.name)' in \(startDir, privacy: .public)")
+        logger.info("Starting shell '\(shell, privacy: .public)' for session '\(self.name)' in \(startDir, privacy: .public)")
 
         var env = Terminal.getEnvironmentVariables(termName: "xterm-256color")
         let processEnv = ProcessInfo.processInfo.environment
@@ -129,7 +128,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
     }
 
     private func handleOsc7770(payload: String) {
-        terminalLog.debug("OSC 7770 received: \(payload, privacy: .public)")
+        logger.debug("OSC 7770 received: \(payload, privacy: .public)")
         if payload.hasPrefix("color=") {
             let hex = String(payload.dropFirst("color=".count))
             if let color = NSColor(hex: hex) {
@@ -248,10 +247,14 @@ public final class TerminalSession: ObservableObject, Identifiable {
     public func terminateProcess() {
         stopProcessPolling()
         if state == .running {
-            terminalLog.info("Terminating shell process for session '\(self.name)'")
+            logger.info("Terminating shell process for session '\(self.name)'")
             terminalView.terminate()
         }
     }
+}
+
+extension TerminalSession: Loggable {
+    public static nonisolated let logger = makeLogger()
 }
 
 /// A key/value pair shown as a subtitle line on a terminal session cell.
@@ -301,10 +304,14 @@ private final class ProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
         let code = exitCode
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                terminalLog.info("Shell process terminated with exit code \(code.map { String($0) } ?? "nil")")
+                self.logger.info("Shell process terminated with exit code \(code.map { String($0) } ?? "nil")")
                 self.session?.stopProcessPolling()
                 self.session?.state = .terminated
             }
         }
     }
+}
+
+extension ProcessHandler: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

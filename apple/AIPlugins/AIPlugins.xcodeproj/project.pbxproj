@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		B417D4C5F1E47358DAFB600D /* AllPlugins */ = {
+		B417D4C5F1E47358DAFB600D /* AllAIPlugins */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllPlugins" */;
+			buildConfigurationList = 8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllAIPlugins" */;
 			buildPhases = (
 			);
 			dependencies = (
@@ -19,7 +19,7 @@
 				AC354DC70C7425B4962DC64A /* PBXTargetDependency */,
 				8A7519A2F8FB23327A5F027D /* PBXTargetDependency */,
 			);
-			name = AllPlugins;
+			name = AllAIPlugins;
 			packageProductDependencies = (
 			);
 			productName = AllPlugins;
@@ -344,8 +344,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 2312467F2C7A6F62BE9A00A7 /* Build configuration list for PBXProject "AIPlugins" */;
 			developmentRegion = en;
@@ -364,7 +362,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B417D4C5F1E47358DAFB600D /* AllPlugins */,
+				B417D4C5F1E47358DAFB600D /* AllAIPlugins */,
 				ADFCB2E3C7792BB90F43F274 /* ClaudeAPIPlugin */,
 				473ED4BC1C0ADBBAC18CAAFC /* ClaudeLocalPlugin */,
 				DECA72941EE8EBE472B3865C /* GooglePlugin */,
@@ -873,7 +871,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllPlugins" */ = {
+		8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllAIPlugins" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D8097E575C23E06BBA281024 /* Debug */,
