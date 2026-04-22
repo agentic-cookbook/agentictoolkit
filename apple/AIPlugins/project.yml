@@ -59,60 +59,60 @@ packages:
 
 targets:
 
-  ClaudeAPIPlugin:
+  ClaudeAPI:
     templates: [Plugin]
     sources:
-      - path: ClaudeAPIPlugin
+      - path: ClaudeAPI
     settings:
       base:
-        INFOPLIST_FILE: ClaudeAPIPlugin/Info.plist
+        INFOPLIST_FILE: ClaudeAPI/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.claude-api
 
-  ClaudeLocalPlugin:
+  ClaudeLocal:
     templates: [Plugin]
     sources:
-      - path: ClaudeLocalPlugin
+      - path: ClaudeLocal
     settings:
       base:
-        INFOPLIST_FILE: ClaudeLocalPlugin/Info.plist
+        INFOPLIST_FILE: ClaudeLocal/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.claude-local
 
-  OpenAIPlugin:
+  OpenAI:
     templates: [Plugin]
     sources:
-      - path: OpenAIPlugin
+      - path: OpenAI
     settings:
       base:
-        INFOPLIST_FILE: OpenAIPlugin/Info.plist
+        INFOPLIST_FILE: OpenAI/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai
 
-  GooglePlugin:
+  Google:
     templates: [Plugin]
     sources:
-      - path: GooglePlugin
+      - path: Google
     settings:
       base:
-        INFOPLIST_FILE: GooglePlugin/Info.plist
+        INFOPLIST_FILE: Google/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.google
 
-  OpenAICompatiblePlugin:
+  OpenAICompatible:
     templates: [Plugin]
     sources:
-      - path: OpenAICompatiblePlugin
+      - path: OpenAICompatible
     settings:
       base:
-        INFOPLIST_FILE: OpenAICompatiblePlugin/Info.plist
+        INFOPLIST_FILE: OpenAICompatible/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.plugin.openai-compatible
 
 schemes:
   AIPlugins:
     build:
       targets:
-        ClaudeAPIPlugin: all
-        ClaudeLocalPlugin: all
-        OpenAIPlugin: all
-        GooglePlugin: all
-        OpenAICompatiblePlugin: all
+        ClaudeAPI: all
+        ClaudeLocal: all
+        OpenAI: all
+        Google: all
+        OpenAICompatible: all
   AllPlugins:
     build:
       targets:
@@ -125,8 +125,8 @@ schemes:
 aggregateTargets:
   AllPlugins:
     targets:
-      - ClaudeAPIPlugin
-      - ClaudeLocalPlugin
-      - OpenAIPlugin
-      - GooglePlugin
-      - OpenAICompatiblePlugin
+      - ClaudeAPI
+      - ClaudeLocal
+      - OpenAI
+      - Google
+      - OpenAICompatible
