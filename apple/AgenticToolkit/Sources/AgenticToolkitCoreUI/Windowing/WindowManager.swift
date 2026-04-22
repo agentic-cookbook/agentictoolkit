@@ -64,7 +64,7 @@ public final class WindowManager {
 
         guard let spec = specs[id] else {
             logger.warning("WindowManager: no spec for '\(id, privacy: .public)'")
-            window.center()
+            applyGeometricCenter(to: window)
             return false
         }
 
@@ -77,7 +77,7 @@ public final class WindowManager {
 
         let screens = screenProvider.screens
         guard !screens.isEmpty else {
-            window.center()
+            applyGeometricCenter(to: window)
             return false
         }
 
@@ -138,7 +138,7 @@ public final class WindowManager {
         if let spec = specs[id] {
             applyDefaultPosition(to: window, spec: spec)
         } else {
-            window.center()
+            applyGeometricCenter(to: window)
         }
     }
 
@@ -158,11 +158,27 @@ public final class WindowManager {
 
     private func applyDefaultPosition(to window: NSWindow, spec: WindowSpec) {
         guard let screen = screenProvider.mainScreen ?? screenProvider.screens.first else {
-            window.center()
+            applyGeometricCenter(to: window)
             return
         }
         let frame = FrameCalculator.defaultFrame(spec: spec, screenVisibleFrame: screen.visibleFrame)
         window.setFrame(frame, display: true)
+    }
+
+    /// Positions the window at the geometric center of the main screen's
+    /// visible frame. `NSWindow.center()` is NOT geometric center — it
+    /// places the window one-third from the top.
+    private func applyGeometricCenter(to window: NSWindow) {
+        let screen = screenProvider.mainScreen ?? screenProvider.screens.first
+        guard let visible = screen?.visibleFrame else {
+            window.center()
+            return
+        }
+        let origin = NSPoint(
+            x: visible.origin.x + (visible.width - window.frame.width) / 2,
+            y: visible.origin.y + (visible.height - window.frame.height) / 2
+        )
+        window.setFrameOrigin(origin)
     }
 
     // MARK: - Screen Change Handling

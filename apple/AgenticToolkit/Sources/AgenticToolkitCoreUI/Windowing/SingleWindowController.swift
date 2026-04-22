@@ -101,10 +101,13 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         }
 
         self.window = newWindow
-        let restored = WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
-        if !restored {
-            newWindow.center()
-        }
+        // WindowManager.restoreFrame handles positioning in every path:
+        // saved geometry → restored; no saved state but spec registered →
+        // applyDefaultPosition (geometric center via FrameCalculator); no
+        // spec → geometric center fallback. A post-call `window.center()`
+        // here would override that with AppKit's upper-center (y ≈ 1/3
+        // from top), which is what it does despite the misleading name.
+        WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
         configureWindow(newWindow)
     }
 
