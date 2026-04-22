@@ -560,6 +560,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.google;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -574,6 +575,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-api";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -658,6 +660,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-api";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -672,6 +675,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.openai-compatible";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -692,6 +696,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.openai;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -769,6 +774,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.openai-compatible";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -783,6 +789,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.google;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};
@@ -797,6 +804,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-local";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -811,6 +819,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.plugin.openai;
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Release;
 		};
@@ -825,6 +834,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.agentictoolkit.plugin.claude-local";
 				SDKROOT = macosx;
+				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
 		};

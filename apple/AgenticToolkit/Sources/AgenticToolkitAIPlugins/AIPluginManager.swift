@@ -3,10 +3,10 @@ import os
 
 /// Discovers, loads, and manages LLM plugin bundles.
 ///
-/// Plugins are macOS `.bundle` files containing a principal class that conforms
-/// to `AIPlugin`. The manager reads `Info.plist` metadata at discovery
-/// time (cheap) and only loads the binary on demand (lazy). All public
-/// accessors return protocol types; the concrete storage is internal.
+/// Plugins are macOS `.aiplugin` bundles containing a principal class that
+/// conforms to `AIPlugin`. The manager reads `Info.plist` metadata at
+/// discovery time (cheap) and only loads the binary on demand (lazy). All
+/// public accessors return protocol types; the concrete storage is internal.
 @MainActor
 public final class AIPluginManager {
 
@@ -25,7 +25,7 @@ public final class AIPluginManager {
     /// Loaded bundles, keyed by identifier (kept alive so the binary stays mapped).
     private var loadedBundles: [String: Bundle] = [:]
 
-    /// Directories to scan for `.bundle` files.
+    /// Directories to scan for `.aiplugin` bundles.
     private let searchPaths: [URL]
 
     /// App name used for the per-plugin data directory.
@@ -95,7 +95,7 @@ public final class AIPluginManager {
 
     // MARK: - Discovery
 
-    /// Scans all search paths for `.bundle` files and reads their metadata.
+    /// Scans all search paths for `.aiplugin` bundles and reads their metadata.
     /// Does not load any plugin binaries.
     public func discoverPlugins() {
         var discovered: [AIPluginRecord] = []
@@ -110,7 +110,7 @@ public final class AIPluginManager {
                 options: [.skipsHiddenFiles]
             ) else { continue }
 
-            for url in contents where url.pathExtension == "bundle" {
+            for url in contents where url.pathExtension == "aiplugin" {
                 guard let bundle = Bundle(url: url),
                       let record = AIPluginRecord.fromBundle(bundle) else {
                     logger.warning("Skipping invalid plugin bundle: \(url.lastPathComponent, privacy: .public)")

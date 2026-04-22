@@ -20,7 +20,7 @@ links the same SPM modules. Our topology:
 
 - **Host app** (`AgenticToolkitApp`) statically links `AgenticToolkitCore`,
   `AgenticToolkitAIPlugins`, etc.
-- **Plugin bundles** (`ClaudeAPIPlugin.bundle`, `OpenAIPlugin.bundle`, …) in
+- **Plugin bundles** (`ClaudeAPIPlugin.aiplugin`, `OpenAIPlugin.aiplugin`, …) in
   `~/.agenticplugins/` each statically link the same modules and are
   loaded into the host at runtime via `Bundle.load()`.
 

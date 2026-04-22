@@ -31,9 +31,13 @@ targetTemplates:
         link: true
     settings:
       base:
+        # Custom bundle extension so plugins are visually distinct from
+        # generic .bundle packages in ~/.agenticplugins/. AIPluginManager
+        # discovers files by this extension.
+        WRAPPER_EXTENSION: aiplugin
         # Host app has the framework at Contents/Frameworks; a plugin at
         # Contents/MacOS/<name> resolves it via four `..` hops to
-        # PluginName.bundle/Contents/MacOS → Contents/Resources/../..
+        # PluginName.aiplugin/Contents/MacOS → Contents/Resources/../..
         # → AgenticToolkitApp.app/Contents/Frameworks.
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
