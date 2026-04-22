@@ -79,7 +79,13 @@ final class SingleWindowControllerTests: XCTestCase {
         XCTAssertFalse(wc.isVisible)
     }
 
-    func testWindowWithNoSavedGeometryIsCenteredOnMainScreen() throws {
+    func testWindowWithNoSavedGeometryIsGeometricallyCenteredOnMainScreen() throws {
+        // Regression: `NSWindow.center()` places the window at "upper-center"
+        // (one-third from the top), NOT the geometric center. A prior
+        // iteration called `newWindow.center()` after `WindowManager.restoreFrame`
+        // which overrode the correct proportional centering with AppKit's
+        // upper-center. Verify BOTH midX and midY match the visible frame's
+        // center — an X-only check passed the buggy version.
         let wc = ViewControllerBasedWC(windowID: "test.center.\(UUID().uuidString)")
         wc.showWindow()
 
@@ -87,10 +93,36 @@ final class SingleWindowControllerTests: XCTestCase {
         let screen = try XCTUnwrap(window.screen ?? NSScreen.main)
         let visible = screen.visibleFrame
 
-        let expectedX = visible.origin.x + (visible.width - window.frame.width) / 2
-        XCTAssertEqual(window.frame.origin.x, expectedX, accuracy: 2.0,
+        XCTAssertEqual(window.frame.midX, visible.midX, accuracy: 2.0,
             "window with no saved geometry should be horizontally centered on main screen")
-        XCTAssertNotEqual(window.frame.origin, .zero,
-            "window with no saved geometry should not stay at its default (0,0) origin")
+        XCTAssertEqual(window.frame.midY, visible.midY, accuracy: 2.0,
+            "window with no saved geometry should be VERTICALLY GEOMETRICALLY centered — not AppKit upper-center")
+    }
+
+    func testWindowWithRegisteredCenterSpecIsGeometricallyCentered() throws {
+        // The spec'd path — what app code does in practice: register a
+        // WindowSpec with `.center` and let WindowManager.restoreFrame do
+        // the positioning via FrameCalculator.defaultFrame.
+        let id = "test.center.spec.\(UUID().uuidString)"
+        WindowManager.shared.register(
+            id: id,
+            spec: WindowSpec(
+                defaultSize: NSSize(width: 800, height: 500),
+                minSize: NSSize(width: 200, height: 200),
+                defaultPosition: .center,
+                persistsFrame: true
+            )
+        )
+        WindowManager.shared.clearSavedState(for: id)
+
+        let wc = ViewControllerBasedWC(windowID: id)
+        wc.showWindow()
+
+        let window = try XCTUnwrap(wc.window)
+        let screen = try XCTUnwrap(window.screen ?? NSScreen.main)
+        let visible = screen.visibleFrame
+
+        XCTAssertEqual(window.frame.midX, visible.midX, accuracy: 2.0)
+        XCTAssertEqual(window.frame.midY, visible.midY, accuracy: 2.0)
     }
 }
