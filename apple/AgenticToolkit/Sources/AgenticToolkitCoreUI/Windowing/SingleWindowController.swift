@@ -87,7 +87,6 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         )
         newWindow.title = windowTitle
         newWindow.isReleasedWhenClosed = false
-        newWindow.delegate = self
         if let minSize = minSize {
             newWindow.minSize = minSize
         }
@@ -109,6 +108,14 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         // from top), which is what it does despite the misleading name.
         WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
         configureWindow(newWindow)
+        // Wire the delegate last — setting `contentViewController` above
+        // resizes the window to the view's size and posts
+        // `NSWindowDidResizeNotification`. If the delegate were attached
+        // before that, `windowDidResize` would call `saveFrame` with the
+        // default-NSWindow pre-restore frame, clobbering any prior saved
+        // state (and then `restoreFrame` would read back that just-written
+        // default frame instead of the spec's geometric center).
+        newWindow.delegate = self
     }
 
     // MARK: - Public API
