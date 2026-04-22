@@ -129,8 +129,20 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     open override func showWindow(_ sender: Any?) {
+        // `NSWindowController.init(window: nil)` leaves `isWindowLoaded = true`
+        // despite no window existing, so the default `showWindow(_:)` skips
+        // `loadWindow()`. Force it so the first call actually builds the
+        // window (subclasses previously duplicated this guard at every call
+        // site).
+        if window == nil { loadWindow() }
         super.showWindow(sender)
-        NSApp.activate(ignoringOtherApps: true)
+        // Window-scoped front-ordering. `super.showWindow` calls
+        // `makeKeyAndOrderFront`, which respects app-activation state — a
+        // window shown from an LSUIElement / menubar context can stay behind
+        // other apps' windows. `orderFrontRegardless` brings *this* window
+        // forward without touching NSApp activation (which is app-scoped and
+        // the wrong tool here, and nil in headless `swift test`).
+        window?.orderFrontRegardless()
     }
 
     /// Hides the window without destroying it.
