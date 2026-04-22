@@ -1,7 +1,6 @@
 import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitAIPlugins
 
 /// Reusable settings view for a single `AIPlugin`. Renders API key
 /// entry + validate, model selection, and (for the OpenAI-compatible plugin)
