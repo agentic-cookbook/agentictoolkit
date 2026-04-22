@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
+               BlueprintIdentifier = "ADFCB2E3C7792BB90F43F274"
                BuildableName = "ClaudeAPIPlugin.bundle"
                BlueprintName = "ClaudeAPIPlugin"
-               ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
+               ReferencedContainer = "container:AIPlugins/AIPlugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -51,10 +51,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8D343B47D3E5D15FEFD120B9"
+            BlueprintIdentifier = "ADFCB2E3C7792BB90F43F274"
             BuildableName = "ClaudeAPIPlugin.bundle"
             BlueprintName = "ClaudeAPIPlugin"
-            ReferencedContainer = "container:AIPlugins/Plugins.xcodeproj">
+            ReferencedContainer = "container:AIPlugins/AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

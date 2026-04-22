@@ -8,6 +8,6 @@
       location = "group:AgenticToolkit">
    </FileRef>
    <FileRef
-      location = "group:AIPlugins/Plugins.xcodeproj">
+      location = "group:AIPlugins/AIPlugins.xcodeproj">
    </FileRef>
 </Workspace>
