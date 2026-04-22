@@ -7,6 +7,12 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.3"
+    # Xcode 26 defaults SWIFT_ENABLE_EXPLICIT_MODULES=YES. Its scanner fails
+    # to propagate transitive deps into the synthesized
+    # *_PackageProduct.framework wrappers generated around third-party SPM
+    # targets (e.g. TextFormation → Rearrange). Opt out. See
+    # docs/research/spm-dynamic-linking.md / FB20602885.
+    SWIFT_ENABLE_EXPLICIT_MODULES: NO
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: K2NA732JAX

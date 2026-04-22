@@ -7,6 +7,9 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.3"
+    # See AgenticToolkitApp/project.yml for rationale — Xcode 26
+    # explicit-module scanner regression (FB20602885).
+    SWIFT_ENABLE_EXPLICIT_MODULES: NO
     SWIFT_STRICT_CONCURRENCY: complete
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -40,8 +43,11 @@ targetTemplates:
         script: |
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
-        outputPaths:
-          - $(HOME)/.agenticplugins/$(FULL_PRODUCT_NAME)
+        # rsync --delete is idempotent — we want this to run every build so
+        # iterating on plugin code picks up on the host side. Declaring
+        # outputs around a directory is unreliable in Xcode's dep analysis,
+        # so opt out of dep analysis explicitly.
+        basedOnDependencyAnalysis: false
 
 packages:
   AgenticToolkit:
