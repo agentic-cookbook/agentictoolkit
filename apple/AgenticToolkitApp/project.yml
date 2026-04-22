@@ -33,8 +33,6 @@ targets:
           - "AgenticToolkitApp.entitlements"
           # Parked pending per-plugin secret storage design.
           - "Settings/DatabaseManagerPersistence.swift"
-    resources:
-      - path: AgenticToolkitApp/Assets.xcassets
     dependencies:
       # Dynamic umbrella for the host/plugin boundary. Embedded so plugin
       # bundles (loaded via NSBundle) resolve these modules through the
