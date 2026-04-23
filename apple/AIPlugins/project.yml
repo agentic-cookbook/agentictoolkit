@@ -16,17 +16,36 @@ settings:
     CODE_SIGN_IDENTITY: ""
     CODE_SIGNING_REQUIRED: NO
     CODE_SIGNING_ALLOWED: NO
+    # The Install post-build script writes plugin bundles to
+    # $HOME/.agenticplugins/, which is outside every path Xcode's user-script
+    # sandbox grants access to. Xcode 26 enables sandboxing by default; leaving
+    # it on makes rsync fail with "Operation not permitted" on the source
+    # bundle before it ever reaches the destination.
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 targetTemplates:
   Plugin:
     type: bundle
     platform: macOS
     dependencies:
-      # Link-without-embed against the host's dynamic umbrella. Resolved at
+      # Link-without-embed against the host's boundary frameworks. Resolved at
       # runtime via the host's @rpath when the plugin bundle is loaded.
-      # See docs/research/spm-dynamic-linking.md for the full rationale.
-      - package: AgenticToolkit
-        product: AgenticToolkitPluginHost
+      - target: AgenticToolkit/AgenticToolkitCore
+        embed: false
+        link: true
+      - target: AgenticToolkit/AgenticToolkitScripting
+        embed: false
+        link: true
+      - target: AgenticToolkit/AgenticToolkitCoreUI
+        embed: false
+        link: true
+      - target: AgenticToolkit/AgenticToolkitSettingsWindow
+        embed: false
+        link: true
+      - target: AgenticToolkit/AgenticToolkitChatWindow
+        embed: false
+        link: true
+      - target: AgenticToolkit/AgenticToolkitAIPlugins
         embed: false
         link: true
     settings:
@@ -53,9 +72,9 @@ targetTemplates:
         # so opt out of dep analysis explicitly.
         basedOnDependencyAnalysis: false
 
-packages:
+projectReferences:
   AgenticToolkit:
-    path: ../AgenticToolkit
+    path: ../AgenticToolkit/AgenticToolkit.xcodeproj
 
 targets:
 

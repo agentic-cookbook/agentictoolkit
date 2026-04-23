@@ -1,5 +1,5 @@
 import XCTest
-@testable import AgenticToolkitAIProvider
+@testable import AgenticToolkitAIPlugins
 
 final class AIRequestBuilderTests: XCTestCase {
 

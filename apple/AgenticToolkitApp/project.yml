@@ -24,8 +24,18 @@ packages:
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm
     from: "1.2.0"
+  CodeEditSourceEditor:
+    url: https://github.com/CodeEditApp/CodeEditSourceEditor.git
+    from: "0.15.2"
+  CodeEditLanguages:
+    url: https://github.com/CodeEditApp/CodeEditLanguages.git
+    exactVersion: "0.1.20"
+
+projectReferences:
   AgenticToolkit:
-    path: ../AgenticToolkit
+    path: ../AgenticToolkit/AgenticToolkit.xcodeproj
+  AIPlugins:
+    path: ../AIPlugins/AIPlugins.xcodeproj
 
 targets:
 
@@ -40,40 +50,48 @@ targets:
           # Parked pending per-plugin secret storage design.
           - "Settings/DatabaseManagerPersistence.swift"
     dependencies:
-      # Dynamic umbrella for the host/plugin boundary. Embedded so plugin
-      # bundles (loaded via NSBundle) resolve these modules through the
-      # host's @rpath at runtime, sharing one loaded image. Bundles
-      # Core, Scripting, CoreUI, SettingsWindow, ChatWindow, AIPlugins.
-      - package: AgenticToolkit
-        product: AgenticToolkitPluginHost
+      # Plugin boundary — 6 frameworks embedded so plugin bundles
+      # (loaded via NSBundle) resolve them through the host's @rpath.
+      - target: AgenticToolkit/AgenticToolkitCore
         embed: true
         link: true
-      # Non-boundary modules — automatic products, Xcode picks static.
-      - package: AgenticToolkit
-        product: AgenticToolkitAIProvider
-        embed: false
-      - package: AgenticToolkit
-        product: AgenticToolkitLoggingWindow
+      - target: AgenticToolkit/AgenticToolkitScripting
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitCoreUI
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitSettingsWindow
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitChatWindow
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitAIPlugins
+        embed: true
+        link: true
+      # Non-boundary modules used directly by the app.
+      - target: AgenticToolkit/AgenticToolkitLoggingWindow
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitNotesWindow
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitTerminalWindow
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitFileBrowser
+        embed: true
+        link: true
+      - target: AgenticToolkit/AgenticToolkitDocument
+        embed: true
+        link: true
+      # Plugin bundles — build-order only. Triggers AllPlugins aggregate,
+      # which builds all 5 plugins and runs their postBuildScript
+      # (installs to ~/.agenticplugins/).
+      - target: AIPlugins/AllPlugins
         embed: false
         link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitNotesWindow
-        embed: false
-        link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitTerminalWindow
-        embed: false
-        link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitFileBrowser
-        embed: false
-        link: false
-      - package: AgenticToolkit
-        product: AgenticToolkitDocument
-        embed: false
-        link: false
-      - package: SwiftTerm
-        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app
@@ -101,10 +119,8 @@ targets:
           - "IngestionIntegrationTests.swift"
     dependencies:
       - target: AgenticToolkitApp
-      - package: AgenticToolkit
-        product: AgenticToolkitCoreUI
-      - package: AgenticToolkit
-        product: AgenticToolkitAIPlugins
+      - target: AgenticToolkit/AgenticToolkitCoreUI
+      - target: AgenticToolkit/AgenticToolkitAIPlugins
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app.tests

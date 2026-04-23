@@ -138,7 +138,7 @@ public final class IDEDetector: ObservableObject {
     }
 
     /// Synchronous scan for IDE markers. Called from background queue.
-    private static func scan(rootURL: URL) -> [IDEProject] {
+    private nonisolated static func scan(rootURL: URL) -> [IDEProject] {
         let fileManager = FileManager.default
         var results: [IDEProject] = []
 
@@ -191,7 +191,7 @@ public final class IDEDetector: ObservableObject {
     }
 
     /// Checks if a URL matches any known IDE marker pattern.
-    private static func matchMarkers(url: URL, rootURL: URL) -> [IDEProject] {
+    private nonisolated static func matchMarkers(url: URL, rootURL: URL) -> [IDEProject] {
         let filename = url.lastPathComponent
         let ext = url.pathExtension.lowercased()
         let relativePath = relativePathString(from: rootURL, to: url)
@@ -241,14 +241,14 @@ public final class IDEDetector: ObservableObject {
     }
 
     /// Determines whether a directory is itself an IDE marker (not to be recursed into).
-    private static func isMarkerDirectory(_ url: URL) -> Bool {
+    private nonisolated static func isMarkerDirectory(_ url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
         let name = url.lastPathComponent
         return ext == "xcodeproj" || ext == "xcworkspace" || name == ".vscode" || name == ".idea" || name == ".git"
     }
 
     /// Determines whether a .idea directory belongs to IntelliJ or Android Studio.
-    private static func detectJetBrainsType(ideaURL: URL) -> IDEType {
+    private nonisolated static func detectJetBrainsType(ideaURL: URL) -> IDEType {
         let fileManager = FileManager.default
         guard let contents = try? fileManager.contentsOfDirectory(
             at: ideaURL,
@@ -268,7 +268,7 @@ public final class IDEDetector: ObservableObject {
     }
 
     /// Computes the relative path string from a root URL to a child URL.
-    private static func relativePathString(from root: URL, to child: URL) -> String {
+    private nonisolated static func relativePathString(from root: URL, to child: URL) -> String {
         let rootPath = root.path
         let childPath = child.path
         if childPath.hasPrefix(rootPath + "/") {

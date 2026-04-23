@@ -5,7 +5,7 @@
       location = "group:AgenticToolkitApp/AgenticToolkitApp.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:AgenticToolkit">
+      location = "group:AgenticToolkit/AgenticToolkit.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:AIPlugins/AIPlugins.xcodeproj">

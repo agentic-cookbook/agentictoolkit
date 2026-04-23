@@ -1,4 +1,4 @@
-import AgenticToolkitAIProvider
+import AgenticToolkitAIPlugins
 import AgenticToolkitCore
 import Combine
 import Foundation
