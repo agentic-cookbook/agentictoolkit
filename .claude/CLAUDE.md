@@ -64,8 +64,7 @@ Adding a module to the host/plugin boundary means adding its target name to `Age
 
 ## Conventions
 
-- AppKit only for macOS UI (no SwiftUI except widgets)
-- Worktrees + PRs are the standard workflow, initiated by the user
+- AppKit only for macOS UI
 
 ## graphify
 

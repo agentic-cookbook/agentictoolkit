@@ -1,4 +1,6 @@
+import AgenticToolkitCore
 import Foundation
+import OSLog
 import ServiceManagement
 
 /// Protocol abstracting SMAppService for testability.
@@ -64,7 +66,7 @@ final class LaunchAtLoginManager {
                 return value == "true"
             }
         } catch {
-            Log.settings.warning("Failed to read launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to read launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
         }
         return false
     }
@@ -75,7 +77,7 @@ final class LaunchAtLoginManager {
     /// - Parameter enabled: Whether to register or unregister the app.
     /// - Throws: An error if the registration or unregistration fails.
     func setEnabled(_ enabled: Bool) throws {
-        Log.settings.info("Launch at login: \(enabled ? "enabling" : "disabling", privacy: .public)")
+        logger.info("Launch at login: \(enabled ? "enabling" : "disabling", privacy: .public)")
         if enabled {
             try service.register()
         } else {
@@ -86,7 +88,7 @@ final class LaunchAtLoginManager {
         do {
             try databaseManager.setSetting(key: Self.launchAtLoginKey, value: enabled ? "true" : "false")
         } catch {
-            Log.settings.error("Failed to persist launch-at-login setting: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to persist launch-at-login setting: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -95,7 +97,11 @@ final class LaunchAtLoginManager {
         do {
             try databaseManager.setSetting(key: Self.launchAtLoginPromptShownKey, value: "true")
         } catch {
-            Log.settings.warning("Failed to persist launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to persist launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
         }
     }
+}
+
+extension LaunchAtLoginManager: Loggable {
+    static nonisolated let logger = makeLogger()
 }

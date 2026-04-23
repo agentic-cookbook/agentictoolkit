@@ -1,8 +1,7 @@
+import AgenticToolkitCore
 import Combine
 import Foundation
 import os
-
-private let managerLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "Terminal")
 
 /// Manages an ordered list of terminal sessions for a single window.
 @MainActor
@@ -28,7 +27,7 @@ public final class TerminalSessionManager: ObservableObject {
         let session = TerminalSession(name: "Session \(sessionCounter)", workingDirectory: workingDirectory)
         sessions.append(session)
         selectedSessionID = session.id
-        managerLog.info("Added session '\(session.name)' (\(session.id)), total: \(self.sessions.count)")
+        logger.info("Added session '\(session.name)' (\(session.id)), total: \(self.sessions.count)")
         return session
     }
 
@@ -36,7 +35,7 @@ public final class TerminalSessionManager: ObservableObject {
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
 
         let removedSession = sessions[index]
-        managerLog.info("Removing session '\(removedSession.name)' (\(id))")
+        logger.info("Removing session '\(removedSession.name)' (\(id))")
         removedSession.terminateProcess()
         sessions.remove(at: index)
 
@@ -57,9 +56,13 @@ public final class TerminalSessionManager: ObservableObject {
     }
 
     public func terminateAll() {
-        managerLog.info("Terminating all \(self.sessions.count) session(s)")
+        logger.info("Terminating all \(self.sessions.count) session(s)")
         for session in sessions {
             session.terminateProcess()
         }
     }
+}
+
+extension TerminalSessionManager: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

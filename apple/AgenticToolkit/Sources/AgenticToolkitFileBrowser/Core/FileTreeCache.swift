@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import Foundation
 import os
 
@@ -34,7 +35,7 @@ public enum FileTreeCache {
 
     public static func save(rootNode: FileTreeNode, to packageURL: URL) {
         // Flatten tree to array, encode as JSON, write to packageURL/file-tree-cache.json
-        // Run on background queue, fire-and-forget with error logging via Log.fileTree
+        // Run on background queue, fire-and-forget.
         DispatchQueue.global(qos: .utility).async {
             do {
                 var entries: [FileTreeCacheEntry] = []
@@ -44,9 +45,9 @@ public enum FileTreeCache {
                 let data = try encoder.encode(entries)
                 let cacheURL = packageURL.appendingPathComponent(cacheFilename)
                 try data.write(to: cacheURL, options: .atomic)
-                Log.fileTree.debug("Wrote file tree cache: \(entries.count) entries")
+                logger.debug("Wrote file tree cache: \(entries.count) entries")
             } catch {
-                Log.fileTree.error("Failed to write file tree cache: \(error.localizedDescription)")
+                logger.error("Failed to write file tree cache: \(error.localizedDescription)")
             }
         }
     }
@@ -82,7 +83,7 @@ public enum FileTreeCache {
 
         // Find root (entry with nil parentPath)
         let root = entries.first(where: { $0.parentPath == nil }).flatMap { nodeMap[$0.path] }
-        Log.fileTree.info("Loaded file tree cache: \(entries.count) entries")
+        logger.info("Loaded file tree cache: \(entries.count) entries")
         return root
     }
 
@@ -102,4 +103,8 @@ public enum FileTreeCache {
             }
         }
     }
+}
+
+extension FileTreeCache: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

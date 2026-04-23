@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import SwiftUI
 import AppKit
 import Combine
@@ -187,7 +188,7 @@ private final class EditorState: ObservableObject {
         do {
             let data = try Data(contentsOf: url)
             guard let text = String(data: data, encoding: .utf8) else {
-                Log.ui.warning("File is not valid UTF-8: \(url.lastPathComponent, privacy: .public)")
+                logger.warning("File is not valid UTF-8: \(url.lastPathComponent, privacy: .public)")
                 loadError = true
                 content = ""
                 savedContent = ""
@@ -198,9 +199,9 @@ private final class EditorState: ObservableObject {
             savedContent = text
             loadGeneration += 1
             isLoaded = true
-            Log.ui.info("Loaded file: \(url.lastPathComponent, privacy: .public) (\(data.count) bytes)")
+            logger.info("Loaded file: \(url.lastPathComponent, privacy: .public) (\(data.count) bytes)")
         } catch {
-            Log.ui.error("Failed to read file: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to read file: \(error.localizedDescription, privacy: .public)")
             loadError = true
             content = ""
             savedContent = ""
@@ -217,9 +218,13 @@ private final class EditorState: ObservableObject {
             try content.write(to: url, atomically: true, encoding: .utf8)
             savedContent = content
             isModified = false
-            Log.ui.info("Saved file: \(url.lastPathComponent, privacy: .public)")
+            logger.info("Saved file: \(url.lastPathComponent, privacy: .public)")
         } catch {
-            Log.ui.error("Failed to save file: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to save file: \(error.localizedDescription, privacy: .public)")
         }
     }
+}
+
+extension EditorState: Loggable {
+    static nonisolated let logger = makeLogger()
 }

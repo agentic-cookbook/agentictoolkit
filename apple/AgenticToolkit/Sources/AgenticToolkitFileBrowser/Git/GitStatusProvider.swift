@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import Foundation
 import os
 
@@ -28,7 +29,7 @@ public final class GitStatusProvider: @unchecked Sendable {
             do {
                 try process.run()
             } catch {
-                Log.fileTree.error("Failed to run git status: \(error.localizedDescription)")
+                self.logger.error("Failed to run git status: \(error.localizedDescription)")
                 DispatchQueue.main.async { completion([:], [:]) }
                 return
             }
@@ -46,7 +47,7 @@ public final class GitStatusProvider: @unchecked Sendable {
 
             let (fileStatuses, dirStatuses) = Self.parse(porcelain: output)
 
-            Log.fileTree.info("Git status: \(fileStatuses.count) files, \(dirStatuses.count) directories")
+            self.logger.info("Git status: \(fileStatuses.count) files, \(dirStatuses.count) directories")
 
             DispatchQueue.main.async {
                 guard self.requestID == requestID else { return }
@@ -112,4 +113,8 @@ public final class GitStatusProvider: @unchecked Sendable {
 
         return (fileStatuses, dirStatuses)
     }
+}
+
+extension GitStatusProvider: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

@@ -1,9 +1,8 @@
 import AgenticToolkitAIProvider
+import AgenticToolkitCore
 import Combine
 import Foundation
 import os
-
-private let coordinatorLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "AI")
 
 /// Host app hook for supplying summarization settings on demand. The coordinator calls
 /// `currentSettings()` each time it needs to summarize, so UI changes take effect
@@ -118,7 +117,7 @@ public final class SummarizationCoordinator {
             let textHash = await MainActor.run { session.recentScrollbackText().hashValue }
             let lastHash = await MainActor.run { self?.lastContentHashes[sessionID] }
             if let lastHash, lastHash == textHash {
-                coordinatorLog.debug("Skipping summarization — content unchanged for session \(sessionID)")
+                Self.logger.debug("Skipping summarization — content unchanged for session \(sessionID)")
                 return
             }
 
@@ -180,3 +179,7 @@ extension TerminalSessionManager {
 // of the manager since stored properties can't be added in an extension.
 @MainActor private var _defaultLayoutStorage: [ObjectIdentifier: SessionLayoutState] = [:]
 @MainActor private var _coordinatorStorage: [ObjectIdentifier: SummarizationCoordinator] = [:]
+
+extension SummarizationCoordinator: Loggable {
+    public static nonisolated let logger = makeLogger()
+}

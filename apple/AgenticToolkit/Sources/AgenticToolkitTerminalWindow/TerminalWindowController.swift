@@ -1,8 +1,7 @@
 import AppKit
+import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import os
-
-private let windowLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "Terminal")
 
 /// Lifecycle callbacks for a `TerminalWindowController`. Apps own the
 /// lifecycle of terminal windows; the controller notifies the delegate
@@ -50,11 +49,15 @@ public final class TerminalWindowController: SingleWindowController {
 
     public override func windowWillClose(_ notification: Notification) {
         sessionManager.terminateAll()
-        windowLog.info("Terminal window closed, sessions terminated")
+        logger.info("Terminal window closed, sessions terminated")
         lifecycleDelegate?.terminalWindowWillClose(self)
     }
 
     public func toggleSidebar() {
         splitVC?.toggleSidebar()
     }
+}
+
+extension TerminalWindowController: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

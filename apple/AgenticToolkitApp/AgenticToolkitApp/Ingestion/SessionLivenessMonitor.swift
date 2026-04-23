@@ -1,4 +1,6 @@
+import AgenticToolkitCore
 import Foundation
+import OSLog
 
 /// Monitors active sessions and marks them as stale when no events arrive
 /// within the configured timeout period. Runs a repeating timer on a background
@@ -73,7 +75,7 @@ final class SessionLivenessMonitor {
         timer.resume()
         isRunning = true
 
-        Log.liveness.info("Started (check interval: \(Self.checkInterval)s, timeout: \(self.currentTimeout())s)")
+        logger.info("Started (check interval: \(Self.checkInterval)s, timeout: \(self.currentTimeout())s)")
     }
 
     /// Stops the repeating liveness check timer.
@@ -81,7 +83,7 @@ final class SessionLivenessMonitor {
         timer?.cancel()
         timer = nil
         isRunning = false
-        Log.liveness.info("Stopped")
+        logger.info("Stopped")
     }
 
     // MARK: - Liveness Check
@@ -94,7 +96,7 @@ final class SessionLivenessMonitor {
                 return seconds
             }
         } catch {
-            Log.liveness.warning("Failed to read staleness timeout setting: \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to read staleness timeout setting: \(error.localizedDescription, privacy: .public)")
         }
         return Self.defaultTimeoutSeconds
     }
@@ -115,7 +117,7 @@ final class SessionLivenessMonitor {
 
             let count = try databaseManager.markStaleSessions(olderThan: timeout)
             if count > 0 {
-                Log.liveness.info("Marked \(count) session(s) as stale (timeout: \(timeout)s)")
+                logger.info("Marked \(count) session(s) as stale (timeout: \(timeout)s)")
                 onSessionsMarkedStale?(count)
 
                 // Notify per-session callback for notifications
@@ -125,10 +127,10 @@ final class SessionLivenessMonitor {
             }
 
             if count > 0 || pidDeathCount > 0 {
-                Log.liveness.debug("Liveness check updated \(count + pidDeathCount) sessions")
+                logger.debug("Liveness check updated \(count + pidDeathCount) sessions")
             }
         } catch {
-            Log.liveness.error("Liveness check failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("Liveness check failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -150,7 +152,7 @@ final class SessionLivenessMonitor {
                     )
                     onSessionProcessDied?(session.sessionId, session.projectName)
                     endedCount += 1
-                    Log.liveness.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
+                    logger.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
                 }
             }
 
@@ -159,12 +161,12 @@ final class SessionLivenessMonitor {
             endedCount += noPidEnded
 
             if endedCount > 0 {
-                Log.liveness.info("Ended \(endedCount) session(s) via PID liveness check")
+                logger.info("Ended \(endedCount) session(s) via PID liveness check")
             }
 
             return endedCount
         } catch {
-            Log.liveness.error("PID liveness check failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("PID liveness check failed: \(error.localizedDescription, privacy: .public)")
             return 0
         }
     }
@@ -180,7 +182,7 @@ final class SessionLivenessMonitor {
                 status: .ended
             )
             onSessionProcessDied?(session.sessionId, session.projectName)
-            Log.liveness.info("No PID — ended stale session '\(session.projectName, privacy: .public)'")
+            logger.info("No PID — ended stale session '\(session.projectName, privacy: .public)'")
         }
         return stalePidless.count
     }
@@ -191,4 +193,8 @@ final class SessionLivenessMonitor {
         guard pid > 0 else { return false }
         return kill(pid, 0) == 0
     }
+}
+
+extension SessionLivenessMonitor: Loggable {
+    static nonisolated let logger = makeLogger()
 }

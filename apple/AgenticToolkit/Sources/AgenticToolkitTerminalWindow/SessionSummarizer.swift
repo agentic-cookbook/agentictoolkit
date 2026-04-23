@@ -1,8 +1,7 @@
 import AgenticToolkitAIProvider
+import AgenticToolkitCore
 import Foundation
 import os
-
-private let summarizerLog = Logger(subsystem: "com.agentictoolkit.AgenticTerminalKit", category: "AI")
 
 /// Settings required to perform a summarization API call. The host app is responsible
 /// for reading these from UserDefaults / Keychain and passing them in, so the toolkit
@@ -57,11 +56,11 @@ public enum SessionSummarizer {
         settings: SummarizationSettings
     ) async -> String? {
         guard settings.enabled else {
-            summarizerLog.debug("Skipping summarization — disabled")
+            logger.debug("Skipping summarization — disabled")
             return nil
         }
         guard !settings.apiKey.isEmpty else {
-            summarizerLog.debug("Skipping summarization — no API key configured")
+            logger.debug("Skipping summarization — no API key configured")
             return nil
         }
 
@@ -69,7 +68,7 @@ public enum SessionSummarizer {
 
         let lineCount = terminalText.components(separatedBy: "\n").count
         guard lineCount >= minimumLineCount, terminalText.count >= minimumCharCount else {
-            summarizerLog.debug("Skipping summarization — insufficient content (\(lineCount) lines, \(terminalText.count) chars)")
+            logger.debug("Skipping summarization — insufficient content (\(lineCount) lines, \(terminalText.count) chars)")
             return nil
         }
 
@@ -104,33 +103,33 @@ public enum SessionSummarizer {
             let (data, response) = try await URLSession.shared.data(for: request)
 
             guard let http = response as? HTTPURLResponse else {
-                summarizerLog.error("Summarization failed — invalid response")
+                logger.error("Summarization failed — invalid response")
                 return nil
             }
 
             guard http.statusCode == 200 || http.statusCode == 201 else {
                 let body = String(data: data, encoding: .utf8) ?? ""
                 let message = AIRequestBuilder.parseErrorMessage(from: body, statusCode: http.statusCode)
-                summarizerLog.error("Summarization failed — HTTP \(http.statusCode): \(message, privacy: .public)")
+                logger.error("Summarization failed — HTTP \(http.statusCode): \(message, privacy: .public)")
                 return nil
             }
 
             let reply = AIRequestBuilder.parseAssistantReply(from: data, provider: settings.provider)
 
             guard !reply.isEmpty, !reply.starts(with: "(") else {
-                summarizerLog.warning("Summarization returned empty/error reply")
+                logger.warning("Summarization returned empty/error reply")
                 return nil
             }
 
             if reply.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "UNCHANGED" {
-                summarizerLog.debug("Topic unchanged — keeping current summary")
+                logger.debug("Topic unchanged — keeping current summary")
                 return nil
             }
 
-            summarizerLog.info("Topic changed — new summary: \(reply.prefix(80), privacy: .public)")
+            logger.info("Topic changed — new summary: \(reply.prefix(80), privacy: .public)")
             return reply
         } catch {
-            summarizerLog.error("Summarization request failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("Summarization request failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }
@@ -168,4 +167,8 @@ public enum SessionSummarizer {
 
         return lines.joined(separator: "\n")
     }
+}
+
+extension SessionSummarizer: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

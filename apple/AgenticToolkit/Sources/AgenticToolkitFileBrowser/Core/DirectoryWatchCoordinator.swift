@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import Foundation
 import Combine
 import os
@@ -57,7 +58,7 @@ public final class DirectoryWatchCoordinator: ObservableObject {
                 guard let self = self else { return }
                 if let cached = cached {
                     self.rootNode = cached
-                    Log.fileTree.info("Loaded cached tree for \(self.rootURL.lastPathComponent)")
+                    self.logger.info("Loaded cached tree for \(self.rootURL.lastPathComponent)")
                 }
                 self.fullSync()
             }
@@ -91,7 +92,7 @@ public final class DirectoryWatchCoordinator: ObservableObject {
                 self.rootNode = tree
                 self.isSyncing = false
                 self.onChangeCallback?()
-                Log.fileTree.info("Full sync complete for \(self.rootURL.lastPathComponent)")
+                self.logger.info("Full sync complete for \(self.rootURL.lastPathComponent)")
             }
 
             // Save cache on background queue (fire-and-forget)
@@ -124,7 +125,7 @@ public final class DirectoryWatchCoordinator: ObservableObject {
 
     /// Handles filesystem change events. Runs surgical updates on a background queue.
     private func handleChanges(_ paths: [String]) {
-        Log.fileTree.debug("FS changes: \(paths.count) path(s) in \(self.rootURL.lastPathComponent)")
+        logger.debug("FS changes: \(paths.count) path(s) in \(self.rootURL.lastPathComponent)")
         isSyncing = true
 
         guard let root = rootNode else {
@@ -189,4 +190,8 @@ public final class DirectoryWatchCoordinator: ObservableObject {
             }
         }
     }
+}
+
+extension DirectoryWatchCoordinator: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

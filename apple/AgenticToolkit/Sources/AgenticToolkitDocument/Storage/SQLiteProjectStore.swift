@@ -1,6 +1,8 @@
+import AgenticToolkitCore
 import AgenticToolkitFileBrowser
 import AgenticToolkitTerminalWindow
 import Foundation
+import OSLog
 import SQLite3
 
 /// Serializes and deserializes `Project` to/from SQLite3 database bytes.
@@ -58,7 +60,7 @@ public enum SQLiteProjectStore {
 
         sqlite3_close(db)
         let data = try Data(contentsOf: tempURL)
-        Log.document.info("Serialized project to SQLite: \(data.count) bytes")
+        logger.info("Serialized project to SQLite: \(data.count) bytes")
         return data
     }
 
@@ -108,11 +110,15 @@ public enum SQLiteProjectStore {
             }
         }
 
-        Log.document.info("Deserialized project '\(name)' from SQLite (v\(version), \(sessionRecords.count) sessions)")
+        logger.info("Deserialized project '\(name)' from SQLite (v\(version), \(sessionRecords.count) sessions)")
         var project = Project(name: name, version: version, createdDate: createdDate, settings: settings)
         project.sessionRecords = sessionRecords
         return project
     }
+}
+
+extension SQLiteProjectStore: Loggable {
+    public static nonisolated let logger = makeLogger()
 }
 
 // MARK: - ProjectSettings Key-Value Conversion

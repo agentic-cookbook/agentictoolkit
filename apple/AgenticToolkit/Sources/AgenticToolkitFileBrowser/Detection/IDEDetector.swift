@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import AppKit
 import Combine
 import Foundation
@@ -101,14 +102,14 @@ public final class IDEDetector: ObservableObject {
     /// Opens the given IDE project in its associated application.
     public static func open(project: IDEProject, rootURL: URL) {
         let targetURL = rootURL.appendingPathComponent(project.path)
-        Log.ide.info("Opening \(project.type.displayName, privacy: .public) project at \(targetURL.path, privacy: .public)")
+        logger.info("Opening \(project.type.displayName, privacy: .public) project at \(targetURL.path, privacy: .public)")
 
         if let bundleID = project.type.bundleIdentifier,
            let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             let config = NSWorkspace.OpenConfiguration()
             NSWorkspace.shared.open([targetURL], withApplicationAt: appURL, configuration: config) { _, error in
                 if let error = error {
-                    Log.ide.error("Failed to open \(project.type.displayName, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    logger.error("Failed to open \(project.type.displayName, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 }
             }
         } else {
@@ -128,9 +129,9 @@ public final class IDEDetector: ObservableObject {
                 guard let self = self else { return }
                 self.detectedIDEs = results
                 self.isDetecting = false
-                Log.ide.info("IDE detection complete: \(results.count) IDE(s) found in \(rootURL.lastPathComponent, privacy: .public)")
+                self.logger.info("IDE detection complete: \(results.count) IDE(s) found in \(rootURL.lastPathComponent, privacy: .public)")
                 for ide in results {
-                    Log.ide.debug("  Detected \(ide.type.displayName, privacy: .public): \(ide.path, privacy: .public)")
+                    self.logger.debug("  Detected \(ide.type.displayName, privacy: .public): \(ide.path, privacy: .public)")
                 }
             }
         }
@@ -275,4 +276,8 @@ public final class IDEDetector: ObservableObject {
         }
         return childPath
     }
+}
+
+extension IDEDetector: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

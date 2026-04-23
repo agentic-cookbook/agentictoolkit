@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import Foundation
 import CoreServices
 import os
@@ -48,13 +49,13 @@ public final class FileSystemWatcher: @unchecked Sendable {
         )
 
         guard let stream = streamRef else {
-            Log.fileTree.error("Failed to create FSEvent stream for \(self.rootPath)")
+            logger.error("Failed to create FSEvent stream for \(self.rootPath)")
             return
         }
 
         FSEventStreamSetDispatchQueue(stream, queue)
         FSEventStreamStart(stream)
-        Log.fileTree.info("Started file system watcher for \(self.rootPath, privacy: .public)")
+        logger.info("Started file system watcher for \(self.rootPath, privacy: .public)")
     }
 
     public func stop() {
@@ -63,8 +64,12 @@ public final class FileSystemWatcher: @unchecked Sendable {
         FSEventStreamInvalidate(stream)
         FSEventStreamRelease(stream)
         streamRef = nil
-        Log.fileTree.info("Stopped file system watcher")
+        logger.info("Stopped file system watcher")
     }
 
     deinit { stop() }
+}
+
+extension FileSystemWatcher: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

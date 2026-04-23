@@ -1,4 +1,6 @@
+import AgenticToolkitCore
 import Foundation
+import OSLog
 import SQLite3
 
 /// Manages the SQLite database connection and provides CRUD operations for all tables.
@@ -25,7 +27,7 @@ final class DatabaseManager {
         }
         try openDatabase()
         try runMigrations()
-        Log.database.info("Database ready at \(self.dbPath, privacy: .public)")
+        logger.info("Database ready at \(self.dbPath, privacy: .public)")
     }
 
     deinit {
@@ -53,7 +55,7 @@ final class DatabaseManager {
     // MARK: - Connection
 
     private func openDatabase() throws {
-        Log.database.debug("Opening database at \(self.dbPath, privacy: .public)")
+        logger.debug("Opening database at \(self.dbPath, privacy: .public)")
         // Use FULLMUTEX (serialized mode) so SQLite handles thread-safety internally.
         // This allows concurrent access from the summarizer, liveness monitor, and ingestion.
         let result = sqlite3_open_v2(
@@ -63,7 +65,7 @@ final class DatabaseManager {
         )
         guard result == SQLITE_OK else {
             let message = String(cString: sqlite3_errmsg(db))
-            Log.database.error("Failed to open database: \(message, privacy: .public)")
+            logger.error("Failed to open database: \(message, privacy: .public)")
             throw DatabaseError.openFailed(message)
         }
 
@@ -71,14 +73,14 @@ final class DatabaseManager {
         try execute("PRAGMA journal_mode=WAL")
         // Enable foreign keys
         try execute("PRAGMA foreign_keys=ON")
-        Log.database.debug("Database opened — WAL mode, serialized threading")
+        logger.debug("Database opened — WAL mode, serialized threading")
     }
 
     func close() {
         if let db = db {
             sqlite3_close(db)
             self.db = nil
-            Log.database.info("Database connection closed")
+            logger.info("Database connection closed")
         }
     }
 
@@ -94,24 +96,24 @@ final class DatabaseManager {
         """)
 
         let currentVersion = try schemaVersion()
-        Log.database.debug("Current schema version: \(currentVersion)")
+        logger.debug("Current schema version: \(currentVersion)")
 
         if currentVersion < 1 {
-            Log.database.info("Running migration 001: create tables")
+            logger.info("Running migration 001: create tables")
             try migration001_createTables()
-            Log.database.info("Migration 001 complete")
+            logger.info("Migration 001 complete")
         }
 
         if currentVersion < 2 {
-            Log.database.info("Running migration 002: add session metadata")
+            logger.info("Running migration 002: add session metadata")
             try migration002_addSessionMetadata()
-            Log.database.info("Migration 002 complete")
+            logger.info("Migration 002 complete")
         }
 
         if currentVersion < 3 {
-            Log.database.info("Running migration 003: add process info")
+            logger.info("Running migration 003: add process info")
             try migration003_addProcessInfo()
-            Log.database.info("Migration 003 complete")
+            logger.info("Migration 003 complete")
         }
     }
 
@@ -210,7 +212,7 @@ final class DatabaseManager {
         if result != SQLITE_OK {
             let message = errorMessage.map { String(cString: $0) } ?? "Unknown error"
             sqlite3_free(errorMessage)
-            Log.database.error("SQL execution failed: \(message, privacy: .public)")
+            logger.error("SQL execution failed: \(message, privacy: .public)")
             throw DatabaseError.executionFailed(message)
         }
         return result
@@ -262,11 +264,11 @@ final class DatabaseManager {
         sqlite3_bind_text(stmt, 11, (session.termProgram as NSString).utf8String, -1, nil)
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
-            Log.database.error("Upsert session failed for \(session.sessionId, privacy: .public): \(self.lastErrorMessage, privacy: .public)")
+            logger.error("Upsert session failed for \(session.sessionId, privacy: .public): \(self.lastErrorMessage, privacy: .public)")
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
 
-        Log.database.debug("Upserted session \(session.sessionId, privacy: .public) status=\(session.status.rawValue, privacy: .public)")
+        logger.debug("Upserted session \(session.sessionId, privacy: .public) status=\(session.status.rawValue, privacy: .public)")
 
         // Return the session with its database ID
         if let fetched = try _fetchSession(bySessionId: session.sessionId) {
@@ -333,7 +335,7 @@ final class DatabaseManager {
 
     /// Updates the status of a session.
     func updateSessionStatus(sessionId: String, status: SessionStatus) throws {
-        Log.database.debug("Updating session \(sessionId, privacy: .public) → \(status.rawValue, privacy: .public)")
+        logger.debug("Updating session \(sessionId, privacy: .public) → \(status.rawValue, privacy: .public)")
         let sql = "UPDATE sessions SET status = ?, last_activity_at = datetime('now') WHERE session_id = ?"
 
         var stmt: OpaquePointer?
@@ -391,7 +393,7 @@ final class DatabaseManager {
 
     /// Deletes a session and all its associated events.
     func deleteSession(sessionId: String) throws {
-        Log.database.info("Deleting session \(sessionId, privacy: .public) and its events")
+        logger.info("Deleting session \(sessionId, privacy: .public) and its events")
         // Delete events first (foreign key dependency)
         let deleteEventsSql = "DELETE FROM events WHERE session_id = ?"
         var evtStmt: OpaquePointer?
@@ -491,7 +493,7 @@ final class DatabaseManager {
         }
         let count = Int(sqlite3_changes(db))
         if count > 0 {
-            Log.database.debug("Marked \(count) session(s) as stale (timeout: \(Int(seconds))s)")
+            logger.debug("Marked \(count) session(s) as stale (timeout: \(Int(seconds))s)")
         }
         return count
     }
@@ -757,4 +759,8 @@ final class DatabaseManager {
         }
         return columns
     }
+}
+
+extension DatabaseManager: Loggable {
+    static nonisolated let logger = makeLogger()
 }

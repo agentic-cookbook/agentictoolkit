@@ -3,6 +3,7 @@ import AgenticToolkitAIPlugins
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitSettingsWindow
+import OSLog
 
 /// Test-app Settings window controller. Subclasses the toolkit base to
 /// compose the panels visible in this app — host-owned (appearance,
@@ -24,7 +25,7 @@ final class AppSettingsWindowController: SettingsWindowController {
     override func makeSettingsPanels() -> [SettingsPanelViewController] {
         ensureViewModel()
         guard let pm = pluginManager else {
-            Log.app.error("Cannot show settings without plugin manager")
+            logger.error("Cannot show settings without plugin manager")
             return []
         }
 
@@ -47,4 +48,8 @@ final class AppSettingsWindowController: SettingsWindowController {
             launchAtLoginManager: launchAtLoginManager
         )
     }
+}
+
+extension AppSettingsWindowController: Loggable {
+    static nonisolated let logger = makeLogger()
 }

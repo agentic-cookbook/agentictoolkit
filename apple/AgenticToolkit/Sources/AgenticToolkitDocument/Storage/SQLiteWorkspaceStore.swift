@@ -1,5 +1,7 @@
+import AgenticToolkitCore
 import AgenticToolkitFileBrowser
 import Foundation
+import OSLog
 import SQLite3
 
 /// Serializes and deserializes `Workspace` to/from SQLite3 database bytes.
@@ -63,7 +65,7 @@ public enum SQLiteWorkspaceStore {
 
         sqlite3_close(db)
         let data = try Data(contentsOf: tempURL)
-        Log.workspace.info("Serialized workspace to SQLite: \(data.count) bytes")
+        logger.info("Serialized workspace to SQLite: \(data.count) bytes")
         return data
     }
 
@@ -116,7 +118,11 @@ public enum SQLiteWorkspaceStore {
             settings.sidebarProportion = sp
         }
 
-        Log.workspace.info("Deserialized workspace '\(name)' from SQLite (v\(version)), \(entries.count) entries")
+        logger.info("Deserialized workspace '\(name)' from SQLite (v\(version)), \(entries.count) entries")
         return Workspace(name: name, version: version, createdDate: createdDate, entries: entries, discoveredProjects: discovered, settings: settings)
     }
+}
+
+extension SQLiteWorkspaceStore: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

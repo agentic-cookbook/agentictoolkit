@@ -1,4 +1,6 @@
+import AgenticToolkitCore
 import Foundation
+import OSLog
 import UserNotifications
 
 /// Protocol abstracting UNUserNotificationCenter for testability.
@@ -71,9 +73,9 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
             Task { @MainActor [weak self] in
                 self?.isAuthorized = granted
                 if let error = error {
-                    Log.notifications.error("Authorization error: \(error.localizedDescription, privacy: .public)")
+                    Self.logger.error("Authorization error: \(error.localizedDescription, privacy: .public)")
                 } else {
-                    Log.notifications.info("Authorization \(granted ? "granted" : "denied", privacy: .public)")
+                    Self.logger.info("Authorization \(granted ? "granted" : "denied", privacy: .public)")
                 }
             }
         }
@@ -183,7 +185,7 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         // Bring the floating window to the front
-        Log.notifications.debug("User clicked notification")
+        logger.debug("User clicked notification")
         DispatchQueue.main.async { [weak self] in
             self?.onNotificationClicked?()
         }
@@ -203,14 +205,14 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
                 return value == "true"
             }
         } catch {
-            Log.notifications.warning("Failed to read setting '\(key, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to read setting '\(key, privacy: .public)': \(error.localizedDescription, privacy: .public)")
         }
         return false
     }
 
     /// Posts a notification request with the given identifier and content.
     private func postNotification(identifier: String, content: UNNotificationContent) {
-        Log.notifications.debug("Posting notification: \(identifier, privacy: .public) — \(content.title, privacy: .public)")
+        logger.debug("Posting notification: \(identifier, privacy: .public) — \(content.title, privacy: .public)")
         let request = UNNotificationRequest(
             identifier: identifier,
             content: content,
@@ -219,7 +221,7 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
 
         notificationCenter.add(request, withCompletionHandler: { error in
             if let error = error {
-                Log.notifications.error("Failed to post notification '\(identifier, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+                Self.logger.error("Failed to post notification '\(identifier, privacy: .public)': \(error.localizedDescription, privacy: .public)")
             }
         })
     }
@@ -231,4 +233,8 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
         }
         return sessionId
     }
+}
+
+extension NotificationManager: Loggable {
+    static nonisolated let logger = makeLogger()
 }

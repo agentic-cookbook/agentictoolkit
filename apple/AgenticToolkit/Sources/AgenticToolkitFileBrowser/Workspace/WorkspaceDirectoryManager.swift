@@ -1,3 +1,4 @@
+import AgenticToolkitCore
 import Combine
 import Foundation
 import os
@@ -153,7 +154,7 @@ public final class WorkspaceDirectoryManager: ObservableObject {
 
                 self.onDiscoveryChanged?(entryID, capturedFound)
 
-                Log.workspace.info("Discovered \(capturedFound.count) project(s) in entry \(entryID)")
+                self.logger.info("Discovered \(capturedFound.count) project(s) in entry \(entryID)")
             }
         }
     }
@@ -206,4 +207,8 @@ public final class WorkspaceDirectoryManager: ObservableObject {
     private func updateSyncingState() {
         isSyncing = coordinators.values.contains { $0.isSyncing }
     }
+}
+
+extension WorkspaceDirectoryManager: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

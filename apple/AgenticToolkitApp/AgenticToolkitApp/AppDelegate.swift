@@ -5,6 +5,7 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitChatWindow
 import AgenticToolkitSettingsWindow
+import OSLog
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -25,7 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - App Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Log.app.info("AgenticPluginTester launching")
+        logger.info("AgenticPluginTester launching")
 
         // Register window specs
         registerWindowSpecs()
@@ -47,15 +48,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.setupNotifications()
             self.setupIngestion()
             self.setupLivenessMonitor()
-            Log.app.info("AgenticPluginTester launch complete — all subsystems initialized")
+            logger.info("AgenticPluginTester launch complete — all subsystems initialized")
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        Log.app.info("AgenticPluginTester terminating")
+        logger.info("AgenticPluginTester terminating")
         livenessMonitor?.stop()
         ingestionManager?.stop()
-        Log.app.info("AgenticPluginTester shutdown complete")
+        logger.info("AgenticPluginTester shutdown complete")
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
@@ -86,9 +87,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupDatabase() {
         do {
             databaseManager = try DatabaseManager()
-            Log.app.info("Database initialized")
+            logger.info("Database initialized")
         } catch {
-            Log.app.error("Failed to initialize database: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to initialize database: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -96,7 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupAfterDatabase() {
         guard let db = databaseManager else {
-            Log.app.warning("Cannot setup — no database")
+            logger.warning("Cannot setup — no database")
             return
         }
 
@@ -105,7 +106,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // No plugins registered for now — per-plugin registration is pending.
         pm.discoverPlugins()
         self.pluginManager = pm
-        Log.app.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
+        logger.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
 
         // Configure the standalone settings window
         settingsWindowController.configure(databaseManager: db, pluginManager: pm)
@@ -118,7 +119,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Show the AI chat window on launch
         aiChatWindowController.showWindow()
 
-        Log.app.debug("Post-database setup complete")
+        logger.debug("Post-database setup complete")
     }
 
     // MARK: - Hooks
@@ -132,11 +133,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let result = installer.installHooks()
         switch result {
         case .installed:
-            Log.app.info("Hooks installed successfully")
+            logger.info("Hooks installed successfully")
         case .alreadyInstalled:
-            Log.app.info("Hooks already installed")
+            logger.info("Hooks already installed")
         case .failed(let error):
-            Log.app.error("Hook installation failed: \(error, privacy: .public)")
+            logger.error("Hook installation failed: \(error, privacy: .public)")
         }
     }
 
@@ -144,20 +145,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupNotifications() {
         guard let db = databaseManager else {
-            Log.app.warning("Cannot setup notifications — no database")
+            logger.warning("Cannot setup notifications — no database")
             return
         }
 
         notificationManager = NotificationManager(databaseManager: db)
         notificationManager?.requestAuthorization()
-        Log.app.debug("Notification manager configured")
+        logger.debug("Notification manager configured")
     }
 
     // MARK: - Ingestion
 
     private func setupIngestion() {
         guard let db = databaseManager else {
-            Log.app.warning("Cannot start ingestion — no database")
+            logger.warning("Cannot start ingestion — no database")
             return
         }
 
@@ -179,7 +180,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try ingestionManager?.start()
         } catch {
-            Log.app.error("Failed to start event ingestion: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to start event ingestion: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -187,7 +188,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupLivenessMonitor() {
         guard let db = databaseManager else {
-            Log.app.warning("Cannot start liveness monitor — no database")
+            logger.warning("Cannot start liveness monitor — no database")
             return
         }
 
@@ -327,28 +328,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quitItem)
 
         statusItem.menu = menu
-        Log.app.debug("Menu bar configured")
+        logger.debug("Menu bar configured")
     }
 
     // MARK: - Menu Actions
 
     @objc private func openSettings() {
-        Log.ui.debug("Menu action: Settings")
+        logger.debug("Menu action: Settings")
         settingsWindowController.showWindow()
     }
 
     @objc private func showAIChat() {
-        Log.ui.debug("Menu action: AI Chat")
+        logger.debug("Menu action: AI Chat")
         aiChatWindowController.showWindow()
     }
 
     @objc private func testWindowActivation() {
-        Log.ui.debug("Menu action: Test Window Activation")
+        logger.debug("Menu action: Test Window Activation")
         guard let db = databaseManager else { return }
 
         // Build activation targets from live sessions.
         guard let sessions = try? db.fetchAllSessions() else {
-            Log.ui.error("Failed to fetch sessions for activation test")
+            logger.error("Failed to fetch sessions for activation test")
             return
         }
         let targets = sessions
@@ -372,16 +373,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 if let logPath {
                     NSWorkspace.shared.open(URL(fileURLWithPath: logPath))
-                    Log.ui.info("Activation test complete — log at \(logPath)")
+                    Self.logger.info("Activation test complete — log at \(logPath)")
                 } else {
-                    Log.ui.info("Activation test complete — log was in-memory only")
+                    Self.logger.info("Activation test complete — log was in-memory only")
                 }
             }
         }
     }
 
     @objc private func quitApp() {
-        Log.app.info("Menu action: Quit")
+        logger.info("Menu action: Quit")
         NSApplication.shared.terminate(nil)
     }
 
@@ -398,6 +399,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         default:
             NSApp.appearance = nil
         }
-        Log.app.info("Appearance mode: \(mode, privacy: .public)")
+        logger.info("Appearance mode: \(mode, privacy: .public)")
     }
+}
+
+extension AppDelegate: Loggable {
+    static nonisolated let logger = makeLogger()
 }
