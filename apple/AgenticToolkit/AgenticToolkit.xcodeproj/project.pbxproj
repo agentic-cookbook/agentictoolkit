@@ -1847,8 +1847,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = ED6B4A0D97F331B23F4B3844 /* Build configuration list for PBXProject "AgenticToolkit" */;
 			developmentRegion = en;
