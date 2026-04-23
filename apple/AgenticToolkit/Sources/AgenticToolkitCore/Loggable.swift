@@ -51,10 +51,29 @@ extension Loggable {
 /// Loggable usage
 /// - for any type that logs using Swift's OSLog / Logger create an extension that conforms to Loggable instead of using Loggers scoped to an enum, struct, or class.
 /// - to conform to Loggable for each type, ONLY conform to Loggable in an extension.
-/// For example:
+/// - Loggable defaults subsystem to Bundle.main.bundleIdentifier and category to th type name. Every conformer uses those defaults — no overrides.
+
+/// Example conformance
 
 extension YourType: Loggable {
    public static nonisolated let logger = makeLogger()
+}
+
+/// - prefer using the instance llogger var over the static logger var, unless necessary
+
+struct CorrectUsageExample {
+    
+    func myFunc() {
+        logger.info("my func!")
+    }
+
+    static func myStaticFunc() {
+        logger.info("my static func")
+    }
+}
+
+extension CorrectUsageExample: Loggable {
+    public static nonisolated let logger = makeLogger()
 }
 
 /// Scoping notes:
