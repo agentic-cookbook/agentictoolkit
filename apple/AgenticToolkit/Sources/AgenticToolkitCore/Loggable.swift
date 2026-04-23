@@ -8,6 +8,8 @@
 import Foundation
 import OSLog
 
+
+
 /// Mix this into any struct or class like this
 /*
  struct MyStruct {
@@ -15,7 +17,7 @@ import OSLog
  }
  
  extension MyStruct: Loggable {
-    public static let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
  }
  */
 public protocol Loggable {
@@ -42,3 +44,80 @@ extension Loggable {
         Logger(subsystem: self.subsystem, category: self.category)
     }
 }
+
+#if false
+ 
+    /// LLM Instrructions
+    /// - for any type that logs using Swift's OSLog / Logger create an extension that conforms to Loggable instead of using Loggers scoped to an enum, struct, or class.
+    /// - to conform to Loggable for each type, ONLY conform to Loggable in an extension.
+    /// For example:
+ 
+    /*
+    extension YourType: Loggable {
+       public static nonisolated let logger = makeLogger()
+    }
+    */
+
+    /// Scoping notes:
+    /// if one type calls into another type's Logger, add an extension to both types. This automatically makes specific logging categories in the logs.
+   
+    /// Incorrect Examples:
+
+     struct IncorrectScopingExample {
+         func something() {
+             logger.info("parent")
+         }
+
+         struct IncorrectScopingEnclosedTypeExample {
+             func somethingElse() {
+                 // this type should have it's own Loggable extension
+                 IncorrectScopingExample.logger.info("parent")
+             }
+         }
+     }
+
+     struct IncorrectSiblingScopingExample {
+         func something() {
+             // this type should have it's own Loggable extension
+             IncorrectScopingExample.logger.info("parent")
+         }
+     }
+
+     extension IncorrectScopingExample: Loggable {
+         public static nonisolated let logger = makeLogger()
+     }
+
+    /// Correct: Examples
+
+     struct CorrectScopingExample {
+         func something() {
+             logger.info("parent")
+         }
+
+         struct CorrectScopingEnclosedTypeExample {
+             func somethingElse() {
+                 logger.info("parent")
+             }
+         }
+     }
+
+     struct CorrectSiblingScopingExample {
+         func something() {
+             logger.info("parent")
+         }
+     }
+
+     extension CorrectScopingExample: Loggable {
+         public static nonisolated let logger = makeLogger()
+     }
+
+     extension CorrectScopingExample.CorrectScopingEnclosedTypeExample: Loggable {
+         public static nonisolated let logger = makeLogger()
+     }
+
+     extension CorrectSiblingScopingExample: Loggable {
+         public static nonisolated let logger = makeLogger()
+     }
+
+
+#endif
