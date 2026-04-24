@@ -1,5 +1,6 @@
 import Foundation
 import os
+import AgenticToolkitCore
 
 public struct FileTreeCacheEntry: Codable, Sendable {
     public let path: String

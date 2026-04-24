@@ -11,7 +11,7 @@ import OSLog
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
-    private var databaseManager: DatabaseManager?
+    private var sessionsDatabaseManager: SessionsDatabaseManager?
     private var pluginManager: AIPluginManager?
     private var ingestionManager: EventIngestionManager?
     private var hookInstaller: HookInstaller?
@@ -86,7 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupDatabase() {
         do {
-            databaseManager = try DatabaseManager()
+            sessionsDatabaseManager = try SessionsDatabaseManager()
             logger.info("Database initialized")
         } catch {
             logger.error("Failed to initialize database: \(error.localizedDescription, privacy: .public)")
@@ -96,7 +96,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Post-Database Setup
 
     private func setupAfterDatabase() {
-        guard let db = databaseManager else {
+        guard let db = sessionsDatabaseManager else {
             logger.warning("Cannot setup — no database")
             return
         }
@@ -109,7 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         logger.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
 
         // Configure the standalone settings window
-        settingsWindowController.configure(databaseManager: db, pluginManager: pm)
+        settingsWindowController.configure(SessionsDatabaseManager: db, pluginManager: pm)
 
         // Apply saved appearance mode
         if let mode = try? db.getSetting(key: SettingsViewModel.appearanceModeKey) {
@@ -144,12 +144,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Notifications
 
     private func setupNotifications() {
-        guard let db = databaseManager else {
+        guard let db = sessionsDatabaseManager else {
             logger.warning("Cannot setup notifications — no database")
             return
         }
 
-        notificationManager = NotificationManager(databaseManager: db)
+        notificationManager = NotificationManager(SessionsDatabaseManager: db)
         notificationManager?.requestAuthorization()
         logger.debug("Notification manager configured")
     }
@@ -157,12 +157,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Ingestion
 
     private func setupIngestion() {
-        guard let db = databaseManager else {
+        guard let db = sessionsDatabaseManager else {
             logger.warning("Cannot start ingestion — no database")
             return
         }
 
-        ingestionManager = EventIngestionManager(databaseManager: db)
+        ingestionManager = EventIngestionManager(SessionsDatabaseManager: db)
 
         // Wire per-event callback for notifications
         ingestionManager?.onEventIngested = { [weak self] eventType, sessionId, projectName in
@@ -187,12 +187,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Liveness Monitor
 
     private func setupLivenessMonitor() {
-        guard let db = databaseManager else {
+        guard let db = sessionsDatabaseManager else {
             logger.warning("Cannot start liveness monitor — no database")
             return
         }
 
-        livenessMonitor = SessionLivenessMonitor(databaseManager: db)
+        livenessMonitor = SessionLivenessMonitor(SessionsDatabaseManager: db)
 
         // Wire per-session stale callback for notifications
         livenessMonitor?.onSessionMarkedStale = { [weak self] sessionId, projectName in
@@ -345,7 +345,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func testWindowActivation() {
         logger.debug("Menu action: Test Window Activation")
-        guard let db = databaseManager else { return }
+        guard let db = sessionsDatabaseManager else { return }
 
         // Build activation targets from live sessions.
         guard let sessions = try? db.fetchAllSessions() else {

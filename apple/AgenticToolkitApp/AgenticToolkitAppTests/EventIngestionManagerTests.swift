@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class EventIngestionManagerTests: XCTestCase {
 
-    private var dbManager: DatabaseManager!
+    private var dbManager: SessionsDatabaseManager!
     private var ingestionManager: EventIngestionManager!
     private var tempDir: URL!
     private var dropDir: URL!
@@ -15,14 +15,14 @@ final class EventIngestionManagerTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try DatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
 
         dropDir = tempDir.appendingPathComponent("session-events")
         try FileManager.default.createDirectory(at: dropDir, withIntermediateDirectories: true)
 
         ingestionManager = EventIngestionManager(
             dropDirectoryURL: dropDir,
-            databaseManager: dbManager
+            SessionsDatabaseManager: dbManager
         )
     }
 
@@ -77,7 +77,7 @@ final class EventIngestionManagerTests: XCTestCase {
         let freshDropDir = tempDir.appendingPathComponent("new-events")
         let manager = EventIngestionManager(
             dropDirectoryURL: freshDropDir,
-            databaseManager: dbManager
+            SessionsDatabaseManager: dbManager
         )
 
         try manager.ensureDirectoriesExist()
@@ -564,7 +564,7 @@ final class EventIngestionManagerTests: XCTestCase {
 
         let manager = EventIngestionManager(
             dropDirectoryURL: freshDropDir,
-            databaseManager: dbManager
+            SessionsDatabaseManager: dbManager
         )
 
         // Put a file in before starting

@@ -11,12 +11,12 @@ import OSLog
 @MainActor
 final class AppSettingsWindowController: SettingsWindowController {
 
-    private var databaseManager: DatabaseManager?
+    private var SessionsDatabaseManager: SessionsDatabaseManager?
     private var pluginManager: AIPluginManager?
     private(set) var viewModel: SettingsViewModel?
 
-    func configure(databaseManager: DatabaseManager, pluginManager: AIPluginManager) {
-        self.databaseManager = databaseManager
+    func configure(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager) {
+        self.SessionsDatabaseManager = SessionsDatabaseManager
         self.pluginManager = pluginManager
     }
 
@@ -40,10 +40,10 @@ final class AppSettingsWindowController: SettingsWindowController {
     }
 
     private func ensureViewModel() {
-        guard viewModel == nil, let db = databaseManager, let pm = pluginManager else { return }
-        let launchAtLoginManager = LaunchAtLoginManager(databaseManager: db)
+        guard viewModel == nil, let db = SessionsDatabaseManager, let pm = pluginManager else { return }
+        let launchAtLoginManager = LaunchAtLoginManager(SessionsDatabaseManager: db)
         viewModel = SettingsViewModel(
-            databaseManager: db,
+            SessionsDatabaseManager: db,
             pluginManager: pm,
             launchAtLoginManager: launchAtLoginManager
         )

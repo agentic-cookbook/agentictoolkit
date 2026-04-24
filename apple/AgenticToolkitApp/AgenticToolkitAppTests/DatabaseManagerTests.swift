@@ -4,14 +4,14 @@ import XCTest
 @MainActor
 final class DatabaseManagerTests: XCTestCase {
 
-    private var dbManager: DatabaseManager!
+    private var dbManager: SessionsDatabaseManager!
     private var tempDir: URL!
 
     override func setUpWithError() throws {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try DatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
     }
 
     override func tearDownWithError() throws {
@@ -309,7 +309,7 @@ final class DatabaseManagerTests: XCTestCase {
         // Close and reopen with same path
         let dbPath = tempDir.appendingPathComponent("test.db").path
         dbManager.close()
-        dbManager = try DatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
 
         let tables = try dbManager.tableNames()
         // Count occurrences of each table name -- should have no duplicates

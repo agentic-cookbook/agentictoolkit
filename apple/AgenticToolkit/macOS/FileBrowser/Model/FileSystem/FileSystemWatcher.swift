@@ -1,6 +1,9 @@
 import Foundation
 import CoreServices
 import os
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
 public final class FileSystemWatcher: @unchecked Sendable {
     public typealias ChangeHandler = @Sendable (_ changedPaths: [String]) -> Void

@@ -1,23 +1,26 @@
 import AppKit
 import AgenticToolkitCore
 import os
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
-/// Lifecycle callbacks for a `TerminalWindowController`. Apps own the
+/// Lifecycle callbacks for a `TerminalSessionWindowController`. Apps own the
 /// lifecycle of terminal windows; the controller notifies the delegate
 /// when its window is closing so the app can remove its reference.
 @MainActor
-public protocol TerminalWindowLifecycleDelegate: AnyObject {
-    func terminalWindowWillClose(_ controller: TerminalWindowController)
+public protocol TerminalSessionWindowLifecycleDelegate: AnyObject {
+    func terminalWindowWillClose(_ controller: TerminalSessionWindowController)
 }
 
 /// Manages a single terminal window with its own session list.
 @MainActor
-public final class TerminalWindowController: SingleWindowController {
+public final class TerminalSessionWindowController: SingleWindowController {
 
     public let sessionManager = TerminalSessionManager()
-    public weak var lifecycleDelegate: TerminalWindowLifecycleDelegate?
+    public weak var lifecycleDelegate: TerminalSessionWindowLifecycleDelegate?
 
-    private var splitVC: TerminalSplitViewController?
+    private var splitVC: TerminalSessionSplitViewController?
 
     public init() {
         super.init(windowID: "terminal")
@@ -34,7 +37,7 @@ public final class TerminalWindowController: SingleWindowController {
     }
 
     public override func makeContentViewController() -> NSViewController? {
-        let svc = TerminalSplitViewController(sessionManager: sessionManager)
+        let svc = TerminalSessionSplitViewController(sessionManager: sessionManager)
         splitVC = svc
         return svc
     }
@@ -57,6 +60,6 @@ public final class TerminalWindowController: SingleWindowController {
     }
 }
 
-extension TerminalWindowController: Loggable {
+extension TerminalSessionWindowController: Loggable {
     public static nonisolated let logger = makeLogger()
 }

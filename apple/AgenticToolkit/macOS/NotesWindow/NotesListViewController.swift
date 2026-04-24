@@ -1,8 +1,8 @@
 import AppKit
 
 @MainActor public protocol NotesListViewControllerDelegate: AnyObject {
-    func notesListDidSelectNote(_ note: Note?)
-    func notesListDidRequestNewNote()
+    public func notesListDidSelectNote(_ note: Note?)
+    public func notesListDidRequestNewNote()
 }
 
 public final class NotesListViewController: NSViewController {
@@ -143,7 +143,7 @@ public final class NotesListViewController: NSViewController {
 
 // MARK: - NSSearchFieldDelegate
 
-extension NotesListViewController: NSSearchFieldDelegate {
+public extension NotesListViewController: NSSearchFieldDelegate {
     public func controlTextDidChange(_ obj: Notification) {
         applySearch()
     }
@@ -151,7 +151,7 @@ extension NotesListViewController: NSSearchFieldDelegate {
 
 // MARK: - NSTableViewDataSource
 
-extension NotesListViewController: NSTableViewDataSource {
+public extension NotesListViewController: NSTableViewDataSource {
     public func numberOfRows(in tableView: NSTableView) -> Int {
         filteredNotes.count
     }
@@ -159,7 +159,7 @@ extension NotesListViewController: NSTableViewDataSource {
 
 // MARK: - NSTableViewDelegate
 
-extension NotesListViewController: NSTableViewDelegate {
+public extension NotesListViewController: NSTableViewDelegate {
 
     public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 60 }
 
@@ -184,7 +184,7 @@ extension NotesListViewController: NSTableViewDelegate {
 
 // MARK: - NoteListCellView
 
-final class NoteListCellView: NSTableCellView {
+public final class NoteListCellView: NSTableCellView {
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
@@ -197,13 +197,13 @@ final class NoteListCellView: NSTableCellView {
     private let dateLabel = NSTextField(labelWithString: "")
     private let previewLabel = NSTextField(labelWithString: "")
 
-    init(identifier: NSUserInterfaceItemIdentifier) {
+    public init(identifier: NSUserInterfaceItemIdentifier) {
         super.init(frame: .zero)
         self.identifier = identifier
         setupViews()
     }
 
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     private func setupViews() {
         titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
@@ -248,7 +248,7 @@ final class NoteListCellView: NSTableCellView {
         ])
     }
 
-    func configure(with note: Note) {
+    public func configure(with note: Note) {
         titleLabel.stringValue = note.title
         dateLabel.stringValue = Self.relativeFormatter.localizedString(for: note.modifiedDate, relativeTo: Date())
         let preview = note.content

@@ -8,7 +8,7 @@ import UserNotifications
 @MainActor
 final class NotificationManagerTests: XCTestCase {
 
-    private var databaseManager: DatabaseManager!
+    private var SessionsDatabaseManager: SessionsDatabaseManager!
     private var notificationManager: NotificationManager!
     private var mockCenter: MockNotificationCenter!
     private var tempDBPath: String!
@@ -25,7 +25,7 @@ final class NotificationManagerTests: XCTestCase {
     }
 
     override func tearDown() {
-        databaseManager?.close()
+        SessionsDatabaseManager?.close()
         if let path = tempDBPath {
             try? FileManager.default.removeItem(atPath: path)
         }
@@ -107,7 +107,7 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotificationDisabledWhenSettingIsFalse() throws {
         setAuthorized(true)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionStartKey,
             value: "false"
         )
@@ -120,7 +120,7 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotificationDisabledWhenNotAuthorized() throws {
         setAuthorized(false)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionStartKey,
             value: "true"
         )
@@ -138,7 +138,7 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotifySessionStartPostsNotification() throws {
         setAuthorized(true)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionStartKey,
             value: "true"
         )
@@ -176,7 +176,7 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotifySessionStartSkippedWhenDisabled() throws {
         setAuthorized(true)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionStartKey,
             value: "false"
         )
@@ -193,7 +193,7 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotifySessionEndPostsNotification() throws {
         setAuthorized(true)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionEndKey,
             value: "true"
         )
@@ -230,7 +230,7 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotifySessionStalePostsNotification() throws {
         setAuthorized(true)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifyStaleKey,
             value: "true"
         )
@@ -336,11 +336,11 @@ final class NotificationManagerTests: XCTestCase {
 
     func testNotificationIdentifiersAreUnique() throws {
         setAuthorized(true)
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionStartKey,
             value: "true"
         )
-        try databaseManager.setSetting(
+        try SessionsDatabaseManager.setSetting(
             key: SettingsViewModel.notifySessionEndKey,
             value: "true"
         )

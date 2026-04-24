@@ -81,13 +81,13 @@ public enum CustomFileTypeMappings {
 
 /// A read-only display entry for a built-in language from CodeEditLanguages.
 private struct BuiltInFileType: Identifiable {
-    let id: String
-    let fileExtension: String
-    let languageName: String
-    let iconName: String
+    public let id: String
+    public let fileExtension: String
+    public let languageName: String
+    public let iconName: String
 
     /// Derives built-in entries from CodeEditLanguages definitions.
-    static func allBuiltIn() -> [BuiltInFileType] {
+    public static func allBuiltIn() -> [BuiltInFileType] {
         var entries: [BuiltInFileType] = []
         for lang in CodeLanguage.allLanguages {
             for ext in lang.extensions.sorted() {
@@ -263,12 +263,12 @@ public struct FileTypesSettingsView: View {
 
 /// A single row displaying a file type's extension, language name, and icon.
 private struct FileTypeRow: View {
-    let fileExtension: String
-    let languageName: String
-    let iconName: String
-    let isCustom: Bool
+    public let fileExtension: String
+    public let languageName: String
+    public let iconName: String
+    public let isCustom: Bool
 
-    var body: some View {
+    public var body: some View {
         HStack(spacing: 12) {
             Image(systemName: iconName)
                 .frame(width: 20)
@@ -301,8 +301,8 @@ private struct FileTypeRow: View {
 
 /// Sheet for adding a new custom file type mapping.
 private struct AddCustomFileTypeSheet: View {
-    let existingExtensions: Set<String>
-    let onSave: (CustomFileTypeMapping) -> Void
+    public let existingExtensions: Set<String>
+    public let onSave: (CustomFileTypeMapping) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var fileExtension = ""
@@ -338,7 +338,7 @@ private struct AddCustomFileTypeSheet: View {
         return !ext.isEmpty && existingExtensions.contains(ext)
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 0) {
             Text("Add Custom File Type")
                 .font(.headline)

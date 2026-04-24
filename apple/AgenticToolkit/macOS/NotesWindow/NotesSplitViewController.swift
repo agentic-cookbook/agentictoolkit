@@ -19,7 +19,7 @@ public final class NotesSplitViewController: NSSplitViewController {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     // MARK: - Lifecycle
 
@@ -64,7 +64,7 @@ public final class NotesSplitViewController: NSSplitViewController {
 
 // MARK: - NotesListViewControllerDelegate
 
-extension NotesSplitViewController: NotesListViewControllerDelegate {
+public extension NotesSplitViewController: NotesListViewControllerDelegate {
 
     public func notesListDidSelectNote(_ note: Note?) {
         editorVC.show(note: note)
@@ -82,7 +82,7 @@ extension NotesSplitViewController: NotesListViewControllerDelegate {
 
 // MARK: - NoteEditorViewControllerDelegate
 
-extension NotesSplitViewController: NoteEditorViewControllerDelegate {
+public extension NotesSplitViewController: NoteEditorViewControllerDelegate {
 
     public func noteEditorDidChangeTitle(_ title: String, for noteID: UUID) {
         guard let note = notesManager.notes.first(where: { $0.id == noteID }) else { return }

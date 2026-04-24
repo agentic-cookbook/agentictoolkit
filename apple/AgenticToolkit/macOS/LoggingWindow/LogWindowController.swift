@@ -1,4 +1,7 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
 /// `SingleWindowController` that hosts a ``LogViewController`` backed
 /// by a caller-supplied ``LogController``. Handles the AppKit window

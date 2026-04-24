@@ -6,7 +6,7 @@ import Foundation
 /// without coupling the toolkit to host-specific types. This is the primary
 /// extension point for future view and document migrations.
 @MainActor
-public protocol ProjectHost: AnyObject {
+public protocol WiiProjectHost: AnyObject {
     /// The file extension used by the host's project package (without leading dot).
     ///
     /// Example: Catnip uses `"catnip-proj"`.
@@ -22,5 +22,5 @@ public protocol ProjectHost: AnyObject {
     /// The host typically reads from `UserDefaults` and a keychain; the toolkit
     /// avoids those dependencies and asks the host when a summarization request
     /// is about to be issued.
-    var summarizationSettings: SummarizationSettingsProviding { get }
+    var summarizationSettings: TerminalSessionSummarizationSettingsProviding { get }
 }

@@ -1,46 +1,46 @@
 import Foundation
 
-public enum PaneType: String, Codable, Equatable, Sendable {
+public enum TerminalSessionPaneType: String, Codable, Equatable, Sendable {
     case fileEditor
     case terminal
 }
 
-public struct PaneSlot: Codable, Equatable, Identifiable, Sendable {
+public struct TerminalSessionPaneSlot: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
-    public var type: PaneType
+    public var type: TerminalSessionPaneType
     public var isVisible: Bool
 
-    public init(id: UUID = UUID(), type: PaneType, isVisible: Bool = true) {
+    public init(id: UUID = UUID(), type: TerminalSessionPaneType, isVisible: Bool = true) {
         self.id = id
         self.type = type
         self.isVisible = isVisible
     }
 }
 
-public struct SessionLayoutState: Codable, Equatable, Sendable {
-    public var panes: [PaneSlot]
+public struct TerminalSessionLayoutState: Codable, Equatable, Sendable {
+    public var panes: [TerminalSessionPaneSlot]
     public var isInspectorPresented: Bool
 
     public init() {
         self.panes = [
-            PaneSlot(type: .fileEditor),
-            PaneSlot(type: .terminal)
+            TerminalSessionPaneSlot(type: .fileEditor),
+            TerminalSessionPaneSlot(type: .terminal)
         ]
         self.isInspectorPresented = false
     }
 
-    public init(panes: [PaneSlot], isInspectorPresented: Bool = false) {
+    public init(panes: [TerminalSessionPaneSlot], isInspectorPresented: Bool = false) {
         self.panes = panes
         self.isInspectorPresented = isInspectorPresented
     }
 
     public var hasFileEditor: Bool { panes.contains { $0.type == .fileEditor } }
 
-    public var visiblePanes: [PaneSlot] { panes.filter(\.isVisible) }
+    public var visiblePanes: [TerminalSessionPaneSlot] { panes.filter(\.isVisible) }
 
-    public mutating func addPane(_ type: PaneType) {
+    public mutating func addPane(_ type: TerminalSessionPaneType) {
         if type == .fileEditor && hasFileEditor { return }
-        panes.append(PaneSlot(type: type))
+        panes.append(TerminalSessionPaneSlot(type: type))
     }
 
     public mutating func removePane(id: UUID) {
@@ -56,8 +56,8 @@ public struct SessionLayoutState: Codable, Equatable, Sendable {
         isFileViewerVisible: Bool = true,
         isTerminalVisible: Bool = true,
         isInspectorPresented: Bool = false
-    ) -> SessionLayoutState {
-        var layout = SessionLayoutState()
+    ) -> TerminalSessionLayoutState {
+        var layout = TerminalSessionLayoutState()
         if let editorIdx = layout.panes.firstIndex(where: { $0.type == .fileEditor }) {
             layout.panes[editorIdx].isVisible = isFileViewerVisible
         }
@@ -69,13 +69,13 @@ public struct SessionLayoutState: Codable, Equatable, Sendable {
     }
 }
 
-public struct SessionRecord: Codable, Equatable, Identifiable, Sendable {
+public struct TerminalSessionSessionRecord: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var name: String
     public var sortOrder: Int
-    public var layoutState: SessionLayoutState
+    public var layoutState: TerminalSessionLayoutState
 
-    public init(id: UUID, name: String, sortOrder: Int, layoutState: SessionLayoutState) {
+    public init(id: UUID, name: String, sortOrder: Int, layoutState: TerminalSessionLayoutState) {
         self.id = id
         self.name = name
         self.sortOrder = sortOrder

@@ -27,7 +27,7 @@ public struct ProjectSettings: Codable, Equatable, Sendable {
 
     /// Default layout state for new sessions. Used as the template when creating
     /// a new terminal session within this project.
-    public var defaultSessionLayout: SessionLayoutState = SessionLayoutState()
+    public var defaultSessionLayout: TerminalSessionLayoutState = TerminalSessionLayoutState()
 
     // MARK: - IDE Detection
 
@@ -65,7 +65,7 @@ public struct ProjectSettings: Codable, Equatable, Sendable {
         isFileTreeVisible = try container.decodeIfPresent(Bool.self, forKey: .isFileTreeVisible) ?? defaults.isFileTreeVisible
 
         // Migration: read legacy per-session fields into defaultSessionLayout
-        if let layout = try container.decodeIfPresent(SessionLayoutState.self, forKey: .defaultSessionLayout) {
+        if let layout = try container.decodeIfPresent(TerminalSessionLayoutState.self, forKey: .defaultSessionLayout) {
             defaultSessionLayout = layout
         } else {
             let isFileViewerVisible = try container.decodeIfPresent(Bool.self, forKey: .isFileViewerVisible) ?? true

@@ -31,7 +31,7 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) unavailable — use init(provider:)") }
+    public required init?(coder: NSCoder) { fatalError("init(coder:) unavailable — use init(provider:)") }
 
     /// Exposed so tests (and callers doing programmatic scrolling)
     /// can re-assert tail-follow after a filter change.

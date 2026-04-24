@@ -50,9 +50,9 @@ public struct FileEditorView: View {
 
 /// Shown when no file is selected or when a directory is selected.
 private struct EditorPlaceholderView: View {
-    let message: String
+    public let message: String
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text")
                 .font(.system(size: 48))
@@ -70,15 +70,15 @@ private struct EditorPlaceholderView: View {
 
 /// Loads the file and shows either the text editor or a "cannot display" message.
 private struct FileEditorContentView: View {
-    let node: FileTreeNode
-    let lightTheme: EditorTheme
-    let darkTheme: EditorTheme
+    public let node: FileTreeNode
+    public let lightTheme: EditorTheme
+    public let darkTheme: EditorTheme
 
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var editorState = EditorState()
     @State private var theme: EditorTheme
 
-    init(node: FileTreeNode, lightTheme: EditorTheme, darkTheme: EditorTheme) {
+    public init(node: FileTreeNode, lightTheme: EditorTheme, darkTheme: EditorTheme) {
         self.node = node
         self.lightTheme = lightTheme
         self.darkTheme = darkTheme
@@ -89,7 +89,7 @@ private struct FileEditorContentView: View {
         LanguageDetection.language(for: editorState.currentURL ?? URL(fileURLWithPath: "/untitled"))
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 0) {
             // Editor or error
             if !editorState.isLoaded {
@@ -140,25 +140,25 @@ private struct FileEditorContentView: View {
 /// Observable state for the file editor, managing content, dirty tracking, and file I/O.
 private final class EditorState: ObservableObject {
     /// The current text content displayed in the editor.
-    @Published var content: String = ""
+    public @Published var content: String = ""
 
     /// Whether the content has been modified since the last save or load.
-    @Published var isModified: Bool = false
+    public @Published var isModified: Bool = false
 
     /// Whether the file could not be read as UTF-8 text.
-    @Published var loadError: Bool = false
+    public @Published var loadError: Bool = false
 
     /// Whether the initial file load has completed (gates SourceEditor creation).
-    @Published var isLoaded: Bool = false
+    public @Published var isLoaded: Bool = false
 
     /// Monotonic counter incremented on each load, used as `.id()` to force SourceEditor recreation.
-    @Published var loadGeneration: Int = 0
+    public @Published var loadGeneration: Int = 0
 
     /// State for the SourceEditor (cursor position, scroll, find panel).
-    @Published var sourceEditorState = SourceEditorState()
+    public @Published var sourceEditorState = SourceEditorState()
 
     /// The URL of the currently loaded file.
-    var currentURL: URL?
+    public var currentURL: URL?
 
     /// The content as it was at the last save/load, for dirty-checking.
     private var savedContent: String = ""
@@ -166,7 +166,7 @@ private final class EditorState: ObservableObject {
     /// Combine subscription for dirty tracking.
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
+    public init() {
         // Track content changes for dirty state via Combine
         $content
             .dropFirst()
@@ -178,7 +178,7 @@ private final class EditorState: ObservableObject {
     }
 
     /// Attempts to load a file as UTF-8 text.
-    func load(from url: URL) {
+    public func load(from url: URL) {
         currentURL = url
         isModified = false
         loadError = false
@@ -210,7 +210,7 @@ private final class EditorState: ObservableObject {
     }
 
     /// Saves the current content back to disk.
-    func save() {
+    public func save() {
         guard let url = currentURL else { return }
         guard isModified else { return }
 
@@ -225,6 +225,6 @@ private final class EditorState: ObservableObject {
     }
 }
 
-extension EditorState: Loggable {
-    static nonisolated let logger = makeLogger()
+public extension EditorState: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

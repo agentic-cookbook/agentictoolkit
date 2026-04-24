@@ -18,7 +18,7 @@ public final class TerminalSessionRowCellView: NSTableCellView {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     private func setupViews() {
         dotView.wantsLayer = true
@@ -103,7 +103,7 @@ public final class TerminalSessionRowCellView: NSTableCellView {
         directory: String?,
         gitBranch: String?,
         foregroundProcess: String?,
-        customSubtitles: [TerminalSubtitle],
+        customSubtitles: [TerminalSessionSubtitle],
         summary: String?
     ) {
         subtitleStack.arrangedSubviews.forEach { $0.removeFromSuperview() }

@@ -17,7 +17,7 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     public override func loadView() {
         let container = NSView()

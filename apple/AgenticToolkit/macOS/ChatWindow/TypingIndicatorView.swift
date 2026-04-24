@@ -2,7 +2,7 @@ import AppKit
 
 /// Animated typing indicator with three pulsing dots.
 @MainActor
-final class TypingIndicatorView: NSView {
+public final class TypingIndicatorView: NSView {
     private let dots: [NSView] = (0..<3).map { _ in
         let dot = NSView()
         dot.wantsLayer = true
@@ -14,13 +14,13 @@ final class TypingIndicatorView: NSView {
     private var timer: Timer?
     private var step: Int = 0
 
-    override init(frame: NSRect) {
+    public override init(frame: NSRect) {
         super.init(frame: frame)
         setup()
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     private func setup() {
         wantsLayer = true
@@ -48,7 +48,7 @@ final class TypingIndicatorView: NSView {
         }
     }
 
-    func startAnimating() {
+    public func startAnimating() {
         for dot in dots { dot.alphaValue = 0.3 }
         step = 0
         timer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak self] _ in
@@ -69,7 +69,7 @@ final class TypingIndicatorView: NSView {
         step += 1
     }
 
-    override func removeFromSuperview() {
+    public override func removeFromSuperview() {
         timer?.invalidate()
         timer = nil
         super.removeFromSuperview()

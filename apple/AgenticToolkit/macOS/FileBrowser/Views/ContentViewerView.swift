@@ -33,7 +33,7 @@ public struct ContentViewerView: View {
 
 /// Shown when no file is selected in the file tree.
 private struct PlaceholderView: View {
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
@@ -51,8 +51,8 @@ private struct PlaceholderView: View {
 
 /// Displays detailed metadata for a selected file or directory.
 private struct FileDetailView: View {
-    let node: FileTreeNode
-    let config: FileTreeConfig
+    public let node: FileTreeNode
+    public let config: FileTreeConfig
 
     /// Formatter for file sizes.
     private static let byteCountFormatter: ByteCountFormatter = {
@@ -69,7 +69,7 @@ private struct FileDetailView: View {
         return formatter
     }()
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 0) {
             // Header
             VStack(spacing: 8) {

@@ -1,7 +1,10 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
 /// A chat message bubble with text and inline timestamp.
-final class MessageBubbleView: NSView {
+public final class MessageBubbleView: NSView {
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -9,7 +12,7 @@ final class MessageBubbleView: NSView {
         return f
     }()
 
-    init(message: ChatMessage, maxWidth: CGFloat) {
+    public init(message: ChatMessage, maxWidth: CGFloat) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = 12
@@ -87,5 +90,5 @@ final class MessageBubbleView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 }

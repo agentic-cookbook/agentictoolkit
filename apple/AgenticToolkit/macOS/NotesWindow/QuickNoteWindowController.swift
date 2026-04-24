@@ -84,7 +84,7 @@ public final class QuickNoteWindowController: NSWindowController {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     // MARK: - Layout
 

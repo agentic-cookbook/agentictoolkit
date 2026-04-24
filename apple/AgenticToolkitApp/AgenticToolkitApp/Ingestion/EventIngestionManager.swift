@@ -21,7 +21,7 @@ final class EventIngestionManager: @unchecked Sendable {
     let errorsDirectoryURL: URL
 
     /// The database manager used to persist events and sessions.
-    private let databaseManager: DatabaseManager
+    private let SessionsDatabaseManager: SessionsDatabaseManager
 
     /// File system event stream for watching the drop directory.
     private var eventStream: FSEventStreamRef?
@@ -60,8 +60,8 @@ final class EventIngestionManager: @unchecked Sendable {
     /// Creates an EventIngestionManager with the given drop directory and database manager.
     /// - Parameters:
     ///   - dropDirectoryURL: The directory to watch for event files. Defaults to `~/.claude/session-events/`.
-    ///   - databaseManager: The database manager for persisting events.
-    init(dropDirectoryURL: URL? = nil, databaseManager: DatabaseManager) {
+    ///   - SessionsDatabaseManager: The database manager for persisting events.
+    init(dropDirectoryURL: URL? = nil, SessionsDatabaseManager: SessionsDatabaseManager) {
         if let url = dropDirectoryURL {
             self.dropDirectoryURL = url
         } else {
@@ -70,7 +70,7 @@ final class EventIngestionManager: @unchecked Sendable {
                 .appendingPathComponent("session-events")
         }
         self.errorsDirectoryURL = self.dropDirectoryURL.appendingPathComponent("errors")
-        self.databaseManager = databaseManager
+        self.SessionsDatabaseManager = SessionsDatabaseManager
     }
 
     deinit {
@@ -278,7 +278,7 @@ final class EventIngestionManager: @unchecked Sendable {
 
         // Create or update the session record
         let session = sessionFromEvent(eventFile)
-        try databaseManager.upsertSession(session)
+        try SessionsDatabaseManager.upsertSession(session)
 
         // Insert the event record
         let event = SessionEvent(
@@ -287,11 +287,11 @@ final class EventIngestionManager: @unchecked Sendable {
             timestamp: eventFile.timestamp,
             rawJson: rawJson
         )
-        try databaseManager.insertEvent(event)
+        try SessionsDatabaseManager.insertEvent(event)
 
         // If this is a SessionEnd event, mark the session as ended
         if eventFile.event == "SessionEnd" {
-            try databaseManager.updateSessionStatus(
+            try SessionsDatabaseManager.updateSessionStatus(
                 sessionId: eventFile.sessionId,
                 status: .ended
             )

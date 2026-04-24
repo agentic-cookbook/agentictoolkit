@@ -1,11 +1,14 @@
 import AgenticToolkitCore
 import Foundation
 import os
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
 /// Settings required to perform a summarization API call. The host app is responsible
 /// for reading these from UserDefaults / Keychain and passing them in, so the toolkit
 /// stays free of host-specific storage keys.
-public struct SummarizationSettings: Sendable {
+public struct TerminalSessionSummarizationSettings: Sendable {
     public let enabled: Bool
     public let provider: AIProvider
     public let model: String
@@ -29,7 +32,7 @@ public struct SummarizationSettings: Sendable {
 
 /// Generates AI-powered summaries for terminal sessions by reading the scrollback
 /// buffer and sending a summarization prompt to the configured AI provider.
-public enum SessionSummarizer {
+public enum TerminalSessionSummarizer {
 
     public static let summaryMaxTokens = 32
     public static let requestTimeout: TimeInterval = 60
@@ -52,7 +55,7 @@ public enum SessionSummarizer {
     /// fails, or the topic has not changed.
     public static func summarize(
         session: TerminalSession,
-        settings: SummarizationSettings
+        settings: TerminalSessionSummarizationSettings
     ) async -> String? {
         guard settings.enabled else {
             logger.debug("Skipping summarization — disabled")
@@ -168,6 +171,6 @@ public enum SessionSummarizer {
     }
 }
 
-extension SessionSummarizer: Loggable {
+extension TerminalSessionSummarizer: Loggable {
     public static nonisolated let logger = makeLogger()
 }

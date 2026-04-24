@@ -4,7 +4,7 @@ import os
 import AgenticToolkitAIPlugins
 
 /// View model for the Settings window. Reads and writes all configurable settings
-/// to the SQLite `settings` table via DatabaseManager. Changes are persisted
+/// to the SQLite `settings` table via SessionsDatabaseManager. Changes are persisted
 /// immediately and take effect without requiring an app restart.
 final class SettingsViewModel: ObservableObject {
 
@@ -155,7 +155,7 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Properties
 
-    private let databaseManager: DatabaseManager
+    private let SessionsDatabaseManager: SessionsDatabaseManager
 
     /// The launch-at-login manager. Nil until configured via `configureLaunchAtLogin`.
     private(set) var launchAtLoginManager: LaunchAtLoginManager?
@@ -165,8 +165,8 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(databaseManager: DatabaseManager, pluginManager: AIPluginManager, launchAtLoginManager: LaunchAtLoginManager? = nil) {
-        self.databaseManager = databaseManager
+    init(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager, launchAtLoginManager: LaunchAtLoginManager? = nil) {
+        self.SessionsDatabaseManager = SessionsDatabaseManager
         self.pluginManager = pluginManager
         self.launchAtLoginManager = launchAtLoginManager
 
@@ -199,7 +199,7 @@ final class SettingsViewModel: ObservableObject {
     /// Loads all settings from the database, falling back to defaults for missing keys.
     func loadFromDatabase() {
         do {
-            let settings = try databaseManager.fetchAllSettings()
+            let settings = try SessionsDatabaseManager.fetchAllSettings()
 
             if let value = settings[Self.stalenessTimeoutKey], let seconds = Double(value), seconds > 0 {
                 stalenessTimeout = seconds
@@ -249,7 +249,7 @@ final class SettingsViewModel: ObservableObject {
     private func saveSetting(key: String, value: String) {
         guard !isLoading else { return }
         do {
-            try databaseManager.setSetting(key: key, value: value)
+            try SessionsDatabaseManager.setSetting(key: key, value: value)
         } catch {
             NSLog("AgenticPluginTester: Failed to save setting '\(key)': \(error.localizedDescription)")
         }
@@ -262,7 +262,7 @@ final class SettingsViewModel: ObservableObject {
 
     /// Whether the dock icon should be shown (reads from database).
     var showDockIcon: Bool {
-        (try? databaseManager.getSetting(key: Self.showDockIconKey)) == "true"
+        (try? SessionsDatabaseManager.getSetting(key: Self.showDockIconKey)) == "true"
     }
 
     // MARK: - Launch at Login Prompt

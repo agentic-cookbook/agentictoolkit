@@ -2,21 +2,21 @@ import AppKit
 
 /// Split view controller with a sidebar (session list) and content area (terminal).
 @MainActor
-public final class TerminalSplitViewController: NSSplitViewController {
+public final class TerminalSessionSplitViewController: NSSplitViewController {
 
     public let sessionManager: TerminalSessionManager
     public let sessionListVC: TerminalSessionListViewController
-    public let terminalContentVC: TerminalContentViewController
+    public let terminalContentVC: TerminalSessionContentViewController
 
     public init(sessionManager: TerminalSessionManager) {
         self.sessionManager = sessionManager
         self.sessionListVC = TerminalSessionListViewController(sessionManager: sessionManager)
-        self.terminalContentVC = TerminalContentViewController(sessionManager: sessionManager)
+        self.terminalContentVC = TerminalSessionContentViewController(sessionManager: sessionManager)
         super.init(nibName: nil, bundle: nil)
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     public override func viewDidLoad() {
         super.viewDidLoad()

@@ -5,10 +5,10 @@ import SwiftTerm
 /// Hosts the active session's terminal view and applies terminal profiles.
 ///
 /// Observes `UserDefaults.didChangeNotification` and
-/// `TerminalProfile.didChangeNotification` to reapply the active profile
+/// `TerminalSessionProfile.didChangeNotification` to reapply the active profile
 /// when the app changes it from elsewhere (e.g. a settings pane).
 @MainActor
-public final class TerminalContentViewController: NSViewController {
+public final class TerminalSessionContentViewController: NSViewController {
 
     public let sessionManager: TerminalSessionManager
     private var cancellables = Set<AnyCancellable>()
@@ -21,7 +21,7 @@ public final class TerminalContentViewController: NSViewController {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    public required init?(coder: NSCoder) { fatalError() }
 
     public override func loadView() {
         let container = NSView()
@@ -42,7 +42,7 @@ public final class TerminalContentViewController: NSViewController {
             .sink { [weak self] _ in self?.reapplyProfileIfChanged() }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: TerminalProfile.didChangeNotification)
+        NotificationCenter.default.publisher(for: TerminalSessionProfile.didChangeNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.reapplyProfile() }
             .store(in: &cancellables)
@@ -85,10 +85,10 @@ public final class TerminalContentViewController: NSViewController {
         }
     }
 
-    private func resolveProfile() -> TerminalProfile {
-        let all = TerminalProfile.builtInProfiles()
+    private func resolveProfile() -> TerminalSessionProfile {
+        let all = TerminalSessionProfile.builtInProfiles()
         let storedID = UserDefaults.standard.string(forKey: "terminal.activeProfileID")
-            ?? TerminalProfile.defaultProfileID
+            ?? TerminalSessionProfile.defaultProfileID
         if let uuid = UUID(uuidString: storedID),
            let match = all.first(where: { $0.id == uuid }) {
             return match

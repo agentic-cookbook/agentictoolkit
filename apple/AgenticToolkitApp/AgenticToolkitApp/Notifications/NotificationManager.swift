@@ -40,7 +40,7 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
 
     // MARK: - Properties
 
-    private let databaseManager: DatabaseManager
+    private let SessionsDatabaseManager: SessionsDatabaseManager
     private let notificationCenter: NotificationCenterProtocol
 
     /// Whether the user has granted notification permission.
@@ -54,10 +54,10 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
 
     /// Creates a NotificationManager.
     /// - Parameters:
-    ///   - databaseManager: The database manager for reading notification settings.
+    ///   - SessionsDatabaseManager: The database manager for reading notification settings.
     ///   - notificationCenter: The notification center to use. Defaults to `.current()`.
-    init(databaseManager: DatabaseManager, notificationCenter: NotificationCenterProtocol? = nil) {
-        self.databaseManager = databaseManager
+    init(SessionsDatabaseManager: SessionsDatabaseManager, notificationCenter: NotificationCenterProtocol? = nil) {
+        self.SessionsDatabaseManager = SessionsDatabaseManager
         self.notificationCenter = notificationCenter ?? UNUserNotificationCenter.current()
         super.init()
         self.notificationCenter.delegate = self
@@ -201,7 +201,7 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
         guard isAuthorized else { return false }
 
         do {
-            if let value = try databaseManager.getSetting(key: key) {
+            if let value = try SessionsDatabaseManager.getSetting(key: key) {
                 return value == "true"
             }
         } catch {

@@ -23,10 +23,10 @@ public final class TerminalSession: ObservableObject, Identifiable {
     @Published public var gitBranch: String?
     @Published public var foregroundProcess: String?
     @Published public var dotColor: NSColor = .green
-    @Published public var customSubtitles: [TerminalSubtitle] = []
+    @Published public var customSubtitles: [TerminalSessionSubtitle] = []
     @Published public var summary: String?
     @Published public var state: TerminalSessionState = .running
-    @Published public var layoutState: SessionLayoutState = SessionLayoutState()
+    @Published public var layoutState: TerminalSessionLayoutState = TerminalSessionLayoutState()
 
     public var displayTitle: String {
         if let title { return title }
@@ -78,7 +78,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
         return view
     }()
 
-    private let processHandler: ProcessHandler
+    private let processHandler: TerminalSessionProcessHandler
     private var gitBranchRequestID: UUID?
     private var processPollingTimer: Timer?
     private let workingDirectory: String?
@@ -86,7 +86,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
     public init(name: String, workingDirectory: String? = nil) {
         self.name = name
         self.workingDirectory = workingDirectory
-        self.processHandler = ProcessHandler()
+        self.processHandler = TerminalSessionProcessHandler()
         self.processHandler.session = self
     }
 
@@ -141,9 +141,9 @@ public final class TerminalSession: ObservableObject, Identifiable {
             let value = String(rest[rest.index(after: equalsIndex)...])
             guard !key.isEmpty else { return }
             if let index = customSubtitles.firstIndex(where: { $0.key == key }) {
-                customSubtitles[index] = TerminalSubtitle(key: key, value: value)
+                customSubtitles[index] = TerminalSessionSubtitle(key: key, value: value)
             } else {
-                customSubtitles.append(TerminalSubtitle(key: key, value: value))
+                customSubtitles.append(TerminalSessionSubtitle(key: key, value: value))
             }
         } else if payload.hasPrefix("clear-subtitle:") {
             let key = String(payload.dropFirst("clear-subtitle:".count))
@@ -253,12 +253,12 @@ public final class TerminalSession: ObservableObject, Identifiable {
     }
 }
 
-extension TerminalSession: Loggable {
+public extension TerminalSession: Loggable {
     public static nonisolated let logger = makeLogger()
 }
 
 /// A key/value pair shown as a subtitle line on a terminal session cell.
-public struct TerminalSubtitle: Sendable, Equatable {
+public struct TerminalSessionSubtitle: Sendable, Equatable {
     public let key: String
     public let value: String
 
@@ -271,12 +271,12 @@ public struct TerminalSubtitle: Sendable, Equatable {
 // MARK: - Process Delegate Handler
 
 @MainActor
-private final class ProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
-    weak var session: TerminalSession?
+private final class TerminalSessionProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
+    public weak var session: TerminalSession?
 
-    nonisolated func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
+    public nonisolated func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
 
-    nonisolated func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
+    public nonisolated func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
                 self.session?.title = title
@@ -284,7 +284,7 @@ private final class ProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
         }
     }
 
-    nonisolated func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
+    public nonisolated func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
         guard let directory = directory else { return }
         let path: String
         if let url = URL(string: directory), url.scheme == "file" {
@@ -300,7 +300,7 @@ private final class ProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
         }
     }
 
-    nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
+    public nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
         let code = exitCode
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
@@ -312,6 +312,6 @@ private final class ProcessHandler: NSObject, LocalProcessTerminalViewDelegate {
     }
 }
 
-extension ProcessHandler: Loggable {
+public extension TerminalSessionProcessHandler: Loggable {
     public static nonisolated let logger = makeLogger()
 }

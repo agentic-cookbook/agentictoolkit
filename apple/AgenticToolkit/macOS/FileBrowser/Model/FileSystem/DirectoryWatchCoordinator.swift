@@ -191,6 +191,6 @@ public final class DirectoryWatchCoordinator: ObservableObject {
     }
 }
 
-extension DirectoryWatchCoordinator: Loggable {
+public extension DirectoryWatchCoordinator: Loggable {
     public static nonisolated let logger = makeLogger()
 }

@@ -122,6 +122,6 @@ public enum SQLiteWorkspaceStore {
     }
 }
 
-extension SQLiteWorkspaceStore: Loggable {
+public extension SQLiteWorkspaceStore: Loggable {
     public static nonisolated let logger = makeLogger()
 }

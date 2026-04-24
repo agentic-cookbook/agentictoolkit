@@ -209,6 +209,6 @@ public final class WorkspaceDirectoryManager: ObservableObject {
     }
 }
 
-extension WorkspaceDirectoryManager: Loggable {
+public extension WorkspaceDirectoryManager: Loggable {
     public static nonisolated let logger = makeLogger()
 }

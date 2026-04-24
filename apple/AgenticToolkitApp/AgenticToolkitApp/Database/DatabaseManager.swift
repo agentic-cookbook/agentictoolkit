@@ -4,7 +4,7 @@ import OSLog
 import SQLite3
 
 /// Manages the SQLite database connection and provides CRUD operations for all tables.
-final class DatabaseManager {
+final class SessionsDatabaseManager {
 
     // MARK: - Properties
 
@@ -17,13 +17,13 @@ final class DatabaseManager {
 
     // MARK: - Initialization
 
-    /// Creates a DatabaseManager with the database at the specified path.
+    /// Creates a SessionsDatabaseManager with the database at the specified path.
     /// If no path is given, uses the default Application Support location.
     init(path: String? = nil) throws {
         if let path = path {
             self.dbPath = path
         } else {
-            self.dbPath = try DatabaseManager.defaultDatabasePath()
+            self.dbPath = try SessionsDatabaseManager.defaultDatabasePath()
         }
         try openDatabase()
         try runMigrations()
@@ -761,6 +761,6 @@ final class DatabaseManager {
     }
 }
 
-extension DatabaseManager: Loggable {
+extension SessionsDatabaseManager: Loggable {
     static nonisolated let logger = makeLogger()
 }

@@ -97,9 +97,9 @@ public enum SQLiteProjectStore {
             for r in sessionRows where r.count == 4 {
                 guard let uuid = UUID(uuidString: r[0]) else { continue }
                 let sortOrder = Int(r[2]) ?? 0
-                let layoutState: SessionLayoutState
+                let layoutState: TerminalSessionLayoutState
                 if let layoutData = r[3].data(using: .utf8),
-                   let decoded = try? decoder.decode(SessionLayoutState.self, from: layoutData) {
+                   let decoded = try? decoder.decode(TerminalSessionLayoutState.self, from: layoutData) {
                     layoutState = decoded
                 } else {
                     layoutState = settings.defaultSessionLayout
@@ -115,13 +115,13 @@ public enum SQLiteProjectStore {
     }
 }
 
-extension SQLiteProjectStore: Loggable {
+public extension SQLiteProjectStore: Loggable {
     public static nonisolated let logger = makeLogger()
 }
 
 // MARK: - ProjectSettings Key-Value Conversion
 
-extension ProjectSettings {
+public extension ProjectSettings {
     public static func fromKeyValueMap(_ map: [String: String]) -> ProjectSettings {
         let defaults = ProjectSettings()
         var s = ProjectSettings()
@@ -134,7 +134,7 @@ extension ProjectSettings {
 
         // Read defaultSessionLayout, falling back to legacy boolean fields for migration
         if let json = map["defaultSessionLayout"], let data = json.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode(SessionLayoutState.self, from: data) {
+           let decoded = try? JSONDecoder().decode(TerminalSessionLayoutState.self, from: data) {
             s.defaultSessionLayout = decoded
         } else {
             let isFileViewerVisible = map["isFileViewerVisible"].flatMap(Bool.init(fromSQLite:)) ?? true

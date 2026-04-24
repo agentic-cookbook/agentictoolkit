@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-public enum ProfileAppearance: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum TerminalSessionProfileAppearance: String, Codable, CaseIterable, Identifiable, Sendable {
     case dark
     case light
     case auto
@@ -9,7 +9,7 @@ public enum ProfileAppearance: String, Codable, CaseIterable, Identifiable, Send
     public var id: String { rawValue }
 }
 
-public enum CursorStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum TerminalSessionCursorStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case block
     case underline
     case bar
@@ -25,7 +25,7 @@ public enum CursorStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
-public struct TerminalColorPalette: Codable, Equatable, Sendable {
+public struct TerminalSessionColorPalette: Codable, Equatable, Sendable {
     /// Foreground text color as "#rrggbb"
     public var foreground: String
     /// Background color as "#rrggbb"
@@ -46,24 +46,24 @@ public struct TerminalColorPalette: Codable, Equatable, Sendable {
     }
 }
 
-public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
+public struct TerminalSessionProfile: Codable, Identifiable, Equatable, Sendable {
     public var id: UUID
     public var name: String
-    public var appearance: ProfileAppearance
+    public var appearance: TerminalSessionProfileAppearance
     public var fontName: String
     public var fontSize: Double
-    public var cursorStyle: CursorStyle
-    public var colors: TerminalColorPalette
+    public var cursorStyle: TerminalSessionCursorStyle
+    public var colors: TerminalSessionColorPalette
     public var isDeletable: Bool
 
     public init(
         id: UUID = UUID(),
         name: String,
-        appearance: ProfileAppearance,
+        appearance: TerminalSessionProfileAppearance,
         fontName: String = "Menlo",
         fontSize: Double = 13,
-        cursorStyle: CursorStyle = .block,
-        colors: TerminalColorPalette,
+        cursorStyle: TerminalSessionCursorStyle = .block,
+        colors: TerminalSessionColorPalette,
         isDeletable: Bool = true
     ) {
         self.id = id
@@ -77,16 +77,16 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
     }
 
     /// Posted when the user changes the active terminal profile or edits an
-    /// existing one. `TerminalContentViewController` observes this to reapply
+    /// existing one. `TerminalSessionContentViewController` observes this to reapply
     /// the profile to the active terminal view.
-    public static let didChangeNotification = Notification.Name("AgenticAppKit.TerminalProfile.didChange")
+    public static let didChangeNotification = Notification.Name("AgenticAppKit.TerminalSessionProfile.didChange")
 
     /// The default profile ID (Solarized Dark).
     public static let defaultProfileID = "A1B2C3D4-0001-4000-8000-000000000001"
 
     /// Returns the active profile by reading the stored profile ID from UserDefaults.
     /// Falls back to Solarized Dark if the stored ID doesn't match any profile.
-    public static func activeProfile() -> TerminalProfile {
+    public static func activeProfile() -> TerminalSessionProfile {
         let storedID = UserDefaults.standard.string(forKey: "terminal.activeProfileID") ?? defaultProfileID
         let all = builtInProfiles()
         if let uuid = UUID(uuidString: storedID),
@@ -96,19 +96,19 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         return all[0]
     }
 
-    public static func builtInProfiles() -> [TerminalProfile] {
+    public static func builtInProfiles() -> [TerminalSessionProfile] {
         [
             solarizedDark, solarizedLight, dracula, nord,
             tokyoNight, githubLight, gruvboxDark, catppuccinMocha,
         ]
     }
 
-    private static let solarizedDark = TerminalProfile(
+    private static let solarizedDark = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0001-4000-8000-000000000001")!,
         name: "Solarized Dark",
         appearance: .dark,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#839496", background: "#002b36", cursor: "#839496", selection: "#073642",
             ansi: [
                 "#073642", "#dc322f", "#859900", "#b58900",
@@ -120,12 +120,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let solarizedLight = TerminalProfile(
+    private static let solarizedLight = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0002-4000-8000-000000000002")!,
         name: "Solarized Light",
         appearance: .light,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#657b83", background: "#fdf6e3", cursor: "#657b83", selection: "#eee8d5",
             ansi: [
                 "#073642", "#dc322f", "#859900", "#b58900",
@@ -137,12 +137,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let dracula = TerminalProfile(
+    private static let dracula = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0003-4000-8000-000000000003")!,
         name: "Dracula",
         appearance: .dark,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#f8f8f2", background: "#282a36", cursor: "#f8f8f2", selection: "#44475a",
             ansi: [
                 "#21222c", "#ff5555", "#50fa7b", "#f1fa8c",
@@ -154,12 +154,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let nord = TerminalProfile(
+    private static let nord = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0004-4000-8000-000000000004")!,
         name: "Nord",
         appearance: .dark,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#d8dee9", background: "#2e3440", cursor: "#d8dee9", selection: "#434c5e",
             ansi: [
                 "#3b4252", "#bf616a", "#a3be8c", "#ebcb8b",
@@ -171,12 +171,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let tokyoNight = TerminalProfile(
+    private static let tokyoNight = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0005-4000-8000-000000000005")!,
         name: "Tokyo Night",
         appearance: .dark,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#a9b1d6", background: "#1a1b26", cursor: "#c0caf5", selection: "#33467c",
             ansi: [
                 "#15161e", "#f7768e", "#9ece6a", "#e0af68",
@@ -188,12 +188,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let githubLight = TerminalProfile(
+    private static let githubLight = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0006-4000-8000-000000000006")!,
         name: "GitHub Light",
         appearance: .light,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#24292e", background: "#ffffff", cursor: "#044289", selection: "#c8c8fa",
             ansi: [
                 "#24292e", "#d73a49", "#28a745", "#dbab09",
@@ -205,12 +205,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let gruvboxDark = TerminalProfile(
+    private static let gruvboxDark = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0007-4000-8000-000000000007")!,
         name: "Gruvbox Dark",
         appearance: .dark,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#ebdbb2", background: "#282828", cursor: "#ebdbb2", selection: "#504945",
             ansi: [
                 "#282828", "#cc241d", "#98971a", "#d79921",
@@ -222,12 +222,12 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
         isDeletable: false
     )
 
-    private static let catppuccinMocha = TerminalProfile(
+    private static let catppuccinMocha = TerminalSessionProfile(
         id: UUID(uuidString: "A1B2C3D4-0008-4000-8000-000000000008")!,
         name: "Catppuccin Mocha",
         appearance: .dark,
         cursorStyle: .block,
-        colors: TerminalColorPalette(
+        colors: TerminalSessionColorPalette(
             foreground: "#cdd6f4", background: "#1e1e2e", cursor: "#f5e0dc", selection: "#45475a",
             ansi: [
                 "#45475a", "#f38ba8", "#a6e3a1", "#f9e2af",
@@ -240,7 +240,7 @@ public struct TerminalProfile: Codable, Identifiable, Equatable, Sendable {
     )
 }
 
-extension NSColor {
+public extension NSColor {
     /// Creates an NSColor from a hex string like `#rrggbb` or `rrggbb`.
     public convenience init?(hex: String) {
         var hexString = hex.trimmingCharacters(in: .whitespacesAndNewlines)

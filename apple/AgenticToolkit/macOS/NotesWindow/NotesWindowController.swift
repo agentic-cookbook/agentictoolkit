@@ -1,5 +1,8 @@
 import AppKit
 import os
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
 /// Manages the Notes window lifecycle. Hosts a `NotesSplitViewController`
 /// with list + editor panes.

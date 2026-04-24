@@ -31,7 +31,7 @@ final class MockLaunchAtLoginService: LaunchAtLoginServiceProtocol {
 @MainActor
 final class LaunchAtLoginManagerTests: XCTestCase {
 
-    private var databaseManager: DatabaseManager!
+    private var SessionsDatabaseManager: SessionsDatabaseManager!
     private var tempDBPath: String!
     private var mockService: MockLaunchAtLoginService!
 
@@ -39,12 +39,12 @@ final class LaunchAtLoginManagerTests: XCTestCase {
         try super.setUpWithError()
         let tempDir = NSTemporaryDirectory()
         tempDBPath = (tempDir as NSString).appendingPathComponent("agentic_launch_test_\(UUID().uuidString).db")
-        databaseManager = try DatabaseManager(path: tempDBPath)
+        SessionsDatabaseManager = try SessionsDatabaseManager(path: tempDBPath)
         mockService = MockLaunchAtLoginService()
     }
 
     override func tearDownWithError() throws {
-        databaseManager.close()
+        SessionsDatabaseManager.close()
         try? FileManager.default.removeItem(atPath: tempDBPath)
         try super.tearDownWithError()
     }
@@ -52,7 +52,7 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     // MARK: - isEnabled
 
     func testIsEnabledReflectsServiceStatus() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
 
         mockService.status = .notRegistered
         XCTAssertFalse(manager.isEnabled)
@@ -67,7 +67,7 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     // MARK: - setEnabled
 
     func testSetEnabledTrueCallsRegister() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
 
         try manager.setEnabled(true)
 
@@ -77,7 +77,7 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     }
 
     func testSetEnabledFalseCallsUnregister() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
         mockService.status = .enabled
 
         try manager.setEnabled(false)
@@ -88,19 +88,19 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     }
 
     func testSetEnabledPersistsToDatabase() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
 
         try manager.setEnabled(true)
-        let value = try databaseManager.getSetting(key: LaunchAtLoginManager.launchAtLoginKey)
+        let value = try SessionsDatabaseManager.getSetting(key: LaunchAtLoginManager.launchAtLoginKey)
         XCTAssertEqual(value, "true")
 
         try manager.setEnabled(false)
-        let value2 = try databaseManager.getSetting(key: LaunchAtLoginManager.launchAtLoginKey)
+        let value2 = try SessionsDatabaseManager.getSetting(key: LaunchAtLoginManager.launchAtLoginKey)
         XCTAssertEqual(value2, "false")
     }
 
     func testSetEnabledThrowsOnRegisterFailure() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
         mockService.shouldThrowOnRegister = true
 
         XCTAssertThrowsError(try manager.setEnabled(true))
@@ -108,7 +108,7 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     }
 
     func testSetEnabledThrowsOnUnregisterFailure() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
         mockService.status = .enabled
         mockService.shouldThrowOnUnregister = true
 
@@ -120,27 +120,27 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     // MARK: - Prompt State
 
     func testHasShownPromptDefaultsToFalse() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
 
         XCTAssertFalse(manager.hasShownPrompt)
     }
 
     func testMarkPromptShownPersists() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
 
         manager.markPromptShown()
 
         XCTAssertTrue(manager.hasShownPrompt)
 
         // Verify it persisted to the database
-        let value = try databaseManager.getSetting(key: LaunchAtLoginManager.launchAtLoginPromptShownKey)
+        let value = try SessionsDatabaseManager.getSetting(key: LaunchAtLoginManager.launchAtLoginPromptShownKey)
         XCTAssertEqual(value, "true")
     }
 
     func testHasShownPromptReadsFromDatabase() throws {
-        try databaseManager.setSetting(key: LaunchAtLoginManager.launchAtLoginPromptShownKey, value: "true")
+        try SessionsDatabaseManager.setSetting(key: LaunchAtLoginManager.launchAtLoginPromptShownKey, value: "true")
 
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
 
         XCTAssertTrue(manager.hasShownPrompt)
     }
@@ -148,8 +148,8 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     // MARK: - SettingsViewModel Integration
 
     func testSettingsViewModelLaunchAtLoginToggle() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
 
         XCTAssertFalse(vm.launchAtLogin)
 
@@ -164,22 +164,22 @@ final class LaunchAtLoginManagerTests: XCTestCase {
 
     func testSettingsViewModelReflectsActualState() throws {
         mockService.status = .enabled
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
 
         XCTAssertTrue(vm.launchAtLogin)
     }
 
     func testSettingsViewModelShowsPromptOnFirstLaunch() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
 
         XCTAssertTrue(vm.shouldShowLaunchAtLoginPrompt)
     }
 
     func testSettingsViewModelHidesPromptAfterDismissal() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
 
         vm.dismissLaunchAtLoginPrompt()
 
@@ -188,18 +188,18 @@ final class LaunchAtLoginManagerTests: XCTestCase {
     }
 
     func testSettingsViewModelHidesPromptIfAlreadyShown() throws {
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
         manager.markPromptShown()
 
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
 
         XCTAssertFalse(vm.shouldShowLaunchAtLoginPrompt)
     }
 
     func testSettingsViewModelRevertsOnRegisterFailure() throws {
         mockService.shouldThrowOnRegister = true
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []), launchAtLoginManager: manager)
 
         vm.launchAtLogin = true
 
@@ -209,8 +209,8 @@ final class LaunchAtLoginManagerTests: XCTestCase {
 
     func testConfigureLaunchAtLoginSyncsState() throws {
         mockService.status = .enabled
-        let manager = LaunchAtLoginManager(databaseManager: databaseManager, service: mockService)
-        let vm = SettingsViewModel(databaseManager: databaseManager, pluginManager: AIPluginManager(searchPaths: []))
+        let manager = LaunchAtLoginManager(SessionsDatabaseManager: SessionsDatabaseManager, service: mockService)
+        let vm = SettingsViewModel(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager(searchPaths: []))
 
         XCTAssertFalse(vm.launchAtLogin)
 

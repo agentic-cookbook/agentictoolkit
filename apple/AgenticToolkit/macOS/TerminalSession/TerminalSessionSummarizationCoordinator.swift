@@ -6,8 +6,8 @@ import os
 /// Host app hook for supplying summarization settings on demand. The coordinator calls
 /// `currentSettings()` each time it needs to summarize, so UI changes take effect
 /// without reconfiguring the coordinator.
-public protocol SummarizationSettingsProviding: AnyObject, Sendable {
-    @MainActor func currentSettings() -> SummarizationSettings
+public protocol TerminalSessionTerminalSessionSummarizationSettingsProviding: AnyObject, Sendable {
+    @MainActor func currentSettings() -> TerminalSessionSummarizationSettings
 }
 
 /// Coordinates when to invoke the AI session summarizer.
@@ -15,10 +15,10 @@ public protocol SummarizationSettingsProviding: AnyObject, Sendable {
 /// Observes terminal session changes (directory, foreground process) and triggers
 /// debounced summarization. Also runs a periodic refresh for the selected session.
 @MainActor
-public final class SummarizationCoordinator {
+public final class TerminalSessionSummarizationCoordinator {
 
     private weak var sessionManager: TerminalSessionManager?
-    private let settingsProvider: SummarizationSettingsProviding
+    private let settingsProvider: TerminalSessionTerminalSessionSummarizationSettingsProviding
 
     private var pendingWork: [UUID: Task<Void, Never>] = [:]
     private var subscriptions: [UUID: Set<AnyCancellable>] = [:]
@@ -29,7 +29,7 @@ public final class SummarizationCoordinator {
     private let debounceDelay: TimeInterval = 5.0
     private let periodicInterval: TimeInterval = 60.0
 
-    public init(sessionManager: TerminalSessionManager, settingsProvider: SummarizationSettingsProviding) {
+    public init(sessionManager: TerminalSessionManager, settingsProvider: TerminalSessionTerminalSessionSummarizationSettingsProviding) {
         self.sessionManager = sessionManager
         self.settingsProvider = settingsProvider
 
@@ -122,7 +122,7 @@ public final class SummarizationCoordinator {
 
             let settings = await MainActor.run { provider.currentSettings() }
 
-            if let summary = await SessionSummarizer.summarize(session: session, settings: settings) {
+            if let summary = await TerminalSessionSummarizer.summarize(session: session, settings: settings) {
                 await MainActor.run {
                     self?.lastContentHashes[sessionID] = textHash
                     session.summary = summary
@@ -151,20 +151,20 @@ extension TerminalSessionManager {
 
     /// Default layout used when creating new sessions. Hosts can override per-session
     /// after creation if they need a different layout.
-    public var defaultLayout: SessionLayoutState {
-        get { _defaultLayoutStorage[ObjectIdentifier(self)] ?? SessionLayoutState() }
+    public var defaultLayout: TerminalSessionLayoutState {
+        get { _defaultLayoutStorage[ObjectIdentifier(self)] ?? TerminalSessionLayoutState() }
         set { _defaultLayoutStorage[ObjectIdentifier(self)] = newValue }
     }
 
     /// The current summarization coordinator, if enabled.
-    public var summarizationCoordinator: SummarizationCoordinator? {
+    public var summarizationCoordinator: TerminalSessionSummarizationCoordinator? {
         _coordinatorStorage[ObjectIdentifier(self)]
     }
 
     /// Enables AI summarization for all sessions managed by this manager. Idempotent —
     /// a second call replaces the existing coordinator.
-    public func enableSummarization(settingsProvider: SummarizationSettingsProviding) {
-        let coordinator = SummarizationCoordinator(sessionManager: self, settingsProvider: settingsProvider)
+    public func enableSummarization(settingsProvider: TerminalSessionTerminalSessionSummarizationSettingsProviding) {
+        let coordinator = TerminalSessionSummarizationCoordinator(sessionManager: self, settingsProvider: settingsProvider)
         _coordinatorStorage[ObjectIdentifier(self)] = coordinator
     }
 
@@ -176,9 +176,9 @@ extension TerminalSessionManager {
 
 // Associated-storage backing for the extension properties above. Keyed by ObjectIdentifier
 // of the manager since stored properties can't be added in an extension.
-@MainActor private var _defaultLayoutStorage: [ObjectIdentifier: SessionLayoutState] = [:]
-@MainActor private var _coordinatorStorage: [ObjectIdentifier: SummarizationCoordinator] = [:]
+@MainActor private var _defaultLayoutStorage: [ObjectIdentifier: TerminalSessionLayoutState] = [:]
+@MainActor private var _coordinatorStorage: [ObjectIdentifier: TerminalSessionSummarizationCoordinator] = [:]
 
-extension SummarizationCoordinator: Loggable {
+extension TerminalSessionSummarizationCoordinator: Loggable {
     public static nonisolated let logger = makeLogger()
 }
