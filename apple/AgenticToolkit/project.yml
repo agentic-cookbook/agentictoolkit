@@ -35,95 +35,37 @@ targets:
   AgenticToolkitCore:
     type: framework
     platform: macOS
-    sources: AgenticToolkitCore
-
-  AgenticToolkitScripting:
-    type: framework
-    platform: macOS
-    sources: AgenticToolkitScripting
-    dependencies:
-      - target: AgenticToolkitCore
+    sources: Core
 
   AgenticToolkitCoreUI:
     type: framework
     platform: macOS
-    sources: UI/AgenticToolkitCoreUI
+    sources: CoreUI
     dependencies:
       - target: AgenticToolkitCore
-      - target: AgenticToolkitScripting
 
-  AgenticToolkitChatWindow:
+  AgenticToolkitCoreMacOS:
     type: framework
     platform: macOS
-    sources: UI/Windows/AgenticToolkitChatWindow
+    sources: CoreMacOS
     dependencies:
       - target: AgenticToolkitCore
       - target: AgenticToolkitCoreUI
 
-  AgenticToolkitLoggingWindow:
+  AgenticToolkitMacOS:
     type: framework
     platform: macOS
-    sources: UI/Windows/AgenticToolkitLoggingWindow
+    sources: macOS
     dependencies:
       - target: AgenticToolkitCore
       - target: AgenticToolkitCoreUI
-
-  AgenticToolkitNotesWindow:
-    type: framework
-    platform: macOS
-    sources: UI/Windows/AgenticToolkitNotesWindow
-    dependencies:
-      - target: AgenticToolkitCore
-      - target: AgenticToolkitCoreUI
-
-  AgenticToolkitSettingsWindow:
-    type: framework
-    platform: macOS
-    sources: UI/Windows/AgenticToolkitSettingsWindow
-    dependencies:
-      - target: AgenticToolkitCore
-      - target: AgenticToolkitCoreUI
-
-  AgenticToolkitTerminalWindow:
-    type: framework
-    platform: macOS
-    sources: UI/Windows/AgenticToolkitTerminalWindow
-    dependencies:
-      - target: AgenticToolkitCore
-      - target: AgenticToolkitCoreUI
-      - target: AgenticToolkitAIPlugins
+      - target: AgenticToolkitCoreMacOS
       - package: SwiftTerm
         product: SwiftTerm
-
-  AgenticToolkitFileBrowser:
-    type: framework
-    platform: macOS
-    sources: UI/AgenticToolkitFileBrowser
-    dependencies:
-      - target: AgenticToolkitCore
       - package: CodeEditSourceEditor
         product: CodeEditSourceEditor
       - package: CodeEditLanguages
         product: CodeEditLanguages
-
-  AgenticToolkitAIPlugins:
-    type: framework
-    platform: macOS
-    sources: AgenticToolkitAIPlugins
-    dependencies:
-      - target: AgenticToolkitCore
-      - target: AgenticToolkitCoreUI
-      - target: AgenticToolkitSettingsWindow
-      - target: AgenticToolkitChatWindow
-
-  AgenticToolkitDocument:
-    type: framework
-    platform: macOS
-    sources: UI/AgenticToolkitDocument
-    dependencies:
-      - target: AgenticToolkitCore
-      - target: AgenticToolkitFileBrowser
-      - target: AgenticToolkitTerminalWindow
 
   # Test targets
 
@@ -134,63 +76,31 @@ targets:
     dependencies:
       - target: AgenticToolkitCore
 
-  AgenticToolkitScriptingTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources: Tests/AgenticToolkitScriptingTests
-    dependencies:
-      - target: AgenticToolkitScripting
-      - target: AgenticToolkitCore
-
   AgenticToolkitCoreUITests:
     type: bundle.unit-test
     platform: macOS
     sources: Tests/AgenticToolkitCoreUITests
     dependencies:
       - target: AgenticToolkitCoreUI
-      - target: AgenticToolkitScripting
       - target: AgenticToolkitCore
 
-  AgenticToolkitLoggingWindowTests:
+  AgenticToolkitCoreMacOSTests:
     type: bundle.unit-test
     platform: macOS
-    sources: Tests/AgenticToolkitLoggingWindowTests
+    sources: Tests/AgenticToolkitCoreMacOSTests
     dependencies:
-      - target: AgenticToolkitLoggingWindow
+      - target: AgenticToolkitCoreMacOS
+      - target: AgenticToolkitCore
+
+  AgenticToolkitMacOSTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: Tests/AgenticToolkitMacOSTests
+    dependencies:
+      - target: AgenticToolkitMacOS
+      - target: AgenticToolkitCoreMacOS
       - target: AgenticToolkitCoreUI
       - target: AgenticToolkitCore
-
-  AgenticToolkitTerminalWindowTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources: Tests/AgenticToolkitTerminalWindowTests
-    dependencies:
-      - target: AgenticToolkitTerminalWindow
-      - target: AgenticToolkitAIPlugins
-      - target: AgenticToolkitCoreUI
-      - target: AgenticToolkitCore
-
-  AgenticToolkitFileBrowserTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources: Tests/AgenticToolkitFileBrowserTests
-    dependencies:
-      - target: AgenticToolkitFileBrowser
-      - target: AgenticToolkitCore
-
-  AgenticToolkitAIPluginsTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources: Tests/AgenticToolkitAIPluginsTests
-    dependencies:
-      - target: AgenticToolkitAIPlugins
-
-  AgenticToolkitDocumentTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources: Tests/AgenticToolkitDocumentTests
-    dependencies:
-      - target: AgenticToolkitDocument
 
 # Client-facing umbrella target. The shared `Everything` scheme references
 # this so a single build covers every framework in the package.
@@ -198,13 +108,6 @@ aggregateTargets:
   AgenticToolkitAll:
     targets:
       - AgenticToolkitCore
-      - AgenticToolkitScripting
       - AgenticToolkitCoreUI
-      - AgenticToolkitChatWindow
-      - AgenticToolkitLoggingWindow
-      - AgenticToolkitNotesWindow
-      - AgenticToolkitSettingsWindow
-      - AgenticToolkitTerminalWindow
-      - AgenticToolkitFileBrowser
-      - AgenticToolkitAIPlugins
-      - AgenticToolkitDocument
+      - AgenticToolkitCoreMacOS
+      - AgenticToolkitMacOS
