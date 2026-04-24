@@ -118,7 +118,7 @@ public struct Project: Codable, Equatable, Sendable {
 
     /// Persisted session records with their layout state.
     /// Restored when the project opens; updated when the project saves.
-    public var sessionRecords: [SessionRecord] = []
+    public var sessionRecords: [TerminalSessionSessionRecord] = []
 
     /// Creates a new project with sensible defaults.
     public static func newProject(name: String) -> Project {

@@ -55,7 +55,7 @@ public protocol AIPlugin: AnyObject, Sendable {
 
 // MARK: - Default Implementations
 
-public extension AIPlugin {
+extension AIPlugin {
     @MainActor
     func settingsPanelViewController() -> SettingsPanelViewController? { nil }
     func validateCredentials(_ credentials: AIPluginCredentials) async -> String? { nil }

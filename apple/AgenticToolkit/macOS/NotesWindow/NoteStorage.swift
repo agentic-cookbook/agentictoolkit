@@ -7,8 +7,8 @@ import Foundation
 /// All methods are synchronous and may throw on I/O failure.
 /// Thread safety is the implementor's responsibility.
 public protocol NoteStorage {
-    public func fetchAllNotes() throws -> [Note]
-    public func insertNote(_ note: Note) throws
-    public func updateNote(_ note: Note) throws
-    public func deleteNote(id: UUID) throws
+    func fetchAllNotes() throws -> [Note]
+    func insertNote(_ note: Note) throws
+    func updateNote(_ note: Note) throws
+    func deleteNote(id: UUID) throws
 }

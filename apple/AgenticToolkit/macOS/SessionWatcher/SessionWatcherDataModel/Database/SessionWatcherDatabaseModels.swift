@@ -3,7 +3,7 @@ import Foundation
 // MARK: - SessionWatcherSession
 
 /// Represents a Claude Code session being monitored.
-public struct SessionWatcherSession: Equatable {
+public struct SessionWatcherSession: Equatable, Sendable {
     public var id: Int?
     public var sessionId: String
     public var cwd: String
@@ -64,7 +64,7 @@ public struct SessionWatcherSession: Equatable {
 // MARK: - SessionWatcherSession Status
 
 /// The lifecycle status of a session.
-public enum SessionWatcherStatus: String, CaseIterable {
+public enum SessionWatcherStatus: String, CaseIterable, Sendable {
     case active
     case stale
     case ended
@@ -73,7 +73,7 @@ public enum SessionWatcherStatus: String, CaseIterable {
 // MARK: - SessionWatcherSession Event
 
 /// Represents a single event in a Claude Code session.
-public struct SessionWatcherEvent: Equatable {
+public struct SessionWatcherEvent: Equatable, Sendable {
     public var id: Int?
     public var sessionId: String
     public var eventType: String

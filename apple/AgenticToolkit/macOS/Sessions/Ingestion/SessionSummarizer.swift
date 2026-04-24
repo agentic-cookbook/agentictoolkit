@@ -1,11 +1,11 @@
-import AgenticToolkitAIPlugins
+import AgenticToolkitCoreMacOS
 import AgenticToolkitCore
 import Foundation
 import os
 
 /// Generates AI-powered summaries for Claude Code sessions by reading stored events
 /// and sending a summarization prompt to the configured AI provider.
-public final class SessionSummarizer {
+public final class SessionSummarizer: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -49,7 +49,7 @@ public final class SessionSummarizer {
         case invalidResponse
         case emptyReply
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .disabled: return "AI summaries not enabled"
             case .noAPIKey: return "No API key configured"
@@ -78,17 +78,17 @@ public final class SessionSummarizer {
     /// Throws `SummarizerError` on failure.
     public func summarize(sessionId: String) async throws -> String {
         // Check if enabled before any logging
-        let enabledStr = try? SessionsDatabaseManager.getSetting(key: SettingsViewModel.aiSummariesEnabledKey)
+        let enabledStr = try? SessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else {
             throw SummarizerError.disabled
         }
 
-        let dbg = SummarizerDebugLog.shared
+        let dbg = SessionWatcherSummarizerDebugLog.shared
         dbg.append("--- summarize(\(sessionId)) called ---")
 
-        let providerStr = (try? SessionsDatabaseManager.getSetting(key: SettingsViewModel.aiProviderKey)) ?? "claude_cli"
-        let provider = AIProvider(rawValue: providerStr) ?? .claudeCLI
-        let model = (try? SessionsDatabaseManager.getSetting(key: SettingsViewModel.aiModelKey)) ?? provider.recommendedModel
+        let providerStr = (try? SessionsDatabaseManager.getSetting(key: "ai_provider")) ?? "claude_cli"
+        let provider = AIProvider(rawValue: providerStr) ?? .anthropic
+        let model = (try? SessionsDatabaseManager.getSetting(key: "ai_model")) ?? provider.recommendedModel
         dbg.append("Provider: \(provider.rawValue), Model: \(model)")
 
         // Fetch session and events
@@ -129,7 +129,7 @@ public final class SessionSummarizer {
     // MARK: - Claude CLI Summarization
 
     /// Runs `claude -p` with the prompt piped to stdin.
-    private func summarizeViaCLI(prompt: String, model: String, dbg: SummarizerDebugLog, sessionId: String) async throws -> String {
+    private func summarizeViaCLI(prompt: String, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
         dbg.append("Using Claude CLI (model: \(model))")
 
         // Find the claude binary
@@ -215,7 +215,7 @@ public final class SessionSummarizer {
         }
 
         dbg.append("SUCCESS: Summary generated")
-        Log.ai.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
+        logger.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
         return reply
     }
 
@@ -236,15 +236,15 @@ public final class SessionSummarizer {
 
     // MARK: - API-based Summarization
 
-    private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SummarizerDebugLog, sessionId: String) async throws -> String {
-        let apiKey = KeychainHelper.get(forKey: SettingsViewModel.aiAPIKeyKey) ?? ""
+    private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
+        let apiKey = KeychainHelper.get(forKey: "ai_api_key") ?? ""
         dbg.append("API key present = \(!apiKey.isEmpty) (length: \(apiKey.count))")
         guard !apiKey.isEmpty else {
             dbg.append("BAIL: No API key in Keychain")
             throw SummarizerError.noAPIKey
         }
 
-        let baseURL = (try? SessionsDatabaseManager.getSetting(key: SettingsViewModel.aiBaseURLKey)) ?? ""
+        let baseURL = (try? SessionsDatabaseManager.getSetting(key: "ai_base_url")) ?? ""
         dbg.append("BaseURL: \(baseURL.isEmpty ? "(none)" : baseURL)")
 
         let config = AIRequestConfig(
@@ -304,7 +304,7 @@ public final class SessionSummarizer {
         }
 
         dbg.append("SUCCESS: Summary generated")
-        Log.ai.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
+        logger.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
         return reply
     }
 
@@ -312,28 +312,28 @@ public final class SessionSummarizer {
     /// Throws on fatal errors (API/config), returns silently on non-fatal ones (no events, etc.).
     public func summarizeAndStore(sessionId: String) async throws {
         // Bail early if disabled — no logging at all
-        let enabledStr = try? SessionsDatabaseManager.getSetting(key: SettingsViewModel.aiSummariesEnabledKey)
+        let enabledStr = try? SessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else { return }
 
-        SummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")
+        SessionWatcherSummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")
 
         let summary: String
         do {
             summary = try await summarize(sessionId: sessionId)
         } catch let error as SummarizerError where !error.isFatal {
-            Log.ai.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return
         }
 
         do {
             try SessionsDatabaseManager.updateSessionSummary(sessionId: sessionId, summary: summary)
-            Log.ai.info("Stored AI summary for session \(sessionId, privacy: .public)")
+            logger.info("Stored AI summary for session \(sessionId, privacy: .public)")
 
             await MainActor.run {
-                SessionListViewModel.notifySessionsChanged()
+                SessionWatcherListViewModel.notifySessionsChanged()
             }
         } catch {
-            Log.ai.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -528,4 +528,8 @@ public final class SessionSummarizer {
             return String(format: "%.1fKB", kb)
         }
     }
+}
+
+extension SessionSummarizer: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

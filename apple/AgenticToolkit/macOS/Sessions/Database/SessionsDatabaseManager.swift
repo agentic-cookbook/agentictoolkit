@@ -1,4 +1,3 @@
-import AgenticToolkitNotesWindow
 import Foundation
 import SQLite3
 import AgenticToolkitCore
@@ -794,7 +793,7 @@ public class SessionsDatabaseManager {
     // when binding temporary NSString.utf8String results.
     private static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-    private static let iso8601: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let iso8601: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
@@ -916,8 +915,8 @@ public class SessionsDatabaseManager {
 
 /// SessionsDatabaseManager already implements the NoteStorage methods —
 /// this declares conformance so it can be injected into NotesManager.
-public extension SessionsDatabaseManager: NoteStorage {}
+extension SessionsDatabaseManager: NoteStorage {}
 
-public extension SessionsDatabaseManager: Loggable {
+extension SessionsDatabaseManager: Loggable {
     public static nonisolated let logger = makeLogger()
 }

@@ -1,5 +1,6 @@
 import AppKit
 import os
+import AgenticToolkitCore
 
 /// A small floating window for quickly capturing a note.
 /// Positions itself near a given screen rect (typically a status bar item).
@@ -59,12 +60,10 @@ public final class QuickNoteWindowController: NSWindowController {
         return btn
     }()
 
-    private let logger: Logger?
 
     // MARK: - Initialization
 
-    public init(logger: Logger? = nil, onSave: @escaping (String, String) -> Void) {
-        self.logger = logger
+    public init(onSave: @escaping (String, String) -> Void) {
         self.onSave = onSave
 
         let window = NSWindow(
@@ -145,7 +144,7 @@ public final class QuickNoteWindowController: NSWindowController {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         window.makeFirstResponder(titleField)
-        logger?.debug("Quick note window shown")
+        logger.debug("Quick note window shown")
     }
 
     // MARK: - Actions
@@ -164,4 +163,8 @@ public final class QuickNoteWindowController: NSWindowController {
     @objc private func cancelAction() {
         close()
     }
+}
+
+extension QuickNoteWindowController: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

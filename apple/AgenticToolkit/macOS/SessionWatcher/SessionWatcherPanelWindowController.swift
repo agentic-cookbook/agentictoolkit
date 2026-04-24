@@ -5,6 +5,7 @@ import AgenticToolkitCoreMacOS
 
 import AppKit
 import Combine
+import os
 
 /// The floating session-list window. Absorbs the former
 /// `SessionWindow` / `SessionPanelController` pair into a single
@@ -12,7 +13,7 @@ import Combine
 @MainActor
 public final class SessionWatcherPanelWindowController: SingleWindowController {
 
-    private(set) var viewModel: SessionWatcherListViewModel?
+    public private(set) var viewModel: SessionWatcherListViewModel?
     public let discoveryWindowController = WindowDiscoveryWindowController()
 
     private var SessionWatcherDatabaseManager: SessionWatcherDatabaseManager?
@@ -58,7 +59,7 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
 
     public override func makeContentView() -> NSView? {
         guard let viewModel else {
-            Log.ui.warning("Creating session window without database manager — call setDatabaseManager first")
+            logger.warning("Creating session window without database manager — call setDatabaseManager first")
             return NSView()
         }
         let view = SessionWatcherContentView(viewModel: viewModel)
@@ -105,7 +106,7 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
 
     public func showPanel() {
         guard viewModel != nil else {
-            Log.ui.warning("Cannot show session window without database manager")
+            logger.warning("Cannot show session window without database manager")
             return
         }
         viewModel?.loadSessions()
@@ -121,7 +122,7 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
         DispatchQueue.main.async { [weak self] in
             self?.handleContentSizeChange()
         }
-        Log.ui.debug("SessionWatcherSession window shown")
+        logger.debug("SessionWatcherSession window shown")
     }
 
     public func hidePanel() {
@@ -129,18 +130,14 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
         guard didShowOnce, let w = window else { return }
         WindowManager.shared.saveFrame(for: w, id: windowID)
         w.orderOut(nil)
-        Log.ui.debug("SessionWatcherSession window hidden")
+        logger.debug("SessionWatcherSession window hidden")
     }
 
     // MARK: - Height auto-fit
 
     private func wireContentViewObservers(_ view: SessionWatcherContentView) {
-        sizeObservation = view.observe(\.intrinsicContentSize, options: [.new]) { [weak self] view, _ in
-            let h = view.intrinsicContentSize.height
-            if h > 0 {
-                DispatchQueue.main.async { self?.updatePanelHeight(to: h) }
-            }
-        }
+        // KVO on intrinsicContentSize removed under Swift 6 strict concurrency.
+        // The NotificationCenter observer below covers the same signal.
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleContentSizeChange),
@@ -217,4 +214,8 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
     public var isWindowDiscoveryVisible: Bool {
         discoveryWindowController.isVisible
     }
+}
+
+extension SessionWatcherPanelWindowController: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

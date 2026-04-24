@@ -62,3 +62,9 @@ public enum AIProvider: String, CaseIterable, Identifiable, Sendable {
         }
     }
 }
+
+extension AIProvider {
+    /// Routes the summarizer through the Claude CLI rather than an HTTP API.
+    /// Currently none of the built-in providers use a CLI.
+    public var usesCLI: Bool { false }
+}

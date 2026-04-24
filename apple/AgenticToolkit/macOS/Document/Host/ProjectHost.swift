@@ -22,5 +22,5 @@ public protocol WiiProjectHost: AnyObject {
     /// The host typically reads from `UserDefaults` and a keychain; the toolkit
     /// avoids those dependencies and asks the host when a summarization request
     /// is about to be issued.
-    var summarizationSettings: TerminalSessionSummarizationSettingsProviding { get }
+    var summarizationSettings: TerminalSessionTerminalSessionSummarizationSettingsProviding { get }
 }

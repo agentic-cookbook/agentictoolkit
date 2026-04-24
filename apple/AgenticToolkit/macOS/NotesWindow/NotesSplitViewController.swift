@@ -64,7 +64,7 @@ public final class NotesSplitViewController: NSSplitViewController {
 
 // MARK: - NotesListViewControllerDelegate
 
-public extension NotesSplitViewController: NotesListViewControllerDelegate {
+extension NotesSplitViewController: NotesListViewControllerDelegate {
 
     public func notesListDidSelectNote(_ note: Note?) {
         editorVC.show(note: note)
@@ -82,7 +82,7 @@ public extension NotesSplitViewController: NotesListViewControllerDelegate {
 
 // MARK: - NoteEditorViewControllerDelegate
 
-public extension NotesSplitViewController: NoteEditorViewControllerDelegate {
+extension NotesSplitViewController: NoteEditorViewControllerDelegate {
 
     public func noteEditorDidChangeTitle(_ title: String, for noteID: UUID) {
         guard let note = notesManager.notes.first(where: { $0.id == noteID }) else { return }

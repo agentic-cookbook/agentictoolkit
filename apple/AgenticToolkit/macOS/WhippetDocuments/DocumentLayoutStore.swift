@@ -152,7 +152,7 @@ public final class DocumentLayoutStore {
             try insertRoot(root.id)
             try execute("COMMIT")
         } catch {
-            try? execute("ROLLBACK")
+            _ = try? execute("ROLLBACK")
             throw error
         }
     }

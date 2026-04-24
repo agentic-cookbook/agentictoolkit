@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCoreMacOS
 
 /// Manages a standalone AI Chat window. Callers build their own
 /// `ChatViewModel` with whichever backend is appropriate (stub, live

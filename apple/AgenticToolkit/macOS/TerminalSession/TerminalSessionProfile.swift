@@ -240,7 +240,7 @@ public struct TerminalSessionProfile: Codable, Identifiable, Equatable, Sendable
     )
 }
 
-public extension NSColor {
+extension NSColor {
     /// Creates an NSColor from a hex string like `#rrggbb` or `rrggbb`.
     public convenience init?(hex: String) {
         var hexString = hex.trimmingCharacters(in: .whitespacesAndNewlines)

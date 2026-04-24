@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import os
 
 
 /// Abstracts the save/open panel modal prompts so tests can inject a fake
@@ -32,22 +33,22 @@ public final class WhippetDocumentController: NSDocumentController {
     /// no way to await the async `openDocument(withContentsOf:display:)` call.
     public var didFinishOpeningDocument: ((NSDocument?, Error?) -> Void)?
 
-    public @IBAction override func newDocument(_ sender: Any?) {
-        Log.app.info("WhippetDocumentController.newDocument(_:) invoked")
+    @IBAction public override func newDocument(_ sender: Any?) {
+        logger.info("WhippetDocumentController.newDocument(_:) invoked")
         NSApp.activate(ignoringOtherApps: true)
         guard let url = urlPrompter.promptForNewProjectURL() else {
-            Log.app.info("newDocument: prompter returned nil — user cancelled")
+            logger.info("newDocument: prompter returned nil — user cancelled")
             return
         }
         createDocumentPackage(at: url)
     }
 
-    public @IBAction override func openDocument(_ sender: Any?) {
-        Log.app.info("WhippetDocumentController.openDocument(_:) invoked")
+    @IBAction public override func openDocument(_ sender: Any?) {
+        logger.info("WhippetDocumentController.openDocument(_:) invoked")
         NSApp.activate(ignoringOtherApps: true)
         let urls = urlPrompter.promptForExistingProjectURLs()
         guard !urls.isEmpty else {
-            Log.app.info("openDocument: prompter returned empty — user cancelled")
+            logger.info("openDocument: prompter returned empty — user cancelled")
             return
         }
         for url in urls {
@@ -71,7 +72,7 @@ public final class WhippetDocumentController: NSDocumentController {
         do {
             finalURL = try Self.writeEmptyPackage(at: url)
         } catch {
-            Log.app.error("Failed to create Whippet project at \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to create Whippet project at \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             presentError(error)
             return
         }
@@ -87,7 +88,7 @@ public final class WhippetDocumentController: NSDocumentController {
     @discardableResult
     private func openProject(at url: URL) -> NSDocument? {
         if let existing = document(for: url) {
-            Log.app.info("openProject: document already open for \(url.path, privacy: .public)")
+            logger.info("openProject: document already open for \(url.path, privacy: .public)")
             if shouldDisplayOpenedDocuments { existing.showWindows() }
             didFinishOpeningDocument?(existing, nil)
             return existing
@@ -99,13 +100,13 @@ public final class WhippetDocumentController: NSDocumentController {
             typeName = try typeForContents(of: url)
             doc = try makeDocument(withContentsOf: url, ofType: typeName)
         } catch {
-            Log.app.error("openProject: load failed for \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("openProject: load failed for \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             didFinishOpeningDocument?(nil, error)
             return nil
         }
 
         addDocument(doc)
-        Log.app.info("openProject: registered \(String(describing: Swift.type(of: doc)), privacy: .public) for \(url.path, privacy: .public)")
+        logger.info("openProject: registered \(String(describing: Swift.type(of: doc)), privacy: .public) for \(url.path, privacy: .public)")
 
         if shouldDisplayOpenedDocuments {
             if doc.windowControllers.isEmpty {
@@ -113,11 +114,11 @@ public final class WhippetDocumentController: NSDocumentController {
             }
             doc.showWindows()
             if let window = doc.windowControllers.first?.window {
-                Log.app.info("openProject: window visible=\(window.isVisible) frame=\(NSStringFromRect(window.frame), privacy: .public)")
+                logger.info("openProject: window visible=\(window.isVisible) frame=\(NSStringFromRect(window.frame), privacy: .public)")
                 window.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
             } else {
-                Log.app.error("openProject: no window after showWindows")
+                logger.error("openProject: no window after showWindows")
             }
         }
 
@@ -165,7 +166,7 @@ public final class DefaultProjectURLPrompter: ProjectURLPrompting {
         panel.isExtensionHidden = false
 
         let response = panel.runModal()
-        Log.app.info("save panel closed with response=\(response.rawValue) url=\(panel.url?.path ?? "<nil>", privacy: .public)")
+        logger.info("save panel closed with response=\(response.rawValue) url=\(panel.url?.path ?? "<nil>", privacy: .public)")
         guard response == .OK else { return nil }
         return panel.url
     }
@@ -180,8 +181,16 @@ public final class DefaultProjectURLPrompter: ProjectURLPrompting {
         panel.allowedContentTypes = [UTType(projectUTI)].compactMap { $0 }
 
         let response = panel.runModal()
-        Log.app.info("open panel closed with response=\(response.rawValue) urls=\(panel.urls.map(\.path).joined(separator: ","), privacy: .public)")
+        logger.info("open panel closed with response=\(response.rawValue) urls=\(panel.urls.map(\.path).joined(separator: ","), privacy: .public)")
         guard response == .OK else { return [] }
         return panel.urls
     }
+}
+
+extension WhippetDocumentController: Loggable {
+    public static nonisolated let logger = makeLogger()
+}
+
+extension DefaultProjectURLPrompter: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

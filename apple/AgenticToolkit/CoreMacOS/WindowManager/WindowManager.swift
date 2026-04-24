@@ -1,5 +1,6 @@
 import AppKit
 import os
+import AgenticToolkitCore
 
 /// Centralized window frame persistence using proportional positioning.
 ///
@@ -20,21 +21,17 @@ public final class WindowManager {
     public let screenProvider: ScreenProvider
     public let storage: WindowStateStorage
 
-    private let logger: Logger
 
     /// Creates a WindowManager with injectable dependencies.
     /// - Parameters:
     ///   - screenProvider: Provides current screen geometry. Defaults to real NSScreen data.
     ///   - storage: Persists window state. Defaults to UserDefaults.
-    ///   - logger: Logger for debug output. Defaults to AgenticAppKit subsystem.
     public init(
         screenProvider: ScreenProvider = RealScreenProvider(),
-        storage: WindowStateStorage = UserDefaultsWindowStateStorage(),
-        logger: Logger = Logger(subsystem: "AgenticAppKit", category: "WindowManager")
+        storage: WindowStateStorage = UserDefaultsWindowStateStorage()
     ) {
         self.screenProvider = screenProvider
         self.storage = storage
-        self.logger = logger
     }
 
     /// Starts observing screen change notifications.
@@ -227,4 +224,8 @@ public final class WindowManager {
         }
         return NSScreen.main.map { RealScreenInfo(screen: $0) }
     }
+}
+
+extension WindowManager: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

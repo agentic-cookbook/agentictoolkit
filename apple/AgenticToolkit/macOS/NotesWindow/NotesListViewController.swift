@@ -1,8 +1,8 @@
 import AppKit
 
 @MainActor public protocol NotesListViewControllerDelegate: AnyObject {
-    public func notesListDidSelectNote(_ note: Note?)
-    public func notesListDidRequestNewNote()
+    func notesListDidSelectNote(_ note: Note?)
+    func notesListDidRequestNewNote()
 }
 
 public final class NotesListViewController: NSViewController {
@@ -143,7 +143,7 @@ public final class NotesListViewController: NSViewController {
 
 // MARK: - NSSearchFieldDelegate
 
-public extension NotesListViewController: NSSearchFieldDelegate {
+extension NotesListViewController: NSSearchFieldDelegate {
     public func controlTextDidChange(_ obj: Notification) {
         applySearch()
     }
@@ -151,7 +151,7 @@ public extension NotesListViewController: NSSearchFieldDelegate {
 
 // MARK: - NSTableViewDataSource
 
-public extension NotesListViewController: NSTableViewDataSource {
+extension NotesListViewController: NSTableViewDataSource {
     public func numberOfRows(in tableView: NSTableView) -> Int {
         filteredNotes.count
     }
@@ -159,7 +159,7 @@ public extension NotesListViewController: NSTableViewDataSource {
 
 // MARK: - NSTableViewDelegate
 
-public extension NotesListViewController: NSTableViewDelegate {
+extension NotesListViewController: NSTableViewDelegate {
 
     public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 60 }
 

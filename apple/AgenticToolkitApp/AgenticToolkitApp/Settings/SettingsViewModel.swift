@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import os
 import AgenticToolkitAIPlugins
+import AgenticToolkitCore
 
 /// View model for the Settings window. Reads and writes all configurable settings
 /// to the SQLite `settings` table via SessionsDatabaseManager. Changes are persisted
@@ -105,7 +106,7 @@ final class SettingsViewModel: ObservableObject {
             do {
                 try manager.setEnabled(launchAtLogin)
             } catch {
-                NSLog("AgenticPluginTester: Failed to \(launchAtLogin ? "enable" : "disable") launch at login: \(error.localizedDescription)")
+                logger.error("Failed to \(launchAtLogin ? "enable" : "disable") launch at login: \(error.localizedDescription)")
                 // Revert to actual state on failure (suppress re-trigger of didSet)
                 let actual = manager.isEnabled
                 if actual != launchAtLogin {
@@ -239,7 +240,7 @@ final class SettingsViewModel: ObservableObject {
                 shouldShowLaunchAtLoginPrompt = !manager.hasShownPrompt
             }
         } catch {
-            NSLog("AgenticPluginTester: Failed to load settings: \(error.localizedDescription)")
+            logger.error("Failed to load settings: \(error.localizedDescription)")
         }
     }
 
@@ -251,7 +252,7 @@ final class SettingsViewModel: ObservableObject {
         do {
             try SessionsDatabaseManager.setSetting(key: key, value: value)
         } catch {
-            NSLog("AgenticPluginTester: Failed to save setting '\(key)': \(error.localizedDescription)")
+            logger.error("Failed to save setting '\(key)': \(error.localizedDescription)")
         }
     }
 
@@ -289,4 +290,8 @@ final class SettingsViewModel: ObservableObject {
         return "\(minutes)m \(remainingSeconds)s"
     }
 
+}
+
+extension SettingsViewModel: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

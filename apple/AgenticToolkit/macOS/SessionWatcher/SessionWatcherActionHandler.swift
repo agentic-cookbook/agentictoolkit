@@ -6,9 +6,10 @@ import AgenticToolkitCoreMacOS
 import AppKit
 import ApplicationServices
 import UserNotifications
+import os
 
 /// The System Settings pane to open when guiding the user to fix a permission.
-public enum SessionWatcherPermissionPane: String {
+public enum SessionWatcherPermissionPane: String, Sendable {
     case accessibility
     case automation = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
     case notifications = "x-apple.systempreferences:com.apple.preference.security?Privacy_Notifications"
@@ -24,12 +25,12 @@ public enum SessionWatcherPermissionPane: String {
     public func open() {
         switch self {
         case .accessibility:
-            Log.app.info("Opening Accessibility settings via AXIsProcessTrustedWithOptions")
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            logger.info("Opening Accessibility settings via AXIsProcessTrustedWithOptions")
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
             let trusted = AXIsProcessTrustedWithOptions(options)
-            Log.app.info("AXIsProcessTrustedWithOptions returned: \(trusted)")
+            logger.info("AXIsProcessTrustedWithOptions returned: \(trusted)")
         default:
-            Log.app.info("Opening System Settings URL: \(rawValue, privacy: .public)")
+            logger.info("Opening System Settings URL: \(rawValue, privacy: .public)")
             if let url = URL(string: rawValue) {
                 NSWorkspace.shared.open(url)
             }
@@ -77,7 +78,7 @@ public enum SessionWatcherActionResult {
 }
 
 /// Handles execution of session click actions.
-public final class SessionWatcherActionHandler {
+public final class SessionWatcherActionHandler: @unchecked Sendable {
 
     // MARK: - Settings Keys
 
@@ -128,13 +129,13 @@ public final class SessionWatcherActionHandler {
     @discardableResult
     public func execute(for session: SessionWatcherSession) -> SessionWatcherActionResult {
         let action = currentAction
-        Log.actions.info("SessionWatcherSession clicked: \(session.sessionId, privacy: .public) project=\(session.projectName, privacy: .public) cwd=\(session.cwd, privacy: .public) action=\(action.rawValue, privacy: .public)")
+        logger.info("SessionWatcherSession clicked: \(session.sessionId, privacy: .public) project=\(session.projectName, privacy: .public) cwd=\(session.cwd, privacy: .public) action=\(action.rawValue, privacy: .public)")
         return execute(action: action, for: session)
     }
 
     @discardableResult
     public func execute(action: SessionWatcherClickAction, for session: SessionWatcherSession) -> SessionWatcherActionResult {
-        Log.actions.info("Executing action '\(action.rawValue, privacy: .public)' for session \(session.sessionId, privacy: .public)")
+        logger.info("Executing action '\(action.rawValue, privacy: .public)' for session \(session.sessionId, privacy: .public)")
         let result: SessionWatcherActionResult
         switch action {
         case .openTerminal:
@@ -155,9 +156,9 @@ public final class SessionWatcherActionHandler {
 
         switch result {
         case .success:
-            Log.actions.info("Action '\(action.rawValue, privacy: .public)' succeeded")
+            logger.info("Action '\(action.rawValue, privacy: .public)' succeeded")
         case .failure(let error):
-            Log.actions.error("Action '\(action.rawValue, privacy: .public)' failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("Action '\(action.rawValue, privacy: .public)' failed: \(error.localizedDescription, privacy: .public)")
         }
         return result
     }
@@ -165,21 +166,21 @@ public final class SessionWatcherActionHandler {
     // MARK: - Open Terminal
 
     private func openTerminal(at path: String) -> SessionWatcherActionResult {
-        Log.actions.debug("openTerminal: path='\(path, privacy: .public)'")
+        logger.debug("openTerminal: path='\(path, privacy: .public)'")
         guard !path.isEmpty else {
-            Log.actions.warning("openTerminal: empty path")
+            logger.warning("openTerminal: empty path")
             return .failure(.directoryNotFound(""))
         }
 
         let expandedPath = (path as NSString).expandingTildeInPath
-        Log.actions.debug("openTerminal: expandedPath='\(expandedPath, privacy: .public)'")
+        logger.debug("openTerminal: expandedPath='\(expandedPath, privacy: .public)'")
         guard FileManager.default.fileExists(atPath: expandedPath) else {
-            Log.actions.warning("openTerminal: directory does not exist")
+            logger.warning("openTerminal: directory does not exist")
             return .failure(.directoryNotFound(expandedPath))
         }
 
         if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.googlecode.iterm2") != nil {
-            Log.actions.debug("openTerminal: using iTerm2")
+            logger.debug("openTerminal: using iTerm2")
             let script = """
                 tell application "iTerm"
                     activate
@@ -190,7 +191,7 @@ public final class SessionWatcherActionHandler {
             if let appleScript = NSAppleScript(source: script) {
                 appleScript.executeAndReturnError(&error)
                 if let error = error {
-                    Log.actions.warning("openTerminal: iTerm2 error: \(String(describing: error), privacy: .public)")
+                    logger.warning("openTerminal: iTerm2 error: \(String(describing: error), privacy: .public)")
                     if let permError = appleScriptPermissionError(error, appName: "iTerm2") {
                         return .failure(permError)
                     }
@@ -200,7 +201,7 @@ public final class SessionWatcherActionHandler {
             }
             return openTerminalApp(at: expandedPath)
         } else {
-            Log.actions.debug("openTerminal: using Terminal.app")
+            logger.debug("openTerminal: using Terminal.app")
             return openTerminalApp(at: expandedPath)
         }
     }
@@ -229,31 +230,31 @@ public final class SessionWatcherActionHandler {
     // MARK: - Activate Warp SessionWatcherSession
 
     private func activateWarpSession(for session: SessionWatcherSession) -> SessionWatcherActionResult {
-        Log.actions.info("activateWarp: cwd='\(session.cwd, privacy: .public)' project='\(session.projectName, privacy: .public)'")
+        logger.info("activateWarp: cwd='\(session.cwd, privacy: .public)' project='\(session.projectName, privacy: .public)'")
 
         guard !session.cwd.isEmpty else {
-            Log.actions.warning("activateWarp: empty cwd")
+            logger.warning("activateWarp: empty cwd")
             return .failure(.directoryNotFound(""))
         }
 
         // Check Warp is running
         let warpApps = NSRunningApplication.runningApplications(withBundleIdentifier: "dev.warp.Warp-Stable")
-        Log.actions.info("activateWarp: found \(warpApps.count) running Warp instance(s)")
+        logger.info("activateWarp: found \(warpApps.count) running Warp instance(s)")
         guard let warpApp = warpApps.first else {
-            Log.actions.warning("activateWarp: Warp is not running")
+            logger.warning("activateWarp: Warp is not running")
             return .failure(.commandFailed("Warp is not running"))
         }
 
         let warpPID = warpApp.processIdentifier
-        Log.actions.debug("activateWarp: Warp PID=\(warpPID)")
+        logger.debug("activateWarp: Warp PID=\(warpPID)")
 
         let expandedCwd = (session.cwd as NSString).expandingTildeInPath
         let projectName = session.projectName
-        Log.actions.debug("activateWarp: looking for window matching project='\(projectName, privacy: .public)' or cwd='\(expandedCwd, privacy: .public)'")
+        logger.debug("activateWarp: looking for window matching project='\(projectName, privacy: .public)' or cwd='\(expandedCwd, privacy: .public)'")
 
         // Strategy 1: Use CGWindowList to find Warp windows and match by title
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
-            Log.actions.error("activateWarp: CGWindowListCopyWindowInfo returned nil")
+            logger.error("activateWarp: CGWindowListCopyWindowInfo returned nil")
             return .failure(.commandFailed("Unable to read window list"))
         }
 
@@ -266,14 +267,14 @@ public final class SessionWatcherActionHandler {
             let number = entry[kCGWindowNumber as String] as? Int ?? -1
             let layer = entry[kCGWindowLayer as String] as? Int ?? -1
             warpWindows.append((name: name, number: number, layer: layer))
-            Log.actions.debug("activateWarp: Warp window #\(number) layer=\(layer) title='\(name, privacy: .public)'")
+            logger.debug("activateWarp: Warp window #\(number) layer=\(layer) title='\(name, privacy: .public)'")
         }
 
-        Log.actions.info("activateWarp: found \(warpWindows.count) Warp window(s) on screen")
+        logger.info("activateWarp: found \(warpWindows.count) Warp window(s) on screen")
 
         if warpWindows.isEmpty {
             // Warp is running but no on-screen windows — just activate it
-            Log.actions.info("activateWarp: no on-screen windows, just activating Warp")
+            logger.info("activateWarp: no on-screen windows, just activating Warp")
             warpApp.activate()
             return .success
         }
@@ -281,14 +282,14 @@ public final class SessionWatcherActionHandler {
         // Try to find a matching window by title
         // Warp window titles typically show: "projectName — command" or the cwd path
         let matchCandidates = [projectName, expandedCwd, (expandedCwd as NSString).lastPathComponent]
-        Log.actions.debug("activateWarp: match candidates: \(matchCandidates, privacy: .public)")
+        logger.debug("activateWarp: match candidates: \(matchCandidates, privacy: .public)")
 
         var bestMatch: (name: String, number: Int)? = nil
         for candidate in matchCandidates {
             guard !candidate.isEmpty else { continue }
             for w in warpWindows where w.layer == 0 { // layer 0 = normal windows
                 if w.name.localizedCaseInsensitiveContains(candidate) {
-                    Log.actions.info("activateWarp: matched window #\(w.number) title='\(w.name, privacy: .public)' via candidate='\(candidate, privacy: .public)'")
+                    logger.info("activateWarp: matched window #\(w.number) title='\(w.name, privacy: .public)' via candidate='\(candidate, privacy: .public)'")
                     bestMatch = (name: w.name, number: w.number)
                     break
                 }
@@ -298,7 +299,7 @@ public final class SessionWatcherActionHandler {
 
         // Check accessibility permission upfront — don't re-prompt if already denied
         guard Self.isAccessibilityTrusted else {
-            Log.actions.error("activateWarp: Accessibility permission not granted")
+            logger.error("activateWarp: Accessibility permission not granted")
             return .failure(.permissionDenied(
                 "Whippet needs Accessibility access to raise Warp windows. Grant access in System Settings.",
                 pane: .accessibility
@@ -306,49 +307,49 @@ public final class SessionWatcherActionHandler {
         }
 
         // Strategy 2: Use Accessibility API to find and raise the matching window
-        Log.actions.debug("activateWarp: querying Accessibility API for Warp windows")
+        logger.debug("activateWarp: querying Accessibility API for Warp windows")
         let axApp = AXUIElementCreateApplication(warpPID)
         var axWindowsRef: CFTypeRef?
         let axResult = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &axWindowsRef)
 
         if axResult != .success {
-            Log.actions.warning("activateWarp: AXUIElementCopyAttributeValue failed with \(axResult.rawValue)")
+            logger.warning("activateWarp: AXUIElementCopyAttributeValue failed with \(axResult.rawValue)")
         }
 
         let axWindows = (axWindowsRef as? [AXUIElement]) ?? []
-        Log.actions.debug("activateWarp: Accessibility found \(axWindows.count) window(s)")
+        logger.debug("activateWarp: Accessibility found \(axWindows.count) window(s)")
 
         for (i, window) in axWindows.enumerated() {
             var titleRef: CFTypeRef?
             AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
             let axTitle = titleRef as? String ?? "<no title>"
-            Log.actions.debug("activateWarp: AX window[\(i)] title='\(axTitle, privacy: .public)'")
+            logger.debug("activateWarp: AX window[\(i)] title='\(axTitle, privacy: .public)'")
         }
 
         // Activate Warp first
-        Log.actions.debug("activateWarp: activating Warp app")
+        logger.debug("activateWarp: activating Warp app")
         warpApp.activate()
 
         if let match = bestMatch {
             // Raise the specific window via Accessibility
-            Log.actions.info("activateWarp: raising matched window '\(match.name, privacy: .public)'")
+            logger.info("activateWarp: raising matched window '\(match.name, privacy: .public)'")
             for window in axWindows {
                 var titleRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
                 if let title = titleRef as? String, title == match.name {
                     let raiseResult = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-                    Log.actions.debug("activateWarp: AXRaise result=\(raiseResult.rawValue)")
+                    logger.debug("activateWarp: AXRaise result=\(raiseResult.rawValue)")
                     return .success
                 }
             }
             // Couldn't raise via AX but we matched — Warp is activated at least
-            Log.actions.info("activateWarp: could not raise via AX, but Warp is now frontmost")
+            logger.info("activateWarp: could not raise via AX, but Warp is now frontmost")
             return .success
         }
 
         // No title match — fall back to raising the first normal-layer window
         if let firstNormal = warpWindows.first(where: { $0.layer == 0 }) {
-            Log.actions.info("activateWarp: no title match, raising first window '\(firstNormal.name, privacy: .public)'")
+            logger.info("activateWarp: no title match, raising first window '\(firstNormal.name, privacy: .public)'")
             for window in axWindows {
                 var titleRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
@@ -359,7 +360,7 @@ public final class SessionWatcherActionHandler {
             }
         }
 
-        Log.actions.info("activateWarp: no match found, Warp activated without specific window")
+        logger.info("activateWarp: no match found, Warp activated without specific window")
         return .success
     }
 
@@ -368,7 +369,7 @@ public final class SessionWatcherActionHandler {
     private func activateMatchingWindow(for session: SessionWatcherSession) -> SessionWatcherActionResult {
         let projectName = session.projectName
         let branch = session.gitBranch
-        let log = SessionWatcherActivationTestLog.whippetShared
+        let log = ActivationTestLog.whippetShared
         log.append("activateMatchingWindow: project=\"\(projectName)\" branch=\"\(branch)\" cwd=\"\(session.cwd)\"")
 
         guard projectName != "Unknown" else {
@@ -543,7 +544,7 @@ public final class SessionWatcherActionHandler {
 
     private func raiseWindow(pid: pid_t, windowName: String) {
         guard Self.isAccessibilityTrusted else {
-            Log.actions.debug("raiseWindow: accessibility not trusted, skipping")
+            logger.debug("raiseWindow: accessibility not trusted, skipping")
             return
         }
 
@@ -551,7 +552,7 @@ public final class SessionWatcherActionHandler {
         var windowsRef: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef)
         guard result == .success, let windows = windowsRef as? [AXUIElement] else {
-            Log.actions.debug("raiseWindow: AX query failed (\(result.rawValue)) for PID \(pid)")
+            logger.debug("raiseWindow: AX query failed (\(result.rawValue)) for PID \(pid)")
             return
         }
 
@@ -561,17 +562,17 @@ public final class SessionWatcherActionHandler {
                let title = titleRef as? String,
                title == windowName {
                 let raiseResult = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-                Log.actions.debug("raiseWindow: raised '\(windowName, privacy: .public)' result=\(raiseResult.rawValue)")
+                logger.debug("raiseWindow: raised '\(windowName, privacy: .public)' result=\(raiseResult.rawValue)")
                 return
             }
         }
-        Log.actions.debug("raiseWindow: no AX window matched '\(windowName, privacy: .public)'")
+        logger.debug("raiseWindow: no AX window matched '\(windowName, privacy: .public)'")
     }
 
     // MARK: - Open Transcript
 
     private func openTranscript(for session: SessionWatcherSession) -> SessionWatcherActionResult {
-        Log.actions.debug("openTranscript: sessionId=\(session.sessionId, privacy: .public)")
+        logger.debug("openTranscript: sessionId=\(session.sessionId, privacy: .public)")
         let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
         let possiblePaths = [
             "\(homeDir)/.claude/projects/\(session.sessionId)/transcript.md",
@@ -582,13 +583,13 @@ public final class SessionWatcherActionHandler {
 
         for path in possiblePaths {
             if FileManager.default.fileExists(atPath: path) {
-                Log.actions.info("openTranscript: found at \(path, privacy: .public)")
+                logger.info("openTranscript: found at \(path, privacy: .public)")
                 NSWorkspace.shared.open(URL(fileURLWithPath: path))
                 return .success
             }
         }
 
-        Log.actions.info("openTranscript: not found in any location")
+        logger.info("openTranscript: not found in any location")
         return .failure(.transcriptNotFound(
             "No transcript found for session \(session.sessionId). Looked in ~/.claude/projects/ and ~/.claude/sessions/."
         ))
@@ -597,7 +598,7 @@ public final class SessionWatcherActionHandler {
     // MARK: - Copy SessionWatcherSession ID
 
     private func copySessionId(_ sessionId: String) -> SessionWatcherActionResult {
-        Log.actions.debug("copySessionId: \(sessionId, privacy: .public)")
+        logger.debug("copySessionId: \(sessionId, privacy: .public)")
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(sessionId, forType: .string)
@@ -609,7 +610,7 @@ public final class SessionWatcherActionHandler {
     private func runCustomCommand(for session: SessionWatcherSession) -> SessionWatcherActionResult {
         let template = customCommandTemplate
         let command = substituteVariables(in: template, session: session)
-        Log.actions.info("runCustomCommand: template='\(template, privacy: .public)' expanded='\(command, privacy: .public)'")
+        logger.info("runCustomCommand: template='\(template, privacy: .public)' expanded='\(command, privacy: .public)'")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -626,14 +627,14 @@ public final class SessionWatcherActionHandler {
                 if process.terminationStatus != 0 {
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     let output = String(data: data, encoding: .utf8) ?? "Unknown error"
-                    Log.actions.error("Custom command failed (exit \(process.terminationStatus)): \(output, privacy: .public)")
+                    Self.logger.error("Custom command failed (exit \(process.terminationStatus)): \(output, privacy: .public)")
                 } else {
-                    Log.actions.debug("Custom command completed successfully")
+                    Self.logger.debug("Custom command completed successfully")
                 }
             }
             return .success
         } catch {
-            Log.actions.error("Custom command launch failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("Custom command launch failed: \(error.localizedDescription, privacy: .public)")
             return .failure(.commandFailed(error.localizedDescription))
         }
     }
@@ -641,7 +642,7 @@ public final class SessionWatcherActionHandler {
     // MARK: - Send Notification
 
     private func sendNotification(for session: SessionWatcherSession) -> SessionWatcherActionResult {
-        Log.actions.debug("sendNotification: \(session.projectName, privacy: .public)")
+        logger.debug("sendNotification: \(session.projectName, privacy: .public)")
         let content = UNMutableNotificationContent()
         content.title = "Whippet: \(session.projectName)"
         content.body = "SessionWatcherSession: \(session.sessionId)\nModel: \(session.model)\nStatus: \(session.status.rawValue)"
@@ -655,7 +656,7 @@ public final class SessionWatcherActionHandler {
 
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                Log.actions.error("Notification delivery failed: \(error.localizedDescription, privacy: .public)")
+                Self.logger.error("Notification delivery failed: \(error.localizedDescription, privacy: .public)")
             }
         }
 
@@ -742,7 +743,7 @@ public final class SessionWatcherActionHandler {
         if errorNumber == -1743 || errorNumber == -1744
             || errorMessage.localizedCaseInsensitiveContains("not authorized")
             || errorMessage.localizedCaseInsensitiveContains("privilege violation") {
-            Log.actions.error("AppleScript permission denied for \(appName, privacy: .public): \(errorMessage, privacy: .public)")
+            logger.error("AppleScript permission denied for \(appName, privacy: .public): \(errorMessage, privacy: .public)")
             return .permissionDenied(
                 "Whippet needs permission to control \(appName). Grant access in System Settings > Privacy & Security > Automation.",
                 pane: .automation
@@ -750,4 +751,12 @@ public final class SessionWatcherActionHandler {
         }
         return nil
     }
+}
+
+extension SessionWatcherActionHandler: Loggable {
+    public static nonisolated let logger = makeLogger()
+}
+
+extension SessionWatcherPermissionPane: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

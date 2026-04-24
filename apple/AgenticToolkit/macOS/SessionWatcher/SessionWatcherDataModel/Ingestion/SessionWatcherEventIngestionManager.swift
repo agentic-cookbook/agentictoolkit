@@ -2,11 +2,12 @@ import Foundation
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import os
 
 /// Watches the drop directory for new JSON event files, parses them, inserts events
 /// into the database, creates/updates session records, and deletes consumed files.
 /// Malformed files are moved to an `errors/` subdirectory.
-public class SessionWatcherEventIngestionManager {
+public class SessionWatcherEventIngestionManager: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -115,14 +116,14 @@ public class SessionWatcherEventIngestionManager {
         startWatching()
 
         isRunning = true
-        Log.ingestion.info("Started watching \(self.dropDirectoryURL.path, privacy: .public)")
+        logger.info("Started watching \(self.dropDirectoryURL.path, privacy: .public)")
     }
 
     /// Stops watching the drop directory.
     public func stop() {
         stopWatching()
         isRunning = false
-        Log.ingestion.info("Stopped")
+        logger.info("Stopped")
     }
 
     // MARK: - File System Watching
@@ -130,7 +131,7 @@ public class SessionWatcherEventIngestionManager {
     private func startWatching() {
         let fd = open(dropDirectoryURL.path, O_EVTONLY)
         guard fd >= 0 else {
-            Log.ingestion.error("Failed to open directory for monitoring: \(self.dropDirectoryURL.path, privacy: .public)")
+            logger.error("Failed to open directory for monitoring: \(self.dropDirectoryURL.path, privacy: .public)")
             return
         }
         directoryFileDescriptor = fd
@@ -145,7 +146,7 @@ public class SessionWatcherEventIngestionManager {
             // Coalesce: delay to let files finish writing, then process the whole batch.
             // Our own deletes may re-trigger .write, but by the time the next
             // coalesced pass runs those files are gone, so it's a cheap no-op.
-            self?.processingQueue.asyncAfter(deadline: .now() + 0.3) {
+            self?.processingQueue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                 self?.processExistingFiles()
             }
         }
@@ -184,7 +185,7 @@ public class SessionWatcherEventIngestionManager {
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
         if !jsonFiles.isEmpty {
-            Log.ingestion.debug("Found \(jsonFiles.count) JSON file(s) to process")
+            logger.debug("Found \(jsonFiles.count) JSON file(s) to process")
         }
 
         for fileURL in jsonFiles {
@@ -214,7 +215,7 @@ public class SessionWatcherEventIngestionManager {
 
         // Read the file contents
         guard let data = try? Data(contentsOf: fileURL) else {
-            Log.ingestion.warning("Failed to read file: \(fileURL.lastPathComponent, privacy: .public)")
+            logger.warning("Failed to read file: \(fileURL.lastPathComponent, privacy: .public)")
             moveToErrors(fileURL)
             return
         }
@@ -225,7 +226,7 @@ public class SessionWatcherEventIngestionManager {
             if let attributes = try? fm.attributesOfItem(atPath: fileURL.path),
                let modDate = attributes[.modificationDate] as? Date,
                Date().timeIntervalSince(modDate) > 5.0 {
-                Log.ingestion.debug("Deleting empty file: \(fileURL.lastPathComponent, privacy: .public)")
+                logger.debug("Deleting empty file: \(fileURL.lastPathComponent, privacy: .public)")
                 try? fm.removeItem(at: fileURL)
             }
             return
@@ -233,7 +234,7 @@ public class SessionWatcherEventIngestionManager {
 
         // Parse JSON
         guard let eventFile = parseEventFile(data: data, fileName: fileURL.lastPathComponent) else {
-            Log.ingestion.warning("Malformed JSON in file: \(fileURL.lastPathComponent, privacy: .public)")
+            logger.warning("Malformed JSON in file: \(fileURL.lastPathComponent, privacy: .public)")
             moveToErrors(fileURL)
             return
         }
@@ -243,9 +244,9 @@ public class SessionWatcherEventIngestionManager {
             try ingestEvent(eventFile, rawData: data)
             // Delete the consumed file
             try fm.removeItem(at: fileURL)
-            Log.ingestion.debug("Ingested \(eventFile.event, privacy: .public) for session \(eventFile.sessionId, privacy: .public) from \(fileURL.lastPathComponent, privacy: .public)")
+            logger.debug("Ingested \(eventFile.event, privacy: .public) for session \(eventFile.sessionId, privacy: .public) from \(fileURL.lastPathComponent, privacy: .public)")
         } catch {
-            Log.ingestion.error("Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
             moveToErrors(fileURL)
         }
     }
@@ -352,12 +353,12 @@ public class SessionWatcherEventIngestionManager {
 
         let work = { [weak self] in
             SessionWatcherSummarizerDebugLog.shared.append("Debounce fired — summarizing \(sessionId)")
-            Task.detached(priority: .utility) {
+            Task.detached(priority: .utility) { [summarizer, sessionId, weak self] in
                 do {
                     try await summarizer.summarizeAndStore(sessionId: sessionId)
                 } catch {
                     SessionWatcherSummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription)")
-                    Log.ai.error("Summarization error for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    Self.logger.error("Summarization error for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
                     await MainActor.run {
                         self?.onSummarizerError?(error.localizedDescription)
                     }
@@ -399,7 +400,7 @@ public class SessionWatcherEventIngestionManager {
                     try await summarizer.summarizeAndStore(sessionId: session.sessionId)
                 } catch {
                     SessionWatcherSummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription) — stopping summarization loop")
-                    Log.ai.error("Summarization loop stopped: \(error.localizedDescription, privacy: .public)")
+                    Self.logger.error("Summarization loop stopped: \(error.localizedDescription, privacy: .public)")
                     await MainActor.run {
                         self?.onSummarizerError?(error.localizedDescription)
                     }
@@ -424,11 +425,15 @@ public class SessionWatcherEventIngestionManager {
                 try fm.removeItem(at: destination)
             }
             try fm.moveItem(at: fileURL, to: destination)
-            Log.ingestion.info("Moved malformed file to errors/: \(fileURL.lastPathComponent, privacy: .public)")
+            logger.info("Moved malformed file to errors/: \(fileURL.lastPathComponent, privacy: .public)")
         } catch {
-            Log.ingestion.error("Failed to move file to errors directory: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to move file to errors directory: \(error.localizedDescription, privacy: .public)")
             // Last resort: try to delete the problematic file
             try? fm.removeItem(at: fileURL)
         }
     }
+}
+
+extension SessionWatcherEventIngestionManager: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

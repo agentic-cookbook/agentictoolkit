@@ -119,7 +119,7 @@ public enum SQLiteHelpers {
 
 // MARK: - Bool String Extension
 
-public extension Bool {
+extension Bool {
     public init?(fromSQLite string: String) {
         switch string.lowercased() {
         case "true", "1", "yes": self = true

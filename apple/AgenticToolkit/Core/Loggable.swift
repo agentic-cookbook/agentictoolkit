@@ -60,7 +60,7 @@ extension YourType: Loggable {
 }
 
 /// NOTE: this is incorrect, don't add public to the extension declaration, only the logger property
-public extension YourType: Loggable {
+extension YourType: Loggable {
    public static nonisolated let logger = makeLogger()
 }
 

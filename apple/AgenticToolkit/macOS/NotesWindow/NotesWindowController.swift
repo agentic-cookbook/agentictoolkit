@@ -10,12 +10,10 @@ import AgenticToolkitCoreMacOS
 public final class NotesWindowController: SingleWindowController {
 
     private let notesManager: NotesManager
-    private let logger: Logger?
     private var splitVC: NotesSplitViewController?
 
-    public init(notesManager: NotesManager, logger: Logger? = nil) {
+    public init(notesManager: NotesManager) {
         self.notesManager = notesManager
-        self.logger = logger
         super.init(windowID: "notes")
     }
 
@@ -45,6 +43,10 @@ public final class NotesWindowController: SingleWindowController {
             }
         }
         showWindow()
-        logger?.debug("Notes window shown")
+        logger.debug("Notes window shown")
     }
+}
+
+extension NotesWindowController: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

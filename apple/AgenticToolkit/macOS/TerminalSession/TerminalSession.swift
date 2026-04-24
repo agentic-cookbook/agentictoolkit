@@ -253,7 +253,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
     }
 }
 
-public extension TerminalSession: Loggable {
+extension TerminalSession: Loggable {
     public static nonisolated let logger = makeLogger()
 }
 
@@ -312,6 +312,6 @@ private final class TerminalSessionProcessHandler: NSObject, LocalProcessTermina
     }
 }
 
-public extension TerminalSessionProcessHandler: Loggable {
+extension TerminalSessionProcessHandler: Loggable {
     public static nonisolated let logger = makeLogger()
 }

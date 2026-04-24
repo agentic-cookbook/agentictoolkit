@@ -1,6 +1,9 @@
 import Foundation
 import Combine
 import os
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
 /// Shared coordinator for directory tree scanning, caching, and filesystem watching.
 ///
@@ -191,6 +194,6 @@ public final class DirectoryWatchCoordinator: ObservableObject {
     }
 }
 
-public extension DirectoryWatchCoordinator: Loggable {
+extension DirectoryWatchCoordinator: Loggable {
     public static nonisolated let logger = makeLogger()
 }

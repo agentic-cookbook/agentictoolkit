@@ -1,4 +1,6 @@
 import Foundation
+import AgenticToolkitCore
+import os
 
 /// Monitors active sessions and marks them as stale when no events arrive
 /// within the configured timeout period. Runs a repeating timer on a background
@@ -73,7 +75,7 @@ public final class SessionWatcherLivenessMonitor {
         timer.resume()
         isRunning = true
 
-        Log.liveness.info("Started (check interval: \(Self.checkInterval)s, timeout: \(self.currentTimeout())s)")
+        logger.info("Started (check interval: \(Self.checkInterval)s, timeout: \(self.currentTimeout())s)")
     }
 
     /// Stops the repeating liveness check timer.
@@ -81,7 +83,7 @@ public final class SessionWatcherLivenessMonitor {
         timer?.cancel()
         timer = nil
         isRunning = false
-        Log.liveness.info("Stopped")
+        logger.info("Stopped")
     }
 
     // MARK: - Liveness Check
@@ -94,7 +96,7 @@ public final class SessionWatcherLivenessMonitor {
                 return seconds
             }
         } catch {
-            Log.liveness.warning("Failed to read staleness timeout setting: \(error.localizedDescription, privacy: .public)")
+            logger.warning("Failed to read staleness timeout setting: \(error.localizedDescription, privacy: .public)")
         }
         return Self.defaultTimeoutSeconds
     }
@@ -115,7 +117,7 @@ public final class SessionWatcherLivenessMonitor {
 
             let count = try SessionWatcherDatabaseManager.markStaleSessions(olderThan: timeout)
             if count > 0 {
-                Log.liveness.info("Marked \(count) session(s) as stale (timeout: \(timeout)s)")
+                logger.info("Marked \(count) session(s) as stale (timeout: \(timeout)s)")
                 onSessionsMarkedStale?(count)
 
                 // Notify per-session callback for notifications
@@ -130,7 +132,7 @@ public final class SessionWatcherLivenessMonitor {
                 }
             }
         } catch {
-            Log.liveness.error("Liveness check failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("Liveness check failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -152,7 +154,7 @@ public final class SessionWatcherLivenessMonitor {
                     )
                     onSessionProcessDied?(session.sessionId, session.projectName)
                     endedCount += 1
-                    Log.liveness.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
+                    logger.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
                 }
             }
 
@@ -161,12 +163,12 @@ public final class SessionWatcherLivenessMonitor {
             endedCount += noPidEnded
 
             if endedCount > 0 {
-                Log.liveness.info("Ended \(endedCount) session(s) via PID liveness check")
+                logger.info("Ended \(endedCount) session(s) via PID liveness check")
             }
 
             return endedCount
         } catch {
-            Log.liveness.error("PID liveness check failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("PID liveness check failed: \(error.localizedDescription, privacy: .public)")
             return 0
         }
     }
@@ -182,7 +184,7 @@ public final class SessionWatcherLivenessMonitor {
                 status: .ended
             )
             onSessionProcessDied?(session.sessionId, session.projectName)
-            Log.liveness.info("No PID — ended stale session '\(session.projectName, privacy: .public)'")
+            logger.info("No PID — ended stale session '\(session.projectName, privacy: .public)'")
         }
         return stalePidless.count
     }
@@ -193,4 +195,8 @@ public final class SessionWatcherLivenessMonitor {
         guard pid > 0 else { return false }
         return kill(pid, 0) == 0
     }
+}
+
+extension SessionWatcherLivenessMonitor: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

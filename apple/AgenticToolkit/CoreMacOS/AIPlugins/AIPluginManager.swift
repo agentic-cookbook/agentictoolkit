@@ -1,5 +1,6 @@
 import Foundation
 import os
+import AgenticToolkitCore
 
 /// Discovers, loads, and manages LLM plugin bundles.
 ///
@@ -31,7 +32,6 @@ public final class AIPluginManager {
     /// App name used for the per-plugin data directory.
     private let appName: String
 
-    private let logger = Logger(subsystem: "com.agentictoolkit", category: "AIPluginManager")
 
     // MARK: - Errors
 
@@ -279,4 +279,8 @@ private struct AIPluginRecord: AIPluginInfo, Sendable {
             bundlePath: bundle.bundleURL
         )
     }
+}
+
+extension AIPluginManager: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

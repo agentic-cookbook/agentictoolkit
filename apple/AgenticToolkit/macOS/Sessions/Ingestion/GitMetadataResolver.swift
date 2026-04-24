@@ -4,7 +4,7 @@ import Foundation
 /// Runs git commands with a short timeout to avoid blocking.
 public final class GitMetadataResolver {
 
-    public static let shared = GitMetadataResolver()
+    nonisolated(unsafe) public static let shared = GitMetadataResolver()
 
     /// Cache to avoid re-running git for the same cwd within a short period.
     private var cache: [String: (branch: String, timestamp: Date)] = [:]

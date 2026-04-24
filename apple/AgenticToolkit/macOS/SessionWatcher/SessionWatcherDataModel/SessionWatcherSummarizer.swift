@@ -1,10 +1,11 @@
 import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 import Foundation
 import os
 
 /// Generates AI-powered summaries for Claude Code sessions by reading stored events
 /// and sending a summarization prompt to the configured AI provider.
-public final class SessionWatcherSummarizer {
+public final class SessionWatcherSummarizer: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -48,7 +49,7 @@ public final class SessionWatcherSummarizer {
         case invalidResponse
         case emptyReply
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .disabled: return "AI summaries not enabled"
             case .noAPIKey: return "No API key configured"
@@ -77,7 +78,7 @@ public final class SessionWatcherSummarizer {
     /// Throws `SummarizerError` on failure.
     public func summarize(sessionId: String) async throws -> String {
         // Check if enabled before any logging
-        let enabledStr = try? SessionWatcherDatabaseManager.getSetting(key: SettingsViewModel.aiSummariesEnabledKey)
+        let enabledStr = try? SessionWatcherDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else {
             throw SummarizerError.disabled
         }
@@ -85,9 +86,9 @@ public final class SessionWatcherSummarizer {
         let dbg = SessionWatcherSummarizerDebugLog.shared
         dbg.append("--- summarize(\(sessionId)) called ---")
 
-        let providerStr = (try? SessionWatcherDatabaseManager.getSetting(key: SettingsViewModel.aiProviderKey)) ?? "claude_cli"
-        let provider = AIProvider(rawValue: providerStr) ?? .claudeCLI
-        let model = (try? SessionWatcherDatabaseManager.getSetting(key: SettingsViewModel.aiModelKey)) ?? provider.recommendedModel
+        let providerStr = (try? SessionWatcherDatabaseManager.getSetting(key: "ai_provider")) ?? "claude_cli"
+        let provider = AIProvider(rawValue: providerStr) ?? .anthropic
+        let model = (try? SessionWatcherDatabaseManager.getSetting(key: "ai_model")) ?? provider.recommendedModel
         dbg.append("Provider: \(provider.rawValue), Model: \(model)")
 
         // Fetch session and events
@@ -214,7 +215,7 @@ public final class SessionWatcherSummarizer {
         }
 
         dbg.append("SUCCESS: Summary generated")
-        Log.ai.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
+        logger.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
         return reply
     }
 
@@ -236,14 +237,14 @@ public final class SessionWatcherSummarizer {
     // MARK: - API-based Summarization
 
     private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
-        let apiKey = KeychainHelper.get(forKey: SettingsViewModel.aiAPIKeyKey) ?? ""
+        let apiKey = KeychainHelper.get(forKey: "ai_api_key") ?? ""
         dbg.append("API key present = \(!apiKey.isEmpty) (length: \(apiKey.count))")
         guard !apiKey.isEmpty else {
             dbg.append("BAIL: No API key in Keychain")
             throw SummarizerError.noAPIKey
         }
 
-        let baseURL = (try? SessionWatcherDatabaseManager.getSetting(key: SettingsViewModel.aiBaseURLKey)) ?? ""
+        let baseURL = (try? SessionWatcherDatabaseManager.getSetting(key: "ai_base_url")) ?? ""
         dbg.append("BaseURL: \(baseURL.isEmpty ? "(none)" : baseURL)")
 
         let config = AIRequestConfig(
@@ -303,7 +304,7 @@ public final class SessionWatcherSummarizer {
         }
 
         dbg.append("SUCCESS: Summary generated")
-        Log.ai.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
+        logger.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
         return reply
     }
 
@@ -311,7 +312,7 @@ public final class SessionWatcherSummarizer {
     /// Throws on fatal errors (API/config), returns silently on non-fatal ones (no events, etc.).
     public func summarizeAndStore(sessionId: String) async throws {
         // Bail early if disabled — no logging at all
-        let enabledStr = try? SessionWatcherDatabaseManager.getSetting(key: SettingsViewModel.aiSummariesEnabledKey)
+        let enabledStr = try? SessionWatcherDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else { return }
 
         SessionWatcherSummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")
@@ -320,19 +321,19 @@ public final class SessionWatcherSummarizer {
         do {
             summary = try await summarize(sessionId: sessionId)
         } catch let error as SummarizerError where !error.isFatal {
-            Log.ai.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return
         }
 
         do {
             try SessionWatcherDatabaseManager.updateSessionSummary(sessionId: sessionId, summary: summary)
-            Log.ai.info("Stored AI summary for session \(sessionId, privacy: .public)")
+            logger.info("Stored AI summary for session \(sessionId, privacy: .public)")
 
             await MainActor.run {
                 SessionWatcherListViewModel.notifySessionsChanged()
             }
         } catch {
-            Log.ai.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -527,4 +528,8 @@ public final class SessionWatcherSummarizer {
             return String(format: "%.1fKB", kb)
         }
     }
+}
+
+extension SessionWatcherSummarizer: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

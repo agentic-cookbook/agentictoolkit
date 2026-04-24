@@ -1,5 +1,8 @@
-import AgenticToolkitCoreUI
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
+import os
 
 /// Manages the Window Discovery window lifecycle. Reuses a single window and
 /// swaps its content view whenever `showDiscovery(for:)` is called with a new
@@ -24,7 +27,7 @@ public final class WindowDiscoveryWindowController: SingleWindowController {
 
     /// Shows the window discovery panel for the given session. Replaces any
     /// existing discovery view with a new one.
-    public func showDiscovery(for session: Session) {
+    public func showDiscovery(for session: SessionWatcherSession) {
         let vm = WindowDiscoveryViewModel(session: session)
         vm.onWindowActivated = { [weak self] in
             self?.dismiss()
@@ -46,6 +49,10 @@ public final class WindowDiscoveryWindowController: SingleWindowController {
         ])
 
         self.discoveryView = view
-        Log.ui.debug("Window discovery shown for '\(session.projectName, privacy: .public)'")
+        logger.debug("Window discovery shown for '\(session.projectName, privacy: .public)'")
     }
+}
+
+extension WindowDiscoveryWindowController: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

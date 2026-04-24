@@ -115,6 +115,6 @@ public final class GitStatusProvider: @unchecked Sendable {
     }
 }
 
-public extension GitStatusProvider: Loggable {
+extension GitStatusProvider: Loggable {
     public static nonisolated let logger = makeLogger()
 }

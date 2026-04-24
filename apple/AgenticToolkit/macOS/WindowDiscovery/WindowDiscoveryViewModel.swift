@@ -3,6 +3,7 @@ import Combine
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import os
 
 /// A single window discovered via the Accessibility API.
 public struct DiscoveredWindow: Identifiable {
@@ -26,24 +27,24 @@ public struct DiscoveredApp: Identifiable {
 
 /// Discovers all on-screen windows using the Accessibility API and groups them by app.
 /// Does not require Screen Recording permission — only Accessibility.
-public final class WindowDiscoveryViewModel: ObservableObject {
+public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendable {
 
     // MARK: - Published State
 
-    public @Published var isLoading = true
-    public @Published var apps: [DiscoveredApp] = []
-    public @Published var accessibilityDenied = false
+    @Published public var isLoading = true
+    @Published public var apps: [DiscoveredApp] = []
+    @Published public var accessibilityDenied = false
 
     // MARK: - Properties
 
-    public let session: Session
+    public let session: SessionWatcherSession
 
     /// Called after the user selects and activates a window so the panel can close.
     public var onWindowActivated: (() -> Void)?
 
     // MARK: - Initialization
 
-    public init(session: Session) {
+    public init(session: SessionWatcherSession) {
         self.session = session
     }
 
@@ -139,7 +140,7 @@ public final class WindowDiscoveryViewModel: ObservableObject {
 
     /// Activates the selected window and its owning app.
     public func activateWindow(_ window: DiscoveredWindow) {
-        Log.actions.info("WindowDiscovery: activating '\(window.title, privacy: .public)' (PID \(window.pid))")
+        logger.info("WindowDiscovery: activating '\(window.title, privacy: .public)' (PID \(window.pid))")
         if let app = NSRunningApplication(processIdentifier: window.pid) {
             app.activate()
         }
@@ -148,6 +149,10 @@ public final class WindowDiscoveryViewModel: ObservableObject {
     }
 
     public func openAccessibilitySettings() {
-        PermissionPane.accessibility.open()
+        SessionWatcherPermissionPane.accessibility.open()
     }
+}
+
+extension WindowDiscoveryViewModel: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

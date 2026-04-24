@@ -140,22 +140,22 @@ private struct FileEditorContentView: View {
 /// Observable state for the file editor, managing content, dirty tracking, and file I/O.
 private final class EditorState: ObservableObject {
     /// The current text content displayed in the editor.
-    public @Published var content: String = ""
+    @Published public var content: String = ""
 
     /// Whether the content has been modified since the last save or load.
-    public @Published var isModified: Bool = false
+    @Published public var isModified: Bool = false
 
     /// Whether the file could not be read as UTF-8 text.
-    public @Published var loadError: Bool = false
+    @Published public var loadError: Bool = false
 
     /// Whether the initial file load has completed (gates SourceEditor creation).
-    public @Published var isLoaded: Bool = false
+    @Published public var isLoaded: Bool = false
 
     /// Monotonic counter incremented on each load, used as `.id()` to force SourceEditor recreation.
-    public @Published var loadGeneration: Int = 0
+    @Published public var loadGeneration: Int = 0
 
     /// State for the SourceEditor (cursor position, scroll, find panel).
-    public @Published var sourceEditorState = SourceEditorState()
+    @Published public var sourceEditorState = SourceEditorState()
 
     /// The URL of the currently loaded file.
     public var currentURL: URL?
@@ -225,6 +225,6 @@ private final class EditorState: ObservableObject {
     }
 }
 
-public extension EditorState: Loggable {
+extension EditorState: Loggable {
     public static nonisolated let logger = makeLogger()
 }

@@ -6,6 +6,7 @@ import AppKit
 import ApplicationServices
 import Combine
 import Foundation
+import os
 
 /// Groups sessions by terminal application (e.g. iTerm2, Warp, VS Code).
 public struct SessionWatcherGroup: Identifiable {
@@ -28,18 +29,18 @@ public struct SessionWatcherGroup: Identifiable {
 ///
 /// Projects are "sticky" — once a project appears, it stays in the list even when
 /// all its sessions end, showing "None" instead. Groups are sorted alphabetically.
-public final class SessionWatcherListViewModel: ObservableObject {
+public final class SessionWatcherListViewModel: ObservableObject, @unchecked Sendable {
 
     // MARK: - Published Properties
 
     /// All sessions grouped by project, sorted alphabetically.
-    @Published private(set) var groups: [SessionWatcherGroup] = []
+    @Published public private(set) var groups: [SessionWatcherGroup] = []
 
     /// Whether there are zero known projects (true only before any session is ever seen).
     @Published private(set) var isEmpty: Bool = true
 
     /// The total number of live (non-ended) sessions.
-    @Published private(set) var sessionCount: Int = 0
+    @Published public private(set) var sessionCount: Int = 0
 
     /// The number of active sessions.
     @Published private(set) var activeSessionCount: Int = 0
@@ -60,10 +61,10 @@ public final class SessionWatcherListViewModel: ObservableObject {
     public let actionHandler: SessionWatcherActionHandler
 
     /// The last error message from a click action, shown briefly in the UI.
-    public @Published var lastActionError: String?
+    @Published public var lastActionError: String?
 
     /// If the last error was a permission issue, the Settings pane the user should open.
-    public @Published var lastPermissionPane: SessionWatcherPermissionPane?
+    @Published public var lastPermissionPane: SessionWatcherPermissionPane?
 
     /// Called when the activateWindow action needs a discovery panel shown.
     public var onWindowDiscoveryRequested: ((SessionWatcherSession) -> Void)?
@@ -75,7 +76,7 @@ public final class SessionWatcherListViewModel: ObservableObject {
     @Published private(set) var summarizingSessionIds: Set<String> = []
 
     /// The session ID whose terminal window is currently frontmost, if any.
-    @Published private(set) var frontmostSessionId: String?
+    @Published public private(set) var frontmostSessionId: String?
 
     private var frontmostTimer: Timer?
 
@@ -144,7 +145,7 @@ public final class SessionWatcherListViewModel: ObservableObject {
                 }
             }
         } catch {
-            Log.ui.error("Failed to load sessions: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to load sessions: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -197,7 +198,7 @@ public final class SessionWatcherListViewModel: ObservableObject {
     @objc private func checkAccessibility() {
         let trusted = AXIsProcessTrusted()
         if trusted != isAccessibilityTrusted {
-            Log.app.info("Accessibility status changed: \(trusted)")
+            logger.info("Accessibility status changed: \(trusted)")
             if Thread.isMainThread {
                 isAccessibilityTrusted = trusted
             } else {
@@ -219,7 +220,7 @@ public final class SessionWatcherListViewModel: ObservableObject {
 
     public func handleSessionClick(_ session: SessionWatcherSession) {
         let action = actionHandler.currentAction
-        let log = SessionWatcherActivationTestLog.whippetShared
+        let log = ActivationTestLog.whippetShared
 
         // For window activation actions, try direct AX match first; show discovery panel if no match
         if action == .activateWindow || action == .activateWarp {
@@ -291,7 +292,7 @@ public final class SessionWatcherListViewModel: ObservableObject {
         case .failure(let error):
             lastActionError = error.localizedDescription
             lastPermissionPane = error.permissionPane
-            Log.actions.warning("Click action failed for session \(session.sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.warning("Click action failed for session \(session.sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
 
             let delay: TimeInterval = error.permissionPane != nil ? 10 : 4
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
@@ -311,10 +312,10 @@ public final class SessionWatcherListViewModel: ObservableObject {
     /// and verifying the Warp main window switched. Runs on a background thread
     /// and reports results via lastActionError.
     public func testActivation() {
-        let log = SessionWatcherActivationTestLog.whippetShared
+        let log = ActivationTestLog.whippetShared
         log.clear()
         log.append("=== Activation Test Started ===")
-        log.append("Log file: \((SessionWatcherActivationTestLog.whippetShared.logPath ?? "(no path)"))")
+        log.append("Log file: \((ActivationTestLog.whippetShared.logPath ?? "(no path)"))")
 
         // Gather unique project names from live sessions
         let projects: [(name: String, session: SessionWatcherSession)] = groups.flatMap { group in
@@ -374,7 +375,7 @@ public final class SessionWatcherListViewModel: ObservableObject {
 
             DispatchQueue.main.async {
                 NSApp.activate(ignoringOtherApps: true)
-                self.lastActionError = "Test: \(passCount) passed, \(failCount) failed — see \((SessionWatcherActivationTestLog.whippetShared.logPath ?? "(no path)"))"
+                self.lastActionError = "Test: \(passCount) passed, \(failCount) failed — see \((ActivationTestLog.whippetShared.logPath ?? "(no path)"))"
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
                     if self?.lastActionError?.hasPrefix("Test:") == true {
@@ -491,4 +492,8 @@ public final class SessionWatcherListViewModel: ObservableObject {
             }
         }
     }
+}
+
+extension SessionWatcherListViewModel: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

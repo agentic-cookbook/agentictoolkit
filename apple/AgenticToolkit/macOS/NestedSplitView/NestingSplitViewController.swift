@@ -206,13 +206,13 @@ public final class NestingSplitViewController: NSSplitViewController {
 /// Type-erasing protocol so `NestingSplitViewController` can hold either a leaf or a nested split.
 @MainActor
 public protocol NestedChild: AnyObject {
-    public var viewController: NSViewController { get }
+    var viewController: NSViewController { get }
 }
 
-public extension NestedViewController: NestedChild {
+extension NestedViewController: NestedChild {
     public var viewController: NSViewController { self }
 }
 
-public extension NestingSplitViewController: NestedChild {
+extension NestingSplitViewController: NestedChild {
     public var viewController: NSViewController { self }
 }

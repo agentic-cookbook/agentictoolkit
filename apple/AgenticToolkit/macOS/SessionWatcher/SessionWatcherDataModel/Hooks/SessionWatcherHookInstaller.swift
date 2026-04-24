@@ -1,4 +1,6 @@
 import Foundation
+import AgenticToolkitCore
+import os
 
 /// Manages auto-installation of Claude Code hooks into `~/.claude/settings.json`.
 /// Each hook writes a JSON event file to the session-events drop directory so that
@@ -74,7 +76,7 @@ public final class SessionWatcherHookInstaller {
 
             // Check if Whippet hooks are already installed
             if hooksAlreadyInstalled(in: settings) {
-                Log.hooks.info("Hooks already installed in \(self.settingsURL.path, privacy: .public)")
+                logger.info("Hooks already installed in \(self.settingsURL.path, privacy: .public)")
                 return .alreadyInstalled
             }
 
@@ -91,10 +93,10 @@ public final class SessionWatcherHookInstaller {
             // Write the updated settings back
             try saveSettings(settings)
 
-            Log.hooks.info("Hooks installed for \(Self.hookedEventTypes.count) event types in \(self.settingsURL.path, privacy: .public)")
+            logger.info("Hooks installed for \(Self.hookedEventTypes.count) event types in \(self.settingsURL.path, privacy: .public)")
             return .installed
         } catch {
-            Log.hooks.error("Failed to install hooks: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to install hooks: \(error.localizedDescription, privacy: .public)")
             return .failed(error.localizedDescription)
         }
     }
@@ -131,12 +133,12 @@ public final class SessionWatcherHookInstaller {
             if removed {
                 settings["hooks"] = hooks.isEmpty ? nil : hooks
                 try saveSettings(settings)
-                Log.hooks.info("Hooks uninstalled from \(self.settingsURL.path, privacy: .public)")
+                logger.info("Hooks uninstalled from \(self.settingsURL.path, privacy: .public)")
             }
 
             return removed
         } catch {
-            Log.hooks.error("Failed to uninstall hooks: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to uninstall hooks: \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
@@ -380,4 +382,8 @@ public enum SessionWatcherHookInstallerError: Error, LocalizedError {
             return "Failed to write settings.json: \(message)"
         }
     }
+}
+
+extension SessionWatcherHookInstaller: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

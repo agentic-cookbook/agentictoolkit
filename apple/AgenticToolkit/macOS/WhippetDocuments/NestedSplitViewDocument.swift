@@ -2,11 +2,12 @@ import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import os
 
 
 public class NestedSplitViewDocument: NSDocument {
 
-    public static let databaseFilename = "project.sqlite"
+    public nonisolated static let databaseFilename = "project.sqlite"
 
     nonisolated(unsafe) private var _layoutStore: DocumentLayoutStore?
     nonisolated(unsafe) private var pendingLayoutForLoad: LayoutNode?
@@ -17,19 +18,19 @@ public class NestedSplitViewDocument: NSDocument {
 
     // MARK: - Thread-safe state access
 
-    public var layoutStore: DocumentLayoutStore? {
+    public nonisolated var layoutStore: DocumentLayoutStore? {
         stateLock.lock()
         defer { stateLock.unlock() }
         return _layoutStore
     }
 
-    private func setLayoutStore(_ store: DocumentLayoutStore?) {
+    private nonisolated func setLayoutStore(_ store: DocumentLayoutStore?) {
         stateLock.lock()
         _layoutStore = store
         stateLock.unlock()
     }
 
-    private func setPendingLayout(_ layout: LayoutNode?) {
+    private nonisolated func setPendingLayout(_ layout: LayoutNode?) {
         stateLock.lock()
         pendingLayoutForLoad = layout
         stateLock.unlock()
@@ -63,7 +64,7 @@ public class NestedSplitViewDocument: NSDocument {
         do {
             try store.saveLayout(root)
         } catch {
-            Log.app.error("Failed to save document layout: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to save document layout: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -100,7 +101,7 @@ public class NestedSplitViewDocument: NSDocument {
             stateLock.lock()
             let pending = pendingLayoutForLoad
             stateLock.unlock()
-            try newStore.saveLayout(pending ?? defaultInitialLayout())
+            try newStore.saveLayout(pending ?? LayoutNode.split(orientation: "horizontal", first: LayoutNode.leaf(contentType: "placeholder"), second: LayoutNode.leaf(contentType: "placeholder")))
         }
         setLayoutStore(newStore)
     }
@@ -109,7 +110,7 @@ public class NestedSplitViewDocument: NSDocument {
         try write(to: url, ofType: typeName)
     }
 
-    private nonisolated func defaultInitialLayout() -> LayoutNode {
+    @MainActor private func defaultInitialLayout() -> LayoutNode {
         LayoutNode.split(
             orientation: "horizontal",
             first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
@@ -135,4 +136,8 @@ public class NestedSplitViewDocument: NSDocument {
         let wc = NestedSplitViewWindowController(document: self)
         addWindowController(wc)
     }
+}
+
+extension NestedSplitViewDocument: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

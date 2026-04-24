@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Not a singleton — create one per test run or per app. The log path is derived
 /// from the init-time `appSupportSubdirectory` name.
-public final class ActivationTestLog {
+public final class ActivationTestLog: @unchecked Sendable {
 
     private let queue = DispatchQueue(label: "AgenticAppKit.ActivationTestLog")
     private var _entries: [String] = []

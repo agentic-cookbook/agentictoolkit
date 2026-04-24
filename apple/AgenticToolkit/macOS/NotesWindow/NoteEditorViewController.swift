@@ -1,10 +1,10 @@
 import AppKit
 
 @MainActor public protocol NoteEditorViewControllerDelegate: AnyObject {
-    public func noteEditorDidChangeTitle(_ title: String, for noteID: UUID)
-    public func noteEditorDidChangeContent(_ content: String, for noteID: UUID)
-    public func noteEditorDidRequestPin(for noteID: UUID)
-    public func noteEditorDidRequestDelete(for noteID: UUID)
+    func noteEditorDidChangeTitle(_ title: String, for noteID: UUID)
+    func noteEditorDidChangeContent(_ content: String, for noteID: UUID)
+    func noteEditorDidRequestPin(for noteID: UUID)
+    func noteEditorDidRequestDelete(for noteID: UUID)
 }
 
 public final class NoteEditorViewController: NSViewController {
@@ -180,7 +180,7 @@ public final class NoteEditorViewController: NSViewController {
 
 // MARK: - NSTextFieldDelegate
 
-public extension NoteEditorViewController: NSTextFieldDelegate {
+extension NoteEditorViewController: NSTextFieldDelegate {
     public func controlTextDidChange(_ obj: Notification) {
         guard let id = currentNoteID else { return }
         delegate?.noteEditorDidChangeTitle(titleField.stringValue, for: id)
@@ -189,7 +189,7 @@ public extension NoteEditorViewController: NSTextFieldDelegate {
 
 // MARK: - NSTextViewDelegate
 
-public extension NoteEditorViewController: NSTextViewDelegate {
+extension NoteEditorViewController: NSTextViewDelegate {
     public func textDidChange(_ notification: Notification) {
         guard let id = currentNoteID else { return }
         delegate?.noteEditorDidChangeContent(contentTextView.string, for: id)

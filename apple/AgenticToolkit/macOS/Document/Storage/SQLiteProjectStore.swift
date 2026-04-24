@@ -91,7 +91,7 @@ public enum SQLiteProjectStore {
         let settings = ProjectSettings.fromKeyValueMap(settingsMap)
 
         // Read session records (table may not exist in v2 projects)
-        var sessionRecords: [SessionRecord] = []
+        var sessionRecords: [TerminalSessionSessionRecord] = []
         let decoder = JSONDecoder()
         if let sessionRows = try? SQLiteHelpers.queryAll(db, "SELECT id, name, sort_order, layout_state FROM sessions ORDER BY sort_order") {
             for r in sessionRows where r.count == 4 {
@@ -104,7 +104,7 @@ public enum SQLiteProjectStore {
                 } else {
                     layoutState = settings.defaultSessionLayout
                 }
-                sessionRecords.append(SessionRecord(id: uuid, name: r[1], sortOrder: sortOrder, layoutState: layoutState))
+                sessionRecords.append(TerminalSessionSessionRecord(id: uuid, name: r[1], sortOrder: sortOrder, layoutState: layoutState))
             }
         }
 
@@ -115,13 +115,13 @@ public enum SQLiteProjectStore {
     }
 }
 
-public extension SQLiteProjectStore: Loggable {
+extension SQLiteProjectStore: Loggable {
     public static nonisolated let logger = makeLogger()
 }
 
 // MARK: - ProjectSettings Key-Value Conversion
 
-public extension ProjectSettings {
+extension ProjectSettings {
     public static func fromKeyValueMap(_ map: [String: String]) -> ProjectSettings {
         let defaults = ProjectSettings()
         var s = ProjectSettings()

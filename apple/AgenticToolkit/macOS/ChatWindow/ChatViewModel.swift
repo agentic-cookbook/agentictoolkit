@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import os
+import AgenticToolkitCore
 
 /// Drives the chat window. Messages queue up and process sequentially
 /// so rapid sends don't interleave.
@@ -14,8 +15,6 @@ public final class ChatViewModel: ObservableObject {
 
     private var queue: [String] = []
     private var isProcessing = false
-
-    private let logger = Logger(subsystem: "com.agentictoolkit", category: "Chat")
 
     public init(backend: ChatBackend) {
         self.backend = backend
@@ -98,4 +97,8 @@ public final class ChatViewModel: ObservableObject {
         isTyping = false
         messages.append(ChatMessage(role: .error, text: text))
     }
+}
+
+extension ChatViewModel: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

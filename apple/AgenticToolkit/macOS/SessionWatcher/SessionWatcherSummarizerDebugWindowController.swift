@@ -6,7 +6,7 @@ import AppKit
 import Combine
 
 /// In-memory log of summarizer activity, displayed in a debug window.
-public final class SessionWatcherSummarizerDebugLog: ObservableObject {
+public final class SessionWatcherSummarizerDebugLog: ObservableObject, @unchecked Sendable {
     public static let shared = SessionWatcherSummarizerDebugLog()
 
     @Published private(set) var entries: [String] = []

@@ -1,5 +1,6 @@
 import Foundation
 import os
+import AgenticToolkitCore
 
 /// Coordinates in-memory note state and storage persistence.
 /// All access must happen on the main actor.
@@ -14,7 +15,6 @@ public final class NotesManager {
     // MARK: - Dependencies
 
     private let storage: NoteStorage
-    private let logger: Logger?
     private var saveTasks: [UUID: Task<Void, Never>] = [:]
 
     /// Debounce interval for auto-save.
@@ -22,9 +22,8 @@ public final class NotesManager {
 
     // MARK: - Initialization
 
-    public init(storage: NoteStorage, logger: Logger? = nil) {
+    public init(storage: NoteStorage) {
         self.storage = storage
-        self.logger = logger
     }
 
     // MARK: - Load
@@ -34,10 +33,10 @@ public final class NotesManager {
             let loaded = try storage.fetchAllNotes()
             notes = loaded.sorted(by: Note.defaultSort)
             isLoaded = true
-            logger?.info("Loaded \(loaded.count) notes")
+            logger.info("Loaded \(loaded.count) notes")
         } catch {
             isLoaded = true
-            logger?.error("Failed to load notes: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to load notes: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -51,7 +50,7 @@ public final class NotesManager {
         do {
             try storage.insertNote(note)
         } catch {
-            logger?.error("Failed to persist new note: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to persist new note: \(error.localizedDescription, privacy: .public)")
         }
         return note.id
     }
@@ -79,7 +78,7 @@ public final class NotesManager {
         do {
             try storage.updateNote(updated)
         } catch {
-            logger?.error("Failed to toggle pin: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to toggle pin: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -88,7 +87,7 @@ public final class NotesManager {
         do {
             try storage.deleteNote(id: id)
         } catch {
-            logger?.error("Failed to delete note: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to delete note: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -107,7 +106,7 @@ public final class NotesManager {
             do {
                 try self.storage.updateNote(current)
             } catch {
-                self.logger?.error("Auto-save failed: \(error.localizedDescription, privacy: .public)")
+                self.logger.error("Auto-save failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -132,8 +131,12 @@ public final class NotesManager {
             do {
                 try storage.updateNote(note)
             } catch {
-                logger?.error("Flush save failed: \(error.localizedDescription, privacy: .public)")
+                logger.error("Flush save failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
+}
+
+extension NotesManager: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

@@ -9,8 +9,6 @@ public enum KeychainHelper {
     /// The Keychain service identifier. Defaults to the main bundle identifier.
     nonisolated(unsafe) public static var service: String = Bundle.main.bundleIdentifier ?? "com.agentictoolkit"
 
-    private static let logger = Logger(subsystem: "com.agentictoolkit", category: "Keychain")
-
     /// Stores a value in the Keychain for the given account key.
     /// Overwrites any existing value for the same key.
     @discardableResult
@@ -79,4 +77,8 @@ public enum KeychainHelper {
 
         return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
+}
+
+extension KeychainHelper: Loggable {
+    public static nonisolated let logger = makeLogger()
 }

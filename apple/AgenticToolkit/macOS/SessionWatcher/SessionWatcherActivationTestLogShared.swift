@@ -1,7 +1,10 @@
 import AgenticToolkitCoreUI
 import Foundation
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
 
-public extension ActivationTestLog {
+extension ActivationTestLog {
     /// Process-wide log instance used by the session list for click diagnostics
     /// and the menu item's full test harness run. Both write to
     /// `~/Library/Application Support/Whippet/activation-test.log`.
