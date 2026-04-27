@@ -1,10 +1,9 @@
 import AppKit
 import ApplicationServices
-import AgenticToolkitAIPlugins
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitChatWindow
-import AgenticToolkitSettingsWindow
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 import OSLog
 
 @MainActor

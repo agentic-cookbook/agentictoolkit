@@ -195,6 +195,9 @@
 		B002CD80867BDCD82952B654 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 489C1112EDB33EE9AB23E30A /* Project.swift */; };
 		B05F5810CF3CFB39633F6FD5 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47DDA91097F1CD49C6045FAB /* TestSupport.swift */; };
 		B0B8163C51D77E7E1B71CF3B /* MockScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4096E907A60D6BFB17343B4D /* MockScreen.swift */; };
+		B26D3FBD2FA00D400070E9C1 /* PermissionWalkthroughWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26D3FBC2FA00D400070E9C1 /* PermissionWalkthroughWindowController.swift */; };
+		B26D3FBE2FA00D400070E9C1 /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26D3FBB2FA00D400070E9C1 /* PermissionWalkthrough.swift */; };
+		B26D3FC02FA00D8D0070E9C1 /* AppPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = B26D3FBF2FA00D8D0070E9C1 /* AppPermission.swift */; };
 		B297DF6BF1443B65DD7F4233 /* RunningAppsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B992B143B68C622728A2C4 /* RunningAppsProvider.swift */; };
 		B2A78C8DCD9845DD76A4B2B0 /* ChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF7777C3AFEA4E3016F4A3D /* ChatBackend.swift */; };
 		B31B526DF3225953421FACC7 /* AIPluginInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98FA2E7D0F6BEF9C566A73A0 /* AIPluginInfo.swift */; };
@@ -569,6 +572,9 @@
 		ADFA07D308075B566E07595C /* PluginCapabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginCapabilityTests.swift; sourceTree = "<group>"; };
 		AFA2D439BC60CCB2920A22F6 /* IDEDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IDEDetector.swift; sourceTree = "<group>"; };
 		AFD326C6488E598665A6DC37 /* AIPluginChatBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginChatBackend.swift; sourceTree = "<group>"; };
+		B26D3FBB2FA00D400070E9C1 /* PermissionWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionWalkthrough.swift; sourceTree = "<group>"; };
+		B26D3FBC2FA00D400070E9C1 /* PermissionWalkthroughWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionWalkthroughWindowController.swift; sourceTree = "<group>"; };
+		B26D3FBF2FA00D8D0070E9C1 /* AppPermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPermission.swift; sourceTree = "<group>"; };
 		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		B3FA733A1A4EF2977207B02B /* LogWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWindowController.swift; sourceTree = "<group>"; };
 		B42F1CDC8340A2703AE59765 /* GitStatusProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStatusProviderTests.swift; sourceTree = "<group>"; };
@@ -810,6 +816,9 @@
 		2B9BB3A0E124E67BB0B34316 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
+				B26D3FBF2FA00D8D0070E9C1 /* AppPermission.swift */,
+				B26D3FBB2FA00D400070E9C1 /* PermissionWalkthrough.swift */,
+				B26D3FBC2FA00D400070E9C1 /* PermissionWalkthroughWindowController.swift */,
 				FC7BE2A61152A3B1E4DD6941 /* LaunchAtLoginManager.swift */,
 				96C1A72AF45AFC362B3C921F /* ChatWindow */,
 				3A1FEE2671A9835F2B270DEE /* Document */,
@@ -1615,6 +1624,8 @@
 				0A842B9AC3DAB0D6DCFB5FE5 /* LogWindowController.swift in Sources */,
 				FC152E17B35E2BDFA763ED36 /* MessageBubbleView.swift in Sources */,
 				17DB20F1071EC68B2F07700F /* NestedContentRegistry.swift in Sources */,
+				B26D3FBD2FA00D400070E9C1 /* PermissionWalkthroughWindowController.swift in Sources */,
+				B26D3FBE2FA00D400070E9C1 /* PermissionWalkthrough.swift in Sources */,
 				A46D8B3ECCA9A95B2FCA21D3 /* NestedSplitViewDocument.swift in Sources */,
 				175030A47F41123DF1E0C62C /* NestedSplitViewWindowController.swift in Sources */,
 				8F4E408D31127A2594F8705C /* NestedViewController.swift in Sources */,
@@ -1647,6 +1658,7 @@
 				3F50550BC2A2B507CDD7B860 /* SessionWatcherLivenessMonitor.swift in Sources */,
 				B718195F5BD3E7C7E9632866 /* SessionWatcherPanelWindowController.swift in Sources */,
 				088708B7FF82B13B9DFC04CF /* SessionWatcherSummarizer.swift in Sources */,
+				B26D3FC02FA00D8D0070E9C1 /* AppPermission.swift in Sources */,
 				3964D24EAA305ADD345B7F01 /* SessionWatcherSummarizerDebugWindowController.swift in Sources */,
 				8ADB0CA9EEE0D29C9937DFCA /* SessionsDatabaseManager.swift in Sources */,
 				3D79F34357345E80FF7608B2 /* SessionsDatabaseModels.swift in Sources */,
