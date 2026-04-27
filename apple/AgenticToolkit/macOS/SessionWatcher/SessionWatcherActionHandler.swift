@@ -94,34 +94,46 @@ public final class SessionWatcherActionHandler: @unchecked Sendable {
 
     // MARK: - Properties
 
-    private let SessionWatcherDatabaseManager: SessionWatcherDatabaseManager
+    private let settingsStore: SettingsStore
 
     // MARK: - Initialization
 
-    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager) {
-        self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+    public init(settingsStore: SettingsStore) {
+        self.settingsStore = settingsStore
     }
 
     // MARK: - Configuration
 
     public var currentAction: SessionWatcherClickAction {
-        guard let value = try? SessionWatcherDatabaseManager.getSetting(key: Self.clickActionKey),
-              let action = SessionWatcherClickAction(rawValue: value) else {
-            return .activateWindow
+        // SettingsStore is @MainActor; callers (UI clicks) run on the main actor.
+        let raw: String = MainActor.assumeIsolated {
+            settingsStore.storageProvider(for: StoredSettingKey<String>.clickAction)
+                .get(.clickAction)
         }
-        return action
+        return SessionWatcherClickAction(rawValue: raw) ?? .activateWindow
     }
 
-    public func setAction(_ action: SessionWatcherClickAction) throws {
-        try SessionWatcherDatabaseManager.setSetting(key: Self.clickActionKey, value: action.rawValue)
+    public func setAction(_ action: SessionWatcherClickAction) {
+        let rawValue = action.rawValue
+        MainActor.assumeIsolated {
+            settingsStore.storageProvider(for: StoredSettingKey<String>.clickAction)
+                .set(rawValue, for: .clickAction)
+        }
     }
 
     public var customCommandTemplate: String {
-        (try? SessionWatcherDatabaseManager.getSetting(key: Self.customCommandKey)) ?? "echo $SESSION_ID $CWD $MODEL"
+        let value: String = MainActor.assumeIsolated {
+            settingsStore.storageProvider(for: StoredSettingKey<String>.customCommandTemplate)
+                .get(.customCommandTemplate)
+        }
+        return value.isEmpty ? "echo $SESSION_ID $CWD $MODEL" : value
     }
 
-    public func setCustomCommandTemplate(_ template: String) throws {
-        try SessionWatcherDatabaseManager.setSetting(key: Self.customCommandKey, value: template)
+    public func setCustomCommandTemplate(_ template: String) {
+        MainActor.assumeIsolated {
+            settingsStore.storageProvider(for: StoredSettingKey<String>.customCommandTemplate)
+                .set(template, for: .customCommandTemplate)
+        }
     }
 
     // MARK: - Execution

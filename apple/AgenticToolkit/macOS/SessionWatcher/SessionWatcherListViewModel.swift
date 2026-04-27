@@ -85,9 +85,10 @@ public final class SessionWatcherListViewModel: ObservableObject, @unchecked Sen
 
     // MARK: - Initialization
 
-    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager) {
+    @MainActor
+    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore) {
         self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
-        self.actionHandler = SessionWatcherActionHandler(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager)
+        self.actionHandler = SessionWatcherActionHandler(settingsStore: settingsStore)
         loadSessions()
         startListening()
     }

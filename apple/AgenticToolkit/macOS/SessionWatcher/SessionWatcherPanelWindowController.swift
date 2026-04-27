@@ -82,7 +82,10 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
 
     public func setDatabaseManager(_ SessionWatcherDatabaseManager: SessionWatcherDatabaseManager) {
         self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
-        let vm = SessionWatcherListViewModel(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager)
+        let vm = SessionWatcherListViewModel(
+            SessionWatcherDatabaseManager: SessionWatcherDatabaseManager,
+            settingsStore: SettingsStore.shared
+        )
         vm.onWindowDiscoveryRequested = { [weak self] session in
             self?.showWindowDiscovery(for: session)
         }

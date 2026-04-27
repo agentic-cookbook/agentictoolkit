@@ -33,9 +33,12 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager) {
+    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore) {
         self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+        self.settingsStore = settingsStore
     }
+
+    private let settingsStore: SettingsStore
 
     // MARK: - Public API
 
@@ -78,17 +81,25 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
     /// Throws `SummarizerError` on failure.
     public func summarize(sessionId: String) async throws -> String {
         // Check if enabled before any logging
-        let enabledStr = try? SessionWatcherDatabaseManager.getSetting(key: "ai_summaries_enabled")
-        guard enabledStr == "true" else {
+        let summariesEnabled: Bool = await MainActor.run {
+            settingsStore.storageProvider(for: any StorableSetting<Value>.aiSummariesEnabled).get(.aiSummariesEnabled)
+        }
+        guard summariesEnabled else {
             throw SummarizerError.disabled
         }
 
         let dbg = SessionWatcherSummarizerDebugLog.shared
         dbg.append("--- summarize(\(sessionId)) called ---")
 
-        let providerStr = (try? SessionWatcherDatabaseManager.getSetting(key: "ai_provider")) ?? "claude_cli"
+        let providerStr: String = await MainActor.run {
+            let v = settingsStore.storageProvider(for: StoredSettingKey<String>.aiProvider).get(.aiProvider)
+            return v.isEmpty ? "claude_cli" : v
+        }
         let provider = AIProvider(rawValue: providerStr) ?? .anthropic
-        let model = (try? SessionWatcherDatabaseManager.getSetting(key: "ai_model")) ?? provider.recommendedModel
+        let model: String = await MainActor.run {
+            let v = settingsStore.storageProvider(for: StoredSettingKey<String>.aiModel).get(.aiModel)
+            return v.isEmpty ? provider.recommendedModel : v
+        }
         dbg.append("Provider: \(provider.rawValue), Model: \(model)")
 
         // Fetch session and events
@@ -237,14 +248,18 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
     // MARK: - API-based Summarization
 
     private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
-        let apiKey = KeychainHelper.get(forKey: "ai_api_key") ?? ""
+        let apiKey: String = await MainActor.run {
+            settingsStore.storageProvider(for: StoredSettingKey<String>.aiAPIKey).get(.aiAPIKey)
+        }
         dbg.append("API key present = \(!apiKey.isEmpty) (length: \(apiKey.count))")
         guard !apiKey.isEmpty else {
             dbg.append("BAIL: No API key in Keychain")
             throw SummarizerError.noAPIKey
         }
 
-        let baseURL = (try? SessionWatcherDatabaseManager.getSetting(key: "ai_base_url")) ?? ""
+        let baseURL: String = await MainActor.run {
+            settingsStore.storageProvider(for: StoredSettingKey<String>.aiBaseURL).get(.aiBaseURL)
+        }
         dbg.append("BaseURL: \(baseURL.isEmpty ? "(none)" : baseURL)")
 
         let config = AIRequestConfig(
@@ -312,7 +327,10 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
     /// Throws on fatal errors (API/config), returns silently on non-fatal ones (no events, etc.).
     public func summarizeAndStore(sessionId: String) async throws {
         // Bail early if disabled — no logging at all
-        let enabledStr = try? SessionWatcherDatabaseManager.getSetting(key: "ai_summaries_enabled")
+        let summariesEnabledLate: Bool = await MainActor.run {
+            settingsStore.storageProvider(for: any StorableSetting<Value>.aiSummariesEnabled).get(.aiSummariesEnabled)
+        }
+        let enabledStr: String? = summariesEnabledLate ? "true" : nil
         guard enabledStr == "true" else { return }
 
         SessionWatcherSummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")

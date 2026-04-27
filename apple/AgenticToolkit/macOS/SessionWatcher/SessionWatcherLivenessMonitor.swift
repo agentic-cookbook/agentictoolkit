@@ -24,6 +24,9 @@ public final class SessionWatcherLivenessMonitor {
     // MARK: - Properties
 
     private let SessionWatcherDatabaseManager: SessionWatcherDatabaseManager
+    /// Cached staleness timeout. Read once at init time from `settingsStore` (if provided).
+    /// Background liveness checks use this without crossing the MainActor boundary.
+    private let cachedTimeout: TimeInterval
     private var timer: DispatchSourceTimer?
     private let queue = DispatchQueue(
         label: "com.mikefullerton.whippet.liveness",
@@ -47,9 +50,22 @@ public final class SessionWatcherLivenessMonitor {
     // MARK: - Initialization
 
     /// Creates a liveness monitor that uses the given database manager.
-    /// - Parameter SessionWatcherDatabaseManager: The database manager for querying and updating sessions.
-    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager) {
+    /// - Parameters:
+    ///   - SessionWatcherDatabaseManager: The database manager for querying and updating sessions.
+    ///   - settingsStore: The settings store for reading the staleness timeout. Pass `nil`
+    ///     to fall back to the default timeout (legacy code path; new callers should pass
+    ///     `SettingsStore.shared`). Read once at init; subsequent setting changes won't be
+    ///     reflected until the monitor is reconstructed.
+    @MainActor
+    public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore? = nil) {
         self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+        if let settingsStore {
+            let seconds = settingsStore.storageProvider(for: StoredSetting<Int>.Key.stalenessTimeout)
+                .get(.stalenessTimeout)
+            self.cachedTimeout = seconds > 0 ? TimeInterval(seconds) : Self.defaultTimeoutSeconds
+        } else {
+            self.cachedTimeout = Self.defaultTimeoutSeconds
+        }
     }
 
     deinit {
@@ -88,18 +104,8 @@ public final class SessionWatcherLivenessMonitor {
 
     // MARK: - Liveness Check
 
-    /// Reads the staleness timeout from settings, falling back to the default.
-    public func currentTimeout() -> TimeInterval {
-        do {
-            if let value = try SessionWatcherDatabaseManager.getSetting(key: Self.stalenessTimeoutKey),
-               let seconds = TimeInterval(value), seconds > 0 {
-                return seconds
-            }
-        } catch {
-            logger.warning("Failed to read staleness timeout setting: \(error.localizedDescription, privacy: .public)")
-        }
-        return Self.defaultTimeoutSeconds
-    }
+    /// Returns the cached staleness timeout (read at init time).
+    public func currentTimeout() -> TimeInterval { cachedTimeout }
 
     /// Checks all active sessions and marks those that exceed the timeout as stale.
     /// Also checks if the originating process for each session is still alive.
