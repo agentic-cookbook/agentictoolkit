@@ -51,5 +51,5 @@ final class AppSettingsWindowController: SettingsWindowController {
 }
 
 extension AppSettingsWindowController: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

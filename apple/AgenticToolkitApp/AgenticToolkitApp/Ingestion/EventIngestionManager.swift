@@ -353,5 +353,5 @@ final class EventIngestionManager: @unchecked Sendable {
 }
 
 extension EventIngestionManager: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

@@ -762,5 +762,5 @@ final class SessionsDatabaseManager {
 }
 
 extension SessionsDatabaseManager: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

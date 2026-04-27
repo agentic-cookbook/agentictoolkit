@@ -107,8 +107,7 @@ public final class SessionWatcherActionHandler: @unchecked Sendable {
     public var currentAction: SessionWatcherClickAction {
         // SettingsStore is @MainActor; callers (UI clicks) run on the main actor.
         let raw: String = MainActor.assumeIsolated {
-            settingsStore.storageProvider(for: StoredSettingKey<String>.clickAction)
-                .get(.clickAction)
+            settingsStore.get(UserSettings.clickAction)
         }
         return SessionWatcherClickAction(rawValue: raw) ?? .activateWindow
     }
@@ -116,23 +115,20 @@ public final class SessionWatcherActionHandler: @unchecked Sendable {
     public func setAction(_ action: SessionWatcherClickAction) {
         let rawValue = action.rawValue
         MainActor.assumeIsolated {
-            settingsStore.storageProvider(for: StoredSettingKey<String>.clickAction)
-                .set(rawValue, for: .clickAction)
+            settingsStore.set(rawValue, for: UserSettings.clickAction)
         }
     }
 
     public var customCommandTemplate: String {
         let value: String = MainActor.assumeIsolated {
-            settingsStore.storageProvider(for: StoredSettingKey<String>.customCommandTemplate)
-                .get(.customCommandTemplate)
+            settingsStore.get(UserSettings.customCommandTemplate)
         }
         return value.isEmpty ? "echo $SESSION_ID $CWD $MODEL" : value
     }
 
     public func setCustomCommandTemplate(_ template: String) {
         MainActor.assumeIsolated {
-            settingsStore.storageProvider(for: StoredSettingKey<String>.customCommandTemplate)
-                .set(template, for: .customCommandTemplate)
+            settingsStore.set(template, for: UserSettings.customCommandTemplate)
         }
     }
 

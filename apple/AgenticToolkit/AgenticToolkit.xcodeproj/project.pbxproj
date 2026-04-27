@@ -66,6 +66,7 @@
 		2336174965CF8DA6061C9212 /* SessionWatcherListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B870C32524477375ECA2C3B /* SessionWatcherListViewModel.swift */; };
 		23603458D2134C9E34917756 /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE45EBBFD88F15E5DA6381F /* FileSystemWatcher.swift */; };
 		26740FA708C468457B3D14FF /* GitStatusProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B31EF8008B55BFD69569C13 /* GitStatusProvider.swift */; };
+		27873D6BC7ACB3ED1190970E /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7BE2A61152A3B1E4DD6941 /* LaunchAtLoginManager.swift */; };
 		2798A43C990BDE7D22D1FFE4 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; };
 		286FF3676149675CCF311ADB /* StoredSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922457ED5DA5D1D965AB21F5 /* StoredSettingsStorageProvider.swift */; };
 		2C0252B2DC7D5D4E56658290 /* TerminalSessionSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C884728054C46FEBAD9AA227 /* TerminalSessionSplitViewController.swift */; };
@@ -89,6 +90,7 @@
 		3E0464E0B5E82916ECDC9AA2 /* LanguageDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E2A33F614395167451C0D47 /* LanguageDetectionTests.swift */; };
 		3E4FBCAC30712619E45DA1FC /* SqliteStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831448F23EB8464AE194DE61 /* SqliteStorageProvider.swift */; };
 		3F50550BC2A2B507CDD7B860 /* SessionWatcherLivenessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC6E30F9B8DA4E60952CC8B /* SessionWatcherLivenessMonitor.swift */; };
+		3FA882101362678876F45F83 /* CodableIgnored.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5901CA876FAFB7BB1CECC87F /* CodableIgnored.swift */; };
 		4050D42A6A0E3EF0AABE309B /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA03F400D5FC6CF7B1EB26C8 /* FileTreeView.swift */; };
 		40ECFC19BF20C9F92CBABA9C /* FrameCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41109D4E2532B7966E33019 /* FrameCalculator.swift */; };
 		421825C859E1E04C158D947A /* WindowManagerSimulatedRelaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7FF7BF0190E6C0108D48972 /* WindowManagerSimulatedRelaunchTests.swift */; };
@@ -116,6 +118,7 @@
 		59E43A4E6C0F53FCB2E92194 /* iCloudSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E81DAA1316C42A0091575C /* iCloudSettingsStorageProvider.swift */; };
 		5A083A3FE7618785410128D1 /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2470A028F3179200203D5922 /* HookInstaller.swift */; };
 		5A1AD645D55A3D1BF99A274E /* FileTypesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E531FF828B47F7C7E7087815 /* FileTypesSettingsView.swift */; };
+		5A423EDBDBC36FFC6215E4DD /* StorableSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2CA3B46968DDD93A7FAA92 /* StorableSetting.swift */; };
 		5ACC730374B9054F6EDCD695 /* GitFileStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35300EC0F79077CEA4B44DCD /* GitFileStatus.swift */; };
 		5AF69A3B14EA0D9224AFE26E /* UserDefaultsWindowStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D236E01DC8A557068EA02548 /* UserDefaultsWindowStateStorage.swift */; };
 		5B4AEFCBCB80B1B46120891B /* OpenAIResponseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211FE1810B9DECEBD7B09265 /* OpenAIResponseParser.swift */; };
@@ -142,6 +145,7 @@
 		80A1384C1F7052FF3552AE56 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A6A6F1AF7704D404EE128D5 /* AgenticToolkitCoreUI.framework */; };
 		80F75DA6485B2BD576DE823F /* FrameCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206ED32863FC19CD2C87D545 /* FrameCalculatorTests.swift */; };
 		81C07DFF4A362CBC2A77F747 /* SettingsKeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 031DDDB74A1F480C37E99AE5 /* SettingsKeyTests.swift */; };
+		81C1CEF0731A9F4884B69CB2 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DBBC96379BEBF4C59726ED /* UserSettings.swift */; };
 		8201E9E565E28DC23AD0F0C7 /* SessionWatcherHookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B57A3B4244F2D49E52D37F5 /* SessionWatcherHookInstaller.swift */; };
 		828F7AE369005AB4771CF252 /* UserDefaultsSettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C42FB3C1A7329B520414AC3 /* UserDefaultsSettingsStoreTests.swift */; };
 		85697B9B49D973C59F7390F0 /* InMemorySecureSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B58829FEE5D03814FD25AB0 /* InMemorySecureSettingsStorageProvider.swift */; };
@@ -191,9 +195,6 @@
 		B002CD80867BDCD82952B654 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 489C1112EDB33EE9AB23E30A /* Project.swift */; };
 		B05F5810CF3CFB39633F6FD5 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47DDA91097F1CD49C6045FAB /* TestSupport.swift */; };
 		B0B8163C51D77E7E1B71CF3B /* MockScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4096E907A60D6BFB17343B4D /* MockScreen.swift */; };
-		B257B7AB2F9FEF3300E96410 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B257B7AA2F9FEF3000E96410 /* UserSettings.swift */; };
-		B257B7AD2F9FF2F500E96410 /* CodableIgnored.swift in Sources */ = {isa = PBXBuildFile; fileRef = B257B7AC2F9FF2F500E96410 /* CodableIgnored.swift */; };
-		B257B7AF2F9FF78100E96410 /* StorableSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B257B7AE2F9FF78100E96410 /* StorableSetting.swift */; };
 		B297DF6BF1443B65DD7F4233 /* RunningAppsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B992B143B68C622728A2C4 /* RunningAppsProvider.swift */; };
 		B2A78C8DCD9845DD76A4B2B0 /* ChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF7777C3AFEA4E3016F4A3D /* ChatBackend.swift */; };
 		B31B526DF3225953421FACC7 /* AIPluginInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98FA2E7D0F6BEF9C566A73A0 /* AIPluginInfo.swift */; };
@@ -512,6 +513,7 @@
 		4D267F72016EFDBFB8D6854C /* RealScreenProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealScreenProvider.swift; sourceTree = "<group>"; };
 		4F2835FBF0EC5D7DF8A99D2B /* UserDefaultsSettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsSettingsStorageProvider.swift; sourceTree = "<group>"; };
 		52557B4360EF2A3057428A5D /* SecureStoredSettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStoredSettingsStorageProvider.swift; sourceTree = "<group>"; };
+		5901CA876FAFB7BB1CECC87F /* CodableIgnored.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableIgnored.swift; sourceTree = "<group>"; };
 		5B98366727045C9EA6F71B5B /* ProjectHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectHost.swift; sourceTree = "<group>"; };
 		5F83BBD3D83F2AB14DFF0FD2 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
 		602EBD5FCAEB6A6685393F52 /* SQLiteProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteProjectStore.swift; sourceTree = "<group>"; };
@@ -563,12 +565,11 @@
 		A94D7910F7BD5E69CC460120 /* EventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManager.swift; sourceTree = "<group>"; };
 		AA5CD36148C38DB0350750DD /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		AB3DC9B22D83FFD7A093F806 /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		AC2CA3B46968DDD93A7FAA92 /* StorableSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorableSetting.swift; sourceTree = "<group>"; };
 		ADFA07D308075B566E07595C /* PluginCapabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginCapabilityTests.swift; sourceTree = "<group>"; };
 		AFA2D439BC60CCB2920A22F6 /* IDEDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IDEDetector.swift; sourceTree = "<group>"; };
 		AFD326C6488E598665A6DC37 /* AIPluginChatBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginChatBackend.swift; sourceTree = "<group>"; };
-		B257B7AA2F9FEF3000E96410 /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
-		B257B7AC2F9FF2F500E96410 /* CodableIgnored.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableIgnored.swift; sourceTree = "<group>"; };
-		B257B7AE2F9FF78100E96410 /* StorableSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorableSetting.swift; sourceTree = "<group>"; };
+		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		B3FA733A1A4EF2977207B02B /* LogWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWindowController.swift; sourceTree = "<group>"; };
 		B42F1CDC8340A2703AE59765 /* GitStatusProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStatusProviderTests.swift; sourceTree = "<group>"; };
 		B470080A8B5B68198282D217 /* TopicListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicListViewController.swift; sourceTree = "<group>"; };
@@ -627,6 +628,7 @@
 		F9DE17016676A7AEA0FBEA76 /* TerminalSessionContentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionContentViewController.swift; sourceTree = "<group>"; };
 		FB40ABF64BA3E26A577B3654 /* SessionWatcherEventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherEventIngestionManager.swift; sourceTree = "<group>"; };
 		FC30CF35DB65AE35FCEE6758 /* InMemorySettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemorySettingsStorageProvider.swift; sourceTree = "<group>"; };
+		FC7BE2A61152A3B1E4DD6941 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		FCA78949E917E07063F4D540 /* FileTreeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeConfig.swift; sourceTree = "<group>"; };
 		FD0B0DFC4E04BF9DA4C703DD /* NotesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesWindowController.swift; sourceTree = "<group>"; };
 		FE2A8BE11F141B88E9296E89 /* LogCellValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogCellValue.swift; sourceTree = "<group>"; };
@@ -808,6 +810,7 @@
 		2B9BB3A0E124E67BB0B34316 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
+				FC7BE2A61152A3B1E4DD6941 /* LaunchAtLoginManager.swift */,
 				96C1A72AF45AFC362B3C921F /* ChatWindow */,
 				3A1FEE2671A9835F2B270DEE /* Document */,
 				5E40FEC8FA32F00B3449FD14 /* FileBrowser */,
@@ -880,7 +883,7 @@
 		490BC2335317A3FE213428D0 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				B257B7AC2F9FF2F500E96410 /* CodableIgnored.swift */,
+				5901CA876FAFB7BB1CECC87F /* CodableIgnored.swift */,
 				97D73AE672A872337EA8DEB2 /* KeychainHelper.swift */,
 				E44C16FF5550600D6EF44C65 /* Loggable.swift */,
 				B6C9D05F7EB1D05CAFE73F5E /* MathUtils.swift */,
@@ -992,12 +995,12 @@
 		75AE05C94CB6E39ECBC7D400 /* SettingStorage */ = {
 			isa = PBXGroup;
 			children = (
-				B257B7AA2F9FEF3000E96410 /* UserSettings.swift */,
 				52557B4360EF2A3057428A5D /* SecureStoredSettingsStorageProvider.swift */,
 				A5AB7B995521327485428570 /* SettingsStore.swift */,
-				B257B7AE2F9FF78100E96410 /* StorableSetting.swift */,
+				AC2CA3B46968DDD93A7FAA92 /* StorableSetting.swift */,
 				14AE188B87D7A008EBBCF53A /* StoredSetting.swift */,
 				922457ED5DA5D1D965AB21F5 /* StoredSettingsStorageProvider.swift */,
+				B2DBBC96379BEBF4C59726ED /* UserSettings.swift */,
 				A98BD71769515F22320FD7B1 /* SettingsStorageProviders */,
 			);
 			path = SettingStorage;
@@ -1524,7 +1527,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2640;
 			};
 			buildConfigurationList = ED6B4A0D97F331B23F4B3844 /* Build configuration list for PBXProject "AgenticToolkit" */;
 			developmentRegion = en;
@@ -1600,6 +1603,7 @@
 				5A083A3FE7618785410128D1 /* HookInstaller.swift in Sources */,
 				6234D5A9832BCA68A014B746 /* IDEDetector.swift in Sources */,
 				2188E2127C79F3A1DCC3DCC8 /* LanguageDetection.swift in Sources */,
+				27873D6BC7ACB3ED1190970E /* LaunchAtLoginManager.swift in Sources */,
 				A0986332861F0E2A6A362106 /* LogBuffer.swift in Sources */,
 				98217D89E4DA65896D8688FC /* LogCellValue.swift in Sources */,
 				F75BB7FCE96620725281B665 /* LogColumn.swift in Sources */,
@@ -1684,23 +1688,23 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2A78C8DCD9845DD76A4B2B0 /* ChatBackend.swift in Sources */,
-				B257B7AF2F9FF78100E96410 /* StorableSetting.swift in Sources */,
 				31192FAB78B40EB7225BEC0A /* ChatMessage.swift in Sources */,
+				3FA882101362678876F45F83 /* CodableIgnored.swift in Sources */,
 				85697B9B49D973C59F7390F0 /* InMemorySecureSettingsStorageProvider.swift in Sources */,
 				7F607722ACC112ADC99CA537 /* InMemorySettingsStorageProvider.swift in Sources */,
 				AF792A00075269B09E646A98 /* KeychainHelper.swift in Sources */,
 				3CC93775A0519CD6A75E67E2 /* KeychainSecureSettingsStorageProvider.swift in Sources */,
 				CB53A899C846C84BC57368A2 /* Loggable.swift in Sources */,
-				B257B7AD2F9FF2F500E96410 /* CodableIgnored.swift in Sources */,
 				9C68CC28C97B1C1C93D3B05C /* MathUtils.swift in Sources */,
 				97F52DEFA9E5FB54C44D67A3 /* SecureStoredSettingsStorageProvider.swift in Sources */,
 				0AA7EC3695C61BB3449125B4 /* SettingsStore.swift in Sources */,
 				3E4FBCAC30712619E45DA1FC /* SqliteStorageProvider.swift in Sources */,
+				5A423EDBDBC36FFC6215E4DD /* StorableSetting.swift in Sources */,
 				983CC238F8BA3CD156123F1F /* StoredSetting.swift in Sources */,
 				286FF3676149675CCF311ADB /* StoredSettingsStorageProvider.swift in Sources */,
 				636967AFCFC51E5665554384 /* UserDefaultsSettingsStorageProvider.swift in Sources */,
+				81C1CEF0731A9F4884B69CB2 /* UserSettings.swift in Sources */,
 				59E43A4E6C0F53FCB2E92194 /* iCloudSettingsStorageProvider.swift in Sources */,
-				B257B7AB2F9FEF3300E96410 /* UserSettings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1912,15 +1916,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -1932,6 +1939,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1947,15 +1955,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -1968,15 +1979,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -1986,6 +2000,7 @@
 		5777E15339BCE9652EFF6241 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Release;
 		};
@@ -1994,6 +2009,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -2008,6 +2024,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -2023,15 +2040,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -2043,6 +2063,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -2057,6 +2078,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -2072,15 +2094,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -2125,9 +2150,11 @@
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -2143,6 +2170,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
@@ -2157,6 +2185,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -2172,15 +2201,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -2193,15 +2225,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -2246,9 +2281,11 @@
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2271,6 +2308,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -2283,6 +2321,7 @@
 		DECDCA6E2131D74260DA8D6F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Debug;
 		};
@@ -2291,6 +2330,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -2306,15 +2346,18 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -2326,6 +2369,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

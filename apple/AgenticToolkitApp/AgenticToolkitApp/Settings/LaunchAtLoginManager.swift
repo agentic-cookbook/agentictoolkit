@@ -103,5 +103,5 @@ final class LaunchAtLoginManager {
 }
 
 extension LaunchAtLoginManager: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

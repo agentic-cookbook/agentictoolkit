@@ -19,10 +19,10 @@ final class KeychainSecureSettingsStorageProviderTests: XCTestCase {
 
     override func tearDown() async throws {
         // Best-effort: remove every key our tests touch.
-        store.remove(.displayName)
-        store.remove(.userPreferences)
-        store.remove(.launchCount)
-        store.remove(.hasCompletedOnboarding)
+        store.remove(UserSettings.displayName)
+        store.remove(UserSettings.userPreferences)
+        store.remove(UserSettings.launchCount)
+        store.remove(UserSettings.hasCompletedOnboarding)
         store = nil
         cancellables = nil
         try await super.tearDown()
@@ -31,20 +31,20 @@ final class KeychainSecureSettingsStorageProviderTests: XCTestCase {
     // MARK: - Defaults
 
     func testReturnsDefaultsWhenEmpty() {
-        XCTAssertEqual(store.get(.displayName), "Anonymous")
-        XCTAssertEqual(store.get(.launchCount), 0)
+        XCTAssertEqual(store.get(UserSettings.displayName), "Anonymous")
+        XCTAssertEqual(store.get(UserSettings.launchCount), 0)
     }
 
     // MARK: - String round-trip (fast path — stored as raw string)
 
     func testStringRoundTrip() {
-        store.set("api-key-12345", for: .displayName)
-        XCTAssertEqual(store.get(.displayName), "api-key-12345")
+        store.set("api-key-12345", for: UserSettings.displayName)
+        XCTAssertEqual(store.get(UserSettings.displayName), "api-key-12345")
     }
 
     func testStringValueIsStoredRawNotJSONQuoted() {
         // The fast path stores Strings without JSON quoting so keychain entries are readable.
-        store.set("hello", for: .displayName)
+        store.set("hello", for: UserSettings.displayName)
         // Read directly via KeychainHelper, bypassing the provider's decoder.
         let raw = KeychainHelper.get(forKey: "test.displayName")
         XCTAssertEqual(raw, "hello")  // not "\"hello\""
@@ -58,28 +58,28 @@ final class KeychainSecureSettingsStorageProviderTests: XCTestCase {
             theme: .dark,
             notificationsEnabled: false
         )
-        store.set(prefs, for: .userPreferences)
-        XCTAssertEqual(store.get(.userPreferences), prefs)
+        store.set(prefs, for: UserSettings.userPreferences)
+        XCTAssertEqual(store.get(UserSettings.userPreferences), prefs)
     }
 
     func testCodableStructFallsBackToDefaultOnCorruptedData() {
         // Inject non-JSON garbage under the key.
         KeychainHelper.set("not valid json {{{", forKey: "test.userPreferences")
 
-        let result = store.get(.userPreferences)
-        XCTAssertEqual(result, StoredSetting<UserPreferences>.Key.userPreferences.defaultValue)
+        let result = store.get(UserSettings.userPreferences)
+        XCTAssertEqual(result, UserSettings.userPreferences.defaultValue)
     }
 
     // MARK: - contains / remove
 
     func testContainsAndRemove() {
-        XCTAssertFalse(store.contains(.displayName))
-        store.set("secret", for: .displayName)
-        XCTAssertTrue(store.contains(.displayName))
+        XCTAssertFalse(store.contains(UserSettings.displayName))
+        store.set("secret", for: UserSettings.displayName)
+        XCTAssertTrue(store.contains(UserSettings.displayName))
 
-        store.remove(.displayName)
-        XCTAssertFalse(store.contains(.displayName))
-        XCTAssertEqual(store.get(.displayName), "Anonymous")
+        store.remove(UserSettings.displayName)
+        XCTAssertFalse(store.contains(UserSettings.displayName))
+        XCTAssertEqual(store.get(UserSettings.displayName), "Anonymous")
     }
 
     // MARK: - Change notifications
@@ -93,12 +93,12 @@ final class KeychainSecureSettingsStorageProviderTests: XCTestCase {
             }
             .store(in: &cancellables)
 
-        store.set("token", for: .displayName)
+        store.set("token", for: UserSettings.displayName)
         wait(for: [expectation], timeout: 1.0)
     }
 
     func testRemoveEmitsChange() {
-        store.set("v", for: .displayName)
+        store.set("v", for: UserSettings.displayName)
 
         let expectation = expectation(description: "remove emits")
         store.changes
@@ -108,7 +108,7 @@ final class KeychainSecureSettingsStorageProviderTests: XCTestCase {
             }
             .store(in: &cancellables)
 
-        store.remove(.displayName)
+        store.remove(UserSettings.displayName)
         wait(for: [expectation], timeout: 1.0)
     }
 

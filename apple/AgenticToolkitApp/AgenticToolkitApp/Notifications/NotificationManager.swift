@@ -236,5 +236,5 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
 }
 
 extension NotificationManager: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

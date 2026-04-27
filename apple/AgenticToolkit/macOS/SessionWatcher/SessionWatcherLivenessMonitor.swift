@@ -59,13 +59,7 @@ public final class SessionWatcherLivenessMonitor {
     @MainActor
     public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore? = nil) {
         self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
-        if let settingsStore {
-            let seconds = settingsStore.storageProvider(for: StoredSetting<Int>.Key.stalenessTimeout)
-                .get(.stalenessTimeout)
-            self.cachedTimeout = seconds > 0 ? TimeInterval(seconds) : Self.defaultTimeoutSeconds
-        } else {
-            self.cachedTimeout = Self.defaultTimeoutSeconds
-        }
+        self.cachedTimeout = UserSettings.stalenessTimeout.value
     }
 
     deinit {

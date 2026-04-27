@@ -82,7 +82,7 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
     public func summarize(sessionId: String) async throws -> String {
         // Check if enabled before any logging
         let summariesEnabled: Bool = await MainActor.run {
-            settingsStore.storageProvider(for: any StorableSetting<Value>.aiSummariesEnabled).get(.aiSummariesEnabled)
+            settingsStore.get(UserSettings.aiSummariesEnabled)
         }
         guard summariesEnabled else {
             throw SummarizerError.disabled
@@ -92,12 +92,12 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
         dbg.append("--- summarize(\(sessionId)) called ---")
 
         let providerStr: String = await MainActor.run {
-            let v = settingsStore.storageProvider(for: StoredSettingKey<String>.aiProvider).get(.aiProvider)
+            let v = settingsStore.get(UserSettings.aiProvider)
             return v.isEmpty ? "claude_cli" : v
         }
         let provider = AIProvider(rawValue: providerStr) ?? .anthropic
         let model: String = await MainActor.run {
-            let v = settingsStore.storageProvider(for: StoredSettingKey<String>.aiModel).get(.aiModel)
+            let v = settingsStore.get(UserSettings.aiModel)
             return v.isEmpty ? provider.recommendedModel : v
         }
         dbg.append("Provider: \(provider.rawValue), Model: \(model)")
@@ -249,7 +249,7 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
 
     private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
         let apiKey: String = await MainActor.run {
-            settingsStore.storageProvider(for: StoredSettingKey<String>.aiAPIKey).get(.aiAPIKey)
+            settingsStore.get(UserSettings.aiAPIKey)
         }
         dbg.append("API key present = \(!apiKey.isEmpty) (length: \(apiKey.count))")
         guard !apiKey.isEmpty else {
@@ -258,7 +258,7 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
         }
 
         let baseURL: String = await MainActor.run {
-            settingsStore.storageProvider(for: StoredSettingKey<String>.aiBaseURL).get(.aiBaseURL)
+            settingsStore.get(UserSettings.aiBaseURL)
         }
         dbg.append("BaseURL: \(baseURL.isEmpty ? "(none)" : baseURL)")
 
@@ -328,7 +328,7 @@ public final class SessionWatcherSummarizer: @unchecked Sendable {
     public func summarizeAndStore(sessionId: String) async throws {
         // Bail early if disabled — no logging at all
         let summariesEnabledLate: Bool = await MainActor.run {
-            settingsStore.storageProvider(for: any StorableSetting<Value>.aiSummariesEnabled).get(.aiSummariesEnabled)
+            settingsStore.get(UserSettings.aiSummariesEnabled)
         }
         let enabledStr: String? = summariesEnabledLate ? "true" : nil
         guard enabledStr == "true" else { return }

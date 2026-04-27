@@ -25,3 +25,18 @@ extension StorableSetting {
         UserSettings.shared.contains(self)
     }
 }
+
+public struct UserSetting<Value: Codable & Sendable>: StorableSetting {
+    
+    public let name: String
+    
+    public let isSecure: Bool
+    
+    public let defaultValue: Value
+    
+    public init(_ name: String, default defaultValue: Value, isSecure: Bool = false) {
+        self.name = name
+        self.isSecure = isSecure
+        self.defaultValue = defaultValue
+    }
+}

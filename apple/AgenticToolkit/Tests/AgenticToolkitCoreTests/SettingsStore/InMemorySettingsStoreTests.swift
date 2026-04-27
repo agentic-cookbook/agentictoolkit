@@ -22,45 +22,45 @@ final class InMemorySettingsStoreTests: XCTestCase {
     // MARK: - Defaults
 
     func testReturnsDefaultValueWhenEmpty() {
-        XCTAssertEqual(store.get(.hasCompletedOnboarding), false)
-        XCTAssertEqual(store.get(.launchCount), 0)
-        XCTAssertEqual(store.get(.displayName), "Anonymous")
-        XCTAssertEqual(store.get(.recentSearches), [])
+        XCTAssertEqual(store.get(UserSettings.hasCompletedOnboarding), false)
+        XCTAssertEqual(store.get(UserSettings.launchCount), 0)
+        XCTAssertEqual(store.get(UserSettings.displayName), "Anonymous")
+        XCTAssertEqual(store.get(UserSettings.recentSearches), [])
     }
 
     // MARK: - Primitives
 
     func testStoresAndRetrievesBool() {
-        store.set(true, for: .hasCompletedOnboarding)
-        XCTAssertEqual(store.get(.hasCompletedOnboarding), true)
+        store.set(true, for: UserSettings.hasCompletedOnboarding)
+        XCTAssertEqual(store.get(UserSettings.hasCompletedOnboarding), true)
     }
 
     func testStoresAndRetrievesInt() {
-        store.set(42, for: .launchCount)
-        XCTAssertEqual(store.get(.launchCount), 42)
+        store.set(42, for: UserSettings.launchCount)
+        XCTAssertEqual(store.get(UserSettings.launchCount), 42)
     }
 
     func testStoresAndRetrievesString() {
-        store.set("Brian", for: .displayName)
-        XCTAssertEqual(store.get(.displayName), "Brian")
+        store.set("Brian", for: UserSettings.displayName)
+        XCTAssertEqual(store.get(UserSettings.displayName), "Brian")
     }
 
     func testStoresAndRetrievesDouble() {
-        store.set(0.75, for: .volume)
-        XCTAssertEqual(store.get(.volume), 0.75)
+        store.set(0.75, for: UserSettings.volume)
+        XCTAssertEqual(store.get(UserSettings.volume), 0.75)
     }
 
     // MARK: - Collections
 
     func testStoresAndRetrievesStringArray() {
         let searches = ["swift", "protocols", "generics"]
-        store.set(searches, for: .recentSearches)
-        XCTAssertEqual(store.get(.recentSearches), searches)
+        store.set(searches, for: UserSettings.recentSearches)
+        XCTAssertEqual(store.get(UserSettings.recentSearches), searches)
     }
 
     func testStoresAndRetrievesIntArray() {
-        store.set([1, 2, 3, 5, 8], for: .favoriteNumbers)
-        XCTAssertEqual(store.get(.favoriteNumbers), [1, 2, 3, 5, 8])
+        store.set([1, 2, 3, 5, 8], for: UserSettings.favoriteNumbers)
+        XCTAssertEqual(store.get(UserSettings.favoriteNumbers), [1, 2, 3, 5, 8])
     }
 
     // MARK: - Codable structs
@@ -71,19 +71,19 @@ final class InMemorySettingsStoreTests: XCTestCase {
             theme: .dark,
             notificationsEnabled: false
         )
-        store.set(prefs, for: .userPreferences)
-        XCTAssertEqual(store.get(.userPreferences), prefs)
+        store.set(prefs, for: UserSettings.userPreferences)
+        XCTAssertEqual(store.get(UserSettings.userPreferences), prefs)
     }
 
     func testRoundTripsCodableStructWithMutation() {
-        var prefs = store.get(.userPreferences)
+        var prefs = store.get(UserSettings.userPreferences)
         XCTAssertEqual(prefs.theme, .system)
 
         prefs.theme = .dark
         prefs.displayName = "Updated"
-        store.set(prefs, for: .userPreferences)
+        store.set(prefs, for: UserSettings.userPreferences)
 
-        let retrieved = store.get(.userPreferences)
+        let retrieved = store.get(UserSettings.userPreferences)
         XCTAssertEqual(retrieved.theme, .dark)
         XCTAssertEqual(retrieved.displayName, "Updated")
     }
@@ -91,21 +91,21 @@ final class InMemorySettingsStoreTests: XCTestCase {
     // MARK: - contains / remove
 
     func testContainsReturnsFalseForUnsetKey() {
-        XCTAssertFalse(store.contains(.launchCount))
+        XCTAssertFalse(store.contains(UserSettings.launchCount))
     }
 
     func testContainsReturnsTrueAfterSet() {
-        store.set(1, for: .launchCount)
-        XCTAssertTrue(store.contains(.launchCount))
+        store.set(1, for: UserSettings.launchCount)
+        XCTAssertTrue(store.contains(UserSettings.launchCount))
     }
 
     func testRemoveClearsValueAndReturnsDefault() {
-        store.set(99, for: .launchCount)
-        XCTAssertTrue(store.contains(.launchCount))
+        store.set(99, for: UserSettings.launchCount)
+        XCTAssertTrue(store.contains(UserSettings.launchCount))
 
-        store.remove(.launchCount)
-        XCTAssertFalse(store.contains(.launchCount))
-        XCTAssertEqual(store.get(.launchCount), 0) // back to default
+        store.remove(UserSettings.launchCount)
+        XCTAssertFalse(store.contains(UserSettings.launchCount))
+        XCTAssertEqual(store.get(UserSettings.launchCount), 0) // back to default
     }
 
     // MARK: - Initial values
@@ -114,7 +114,7 @@ final class InMemorySettingsStoreTests: XCTestCase {
         let seeded = InMemorySettingsStorageProvider(initial: [
             "test.launchCount": 7
         ])
-        XCTAssertEqual(seeded.get(.launchCount), 7)
+        XCTAssertEqual(seeded.get(UserSettings.launchCount), 7)
     }
 
     // MARK: - Change publisher
@@ -130,15 +130,15 @@ final class InMemorySettingsStoreTests: XCTestCase {
             }
             .store(in: &cancellables)
 
-        store.set(1, for: .launchCount)
-        store.set("hi", for: .displayName)
+        store.set(1, for: UserSettings.launchCount)
+        store.set("hi", for: UserSettings.displayName)
 
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(receivedKeys, ["test.launchCount", "test.displayName"])
     }
 
     func testRemoveEmitsChange() {
-        store.set(1, for: .launchCount)
+        store.set(1, for: UserSettings.launchCount)
 
         let expectation = expectation(description: "remove emits")
         store.changes
@@ -148,25 +148,25 @@ final class InMemorySettingsStoreTests: XCTestCase {
             }
             .store(in: &cancellables)
 
-        store.remove(.launchCount)
+        store.remove(UserSettings.launchCount)
         wait(for: [expectation], timeout: 1.0)
     }
 
     func testPublisherForKeyEmitsCurrentAndSubsequentValues() {
-        store.set(5, for: .launchCount)
+        store.set(5, for: UserSettings.launchCount)
 
         let expectation = expectation(description: "publisher emits")
         var received: [Int] = []
 
-        store.publisher(for: .launchCount)
+        store.publisher(for: UserSettings.launchCount)
             .sink { value in
                 received.append(value)
                 if received.count == 3 { expectation.fulfill() }
             }
             .store(in: &cancellables)
 
-        store.set(6, for: .launchCount)
-        store.set(7, for: .launchCount)
+        store.set(6, for: UserSettings.launchCount)
+        store.set(7, for: UserSettings.launchCount)
 
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(received, [5, 6, 7])
@@ -176,15 +176,15 @@ final class InMemorySettingsStoreTests: XCTestCase {
         let expectation = expectation(description: "only target key")
         var received: [Int] = []
 
-        store.publisher(for: .launchCount)
+        store.publisher(for: UserSettings.launchCount)
             .sink { value in
                 received.append(value)
                 if received.count == 2 { expectation.fulfill() }
             }
             .store(in: &cancellables)
 
-        store.set("ignored", for: .displayName) // should NOT trigger
-        store.set(99, for: .launchCount)         // should trigger
+        store.set("ignored", for: UserSettings.displayName) // should NOT trigger
+        store.set(99, for: UserSettings.launchCount)         // should trigger
 
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(received, [0, 99]) // initial default + new value
@@ -193,9 +193,9 @@ final class InMemorySettingsStoreTests: XCTestCase {
     // MARK: - AsyncStream
 
     func testAsyncStreamYieldsValues() async {
-        store.set(10, for: .launchCount)
+        store.set(10, for: UserSettings.launchCount)
 
-        let stream = store.values(for: .launchCount)
+        let stream = store.values(for: UserSettings.launchCount)
         var iterator = stream.makeAsyncIterator()
 
         let initial = await iterator.next()
@@ -204,7 +204,7 @@ final class InMemorySettingsStoreTests: XCTestCase {
         // Schedule the update after the iterator is awaiting.
         Task {
             try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
-            self.store.set(11, for: .launchCount)
+            self.store.set(11, for: UserSettings.launchCount)
         }
 
         let next = await iterator.next()

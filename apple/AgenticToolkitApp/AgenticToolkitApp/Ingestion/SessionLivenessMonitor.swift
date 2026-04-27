@@ -196,5 +196,5 @@ final class SessionLivenessMonitor {
 }
 
 extension SessionLivenessMonitor: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

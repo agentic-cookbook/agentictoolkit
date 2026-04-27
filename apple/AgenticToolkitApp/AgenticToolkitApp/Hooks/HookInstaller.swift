@@ -369,7 +369,7 @@ final class HookInstaller {
 // MARK: - Errors
 
 extension HookInstaller: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }
 
 /// Errors that can occur during hook installation.

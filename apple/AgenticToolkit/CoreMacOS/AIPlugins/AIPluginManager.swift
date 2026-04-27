@@ -1,6 +1,7 @@
 import Foundation
 import os
 import AgenticToolkitCore
+import OSLog
 
 /// Discovers, loads, and manages LLM plugin bundles.
 ///

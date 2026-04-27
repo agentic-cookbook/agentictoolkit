@@ -404,5 +404,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 extension AppDelegate: Loggable {
-    static nonisolated let logger = makeLogger()
+    public static nonisolated let logger = makeLogger()
 }

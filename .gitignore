@@ -4,8 +4,11 @@
 .env
 .superpowers/
 
-# Swift
+# Swift / Xcode build outputs
+**/.build/**
 .build/
+**/build/
+build/
 Package.resolved
 **/.swiftpm/*
 !**/.swiftpm/configuration
