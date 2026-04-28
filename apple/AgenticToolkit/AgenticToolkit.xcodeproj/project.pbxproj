@@ -265,6 +265,7 @@
 		CCD06F69BA7D6A0DD1B0585C /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 61310A916E242BA60A9FE8C1 /* AgenticToolkitCoreMacOS.framework */; };
 		CDB4A3BA6B1AAD992806D5F7 /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F8E3D7A12AD43497293D93 /* PermissionWalkthrough.swift */; };
 		CDE72013907F559C386A4532 /* CheckboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E50B4CDB300B6961AD32651 /* CheckboxView.swift */; };
+		49411E95A9A1BD73CB8137DE /* ChoiceSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F51D7FC0876F166467F214B /* ChoiceSliderView.swift */; };
 		CEF2F936F64BCBD7933075F2 /* WhippetDocumentController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B673C075643F7F85FD42BBD /* WhippetDocumentController.swift */; };
 		CFF87C570ECB482CF9FC891C /* AIPluginsSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 797E5E73D3B7F58178C844A8 /* AIPluginsSettingsPanelViewController.swift */; };
 		D04025F01F4DA0BC1BA79F95 /* WindowPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5FC2B28A30AAD2FA2B53F7 /* WindowPosition.swift */; };
@@ -671,6 +672,7 @@
 		7B57A3B4244F2D49E52D37F5 /* SessionWatcherHookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherHookInstaller.swift; sourceTree = "<group>"; };
 		7BC6E30F9B8DA4E60952CC8B /* SessionWatcherLivenessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherLivenessMonitor.swift; sourceTree = "<group>"; };
 		7E50B4CDB300B6961AD32651 /* CheckboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxView.swift; sourceTree = "<group>"; };
+		2F51D7FC0876F166467F214B /* ChoiceSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceSliderView.swift; sourceTree = "<group>"; };
 		7FAEFFC3135DA747F343AED1 /* PluginSettingsContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsContentView.swift; sourceTree = "<group>"; };
 		8088F3D599A383AAFE64A275 /* SessionWatcherClickAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherClickAction.swift; sourceTree = "<group>"; };
 		8157D54269465D4A9582F3F6 /* SessionWatcherActivationTestLogShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherActivationTestLogShared.swift; sourceTree = "<group>"; };
@@ -1268,6 +1270,7 @@
 			children = (
 				112CFC0171CE8F77FF5180F3 /* ButtonView.swift */,
 				7E50B4CDB300B6961AD32651 /* CheckboxView.swift */,
+				2F51D7FC0876F166467F214B /* ChoiceSliderView.swift */,
 				208522C9915C7123F76C9347 /* ColorPickerView.swift */,
 				9ADBF3C00B248115009A1ECA /* DividerView.swift */,
 				720D5E0FC6533F06EFD422F0 /* ExplanationView.swift */,
@@ -2024,6 +2027,7 @@
 				ABC96131D0410BF132FC027A /* ButtonView.swift in Sources */,
 				C22C5A676720FB7AC75572A6 /* ButtonViewModel.swift in Sources */,
 				CDE72013907F559C386A4532 /* CheckboxView.swift in Sources */,
+				49411E95A9A1BD73CB8137DE /* ChoiceSliderView.swift in Sources */,
 				8442D5AFA9AFCE8B53F70A24 /* ChoiceViewModel.swift in Sources */,
 				FF8728AFB44BE34E7F221C74 /* ColorPickerView.swift in Sources */,
 				C41EE299960DA323F1797672 /* ColorViewModel.swift in Sources */,
