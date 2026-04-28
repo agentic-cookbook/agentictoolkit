@@ -5,16 +5,16 @@ import AppKit
 /// lives on the panel itself via the open overrides below. The panel *is* the
 /// list item — no wrapper struct.
 @MainActor
-open class SettingsPanelViewController<PanelView: SettingsPanelView>: NSViewController {
+open class ComposableSettingsPanelViewController: NSViewController {
 
     /// This is what is user for the settings panel list
-    public let descriptor: any SettingsDescriptorProtocol
+    public let descriptor: any SettingsPanelDescribing
 
     open override func loadView() {
-        self.view = SettingsPanelView()
+        self.view = ComposableSettingsPanelView()
     }
     
-    public init(descriptor: any SettingsDescriptorProtocol) {
+    public init(topicItem: any SettingsPanelDescribing) {
         self.descriptor = descriptor
         super.init(nibName: nil, bundle: nil)
     }
@@ -25,26 +25,18 @@ open class SettingsPanelViewController<PanelView: SettingsPanelView>: NSViewCont
 }
 
 @MainActor
-public protocol SettingsDescriptorProtocol {
-    var panelTitle: String { get }
-    var thumbnail: NSView { get }
+public protocol SettingsPanelDescribing: TopicListItemProtocol {
     var category: String? { get }
 }
 
-public struct SettingsDescriptor: SettingsDescriptorProtocol {
-    public let panelTitle: String
-    public let thumbnail: NSView
+public struct SettingsPanelDescriptor: SettingsPanelDescribing {
+    public let title: String
+    public let icon: NSImage
     public let category: String? = nil
+    public let isDisabled: Bool = false
     
-    public init(panelTitle: String, thumbnail: NSView, category: String?) {
+    public init(panelTitle: String, icon: icon, category: String?) {
         self.panelTitle = panelTitle
-        self.thumbnail = thumbnail
-    }
-    
-    public init(panelTitle: String, image: NSImage) {
-        self.panelTitle = panelTitle
-        self.thumbnail = NSImageView(image: image)
+        self.icon = icon
     }
 }
-
-

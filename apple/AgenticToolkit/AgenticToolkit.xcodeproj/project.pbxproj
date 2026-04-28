@@ -163,7 +163,8 @@
 		9791382590777AAE0D034912 /* WindowDiscoveryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 431DDAE0D6FD6696A1298C65 /* WindowDiscoveryWindowController.swift */; };
 		97F52DEFA9E5FB54C44D67A3 /* SecureStoredSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52557B4360EF2A3057428A5D /* SecureStoredSettingsStorageProvider.swift */; };
 		98217D89E4DA65896D8688FC /* LogCellValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2A8BE11F141B88E9296E89 /* LogCellValue.swift */; };
-		983CC238F8BA3CD156123F1F /* StoredSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14AE188B87D7A008EBBCF53A /* StoredSetting.swift */; };
+		983CC238F8BA3CD156123F1F /* StoredSettingPropertyWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14AE188B87D7A008EBBCF53A /* StoredSettingPropertyWrapper.swift */; };
+		FF1A2B3C4D5E6F7081234567 /* ObservedSettingPropertyWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8A9B0C1D2E3F4051627384 /* ObservedSettingPropertyWrapper.swift */; };
 		99D1D89BB552AC92ED3B8BF4 /* ScreenInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BF850256384D0F3E0263DCE /* ScreenInfo.swift */; };
 		9AD4069D2538A5AFA9499AE9 /* TTYResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FDC41ED3D1962884782219 /* TTYResolver.swift */; };
 		9B26D9DB51EAB9C7C8552349 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F67A8B509ACE1EC7D600880 /* PlaceholderTests.swift */; };
@@ -466,7 +467,8 @@
 		11E81DAA1316C42A0091575C /* iCloudSettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iCloudSettingsStorageProvider.swift; sourceTree = "<group>"; };
 		1202A407C7A26A47DE6B0DCD /* TerminalSessionSummarizationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionSummarizationCoordinator.swift; sourceTree = "<group>"; };
 		13894700FEDF09F2EB8B62B7 /* TerminalSessionRowCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionRowCellView.swift; sourceTree = "<group>"; };
-		14AE188B87D7A008EBBCF53A /* StoredSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredSetting.swift; sourceTree = "<group>"; };
+		14AE188B87D7A008EBBCF53A /* StoredSettingPropertyWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredSettingPropertyWrapper.swift; sourceTree = "<group>"; };
+		FF8A9B0C1D2E3F4051627384 /* ObservedSettingPropertyWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservedSettingPropertyWrapper.swift; sourceTree = "<group>"; };
 		14F0F22634273E3BE4E8227E /* LogColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogColumn.swift; sourceTree = "<group>"; };
 		1A41D9015BE50BF10CFC3F47 /* WindowScreenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowScreenshot.swift; sourceTree = "<group>"; };
 		1AB483183EC44F8F5457C2B6 /* SingleWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleWindowControllerTests.swift; sourceTree = "<group>"; };
@@ -576,7 +578,7 @@
 		B26D3FE42FA01FA80070E9C1 /* AIModelChatConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModelChatConfig.swift; sourceTree = "<group>"; };
 		B26D3FFC2FA0E4C80070E9C1 /* SettingsPanelListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelListViewController.swift; sourceTree = "<group>"; };
 		B26D3FFD2FA0E4C80070E9C1 /* SettingsSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSplitViewController.swift; sourceTree = "<group>"; };
-		B26D3FFF2FA0E4C80070E9C1 /* SettingsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelView.swift; sourceTree = "<group>"; };
+		B26D3FFF2FA0E4C80070E9C1 /* ComposableSettingsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposableSettingsPanelView.swift; sourceTree = "<group>"; };
 		B26D40002FA0E4C80070E9C1 /* SettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelViewController.swift; sourceTree = "<group>"; };
 		B26D40012FA0E4C80070E9C1 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		B26D40132FA0E9150070E9C1 /* AppearanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceMode.swift; sourceTree = "<group>"; };
@@ -587,6 +589,7 @@
 		B26D40192FA0E9150070E9C1 /* SettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelViewController.swift; sourceTree = "<group>"; };
 		B26D401A2FA0E9150070E9C1 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
 		B26D401B2FA0E9150070E9C1 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		B26D40252FA0F4740070E9C1 /* ComposableSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposableSettingsViewModel.swift; sourceTree = "<group>"; };
 		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		B3FA733A1A4EF2977207B02B /* LogWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWindowController.swift; sourceTree = "<group>"; };
 		B42F1CDC8340A2703AE59765 /* GitStatusProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStatusProviderTests.swift; sourceTree = "<group>"; };
@@ -993,10 +996,10 @@
 		75AE05C94CB6E39ECBC7D400 /* SettingStorage */ = {
 			isa = PBXGroup;
 			children = (
-				52557B4360EF2A3057428A5D /* SecureStoredSettingsStorageProvider.swift */,
 				A5AB7B995521327485428570 /* SettingsStore.swift */,
 				AC2CA3B46968DDD93A7FAA92 /* StorableSetting.swift */,
-				14AE188B87D7A008EBBCF53A /* StoredSetting.swift */,
+				14AE188B87D7A008EBBCF53A /* StoredSettingPropertyWrapper.swift */,
+				FF8A9B0C1D2E3F4051627384 /* ObservedSettingPropertyWrapper.swift */,
 				922457ED5DA5D1D965AB21F5 /* StoredSettingsStorageProvider.swift */,
 				B2DBBC96379BEBF4C59726ED /* UserSettings.swift */,
 				A98BD71769515F22320FD7B1 /* SettingsStorageProviders */,
@@ -1202,6 +1205,7 @@
 				33F852968686967ACD65E1B5 /* KeychainSecureSettingsStorageProvider.swift */,
 				831448F23EB8464AE194DE61 /* SqliteStorageProvider.swift */,
 				4F2835FBF0EC5D7DF8A99D2B /* UserDefaultsSettingsStorageProvider.swift */,
+				52557B4360EF2A3057428A5D /* SecureStoredSettingsStorageProvider.swift */,
 			);
 			path = SettingsStorageProviders;
 			sourceTree = "<group>";
@@ -1229,7 +1233,8 @@
 		B26D40022FA0E4C80070E9C1 /* NewSettingsWindow */ = {
 			isa = PBXGroup;
 			children = (
-				B26D3FFF2FA0E4C80070E9C1 /* SettingsPanelView.swift */,
+				B26D40252FA0F4740070E9C1 /* ComposableSettingsViewModel.swift */,
+				B26D3FFF2FA0E4C80070E9C1 /* ComposableSettingsPanelView.swift */,
 				B26D40002FA0E4C80070E9C1 /* SettingsPanelViewController.swift */,
 				B26D40012FA0E4C80070E9C1 /* SettingsWindowController.swift */,
 				B26D3FFC2FA0E4C80070E9C1 /* SettingsPanelListViewController.swift */,
@@ -1743,7 +1748,8 @@
 				0AA7EC3695C61BB3449125B4 /* SettingsStore.swift in Sources */,
 				3E4FBCAC30712619E45DA1FC /* SqliteStorageProvider.swift in Sources */,
 				5A423EDBDBC36FFC6215E4DD /* StorableSetting.swift in Sources */,
-				983CC238F8BA3CD156123F1F /* StoredSetting.swift in Sources */,
+				983CC238F8BA3CD156123F1F /* StoredSettingPropertyWrapper.swift in Sources */,
+				FF1A2B3C4D5E6F7081234567 /* ObservedSettingPropertyWrapper.swift in Sources */,
 				286FF3676149675CCF311ADB /* StoredSettingsStorageProvider.swift in Sources */,
 				636967AFCFC51E5665554384 /* UserDefaultsSettingsStorageProvider.swift in Sources */,
 				81C1CEF0731A9F4884B69CB2 /* UserSettings.swift in Sources */,

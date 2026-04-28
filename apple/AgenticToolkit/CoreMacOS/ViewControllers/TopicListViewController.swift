@@ -1,25 +1,32 @@
 import AppKit
 
+public protocol TopicListItemProtocol: Sendable {
+    var id: String { get }
+    var title: String { get }
+    var icon: NSImage? { get }
+    var isDisabled: Bool { get }
+}
+
 /// One row in a `TopicListViewController`.
-public struct TopicListItem: Sendable {
+public struct TopicListItem: TopicListItemProtocol {
     public let id: String
     public let title: String
     public let icon: NSImage?
     /// Render the row in a muted style (e.g. for "coming soon" placeholders).
-    public let isDimmed: Bool
+    public let isDisabled: Bool
 
-    public init(id: String, title: String, icon: NSImage? = nil, isDimmed: Bool = false) {
+    public init(id: String, title: String, icon: NSImage? = nil, isDisabled: Bool = false) {
         self.id = id
         self.title = title
         self.icon = icon
-        self.isDimmed = isDimmed
+        self.isDisabled = isDisabled
     }
 }
 
 /// A group of items shown under an optional header row.
 public struct TopicListSection: Sendable {
     public let title: String?
-    public let items: [TopicListItem]
+    public let items: [any TopicListItemProtocol]
 
     public init(title: String?, items: [TopicListItem]) {
         self.title = title
@@ -37,7 +44,7 @@ public struct TopicListSection: Sendable {
 open class TopicListViewController: NSViewController {
 
     /// Fired when the user changes the selection. Nil when nothing is selected.
-    public var onSelect: ((TopicListItem?) -> Void)?
+    public var onSelect: (((any TopicListItemProtocol)?) -> Void)?
 
     /// Suppresses the next `onSelect` callback. Used by `selectItem(withId:)`
     /// so programmatic selection doesn't echo back to callers that just told
@@ -88,7 +95,7 @@ open class TopicListViewController: NSViewController {
         outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
     }
 
-    private func findItem(withId id: String) -> TopicListItem? {
+    private func findItem(withId id: String) -> TopicListItemProtocol? {
         for section in sections {
             if let match = section.items.first(where: { $0.id == id }) {
                 return match
@@ -108,13 +115,13 @@ open class TopicListViewController: NSViewController {
 private final class TopicListNode: NSObject {
     enum Kind {
         case header(String)
-        case item(TopicListItem)
+        case item(TopicListItemProtocol)
     }
     let kind: Kind
     init(kind: Kind) { self.kind = kind }
 
     static func header(_ title: String) -> TopicListNode { .init(kind: .header(title)) }
-    static func item(_ item: TopicListItem) -> TopicListNode { .init(kind: .item(item)) }
+    static func item(_ item: TopicListItemProtocol) -> TopicListNode { .init(kind: .item(item)) }
 }
 
 extension TopicListViewController {
@@ -179,9 +186,9 @@ extension TopicListViewController: NSOutlineViewDelegate {
             let cell = outlineView.makeView(withIdentifier: id, owner: nil) as? NSTableCellView
                 ?? Self.makeItemCell(identifier: id)
             cell.textField?.stringValue = item.title
-            cell.textField?.alphaValue = item.isDimmed ? 0.5 : 1.0
+            cell.textField?.alphaValue = item.isDisabled ? 0.5 : 1.0
             cell.imageView?.image = item.icon
-            cell.imageView?.contentTintColor = item.isDimmed ? .tertiaryLabelColor : .controlAccentColor
+            cell.imageView?.contentTintColor = item.isDisabled ? .tertiaryLabelColor : .controlAccentColor
             return cell
         }
     }
