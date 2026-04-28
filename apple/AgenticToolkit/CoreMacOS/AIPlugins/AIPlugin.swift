@@ -46,7 +46,7 @@ public protocol AIPlugin: AnyObject, Sendable {
     /// The returned controller is hosted in the app's `SettingsViewController`
     /// sidebar; return nil for plugins that have no per-plugin settings UI.
     @MainActor
-    func settingsPanelViewController() -> SettingsPanelViewController?
+    func settingsPanelViewController() -> OldSettingsPanelViewController?
 
     /// Validate credentials by making a minimal API call.
     /// Returns nil on success, or an error message string on failure.
@@ -57,6 +57,6 @@ public protocol AIPlugin: AnyObject, Sendable {
 
 extension AIPlugin {
     @MainActor
-    func settingsPanelViewController() -> SettingsPanelViewController? { nil }
+    func settingsPanelViewController() -> OldSettingsPanelViewController? { nil }
     func validateCredentials(_ credentials: AIPluginCredentials) async -> String? { nil }
 }

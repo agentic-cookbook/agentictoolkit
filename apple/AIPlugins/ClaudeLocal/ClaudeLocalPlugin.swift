@@ -1,8 +1,9 @@
 import Foundation
 import os
+import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitSettingsWindow
-import AgenticToolkitAIPlugins
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 /// LLM plugin that runs Claude locally via the Claude Code CLI (`claude -p`).
 /// Uses the user's existing Claude Code installation — no API key required.

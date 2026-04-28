@@ -1,7 +1,8 @@
 import AppKit
+import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitSettingsWindow
-import AgenticToolkitAIPlugins
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 /// Settings panel for `OpenAIPlugin`.
 @MainActor

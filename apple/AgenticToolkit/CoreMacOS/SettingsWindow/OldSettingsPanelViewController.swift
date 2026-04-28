@@ -1,11 +1,11 @@
 import AppKit
 
 /// Base class for every settings panel. One instance is hosted in the
-/// right-hand detail pane of a `SettingsViewController`; the sidebar metadata
+/// right-hand detail pane of a `OldSettingsViewController`; the sidebar metadata
 /// lives on the panel itself via the open overrides below. The panel *is* the
 /// list item — no wrapper struct.
 @MainActor
-open class SettingsPanelViewController: NSViewController {
+open class OldSettingsPanelViewController: NSViewController {
 
     /// Title shown in the sidebar row. Subclasses override.
     open var panelTitle: String { "" }
@@ -19,6 +19,6 @@ open class SettingsPanelViewController: NSViewController {
     open var section: String? { nil }
 
     open override func loadView() {
-        view = SettingsPanelView()
+        view = OldSettingsPanelView()
     }
 }

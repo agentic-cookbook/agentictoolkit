@@ -22,7 +22,7 @@ public struct AIRequestConfig {
 
 /// Builds provider-specific HTTP requests and parses responses for AI APIs.
 /// Shared by MiniChatViewModel (interactive chat), TerminalSessionSummarizer (summarization),
-/// and SettingsViewModel (API key smoke tests).
+/// and WhippetSettingsViewModel (API key smoke tests).
 public enum AIRequestBuilder {
 
     /// Builds a URLRequest for the configured provider with the given messages.

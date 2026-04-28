@@ -4,10 +4,10 @@ import AppKit
 /// whose sidebar lists every discovered plugin; selecting one shows the
 /// plugin's own vended settings panel.
 @MainActor
-public final class AIPluginsSettingsPanelViewController: SettingsPanelViewController {
+public final class AIPluginsSettingsPanelViewController: OldSettingsPanelViewController {
 
     private let pluginManager: AIPluginManager
-    private let innerSettings = SettingsViewController()
+    private let innerSettings = OldSettingsViewController()
 
     public init(pluginManager: AIPluginManager) {
         self.pluginManager = pluginManager

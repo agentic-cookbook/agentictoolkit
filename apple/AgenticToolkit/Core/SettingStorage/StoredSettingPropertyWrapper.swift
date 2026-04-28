@@ -1,3 +1,4 @@
+#if false
 import Foundation
 import SwiftUI
 import Combine
@@ -66,3 +67,4 @@ extension StoredSetting {
     }
 }
 
+#endif

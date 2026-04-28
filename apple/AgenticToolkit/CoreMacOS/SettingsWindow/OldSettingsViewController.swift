@@ -1,20 +1,20 @@
 import AppKit
 
 /// Split-pane settings container. Subclass and populate in `viewDidLoad` by
-/// calling `addPanel(_:)`. Sidebar is a `SettingsPanelListViewController`; the
-/// detail pane hosts the currently selected `SettingsPanelViewController`.
+/// calling `addPanel(_:)`. Sidebar is a `OldSettingsPanelListViewController`; the
+/// detail pane hosts the currently selected `OldSettingsPanelViewController`.
 @MainActor
-open class SettingsViewController: NSSplitViewController {
+open class OldSettingsViewController: NSSplitViewController {
 
-    public private(set) var panels: [SettingsPanelViewController] = []
+    public private(set) var panels: [OldSettingsPanelViewController] = []
 
     /// The sidebar list controller. Inject a subclass to customize row
-    /// presentation; defaults to a stock `SettingsPanelListViewController`.
-    public let listViewController: SettingsPanelListViewController
+    /// presentation; defaults to a stock `OldSettingsPanelListViewController`.
+    public let listViewController: OldSettingsPanelListViewController
 
     private let detailContainer = NSViewController()
 
-    public init(listViewController: SettingsPanelListViewController = SettingsPanelListViewController()) {
+    public init(listViewController: OldSettingsPanelListViewController = OldSettingsPanelListViewController()) {
         self.listViewController = listViewController
         super.init(nibName: nil, bundle: nil)
     }
@@ -48,12 +48,12 @@ open class SettingsViewController: NSSplitViewController {
 
     // MARK: - Panel management
 
-    public func addPanel(_ panel: SettingsPanelViewController) {
+    public func addPanel(_ panel: OldSettingsPanelViewController) {
         panels.append(panel)
         listViewController.setPanels(panels)
     }
 
-    public func removePanel(_ panel: SettingsPanelViewController) {
+    public func removePanel(_ panel: OldSettingsPanelViewController) {
         panels.removeAll { $0 === panel }
         listViewController.setPanels(panels)
         if currentPanel === panel { show(nil) }
@@ -65,7 +65,7 @@ open class SettingsViewController: NSSplitViewController {
         show(nil)
     }
 
-    public func selectPanel(_ panel: SettingsPanelViewController) {
+    public func selectPanel(_ panel: OldSettingsPanelViewController) {
         guard let index = panels.firstIndex(where: { $0 === panel }) else { return }
         selectPanel(at: index)
     }
@@ -78,11 +78,11 @@ open class SettingsViewController: NSSplitViewController {
 
     // MARK: - Detail pane
 
-    private var currentPanel: SettingsPanelViewController? {
-        detailContainer.children.first as? SettingsPanelViewController
+    private var currentPanel: OldSettingsPanelViewController? {
+        detailContainer.children.first as? OldSettingsPanelViewController
     }
 
-    private func show(_ panel: SettingsPanelViewController?) {
+    private func show(_ panel: OldSettingsPanelViewController?) {
         for child in detailContainer.children {
             child.view.removeFromSuperview()
             child.removeFromParent()

@@ -1,10 +1,11 @@
 import AppKit
 
+
 /// A reusable settings window controller. Subclass and override
 /// `makeSettingsPanels()` to compose the panels shown in the sidebar.
 ///
 /// ```swift
-/// final class AppSettingsWindowController: SettingsWindowController {
+/// final class AppSettingsWindowController: WhippetSettingsWindowController {
 ///     override func makeSettingsPanels() -> [SettingsPanelViewController] {
 ///         [GeneralPanel(), AppearancePanel(), PluginsPanel()]
 ///     }
@@ -15,35 +16,36 @@ import AppKit
 /// subclass needs to inject (managers, view models, configuration)
 /// can be set up before the first call to `showWindow()`.
 @MainActor
-open class SettingsWindowController: SingleWindowController {
-
+open class SettingsWindow: SingleWindowController {
+    
     public override init(windowID: String) {
         super.init(windowID: windowID)
     }
-
+    
     public convenience init() {
         self.init(windowID: "settings")
     }
-
+    
     open override var windowTitle: String { "Settings" }
-
+    
     open override var defaultContentRect: NSRect {
         NSRect(x: 0, y: 0, width: 720, height: 480)
     }
-
+    
     open override var windowStyleMask: NSWindow.StyleMask {
         [.titled, .closable, .miniaturizable, .resizable]
     }
-
+    
     open override func makeContentViewController() -> NSViewController? {
-        let vc = SettingsViewController()
+        let vc = ComposableSettings.SplitViewController()
         for panel in makeSettingsPanels() {
             vc.addPanel(panel)
         }
         return vc
     }
-
+    
     /// Override to compose the panels shown in the settings window. Called
     /// during `loadWindow()`, after subclass init has completed.
-    open func makeSettingsPanels() -> [SettingsPanelViewController] { [] }
+    open func makeSettingsPanels() -> [ComposableSettings.SettingsPanelViewController] { [] }
 }
+

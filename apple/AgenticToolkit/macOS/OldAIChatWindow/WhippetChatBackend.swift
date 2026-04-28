@@ -4,7 +4,7 @@ import AgenticToolkitCoreMacOS
 
 import Foundation
 
-/// A `ChatBackend` that dispatches to the provider configured in `SettingsViewModel`.
+/// A `ChatBackend` that dispatches to the provider configured in `WhippetSettingsViewModel`.
 /// Routes to the Claude CLI when `aiProvider.usesCLI`, otherwise uses `AIRequestBuilder`
 /// to build a provider-specific HTTP request.
 @MainActor

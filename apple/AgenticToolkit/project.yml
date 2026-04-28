@@ -45,7 +45,13 @@ targets:
   AgenticToolkitCore:
     type: framework
     platform: macOS
-    sources: Core
+    sources:
+      - Core
+      # Foundation-only `ChatBackend` types live next to the legacy macOS
+      # chat window but are needed by `CoreMacOS/AIPlugins`. Hosting them
+      # in Core (which CoreMacOS depends on) gives the plugin code visibility
+      # without pulling in the full macOS UI target.
+      - path: macOS/OldAIChatWindow/ChatBackend.swift
 
   AgenticToolkitCoreUI:
     type: framework
@@ -65,7 +71,12 @@ targets:
   AgenticToolkitMacOS:
     type: framework
     platform: macOS
-    sources: macOS
+    sources:
+      - path: macOS
+        # ChatBackend.swift is hosted in AgenticToolkitCore (see above) so
+        # CoreMacOS plugins can reach it through the dependency chain.
+        excludes:
+          - "OldAIChatWindow/ChatBackend.swift"
     dependencies:
       - target: AgenticToolkitCore
       - target: AgenticToolkitCoreUI

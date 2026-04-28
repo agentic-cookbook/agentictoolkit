@@ -3,7 +3,7 @@ import AppKit
 /// Base view for settings panels. Hosts shared visual utilities such as
 /// section headers. Subclasses can extend with panel-specific layout.
 @MainActor
-open class SettingsPanelView: NSView {
+open class OldSettingsPanelView: NSView {
 
     public static func makeHeader(_ title: String) -> NSTextField {
         let label = NSTextField(labelWithString: title)

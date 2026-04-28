@@ -1,9 +1,10 @@
 import AppKit
 import Foundation
 import os
+import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitSettingsWindow
-import AgenticToolkitAIPlugins
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 /// LLM plugin for the Google Gemini `generateContent` API.
 public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {

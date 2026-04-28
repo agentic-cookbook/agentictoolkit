@@ -1,9 +1,10 @@
 import AppKit
 import Foundation
 import os
+import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitSettingsWindow
-import AgenticToolkitAIPlugins
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 /// LLM plugin for the OpenAI Chat Completions API.
 public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
