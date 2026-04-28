@@ -1,9 +1,5 @@
 import AppKit
 
-/// Theme preference exposed by `AppearanceSettingsPanelViewController`.
-///
-/// The raw value is the string written to `UserDefaults` so apps can read it
-/// back without depending on this type.
 public enum AppearanceMode: String, CaseIterable, Sendable {
     case auto = "auto"
     case light = "light"

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Discrete text-size scale exposed by `AppearanceSettingsPanelViewController`.
+/// Discrete text-size scale exposed by `OldAppearanceSettingsPanelViewController`.
 ///
 /// Apps decide how to map this to actual font sizes (point sizes, dynamic
 /// type categories, multipliers) — this type just tracks the user's choice.

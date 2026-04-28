@@ -276,7 +276,7 @@
 		D9A144BC2DCD94266E5386E4 /* CodeEditLanguages in Frameworks */ = {isa = PBXBuildFile; productRef = 84234475813CD09DE51A130E /* CodeEditLanguages */; };
 		E12AF5245806859AB7FA8C47 /* PluginSettingsContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FAEFFC3135DA747F343AED1 /* PluginSettingsContentView.swift */; };
 		E41FD78990B3FC5A9DCE6633 /* SessionWatcherEventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29780E66EED996FAA4895A7A /* SessionWatcherEventFile.swift */; };
-		E4865E1B95067D7B919F944B /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49596C8C9058720084CB1D81 /* AppearanceSettingsPanelViewController.swift */; };
+		E4865E1B95067D7B919F944B /* OldAppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49596C8C9058720084CB1D81 /* OldAppearanceSettingsPanelViewController.swift */; };
 		E5E64A21285D19829D23FD95 /* SecureStoredSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7D1B477544576902F376315 /* SecureStoredSettingsStorageProvider.swift */; };
 		E952A1B857821C5E74037A0E /* SessionWatcherClickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8088F3D599A383AAFE64A275 /* SessionWatcherClickAction.swift */; };
 		E9E038001EE863484F3C7953 /* NestingSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A89604FEA0BFBA788EFCC15 /* NestingSplitViewController.swift */; };
@@ -298,7 +298,7 @@
 		FB14B491EC42E61B9CCC05A3 /* WindowDiscoveryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C49E42BE80C5294D0938B54 /* WindowDiscoveryViewModel.swift */; };
 		FBB66909D7560A8974226567 /* FileEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDEEDB55C839EAD5F0682D33 /* FileEditorView.swift */; };
 		FCD97DA1187DC4685D6847F8 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		FE79D4F4B5EABF1EA0D2F905 /* NewAppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B38DF33956624006C3F33C38 /* NewAppearanceSettingsPanelViewController.swift */; };
+		FE79D4F4B5EABF1EA0D2F905 /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B38DF33956624006C3F33C38 /* AppearanceSettingsPanelViewController.swift */; };
 		FEB1FE5044BBEA34874A865B /* AIPluginChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFD326C6488E598665A6DC37 /* AIPluginChatBackend.swift */; };
 		FEFE66656456CA9A1353CA78 /* WindowActivationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0598E1E6B9C0D9A2F765B9 /* WindowActivationTarget.swift */; };
 		FF8728AFB44BE34E7F221C74 /* ColorPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208522C9915C7123F76C9347 /* ColorPickerView.swift */; };
@@ -634,7 +634,7 @@
 		480F181C1F87A104018ADA08 /* OldSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSettingsWindowController.swift; sourceTree = "<group>"; };
 		489C1112EDB33EE9AB23E30A /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		494B4B5B0947DBE20A3EC22A /* ButtonViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonViewModel.swift; sourceTree = "<group>"; };
-		49596C8C9058720084CB1D81 /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		49596C8C9058720084CB1D81 /* OldAppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		4988B8EF4CF60D6D2F3A701A /* MainActorScriptCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorScriptCommand.swift; sourceTree = "<group>"; };
 		4D267F72016EFDBFB8D6854C /* RealScreenProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealScreenProvider.swift; sourceTree = "<group>"; };
 		4D979163F924331572CEEC08 /* ProgressViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewModel.swift; sourceTree = "<group>"; };
@@ -714,7 +714,7 @@
 		B26D403C2FA131C70070E9C1 /* ComposableSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposableSettings.swift; sourceTree = "<group>"; };
 		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		B2E5D0C7F53DC1B3194A3635 /* HorizontalStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalStackView.swift; sourceTree = "<group>"; };
-		B38DF33956624006C3F33C38 /* NewAppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewAppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		B38DF33956624006C3F33C38 /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		B3D112853E30CE786A73B192 /* UserSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSetting.swift; sourceTree = "<group>"; };
 		B3FA733A1A4EF2977207B02B /* LogWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWindowController.swift; sourceTree = "<group>"; };
 		B42F1CDC8340A2703AE59765 /* GitStatusProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStatusProviderTests.swift; sourceTree = "<group>"; };
@@ -1049,8 +1049,8 @@
 			isa = PBXGroup;
 			children = (
 				6244DC3730EF879528F9D9A8 /* AppearanceMode.swift */,
-				49596C8C9058720084CB1D81 /* AppearanceSettingsPanelViewController.swift */,
-				B38DF33956624006C3F33C38 /* NewAppearanceSettingsPanelViewController.swift */,
+				49596C8C9058720084CB1D81 /* OldAppearanceSettingsPanelViewController.swift */,
+				B38DF33956624006C3F33C38 /* AppearanceSettingsPanelViewController.swift */,
 				6166DD3959C51A8CA4D7CCF9 /* TextSize.swift */,
 			);
 			path = AppearanceSettingsPanel;
@@ -2018,7 +2018,7 @@
 				A02449D548E346479EF9F69F /* AbstractViewModel.swift in Sources */,
 				A9BB195487D4143248692A45 /* ActivationTestLog.swift in Sources */,
 				82AD81B8C24BB13BFD5AFEB4 /* AppearanceMode.swift in Sources */,
-				E4865E1B95067D7B919F944B /* AppearanceSettingsPanelViewController.swift in Sources */,
+				E4865E1B95067D7B919F944B /* OldAppearanceSettingsPanelViewController.swift in Sources */,
 				448B8964A1C2C5AD7C17F59D /* AppleScriptRunner.swift in Sources */,
 				4D856E518E652C31154DBC6C /* BuiltInActivationStrategies.swift in Sources */,
 				ABC96131D0410BF132FC027A /* ButtonView.swift in Sources */,
@@ -2040,7 +2040,7 @@
 				92E40CEA728BA82239329D59 /* HorizontalStackView.swift in Sources */,
 				356D8ABBAF2C640E14CD87D8 /* KnownTerminals.swift in Sources */,
 				78B317B3CD488F9BB04B3CE5 /* MainActorScriptCommand.swift in Sources */,
-				FE79D4F4B5EABF1EA0D2F905 /* NewAppearanceSettingsPanelViewController.swift in Sources */,
+				FE79D4F4B5EABF1EA0D2F905 /* AppearanceSettingsPanelViewController.swift in Sources */,
 				5B4AEFCBCB80B1B46120891B /* OpenAIResponseParser.swift in Sources */,
 				8F4BB56EF4EB0EC79D08942E /* PanelView.swift in Sources */,
 				D3279846CE8A7FD95F5AA496 /* PerIDWindowController.swift in Sources */,
