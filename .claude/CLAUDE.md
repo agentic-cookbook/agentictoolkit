@@ -3,35 +3,32 @@
 A cross-platform toolkit for agentic development workflows.
 
 ## Tech Stack
-- **Apple platforms**: Swift 6.0, SPM, macOS 14+ / iOS 17+ / tvOS 17+ / watchOS 10+
+- **Apple platforms**: Swift 6.0, Xcode projects (no XcodeGen, no SPM), macOS 14+ / iOS 17+ / tvOS 17+ / watchOS 10+
 - **Windows**: TBD
 - **Android**: TBD
 
 ## Build
 
-`apple/AgenticToolkit/` is a single Swift Package. Each module is a target
-under `Sources/AgenticToolkit<Module>/` with tests under
-`Tests/AgenticToolkit<Module>Tests/`. The app and plugin bundles are
-XcodeGen-generated Xcode projects that consume the umbrella package as a
-local SPM dependency.
+`apple/` contains three Xcode projects wired together by
+`apple/AgenticToolkit.xcworkspace`: the `AgenticToolkit` framework
+project, the `AgenticToolkitApp` app project, and the `AIPlugins`
+plugin-bundle project.
 
-Always pass `-derivedDataPath` so artifacts go to `~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed/` instead of polluting the working tree with `./build/`. Setting `SYMROOT`/`OBJROOT` in `project.yml` triggers Xcode's "legacy build locations" mode and breaks the external SPM packages this project consumes (SwiftTerm, CodeEditSourceEditor, etc.) — keep the override on the CLI.
+**The `.xcodeproj` files are the source of truth.** Do not use XcodeGen,
+do not create `project.yml` files, do not run `cc-xcgen`. Edit the Xcode
+projects directly (in Xcode or by hand-editing `project.pbxproj`).
+
+Always pass `-derivedDataPath` so artifacts go to `~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed/` instead of polluting the working tree with `./build/`. Setting `SYMROOT`/`OBJROOT` in build settings triggers Xcode's "legacy build locations" mode and breaks the external SPM packages this project consumes (SwiftTerm, CodeEditSourceEditor, etc.) — keep the override on the CLI.
 
 ```bash
-# Package build/test (single command covers every module):
-cd apple/AgenticToolkit && swift build
-cd apple/AgenticToolkit && swift test
-
-# Xcode-project build (with DerivedData override):
+# Build the framework with DerivedData override:
 DD=~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed
 xcodebuild -project apple/AgenticToolkit/AgenticToolkit.xcodeproj \
            -scheme AgenticToolkitAll \
            -destination 'platform=macOS,arch=arm64' \
            -derivedDataPath "$DD" build
 
-# Full workspace (app + plugins + packages):
-cd apple/AgenticToolkitApp && cc-xcgen         # regenerate app xcodeproj
-cd apple/AIPlugins && cc-xcgen                 # regenerate plugins xcodeproj
+# Full workspace (app + plugins + framework):
 open apple/AgenticToolkit.xcworkspace
 ```
 
