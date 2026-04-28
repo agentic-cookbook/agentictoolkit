@@ -19,6 +19,10 @@ extension ComposableSettings {
             for choice in viewModel.choices {
                 self.popUpButton.addItem(withTitle: choice.label)
                 self.popUpButton.lastItem?.representedObject = choice.value
+                if let symbol = choice.imageSystemName {
+                    self.popUpButton.lastItem?.image =
+                        NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+                }
             }
 
             super.init(frame: .zero)

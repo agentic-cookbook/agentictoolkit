@@ -51,15 +51,15 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
 extension UserSettings {
     
     /// Whether the session panel floats above all other windows.
-    static var alwaysOnTop = UserSetting<Bool>("always_on_top", default: true)
+    static public var alwaysOnTop = UserSetting<Bool>("always_on_top", default: true)
     
     /// Whether the dock icon is visible.
-    static var showDockIcon = UserSetting<Bool>("show_dock_icon", default: false)
+    static public var showDockIcon = UserSetting<Bool>("show_dock_icon", default: false)
     
     /// Appearance mode: "light" / "dark" / "auto".
-    static var appearanceMode = UserSetting<String>("appearance_mode", default: "auto")
+    static public var appearanceMode = UserSetting<String>("appearance_mode", default: "auto")
     
     /// Text size offset from system default (range -4...4).
-    static var textSize = UserSetting<Double>("text_size", default: 0.0)
+    static public var textSize = UserSetting<Double>("text_size", default: 0.0)
 }
 

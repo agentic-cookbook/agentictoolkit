@@ -20,14 +20,17 @@ extension ComposableSettings {
 
 extension ComposableSettings.ChoiceViewModel {
     
-    /// A label/value pair for a `ChoiceViewModel`.
+    /// A label/value pair for a `ChoiceViewModel`. Optionally carries a system
+    /// symbol name; views that support iconography render it next to the label.
     public struct Choice: Sendable {
         public let label: String
         public let value: Value
+        public let imageSystemName: String?
 
-        public init(label: String, value: Value) {
+        public init(label: String, value: Value, imageSystemName: String? = nil) {
             self.label = label
             self.value = value
+            self.imageSystemName = imageSystemName
         }
     }
 }

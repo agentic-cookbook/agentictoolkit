@@ -34,7 +34,7 @@ extension ComposableSettings {
             fatalError("init(coder:) has not been implemented")
         }
 
-        func addGroup(_ group: GroupView) {
+        public func addGroup(_ group: GroupView) {
             if !self.stackView.arrangedSubviews.isEmpty {
                 self.stackView.addArrangedSubview(DividerView(viewLayout: self.viewLayout))
             }
