@@ -222,3 +222,12 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
 extension SessionWatcherPanelWindowController: Loggable {
     public static nonisolated let logger = makeLogger()
 }
+
+extension UserSettings {
+    
+    /// Whether the session panel floats above all other windows.
+    static var sessionWindowAlwaysOnTop = UserSetting<Bool>("sessionWindowAlwaysOnTop", default: true)
+    
+    /// Window transparency (0.3...1.0).
+    static var sessionWindowTransparency = UserSetting<Double>("sessionWindowTransparency", default: 1.0)
+}

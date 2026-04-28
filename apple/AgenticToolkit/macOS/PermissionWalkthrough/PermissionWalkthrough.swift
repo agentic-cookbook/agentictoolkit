@@ -5,18 +5,18 @@ import ApplicationServices
 /// Shows one modal sheet per permission, waits for the user to grant it (polling),
 /// then advances to the next. Skips permissions already granted.
 @MainActor
-final class PermissionWalkthrough {
+public final class PermissionWalkthrough {
 
     /// UserDefaults key tracking whether the walkthrough has completed.
-    static let walkthroughCompleteKey = "permission_walkthrough_complete"
+    public static let walkthroughCompleteKey = "permission_walkthrough_complete"
 
     /// Whether the walkthrough has already been completed.
-    static var isComplete: Bool {
+    public static var isComplete: Bool {
         UserDefaults.standard.bool(forKey: walkthroughCompleteKey)
     }
 
     /// Resets the walkthrough so it runs again on next launch.
-    static func reset() {
+    public static func reset() {
         UserDefaults.standard.removeObject(forKey: walkthroughCompleteKey)
     }
 
@@ -28,13 +28,13 @@ final class PermissionWalkthrough {
     private var statusDot: NSView?
     private var statusLabel: NSTextField?
 
-    init() {
+    public init() {
         self.permissions = AppPermission.allCases
     }
 
     /// Runs the walkthrough if it hasn't been completed yet.
     /// Calls `completion` when all permissions have been addressed.
-    func runIfNeeded(completion: @escaping () -> Void) {
+    public func runIfNeeded(completion: @escaping () -> Void) {
         guard !Self.isComplete else {
             completion()
             return
@@ -165,9 +165,12 @@ final class PermissionWalkthrough {
 
         windowController.present()
 
-        // Request the permission (triggers system prompt for notifications, opens settings for others)
+        // Request the permission (triggers system prompt for notifications, opens settings for others).
+        // The completion may fire from a non-MainActor context; hop to the main actor before
+        // touching MainActor-isolated state.
         permission.request { [weak self] granted in
-            if granted {
+            guard granted else { return }
+            Task { @MainActor [weak self] in
                 self?.handleGranted()
             }
         }
@@ -179,9 +182,13 @@ final class PermissionWalkthrough {
     private func startPolling(for permission: AppPermission) {
         pollingTimer?.invalidate()
         pollingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            if permission.isGranted {
-                self.handleGranted()
+            // Timers fire on the main run loop, so we are already on the main
+            // actor — assert it so we can call MainActor-isolated members sync.
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if permission.isGranted {
+                    self.handleGranted()
+                }
             }
         }
     }

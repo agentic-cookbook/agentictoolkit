@@ -223,7 +223,7 @@ public final class SessionWatcherGroupCardView: NSView {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         // Header
-        stack.addArrangedSubview(makeHeader())
+        stack.addArrangedSubview(makeSessionHeader())
         stack.addArrangedSubview(makeDivider())
 
         // Sessions
@@ -266,7 +266,7 @@ public final class SessionWatcherGroupCardView: NSView {
         ])
     }
 
-    private func makeHeader() -> NSView {
+    private func makeSessionHeader() -> NSView {
         let container = NSView()
         container.translatesAutoresizingMaskIntoConstraints = false
 

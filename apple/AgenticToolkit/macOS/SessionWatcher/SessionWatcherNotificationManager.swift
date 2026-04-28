@@ -1,10 +1,13 @@
-import AgenticToolkitCore
 import Foundation
-import OSLog
 import UserNotifications
+import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
+import OSLog
+import os
 
 /// Protocol abstracting UNUserNotificationCenter for testability.
-protocol SessionWatcherNotificationCenterProtocol: AnyObject {
+public protocol NotificationCenterProtocol: AnyObject {
     var delegate: (any UNUserNotificationCenterDelegate)? { get set }
     func requestAuthorization(options: UNAuthorizationOptions, completionHandler: @escaping @Sendable (Bool, (any Error)?) -> Void)
     func getNotificationSettings(completionHandler: @escaping @Sendable (UNNotificationSettings) -> Void)
@@ -15,7 +18,7 @@ protocol SessionWatcherNotificationCenterProtocol: AnyObject {
 /// Conform the real UNUserNotificationCenter to our protocol.
 extension UNUserNotificationCenter: NotificationCenterProtocol {}
 
-/// Manages macOS notifications for AgenticPluginTester session events.
+/// Manages macOS notifications for Whippet session events.
 ///
 /// Responsibilities:
 /// - Requests notification authorization on first launch
@@ -23,24 +26,24 @@ extension UNUserNotificationCenter: NotificationCenterProtocol {}
 /// - Respects per-event-type toggles from the settings database
 /// - Handles notification click actions (brings floating window to front)
 @MainActor
-final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserNotificationCenterDelegate {
+public class SessionWatcherNotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     // MARK: - Category Identifiers
 
     /// Notification category identifier for session events.
-    static let sessionCategoryIdentifier = "AGENTIC_SESSION_EVENT"
+    public static let sessionCategoryIdentifier = "WHIPPET_SESSION_EVENT"
 
     // MARK: - User Info Keys
 
     /// Key for the session ID in the notification's userInfo dictionary.
-    static let sessionIdKey = "sessionId"
+    public static let sessionIdKey = "sessionId"
 
     /// Key for the event type in the notification's userInfo dictionary.
-    static let eventTypeKey = "eventType"
+    public static let eventTypeKey = "eventType"
 
     // MARK: - Properties
 
-    private let SessionsDatabaseManager: SessionsDatabaseManager
+    private let settingsStore: SettingsStore
     private let notificationCenter: NotificationCenterProtocol
 
     /// Whether the user has granted notification permission.
@@ -48,16 +51,16 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
 
     /// Callback invoked when the user taps a notification.
     /// The caller (AppDelegate) should bring the floating window to the front.
-    var onNotificationClicked: (() -> Void)?
+    public var onNotificationClicked: (() -> Void)?
 
     // MARK: - Initialization
 
     /// Creates a NotificationManager.
     /// - Parameters:
-    ///   - SessionsDatabaseManager: The database manager for reading notification settings.
+    ///   - settingsStore: The settings store for reading notification toggles. Defaults to the shared store.
     ///   - notificationCenter: The notification center to use. Defaults to `.current()`.
-    init(SessionsDatabaseManager: SessionsDatabaseManager, notificationCenter: NotificationCenterProtocol? = nil) {
-        self.SessionsDatabaseManager = SessionsDatabaseManager
+    public init(settingsStore: SettingsStore, notificationCenter: NotificationCenterProtocol? = nil) {
+        self.settingsStore = settingsStore
         self.notificationCenter = notificationCenter ?? UNUserNotificationCenter.current()
         super.init()
         self.notificationCenter.delegate = self
@@ -68,8 +71,8 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
 
     /// Requests notification authorization with alert and sound options.
     /// Should be called once during app launch.
-    func requestAuthorization() {
-        notificationCenter.requestAuthorization(options: [.alert, .sound]) { granted, error in
+    public func requestAuthorization() {
+        notificationCenter.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
             Task { @MainActor [weak self] in
                 self?.isAuthorized = granted
                 if let error = error {
@@ -82,8 +85,8 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     }
 
     /// Checks the current authorization status and updates `isAuthorized`.
-    func checkAuthorization(completion: (@MainActor @Sendable (Bool) -> Void)? = nil) {
-        notificationCenter.getNotificationSettings { settings in
+    public func checkAuthorization(completion: (@Sendable (Bool) -> Void)? = nil) {
+        notificationCenter.getNotificationSettings { [weak self] settings in
             let authorized = settings.authorizationStatus == .authorized
             Task { @MainActor [weak self] in
                 self?.isAuthorized = authorized
@@ -110,8 +113,8 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     /// - Parameters:
     ///   - sessionId: The session identifier.
     ///   - projectName: The derived project name from the working directory.
-    func notifySessionStart(sessionId: String, projectName: String) {
-        guard isNotificationEnabled(forKey: SettingsViewModel.notifySessionStartKey) else { return }
+    public func notifySessionStart(sessionId: String, projectName: String) {
+        guard isNotificationEnabled(UserSettings.notifySessionStart) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Session Started"
@@ -130,8 +133,8 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     /// - Parameters:
     ///   - sessionId: The session identifier.
     ///   - projectName: The derived project name from the working directory.
-    func notifySessionEnd(sessionId: String, projectName: String) {
-        guard isNotificationEnabled(forKey: SettingsViewModel.notifySessionEndKey) else { return }
+    public func notifySessionEnd(sessionId: String, projectName: String) {
+        guard isNotificationEnabled(UserSettings.notifySessionEnd) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Session Ended"
@@ -150,8 +153,8 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     /// - Parameters:
     ///   - sessionId: The session identifier.
     ///   - projectName: The derived project name from the working directory.
-    func notifySessionStale(sessionId: String, projectName: String) {
-        guard isNotificationEnabled(forKey: SettingsViewModel.notifyStaleKey) else { return }
+    public func notifySessionStale(sessionId: String, projectName: String) {
+        guard isNotificationEnabled(UserSettings.notifyStale) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Session Stale"
@@ -169,7 +172,9 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     // MARK: - UNUserNotificationCenterDelegate
 
     /// Called when a notification is delivered while the app is in the foreground.
-    func userNotificationCenter(
+    /// Delegate methods are invoked from non-MainActor contexts; mark them
+    /// `nonisolated` and only the post-handler hop reaches MainActor state.
+    public nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
@@ -179,14 +184,15 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     }
 
     /// Called when the user interacts with a notification (e.g., clicks it).
-    func userNotificationCenter(
+    public nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        // Bring the floating window to the front
-        logger.debug("User clicked notification")
-        DispatchQueue.main.async { [weak self] in
+        // Bring the floating window to the front. Hop to MainActor before
+        // touching any isolated state.
+        Task { @MainActor [weak self] in
+            Self.logger.debug("User clicked notification")
             self?.onNotificationClicked?()
         }
         completionHandler()
@@ -194,20 +200,11 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
 
     // MARK: - Helpers
 
-    /// Checks whether notifications are enabled for the given settings key.
-    /// - Parameter key: The settings key (e.g., `notify_session_start`).
-    /// - Returns: `true` if the setting is "true", `false` otherwise (default: false).
-    func isNotificationEnabled(forKey key: String) -> Bool {
+    /// Checks whether notifications are enabled for the given typed Bool key.
+    /// Returns `false` if the user has not granted authorization yet.
+    public func isNotificationEnabled(_ key: UserSetting<Bool>) -> Bool {
         guard isAuthorized else { return false }
-
-        do {
-            if let value = try SessionsDatabaseManager.getSetting(key: key) {
-                return value == "true"
-            }
-        } catch {
-            logger.warning("Failed to read setting '\(key, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-        }
-        return false
+        return settingsStore.get(key)
     }
 
     /// Posts a notification request with the given identifier and content.
@@ -227,7 +224,7 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     }
 
     /// Abbreviates a session ID for display (first 8 characters).
-    func abbreviateSessionId(_ sessionId: String) -> String {
+    public func abbreviateSessionId(_ sessionId: String) -> String {
         if sessionId.count > 8 {
             return String(sessionId.prefix(8)) + "..."
         }
@@ -237,4 +234,16 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
 
 extension SessionWatcherNotificationManager: Loggable {
     public static nonisolated let logger = makeLogger()
+}
+
+extension UserSettings {
+    
+    /// Whether to post a notification when a Claude Code session starts.
+    public static var notifySessionStart = UserSetting<Bool>("notify_session_start", default: false)
+    
+    /// Whether to post a notification when a Claude Code session ends.
+    public static var notifySessionEnd = UserSetting<Bool>("notify_session_end", default: false)
+    
+    /// Whether to post a notification when a session goes stale.
+    public static var notifyStale = UserSetting<Bool>("notify_stale", default: false)
 }

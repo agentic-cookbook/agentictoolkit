@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
 /// Manages a standalone AI Chat window. Callers build their own
@@ -28,3 +29,4 @@ public final class AIChatWindowController: SingleWindowController {
         ChatView(viewModel: viewModel)
     }
 }
+

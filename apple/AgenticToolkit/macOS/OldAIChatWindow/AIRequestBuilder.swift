@@ -1,21 +1,16 @@
 import Foundation
+import AgenticToolkitCoreMacOS
 
-public struct AIRequestConfig: Sendable {
+/// Configuration for an AI API request.
+public struct AIRequestConfig {
     public let provider: AIProvider
     public let model: String
     public let apiKey: String
     public let customBaseURL: String
     public let maxTokens: Int
     public let timeoutInterval: TimeInterval
-
-    public init(
-        provider: AIProvider,
-        model: String,
-        apiKey: String,
-        customBaseURL: String = "",
-        maxTokens: Int,
-        timeoutInterval: TimeInterval
-    ) {
+    
+    public init(provider: AIProvider, model: String, apiKey: String, customBaseURL: String, maxTokens: Int, timeoutInterval: TimeInterval) {
         self.provider = provider
         self.model = model
         self.apiKey = apiKey
@@ -25,21 +20,13 @@ public struct AIRequestConfig: Sendable {
     }
 }
 
-public enum AIRequestError: Error, LocalizedError, Equatable {
-    case invalidResponse
-    case missingBaseURL
-
-    public var errorDescription: String? {
-        switch self {
-        case .invalidResponse: return "Invalid server response"
-        case .missingBaseURL: return "Custom base URL is required"
-        }
-    }
-}
-
 /// Builds provider-specific HTTP requests and parses responses for AI APIs.
+/// Shared by MiniChatViewModel (interactive chat), TerminalSessionSummarizer (summarization),
+/// and SettingsViewModel (API key smoke tests).
 public enum AIRequestBuilder {
 
+    /// Builds a URLRequest for the configured provider with the given messages.
+    /// Messages use the format `[["role": "user"|"assistant", "content": "..."]]`.
     public static func buildRequest(
         config: AIRequestConfig,
         messages: [[String: String]],
@@ -59,9 +46,14 @@ public enum AIRequestBuilder {
             }
             return try buildOpenAIRequest(config: config, messages: messages, systemPrompt: systemPrompt,
                                           baseURL: config.customBaseURL)
+        case .claudeCLI:
+            fatalError("This needs to be implemented")
+            
+            break
         }
     }
 
+    /// Extracts the assistant's text reply from a provider-specific JSON response.
     public static func parseAssistantReply(from data: Data, provider: AIProvider) -> String {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return "(Unable to parse response)"
@@ -92,11 +84,16 @@ public enum AIRequestBuilder {
                let text = firstPart["text"] as? String {
                 return text
             }
+        case .claudeCLI:
+            // todo: fix this
+            
+            break
         }
 
         return "(Empty response)"
     }
 
+    /// Extracts a user-friendly error message from an API error response body.
     public static func parseErrorMessage(from body: String, statusCode: Int) -> String {
         if let data = body.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -198,5 +195,21 @@ public enum AIRequestBuilder {
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = config.timeoutInterval
         return request
+    }
+}
+
+// MARK: - Errors
+
+public enum AIRequestError: Error, LocalizedError {
+    case invalidResponse
+    case missingBaseURL
+    case unsupportedProvider
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidResponse: return "Invalid server response"
+        case .missingBaseURL: return "Custom base URL is required"
+        case .unsupportedProvider: return "This provider does not use HTTP requests"
+        }
     }
 }

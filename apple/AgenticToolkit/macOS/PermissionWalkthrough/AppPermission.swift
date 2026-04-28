@@ -2,13 +2,19 @@ import AppKit
 import ApplicationServices
 import UserNotifications
 
+// `kAXTrustedCheckOptionPrompt` is an imported C global which Swift 6
+// strict-concurrency flags as not concurrency-safe. The literal CFString
+// value of that constant is "AXTrustedCheckOptionPrompt"; using the literal
+// avoids the global access entirely (the AX API just looks it up by string).
+private let axTrustedCheckOptionPromptKey: String = "AXTrustedCheckOptionPrompt"
+
 /// Enumerates the macOS permissions that Whippet requires to function.
-enum AppPermission: Int, CaseIterable {
+public enum AppPermission: Int, CaseIterable, Sendable {
     case accessibility = 0
     case notifications = 1
     case automation = 2
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .accessibility: return "Accessibility"
         case .notifications: return "Notifications"
@@ -16,7 +22,7 @@ enum AppPermission: Int, CaseIterable {
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .accessibility: return "hand.raised"
         case .notifications: return "bell.badge"
@@ -24,7 +30,7 @@ enum AppPermission: Int, CaseIterable {
         }
     }
 
-    var explanation: String {
+    public var explanation: String {
         switch self {
         case .accessibility:
             return "Required to discover and activate terminal windows for your Claude Code sessions."
@@ -35,7 +41,7 @@ enum AppPermission: Int, CaseIterable {
         }
     }
 
-    var settingsPath: String {
+    public var settingsPath: String {
         switch self {
         case .accessibility:
             return "Settings → Privacy & Security → Accessibility"
@@ -47,22 +53,26 @@ enum AppPermission: Int, CaseIterable {
     }
 
     /// Checks whether this permission is currently granted.
-    var isGranted: Bool {
+    public var isGranted: Bool {
         switch self {
         case .accessibility:
             return AXIsProcessTrusted()
         case .notifications:
             // Synchronous check — the actual async result is cached by NotificationManager,
             // but for the settings pane we do a synchronous snapshot.
-            var granted = false
+            // The Box exists to ferry the result out of a @Sendable callback;
+            // the semaphore enforces the happens-before, so the unchecked
+            // Sendable conformance is safe.
+            final class Box: @unchecked Sendable { var value = false }
+            let box = Box()
             let semaphore = DispatchSemaphore(value: 0)
             UNUserNotificationCenter.current().getNotificationSettings { settings in
-                granted = settings.authorizationStatus == .authorized
+                box.value = settings.authorizationStatus == .authorized
                 semaphore.signal()
             }
             // Timeout after 1 second to avoid blocking UI forever
             _ = semaphore.wait(timeout: .now() + 1)
-            return granted
+            return box.value
         case .automation:
             // There's no direct API to check Automation permission.
             // We return true optimistically; if it fails at runtime, the error
@@ -72,10 +82,10 @@ enum AppPermission: Int, CaseIterable {
     }
 
     /// Opens the relevant System Settings pane for this permission.
-    func openSettings() {
+    public func openSettings() {
         switch self {
         case .accessibility:
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            let options = [axTrustedCheckOptionPromptKey: true] as CFDictionary
             AXIsProcessTrustedWithOptions(options)
         case .notifications:
             if let bundleId = Bundle.main.bundleIdentifier,
@@ -92,10 +102,10 @@ enum AppPermission: Int, CaseIterable {
     /// Requests this permission from the user. For accessibility, this shows
     /// the system prompt. For notifications, this triggers the authorization
     /// request. For automation, we open System Settings (no programmatic request).
-    func request(completion: @escaping (Bool) -> Void) {
+    public func request(completion: @escaping @Sendable (Bool) -> Void) {
         switch self {
         case .accessibility:
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            let options = [axTrustedCheckOptionPromptKey: true] as CFDictionary
             let trusted = AXIsProcessTrustedWithOptions(options)
             // AX prompt is async — the user has to toggle it in Settings.
             // Return current state; the caller should poll.

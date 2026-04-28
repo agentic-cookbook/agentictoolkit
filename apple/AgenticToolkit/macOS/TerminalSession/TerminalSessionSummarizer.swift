@@ -4,6 +4,7 @@ import os
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import Foundation
 
 /// Settings required to perform a summarization API call. The host app is responsible
 /// for reading these from UserDefaults / Keychain and passing them in, so the toolkit

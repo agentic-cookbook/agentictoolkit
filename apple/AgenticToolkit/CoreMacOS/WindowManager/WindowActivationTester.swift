@@ -9,7 +9,10 @@ import ApplicationServices
 /// Not tied to any particular app or data source — callers build
 /// `WindowActivationTarget` values from whatever they have (SQLite sessions,
 /// file paths, running processes).
-public final class WindowActivationTester {
+/// Single-threaded diagnostic harness — created on main, run on a background
+/// queue, results posted back to main. Use `@unchecked Sendable` to let
+/// callers hop the instance across queues; internal access is not concurrent.
+public final class WindowActivationTester: @unchecked Sendable {
 
     private let targets: [WindowActivationTarget]
     private let strategies: [WindowActivationStrategy]

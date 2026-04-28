@@ -15,10 +15,19 @@ under `Sources/AgenticToolkit<Module>/` with tests under
 XcodeGen-generated Xcode projects that consume the umbrella package as a
 local SPM dependency.
 
+Always pass `-derivedDataPath` so artifacts go to `~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed/` instead of polluting the working tree with `./build/`. Setting `SYMROOT`/`OBJROOT` in `project.yml` triggers Xcode's "legacy build locations" mode and breaks the external SPM packages this project consumes (SwiftTerm, CodeEditSourceEditor, etc.) — keep the override on the CLI.
+
 ```bash
 # Package build/test (single command covers every module):
 cd apple/AgenticToolkit && swift build
 cd apple/AgenticToolkit && swift test
+
+# Xcode-project build (with DerivedData override):
+DD=~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed
+xcodebuild -project apple/AgenticToolkit/AgenticToolkit.xcodeproj \
+           -scheme AgenticToolkitAll \
+           -destination 'platform=macOS,arch=arm64' \
+           -derivedDataPath "$DD" build
 
 # Full workspace (app + plugins + packages):
 cd apple/AgenticToolkitApp && cc-xcgen         # regenerate app xcodeproj
