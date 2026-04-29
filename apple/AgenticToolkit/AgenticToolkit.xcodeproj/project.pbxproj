@@ -106,6 +106,7 @@
 		3FA882101362678876F45F83 /* CodableIgnored.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5901CA876FAFB7BB1CECC87F /* CodableIgnored.swift */; };
 		4050D42A6A0E3EF0AABE309B /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA03F400D5FC6CF7B1EB26C8 /* FileTreeView.swift */; };
 		42062388F3DB048FA26D07AF /* SummarizerDebugCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A76CA785962BC769253EF70 /* SummarizerDebugCoordinator.swift */; };
+		751A149FC2B53D65F2E7C4D1 /* SummarizerDebugCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AC20942295411D82A9FC31 /* SummarizerDebugCommands.swift */; };
 		421825C859E1E04C158D947A /* WindowManagerSimulatedRelaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7FF7BF0190E6C0108D48972 /* WindowManagerSimulatedRelaunchTests.swift */; };
 		450A80B30FF153772B42D722 /* ChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14532CCF66CDA1B57A363C03 /* ChatBackend.swift */; };
 		45EAA5980E86BE9C855B3245 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -676,6 +677,7 @@
 		D3EA7717F495A2013514B3FA /* ScriptingHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptingHost.swift; sourceTree = "<group>"; };
 		F43D297D5C616341B252C515 /* ScriptingRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptingRouter.swift; sourceTree = "<group>"; };
 		5A76CA785962BC769253EF70 /* SummarizerDebugCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizerDebugCoordinator.swift; sourceTree = "<group>"; };
+		C4AC20942295411D82A9FC31 /* SummarizerDebugCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizerDebugCommands.swift; sourceTree = "<group>"; };
 		5B98366727045C9EA6F71B5B /* ProjectHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectHost.swift; sourceTree = "<group>"; };
 		5F83BBD3D83F2AB14DFF0FD2 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
 		602EBD5FCAEB6A6685393F52 /* SQLiteProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteProjectStore.swift; sourceTree = "<group>"; };
@@ -1592,8 +1594,17 @@
 				B2A94B052FA2488100ED0CEB /* SummarizerDebugView.swift */,
 				B2A94B032FA2482A00ED0CEB /* SummarizerDebugWindowController.swift */,
 				5A76CA785962BC769253EF70 /* SummarizerDebugCoordinator.swift */,
+				FFB0E33FB5807A2D14E5DE56 /* Scripting */,
 			);
 			path = SummarizerDebugWindow;
+			sourceTree = "<group>";
+		};
+		FFB0E33FB5807A2D14E5DE56 /* Scripting */ = {
+			isa = PBXGroup;
+			children = (
+				C4AC20942295411D82A9FC31 /* SummarizerDebugCommands.swift */,
+			);
+			path = Scripting;
 			sourceTree = "<group>";
 		};
 		B2A94AF72FA23AD700ED0CEB /* Scripting */ = {
@@ -2218,6 +2229,7 @@
 				E5FAABB018B8C482C8CAE293 /* AIChatCoordinator.swift in Sources */,
 				2712CBAF012716DFEEF93F03 /* AIChatCommands.swift in Sources */,
 				42062388F3DB048FA26D07AF /* SummarizerDebugCoordinator.swift in Sources */,
+				751A149FC2B53D65F2E7C4D1 /* SummarizerDebugCommands.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
