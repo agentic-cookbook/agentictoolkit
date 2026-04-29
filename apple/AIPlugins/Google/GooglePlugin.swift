@@ -66,7 +66,7 @@ public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     @MainActor
-    public func settingsPanelViewController() -> SettingsPanelViewController? {
+    public func settingsPanelViewController() -> ComposableSettings.SettingsPanelViewController? {
         GoogleSettingsPanelViewController(plugin: self)
     }
 
