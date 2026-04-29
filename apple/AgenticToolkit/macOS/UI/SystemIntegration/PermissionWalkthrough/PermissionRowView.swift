@@ -22,6 +22,8 @@ public final class PermissionRowView: NSView {
 
         super.init(frame: .zero)
         self.translatesAutoresizingMaskIntoConstraints = false
+        self.setContentHuggingPriority(.defaultHigh, for: .vertical)
+        self.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
         self.layer?.cornerRadius = 8
@@ -83,7 +85,7 @@ public final class PermissionRowView: NSView {
 
             statusRow.leadingAnchor.constraint(equalTo: self.titleLabel.leadingAnchor),
             statusRow.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 6),
-            statusRow.bottomAnchor.constraint(lessThanOrEqualTo: self.bottomAnchor, constant: -10),
+            statusRow.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -10),
 
             self.statusDot.widthAnchor.constraint(equalToConstant: 8),
             self.statusDot.heightAnchor.constraint(equalToConstant: 8),
