@@ -214,6 +214,7 @@
 		B2A94A8D2FA160B400ED0CEB /* AIPluginRequestError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06300CFF2533378A470579E2 /* AIPluginRequestError.swift */; };
 		B2A94A8E2FA160B400ED0CEB /* AIPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4FD709BA2A9D7CB30EA1E1 /* AIPluginManager.swift */; };
 		B2A94A8F2FA160B400ED0CEB /* PluginSettingsContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FAEFFC3135DA747F343AED1 /* PluginSettingsContentView.swift */; };
+		17D1F915EE7D99A522935E6D /* PluginSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF900B00EB83CB4060C89067 /* PluginSettingsPanel.swift */; };
 		B2A94A902FA160B400ED0CEB /* AIPluginInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98FA2E7D0F6BEF9C566A73A0 /* AIPluginInfo.swift */; };
 		B2A94A912FA160B400ED0CEB /* AIPluginMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA0C68128B42349CAD414EEF /* AIPluginMessage.swift */; };
 		B2A94A922FA1618000ED0CEB /* GeneralSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0E3E858E037E260FD6C616 /* GeneralSettingsPanelViewController.swift */; };
@@ -718,6 +719,7 @@
 		7E50B4CDB300B6961AD32651 /* CheckboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxView.swift; sourceTree = "<group>"; };
 		7F8151BD70F878A42609D463 /* CaptionedSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionedSliderView.swift; sourceTree = "<group>"; };
 		7FAEFFC3135DA747F343AED1 /* PluginSettingsContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsContentView.swift; sourceTree = "<group>"; };
+		FF900B00EB83CB4060C89067 /* PluginSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginSettingsPanel.swift; sourceTree = "<group>"; };
 		8088F3D599A383AAFE64A275 /* SessionWatcherClickAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherClickAction.swift; sourceTree = "<group>"; };
 		8222001113D49C1E20388E8B /* SettingsPanelListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelListViewController.swift; sourceTree = "<group>"; };
 		82347BCBB860239CE234EA13 /* AIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPlugin.swift; sourceTree = "<group>"; };
@@ -1246,6 +1248,7 @@
 				06300CFF2533378A470579E2 /* AIPluginRequestError.swift */,
 				211FE1810B9DECEBD7B09265 /* OpenAIResponseParser.swift */,
 				7FAEFFC3135DA747F343AED1 /* PluginSettingsContentView.swift */,
+				FF900B00EB83CB4060C89067 /* PluginSettingsPanel.swift */,
 				B27CD2C42FA27DF2004B7DE8 /* AIPluginsCoordinator.swift */,
 			);
 			path = AIPlugins;
@@ -2256,6 +2259,7 @@
 				B2A94AD72FA1642900ED0CEB /* AppearanceSettingsPanelViewController.swift in Sources */,
 				B2A94B022FA2470100ED0CEB /* UserSettings+SessionWatcher.swift in Sources */,
 				B2A94A8F2FA160B400ED0CEB /* PluginSettingsContentView.swift in Sources */,
+				17D1F915EE7D99A522935E6D /* PluginSettingsPanel.swift in Sources */,
 				B2A94A902FA160B400ED0CEB /* AIPluginInfo.swift in Sources */,
 				B2A94A912FA160B400ED0CEB /* AIPluginMessage.swift in Sources */,
 				E41FD78990B3FC5A9DCE6633 /* SessionWatcherEventFile.swift in Sources */,
