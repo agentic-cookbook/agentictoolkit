@@ -6,12 +6,19 @@ import AgenticToolkitCore
 @MainActor
 public final class GeneralSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
+    public init() {
+        super.init(with: Descriptor(
+            title: "General",
+            icon: NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+        ))
+    }
+
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
-
-        self.descriptor.title = "General"
-        self.descriptor.icon = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
-
         self.settingsView.addGroup(createStartupGroup())
     }
 

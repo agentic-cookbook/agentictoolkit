@@ -8,6 +8,17 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class TerminalSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
+    public init() {
+        super.init(with: Descriptor(
+            title: "Terminal",
+            icon: NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
+        ))
+    }
+
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override func loadView() {
         let host = NSView()
         host.translatesAutoresizingMaskIntoConstraints = false
@@ -21,11 +32,5 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
             inner.bottomAnchor.constraint(equalTo: host.bottomAnchor),
         ])
         self.view = host
-    }
-
-    public override func viewDidLoad() {
-        super.viewDidLoad()
-        self.descriptor.title = "Terminal"
-        self.descriptor.icon = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
     }
 }

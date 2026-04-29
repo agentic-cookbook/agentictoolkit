@@ -7,12 +7,19 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class SessionWindowSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
+    public init() {
+        super.init(with: Descriptor(
+            title: "Session Window",
+            icon: NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
+        ))
+    }
+
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
-
-        self.descriptor.title = "Session Window"
-        self.descriptor.icon = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
-
         self.settingsView.addGroup(createWindowBehaviorGroup())
         self.settingsView.addGroup(createTransparencyGroup())
         self.settingsView.addGroup(createStalenessGroup())

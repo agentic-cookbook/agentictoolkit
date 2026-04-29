@@ -3,7 +3,7 @@ import AppKit
 /// Bespoke card-style row for a single `AppPermission`. Shows the permission's
 /// icon, name, description, current grant status, and an "Open Settings"
 /// button that jumps to the relevant System Settings pane. `refresh()`
-/// re-reads the granted state — `SystemSettingsPanelViewController` calls it
+/// re-reads the granted state — `PermissionsSettingsPanelViewController` calls it
 /// on a polling timer.
 @MainActor
 public final class PermissionRowView: NSView {

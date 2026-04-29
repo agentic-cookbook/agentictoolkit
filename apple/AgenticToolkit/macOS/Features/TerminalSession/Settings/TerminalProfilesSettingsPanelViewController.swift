@@ -7,6 +7,17 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class TerminalProfilesSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
+    public init() {
+        super.init(with: Descriptor(
+            title: "Profiles",
+            icon: NSImage(systemSymbolName: "paintpalette", accessibilityDescription: nil)
+        ))
+    }
+
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override func loadView() {
         let host = NSView()
         host.translatesAutoresizingMaskIntoConstraints = false
@@ -20,11 +31,5 @@ public final class TerminalProfilesSettingsPanelViewController: ComposableSettin
             inner.bottomAnchor.constraint(equalTo: host.bottomAnchor),
         ])
         self.view = host
-    }
-
-    public override func viewDidLoad() {
-        super.viewDidLoad()
-        self.descriptor.title = "Profiles"
-        self.descriptor.icon = NSImage(systemSymbolName: "paintpalette", accessibilityDescription: nil)
     }
 }

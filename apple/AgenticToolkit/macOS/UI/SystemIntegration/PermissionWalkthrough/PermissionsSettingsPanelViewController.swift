@@ -7,16 +7,23 @@ import AgenticToolkitCoreMacOS
 /// permission walkthrough. This panel doesn't bind any `UserSetting`s — it's
 /// a status/action surface, not a preferences surface.
 @MainActor
-public final class SystemSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
+public final class PermissionsSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     private var permissionRows: [PermissionRowView] = []
 
+    public init() {
+        super.init(with: Descriptor(
+            title: "Permissions",
+            icon: NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
+        ))
+    }
+
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
-
-        self.descriptor.title = "System"
-        self.descriptor.icon = NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
-
         self.settingsView.addGroup(createPermissionsGroup())
         self.settingsView.addGroup(createWalkthroughGroup())
     }

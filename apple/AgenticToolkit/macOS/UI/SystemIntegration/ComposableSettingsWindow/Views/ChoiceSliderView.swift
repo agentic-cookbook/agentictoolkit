@@ -33,6 +33,24 @@ extension ComposableSettings {
             self.slider.target = self
             self.slider.action = #selector(sliderChanged(_:))
 
+            // The slider is the only flexible element in the row — let it
+            // absorb extra width so the right-hand caption pins to the panel
+            // edge instead of leaving a gap.
+            self.label.setContentHuggingPriority(.required, for: .horizontal)
+            self.valueLabel.setContentHuggingPriority(.required, for: .horizontal)
+            self.slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+            // Pin the value label to the width of the longest possible caption
+            // so the slider's width doesn't oscillate as the user drags through
+            // shorter/longer choice labels (e.g. "Small" → "Extra Small").
+            let longestLabelWidth = Self.maxLabelWidth(
+                for: viewModel.choices.map(\.label),
+                font: self.valueLabel.font
+            )
+            self.valueLabel.widthAnchor.constraint(
+                equalToConstant: ceil(longestLabelWidth)
+            ).isActive = true
+
             let row = Self.makeRow(
                 [self.label, self.slider, self.valueLabel],
                 viewLayout: viewLayout
@@ -73,6 +91,14 @@ extension ComposableSettings {
             fatalError("init(coder:) has not been implemented")
         }
 
+        // Span the full GroupView width so the slider can stretch and the
+        // trailing value label pins to the right edge of the panel.
+        public override func viewDidMoveToSuperview() {
+            super.viewDidMoveToSuperview()
+            guard let parent = self.superview else { return }
+            self.widthAnchor.constraint(equalTo: parent.widthAnchor).isActive = true
+        }
+
         static func createLabel(title: String) -> NSTextField {
             let label = NSTextField(labelWithString: title)
             label.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -83,7 +109,15 @@ extension ComposableSettings {
             let label = NSTextField(labelWithString: "")
             label.font = .systemFont(ofSize: 11)
             label.textColor = .secondaryLabelColor
+            label.alignment = .left
             return label
+        }
+
+        private static func maxLabelWidth(for labels: [String], font: NSFont?) -> CGFloat {
+            let attributes: [NSAttributedString.Key: Any] = [.font: font ?? .systemFont(ofSize: 11)]
+            return labels
+                .map { ($0 as NSString).size(withAttributes: attributes).width }
+                .max() ?? 0
         }
     }
 }

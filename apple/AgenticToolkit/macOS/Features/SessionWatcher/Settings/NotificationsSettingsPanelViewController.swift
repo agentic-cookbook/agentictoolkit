@@ -8,12 +8,19 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class NotificationsSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
+    public init() {
+        super.init(with: Descriptor(
+            title: "Notifications",
+            icon: NSImage(systemSymbolName: "bell", accessibilityDescription: nil)
+        ))
+    }
+
+    public required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
-
-        self.descriptor.title = "Notifications"
-        self.descriptor.icon = NSImage(systemSymbolName: "bell", accessibilityDescription: nil)
-
         self.settingsView.addGroup(createNotifyWhenGroup())
     }
 

@@ -137,7 +137,7 @@
 		74A1F26C5FB16095BC834690 /* AIModelChatConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1311A691039678E888522DA6 /* AIModelChatConfig.swift */; };
 		74E1AC3979B6FBF4890DEA68 /* WorkspaceDirectoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D4904FFA01A1F4190B0C852 /* WorkspaceDirectoryManager.swift */; };
 		77574A8E84C9C0665FF3D933 /* LogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC9B45D20643D84977E0C94 /* LogViewController.swift */; };
-		795A5E6700F116010A88134D /* SystemSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385BBB969EEBE4A360EB50BA /* SystemSettingsPanelViewController.swift */; };
+		795A5E6700F116010A88134D /* PermissionsSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385BBB969EEBE4A360EB50BA /* PermissionsSettingsPanelViewController.swift */; };
 		7A5F8A3862063D43799C7077 /* NotificationsSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22876007772610F83EC71C4C /* NotificationsSettingsPanelViewController.swift */; };
 		7AA7DD4D1A43A9B02FDE0EB8 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 17D55EB771817306B99DA341 /* SwiftTerm */; };
 		7C3AD769B08C99E564093A06 /* LogBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F36405BF2FF5FC38788B5C /* LogBufferTests.swift */; };
@@ -262,8 +262,6 @@
 		B2A94ACF2FA1630900ED0CEB /* TTYResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FDC41ED3D1962884782219 /* TTYResolver.swift */; };
 		B2A94AD22FA1634100ED0CEB /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A94AD12FA1633B00ED0CEB /* Placeholder.swift */; };
 		B2A94AD72FA1642900ED0CEB /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B38DF33956624006C3F33C38 /* AppearanceSettingsPanelViewController.swift */; };
-		B2A94AD82FA1646000ED0CEB /* AppearanceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6244DC3730EF879528F9D9A8 /* AppearanceMode.swift */; };
-		B2A94AD92FA1646B00ED0CEB /* TextSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6166DD3959C51A8CA4D7CCF9 /* TextSize.swift */; };
 		B718195F5BD3E7C7E9632866 /* SessionWatcherPanelWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D78568220A75B02F489002C /* SessionWatcherPanelWindowController.swift */; };
 		B8B0D1966DC099259D1C1D44 /* NotesSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C274757FD09884B5ECFC8F7D /* NotesSplitViewController.swift */; };
 		B95BD673710DE8645A50740D /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F5768F178D6D70BF2CDCB3D /* ChatMessage.swift */; };
@@ -303,6 +301,9 @@
 		FB14B491EC42E61B9CCC05A3 /* WindowDiscoveryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C49E42BE80C5294D0938B54 /* WindowDiscoveryViewModel.swift */; };
 		FBB66909D7560A8974226567 /* FileEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDEEDB55C839EAD5F0682D33 /* FileEditorView.swift */; };
 		FCD97DA1187DC4685D6847F8 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		1AB0A531C8F6FFA8720A4790 /* AppearanceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5811B43157F9A1F2F24227B8 /* AppearanceManager.swift */; };
+		961A3DD159FB23878A285E61 /* SessionWatcherCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE18A16D60050F1829843F9 /* SessionWatcherCoordinator.swift */; };
+		AC4A98FCCECF19693CA60D29 /* NotesCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1111095327F39EBAA55AE3B4 /* NotesCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -550,7 +551,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		014C23FF1C8186C327CC1148 /* OldSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSettingsViewController.swift; sourceTree = "<group>"; };
 		0154656873A312CD52D049D9 /* TerminalSessionWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionWindowController.swift; sourceTree = "<group>"; };
 		02EDD70E4DD37A41063C6B96 /* LogViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewTests.swift; sourceTree = "<group>"; };
 		02F646AD3478F693F2077533 /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
@@ -613,7 +613,6 @@
 		2BF850256384D0F3E0263DCE /* ScreenInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenInfo.swift; sourceTree = "<group>"; };
 		2E1EC7870DCC6772A8B50F61 /* SessionWatcherDatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherDatabaseManager.swift; sourceTree = "<group>"; };
 		2F51D7FC0876F166467F214B /* ChoiceSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceSliderView.swift; sourceTree = "<group>"; };
-		2FCDE1945504B402A6EDB0E4 /* OldSettingsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSettingsPanelView.swift; sourceTree = "<group>"; };
 		32582C63B9D189B594547E89 /* KnownTerminals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnownTerminals.swift; sourceTree = "<group>"; };
 		33F852968686967ACD65E1B5 /* KeychainSecureSettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSecureSettingsStorageProvider.swift; sourceTree = "<group>"; };
 		340D8418B9864E2B4DBE4169 /* InMemorySettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemorySettingsStoreTests.swift; sourceTree = "<group>"; };
@@ -621,7 +620,7 @@
 		35300EC0F79077CEA4B44DCD /* GitFileStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitFileStatus.swift; sourceTree = "<group>"; };
 		37B3C943A5A8E8E45CF89881 /* AgenticToolkitCoreUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitCoreUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3804CA9B09E0C47343A1F4E7 /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
-		385BBB969EEBE4A360EB50BA /* SystemSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPanelViewController.swift; sourceTree = "<group>"; };
+		385BBB969EEBE4A360EB50BA /* PermissionsSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		398F7AC6587905A39A5079BA /* SessionWatcherContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherContentView.swift; sourceTree = "<group>"; };
 		3B7B8205532F32407A81DC0C /* NotesListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesListViewController.swift; sourceTree = "<group>"; };
 		3BB3ADE4C64195BCABB50F5C /* SliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderView.swift; sourceTree = "<group>"; };
@@ -638,7 +637,6 @@
 		44F6CEB7226E420B44A61C33 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		461A921DBCC37CEFB4F2A7DB /* WhippetProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhippetProject.swift; sourceTree = "<group>"; };
 		47DDA91097F1CD49C6045FAB /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
-		480F181C1F87A104018ADA08 /* OldSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSettingsWindowController.swift; sourceTree = "<group>"; };
 		489C1112EDB33EE9AB23E30A /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		494B4B5B0947DBE20A3EC22A /* ButtonViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonViewModel.swift; sourceTree = "<group>"; };
 		49596C8C9058720084CB1D81 /* OldAppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
@@ -653,9 +651,7 @@
 		5F83BBD3D83F2AB14DFF0FD2 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
 		602EBD5FCAEB6A6685393F52 /* SQLiteProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteProjectStore.swift; sourceTree = "<group>"; };
 		61310A916E242BA60A9FE8C1 /* AgenticToolkitCoreMacOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticToolkitCoreMacOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		6166DD3959C51A8CA4D7CCF9 /* TextSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSize.swift; sourceTree = "<group>"; };
 		61D195496C5D5D7F946A4A1A /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
-		6244DC3730EF879528F9D9A8 /* AppearanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceMode.swift; sourceTree = "<group>"; };
 		62B4BE4500D545AD0E18EEDC /* LanguageDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetection.swift; sourceTree = "<group>"; };
 		649DBA98408E35AF8452119D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		662D7755AAC5265FD6D2BD78 /* SessionLayoutStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLayoutStateTests.swift; sourceTree = "<group>"; };
@@ -688,7 +684,6 @@
 		82347BCBB860239CE234EA13 /* AIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPlugin.swift; sourceTree = "<group>"; };
 		8251C89D61B2A47FBDDF5027 /* LogBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBuffer.swift; sourceTree = "<group>"; };
 		831448F23EB8464AE194DE61 /* SqliteStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SqliteStorageProvider.swift; sourceTree = "<group>"; };
-		85F053E8F22D296557DBDFBC /* OldSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		8688A440055400E5D6903E08 /* AIChatWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatWindowController.swift; sourceTree = "<group>"; };
 		87F36405BF2FF5FC38788B5C /* LogBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBufferTests.swift; sourceTree = "<group>"; };
 		8CE45EBBFD88F15E5DA6381F /* FileSystemWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemWatcher.swift; sourceTree = "<group>"; };
@@ -725,14 +720,10 @@
 		B2A94A522FA15C0900ED0CEB /* AIPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPanelViewController.swift; sourceTree = "<group>"; };
 		B2A94A532FA15C0900ED0CEB /* AISettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AISettingsPane.swift; sourceTree = "<group>"; };
 		B2A94A652FA15C5000ED0CEB /* OldAppearanceSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAppearanceSettingsPane.swift; sourceTree = "<group>"; };
-		B2A94A672FA15C6800ED0CEB /* OldAppearancePanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAppearancePanelViewController.swift; sourceTree = "<group>"; };
-		B2A94A692FA15CA700ED0CEB /* OldGeneralPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldGeneralPanelViewController.swift; sourceTree = "<group>"; };
-		B2A94A6A2FA15CA700ED0CEB /* OldGeneralSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldGeneralSettingsPane.swift; sourceTree = "<group>"; };
 		B2A94A702FA15CBF00ED0CEB /* OldNotificationsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldNotificationsPanelViewController.swift; sourceTree = "<group>"; };
 		B2A94A712FA15CBF00ED0CEB /* OldNotificationsSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldNotificationsSettingsPane.swift; sourceTree = "<group>"; };
 		B2A94A742FA15CDA00ED0CEB /* OldTerminalProfilesPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldTerminalProfilesPanelViewController.swift; sourceTree = "<group>"; };
 		B2A94A762FA15CEE00ED0CEB /* OldTerminalGeneralPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldTerminalGeneralPanelViewController.swift; sourceTree = "<group>"; };
-		B2A94A782FA15D0300ED0CEB /* OldSystemPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSystemPanelViewController.swift; sourceTree = "<group>"; };
 		B2A94A792FA15D0300ED0CEB /* OldSystemSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSystemSettingsPane.swift; sourceTree = "<group>"; };
 		B2A94A802FA15D2800ED0CEB /* OldSessionWindowPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSessionWindowPanelViewController.swift; sourceTree = "<group>"; };
 		B2A94A812FA15D2800ED0CEB /* OldSessionWindowSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSessionWindowSettingsPane.swift; sourceTree = "<group>"; };
@@ -764,7 +755,6 @@
 		C6794B18EC667BF83E7D1415 /* SessionWatcherDatabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherDatabaseModels.swift; sourceTree = "<group>"; };
 		C6DE686A8924462D709A3CA7 /* FileTreeCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeCacheTests.swift; sourceTree = "<group>"; };
 		C6F04782B1AFFF7127832525 /* NoteStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteStorage.swift; sourceTree = "<group>"; };
-		C77AA8162174789AB843F373 /* OldSettingsPanelListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSettingsPanelListViewController.swift; sourceTree = "<group>"; };
 		C7FF7BF0190E6C0108D48972 /* WindowManagerSimulatedRelaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerSimulatedRelaunchTests.swift; sourceTree = "<group>"; };
 		C884728054C46FEBAD9AA227 /* TerminalSessionSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionSplitViewController.swift; sourceTree = "<group>"; };
 		CEE3FCE04001A824A67BAB45 /* WindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowStateStorage.swift; sourceTree = "<group>"; };
@@ -813,6 +803,9 @@
 		FE2A8BE11F141B88E9296E89 /* LogCellValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogCellValue.swift; sourceTree = "<group>"; };
 		FE4C8C73A9447E11CAE71500 /* WindowDiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowDiscoveryView.swift; sourceTree = "<group>"; };
 		FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticToolkitCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5811B43157F9A1F2F24227B8 /* AppearanceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceManager.swift; sourceTree = "<group>"; };
+		CFE18A16D60050F1829843F9 /* SessionWatcherCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherCoordinator.swift; sourceTree = "<group>"; };
+		1111095327F39EBAA55AE3B4 /* NotesCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1015,6 +1008,7 @@
 				C6F04782B1AFFF7127832525 /* NoteStorage.swift */,
 				FD0B0DFC4E04BF9DA4C703DD /* NotesWindowController.swift */,
 				6990A8D66A74268EAB2D1382 /* QuickNoteWindowController.swift */,
+				1111095327F39EBAA55AE3B4 /* NotesCoordinator.swift */,
 			);
 			path = NotesWindow;
 			sourceTree = "<group>";
@@ -1047,17 +1041,6 @@
 			path = Sessions;
 			sourceTree = "<group>";
 		};
-		429CB7ACC4B53EB8794D70CA /* AppearanceSettingsPanel */ = {
-			isa = PBXGroup;
-			children = (
-				6244DC3730EF879528F9D9A8 /* AppearanceMode.swift */,
-				B2A94A642FA15C3900ED0CEB /* Old */,
-				B38DF33956624006C3F33C38 /* AppearanceSettingsPanelViewController.swift */,
-				6166DD3959C51A8CA4D7CCF9 /* TextSize.swift */,
-			);
-			path = AppearanceSettingsPanel;
-			sourceTree = "<group>";
-		};
 		490BC2335317A3FE213428D0 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -1084,6 +1067,7 @@
 				1D78568220A75B02F489002C /* SessionWatcherPanelWindowController.swift */,
 				27F7719AD6CCFEAC95246DF1 /* SessionWatcherSummarizerDebugWindowController.swift */,
 				A683A7794A572CD3047591B4 /* SessionWatcherDataModel */,
+				CFE18A16D60050F1829843F9 /* SessionWatcherCoordinator.swift */,
 			);
 			path = SessionWatcher;
 			sourceTree = "<group>";
@@ -1371,9 +1355,12 @@
 		A5E2391F78B099C6A29AFA7B /* PermissionWalkthrough */ = {
 			isa = PBXGroup;
 			children = (
+				B2A94A792FA15D0300ED0CEB /* OldSystemSettingsPane.swift */,
 				8F69251451C74E3A277CF3A8 /* AppPermission.swift */,
 				E3F8E3D7A12AD43497293D93 /* PermissionWalkthrough.swift */,
 				03A4C90FC6896DB06BEDEC7C /* PermissionWalkthroughWindowController.swift */,
+				385BBB969EEBE4A360EB50BA /* PermissionsSettingsPanelViewController.swift */,
+				70C65EF6627F21D76D253B79 /* PermissionRowView.swift */,
 			);
 			path = PermissionWalkthrough;
 			sourceTree = "<group>";
@@ -1446,36 +1433,6 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		B2A94A512FA15C0000ED0CEB /* AIChatWindow */ = {
-			isa = PBXGroup;
-			children = (
-				B2A94A522FA15C0900ED0CEB /* AIPanelViewController.swift */,
-				B2A94A532FA15C0900ED0CEB /* AISettingsPane.swift */,
-			);
-			path = AIChatWindow;
-			sourceTree = "<group>";
-		};
-		B2A94A642FA15C3900ED0CEB /* Old */ = {
-			isa = PBXGroup;
-			children = (
-				B2A94A672FA15C6800ED0CEB /* OldAppearancePanelViewController.swift */,
-				B2A94A652FA15C5000ED0CEB /* OldAppearanceSettingsPane.swift */,
-				49596C8C9058720084CB1D81 /* OldAppearanceSettingsPanelViewController.swift */,
-			);
-			path = Old;
-			sourceTree = "<group>";
-		};
-		B2A94A7B2FA15D0300ED0CEB /* System */ = {
-			isa = PBXGroup;
-			children = (
-				B2A94A782FA15D0300ED0CEB /* OldSystemPanelViewController.swift */,
-				B2A94A792FA15D0300ED0CEB /* OldSystemSettingsPane.swift */,
-				385BBB969EEBE4A360EB50BA /* SystemSettingsPanelViewController.swift */,
-				70C65EF6627F21D76D253B79 /* PermissionRowView.swift */,
-			);
-			path = System;
-			sourceTree = "<group>";
-		};
 		B2A94A7F2FA15D1F00ED0CEB /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -1492,27 +1449,16 @@
 			isa = PBXGroup;
 			children = (
 				FC7BE2A61152A3B1E4DD6941 /* LaunchAtLoginManager.swift */,
+				DE0E3E858E037E260FD6C616 /* GeneralSettingsPanelViewController.swift */,
 			);
 			path = LaunchAtLogin;
-			sourceTree = "<group>";
-		};
-		B2A94A862FA15F2000ED0CEB /* AIPlugins */ = {
-			isa = PBXGroup;
-			children = (
-				B2A94AD42FA1639700ED0CEB /* OldPluginsSettingsPanelViewController.swift */,
-			);
-			path = AIPlugins;
 			sourceTree = "<group>";
 		};
 		B2A94AB32FA161DC00ED0CEB /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 				D23B9AC74B0D4DFA54D6FC97 /* SettingPanels */,
-				1F8E4AB0CFA90582D36259D3 /* ComposableSettingsWindow */,
-				A5E2391F78B099C6A29AFA7B /* PermissionWalkthrough */,
-				B2A94A852FA15E7900ED0CEB /* LaunchAtLogin */,
 				740CE7761E02400F78FB14A2 /* SettingStorage */,
-				CFD7A200F1462E3519B9EF91 /* OldSettingsWindow */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -1547,10 +1493,43 @@
 			children = (
 				3A1FEE2671A9835F2B270DEE /* Document */,
 				B2A94AB52FA1624200ED0CEB /* ViewControllers */,
+				B2A94AE92FA16F5600ED0CEB /* SystemIntegration */,
 				B2A94AB32FA161DC00ED0CEB /* Settings */,
-				784385E2E616686EBA15611A /* WindowManager */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		B2A94AE92FA16F5600ED0CEB /* SystemIntegration */ = {
+			isa = PBXGroup;
+			children = (
+				A5E2391F78B099C6A29AFA7B /* PermissionWalkthrough */,
+				B2A94AEA2FA16F6F00ED0CEB /* Appearance */,
+				B2A94A852FA15E7900ED0CEB /* LaunchAtLogin */,
+				1F8E4AB0CFA90582D36259D3 /* ComposableSettingsWindow */,
+				784385E2E616686EBA15611A /* WindowManager */,
+			);
+			path = SystemIntegration;
+			sourceTree = "<group>";
+		};
+		B2A94AEA2FA16F6F00ED0CEB /* Appearance */ = {
+			isa = PBXGroup;
+			children = (
+				B38DF33956624006C3F33C38 /* AppearanceSettingsPanelViewController.swift */,
+				B2A94A652FA15C5000ED0CEB /* OldAppearanceSettingsPane.swift */,
+				49596C8C9058720084CB1D81 /* OldAppearanceSettingsPanelViewController.swift */,
+				5811B43157F9A1F2F24227B8 /* AppearanceManager.swift */,
+			);
+			path = Appearance;
+			sourceTree = "<group>";
+		};
+		B2A94AEB2FA16FBD00ED0CEB /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				B2A94A522FA15C0900ED0CEB /* AIPanelViewController.swift */,
+				B2A94A532FA15C0900ED0CEB /* AISettingsPane.swift */,
+				B2A94AD42FA1639700ED0CEB /* OldPluginsSettingsPanelViewController.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		B6E4A3D9AA3C14DAC576D3F4 /* Hooks */ = {
@@ -1564,6 +1543,7 @@
 		BDEED725FEC31E9E711998FD /* AIChatWindow */ = {
 			isa = PBXGroup;
 			children = (
+				B2A94AEB2FA16FBD00ED0CEB /* Settings */,
 				8688A440055400E5D6903E08 /* AIChatWindowController.swift */,
 				1311A691039678E888522DA6 /* AIModelChatConfig.swift */,
 				3DF8DCCBFB2FAFFC83582743 /* AIProvider.swift */,
@@ -1613,18 +1593,6 @@
 			path = AgenticToolkitMacOSTests;
 			sourceTree = "<group>";
 		};
-		CFD7A200F1462E3519B9EF91 /* OldSettingsWindow */ = {
-			isa = PBXGroup;
-			children = (
-				C77AA8162174789AB843F373 /* OldSettingsPanelListViewController.swift */,
-				2FCDE1945504B402A6EDB0E4 /* OldSettingsPanelView.swift */,
-				85F053E8F22D296557DBDFBC /* OldSettingsPanelViewController.swift */,
-				014C23FF1C8186C327CC1148 /* OldSettingsViewController.swift */,
-				480F181C1F87A104018ADA08 /* OldSettingsWindowController.swift */,
-			);
-			path = OldSettingsWindow;
-			sourceTree = "<group>";
-		};
 		D16350DC98EBA2065EB113AC /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -1637,11 +1605,6 @@
 		D23B9AC74B0D4DFA54D6FC97 /* SettingPanels */ = {
 			isa = PBXGroup;
 			children = (
-				B2A94A512FA15C0000ED0CEB /* AIChatWindow */,
-				B2A94A862FA15F2000ED0CEB /* AIPlugins */,
-				429CB7ACC4B53EB8794D70CA /* AppearanceSettingsPanel */,
-				DD142B9577B4827ABD6B9B83 /* GeneralSettingsPanel */,
-				B2A94A7B2FA15D0300ED0CEB /* System */,
 			);
 			path = SettingPanels;
 			sourceTree = "<group>";
@@ -1664,16 +1627,6 @@
 				E0CD3B1C399B2A7FDA417BF1 /* SessionSummarizer.swift */,
 			);
 			path = Ingestion;
-			sourceTree = "<group>";
-		};
-		DD142B9577B4827ABD6B9B83 /* GeneralSettingsPanel */ = {
-			isa = PBXGroup;
-			children = (
-				B2A94A692FA15CA700ED0CEB /* OldGeneralPanelViewController.swift */,
-				B2A94A6A2FA15CA700ED0CEB /* OldGeneralSettingsPane.swift */,
-				DE0E3E858E037E260FD6C616 /* GeneralSettingsPanelViewController.swift */,
-			);
-			path = GeneralSettingsPanel;
 			sourceTree = "<group>";
 		};
 		DEF55812932E380817049F0A /* NestedSplitView */ = {
@@ -1988,7 +1941,6 @@
 				2188E2127C79F3A1DCC3DCC8 /* LanguageDetection.swift in Sources */,
 				27873D6BC7ACB3ED1190970E /* LaunchAtLoginManager.swift in Sources */,
 				A0986332861F0E2A6A362106 /* LogBuffer.swift in Sources */,
-				B2A94AD82FA1646000ED0CEB /* AppearanceMode.swift in Sources */,
 				98217D89E4DA65896D8688FC /* LogCellValue.swift in Sources */,
 				F75BB7FCE96620725281B665 /* LogColumn.swift in Sources */,
 				F1C666EAA354A4707B270391 /* LogController.swift in Sources */,
@@ -2095,7 +2047,6 @@
 				AFA6C6C594B45800CDE17F00 /* SessionWatcherEventIngestionManager.swift in Sources */,
 				9718B981E92E58AC20E46F4E /* SessionWatcherGitMetadataResolver.swift in Sources */,
 				8201E9E565E28DC23AD0F0C7 /* SessionWatcherHookInstaller.swift in Sources */,
-				B2A94AD92FA1646B00ED0CEB /* TextSize.swift in Sources */,
 				2336174965CF8DA6061C9212 /* SessionWatcherListViewModel.swift in Sources */,
 				3F50550BC2A2B507CDD7B860 /* SessionWatcherLivenessMonitor.swift in Sources */,
 				AE96A20253A7E93B08AAE9EC /* SessionWatcherNotificationManager.swift in Sources */,
@@ -2128,10 +2079,13 @@
 				74E1AC3979B6FBF4890DEA68 /* WorkspaceDirectoryManager.swift in Sources */,
 				7A5F8A3862063D43799C7077 /* NotificationsSettingsPanelViewController.swift in Sources */,
 				66E337318E16194AC10521FD /* SessionWindowSettingsPanelViewController.swift in Sources */,
-				795A5E6700F116010A88134D /* SystemSettingsPanelViewController.swift in Sources */,
+				795A5E6700F116010A88134D /* PermissionsSettingsPanelViewController.swift in Sources */,
 				B2A94AB82FA162EC00ED0CEB /* MainActorScriptCommand.swift in Sources */,
 				B2A94AB92FA162EC00ED0CEB /* AppleScriptRunner.swift in Sources */,
 				29539112485DCABCE17FC769 /* PermissionRowView.swift in Sources */,
+				1AB0A531C8F6FFA8720A4790 /* AppearanceManager.swift in Sources */,
+				961A3DD159FB23878A285E61 /* SessionWatcherCoordinator.swift in Sources */,
+				AC4A98FCCECF19693CA60D29 /* NotesCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

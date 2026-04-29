@@ -52,6 +52,12 @@ open class TopicListViewController: NSViewController {
     private var suppressNextSelectionCallback = false
 
     private var sections: [TopicListSection] = []
+    /// Stable per-section node instances. NSOutlineView identifies items by
+    /// reference, so the outline must always be handed the same `TopicListNode`
+    /// instance for a given logical row. Rebuilding `rootNodes` on every access
+    /// (the previous behaviour) made `row(forItem:)` always return -1, which
+    /// in turn made `selectItem(withId:)` silently no-op.
+    private var rootNodesCache: [TopicListNode] = []
     private let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
 
@@ -81,6 +87,7 @@ open class TopicListViewController: NSViewController {
     /// render their items without a header row.
     open func setSections(_ sections: [TopicListSection]) {
         self.sections = sections
+        self.rootNodesCache = Self.buildRootNodes(from: sections)
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
     }
@@ -88,11 +95,27 @@ open class TopicListViewController: NSViewController {
     /// Selects the row matching `id` without firing `onSelect`.
     /// No-op if the id isn't present.
     open func selectItem(withId id: String) {
-        guard let item = findItem(withId: id) else { return }
-        let row = outlineView.row(forItem: TopicListNode.item(item))
+        guard let node = rootNodesCache.first(where: { node in
+            if case .item(let item) = node.kind, item.id == id { return true }
+            return false
+        }) else { return }
+        let row = outlineView.row(forItem: node)
         guard row >= 0 else { return }
         suppressNextSelectionCallback = true
         outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+    }
+
+    private static func buildRootNodes(from sections: [TopicListSection]) -> [TopicListNode] {
+        var nodes: [TopicListNode] = []
+        for section in sections {
+            if let title = section.title, !title.isEmpty {
+                nodes.append(.header(title))
+            }
+            for item in section.items {
+                nodes.append(.item(item))
+            }
+        }
+        return nodes
     }
 
     private func findItem(withId id: String) -> TopicListItemProtocol? {
@@ -125,18 +148,7 @@ private final class TopicListNode: NSObject {
 }
 
 extension TopicListViewController {
-    fileprivate var rootNodes: [TopicListNode] {
-        var nodes: [TopicListNode] = []
-        for section in sections {
-            if let title = section.title, !title.isEmpty {
-                nodes.append(.header(title))
-            }
-            for item in section.items {
-                nodes.append(.item(item))
-            }
-        }
-        return nodes
-    }
+    fileprivate var rootNodes: [TopicListNode] { rootNodesCache }
 }
 
 // MARK: - NSOutlineViewDataSource
