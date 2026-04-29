@@ -184,7 +184,15 @@ public final class SessionWatcherSummarizerDebugView: NSView {
 @MainActor
 public final class SessionWatcherSummarizerDebugWindowController: SingleWindowController {
 
-    public init() { super.init(windowID: "summarizerDebug") }
+    public static let windowID = "summarizerDebug"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 700, height: 500),
+        minSize: NSSize(width: 400, height: 300),
+        defaultPosition: .center,
+        persistsFrame: true
+    )
+
+    public init() { super.init(windowID: Self.windowID, spec: Self.windowSpec) }
 
     public override var windowTitle: String { "Summarizer Debug Log" }
     public override var defaultContentRect: NSRect { NSRect(x: 0, y: 0, width: 700, height: 500) }

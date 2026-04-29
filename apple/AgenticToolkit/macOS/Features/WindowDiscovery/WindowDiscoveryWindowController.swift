@@ -13,7 +13,15 @@ public final class WindowDiscoveryWindowController: SingleWindowController {
     private let container = NSView()
     private var discoveryView: WindowDiscoveryView?
 
-    public init() { super.init(windowID: "windowDiscovery") }
+    public static let windowID = "windowDiscovery"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 380, height: 420),
+        minSize: NSSize(width: 300, height: 200),
+        defaultPosition: .center,
+        persistsFrame: true
+    )
+
+    public init() { super.init(windowID: Self.windowID, spec: Self.windowSpec) }
 
     // MARK: - SingleWindowController overrides
 

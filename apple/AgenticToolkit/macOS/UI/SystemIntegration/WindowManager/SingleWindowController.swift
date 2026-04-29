@@ -28,8 +28,16 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     public let windowID: String
 
-    public init(windowID: String) {
+    /// Initializes the controller. If a `spec` is provided it's registered
+    /// with `WindowManager.shared` for `windowID` before the window is built —
+    /// subclasses that own their spec (typical pattern: a `static let
+    /// windowSpec`) should pass it here so registration is local to the
+    /// controller and AppDelegate doesn't need a global setup pass.
+    public init(windowID: String, spec: WindowSpec? = nil) {
         self.windowID = windowID
+        if let spec {
+            WindowManager.shared.register(id: windowID, spec: spec)
+        }
         super.init(window: nil)
     }
 

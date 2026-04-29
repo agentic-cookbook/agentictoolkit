@@ -12,12 +12,18 @@ import AgenticToolkitCoreMacOS
 public final class NestedSplitViewWindowController: SingleWindowController {
 
     public static let sharedWindowID = "whiprojDocumentWindow"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 800, height: 500),
+        minSize: NSSize(width: 400, height: 300),
+        defaultPosition: .center,
+        persistsFrame: true
+    )
 
     private let splitDocument: NestedSplitViewDocument
 
     public init(document: NestedSplitViewDocument) {
         self.splitDocument = document
-        super.init(windowID: Self.sharedWindowID)
+        super.init(windowID: Self.sharedWindowID, spec: Self.windowSpec)
     }
 
     public override var windowTitle: String { splitDocument.displayName ?? "Untitled" }

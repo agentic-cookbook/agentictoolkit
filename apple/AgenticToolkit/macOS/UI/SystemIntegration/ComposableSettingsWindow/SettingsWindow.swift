@@ -19,12 +19,12 @@ extension ComposableSettings {
     @MainActor
     open class SettingsWindow: SingleWindowController {
 
-        public override init(windowID: String) {
-            super.init(windowID: windowID)
+        public override init(windowID: String, spec: WindowSpec? = nil) {
+            super.init(windowID: windowID, spec: spec)
         }
 
         public convenience init() {
-            self.init(windowID: "settings")
+            self.init(windowID: "settings", spec: nil)
         }
 
         open override var windowTitle: String { "Settings" }

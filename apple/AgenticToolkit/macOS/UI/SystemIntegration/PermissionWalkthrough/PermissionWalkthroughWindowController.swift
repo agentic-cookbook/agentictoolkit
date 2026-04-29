@@ -10,8 +10,16 @@ final class PermissionWalkthroughWindowController: SingleWindowController {
 
     let contentContainer = NSView(frame: NSRect(x: 0, y: 0, width: 440, height: 310))
 
+    static let windowID = "permissionWalkthrough"
+    static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 440, height: 310),
+        minSize: NSSize(width: 440, height: 310),
+        defaultPosition: .center,
+        persistsFrame: false
+    )
+
     init() {
-        super.init(windowID: "permissionWalkthrough")
+        super.init(windowID: Self.windowID, spec: Self.windowSpec)
     }
 
     override var windowTitle: String { "Whippet Setup" }

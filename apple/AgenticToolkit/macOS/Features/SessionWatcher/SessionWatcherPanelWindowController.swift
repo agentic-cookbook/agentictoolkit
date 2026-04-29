@@ -37,8 +37,16 @@ public final class SessionWatcherPanelWindowController: SingleWindowController {
 
     public var onSettingsButtonPressed: (() -> Void)?
 
+    public static let windowID = "sessionPanel"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 340, height: 300),
+        minSize: NSSize(width: 280, height: 120),
+        defaultPosition: .topRight,
+        persistsFrame: true
+    )
+
     public init() {
-        super.init(windowID: "sessionPanel")
+        super.init(windowID: Self.windowID, spec: Self.windowSpec)
     }
 
     // MARK: - SingleWindowController hooks

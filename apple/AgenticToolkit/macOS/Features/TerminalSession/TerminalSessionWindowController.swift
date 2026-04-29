@@ -22,8 +22,16 @@ public final class TerminalSessionWindowController: SingleWindowController {
 
     private var splitVC: TerminalSessionSplitViewController?
 
+    public static let windowID = "terminal"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 800, height: 600),
+        minSize: NSSize(width: 600, height: 400),
+        defaultPosition: .center,
+        persistsFrame: true
+    )
+
     public init() {
-        super.init(windowID: "terminal")
+        super.init(windowID: Self.windowID, spec: Self.windowSpec)
     }
 
     public override var windowTitle: String { "Terminal" }

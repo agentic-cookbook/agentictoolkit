@@ -12,9 +12,17 @@ public final class NotesWindowController: SingleWindowController {
     private let notesManager: NotesManager
     private var splitVC: NotesSplitViewController?
 
+    public static let windowID = "notes"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 700, height: 500),
+        minSize: NSSize(width: 480, height: 300),
+        defaultPosition: .center,
+        persistsFrame: true
+    )
+
     public init(notesManager: NotesManager) {
         self.notesManager = notesManager
-        super.init(windowID: "notes")
+        super.init(windowID: Self.windowID, spec: Self.windowSpec)
     }
 
     public override var windowTitle: String { "Notes" }

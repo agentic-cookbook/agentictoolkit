@@ -8,7 +8,7 @@ import AgenticToolkitCore
 /// values on init so launch state matches the saved settings, then reacts
 /// to any live changes (e.g. from the settings panel).
 @MainActor
-public final class AppearanceManager {
+public final class AppearanceManager: AppFeature {
 
     private var modeObserver: UserSettingObserver<AppearanceMode>?
     private var textSizeObserver: UserSettingObserver<TextSize>?

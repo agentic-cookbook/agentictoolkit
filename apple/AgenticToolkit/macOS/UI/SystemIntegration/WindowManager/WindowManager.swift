@@ -32,9 +32,13 @@ public final class WindowManager {
     ) {
         self.screenProvider = screenProvider
         self.storage = storage
+        // Auto-observe screen changes so hosts don't need a separate call.
+        // No-op on second invocation if a host explicitly re-calls.
+        startObservingScreenChanges()
     }
 
-    /// Starts observing screen change notifications.
+    /// Starts observing screen change notifications. Called automatically by
+    /// `init`; exposed publicly so hosts can re-arm after detaching.
     public func startObservingScreenChanges() {
         NotificationCenter.default.addObserver(
             self,

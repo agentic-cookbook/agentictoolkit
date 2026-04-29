@@ -10,9 +10,17 @@ public final class AIChatWindowController: SingleWindowController {
 
     private let viewModel: ChatViewModel
 
-    public init(viewModel: ChatViewModel, windowID: String = "aiChat") {
+    public static let windowID = "aiChat"
+    public static let windowSpec = WindowSpec(
+        defaultSize: NSSize(width: 420, height: 520),
+        minSize: NSSize(width: 320, height: 400),
+        defaultPosition: .center,
+        persistsFrame: true
+    )
+
+    public init(viewModel: ChatViewModel, windowID: String = AIChatWindowController.windowID) {
         self.viewModel = viewModel
-        super.init(windowID: windowID)
+        super.init(windowID: windowID, spec: Self.windowSpec)
     }
 
     public override var windowTitle: String { "AI Chat" }
