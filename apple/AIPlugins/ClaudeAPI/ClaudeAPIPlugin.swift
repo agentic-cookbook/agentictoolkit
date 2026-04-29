@@ -5,6 +5,7 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import AgenticToolkitMacOS
+import AIPluginsShared
 
 /// LLM plugin for the Anthropic Messages API with SSE streaming.
 /// Requires an API key from console.anthropic.com.

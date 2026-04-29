@@ -3,6 +3,7 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import AgenticToolkitMacOS
+import AIPluginsShared
 
 /// Settings panel for `OpenAICompatiblePlugin`. Adds a free-form Base
 /// URL field and free-form Model field on top of the standard

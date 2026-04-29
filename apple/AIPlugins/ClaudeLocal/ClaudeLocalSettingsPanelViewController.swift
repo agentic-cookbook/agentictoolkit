@@ -3,6 +3,7 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import AgenticToolkitMacOS
+import AIPluginsShared
 
 /// Settings panel for `ClaudeLocalPlugin`. The local CLI doesn't take an
 /// API key, so the panel is just a model popup + an explanation.

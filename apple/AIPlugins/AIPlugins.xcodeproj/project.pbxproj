@@ -57,6 +57,16 @@
 		B28C2A672FA288D500F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
 		B28C2A682FA288D500F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
 		B28C2A692FA288D500F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
+		B28C2A7A2FA28C2500F2F7FD /* AIPluginsShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */; };
+		B28C2A902FA28C9800F2F7FD /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
+		B28C2A912FA28C9800F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
+		B28C2A922FA28C9800F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
+		B28C2A932FA28C9800F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
+		B28C2A962FA28CA500F2F7FD /* AIPluginsShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */; };
+		B28C2A992FA28CB300F2F7FD /* AIPluginsShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */; };
+		B28C2A9C2FA28CBC00F2F7FD /* AIPluginsShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */; };
+		B28C2A9F2FA28CC500F2F7FD /* AIPluginsShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */; };
+		B28C2AA22FA28CD000F2F7FD /* AIPluginsShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -214,6 +224,76 @@
 			remoteGlobalIDString = F03FB5CC81FF718A106A6513;
 			remoteInfo = AgenticToolkitMacOS;
 		};
+		B28C2A7B2FA28C2500F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B28C2A6E2FA28C2500F2F7FD;
+			remoteInfo = AIPluginsShared;
+		};
+		B28C2A882FA28C9200F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
+			remoteInfo = AgenticToolkitCore;
+		};
+		B28C2A8A2FA28C9200F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		B28C2A8C2FA28C9200F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
+			remoteInfo = AgenticToolkitCoreUI;
+		};
+		B28C2A8E2FA28C9200F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		B28C2A942FA28CA100F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B28C2A6E2FA28C2500F2F7FD;
+			remoteInfo = AIPluginsShared;
+		};
+		B28C2A972FA28CA900F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B28C2A6E2FA28C2500F2F7FD;
+			remoteInfo = AIPluginsShared;
+		};
+		B28C2A9A2FA28CB800F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B28C2A6E2FA28C2500F2F7FD;
+			remoteInfo = AIPluginsShared;
+		};
+		B28C2A9D2FA28CC100F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B28C2A6E2FA28C2500F2F7FD;
+			remoteInfo = AIPluginsShared;
+		};
+		B28C2AA02FA28CCB00F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B28C2A6E2FA28C2500F2F7FD;
+			remoteInfo = AIPluginsShared;
+		};
 		B8B16DD4E67DE0B147CAC0A0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
@@ -279,6 +359,8 @@
 		A397B536576EBC94F8FF6B54 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AB6EE58E62C50776B8A0372B /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AgenticToolkit; path = ../AgenticToolkit/AgenticToolkit.xcodeproj; sourceTree = "<group>"; };
 		AE0AF1BEA1B1871B876D693A /* Google.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = Google.bundle; path = Google.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AIPluginsShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		B28C2A792FA28C2500F2F7FD /* AIPluginsSharedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPluginsSharedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatiblePlugin.swift; sourceTree = "<group>"; };
 		D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = OpenAICompatible.bundle; path = OpenAICompatible.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6D352531361C0921D72300 /* OpenAISettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISettingsPanelViewController.swift; sourceTree = "<group>"; };
@@ -289,11 +371,25 @@
 		FCF0E2C70955B3DCFD52F42E /* ClaudeAPIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAPIPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B28C2A702FA28C2500F2F7FD /* AIPluginsShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AIPluginsShared;
+			sourceTree = "<group>";
+		};
+		B28C2A7D2FA28C2500F2F7FD /* AIPluginsSharedTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AIPluginsSharedTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		A485582FFBCEF05D094E364A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B28C2A9C2FA28CBC00F2F7FD /* AIPluginsShared.framework in Frameworks */,
 				B28C2A5E2FA288C600F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
 				B28C2A5F2FA288C600F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
 				B28C2A602FA288C600F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
@@ -301,10 +397,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B28C2A6C2FA28C2500F2F7FD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B28C2A902FA28C9800F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
+				B28C2A912FA28C9800F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
+				B28C2A922FA28C9800F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
+				B28C2A932FA28C9800F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B28C2A762FA28C2500F2F7FD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B28C2A7A2FA28C2500F2F7FD /* AIPluginsShared.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B8363725CBB07A8D107F344F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B28C2A992FA28CB300F2F7FD /* AIPluginsShared.framework in Frameworks */,
 				B28C2A622FA288CD00F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
 				B28C2A632FA288CD00F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
 				B28C2A642FA288CD00F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
@@ -316,6 +432,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B28C2AA22FA28CD000F2F7FD /* AIPluginsShared.framework in Frameworks */,
 				B28C2A562FA288B400F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
 				B28C2A572FA288B400F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
 				B28C2A582FA288B400F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
@@ -327,6 +444,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B28C2A962FA28CA500F2F7FD /* AIPluginsShared.framework in Frameworks */,
 				B28C2A662FA288D500F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
 				B28C2A672FA288D500F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
 				B28C2A682FA288D500F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
@@ -338,6 +456,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B28C2A9F2FA28CC500F2F7FD /* AIPluginsShared.framework in Frameworks */,
 				B28C2A5A2FA288BE00F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
 				B28C2A5B2FA288BE00F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
 				B28C2A5C2FA288BE00F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
@@ -356,6 +475,8 @@
 				9E67D7008AE28148248B689F /* Google */,
 				D2138CB62BB44E61B98DD24C /* OpenAI */,
 				FE96172D919F63BB17190BCD /* OpenAICompatible */,
+				B28C2A702FA28C2500F2F7FD /* AIPluginsShared */,
+				B28C2A7D2FA28C2500F2F7FD /* AIPluginsSharedTests */,
 				512156939C8E6A387DA6BA98 /* Products */,
 				8F29C301737460E330F4AAEA /* Projects */,
 				B28C2A552FA288B400F2F7FD /* Frameworks */,
@@ -370,6 +491,8 @@
 				AE0AF1BEA1B1871B876D693A /* Google.bundle */,
 				7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */,
 				D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */,
+				B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */,
+				B28C2A792FA28C2500F2F7FD /* AIPluginsSharedTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -452,6 +575,16 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXHeadersBuildPhase section */
+		B28C2A6A2FA28C2500F2F7FD /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		40E8B4B9D4D13B107306FAD1 /* OpenAI */ = {
 			isa = PBXNativeTarget;
@@ -464,6 +597,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B28C2A9E2FA28CC100F2F7FD /* PBXTargetDependency */,
 				B27CD2E72FA28874004B7DE8 /* PBXTargetDependency */,
 				B27CD2E92FA28874004B7DE8 /* PBXTargetDependency */,
 				59CB9F86534CE0DBF1FA378D /* PBXTargetDependency */,
@@ -487,6 +621,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B28C2AA12FA28CCB00F2F7FD /* PBXTargetDependency */,
 				B27CD2EB2FA2887C004B7DE8 /* PBXTargetDependency */,
 				B27CD2ED2FA2887C004B7DE8 /* PBXTargetDependency */,
 				DE1F042949C3243EAC540BFF /* PBXTargetDependency */,
@@ -510,6 +645,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B28C2A982FA28CA900F2F7FD /* PBXTargetDependency */,
 				B27CD2DF2FA2885C004B7DE8 /* PBXTargetDependency */,
 				B27CD2E12FA2885C004B7DE8 /* PBXTargetDependency */,
 				D7487455733E9E180F04AC58 /* PBXTargetDependency */,
@@ -533,6 +669,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B28C2A952FA28CA100F2F7FD /* PBXTargetDependency */,
 				B27CD2DB2FA2884C004B7DE8 /* PBXTargetDependency */,
 				B27CD2DD2FA2884C004B7DE8 /* PBXTargetDependency */,
 				BBDE29717DB0B14F5E3E8212 /* PBXTargetDependency */,
@@ -545,6 +682,56 @@
 			productReference = 8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B28C2A802FA28C2500F2F7FD /* Build configuration list for PBXNativeTarget "AIPluginsShared" */;
+			buildPhases = (
+				B28C2A6A2FA28C2500F2F7FD /* Headers */,
+				B28C2A6B2FA28C2500F2F7FD /* Sources */,
+				B28C2A6C2FA28C2500F2F7FD /* Frameworks */,
+				B28C2A6D2FA28C2500F2F7FD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B28C2A892FA28C9200F2F7FD /* PBXTargetDependency */,
+				B28C2A8B2FA28C9200F2F7FD /* PBXTargetDependency */,
+				B28C2A8D2FA28C9200F2F7FD /* PBXTargetDependency */,
+				B28C2A8F2FA28C9200F2F7FD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B28C2A702FA28C2500F2F7FD /* AIPluginsShared */,
+			);
+			name = AIPluginsShared;
+			packageProductDependencies = (
+			);
+			productName = AIPluginsShared;
+			productReference = B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		B28C2A782FA28C2500F2F7FD /* AIPluginsSharedTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B28C2A832FA28C2500F2F7FD /* Build configuration list for PBXNativeTarget "AIPluginsSharedTests" */;
+			buildPhases = (
+				B28C2A752FA28C2500F2F7FD /* Sources */,
+				B28C2A762FA28C2500F2F7FD /* Frameworks */,
+				B28C2A772FA28C2500F2F7FD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B28C2A7C2FA28C2500F2F7FD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B28C2A7D2FA28C2500F2F7FD /* AIPluginsSharedTests */,
+			);
+			name = AIPluginsSharedTests;
+			packageProductDependencies = (
+			);
+			productName = AIPluginsSharedTests;
+			productReference = B28C2A792FA28C2500F2F7FD /* AIPluginsSharedTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		BA37AF4B2F16BE7AB23931CA /* Google */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1DADD78F4AF7AFC474C2CE6E /* Build configuration list for PBXNativeTarget "Google" */;
@@ -556,6 +743,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B28C2A9B2FA28CB800F2F7FD /* PBXTargetDependency */,
 				B27CD2E32FA2886C004B7DE8 /* PBXTargetDependency */,
 				B27CD2E52FA2886C004B7DE8 /* PBXTargetDependency */,
 				7A4C7536F16E0B79888FCD5F /* PBXTargetDependency */,
@@ -575,7 +763,16 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					B28C2A6E2FA28C2500F2F7FD = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					B28C2A782FA28C2500F2F7FD = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
 			};
 			buildConfigurationList = 2312467F2C7A6F62BE9A00A7 /* Build configuration list for PBXProject "AIPlugins" */;
 			developmentRegion = en;
@@ -603,6 +800,8 @@
 				BA37AF4B2F16BE7AB23931CA /* Google */,
 				40E8B4B9D4D13B107306FAD1 /* OpenAI */,
 				4902207C4C9CDF009D44C9FA /* OpenAICompatible */,
+				B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */,
+				B28C2A782FA28C2500F2F7FD /* AIPluginsSharedTests */,
 			);
 		};
 /* End PBXProject section */
@@ -637,6 +836,23 @@
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B28C2A6D2FA28C2500F2F7FD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B28C2A772FA28C2500F2F7FD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		399DC83516F4F8D72F9E644F /* Install to ~/.agenticplugins */ = {
@@ -752,6 +968,20 @@
 			files = (
 				A9FC14B3250E4A7510095AE9 /* OpenAIPlugin.swift in Sources */,
 				13207D74A2D4297BD27C9106 /* OpenAISettingsPanelViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B28C2A6B2FA28C2500F2F7FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B28C2A752FA28C2500F2F7FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -889,6 +1119,56 @@
 			isa = PBXTargetDependency;
 			name = AgenticToolkitMacOS;
 			targetProxy = B27CD2EC2FA2887C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B28C2A7C2FA28C2500F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */;
+			targetProxy = B28C2A7B2FA28C2500F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A892FA28C9200F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCore;
+			targetProxy = B28C2A882FA28C9200F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A8B2FA28C9200F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCoreMacOS;
+			targetProxy = B28C2A8A2FA28C9200F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A8D2FA28C9200F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCoreUI;
+			targetProxy = B28C2A8C2FA28C9200F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A8F2FA28C9200F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitMacOS;
+			targetProxy = B28C2A8E2FA28C9200F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A952FA28CA100F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */;
+			targetProxy = B28C2A942FA28CA100F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A982FA28CA900F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */;
+			targetProxy = B28C2A972FA28CA900F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A9B2FA28CB800F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */;
+			targetProxy = B28C2A9A2FA28CB800F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2A9E2FA28CC100F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */;
+			targetProxy = B28C2A9D2FA28CC100F2F7FD /* PBXContainerItemProxy */;
+		};
+		B28C2AA12FA28CCB00F2F7FD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */;
+			targetProxy = B28C2AA02FA28CCB00F2F7FD /* PBXContainerItemProxy */;
 		};
 		BBDE29717DB0B14F5E3E8212 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1189,6 +1469,152 @@
 			};
 			name = Release;
 		};
+		B28C2A812FA28C2500F2F7FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsShared;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		B28C2A822FA28C2500F2F7FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsShared;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		B28C2A842FA28C2500F2F7FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsSharedTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B28C2A852FA28C2500F2F7FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K2NA732JAX;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsSharedTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		BA1B9548F6CF884F3985D248 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1263,6 +1689,24 @@
 			buildConfigurations = (
 				6199CAE8F37AEEB1BDEF0C27 /* Debug */,
 				6EEB80107F4CD7C85E5F96DA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B28C2A802FA28C2500F2F7FD /* Build configuration list for PBXNativeTarget "AIPluginsShared" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B28C2A812FA28C2500F2F7FD /* Debug */,
+				B28C2A822FA28C2500F2F7FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B28C2A832FA28C2500F2F7FD /* Build configuration list for PBXNativeTarget "AIPluginsSharedTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B28C2A842FA28C2500F2F7FD /* Debug */,
+				B28C2A852FA28C2500F2F7FD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

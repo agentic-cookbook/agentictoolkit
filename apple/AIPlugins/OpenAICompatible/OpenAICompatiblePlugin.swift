@@ -5,6 +5,7 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import AgenticToolkitMacOS
+import AIPluginsShared
 
 /// LLM plugin for OpenAI-compatible API endpoints (e.g. self-hosted, LM Studio, etc.).
 /// Provides a custom settings view with a base URL text field.

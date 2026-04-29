@@ -1,5 +1,9 @@
 import AppKit
 import AgenticToolkitCore
+import AgenticToolkitCoreUI
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
+
 
 /// Composable settings panel base class for `AIPlugin` implementations.
 /// Vends the standard model-popup and "API Key" groups (masked entry +
