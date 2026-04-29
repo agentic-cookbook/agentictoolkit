@@ -33,6 +33,7 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
         tableView.dataSource = self
         tableView.delegate = self
         tableView.rowSizeStyle = .custom
+        tableView.usesAutomaticRowHeights = true
 
         let menu = NSMenu()
         menu.addItem(withTitle: "Remove Session", action: #selector(closeSessionFromMenu(_:)), keyEquivalent: "")
@@ -116,20 +117,6 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
         return cell
     }
 
-    public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        guard row < sessionManager.sessions.count else { return 28 }
-        let session = sessionManager.sessions[row]
-
-        var height: CGFloat = 28
-        let lineHeight: CGFloat = 16
-        if session.currentDirectory != nil { height += lineHeight }
-        if session.gitBranch != nil { height += lineHeight }
-        if session.foregroundProcess != nil { height += lineHeight }
-        height += CGFloat(session.customSubtitles.count) * lineHeight
-        if session.summary != nil { height += lineHeight }
-
-        return height
-    }
 
     public func tableViewSelectionDidChange(_ notification: Notification) {
         let selectedRow = tableView.selectedRow

@@ -52,7 +52,7 @@ public final class TerminalSessionRowCellView: NSTableCellView {
             subtitleStack.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             subtitleStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
             subtitleStack.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
-            subtitleStack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -4),
+            subtitleStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
     }
 
