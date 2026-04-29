@@ -4,30 +4,27 @@ import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import AgenticToolkitMacOS
 
-/// Settings panel for `OpenAICompatiblePlugin`. Composable: free-form
-/// model name, base-URL override, masked API-key entry, async-test +
-/// clear actions.
+/// Settings panel for `OpenAICompatiblePlugin`. Adds a free-form Base
+/// URL field and free-form Model field on top of the standard
+/// API-key flow — the OpenAI-compatible plugin has no preset model list.
 @MainActor
-final class OpenAICompatibleSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
-
-    private let plugin: OpenAICompatiblePlugin
-    private let statusLabel = NSTextField(labelWithString: "")
+final class OpenAICompatibleSettingsPanelViewController: PluginSettingsPanel {
 
     init(plugin: OpenAICompatiblePlugin) {
-        self.plugin = plugin
-        super.init(with: ComposableSettings.SettingsPanelDescriptor(
+        super.init(
+            plugin: plugin,
             title: "Custom (OpenAI-compatible)",
             icon: NSImage(systemSymbolName: "server.rack", accessibilityDescription: nil)
-        ))
+        )
     }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         settingsView.addGroup(makeEndpointGroup())
-        settingsView.addGroup(makeCredentialsGroup())
+        settingsView.addGroup(makeCredentialsGroup(
+            apiKey: UserSettings.openAICompatibleAPIKey,
+            baseURL: UserSettings.openAICompatibleBaseURL
+        ))
     }
 
     private func makeEndpointGroup() -> ComposableSettings.GroupView {
@@ -52,61 +49,6 @@ final class OpenAICompatibleSettingsPanelViewController: ComposableSettings.Sett
         ))
 
         return group
-    }
-
-    private func makeCredentialsGroup() -> ComposableSettings.GroupView {
-        let group = ComposableSettings.GroupView(withTitle: "API Key")
-
-        group.addArrangedSubview(ComposableSettings.SecureTextEditView(
-            with: ComposableSettings.ViewModel<String>(
-                title: "API Key",
-                setting: UserSettings.openAICompatibleAPIKey
-            )
-        ))
-
-        let buttonRow = ComposableSettings.HorizontalStackView()
-        buttonRow.addArrangedSubview(ComposableSettings.ButtonView(viewModel: ComposableSettings.ButtonViewModel(
-            title: "Test API Key",
-            wasPressedCallback: { [weak self] in self?.runTest() }
-        )))
-        buttonRow.addArrangedSubview(ComposableSettings.ButtonView(viewModel: ComposableSettings.ButtonViewModel(
-            title: "Clear Key",
-            wasPressedCallback: { UserSettings.openAICompatibleAPIKey.remove() }
-        )))
-        group.addArrangedSubview(buttonRow)
-
-        statusLabel.font = .systemFont(ofSize: 11)
-        statusLabel.textColor = .secondaryLabelColor
-        group.addArrangedSubview(statusLabel)
-
-        return group
-    }
-
-    private func runTest() {
-        let key = UserSettings.openAICompatibleAPIKey.value
-        guard !key.isEmpty else {
-            statusLabel.stringValue = "No API key entered"
-            statusLabel.textColor = .systemRed
-            return
-        }
-        let baseURL = UserSettings.openAICompatibleBaseURL.value.trimmingCharacters(in: .whitespacesAndNewlines)
-        statusLabel.stringValue = "Testing…"
-        statusLabel.textColor = .secondaryLabelColor
-        let plugin = self.plugin
-        let credentials = AIPluginCredentials(apiKey: key, baseURL: baseURL.isEmpty ? nil : baseURL)
-        Task { [weak self] in
-            let error = await plugin.validateCredentials(credentials)
-            await MainActor.run {
-                guard let self else { return }
-                if let error {
-                    self.statusLabel.stringValue = error
-                    self.statusLabel.textColor = .systemRed
-                } else {
-                    self.statusLabel.stringValue = "API key is valid"
-                    self.statusLabel.textColor = .systemGreen
-                }
-            }
-        }
     }
 }
 
