@@ -348,21 +348,21 @@
 /* Begin PBXFileReference section */
 		69FC91CCCB896878C991DE64 /* ClaudeLocalSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLocalSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		7855544C4A0FD72D0994373C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		79563BD36327321665696A42 /* ClaudeLocal.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = ClaudeLocal.bundle; path = ClaudeLocal.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		79563BD36327321665696A42 /* ClaudeLocal.aiplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeLocal.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B89DF82813E260680FF5BFF /* GoogleSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = OpenAI.bundle; path = OpenAI.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = ClaudeAPI.bundle; path = ClaudeAPI.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F7CEFDBC7B0E9FF507E8015 /* OpenAI.aiplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAI.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A6A612856009C2E5E21A3C2 /* ClaudeAPI.aiplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeAPI.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CE3B7CA4B2495D6C42AF319 /* ClaudeLocalPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLocalPlugin.swift; sourceTree = "<group>"; };
 		8CE5EC26A0AB7F543D9FE01E /* OpenAIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIPlugin.swift; sourceTree = "<group>"; };
 		985A816B613BC9E9E2A003B4 /* ClaudeAPISettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAPISettingsPanelViewController.swift; sourceTree = "<group>"; };
 		98C2D3573FB50C435AC88D2F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A397B536576EBC94F8FF6B54 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AB6EE58E62C50776B8A0372B /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AgenticToolkit; path = ../AgenticToolkit/AgenticToolkit.xcodeproj; sourceTree = "<group>"; };
-		AE0AF1BEA1B1871B876D693A /* Google.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = Google.bundle; path = Google.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE0AF1BEA1B1871B876D693A /* Google.aiplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Google.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AIPluginsShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B28C2A792FA28C2500F2F7FD /* AIPluginsSharedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPluginsSharedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatiblePlugin.swift; sourceTree = "<group>"; };
-		D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = OpenAICompatible.bundle; path = OpenAICompatible.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		D19C0E456C2DCC53E589A20F /* OpenAICompatible.aiplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAICompatible.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6D352531361C0921D72300 /* OpenAISettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISettingsPanelViewController.swift; sourceTree = "<group>"; };
 		E8E7F00486CCEB3CFB46EB96 /* GooglePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GooglePlugin.swift; sourceTree = "<group>"; };
 		F4DE7F22A6C62D04B3A8718E /* OpenAICompatibleSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatibleSettingsPanelViewController.swift; sourceTree = "<group>"; };
@@ -486,11 +486,11 @@
 		512156939C8E6A387DA6BA98 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */,
-				79563BD36327321665696A42 /* ClaudeLocal.bundle */,
-				AE0AF1BEA1B1871B876D693A /* Google.bundle */,
-				7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */,
-				D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */,
+				8A6A612856009C2E5E21A3C2 /* ClaudeAPI.aiplugin */,
+				79563BD36327321665696A42 /* ClaudeLocal.aiplugin */,
+				AE0AF1BEA1B1871B876D693A /* Google.aiplugin */,
+				7F7CEFDBC7B0E9FF507E8015 /* OpenAI.aiplugin */,
+				D19C0E456C2DCC53E589A20F /* OpenAICompatible.aiplugin */,
 				B28C2A6F2FA28C2500F2F7FD /* AIPluginsShared.framework */,
 				B28C2A792FA28C2500F2F7FD /* AIPluginsSharedTests.xctest */,
 			);
@@ -607,7 +607,7 @@
 			packageProductDependencies = (
 			);
 			productName = OpenAI;
-			productReference = 7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */;
+			productReference = 7F7CEFDBC7B0E9FF507E8015 /* OpenAI.aiplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 		4902207C4C9CDF009D44C9FA /* OpenAICompatible */ = {
@@ -631,7 +631,7 @@
 			packageProductDependencies = (
 			);
 			productName = OpenAICompatible;
-			productReference = D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */;
+			productReference = D19C0E456C2DCC53E589A20F /* OpenAICompatible.aiplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 		69B12492E5D241F6EF3DAC75 /* ClaudeLocal */ = {
@@ -655,7 +655,7 @@
 			packageProductDependencies = (
 			);
 			productName = ClaudeLocal;
-			productReference = 79563BD36327321665696A42 /* ClaudeLocal.bundle */;
+			productReference = 79563BD36327321665696A42 /* ClaudeLocal.aiplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 		78D0E6AA9542822FD01209E4 /* ClaudeAPI */ = {
@@ -679,7 +679,7 @@
 			packageProductDependencies = (
 			);
 			productName = ClaudeAPI;
-			productReference = 8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */;
+			productReference = 8A6A612856009C2E5E21A3C2 /* ClaudeAPI.aiplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 		B28C2A6E2FA28C2500F2F7FD /* AIPluginsShared */ = {
@@ -753,7 +753,7 @@
 			packageProductDependencies = (
 			);
 			productName = Google;
-			productReference = AE0AF1BEA1B1871B876D693A /* Google.bundle */;
+			productReference = AE0AF1BEA1B1871B876D693A /* Google.aiplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -764,7 +764,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 2640;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					B28C2A6E2FA28C2500F2F7FD = {
 						CreatedOnToolsVersion = 26.4.1;
@@ -1197,6 +1197,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeAPI/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1246,6 +1247,7 @@
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1271,6 +1273,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1282,6 +1285,7 @@
 		4DF1BE81EBAA50902CF7C17A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Release;
 		};
@@ -1289,6 +1293,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = Google/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1304,6 +1309,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeAPI/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1319,6 +1325,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeLocal/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1334,6 +1341,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = ClaudeLocal/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1349,6 +1357,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAI/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1364,6 +1373,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAICompatible/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1379,6 +1389,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAICompatible/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1428,6 +1439,7 @@
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1446,6 +1458,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
@@ -1458,6 +1471,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = Google/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1478,6 +1492,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = K2NA732JAX;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -1527,6 +1542,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = K2NA732JAX;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -1569,6 +1585,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = K2NA732JAX;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -1598,6 +1615,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = K2NA732JAX;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -1619,6 +1637,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = OpenAI/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1633,6 +1652,7 @@
 		D8097E575C23E06BBA281024 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Debug;
 		};
