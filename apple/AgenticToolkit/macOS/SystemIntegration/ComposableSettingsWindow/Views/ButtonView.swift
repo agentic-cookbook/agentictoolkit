@@ -3,15 +3,13 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class ButtonView: NSView {
+    public class ButtonView: NSView, SettingsViewProtocol {
         public let button: NSButton
 
         private let viewModel: ButtonViewModel
-        private let viewLayout: SettingsLayout
 
-        public init(viewModel: ButtonViewModel, viewLayout: SettingsLayout = .default) {
+        public init(viewModel: ButtonViewModel) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.button = NSButton(title: viewModel.title, target: nil, action: nil)
 
             super.init(frame: .zero)

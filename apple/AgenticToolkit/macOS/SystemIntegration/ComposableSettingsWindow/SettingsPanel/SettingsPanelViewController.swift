@@ -16,8 +16,6 @@ extension ComposableSettings {
         public let descriptor: SettingsPanelDescriptor
         
         public let settingsView = PanelView()
-                
-        public var settingsLayout: SettingsLayout = .default
         
         open override func loadView() {
             self.view = settingsView

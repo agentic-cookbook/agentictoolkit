@@ -3,16 +3,15 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class SliderView: NSView {
+    public class SliderView: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public let slider: NSSlider
 
         private let viewModel: RangeViewModel<Double>
-        private let viewLayout: SettingsLayout
+        
 
-        public init(viewModel: RangeViewModel<Double>, viewLayout: SettingsLayout = .default) {
+        public init(viewModel: RangeViewModel<Double>) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
             self.slider = NSSlider()
 
@@ -25,7 +24,7 @@ extension ComposableSettings {
             self.slider.target = self
             self.slider.action = #selector(sliderChanged(_:))
 
-            let row = Self.makeRow([self.label, self.slider], viewLayout: viewLayout)
+            let row = Self.makeRow([self.label, self.slider])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)
 

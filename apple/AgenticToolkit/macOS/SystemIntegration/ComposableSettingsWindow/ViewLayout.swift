@@ -40,15 +40,14 @@ extension NSView {
 
     @MainActor
     static func makeRow(
-        _ views: [NSView],
-        viewLayout: ComposableSettings.SettingsLayout
+        _ views: [NSView]
     ) -> NSStackView {
         for view in views {
             view.translatesAutoresizingMaskIntoConstraints = false
         }
         let row = NSStackView(views: views)
         row.orientation = .horizontal
-        row.spacing = viewLayout[.rowSpacing]
+        row.spacing = ComposableSettings.SettingsLayout.default[.rowSpacing]
         row.alignment = .firstBaseline
         row.translatesAutoresizingMaskIntoConstraints = false
         return row

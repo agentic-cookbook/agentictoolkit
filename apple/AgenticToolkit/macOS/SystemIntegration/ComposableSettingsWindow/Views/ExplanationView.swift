@@ -4,13 +4,12 @@ extension ComposableSettings {
 
     /// Small descriptive blurb rendered beneath a setting.
     @MainActor
-    public class ExplanationView: NSView {
+    public class ExplanationView: NSView, SettingsViewProtocol {
         public let label: NSTextField
 
-        private let viewLayout: SettingsLayout
+        
 
-        public init(withText text: String, viewLayout: SettingsLayout = .default) {
-            self.viewLayout = viewLayout
+        public init(withText text: String) {
             self.label = Self.createLabel(title: text)
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false

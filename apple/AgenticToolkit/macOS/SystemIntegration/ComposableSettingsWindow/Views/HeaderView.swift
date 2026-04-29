@@ -3,13 +3,12 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class HeaderView: NSView {
+    public class HeaderView: NSView, SettingsViewProtocol {
         public let titleLabel: NSTextField
 
-        private let viewLayout: SettingsLayout
+        
 
-        public init(title: String, viewLayout: SettingsLayout = .default) {
-            self.viewLayout = viewLayout
+        public init(title: String) {
             self.titleLabel = Self.createHeaderLabel(title: title)
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false

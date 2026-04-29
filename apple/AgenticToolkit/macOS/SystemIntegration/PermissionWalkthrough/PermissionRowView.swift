@@ -6,7 +6,7 @@ import AppKit
 /// re-reads the granted state — `PermissionsSettingsPanelViewController` calls it
 /// on a polling timer.
 @MainActor
-public final class PermissionRowView: NSView {
+public final class PermissionRowView: NSView, SettingsViewProtocol {
 
     public let permission: AppPermission
 

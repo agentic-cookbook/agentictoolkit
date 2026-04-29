@@ -3,19 +3,23 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class GroupView: NSStackView {
+    public class GroupView: NSView, SettingsViewProtocol {
 
-        private let viewLayout: SettingsLayout
+        private let stackView: NSStackView
+        
+        public init(withTitle title: String) {
+            self.stackView = NSStackView()
 
-        public init(withTitle title: String, viewLayout: SettingsLayout = .default) {
-            self.viewLayout = viewLayout
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
+            self.stackView.translatesAutoresizingMaskIntoConstraints = false
+            self.addSubview(self.stackView)
+            Self.pinToEdges(self.stackView, of: self)
 
-            self.orientation = .vertical
-            self.spacing = viewLayout[.groupSpacing]
-            self.alignment = .leading
-            self.addArrangedSubview(HeaderView(title: title, viewLayout: viewLayout))
+            self.stackView.orientation = .vertical
+            self.stackView.alignment = .leading
+            
+            self.addSettingSubview(HeaderView(title: title))
         }
 
         public required init?(coder: NSCoder) {
@@ -30,6 +34,10 @@ extension ComposableSettings {
             super.viewDidMoveToSuperview()
             guard let parent = self.superview else { return }
             self.widthAnchor.constraint(equalTo: parent.widthAnchor).isActive = true
+        }
+        
+        public func addSettingSubview(_ view: NSView) {
+            stackView.addArrangedSubview(view)
         }
     }
 }

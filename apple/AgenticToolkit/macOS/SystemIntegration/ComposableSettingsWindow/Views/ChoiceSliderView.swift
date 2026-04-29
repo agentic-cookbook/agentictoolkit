@@ -7,17 +7,16 @@ extension ComposableSettings {
     /// ticks only. The current choice's `label` is shown as a secondary
     /// caption to the right of the slider.
     @MainActor
-    public class ChoiceSliderView<Value: Codable & Sendable & Equatable>: NSView {
+    public class ChoiceSliderView<Value: Codable & Sendable & Equatable>: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public let slider: NSSlider
         public let valueLabel: NSTextField
 
         private let viewModel: ChoiceViewModel<Value>
-        private let viewLayout: SettingsLayout
+        
 
-        public init(viewModel: ChoiceViewModel<Value>, viewLayout: SettingsLayout = .default) {
+        public init(viewModel: ChoiceViewModel<Value>) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
             self.slider = NSSlider()
             self.valueLabel = Self.createValueLabel()
@@ -52,8 +51,7 @@ extension ComposableSettings {
             ).isActive = true
 
             let row = Self.makeRow(
-                [self.label, self.slider, self.valueLabel],
-                viewLayout: viewLayout
+                [self.label, self.slider, self.valueLabel]
             )
             self.addSubview(row)
             Self.pinToEdges(row, of: self)

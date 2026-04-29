@@ -3,16 +3,17 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class VerticalStackView: NSView {
+    public class VerticalStackView: NSView, SettingsViewProtocol {
         public let stackView: NSStackView
 
-        private let viewLayout: SettingsLayout
+        public convenience init() {
+            self.init(frame: .zero)
+        }
 
-        public init(viewLayout: SettingsLayout = .default) {
-            self.viewLayout = viewLayout
+        public override init(frame frameRect: NSRect) {
             self.stackView = NSStackView()
             self.stackView.orientation = .vertical
-            self.stackView.spacing = viewLayout[.groupSpacing]
+            self.stackView.spacing = SettingsLayout.default[.groupSpacing]
 
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
@@ -20,10 +21,6 @@ extension ComposableSettings {
             self.stackView.translatesAutoresizingMaskIntoConstraints = false
             self.addSubview(self.stackView)
             Self.pinToEdges(self.stackView, of: self)
-        }
-
-        public override init(frame frameRect: NSRect) {
-            fatalError("init(frame frameRect: NSRect")
         }
 
         required init?(coder: NSCoder) {

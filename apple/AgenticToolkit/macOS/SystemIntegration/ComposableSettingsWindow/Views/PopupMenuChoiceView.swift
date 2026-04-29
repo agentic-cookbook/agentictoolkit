@@ -3,16 +3,15 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class PopupMenuChoiceView<Value: Codable & Sendable & Equatable>: NSView {
+    public class PopupMenuChoiceView<Value: Codable & Sendable & Equatable>: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public let popUpButton: NSPopUpButton
 
         private let viewModel: ChoiceViewModel<Value>
-        private let viewLayout: SettingsLayout
+        
 
-        public init(viewModel: ChoiceViewModel<Value>, viewLayout: SettingsLayout = .default) {
+        public init(viewModel: ChoiceViewModel<Value>) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
             self.popUpButton = NSPopUpButton(frame: .zero)
 
@@ -28,7 +27,7 @@ extension ComposableSettings {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
-            let row = Self.makeRow([self.label, self.popUpButton], viewLayout: viewLayout)
+            let row = Self.makeRow([self.label, self.popUpButton])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)
 

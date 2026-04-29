@@ -8,22 +8,19 @@ extension ComposableSettings {
     /// backing `UserSetting<Bool>` flips to `true`. Use for one-time onboarding
     /// prompts ("enable launch at login so you never miss a session…").
     @MainActor
-    public class DismissibleHintView: NSView {
+    public class DismissibleHintView: NSView, SettingsViewProtocol {
         public let textLabel: NSTextField
         public let dismissButton: NSButton
 
         private let observer: UserSettingObserver<Bool>
-        private let viewLayout: SettingsLayout
+        
 
         public init(
             text: String,
             dismissedSetting: UserSetting<Bool>,
-            buttonTitle: String = "Got It",
-            viewLayout: SettingsLayout = .default
+            buttonTitle: String = "Got It"
         ) {
             self.observer = UserSettingObserver(dismissedSetting)
-            self.viewLayout = viewLayout
-
             self.textLabel = NSTextField(wrappingLabelWithString: text)
             self.textLabel.font = .systemFont(ofSize: 12)
             self.textLabel.textColor = .secondaryLabelColor
@@ -41,7 +38,7 @@ extension ComposableSettings {
             let stack = NSStackView(views: [self.textLabel, self.dismissButton])
             stack.orientation = .vertical
             stack.alignment = .leading
-            stack.spacing = viewLayout[.rowSpacing]
+            stack.spacing = SettingsLayout.default[.rowSpacing]
             stack.translatesAutoresizingMaskIntoConstraints = false
             self.addSubview(stack)
             Self.pinToEdges(stack, of: self)

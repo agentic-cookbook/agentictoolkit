@@ -205,6 +205,7 @@
 		B27CD2C32FA27C67004B7DE8 /* AISettingsViewPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27CD2C22FA27C67004B7DE8 /* AISettingsViewPanelController.swift */; };
 		B27CD2C52FA27DF2004B7DE8 /* AIPluginsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27CD2C42FA27DF2004B7DE8 /* AIPluginsCoordinator.swift */; };
 		B28C2ADF2FA2977700F2F7FD /* SettingsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28C2ADE2FA2977700F2F7FD /* SettingsCoordinator.swift */; };
+		B28C2AF12FA2B92100F2F7FD /* SettingsViewProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28C2AF02FA2B91A00F2F7FD /* SettingsViewProtocol.swift */; };
 		B2A94A872FA160B400ED0CEB /* AIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82347BCBB860239CE234EA13 /* AIPlugin.swift */; };
 		B2A94A882FA160B400ED0CEB /* AIPluginChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFD326C6488E598665A6DC37 /* AIPluginChatBackend.swift */; };
 		B2A94A892FA160B400ED0CEB /* AIPluginCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09CFE2E44BD546FBB96DD39 /* AIPluginCredentials.swift */; };
@@ -761,6 +762,7 @@
 		B27CD2C22FA27C67004B7DE8 /* AISettingsViewPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AISettingsViewPanelController.swift; sourceTree = "<group>"; };
 		B27CD2C42FA27DF2004B7DE8 /* AIPluginsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginsCoordinator.swift; sourceTree = "<group>"; };
 		B28C2ADE2FA2977700F2F7FD /* SettingsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCoordinator.swift; sourceTree = "<group>"; };
+		B28C2AF02FA2B91A00F2F7FD /* SettingsViewProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewProtocol.swift; sourceTree = "<group>"; };
 		B2A94A522FA15C0900ED0CEB /* OldAIPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAIPanelViewController.swift; sourceTree = "<group>"; };
 		B2A94A532FA15C0900ED0CEB /* OldAISettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAISettingsPane.swift; sourceTree = "<group>"; };
 		B2A94A652FA15C5000ED0CEB /* OldAppearanceSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldAppearanceSettingsPane.swift; sourceTree = "<group>"; };
@@ -1327,6 +1329,7 @@
 		8942DBEE7187CAE794929ECB /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				B28C2AF02FA2B91A00F2F7FD /* SettingsViewProtocol.swift */,
 				112CFC0171CE8F77FF5180F3 /* ButtonView.swift */,
 				7E50B4CDB300B6961AD32651 /* CheckboxView.swift */,
 				2F51D7FC0876F166467F214B /* ChoiceSliderView.swift */,
@@ -2244,6 +2247,7 @@
 				B2A94A8D2FA160B400ED0CEB /* AIPluginRequestError.swift in Sources */,
 				B2A94A8E2FA160B400ED0CEB /* AIPluginManager.swift in Sources */,
 				B2A94AD72FA1642900ED0CEB /* AppearanceSettingsPanelViewController.swift in Sources */,
+				B28C2AF12FA2B92100F2F7FD /* SettingsViewProtocol.swift in Sources */,
 				B2A94B022FA2470100ED0CEB /* UserSettings+SessionWatcher.swift in Sources */,
 				B2A94A8F2FA160B400ED0CEB /* PluginSettingsContentView.swift in Sources */,
 				B2A94A902FA160B400ED0CEB /* AIPluginInfo.swift in Sources */,

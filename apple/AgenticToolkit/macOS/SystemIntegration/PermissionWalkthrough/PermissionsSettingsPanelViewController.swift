@@ -42,14 +42,14 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
     private func createPermissionsGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Permissions")
 
-        group.addArrangedSubview(ComposableSettings.ExplanationView(
+        group.addSettingSubview(ComposableSettings.ExplanationView(
             withText: "The following permissions are required to monitor and activate Claude Code sessions."
         ))
 
         for permission in AppPermission.allCases {
             let row = PermissionRowView(permission: permission)
             self.permissionRows.append(row)
-            group.addArrangedSubview(row)
+            group.addSettingSubview(row)
         }
 
         return group
@@ -58,14 +58,14 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
     private func createWalkthroughGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Walkthrough")
 
-        group.addArrangedSubview(ComposableSettings.ButtonView(
+        group.addSettingSubview(ComposableSettings.ButtonView(
             viewModel: ComposableSettings.ButtonViewModel(
                 title: "Reset Permission Walkthrough",
                 wasPressedCallback: { [weak self] in self?.resetWalkthrough() }
             )
         ))
 
-        group.addArrangedSubview(ComposableSettings.ExplanationView(
+        group.addSettingSubview(ComposableSettings.ExplanationView(
             withText: "Re-runs the first-launch permission walkthrough on next app launch."
         ))
 

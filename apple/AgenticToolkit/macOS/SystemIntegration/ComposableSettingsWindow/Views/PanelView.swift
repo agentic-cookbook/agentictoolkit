@@ -5,23 +5,25 @@ extension ComposableSettings {
     /// Root container for a panel. Hosts a vertical stack of `GroupView`s with
     /// `DividerView`s between them, all inside the panel's content area.
     @MainActor
-    open class PanelView: NSView {
+    open class PanelView: NSView, SettingsViewProtocol {
 
         private let stackView = NSStackView()
-        private let viewLayout: SettingsLayout
 
-        public init(viewLayout: SettingsLayout = .default) {
-            self.viewLayout = viewLayout
+        public convenience init() {
+            self.init(frame: .zero)
+        }
+        
+        public override init(frame frameRect: NSRect) {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
             self.stackView.orientation = .vertical
-            self.stackView.spacing = viewLayout[.groupSpacing]
+            self.stackView.spacing = SettingsLayout.default[.groupSpacing]
             self.stackView.alignment = .leading
             self.stackView.translatesAutoresizingMaskIntoConstraints = false
             self.addSubview(self.stackView)
 
-            let inset = viewLayout[.panelInset]
+            let inset = SettingsLayout.default[.panelInset]
             NSLayoutConstraint.activate([
                 self.stackView.topAnchor.constraint(equalTo: self.topAnchor, constant: inset),
                 self.stackView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: inset),
@@ -31,12 +33,12 @@ extension ComposableSettings {
         }
 
         public required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
+            fatalError("not overridden")
         }
 
         public func addGroup(_ group: GroupView) {
             if !self.stackView.arrangedSubviews.isEmpty {
-                self.stackView.addArrangedSubview(DividerView(viewLayout: self.viewLayout))
+                self.stackView.addArrangedSubview(DividerView())
             }
             self.stackView.addArrangedSubview(group)
         }

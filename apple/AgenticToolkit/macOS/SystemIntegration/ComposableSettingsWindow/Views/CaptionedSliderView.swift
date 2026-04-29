@@ -7,22 +7,20 @@ extension ComposableSettings {
     /// `{ "\(Int($0))s" }`). Use when the slider's raw position isn't enough
     /// to identify the current value.
     @MainActor
-    public class CaptionedSliderView: NSView {
+    public class CaptionedSliderView: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public let slider: NSSlider
         public let captionLabel: NSTextField
 
         private let viewModel: RangeViewModel<Double>
-        private let viewLayout: SettingsLayout
+        
         private let formatter: @MainActor (Double) -> String
 
         public init(
             viewModel: RangeViewModel<Double>,
-            viewLayout: SettingsLayout = .default,
             formatter: @escaping @MainActor (Double) -> String
         ) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.formatter = formatter
             self.label = Self.createLabel(title: viewModel.title)
             self.slider = NSSlider()
@@ -37,10 +35,7 @@ extension ComposableSettings {
             self.slider.target = self
             self.slider.action = #selector(sliderChanged(_:))
 
-            let row = Self.makeRow(
-                [self.label, self.slider, self.captionLabel],
-                viewLayout: viewLayout
-            )
+            let row = Self.makeRow([self.label, self.slider, self.captionLabel])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)
 

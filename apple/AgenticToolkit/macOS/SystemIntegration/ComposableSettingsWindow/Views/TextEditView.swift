@@ -3,23 +3,22 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class TextEditView: NSView {
+    public class TextEditView: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public let textField: NSTextField
 
         private let viewModel: ViewModel<String>
-        private let viewLayout: SettingsLayout
+        
 
-        public init(with viewModel: ViewModel<String>, viewLayout: SettingsLayout = .default) {
+        public init(with viewModel: ViewModel<String>) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
             self.textField = Self.makeTextField(initialValue: viewModel.value)
 
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
-            let row = Self.makeRow([self.label, self.textField], viewLayout: viewLayout)
+            let row = Self.makeRow([self.label, self.textField])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)
 

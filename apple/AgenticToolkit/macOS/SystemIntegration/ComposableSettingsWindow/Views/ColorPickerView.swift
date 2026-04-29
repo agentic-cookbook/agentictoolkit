@@ -3,16 +3,15 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class ColorPickerView: NSView {
+    public class ColorPickerView: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public let colorWell: NSColorWell
 
         private let viewModel: ColorViewModel
-        private let viewLayout: SettingsLayout
+        
 
-        public init(viewModel: ColorViewModel, viewLayout: SettingsLayout = .default) {
+        public init(viewModel: ColorViewModel) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
             self.colorWell = NSColorWell()
             self.colorWell.color = viewModel.color
@@ -20,7 +19,7 @@ extension ComposableSettings {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
-            let row = Self.makeRow([self.label, self.colorWell], viewLayout: viewLayout)
+            let row = Self.makeRow([self.label, self.colorWell])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)
 

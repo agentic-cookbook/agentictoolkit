@@ -18,7 +18,7 @@ extension ComposableSettings {
     /// ) { $0 == "custom_command" }
     /// ```
     @MainActor
-    public class ConditionalView<Value: Codable & Sendable>: NSView {
+    public class ConditionalView<Value: Codable & Sendable>: NSView, SettingsViewProtocol {
         public let child: NSView
 
         private let observer: UserSettingObserver<Value>

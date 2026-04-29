@@ -25,14 +25,14 @@ public final class GeneralSettingsPanelViewController: ComposableSettings.Settin
     private func createStartupGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Startup")
 
-        group.addArrangedSubview(ComposableSettings.CheckboxView(
+        group.addSettingSubview(ComposableSettings.CheckboxView(
             with: ComposableSettings.ViewModel<Bool>(
                 title: "Launch at Login",
                 setting: UserSettings.launchAtLogin
             )
         ))
 
-        group.addArrangedSubview(ComposableSettings.DismissibleHintView(
+        group.addSettingSubview(ComposableSettings.DismissibleHintView(
             text: "Whippet works best when it starts automatically with your Mac. Enable launch at login so you never miss a Claude Code session.",
             dismissedSetting: UserSettings.launchAtLoginHintDismissed
         ))

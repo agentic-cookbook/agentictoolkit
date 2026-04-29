@@ -35,7 +35,7 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
                 .init(label: $0.label, value: $0)
             }
         )
-        group.addArrangedSubview(ComposableSettings.PopupMenuChoiceView(viewModel: viewModel))
+        group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: viewModel))
 
         return group
     }
@@ -48,7 +48,7 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
             setting: UserSettings.textSize,
             choices: TextSize.allCases.map { .init(label: $0.label, value: $0) }
         )
-        group.addArrangedSubview(ComposableSettings.ChoiceSliderView(viewModel: viewModel))
+        group.addSettingSubview(ComposableSettings.ChoiceSliderView(viewModel: viewModel))
 
         return group
     }

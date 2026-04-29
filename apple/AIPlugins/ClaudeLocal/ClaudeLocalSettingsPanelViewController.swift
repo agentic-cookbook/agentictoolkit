@@ -21,7 +21,7 @@ final class ClaudeLocalSettingsPanelViewController: PluginSettingsPanel {
     override func viewDidLoad() {
         super.viewDidLoad()
         if let modelGroup = makeModelGroup(setting: UserSettings.claudeLocalModel) {
-            modelGroup.addArrangedSubview(ComposableSettings.ExplanationView(
+            modelGroup.addSettingSubview(ComposableSettings.ExplanationView(
                 withText: "Routes through the local Claude CLI. No API key required."
             ))
             settingsView.addGroup(modelGroup)

@@ -32,7 +32,7 @@ extension SessionWatcher {
         
         private func createWindowBehaviorGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Window Behavior")
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
+            group.addSettingSubview(ComposableSettings.CheckboxView(
                 with: ComposableSettings.ViewModel<Bool>(
                     title: "Always on Top",
                     setting: UserSettings.sessionWindowAlwaysOnTop
@@ -43,7 +43,7 @@ extension SessionWatcher {
         
         private func createTransparencyGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Transparency")
-            group.addArrangedSubview(ComposableSettings.CaptionedSliderView(
+            group.addSettingSubview(ComposableSettings.CaptionedSliderView(
                 viewModel: ComposableSettings.RangeViewModel<Double>(
                     title: "Opacity",
                     setting: UserSettings.sessionWindowTransparency,
@@ -57,7 +57,7 @@ extension SessionWatcher {
         
         private func createStalenessGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Staleness Timeout")
-            group.addArrangedSubview(ComposableSettings.CaptionedSliderView(
+            group.addSettingSubview(ComposableSettings.CaptionedSliderView(
                 viewModel: ComposableSettings.RangeViewModel<Double>(
                     title: "Timeout",
                     setting: UserSettings.sessionStalenessTimeout,
@@ -66,7 +66,7 @@ extension SessionWatcher {
                 ),
                 formatter: Self.formatTimeoutSeconds
             ))
-            group.addArrangedSubview(ComposableSettings.ExplanationView(
+            group.addSettingSubview(ComposableSettings.ExplanationView(
                 withText: "Sessions with no events within this timeout are marked as stale."
             ))
             return group
@@ -82,20 +82,20 @@ extension SessionWatcher {
                     .init(label: $0.displayName, value: $0.rawValue, imageSystemName: $0.systemImage)
                 }
             )
-            group.addArrangedSubview(ComposableSettings.PopupMenuChoiceView(viewModel: actionViewModel))
+            group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: actionViewModel))
             
             let customCommandGroup = ComposableSettings.GroupView(withTitle: "Shell Command Template")
-            customCommandGroup.addArrangedSubview(ComposableSettings.TextEditView(
+            customCommandGroup.addSettingSubview(ComposableSettings.TextEditView(
                 with: ComposableSettings.ViewModel<String>(
                     title: "Command",
                     setting: UserSettings.sessionCustomCommand
                 )
             ))
-            customCommandGroup.addArrangedSubview(ComposableSettings.ExplanationView(
+            customCommandGroup.addSettingSubview(ComposableSettings.ExplanationView(
                 withText: "Available variables: $SESSION_ID, $CWD, $MODEL"
             ))
             
-            group.addArrangedSubview(ComposableSettings.ConditionalView<String>(
+            group.addSettingSubview(ComposableSettings.ConditionalView<String>(
                 observing: UserSettings.sessionClickAction,
                 child: customCommandGroup
             ) { $0 == SessionWatcherClickAction.customCommand.rawValue })
@@ -105,13 +105,13 @@ extension SessionWatcher {
         
         private func createSummariesGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Session Summaries")
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
+            group.addSettingSubview(ComposableSettings.CheckboxView(
                 with: ComposableSettings.ViewModel<Bool>(
                     title: "Enable AI session summaries",
                     setting: UserSettings.aiSummariesEnabled
                 )
             ))
-            group.addArrangedSubview(ComposableSettings.ExplanationView(
+            group.addSettingSubview(ComposableSettings.ExplanationView(
                 withText: "Uses AI to generate a short description of what each session is doing."
             ))
             return group
@@ -120,28 +120,28 @@ extension SessionWatcher {
         private func createNotifyWhenGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Notify When")
 
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
+            group.addSettingSubview(ComposableSettings.CheckboxView(
                 with: ComposableSettings.ViewModel<Bool>(
                     title: "Session Started",
                     setting: UserSettings.notifySessionStart
                 )
             ))
 
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
+            group.addSettingSubview(ComposableSettings.CheckboxView(
                 with: ComposableSettings.ViewModel<Bool>(
                     title: "Session Ended",
                     setting: UserSettings.notifySessionEnd
                 )
             ))
 
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
+            group.addSettingSubview(ComposableSettings.CheckboxView(
                 with: ComposableSettings.ViewModel<Bool>(
                     title: "Session Became Stale",
                     setting: UserSettings.notifyStale
                 )
             ))
 
-            group.addArrangedSubview(ComposableSettings.ExplanationView(
+            group.addSettingSubview(ComposableSettings.ExplanationView(
                 withText: "Notifications require permission. macOS will prompt you on first use."
             ))
 

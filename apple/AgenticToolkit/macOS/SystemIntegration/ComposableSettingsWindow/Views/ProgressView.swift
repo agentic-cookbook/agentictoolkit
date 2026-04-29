@@ -4,16 +4,15 @@ import Combine
 extension ComposableSettings {
 
     @MainActor
-    public class ProgressView: NSView {
+    public class ProgressView: NSView, SettingsViewProtocol {
         public let progressIndicator: NSProgressIndicator
 
         private let viewModel: ProgressViewModel
-        private let viewLayout: SettingsLayout
+        
         private var cancellable: AnyCancellable?
 
-        public init(viewModel: ProgressViewModel, viewLayout: SettingsLayout = .default) {
+        public init(viewModel: ProgressViewModel) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.progressIndicator = NSProgressIndicator()
             self.progressIndicator.controlSize = .regular
 

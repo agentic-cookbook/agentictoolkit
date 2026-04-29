@@ -3,21 +3,19 @@ import AppKit
 extension ComposableSettings {
 
     @MainActor
-    public class RadioButtonChoiceView<Value: Codable & Sendable & Equatable>: NSView {
+    public class RadioButtonChoiceView<Value: Codable & Sendable & Equatable>: NSView, SettingsViewProtocol {
         public let label: NSTextField
         public private(set) var radioButtons: [NSButton] = []
 
         private let viewModel: ChoiceViewModel<Value>
-        private let viewLayout: SettingsLayout
+        
         private var buttonValues: [(button: NSButton, value: Value)] = []
 
         public init(
             viewModel: ChoiceViewModel<Value>,
-            axis: NSUserInterfaceLayoutOrientation = .vertical,
-            viewLayout: SettingsLayout = .default
+            axis: NSUserInterfaceLayoutOrientation = .vertical
         ) {
             self.viewModel = viewModel
-            self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
 
             super.init(frame: .zero)
@@ -35,13 +33,13 @@ extension ComposableSettings {
 
             let controlsStack = NSStackView(views: self.radioButtons)
             controlsStack.orientation = axis
-            controlsStack.spacing = viewLayout[.rowSpacing]
+            controlsStack.spacing = SettingsLayout.default[.rowSpacing]
             controlsStack.alignment = (axis == .vertical) ? .leading : .firstBaseline
             controlsStack.translatesAutoresizingMaskIntoConstraints = false
 
             let outer = NSStackView(views: [self.label, controlsStack])
             outer.orientation = .vertical
-            outer.spacing = viewLayout[.rowSpacing]
+            outer.spacing = SettingsLayout.default[.rowSpacing]
             outer.alignment = .leading
             outer.translatesAutoresizingMaskIntoConstraints = false
             self.addSubview(outer)

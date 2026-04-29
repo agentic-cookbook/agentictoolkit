@@ -38,7 +38,7 @@ open class PluginSettingsPanel: ComposableSettings.SettingsPanelViewController {
             setting: setting,
             choices: plugin.availableModels.map { .init(label: $0, value: $0) }
         )
-        group.addArrangedSubview(ComposableSettings.PopupMenuChoiceView(viewModel: viewModel))
+        group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: viewModel))
         return group
     }
 
@@ -52,7 +52,7 @@ open class PluginSettingsPanel: ComposableSettings.SettingsPanelViewController {
     ) -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "API Key")
 
-        group.addArrangedSubview(ComposableSettings.SecureTextEditView(
+        group.addSettingSubview(ComposableSettings.SecureTextEditView(
             with: ComposableSettings.ViewModel<String>(title: "API Key", setting: apiKey)
         ))
 
@@ -67,11 +67,11 @@ open class PluginSettingsPanel: ComposableSettings.SettingsPanelViewController {
             title: "Clear Key",
             wasPressedCallback: { apiKey.remove() }
         )))
-        group.addArrangedSubview(buttonRow)
+        group.addSettingSubview(buttonRow)
 
         statusLabel.font = .systemFont(ofSize: 11)
         statusLabel.textColor = .secondaryLabelColor
-        group.addArrangedSubview(statusLabel)
+        group.addSettingSubview(statusLabel)
 
         return group
     }

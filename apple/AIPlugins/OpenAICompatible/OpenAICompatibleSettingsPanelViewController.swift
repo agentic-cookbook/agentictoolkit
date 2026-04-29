@@ -31,21 +31,21 @@ final class OpenAICompatibleSettingsPanelViewController: PluginSettingsPanel {
     private func makeEndpointGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Endpoint")
 
-        group.addArrangedSubview(ComposableSettings.TextEditView(
+        group.addSettingSubview(ComposableSettings.TextEditView(
             with: ComposableSettings.ViewModel<String>(
                 title: "Base URL",
                 setting: UserSettings.openAICompatibleBaseURL
             )
         ))
 
-        group.addArrangedSubview(ComposableSettings.TextEditView(
+        group.addSettingSubview(ComposableSettings.TextEditView(
             with: ComposableSettings.ViewModel<String>(
                 title: "Model",
                 setting: UserSettings.openAICompatibleModel
             )
         ))
 
-        group.addArrangedSubview(ComposableSettings.ExplanationView(
+        group.addSettingSubview(ComposableSettings.ExplanationView(
             withText: "Point at any OpenAI-compatible endpoint (e.g. a local server). Enter the model name your endpoint expects."
         ))
 
