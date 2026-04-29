@@ -249,6 +249,7 @@
 		B2A94AB02FA161D000ED0CEB /* ButtonViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 494B4B5B0947DBE20A3EC22A /* ButtonViewModel.swift */; };
 		B2A94AB12FA161D000ED0CEB /* ChoiceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E91F77A0C802075780243F /* ChoiceViewModel.swift */; };
 		B2A94AB22FA161D000ED0CEB /* TextEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD4CFEAEE77556908EC5338 /* TextEditView.swift */; };
+		5A5446BC9F0F7B476F12297E /* SecureTextEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25505D1F46DD0E6E557EC10D /* SecureTextEditView.swift */; };
 		B2A94AB62FA162B600ED0CEB /* RGBAColor+NSColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029FE029CAD950264A2B68B /* RGBAColor+NSColor.swift */; };
 		B2A94AB72FA162CE00ED0CEB /* TopicListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B470080A8B5B68198282D217 /* TopicListViewController.swift */; };
 		B2A94AB82FA162EC00ED0CEB /* MainActorScriptCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4988B8EF4CF60D6D2F3A701A /* MainActorScriptCommand.swift */; };
@@ -799,6 +800,7 @@
 		BA12F5ADAB56467CE6CE4E75 /* AppleScriptRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptRunnerTests.swift; sourceTree = "<group>"; };
 		BA6609EB4EACF15580B7A590 /* NestedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedViewController.swift; sourceTree = "<group>"; };
 		BAD4CFEAEE77556908EC5338 /* TextEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditView.swift; sourceTree = "<group>"; };
+		25505D1F46DD0E6E557EC10D /* SecureTextEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureTextEditView.swift; sourceTree = "<group>"; };
 		BB15F64A4AFCADAB558EB98B /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		BB392C384C2199BAFB5E5005 /* NestedContentRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedContentRegistry.swift; sourceTree = "<group>"; };
 		BDEEDB55C839EAD5F0682D33 /* FileEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileEditorView.swift; sourceTree = "<group>"; };
@@ -1343,6 +1345,7 @@
 				A8E7BADD52614A4CF223EF9E /* RadioButtonChoiceView.swift */,
 				3BB3ADE4C64195BCABB50F5C /* SliderView.swift */,
 				BAD4CFEAEE77556908EC5338 /* TextEditView.swift */,
+				25505D1F46DD0E6E557EC10D /* SecureTextEditView.swift */,
 				2A5828445BFC4AA19D66449D /* VerticalStackView.swift */,
 				7F8151BD70F878A42609D463 /* CaptionedSliderView.swift */,
 				4A1D66D130125C0E6F545CBC /* ConditionalView.swift */,
@@ -2238,6 +2241,7 @@
 				B2A94AB02FA161D000ED0CEB /* ButtonViewModel.swift in Sources */,
 				B2A94AB12FA161D000ED0CEB /* ChoiceViewModel.swift in Sources */,
 				B2A94AB22FA161D000ED0CEB /* TextEditView.swift in Sources */,
+				5A5446BC9F0F7B476F12297E /* SecureTextEditView.swift in Sources */,
 				1E344C37078560BD4572761F /* SessionListView.swift in Sources */,
 				A45ADD099009B4C840E99BF6 /* SessionWatcherDatabaseManager.swift in Sources */,
 				329C3FAF1D37BB94F234C595 /* SessionWatcherDatabaseModels.swift in Sources */,

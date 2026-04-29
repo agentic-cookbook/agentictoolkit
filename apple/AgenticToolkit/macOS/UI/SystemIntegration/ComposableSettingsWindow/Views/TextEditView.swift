@@ -14,7 +14,7 @@ extension ComposableSettings {
             self.viewModel = viewModel
             self.viewLayout = viewLayout
             self.label = Self.createLabel(title: viewModel.title)
-            self.textField = NSTextField(string: viewModel.value)
+            self.textField = Self.makeTextField(initialValue: viewModel.value)
 
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
@@ -52,6 +52,12 @@ extension ComposableSettings {
             let label = NSTextField(labelWithString: title)
             label.font = .systemFont(ofSize: 13, weight: .semibold)
             return label
+        }
+
+        /// Override to substitute a different `NSTextField` subclass — e.g.
+        /// `SecureTextEditView` returns an `NSSecureTextField`.
+        open class func makeTextField(initialValue: String) -> NSTextField {
+            NSTextField(string: initialValue)
         }
     }
 }
