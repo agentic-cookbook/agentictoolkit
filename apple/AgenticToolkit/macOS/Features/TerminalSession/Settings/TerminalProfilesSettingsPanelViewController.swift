@@ -8,7 +8,7 @@ import AgenticToolkitCoreMacOS
 public final class TerminalProfilesSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     public init() {
-        super.init(with: Descriptor(
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Profiles",
             icon: NSImage(systemSymbolName: "paintpalette", accessibilityDescription: nil)
         ))

@@ -1,7 +1,7 @@
 import AppKit
 
 /// Identifies a screen across app relaunches using layered matching.
-public struct ScreenFingerprint: Codable, Equatable {
+public struct ScreenFingerprint: Codable, Equatable, Sendable {
     public let displayUUID: String?
     public let localizedName: String?
     public let resolutionWidth: CGFloat

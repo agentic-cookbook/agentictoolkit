@@ -9,7 +9,7 @@ import AgenticToolkitCore
 public final class AppearanceSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     public init() {
-        super.init(with: Descriptor(
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Appearance",
             icon: NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
         ))

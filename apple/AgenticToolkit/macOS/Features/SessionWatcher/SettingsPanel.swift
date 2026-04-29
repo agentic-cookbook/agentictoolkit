@@ -10,7 +10,7 @@ extension SessionWatcher {
     public final class SettingsPanel: ComposableSettings.SettingsPanelViewController {
         
         public init() {
-            super.init(with: Descriptor(
+            super.init(with: ComposableSettings.SettingsPanelDescriptor(
                 title: "Session Window",
                 icon: NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
             ))

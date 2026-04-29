@@ -7,7 +7,7 @@ import AgenticToolkitCore
 public final class GeneralSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     public init() {
-        super.init(with: Descriptor(
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "General",
             icon: NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         ))

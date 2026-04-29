@@ -27,7 +27,7 @@ extension ComposableSettings {
             self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
         }
         
-        public var settingPanels: [ComposableSettings.SettingsPanelViewController] {
+        public var settingPanels: [any ComposableSettingsPanel] {
             get { viewController?.panels ?? [] }
             set { viewController?.setPanels(newValue) }
         }

@@ -1,18 +1,19 @@
 import AppKit
 import Foundation
-import Combine
+
+
 
 extension ComposableSettings {
-    
+
     /// Base class for every settings panel. One instance is hosted in the
     /// right-hand detail pane of a `SplitViewController`; the sidebar metadata
     /// lives on the panel itself via the open overrides below. The panel *is* the
     /// list item — no wrapper struct.
     @MainActor
-    open class SettingsPanelViewController: NSViewController {
+    open class SettingsPanelViewController: NSViewController, ComposableSettingsPanel {
         
         /// This is what is user for the settings panel list
-        public let descriptor: Descriptor
+        public let descriptor: SettingsPanelDescriptor
         
         public let settingsView = PanelView()
                 
@@ -22,11 +23,11 @@ extension ComposableSettings {
             self.view = settingsView
         }
         
-        public init(with descriptor: Descriptor? = nil) {
+        public init(with descriptor: SettingsPanelDescriptor? = nil) {
             if let descriptor {
                 self.descriptor = descriptor
             } else {
-                self.descriptor = Descriptor()
+                self.descriptor = SettingsPanelDescriptor()
             }
             super.init(nibName: nil, bundle: nil)
         }
@@ -41,24 +42,3 @@ extension ComposableSettings {
     }
 }
 
-extension ComposableSettings.SettingsPanelViewController {
-    
-    public class Descriptor: ObservableObject {
-        
-        @Published public var title: String
-        @Published public var icon: NSImage?
-        @Published public var isDisabled: Bool = false
-        
-        @Published public var section: String?
-        
-        public init(title: String, icon: NSImage? = nil, isDisabled: Bool = false, section: String? = nil) {
-            self.title = title
-            self.icon = icon
-            self.isDisabled = isDisabled
-        }
-        
-        public convenience init() {
-            self.init(title: "")
-        }
-    }
-}

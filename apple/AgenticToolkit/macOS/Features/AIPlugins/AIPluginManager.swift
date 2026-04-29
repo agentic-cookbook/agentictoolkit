@@ -132,6 +132,15 @@ public final class AIPluginManager {
     }
 
     // MARK: - Loading
+    
+    public func loadAllPlugins() throws -> [any AIPlugin] {
+        var plugins: [any AIPlugin] = []
+        for availablePlugin in availablePlugins {
+            let plugin = try loadPlugin(identifier: availablePlugin.identifier)
+            plugins.append(plugin)
+        }
+        return plugins
+    }
 
     /// Loads a plugin's binary and instantiates it. Returns a cached instance if already loaded.
     public func loadPlugin(identifier: String) throws -> any AIPlugin {

@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 
 /// The saved state for a window, stored as JSON.
-public struct PersistedWindowState: Codable {
+public struct PersistedWindowState: Codable, Sendable {
     public let proportionalX: CGFloat
     public let proportionalY: CGFloat
     public let width: CGFloat

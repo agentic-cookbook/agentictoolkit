@@ -10,9 +10,9 @@ extension ComposableSettings {
     open class PanelListViewController: TopicListViewController {
         
         /// Fired when the user picks a row. Nil when nothing is selected.
-        public var onSelectPanel: ((SettingsPanelViewController?) -> Void)?
+        public var onSelectPanel: (((any ComposableSettingsPanel)?) -> Void)?
         
-        private var panels: [SettingsPanelViewController] = []
+        private var panels: [any ComposableSettingsPanel] = []
         
         public override init(nibName: NSNib.Name?, bundle: Bundle?) {
             super.init(nibName: nibName, bundle: bundle)
@@ -26,7 +26,7 @@ extension ComposableSettings {
         
         public required init?(coder: NSCoder) { super.init(coder: coder) }
         
-        public func setPanels(_ panels: [SettingsPanelViewController]) {
+        public func setPanels(_ panels: [any ComposableSettingsPanel]) {
             self.panels = panels
             setSections(Self.buildSections(from: panels))
         }
@@ -40,12 +40,12 @@ extension ComposableSettings {
         
         // MARK: - Internals
         
-        private func panel(forId id: String) -> SettingsPanelViewController? {
+        private func panel(forId id: String) -> (any ComposableSettingsPanel)? {
             guard let index = Int(id), panels.indices.contains(index) else { return nil }
             return panels[index]
         }
         
-        private static func buildSections(from panels: [SettingsPanelViewController]) -> [TopicListSection] {
+        private static func buildSections(from panels: [any ComposableSettingsPanel]) -> [TopicListSection] {
             let items = panels.enumerated().map { index, panel in
                 TopicListItem(id: String(index), title: panel.descriptor.title, icon: panel.descriptor.icon, isDisabled: panel.descriptor.isDisabled)
             }

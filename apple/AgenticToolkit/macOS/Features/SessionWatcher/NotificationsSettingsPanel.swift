@@ -11,7 +11,7 @@ extension SessionWatcher {
     public final class NotificationsSettingsPanel: ComposableSettings.SettingsPanelViewController {
 
         public init() {
-            super.init(with: Descriptor(
+            super.init(with: ComposableSettings.SettingsPanelDescriptor(
                 title: "Notifications",
                 icon: NSImage(systemSymbolName: "bell", accessibilityDescription: nil)
             ))

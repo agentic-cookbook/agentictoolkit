@@ -12,7 +12,7 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
     private var permissionRows: [PermissionRowView] = []
 
     public init() {
-        super.init(with: Descriptor(
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Permissions",
             icon: NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
         ))

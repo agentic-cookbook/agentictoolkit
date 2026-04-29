@@ -9,7 +9,7 @@ import AgenticToolkitCoreMacOS
 public final class TerminalSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     public init() {
-        super.init(with: Descriptor(
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Terminal",
             icon: NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
         ))
