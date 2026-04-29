@@ -52,7 +52,6 @@
 		0A842B9AC3DAB0D6DCFB5FE5 /* LogWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA733A1A4EF2977207B02B /* LogWindowController.swift */; };
 		0AA7EC3695C61BB3449125B4 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5AB7B995521327485428570 /* SettingsStore.swift */; };
 		0BE1AF05C80AE08913C6A96C /* PermissionWalkthroughWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03A4C90FC6896DB06BEDEC7C /* PermissionWalkthroughWindowController.swift */; };
-		0CA210518D8E6F867E843617 /* NotificationsSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C65F43A28D9651A0EF6F44 /* NotificationsSettingsPanel.swift */; };
 		0D2E2A534D3AE72A087A7765 /* ScreenMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11487F0099972A68141118FF /* ScreenMatcherTests.swift */; };
 		0E9ABF4774F8B8760F1FB631 /* ScriptingContributor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A533B6A1F6A9441BB27D717 /* ScriptingContributor.swift */; };
 		0F52124772A431237C5F45F0 /* LogLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C80EC3C20D1602D7383A72 /* LogLine.swift */; };
@@ -617,7 +616,6 @@
 		13894700FEDF09F2EB8B62B7 /* TerminalSessionRowCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionRowCellView.swift; sourceTree = "<group>"; };
 		14532CCF66CDA1B57A363C03 /* ChatBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBackend.swift; sourceTree = "<group>"; };
 		14F0F22634273E3BE4E8227E /* LogColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogColumn.swift; sourceTree = "<group>"; };
-		18C65F43A28D9651A0EF6F44 /* NotificationsSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsPanel.swift; sourceTree = "<group>"; };
 		1942BFDF96D6B0678DC686F4 /* ProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressView.swift; sourceTree = "<group>"; };
 		1A41D9015BE50BF10CFC3F47 /* WindowScreenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowScreenshot.swift; sourceTree = "<group>"; };
 		1AB483183EC44F8F5457C2B6 /* SingleWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleWindowControllerTests.swift; sourceTree = "<group>"; };
@@ -1132,7 +1130,6 @@
 				B2A94B002FA2458E00ED0CEB /* Old */,
 				B2A94AF42FA2397D00ED0CEB /* SessionWatcher.swift */,
 				290B43374C9B67DD43FFB01C /* SettingsPanel.swift */,
-				18C65F43A28D9651A0EF6F44 /* NotificationsSettingsPanel.swift */,
 				B2A94B012FA2470100ED0CEB /* UserSettings+SessionWatcher.swift */,
 				D041A94CBF317F44EA1B395D /* SessionWatcherActionHandler.swift */,
 				8088F3D599A383AAFE64A275 /* SessionWatcherClickAction.swift */,
@@ -2293,7 +2290,6 @@
 				906C42742B4A0DDBDAA7B47B /* Workspace.swift in Sources */,
 				74E1AC3979B6FBF4890DEA68 /* WorkspaceDirectoryManager.swift in Sources */,
 				66E337318E16194AC10521FD /* SettingsPanel.swift in Sources */,
-				0CA210518D8E6F867E843617 /* NotificationsSettingsPanel.swift in Sources */,
 				795A5E6700F116010A88134D /* PermissionsSettingsPanelViewController.swift in Sources */,
 				B2A94AB82FA162EC00ED0CEB /* MainActorScriptCommand.swift in Sources */,
 				B2A94AB92FA162EC00ED0CEB /* AppleScriptRunner.swift in Sources */,
