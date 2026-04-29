@@ -1168,18 +1168,6 @@
 			path = WindowDiscovery;
 			sourceTree = "<group>";
 		};
-		5DB08D5BA8167377BE54183F /* WhippetDocuments */ = {
-			isa = PBXGroup;
-			children = (
-				BF1BFA8563BD956C72CBC441 /* DocumentLayoutStore.swift */,
-				CFED74CE3B6BD413CBEFAB9E /* NestedSplitViewDocument.swift */,
-				6E836BB4BD4F665B16A65F9A /* NestedSplitViewWindowController.swift */,
-				0B673C075643F7F85FD42BBD /* WhippetDocumentController.swift */,
-				461A921DBCC37CEFB4F2A7DB /* WhippetProject.swift */,
-			);
-			path = WhippetDocuments;
-			sourceTree = "<group>";
-		};
 		5E40FEC8FA32F00B3449FD14 /* FileBrowser */ = {
 			isa = PBXGroup;
 			children = (
@@ -1543,7 +1531,6 @@
 			children = (
 				513622501A1C643C0C618D3E /* SessionWatcher */,
 				F598F0CD1560105F170D8F7D /* TerminalSession */,
-				5DB08D5BA8167377BE54183F /* WhippetDocuments */,
 				5B629D0FCCF00748DDA8D44A /* WindowDiscovery */,
 				7577DF276B33ADC015E76E2C /* AIPlugins */,
 				BDEED725FEC31E9E711998FD /* AIChatWindow */,
@@ -1810,9 +1797,14 @@
 		DEF55812932E380817049F0A /* NestedSplitView */ = {
 			isa = PBXGroup;
 			children = (
+				BF1BFA8563BD956C72CBC441 /* DocumentLayoutStore.swift */,
+				CFED74CE3B6BD413CBEFAB9E /* NestedSplitViewDocument.swift */,
 				BB392C384C2199BAFB5E5005 /* NestedContentRegistry.swift */,
 				BA6609EB4EACF15580B7A590 /* NestedViewController.swift */,
 				0A89604FEA0BFBA788EFCC15 /* NestingSplitViewController.swift */,
+				6E836BB4BD4F665B16A65F9A /* NestedSplitViewWindowController.swift */,
+				0B673C075643F7F85FD42BBD /* WhippetDocumentController.swift */,
+				461A921DBCC37CEFB4F2A7DB /* WhippetProject.swift */,
 			);
 			path = NestedSplitView;
 			sourceTree = "<group>";
