@@ -32,44 +32,44 @@ import AppKit
 ///
 /// Registry lookup is keyed off the Swift metatype + ID, so each subclass
 /// has its own isolated ID space.
-@MainActor
-open class PerIDWindowController<ID: Hashable>: SingleWindowController {
-
-    public let id: ID
-
-    public init(id: ID, windowID: String) {
-        self.id = id
-        super.init(windowID: windowID)
-        PerIDRegistry.shared.set(self, type: ObjectIdentifier(Self.self), id: id)
-    }
-
-    /// Brings the window for `id` to front if one already exists; otherwise
-    /// creates a new controller via `factory`, stores it in the registry,
-    /// and shows it.
-    @discardableResult
-    public static func present(
-        id: ID,
-        factory: () -> PerIDWindowController<ID>
-    ) -> PerIDWindowController<ID> {
-        if let existing: PerIDWindowController<ID> =
-            PerIDRegistry.shared.get(type: ObjectIdentifier(Self.self), id: id) {
-            existing.showWindow()
-            return existing
-        }
-        let controller = factory()
-        controller.showWindow()
-        return controller
-    }
-
-    /// The currently-registered controller for `id`, if any.
-    public static func controller(for id: ID) -> PerIDWindowController<ID>? {
-        PerIDRegistry.shared.get(type: ObjectIdentifier(Self.self), id: id)
-    }
-
-    open override func windowWillClose(_ notification: Notification) {
-        PerIDRegistry.shared.remove(type: ObjectIdentifier(Self.self), id: id)
-    }
-}
+//@MainActor
+//open class PerIDWindowController<ID: Hashable>: SingleWindowController {
+//
+//    public let id: ID
+//
+//    public init(id: ID, windowID: String) {
+//        self.id = id
+//        super.init(windowID: windowID)
+//        PerIDRegistry.shared.set(self, type: ObjectIdentifier(Self.self), id: id)
+//    }
+//
+//    /// Brings the window for `id` to front if one already exists; otherwise
+//    /// creates a new controller via `factory`, stores it in the registry,
+//    /// and shows it.
+//    @discardableResult
+//    public static func present(
+//        id: ID,
+//        factory: () -> PerIDWindowController<ID>
+//    ) -> PerIDWindowController<ID> {
+//        if let existing: PerIDWindowController<ID> =
+//            PerIDRegistry.shared.get(type: ObjectIdentifier(Self.self), id: id) {
+//            existing.showWindow()
+//            return existing
+//        }
+//        let controller = factory()
+//        controller.showWindow()
+//        return controller
+//    }
+//
+//    /// The currently-registered controller for `id`, if any.
+//    public static func controller(for id: ID) -> PerIDWindowController<ID>? {
+//        PerIDRegistry.shared.get(type: ObjectIdentifier(Self.self), id: id)
+//    }
+//
+//    open override func windowWillClose(_ notification: Notification) {
+//        PerIDRegistry.shared.remove(type: ObjectIdentifier(Self.self), id: id)
+//    }
+//}
 
 // MARK: - Registry
 

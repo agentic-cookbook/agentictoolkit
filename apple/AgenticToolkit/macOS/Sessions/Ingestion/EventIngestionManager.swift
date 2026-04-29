@@ -194,7 +194,9 @@ public class EventIngestionManager: @unchecked Sendable {
 
         if !jsonFiles.isEmpty {
             onEventsIngested?()
-            SessionWatcherListViewModel.notifySessionsChanged()
+            
+            // TODO: remove this coupling
+            SessionWatcher.SessionListViewModel.notifySessionsChanged()
         }
     }
 
@@ -352,12 +354,12 @@ public class EventIngestionManager: @unchecked Sendable {
         summarizeWorkItems[sessionId] = nil
 
         let work = { [weak self] in
-            SessionWatcherSummarizerDebugLog.shared.append("Debounce fired — summarizing \(sessionId)")
+            SessionWatcher.SummarizerDebugLog.shared.append("Debounce fired — summarizing \(sessionId)")
             Task.detached(priority: .utility) { [summarizer, sessionId, weak self] in
                 do {
                     try await summarizer.summarizeAndStore(sessionId: sessionId)
                 } catch {
-                    SessionWatcherSummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription)")
+                    SessionWatcher.SummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription)")
                     Self.logger.error("Summarization error for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
                     await MainActor.run {
                         self?.onSummarizerError?(error.localizedDescription)
@@ -367,7 +369,7 @@ public class EventIngestionManager: @unchecked Sendable {
         }
 
         if immediate {
-            SessionWatcherSummarizerDebugLog.shared.append("Immediate summarize for \(sessionId) (SessionEnd)")
+            SessionWatcher.SummarizerDebugLog.shared.append("Immediate summarize for \(sessionId) (SessionEnd)")
             work()
         } else {
             let item = DispatchWorkItem { work() }
@@ -383,23 +385,23 @@ public class EventIngestionManager: @unchecked Sendable {
     /// Processes sessions sequentially to avoid concurrent SQLite access.
     public func summarizeExistingSessions() {
         guard let summarizer = sessionSummarizer else {
-            SessionWatcherSummarizerDebugLog.shared.append("summarizeExistingSessions: summarizer is nil")
+            SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: summarizer is nil")
             return
         }
 
         Task.detached(priority: .utility) { [weak self] in
             guard let sessions = try? self?.SessionsDatabaseManager.fetchAllSessions() else {
-                SessionWatcherSummarizerDebugLog.shared.append("summarizeExistingSessions: failed to fetch sessions")
+                SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: failed to fetch sessions")
                 return
             }
-            SessionWatcherSummarizerDebugLog.shared.append("summarizeExistingSessions: \(sessions.count) session(s) total")
+            SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: \(sessions.count) session(s) total")
 
             for session in sessions {
-                SessionWatcherSummarizerDebugLog.shared.append("  summarizing: \(session.sessionId) (\(session.status.rawValue))")
+                SessionWatcher.SummarizerDebugLog.shared.append("  summarizing: \(session.sessionId) (\(session.status.rawValue))")
                 do {
                     try await summarizer.summarizeAndStore(sessionId: session.sessionId)
                 } catch {
-                    SessionWatcherSummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription) — stopping summarization loop")
+                    SessionWatcher.SummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription) — stopping summarization loop")
                     Self.logger.error("Summarization loop stopped: \(error.localizedDescription, privacy: .public)")
                     await MainActor.run {
                         self?.onSummarizerError?(error.localizedDescription)

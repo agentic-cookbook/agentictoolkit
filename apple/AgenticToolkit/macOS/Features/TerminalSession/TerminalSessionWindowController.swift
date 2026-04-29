@@ -1,5 +1,4 @@
 import AppKit
-import AgenticToolkitCore
 import os
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
@@ -15,39 +14,28 @@ public protocol TerminalSessionWindowLifecycleDelegate: AnyObject {
 
 /// Manages a single terminal window with its own session list.
 @MainActor
-public final class TerminalSessionWindowController: SingleWindowController {
+public final class TerminalSessionWindowController: WindowController<TerminalSessionSplitViewController> {
 
-    public let sessionManager = TerminalSessionManager()
+    public let sessionManager: TerminalSessionManager
     public weak var lifecycleDelegate: TerminalSessionWindowLifecycleDelegate?
 
-    private var splitVC: TerminalSessionSplitViewController?
-
     public static let windowID = "terminal"
-    public static let windowSpec = WindowSpec(
-        defaultSize: NSSize(width: 800, height: 600),
-        minSize: NSSize(width: 600, height: 400),
-        defaultPosition: .center,
-        persistsFrame: true
-    )
 
     public init() {
-        super.init(windowID: Self.windowID, spec: Self.windowSpec)
-    }
-
-    public override var windowTitle: String { "Terminal" }
-
-    public override var defaultContentRect: NSRect {
-        NSRect(x: 0, y: 0, width: 800, height: 600)
-    }
-
-    public override var windowStyleMask: NSWindow.StyleMask {
-        [.titled, .closable, .miniaturizable, .resizable]
-    }
-
-    public override func makeContentViewController() -> NSViewController? {
-        let svc = TerminalSessionSplitViewController(sessionManager: sessionManager)
-        splitVC = svc
-        return svc
+        let manager = TerminalSessionManager()
+        self.sessionManager = manager
+        super.init(
+            windowID: Self.windowID,
+            contentViewController: TerminalSessionSplitViewController(sessionManager: manager)
+        )
+        self.windowSpec = WindowSpec(
+            defaultSize: NSSize(width: 800, height: 600),
+            minSize: NSSize(width: 600, height: 400),
+            defaultPosition: .center,
+            persistsFrame: true
+        )
+        self.windowTitle = "Terminal"
+        self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
     }
 
     public override func showWindow(_ sender: Any?) {
@@ -64,7 +52,7 @@ public final class TerminalSessionWindowController: SingleWindowController {
     }
 
     public func toggleSidebar() {
-        splitVC?.toggleSidebar()
+        viewController?.toggleSidebar()
     }
 }
 

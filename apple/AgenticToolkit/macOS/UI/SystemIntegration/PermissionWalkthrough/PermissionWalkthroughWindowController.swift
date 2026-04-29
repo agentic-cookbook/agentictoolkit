@@ -6,31 +6,29 @@ import AgenticToolkitCoreMacOS
 /// by `PermissionWalkthrough`, which reuses `contentContainer` as its
 /// drawing surface.
 @MainActor
-final class PermissionWalkthroughWindowController: SingleWindowController {
+final class PermissionWalkthroughWindowController: WindowController<WindowContentViewController<NSView>> {
 
-    let contentContainer = NSView(frame: NSRect(x: 0, y: 0, width: 440, height: 310))
+    var contentContainer: NSView {
+        viewController?.contentView ?? NSView()
+    }
 
     static let windowID = "permissionWalkthrough"
-    static let windowSpec = WindowSpec(
-        defaultSize: NSSize(width: 440, height: 310),
-        minSize: NSSize(width: 440, height: 310),
-        defaultPosition: .center,
-        persistsFrame: false
-    )
 
     init() {
-        super.init(windowID: Self.windowID, spec: Self.windowSpec)
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 440, height: 310))
+        super.init(
+            windowID: Self.windowID,
+            contentViewController: WindowContentViewController<NSView>(contentView: container)
+        )
+        self.windowSpec = WindowSpec(
+            defaultSize: NSSize(width: 440, height: 310),
+            minSize: NSSize(width: 440, height: 310),
+            defaultPosition: .center,
+            persistsFrame: false
+        )
+        self.windowTitle = "Whippet Setup"
+        self.windowStyleMask = [.titled]
     }
-
-    override var windowTitle: String { "Whippet Setup" }
-
-    override var defaultContentRect: NSRect {
-        NSRect(x: 0, y: 0, width: 440, height: 310)
-    }
-
-    override var windowStyleMask: NSWindow.StyleMask { [.titled] }
-
-    override func makeContentView() -> NSView? { contentContainer }
 
     override func configureWindow(_ window: NSWindow) {
         window.level = .floating

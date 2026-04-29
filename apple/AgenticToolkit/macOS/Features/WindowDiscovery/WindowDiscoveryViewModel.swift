@@ -37,14 +37,14 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
 
     // MARK: - Properties
 
-    public let session: SessionWatcherSession
+    public let session: SessionWatcher.SessionWatcherSession
 
     /// Called after the user selects and activates a window so the panel can close.
     public var onWindowActivated: (() -> Void)?
 
     // MARK: - Initialization
 
-    public init(session: SessionWatcherSession) {
+    public init(session: SessionWatcher.SessionWatcherSession) {
         self.session = session
     }
 
@@ -149,7 +149,7 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
     }
 
     public func openAccessibilitySettings() {
-        SessionWatcherPermissionPane.accessibility.open()
+        SessionWatcher.SessionWatcherPermissionPane.accessibility.open()
     }
 }
 

@@ -17,11 +17,11 @@ public final class WindowManager {
 
     public static let shared = WindowManager()
 
-    public private(set) var specs: [String: WindowSpec] = [:]
     public let screenProvider: ScreenProvider
     public let storage: WindowStateStorage
 
-
+    fileprivate var windowSpecs: [String: WindowSpec] = [:]
+    
     /// Creates a WindowManager with injectable dependencies.
     /// - Parameters:
     ///   - screenProvider: Provides current screen geometry. Defaults to real NSScreen data.
@@ -52,9 +52,9 @@ public final class WindowManager {
 
     /// Registers a window spec. Call once per window identifier at app startup.
     public func register(id: String, spec: WindowSpec) {
-        specs[id] = spec
+        windowSpecs[id] = spec
     }
-
+  
     // MARK: - Frame Restoration
 
     /// Restores a window's frame from saved proportional state, or applies defaults.
@@ -63,7 +63,7 @@ public final class WindowManager {
     public func restoreFrame(for window: NSWindow, id: String) -> Bool {
         window.identifier = NSUserInterfaceItemIdentifier("wm_\(id)")
 
-        guard let spec = specs[id] else {
+        guard let spec = windowSpecs[id] else {
             logger.warning("WindowManager: no spec for '\(id, privacy: .public)'")
             applyGeometricCenter(to: window)
             return false
@@ -109,7 +109,7 @@ public final class WindowManager {
 
     /// Saves the window's current frame as proportional coordinates.
     public func saveFrame(for window: NSWindow, id: String) {
-        guard let spec = specs[id], spec.persistsFrame else { return }
+        guard let spec = windowSpecs[id], spec.persistsFrame else { return }
 
         let screens = screenProvider.screens
         guard let screen = Self.bestScreen(for: window, among: screens) else { return }
@@ -136,7 +136,7 @@ public final class WindowManager {
     /// Clears saved state for a window and applies its default position.
     public func resetFrame(for window: NSWindow, id: String) {
         storage.removeState(for: id)
-        if let spec = specs[id] {
+        if let spec = windowSpecs[id] {
             applyDefaultPosition(to: window, spec: spec)
         } else {
             applyGeometricCenter(to: window)
@@ -145,7 +145,7 @@ public final class WindowManager {
 
     /// Clears all saved window states.
     public func resetAllFrames() {
-        for id in specs.keys {
+        for id in windowSpecs.keys {
             storage.removeState(for: id)
         }
     }
@@ -186,7 +186,7 @@ public final class WindowManager {
 
     @objc private func screensDidChange() {
         let screens = screenProvider.screens
-        for (id, spec) in specs {
+        for (id, spec) in windowSpecs {
             let wmId = "wm_\(id)"
             for window in NSApp.windows {
                 guard window.isVisible,
@@ -232,4 +232,12 @@ public final class WindowManager {
 
 extension WindowManager: Loggable {
     public static nonisolated let logger = makeLogger()
+}
+
+extension SingleWindowController {
+    
+    public var windowSpec: WindowSpec? {
+        get { WindowManager.shared.windowSpecs[windowID] }
+        set { WindowManager.shared.windowSpecs[windowID] = newValue }
+    }
 }

@@ -26,19 +26,19 @@ import AppKit
 @MainActor
 open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
-    public let windowID: String
+    public static let defaultSize = NSSize(width: 600, height: 480)
+    
+    public var windowID: String = ""
 
     /// Initializes the controller. If a `spec` is provided it's registered
     /// with `WindowManager.shared` for `windowID` before the window is built —
     /// subclasses that own their spec (typical pattern: a `static let
     /// windowSpec`) should pass it here so registration is local to the
     /// controller and AppDelegate doesn't need a global setup pass.
-    public init(windowID: String, spec: WindowSpec? = nil) {
+    public init(windowID: String, contentViewController: NSViewController) {
         self.windowID = windowID
-        if let spec {
-            WindowManager.shared.register(id: windowID, spec: spec)
-        }
         super.init(window: nil)
+        self.contentViewController = contentViewController
     }
 
     @available(*, unavailable)
@@ -49,35 +49,36 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     // MARK: - Overridable configuration
 
     /// Title shown in the window's title bar.
-    open var windowTitle: String { "" }
+    open var windowTitle: String = ""
 
     /// Initial content rect used when the window is first created. Frame
     /// persistence via `WindowManager` may override size/position on
     /// subsequent launches if a saved frame exists for `windowID`.
     open var defaultContentRect: NSRect {
-        NSRect(x: 0, y: 0, width: 600, height: 480)
+        guard let size = windowSpec?.defaultSize else {
+            return NSRect(origin: .zero, size: Self.defaultSize)
+        }
+        return NSRect(origin: .zero, size: size)
     }
 
     /// Style mask for the window.
-    open var windowStyleMask: NSWindow.StyleMask {
-        [.titled, .closable, .resizable]
-    }
-
+    open var windowStyleMask: NSWindow.StyleMask = [.titled, .closable, .resizable]
+    
     /// Optional minimum size. If non-nil it is applied to the window after
     /// creation.
-    open var minSize: NSSize? { nil }
+    open var minSize: NSSize?
 
-    /// Content factory — override one of these. If both return nil the
-    /// controller traps on first `showWindow()`.
-    ///
-    /// Prefer `makeContentViewController()` — setting
-    /// `window.contentViewController` is the canonical AppKit pattern and
-    /// drives the NSViewController view lifecycle
-    /// (`viewDidLoad` / `viewWillAppear` / `viewDidDisappear` / …).
-    open func makeContentViewController() -> NSViewController? { nil }
-
-    /// NSView variant for controllers that don't need a view controller.
-    open func makeContentView() -> NSView? { nil }
+//    /// Content factory — override one of these. If both return nil the
+//    /// controller traps on first `showWindow()`.
+//    ///
+//    /// Prefer `makeContentViewController()` — setting
+//    /// `window.contentViewController` is the canonical AppKit pattern and
+//    /// drives the NSViewController view lifecycle
+//    /// (`viewDidLoad` / `viewWillAppear` / `viewDidDisappear` / …).
+//    open func makeContentViewController() -> NSViewController? { nil }
+//
+//    /// NSView variant for controllers that don't need a view controller.
+//    open func makeContentView() -> NSView? { nil }
 
     /// Called after the window has been fully constructed and its frame
     /// restored. Override for post-creation mutation (e.g. wiring extra
@@ -99,13 +100,13 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
             newWindow.minSize = minSize
         }
 
-        if let viewController = makeContentViewController() {
-            newWindow.contentViewController = viewController
-        } else if let contentView = makeContentView() {
-            installContentView(contentView, in: newWindow)
-        } else {
-            fatalError("\(type(of: self)) must override makeContentViewController() or makeContentView()")
-        }
+//        if let viewController = makeContentViewController() {
+        newWindow.contentViewController = contentViewController
+//        } else if let contentView = makeContentView() {
+//            installContentView(contentView, in: newWindow)
+//        } else {
+//            fatalError("\(type(of: self)) must override makeContentViewController() or makeContentView()")
+//        }
 
         self.window = newWindow
         // WindowManager.restoreFrame handles positioning in every path:
@@ -179,23 +180,24 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: - Helpers
 
-    private func installContentView(_ contentView: NSView, in window: NSWindow) {
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-
-        let container: NSView
-        if let existing = window.contentView {
-            container = existing
-        } else {
-            let fresh = NSView()
-            window.contentView = fresh
-            container = fresh
-        }
-        container.addSubview(contentView)
-        NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: container.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
-    }
+//    private func installContentView(_ contentView: NSView, in window: NSWindow) {
+//        contentView.translatesAutoresizingMaskIntoConstraints = false
+//
+//        let container: NSView
+//        if let existing = window.contentView {
+//            container = existing
+//        } else {
+//            let fresh = NSView()
+//            window.contentView = fresh
+//            container = fresh
+//        }
+//        container.addSubview(contentView)
+//        NSLayoutConstraint.activate([
+//            contentView.topAnchor.constraint(equalTo: container.topAnchor),
+//            contentView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+//            contentView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+//            contentView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+//        ])
+//    }
 }
+

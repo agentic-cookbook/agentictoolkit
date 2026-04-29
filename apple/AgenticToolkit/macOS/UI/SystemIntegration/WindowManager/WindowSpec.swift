@@ -1,7 +1,7 @@
 import AppKit
 
 /// Declares the spatial rules for a managed window.
-public struct WindowSpec {
+public struct WindowSpec: Codable, Sendable, Equatable {
     public let defaultSize: NSSize
     public let minSize: NSSize
     public let defaultPosition: WindowPosition
@@ -19,3 +19,4 @@ public struct WindowSpec {
         self.persistsFrame = persistsFrame
     }
 }
+

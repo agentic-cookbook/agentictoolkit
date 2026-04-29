@@ -9,41 +9,31 @@ import AgenticToolkitCoreMacOS
 /// preferences (not per-document) — content layout lives in the package's
 /// SQLite.
 @MainActor
-public final class NestedSplitViewWindowController: SingleWindowController {
+public final class NestedSplitViewWindowController: WindowController<NSViewController> {
 
     public static let sharedWindowID = "whiprojDocumentWindow"
-    public static let windowSpec = WindowSpec(
-        defaultSize: NSSize(width: 800, height: 500),
-        minSize: NSSize(width: 400, height: 300),
-        defaultPosition: .center,
-        persistsFrame: true
-    )
 
     private let splitDocument: NestedSplitViewDocument
 
     public init(document: NestedSplitViewDocument) {
         self.splitDocument = document
-        super.init(windowID: Self.sharedWindowID, spec: Self.windowSpec)
-    }
 
-    public override var windowTitle: String { splitDocument.displayName ?? "Untitled" }
-
-    public override var defaultContentRect: NSRect {
-        NSRect(x: 0, y: 0, width: 800, height: 500)
-    }
-
-    public override var windowStyleMask: NSWindow.StyleMask {
-        [.titled, .closable, .resizable, .miniaturizable]
-    }
-
-    public override var minSize: NSSize? { NSSize(width: 400, height: 300) }
-
-    public override func makeContentViewController() -> NSViewController? {
-        NestingSplitViewController.make(
-            from: splitDocument.initialLayout(),
-            document: splitDocument,
+        let content = NestingSplitViewController.make(
+            from: document.initialLayout(),
+            document: document,
             isRoot: true
         )
+        super.init(windowID: Self.sharedWindowID, contentViewController: content)
+
+        self.windowSpec = WindowSpec(
+            defaultSize: NSSize(width: 800, height: 500),
+            minSize: NSSize(width: 400, height: 300),
+            defaultPosition: .center,
+            persistsFrame: true
+        )
+        self.windowTitle = document.displayName ?? "Untitled"
+        self.windowStyleMask = [.titled, .closable, .resizable, .miniaturizable]
+        self.minSize = NSSize(width: 400, height: 300)
     }
 
     public override func showWindow(_ sender: Any?) {

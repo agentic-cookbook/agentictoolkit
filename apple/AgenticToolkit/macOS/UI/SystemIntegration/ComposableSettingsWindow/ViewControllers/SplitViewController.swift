@@ -50,6 +50,11 @@ extension ComposableSettings {
         
         // MARK: - Panel management
         
+        public func setPanels(_ panels: [SettingsPanelViewController]) {
+            self.panels = panels
+            listViewController.setPanels(panels)
+        }
+        
         public func addPanel(_ panel: SettingsPanelViewController) {
             panels.append(panel)
             listViewController.setPanels(panels)

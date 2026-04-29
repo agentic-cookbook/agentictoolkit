@@ -2,7 +2,7 @@ import CoreGraphics
 
 /// A proportional position within a screen's visible frame.
 /// Values range from 0.0 (left/bottom edge) to 1.0 (right/top edge).
-public enum WindowPosition {
+public enum WindowPosition: Equatable, Sendable, Codable {
     case center
     case topRight
     case custom(x: CGFloat, y: CGFloat)

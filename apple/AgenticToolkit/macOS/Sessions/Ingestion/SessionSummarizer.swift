@@ -83,7 +83,7 @@ public final class SessionSummarizer: @unchecked Sendable {
             throw SummarizerError.disabled
         }
 
-        let dbg = SessionWatcherSummarizerDebugLog.shared
+        let dbg = SessionWatcher.SummarizerDebugLog.shared
         dbg.append("--- summarize(\(sessionId)) called ---")
 
         let providerStr = (try? SessionsDatabaseManager.getSetting(key: "ai_provider")) ?? "claude_cli"
@@ -129,7 +129,7 @@ public final class SessionSummarizer: @unchecked Sendable {
     // MARK: - Claude CLI Summarization
 
     /// Runs `claude -p` with the prompt piped to stdin.
-    private func summarizeViaCLI(prompt: String, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
+    private func summarizeViaCLI(prompt: String, model: String, dbg: SessionWatcher.SummarizerDebugLog, sessionId: String) async throws -> String {
         dbg.append("Using Claude CLI (model: \(model))")
 
         // Find the claude binary
@@ -236,7 +236,7 @@ public final class SessionSummarizer: @unchecked Sendable {
 
     // MARK: - API-based Summarization
 
-    private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcherSummarizerDebugLog, sessionId: String) async throws -> String {
+    private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcher.SummarizerDebugLog, sessionId: String) async throws -> String {
         let apiKey = KeychainHelper.get(forKey: "ai_api_key") ?? ""
         dbg.append("API key present = \(!apiKey.isEmpty) (length: \(apiKey.count))")
         guard !apiKey.isEmpty else {
@@ -315,7 +315,7 @@ public final class SessionSummarizer: @unchecked Sendable {
         let enabledStr = try? SessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else { return }
 
-        SessionWatcherSummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")
+        SessionWatcher.SummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")
 
         let summary: String
         do {
@@ -330,7 +330,8 @@ public final class SessionSummarizer: @unchecked Sendable {
             logger.info("Stored AI summary for session \(sessionId, privacy: .public)")
 
             await MainActor.run {
-                SessionWatcherListViewModel.notifySessionsChanged()
+                // TODO: remove this coupling
+                SessionWatcher.SessionListViewModel.notifySessionsChanged()
             }
         } catch {
             logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")

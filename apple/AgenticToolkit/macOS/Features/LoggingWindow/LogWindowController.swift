@@ -13,25 +13,21 @@ import AgenticToolkitCoreMacOS
 /// Callers that want singleton semantics layer their own static on top
 /// — this base intentionally stays non-singleton.
 @MainActor
-open class LogWindowController: SingleWindowController {
+open class LogWindowController: WindowController<LogViewController> {
     public let controller: any LogController
 
     public init(windowID: String, controller: any LogController) {
         self.controller = controller
-        super.init(windowID: windowID)
-    }
-
-    open override var windowTitle: String { "Log" }
-
-    open override var defaultContentRect: NSRect {
-        NSRect(x: 0, y: 0, width: 900, height: 600)
-    }
-
-    open override var windowStyleMask: NSWindow.StyleMask {
-        [.titled, .closable, .resizable, .miniaturizable]
-    }
-
-    open override func makeContentViewController() -> NSViewController? {
-        LogViewController(controller: controller)
+        super.init(windowID: windowID, contentViewController: LogViewController(controller: controller))
+        
+        self.windowTitle = "Log"
+        self.windowStyleMask = [.titled, .closable, .resizable, .miniaturizable]
+        
+        self.windowSpec = WindowSpec(
+            defaultSize: NSSize(width: 900, height: 600),
+            minSize: NSSize(width: 550, height: 420),
+            defaultPosition: .center,
+            persistsFrame: true
+        )
     }
 }

@@ -7,39 +7,27 @@ import AgenticToolkitCoreMacOS
 /// Manages the Notes window lifecycle. Hosts a `NotesSplitViewController`
 /// with list + editor panes.
 @MainActor
-public final class NotesWindowController: SingleWindowController {
+public final class NotesWindowController: WindowController<NotesSplitViewController> {
 
     private let notesManager: NotesManager
-    private var splitVC: NotesSplitViewController?
 
     public static let windowID = "notes"
-    public static let windowSpec = WindowSpec(
-        defaultSize: NSSize(width: 700, height: 500),
-        minSize: NSSize(width: 480, height: 300),
-        defaultPosition: .center,
-        persistsFrame: true
-    )
 
     public init(notesManager: NotesManager) {
         self.notesManager = notesManager
-        super.init(windowID: Self.windowID, spec: Self.windowSpec)
-    }
-
-    public override var windowTitle: String { "Notes" }
-    public override var defaultContentRect: NSRect {
-        NSRect(x: 0, y: 0, width: 700, height: 500)
-    }
-    public override var windowStyleMask: NSWindow.StyleMask {
-        [.titled, .closable, .miniaturizable, .resizable]
-    }
-    public override var minSize: NSSize? {
-        NSSize(width: 480, height: 300)
-    }
-
-    public override func makeContentViewController() -> NSViewController? {
-        let svc = NotesSplitViewController(notesManager: notesManager)
-        splitVC = svc
-        return svc
+        super.init(
+            windowID: Self.windowID,
+            contentViewController: NotesSplitViewController(notesManager: notesManager)
+        )
+        self.windowSpec = WindowSpec(
+            defaultSize: NSSize(width: 700, height: 500),
+            minSize: NSSize(width: 480, height: 300),
+            defaultPosition: .center,
+            persistsFrame: true
+        )
+        self.windowTitle = "Notes"
+        self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
+        self.minSize = NSSize(width: 480, height: 300)
     }
 
     /// Shows (or brings forward) the notes window, loading notes if needed.
@@ -47,7 +35,7 @@ public final class NotesWindowController: SingleWindowController {
         if !notesManager.isLoaded {
             Task { @MainActor in
                 await notesManager.loadNotes()
-                splitVC?.reload()
+                viewController?.reload()
             }
         }
         showWindow()

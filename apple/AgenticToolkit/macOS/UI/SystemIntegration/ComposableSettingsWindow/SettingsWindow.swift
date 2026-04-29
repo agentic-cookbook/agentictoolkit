@@ -17,36 +17,19 @@ extension ComposableSettings {
     /// subclass needs to inject (managers, view models, configuration)
     /// can be set up before the first call to `showWindow()`.
     @MainActor
-    open class SettingsWindow: SingleWindowController {
+    open class SettingsWindow: WindowController<SplitViewController>  {
 
-        public override init(windowID: String, spec: WindowSpec? = nil) {
-            super.init(windowID: windowID, spec: spec)
+        private static let windowID = "settings"
+      
+        public init() {
+            super.init(windowID: Self.windowID, contentViewController: SplitViewController())
+            self.windowTitle = "Settings"
+            self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
         }
-
-        public convenience init() {
-            self.init(windowID: "settings", spec: nil)
+        
+        public var settingPanels: [ComposableSettings.SettingsPanelViewController] {
+            get { viewController?.panels ?? [] }
+            set { viewController?.setPanels(newValue) }
         }
-
-        open override var windowTitle: String { "Settings" }
-
-        open override var defaultContentRect: NSRect {
-            NSRect(x: 0, y: 0, width: 720, height: 480)
-        }
-
-        open override var windowStyleMask: NSWindow.StyleMask {
-            [.titled, .closable, .miniaturizable, .resizable]
-        }
-
-        open override func makeContentViewController() -> NSViewController? {
-            let vc = ComposableSettings.SplitViewController()
-            for panel in makeSettingsPanels() {
-                vc.addPanel(panel)
-            }
-            return vc
-        }
-
-        /// Override to compose the panels shown in the settings window. Called
-        /// during `loadWindow()`, after subclass init has completed.
-        open func makeSettingsPanels() -> [ComposableSettings.SettingsPanelViewController] { [] }
     }
 }
