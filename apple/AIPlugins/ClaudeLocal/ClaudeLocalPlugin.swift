@@ -58,8 +58,15 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     @MainActor
-    public func settingsPanelViewController() -> SettingsPanelViewController? {
+    public func settingsPanelViewController() -> ComposableSettings.SettingsPanelViewController? {
         ClaudeLocalSettingsPanelViewController(plugin: self)
+    }
+
+    /// No credentials to validate — the local plugin shells out to the
+    /// Claude Code CLI. Returns nil if the binary is on `$PATH`, an error
+    /// message otherwise.
+    public func validateCredentials(_ credentials: AIPluginCredentials) async -> String? {
+        Self.findClaudeBinary() == nil ? "Claude CLI not found on PATH" : nil
     }
 
     // MARK: - Prompt Assembly
