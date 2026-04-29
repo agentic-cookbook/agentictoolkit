@@ -68,7 +68,7 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
     }
 
     @MainActor
-    public func settingsPanelViewController() -> SettingsPanelViewController? {
+    public func settingsPanelViewController() -> ComposableSettings.SettingsPanelViewController? {
         OpenAISettingsPanelViewController(plugin: self)
     }
 
