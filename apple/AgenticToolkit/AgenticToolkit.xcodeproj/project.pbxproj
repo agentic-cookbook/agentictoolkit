@@ -301,6 +301,7 @@
 		E41FD78990B3FC5A9DCE6633 /* SessionWatcherEventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29780E66EED996FAA4895A7A /* SessionWatcherEventFile.swift */; };
 		E5E64A21285D19829D23FD95 /* SecureStoredSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7D1B477544576902F376315 /* SecureStoredSettingsStorageProvider.swift */; };
 		E5FAABB018B8C482C8CAE293 /* AIChatCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEF95F1D20BEAC4A1A08DFD2 /* AIChatCoordinator.swift */; };
+		2712CBAF012716DFEEF93F03 /* AIChatCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54480A813E9B1F0F01F0B25 /* AIChatCommands.swift */; };
 		E952A1B857821C5E74037A0E /* SessionWatcherClickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8088F3D599A383AAFE64A275 /* SessionWatcherClickAction.swift */; };
 		E9E038001EE863484F3C7953 /* NestingSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A89604FEA0BFBA788EFCC15 /* NestingSplitViewController.swift */; };
 		EA7FB6C3355B06B56E0E7C10 /* UserSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D112853E30CE786A73B192 /* UserSetting.swift */; };
@@ -812,6 +813,7 @@
 		DDC9B45D20643D84977E0C94 /* LogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewController.swift; sourceTree = "<group>"; };
 		DE0E3E858E037E260FD6C616 /* GeneralSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		DEF95F1D20BEAC4A1A08DFD2 /* AIChatCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatCoordinator.swift; sourceTree = "<group>"; };
+		B54480A813E9B1F0F01F0B25 /* AIChatCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatCommands.swift; sourceTree = "<group>"; };
 		DF58BC67AB881F9071E25525 /* TerminalSessionGeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionGeneralSettingsView.swift; sourceTree = "<group>"; };
 		E0CD3B1C399B2A7FDA417BF1 /* SessionSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummarizer.swift; sourceTree = "<group>"; };
 		E22ADDAD7836E3F454576034 /* TerminalSessionLayoutState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionLayoutState.swift; sourceTree = "<group>"; };
@@ -1655,8 +1657,17 @@
 				9165CD80ABC102E9EF4583FE /* TypingIndicatorView.swift */,
 				94DD0564FFBB7B207827BBB0 /* WhippetChatBackend.swift */,
 				DEF95F1D20BEAC4A1A08DFD2 /* AIChatCoordinator.swift */,
+				FC6A3D5FD935C6A89519DDD3 /* Scripting */,
 			);
 			path = AIChatWindow;
+			sourceTree = "<group>";
+		};
+		FC6A3D5FD935C6A89519DDD3 /* Scripting */ = {
+			isa = PBXGroup;
+			children = (
+				B54480A813E9B1F0F01F0B25 /* AIChatCommands.swift */,
+			);
+			path = Scripting;
 			sourceTree = "<group>";
 		};
 		C914A1837128F40AC1C44C9F /* Host */ = {
@@ -2205,6 +2216,7 @@
 				C034623922DCFE366A84C1F3 /* ScriptableTerminalSession.swift in Sources */,
 				D846A6ABC63D3F9F7422A3BA /* TerminalCoordinator.swift in Sources */,
 				E5FAABB018B8C482C8CAE293 /* AIChatCoordinator.swift in Sources */,
+				2712CBAF012716DFEEF93F03 /* AIChatCommands.swift in Sources */,
 				42062388F3DB048FA26D07AF /* SummarizerDebugCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
