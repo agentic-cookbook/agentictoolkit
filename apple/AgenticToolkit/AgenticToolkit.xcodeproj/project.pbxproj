@@ -320,6 +320,7 @@
 		FBB66909D7560A8974226567 /* FileEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDEEDB55C839EAD5F0682D33 /* FileEditorView.swift */; };
 		FCD97DA1187DC4685D6847F8 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		FE3C3753B9D2F7879A48431A /* ScriptableSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E047B8AC3971B2ADD9A6E54 /* ScriptableSession.swift */; };
+		6D3E66CF97857567E2E952A2 /* SessionWatcherCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99834785E7A59A9277C9842 /* SessionWatcherCommands.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -713,6 +714,7 @@
 		8CE45EBBFD88F15E5DA6381F /* FileSystemWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemWatcher.swift; sourceTree = "<group>"; };
 		8E0448347D601C05E85051B6 /* StoredSettingPropertyWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredSettingPropertyWrapper.swift; sourceTree = "<group>"; };
 		8E047B8AC3971B2ADD9A6E54 /* ScriptableSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptableSession.swift; sourceTree = "<group>"; };
+		F99834785E7A59A9277C9842 /* SessionWatcherCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherCommands.swift; sourceTree = "<group>"; };
 		8F083EA8EB15552CE28365C2 /* SessionsDatabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsDatabaseModels.swift; sourceTree = "<group>"; };
 		8F5768F178D6D70BF2CDCB3D /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		8F69251451C74E3A277CF3A8 /* AppPermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPermission.swift; sourceTree = "<group>"; };
@@ -1586,6 +1588,7 @@
 			children = (
 				8E047B8AC3971B2ADD9A6E54 /* ScriptableSession.swift */,
 				120EF4035E163AB508A8B4B5 /* ScriptableSetting.swift */,
+				F99834785E7A59A9277C9842 /* SessionWatcherCommands.swift */,
 			);
 			path = Scripting;
 			sourceTree = "<group>";
@@ -2185,6 +2188,7 @@
 				16096C68C733B4F3049287CA /* ScriptingHost.swift in Sources */,
 				B9EDD5A98934CC2C27315878 /* ScriptingRouter.swift in Sources */,
 				FE3C3753B9D2F7879A48431A /* ScriptableSession.swift in Sources */,
+				6D3E66CF97857567E2E952A2 /* SessionWatcherCommands.swift in Sources */,
 				624C89C42815D961E6EFA65A /* ScriptableSetting.swift in Sources */,
 				C034623922DCFE366A84C1F3 /* ScriptableTerminalSession.swift in Sources */,
 				D846A6ABC63D3F9F7422A3BA /* TerminalCoordinator.swift in Sources */,
