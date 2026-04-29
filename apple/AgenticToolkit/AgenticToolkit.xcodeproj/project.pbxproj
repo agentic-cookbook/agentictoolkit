@@ -136,6 +136,7 @@
 		636967AFCFC51E5665554384 /* UserDefaultsSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F2835FBF0EC5D7DF8A99D2B /* UserDefaultsSettingsStorageProvider.swift */; };
 		637FCF6D5077CD1B7DBFB260 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; };
 		66E337318E16194AC10521FD /* SettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290B43374C9B67DD43FFB01C /* SettingsPanel.swift */; };
+		0CA210518D8E6F867E843617 /* NotificationsSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C65F43A28D9651A0EF6F44 /* NotificationsSettingsPanel.swift */; };
 		68A7EBFB032C3EC472FD605C /* WindowFrameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52E149B909C3BFB518BEE27A /* WindowFrameManager.swift */; };
 		6BD4FBE72FB8BF5D45F483B9 /* SessionLayoutStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662D7755AAC5265FD6D2BD78 /* SessionLayoutStateTests.swift */; };
 		6CD239EECF2D94FBBE65D19D /* GitMetadataResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DED1F6D31B5242800F0151 /* GitMetadataResolver.swift */; };
@@ -636,6 +637,7 @@
 		28B992B143B68C622728A2C4 /* RunningAppsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningAppsProvider.swift; sourceTree = "<group>"; };
 		28D750E564D3D48677B19B2C /* NoteEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorViewController.swift; sourceTree = "<group>"; };
 		290B43374C9B67DD43FFB01C /* SettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanel.swift; sourceTree = "<group>"; };
+		18C65F43A28D9651A0EF6F44 /* NotificationsSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsPanel.swift; sourceTree = "<group>"; };
 		29780E66EED996FAA4895A7A /* SessionWatcherEventFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherEventFile.swift; sourceTree = "<group>"; };
 		2A0598E1E6B9C0D9A2F765B9 /* WindowActivationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowActivationTarget.swift; sourceTree = "<group>"; };
 		2A5828445BFC4AA19D66449D /* VerticalStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerticalStackView.swift; sourceTree = "<group>"; };
@@ -1118,6 +1120,7 @@
 				B2A94B002FA2458E00ED0CEB /* Old */,
 				B2A94AF42FA2397D00ED0CEB /* SessionWatcher.swift */,
 				290B43374C9B67DD43FFB01C /* SettingsPanel.swift */,
+				18C65F43A28D9651A0EF6F44 /* NotificationsSettingsPanel.swift */,
 				B2A94B012FA2470100ED0CEB /* UserSettings+SessionWatcher.swift */,
 				D041A94CBF317F44EA1B395D /* SessionWatcherActionHandler.swift */,
 				8088F3D599A383AAFE64A275 /* SessionWatcherClickAction.swift */,
@@ -2259,6 +2262,7 @@
 				906C42742B4A0DDBDAA7B47B /* Workspace.swift in Sources */,
 				74E1AC3979B6FBF4890DEA68 /* WorkspaceDirectoryManager.swift in Sources */,
 				66E337318E16194AC10521FD /* SettingsPanel.swift in Sources */,
+				0CA210518D8E6F867E843617 /* NotificationsSettingsPanel.swift in Sources */,
 				795A5E6700F116010A88134D /* PermissionsSettingsPanelViewController.swift in Sources */,
 				B2A94AB82FA162EC00ED0CEB /* MainActorScriptCommand.swift in Sources */,
 				B2A94AB92FA162EC00ED0CEB /* AppleScriptRunner.swift in Sources */,

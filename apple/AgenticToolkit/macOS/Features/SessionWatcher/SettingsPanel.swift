@@ -27,7 +27,6 @@ extension SessionWatcher {
             self.settingsView.addGroup(createStalenessGroup())
             self.settingsView.addGroup(createClickActionGroup())
             self.settingsView.addGroup(createSummariesGroup())
-            self.settingsView.addGroup(createNotifyWhenGroup())
         }
         
         private func createWindowBehaviorGroup() -> ComposableSettings.GroupView {
@@ -114,37 +113,6 @@ extension SessionWatcher {
             group.addArrangedSubview(ComposableSettings.ExplanationView(
                 withText: "Uses AI to generate a short description of what each session is doing."
             ))
-            return group
-        }
-        
-        private func createNotifyWhenGroup() -> ComposableSettings.GroupView {
-            let group = ComposableSettings.GroupView(withTitle: "Notify When")
-            
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
-                with: ComposableSettings.ViewModel<Bool>(
-                    title: "Session Started",
-                    setting: UserSettings.notifySessionStart
-                )
-            ))
-            
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
-                with: ComposableSettings.ViewModel<Bool>(
-                    title: "Session Ended",
-                    setting: UserSettings.notifySessionEnd
-                )
-            ))
-            
-            group.addArrangedSubview(ComposableSettings.CheckboxView(
-                with: ComposableSettings.ViewModel<Bool>(
-                    title: "Session Became Stale",
-                    setting: UserSettings.notifyStale
-                )
-            ))
-            
-            group.addArrangedSubview(ComposableSettings.ExplanationView(
-                withText: "Notifications require permission. macOS will prompt you on first use."
-            ))
-            
             return group
         }
         
