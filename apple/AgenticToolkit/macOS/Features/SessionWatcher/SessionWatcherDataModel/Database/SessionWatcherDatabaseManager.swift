@@ -10,7 +10,7 @@ extension SessionWatcher {
         // MARK: - Properties
         
         private var db: OpaquePointer?
-        private let dbPath: String
+        private var dbPath: String?
         private let queue = DispatchQueue(label: "com.mikefullerton.whippet.database", qos: .userInitiated)
         
         /// The current schema version. Increment this when adding new migrations.
@@ -20,7 +20,10 @@ extension SessionWatcher {
         
         /// Creates a SessionWatcherDatabaseManager with the database at the specified path.
         /// If no path is given, uses the default Application Support location.
-        public init(path: String? = nil) throws {
+        public init() {
+        }
+        
+        public func open(path: String? = nil) throws {
             if let path = path {
                 self.dbPath = path
             } else {
@@ -28,7 +31,7 @@ extension SessionWatcher {
             }
             try openDatabase()
             try runMigrations()
-            logger.info("Database ready at \(self.dbPath, privacy: .public)")
+            logger.info("Database ready at \(self.dbPath ?? "none")")
         }
         
         deinit {
@@ -56,7 +59,7 @@ extension SessionWatcher {
         // MARK: - Connection
         
         private func openDatabase() throws {
-            logger.debug("Opening database at \(self.dbPath, privacy: .public)")
+            logger.debug("Opening database at \(self.dbPath ?? "nil")")
             // Use FULLMUTEX (serialized mode) so SQLite handles thread-safety internally.
             // This allows concurrent access from the summarizer, liveness monitor, and ingestion.
             let result = sqlite3_open_v2(

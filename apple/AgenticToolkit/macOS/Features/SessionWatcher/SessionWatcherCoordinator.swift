@@ -16,7 +16,7 @@ extension SessionWatcher {
     /// As a `ScriptingContributor` it owns every panel/session KVC key Cocoa
     /// Scripting reaches for.
     @MainActor
-    public final class SessionWatcherCoordinator: AppFeature, MenuContributor, ScriptingContributor {
+    public final class SessionWatcherCoordinator: AppFeature {
         
         public let databaseManager: SessionWatcherDatabaseManager
         public let ingestionManager: SessionWatcherEventIngestionManager
@@ -28,10 +28,8 @@ extension SessionWatcher {
         
         public init(
             settingsStore: SettingsStore = UserSettings.shared
-        ) throws {
-            
-            let databaseManager = try SessionWatcherDatabaseManager()
-            
+        ) {
+            let databaseManager = SessionWatcherDatabaseManager()
             self.databaseManager     = databaseManager
             self.windowController    = SessionWatcherWindowController(databaseManager: databaseManager)
             self.ingestionManager    = SessionWatcherEventIngestionManager(SessionWatcherDatabaseManager: databaseManager)
@@ -40,12 +38,38 @@ extension SessionWatcher {
             self.summarizer          = SessionWatcherSummarizer(SessionWatcherDatabaseManager: databaseManager,
                                                                 settingsStore: settingsStore)
             self.hookInstaller       = SessionWatcherHookInstaller()
+            super.init()
+            
+            self.menuContributions =  [
+                MenuContribution(slot: .window, title: "Session Window", order: 10, key: "1") { [weak self] in
+                    self?.windowController.togglePanel()
+                },
+//                MenuContribution(slot: .window, title: "Window Discovery", order: 20, key: "2") { [weak self] in
+//                    self?.showWindowDiscovery()
+//                },
+                MenuContribution(slot: .statusItem(section: 0), title: "Show Sessions", order: 0, key: "s") { [weak self] in
+                    self?.windowController.togglePanel()
+                },
+                MenuContribution(slot: .statusItem(section: 3), title: "Test Window Activation", order: 0, key: "t") { [weak self] in
+                    self?.runWindowActivationTest()
+                },
+            ]
+            
+            self.scriptingKeys = [
+                "sessions",
+                "scriptingSettings",
+                "scriptingSessionCount",
+                "scriptingActiveSessionCount",
+                "scriptingPanelVisible",
+                "scriptingPanelFloating",
+                "scriptingPanelTransparency",
+            ]
             
             windowController.setSessionSummarizer(self.summarizer)
             ingestionManager.sessionSummarizer = summarizer
             
-            wireNotifications()
-            wireIngestionToPanelErrors()
+            self.wireNotifications()
+            self.wireIngestionToPanelErrors()
         }
         
         // MARK: - AppFeature
@@ -55,7 +79,7 @@ extension SessionWatcher {
         /// pass for sessions that already had data when the app launched.
         /// Restores prior panel visibility (the panel was open the last time the
         /// user quit on first launch).
-        public func start() throws {
+        public override func start() throws {
             _ = hookInstaller.uninstallHooks()
             let result = hookInstaller.installHooks()
             switch result {
@@ -75,30 +99,14 @@ extension SessionWatcher {
         }
         
         /// Graceful shutdown — stop the long-running monitors before the app exits.
-        public func stop() {
+        public override func stop() {
             livenessMonitor.stop()
             ingestionManager.stop()
         }
         
         // MARK: - MenuContributor
         
-        public func menuContributions() -> [MenuContribution] {
-            [
-                MenuContribution(slot: .window, title: "Session Window", order: 10, key: "1") { [weak self] in
-                    self?.windowController.togglePanel()
-                },
-//                MenuContribution(slot: .window, title: "Window Discovery", order: 20, key: "2") { [weak self] in
-//                    self?.showWindowDiscovery()
-//                },
-                MenuContribution(slot: .statusItem(section: 0), title: "Show Sessions", order: 0, key: "s") { [weak self] in
-                    self?.windowController.togglePanel()
-                },
-                MenuContribution(slot: .statusItem(section: 3), title: "Test Window Activation", order: 0, key: "t") { [weak self] in
-                    self?.runWindowActivationTest()
-                },
-            ]
-        }
-        
+     
 //        private func showWindowDiscovery() {
 //            guard let vm = windowController.viewModel else { return }
 //            let allSessions = vm.groups.flatMap(\.sessions)
@@ -138,20 +146,8 @@ extension SessionWatcher {
         }
         
         // MARK: - ScriptingContributor
-        
-        public var scriptingKeys: Set<String> {
-            [
-                "sessions",
-                "scriptingSettings",
-                "scriptingSessionCount",
-                "scriptingActiveSessionCount",
-                "scriptingPanelVisible",
-                "scriptingPanelFloating",
-                "scriptingPanelTransparency",
-            ]
-        }
-        
-        public func value(forScriptingKey key: String) -> Any? {
+    
+        public override func value(forScriptingKey key: String) -> Any? {
             switch key {
             case "sessions":
                 return ((try? databaseManager.fetchAllSessions()) ?? []).map(ScriptableSession.init(session:))
@@ -174,7 +170,7 @@ extension SessionWatcher {
             }
         }
         
-        public func setValue(_ value: Any?, forScriptingKey key: String) {
+        public override func setValue(_ value: Any?, forScriptingKey key: String) {
             switch key {
             case "scriptingPanelVisible":
                 (value as? Bool) == true ? windowController.showPanel() : windowController.hidePanel()

@@ -7,7 +7,7 @@ import AgenticToolkitCore
 /// backend is host-specific (Whippet uses `WhippetChatBackend`), so the
 /// coordinator takes a backend-factory closure at init.
 @MainActor
-public final class AIChatCoordinator: AppFeature, MenuContributor, ScriptingContributor {
+public final class AIChatCoordinator: AppFeature {
 
     private let makeBackend: () -> ChatBackend
     public private(set) var viewModel: ChatViewModel?
@@ -15,6 +15,19 @@ public final class AIChatCoordinator: AppFeature, MenuContributor, ScriptingCont
 
     public init(makeBackend: @escaping () -> ChatBackend) {
         self.makeBackend = makeBackend
+        super.init()
+        
+        self.menuContributions = [
+            MenuContribution(slot: .window, title: "AI Chat", order: 30, key: "3") { [weak self] in
+                self?.showWindow()
+            },
+            MenuContribution(slot: .statusItem(section: 1), title: "AI Chat", order: 20) { [weak self] in
+                self?.showWindow()
+            },
+        ]
+        
+        self.scriptingKeys.insert("scriptingAIChatVisible")
+        self.scriptingKeys.insert("scriptingChatViewModel")
     }
 
     // MARK: - Public API
@@ -33,24 +46,7 @@ public final class AIChatCoordinator: AppFeature, MenuContributor, ScriptingCont
         windowController?.showWindow()
     }
 
-    // MARK: - MenuContributor
-
-    public func menuContributions() -> [MenuContribution] {
-        [
-            MenuContribution(slot: .window, title: "AI Chat", order: 30, key: "3") { [weak self] in
-                self?.showWindow()
-            },
-            MenuContribution(slot: .statusItem(section: 1), title: "AI Chat", order: 20) { [weak self] in
-                self?.showWindow()
-            },
-        ]
-    }
-
-    // MARK: - ScriptingContributor
-
-    public var scriptingKeys: Set<String> { ["scriptingAIChatVisible", "scriptingChatViewModel"] }
-
-    public func value(forScriptingKey key: String) -> Any? {
+    public override func value(forScriptingKey key: String) -> Any? {
         switch key {
         case "scriptingAIChatVisible":
             return windowController?.isVisible ?? false
@@ -61,7 +57,7 @@ public final class AIChatCoordinator: AppFeature, MenuContributor, ScriptingCont
         }
     }
 
-    public func setValue(_ value: Any?, forScriptingKey key: String) {
+    public override func setValue(_ value: Any?, forScriptingKey key: String) {
         switch key {
         case "scriptingAIChatVisible":
             if (value as? Bool) == true { showWindow() }

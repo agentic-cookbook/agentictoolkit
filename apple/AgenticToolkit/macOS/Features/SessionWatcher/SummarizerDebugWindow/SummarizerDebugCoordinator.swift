@@ -9,20 +9,14 @@ extension SessionWatcher {
     /// the menu item and `summarizerDebugVisible` scripting key, no
     /// inter-feature dependencies.
     @MainActor
-    public final class SummarizerDebugCoordinator: AppFeature, MenuContributor, ScriptingContributor {
+    public final class SummarizerDebugCoordinator: AppFeature {
         
         public let windowController = SummarizerDebugWindowController()
         
-        public init() {}
-        
-        public func showWindow() {
-            windowController.showWindow()
-        }
-        
-        // MARK: - MenuContributor
-        
-        public func menuContributions() -> [MenuContribution] {
-            [
+        public override init() {
+            super.init()
+            
+            self.menuContributions = [
                 MenuContribution(slot: .window, title: "Summarizer Debug Log", order: 50) { [weak self] in
                     self?.showWindow()
                 },
@@ -30,20 +24,22 @@ extension SessionWatcher {
                     self?.showWindow()
                 },
             ]
+            
+            self.scriptingKeys.insert("scriptingSummarizerDebugVisible")
         }
         
-        // MARK: - ScriptingContributor
-        
-        public var scriptingKeys: Set<String> { ["scriptingSummarizerDebugVisible"] }
-        
-        public func value(forScriptingKey key: String) -> Any? {
+        public func showWindow() {
+            windowController.showWindow()
+        }
+                
+        public override func value(forScriptingKey key: String) -> Any? {
             switch key {
             case "scriptingSummarizerDebugVisible": return windowController.isVisible
             default: return nil
             }
         }
         
-        public func setValue(_ value: Any?, forScriptingKey key: String) {
+        public override func setValue(_ value: Any?, forScriptingKey key: String) {
             switch key {
             case "scriptingSummarizerDebugVisible":
                 (value as? Bool) == true ? windowController.showWindow() : windowController.dismiss()

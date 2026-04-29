@@ -5,7 +5,7 @@ import ApplicationServices
 /// Shows one modal sheet per permission, waits for the user to grant it (polling),
 /// then advances to the next. Skips permissions already granted.
 @MainActor
-public final class PermissionWalkthrough {
+public final class PermissionWalkthrough: AppFeature {
 
     /// UserDefaults key tracking whether the walkthrough has completed.
     public static let walkthroughCompleteKey = "permission_walkthrough_complete"
@@ -28,7 +28,7 @@ public final class PermissionWalkthrough {
     private var statusDot: NSView?
     private var statusLabel: NSTextField?
 
-    public init() {
+    public override init() {
         self.permissions = AppPermission.allCases
     }
 

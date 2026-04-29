@@ -13,13 +13,16 @@ public final class AppearanceManager: AppFeature {
     private var modeObserver: UserSettingObserver<AppearanceMode>?
     private var textSizeObserver: UserSettingObserver<TextSize>?
 
-    public init() {
+    public override init() {
+        super.init()
+        
         modeObserver = UserSettingObserver(UserSettings.appearanceMode) { [weak self] mode in
             self?.applyAppearance(mode)
         }
         textSizeObserver = UserSettingObserver(UserSettings.textSize) { [weak self] size in
             self?.applyTextSize(size)
         }
+
         applyAppearance(UserSettings.appearanceMode.currentValue)
         applyTextSize(UserSettings.textSize.currentValue)
     }

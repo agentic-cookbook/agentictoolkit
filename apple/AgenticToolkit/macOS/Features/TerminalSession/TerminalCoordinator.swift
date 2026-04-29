@@ -8,15 +8,34 @@ import AgenticToolkitCore
 /// command target. Contributes the File-menu and status-item terminal
 /// items + the `terminalSessions` scripting key set.
 @MainActor
-public final class TerminalCoordinator: NSObject, AppFeature, MenuContributor, ScriptingContributor, TerminalSessionWindowLifecycleDelegate {
+public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecycleDelegate {
 
     public private(set) var windowControllers: [TerminalSessionWindowController] = []
 
+    // MARK: - Public API
+    
     public override init() {
         super.init()
+        
+        self.scriptingKeys.insert("terminalSessions")
+        self.menuContributions =  [
+            MenuContribution(slot: .file, title: "New Terminal Window", order: 0, key: "t") { [weak self] in
+                self?.openNewTerminalWindow()
+            },
+            MenuContribution(slot: .file, title: "New Terminal Session", order: 10, key: "n",
+                             modifiers: [.command, .shift]) { [weak self] in
+                self?.openNewTerminalSession()
+            },
+            MenuContribution(slot: .view, title: "Toggle Sidebar", order: 0, key: "s",
+                             modifiers: [.command, .option]) { [weak self] in
+                self?.toggleSidebar()
+            },
+            MenuContribution(slot: .statusItem(section: 1), title: "New Terminal Window", order: 30) { [weak self] in
+                self?.openNewTerminalWindow()
+            },
+        ]
     }
-
-    // MARK: - Public API
+    
 
     public func openNewTerminalWindow() {
         let wc = TerminalSessionWindowController()
@@ -53,32 +72,7 @@ public final class TerminalCoordinator: NSObject, AppFeature, MenuContributor, S
         Self.logger.info("Removed terminal window controller, remaining: \(self.windowControllers.count, privacy: .public)")
     }
 
-    // MARK: - MenuContributor
-
-    public func menuContributions() -> [MenuContribution] {
-        [
-            MenuContribution(slot: .file, title: "New Terminal Window", order: 0, key: "t") { [weak self] in
-                self?.openNewTerminalWindow()
-            },
-            MenuContribution(slot: .file, title: "New Terminal Session", order: 10, key: "n",
-                             modifiers: [.command, .shift]) { [weak self] in
-                self?.openNewTerminalSession()
-            },
-            MenuContribution(slot: .view, title: "Toggle Sidebar", order: 0, key: "s",
-                             modifiers: [.command, .option]) { [weak self] in
-                self?.toggleSidebar()
-            },
-            MenuContribution(slot: .statusItem(section: 1), title: "New Terminal Window", order: 30) { [weak self] in
-                self?.openNewTerminalWindow()
-            },
-        ]
-    }
-
-    // MARK: - ScriptingContributor
-
-    public var scriptingKeys: Set<String> { ["terminalSessions"] }
-
-    public func value(forScriptingKey key: String) -> Any? {
+    public override func value(forScriptingKey key: String) -> Any? {
         switch key {
         case "terminalSessions":
             return windowControllers.flatMap { wc in

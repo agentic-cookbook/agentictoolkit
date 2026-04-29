@@ -158,3 +158,11 @@ extension SessionWatcher {
     }
 }
 
+extension ComposableSettings.AppCoordinator {
+    public func bind(sessionWatcherWindow: SessionWatcher.SessionWatcherWindowController?) {
+        guard let sessionWatcherWindow else { return }
+        sessionWatcherWindow.onSettingsButtonPressed = { [weak self] in
+            self?.settingsWindow.showWindow()
+        }
+    }
+}
