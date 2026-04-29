@@ -27,83 +27,45 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		01053557EC4421FCEEB0A18B /* AgenticToolkitAIPlugins.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */; };
-		03D769171F4D245088B18DC4 /* AgenticToolkitSettingsWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */; };
-		0402967F840821AB19BE9BC8 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
 		080049D9529510ECE6CAE63D /* ClaudeAPISettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 985A816B613BC9E9E2A003B4 /* ClaudeAPISettingsPanelViewController.swift */; };
-		08CD61FEF0AA17A5021AAC3E /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
-		0DA884CB9A87DD8096B1803D /* AgenticToolkitChatWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */; };
 		13207D74A2D4297BD27C9106 /* OpenAISettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA6D352531361C0921D72300 /* OpenAISettingsPanelViewController.swift */; };
-		17DC40061A5791733D7C1B12 /* AgenticToolkitChatWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */; };
 		199715F1320C42B6C9D379AD /* OpenAICompatibleSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4DE7F22A6C62D04B3A8718E /* OpenAICompatibleSettingsPanelViewController.swift */; };
-		1B01C2585B18487461BAF07C /* AgenticToolkitScripting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */; };
-		22A32219BBA0E7DC28855356 /* AgenticToolkitScripting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */; };
 		3C1691DD645A15FBA12CD8E2 /* ClaudeLocalSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69FC91CCCB896878C991DE64 /* ClaudeLocalSettingsPanelViewController.swift */; };
 		4055E75B95ABB98D4EBDA069 /* OpenAICompatiblePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */; };
-		551A3DCB1EC3294C19D9BA9A /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
-		5790619C2B4ED895BEECE45F /* AgenticToolkitSettingsWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */; };
-		5A41835B9FFD18D2B13346C9 /* AgenticToolkitAIPlugins.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */; };
-		5D9694753D71EAE3C8DB8AAE /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
-		5F050F4386298307347BB1D4 /* AgenticToolkitChatWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */; };
 		6B7B1DD86E2D8CF390411B8E /* GoogleSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B89DF82813E260680FF5BFF /* GoogleSettingsPanelViewController.swift */; };
 		6CECE5D45CEA51315CE3980C /* GooglePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E7F00486CCEB3CFB46EB96 /* GooglePlugin.swift */; };
-		84697DE53A9AA78B5D4F4B12 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
-		84A3C66895E236EAF85B8349 /* AgenticToolkitChatWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */; };
 		893C303BE350EA5A2F1BE0EE /* ClaudeLocalPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE3B7CA4B2495D6C42AF319 /* ClaudeLocalPlugin.swift */; };
-		8D580F450F59B8211A03F9BE /* AgenticToolkitScripting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */; };
-		97F3D0DED1C69A11AEFEFF91 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
-		A202A7163C965FD1B5E4B495 /* AgenticToolkitAIPlugins.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */; };
 		A4C79FED4C5E26CE247C2305 /* ClaudeAPIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF0E2C70955B3DCFD52F42E /* ClaudeAPIPlugin.swift */; };
 		A9FC14B3250E4A7510095AE9 /* OpenAIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE5EC26A0AB7F543D9FE01E /* OpenAIPlugin.swift */; };
-		AF31F278FFEA9C86F5C3BE4A /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
-		B195C1F8268C1A090E193669 /* AgenticToolkitSettingsWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */; };
-		B37856B80A31FA9FC4F0D470 /* AgenticToolkitScripting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */; };
-		DAACDB5C68DD268776B19EA0 /* AgenticToolkitSettingsWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */; };
-		DDD7FC986ED70BB4CFAC858A /* AgenticToolkitChatWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */; };
-		F09D0F57E8499D5819E0580A /* AgenticToolkitScripting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */; };
-		F150D4D77DA655B903B565BC /* AgenticToolkitSettingsWindow.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */; };
-		F3DCED4B3D04FF3DDC1BC61E /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
-		F72D1E8D8D0919E1E241CEFE /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
-		F8A018E71314EE90CAB6ECA6 /* AgenticToolkitAIPlugins.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */; };
-		FBF9F9D2FFE7DA17904C4A17 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
-		FC00A7F923FF9E3D76A923FD /* AgenticToolkitAIPlugins.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */; };
+		B28C2A562FA288B400F2F7FD /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
+		B28C2A572FA288B400F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
+		B28C2A582FA288B400F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
+		B28C2A592FA288B400F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
+		B28C2A5A2FA288BE00F2F7FD /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
+		B28C2A5B2FA288BE00F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
+		B28C2A5C2FA288BE00F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
+		B28C2A5D2FA288BE00F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
+		B28C2A5E2FA288C600F2F7FD /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
+		B28C2A5F2FA288C600F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
+		B28C2A602FA288C600F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
+		B28C2A612FA288C600F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
+		B28C2A622FA288CD00F2F7FD /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
+		B28C2A632FA288CD00F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
+		B28C2A642FA288CD00F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
+		B28C2A652FA288CD00F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
+		B28C2A662FA288D500F2F7FD /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */; };
+		B28C2A672FA288D500F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */; };
+		B28C2A682FA288D500F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */; };
+		B28C2A692FA288D500F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		0FD36559FC32EE51C8FD8D73 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 2;
-			remoteGlobalIDString = E2F77161C4E2801233B0E81B;
-			remoteInfo = AgenticToolkitScripting;
-		};
-		10CA56E3AC40E21109B144A0 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 2;
-			remoteGlobalIDString = 198E4D71EE60D4D25EE3A8DF;
-			remoteInfo = AgenticToolkitChatWindow;
-		};
-		172024E23D894C85DB6B1D2F /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 61DE80AACD477F54828B741C;
-			remoteInfo = AgenticToolkitScripting;
-		};
 		2841EABE660F3A4F34A9298F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
-		};
-		2BA53D34DA0299009A0469C3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = E404E2F414DF14F33D053582;
-			remoteInfo = AgenticToolkitAIPlugins;
 		};
 		307C883E7C228611087C0E20 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -119,40 +81,12 @@
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
 		};
-		3FAAC9B44FE7292CEB5D2E95 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 2DE9879E295BC539650CEA46;
-			remoteInfo = AgenticToolkitChatWindow;
-		};
-		40360A8E0715C523CE1DAC50 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 2DE9879E295BC539650CEA46;
-			remoteInfo = AgenticToolkitChatWindow;
-		};
 		412C808986443A07B7661CF4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
-		};
-		4291E746F9A5145A153EE6E0 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 2DE9879E295BC539650CEA46;
-			remoteInfo = AgenticToolkitChatWindow;
-		};
-		42D2C049431A82D08155FB2B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 61DE80AACD477F54828B741C;
-			remoteInfo = AgenticToolkitScripting;
 		};
 		49121C9EF75F34F8337F1A93 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -168,47 +102,12 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		7C5CE2A42180512640C0B91E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = E404E2F414DF14F33D053582;
-			remoteInfo = AgenticToolkitAIPlugins;
-		};
-		7DE22875B01DF0F4883408DA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = E404E2F414DF14F33D053582;
-			remoteInfo = AgenticToolkitAIPlugins;
-		};
-		88F034E31DD744E3D8B4D473 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 2;
-			remoteGlobalIDString = E402442694C77A8A8EB93D02;
-			remoteInfo = AgenticToolkitAIPlugins;
-		};
-		8DD02408E07A1A2E1BDA73F7 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 0A4670F44E7C5FF0B077EBF8;
-			remoteInfo = AgenticToolkitSettingsWindow;
-		};
 		8E9C5C4B57CCB85363860865 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 40E8B4B9D4D13B107306FAD1;
 			remoteInfo = OpenAI;
-		};
-		939B5966528B77E8FE2A1F87 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 2DE9879E295BC539650CEA46;
-			remoteInfo = AgenticToolkitChatWindow;
 		};
 		939F4CFC05AE502C28D2AABC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -231,19 +130,89 @@
 			remoteGlobalIDString = 4902207C4C9CDF009D44C9FA;
 			remoteInfo = OpenAICompatible;
 		};
-		A620A7D1F64D069B23DF398B /* PBXContainerItemProxy */ = {
+		B27CD2DA2FA2884C004B7DE8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
-			remoteGlobalIDString = 2DE9879E295BC539650CEA46;
-			remoteInfo = AgenticToolkitChatWindow;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
 		};
-		A8FF8A422907B090144E592F /* PBXContainerItemProxy */ = {
+		B27CD2DC2FA2884C004B7DE8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
-			remoteGlobalIDString = 0A4670F44E7C5FF0B077EBF8;
-			remoteInfo = AgenticToolkitSettingsWindow;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		B27CD2DE2FA2885C004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		B27CD2E02FA2885C004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		B27CD2E22FA2886C004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		B27CD2E42FA2886C004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		B27CD2E62FA28874004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		B27CD2E82FA28874004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		B27CD2EA2FA2887C004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		B27CD2EC2FA2887C004B7DE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		B28C2A492FA288B200F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = 61310A916E242BA60A9FE8C1;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		B28C2A512FA288B200F2F7FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 2;
+			remoteGlobalIDString = F03FB5CC81FF718A106A6513;
+			remoteInfo = AgenticToolkitMacOS;
 		};
 		B8B16DD4E67DE0B147CAC0A0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -266,47 +235,12 @@
 			remoteGlobalIDString = FF857DF2BB3D2BE006BBA101;
 			remoteInfo = AgenticToolkitCore;
 		};
-		BDC08D0CCCF0ADF8BCB8ACF5 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = E404E2F414DF14F33D053582;
-			remoteInfo = AgenticToolkitAIPlugins;
-		};
 		C4BE1928FFBCEB43F421A081 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
-		};
-		C5C9A1843FCF88E83EF2B445 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 2;
-			remoteGlobalIDString = E1BAEED60C2F2C1B963BA602;
-			remoteInfo = AgenticToolkitSettingsWindow;
-		};
-		CB40C51F53935C8A8206FB53 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 0A4670F44E7C5FF0B077EBF8;
-			remoteInfo = AgenticToolkitSettingsWindow;
-		};
-		CCA53F491E2A3C38F8C0E55A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 0A4670F44E7C5FF0B077EBF8;
-			remoteInfo = AgenticToolkitSettingsWindow;
-		};
-		CF311F327C75BC5248E7023E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 61DE80AACD477F54828B741C;
-			remoteInfo = AgenticToolkitScripting;
 		};
 		D4E061321EE41AAB61210FAF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -315,33 +249,12 @@
 			remoteGlobalIDString = 69B12492E5D241F6EF3DAC75;
 			remoteInfo = ClaudeLocal;
 		};
-		D5781EBCE6968EAF291FE146 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = E404E2F414DF14F33D053582;
-			remoteInfo = AgenticToolkitAIPlugins;
-		};
-		DCD455C19960A2634F6B319A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 61DE80AACD477F54828B741C;
-			remoteInfo = AgenticToolkitScripting;
-		};
 		E014F487ACD1DB023FF06B43 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
-		};
-		F83FB12DB0A777E906B7BDFF /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 0A4670F44E7C5FF0B077EBF8;
-			remoteInfo = AgenticToolkitSettingsWindow;
 		};
 		F8A96052A249C227E0CB9F5F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -350,31 +263,24 @@
 			remoteGlobalIDString = 78D0E6AA9542822FD01209E4;
 			remoteInfo = ClaudeAPI;
 		};
-		FEB1B157B8D7E524C42AB57C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
-			proxyType = 1;
-			remoteGlobalIDString = 61DE80AACD477F54828B741C;
-			remoteInfo = AgenticToolkitScripting;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		69FC91CCCB896878C991DE64 /* ClaudeLocalSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLocalSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		7855544C4A0FD72D0994373C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		79563BD36327321665696A42 /* ClaudeLocal.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeLocal.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		79563BD36327321665696A42 /* ClaudeLocal.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = ClaudeLocal.bundle; path = ClaudeLocal.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B89DF82813E260680FF5BFF /* GoogleSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAI.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeAPI.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = OpenAI.bundle; path = OpenAI.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = ClaudeAPI.bundle; path = ClaudeAPI.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CE3B7CA4B2495D6C42AF319 /* ClaudeLocalPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLocalPlugin.swift; sourceTree = "<group>"; };
 		8CE5EC26A0AB7F543D9FE01E /* OpenAIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIPlugin.swift; sourceTree = "<group>"; };
 		985A816B613BC9E9E2A003B4 /* ClaudeAPISettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAPISettingsPanelViewController.swift; sourceTree = "<group>"; };
 		98C2D3573FB50C435AC88D2F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A397B536576EBC94F8FF6B54 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AB6EE58E62C50776B8A0372B /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AgenticToolkit; path = ../AgenticToolkit/AgenticToolkit.xcodeproj; sourceTree = "<group>"; };
-		AE0AF1BEA1B1871B876D693A /* Google.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Google.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE0AF1BEA1B1871B876D693A /* Google.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = Google.bundle; path = Google.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatiblePlugin.swift; sourceTree = "<group>"; };
-		D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAICompatible.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = OpenAICompatible.bundle; path = OpenAICompatible.aiplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA6D352531361C0921D72300 /* OpenAISettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISettingsPanelViewController.swift; sourceTree = "<group>"; };
 		E8E7F00486CCEB3CFB46EB96 /* GooglePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GooglePlugin.swift; sourceTree = "<group>"; };
 		F4DE7F22A6C62D04B3A8718E /* OpenAICompatibleSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatibleSettingsPanelViewController.swift; sourceTree = "<group>"; };
@@ -388,12 +294,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F72D1E8D8D0919E1E241CEFE /* AgenticToolkitCore.framework in Frameworks */,
-				8D580F450F59B8211A03F9BE /* AgenticToolkitScripting.framework in Frameworks */,
-				551A3DCB1EC3294C19D9BA9A /* AgenticToolkitCoreUI.framework in Frameworks */,
-				F150D4D77DA655B903B565BC /* AgenticToolkitSettingsWindow.framework in Frameworks */,
-				5F050F4386298307347BB1D4 /* AgenticToolkitChatWindow.framework in Frameworks */,
-				A202A7163C965FD1B5E4B495 /* AgenticToolkitAIPlugins.framework in Frameworks */,
+				B28C2A5E2FA288C600F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
+				B28C2A5F2FA288C600F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
+				B28C2A602FA288C600F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
+				B28C2A612FA288C600F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -401,12 +305,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0402967F840821AB19BE9BC8 /* AgenticToolkitCore.framework in Frameworks */,
-				B37856B80A31FA9FC4F0D470 /* AgenticToolkitScripting.framework in Frameworks */,
-				97F3D0DED1C69A11AEFEFF91 /* AgenticToolkitCoreUI.framework in Frameworks */,
-				03D769171F4D245088B18DC4 /* AgenticToolkitSettingsWindow.framework in Frameworks */,
-				84A3C66895E236EAF85B8349 /* AgenticToolkitChatWindow.framework in Frameworks */,
-				01053557EC4421FCEEB0A18B /* AgenticToolkitAIPlugins.framework in Frameworks */,
+				B28C2A622FA288CD00F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
+				B28C2A632FA288CD00F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
+				B28C2A642FA288CD00F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
+				B28C2A652FA288CD00F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,12 +316,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				84697DE53A9AA78B5D4F4B12 /* AgenticToolkitCore.framework in Frameworks */,
-				1B01C2585B18487461BAF07C /* AgenticToolkitScripting.framework in Frameworks */,
-				5D9694753D71EAE3C8DB8AAE /* AgenticToolkitCoreUI.framework in Frameworks */,
-				DAACDB5C68DD268776B19EA0 /* AgenticToolkitSettingsWindow.framework in Frameworks */,
-				DDD7FC986ED70BB4CFAC858A /* AgenticToolkitChatWindow.framework in Frameworks */,
-				FC00A7F923FF9E3D76A923FD /* AgenticToolkitAIPlugins.framework in Frameworks */,
+				B28C2A562FA288B400F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
+				B28C2A572FA288B400F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
+				B28C2A582FA288B400F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
+				B28C2A592FA288B400F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -427,12 +327,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AF31F278FFEA9C86F5C3BE4A /* AgenticToolkitCore.framework in Frameworks */,
-				F09D0F57E8499D5819E0580A /* AgenticToolkitScripting.framework in Frameworks */,
-				08CD61FEF0AA17A5021AAC3E /* AgenticToolkitCoreUI.framework in Frameworks */,
-				B195C1F8268C1A090E193669 /* AgenticToolkitSettingsWindow.framework in Frameworks */,
-				17DC40061A5791733D7C1B12 /* AgenticToolkitChatWindow.framework in Frameworks */,
-				5A41835B9FFD18D2B13346C9 /* AgenticToolkitAIPlugins.framework in Frameworks */,
+				B28C2A662FA288D500F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
+				B28C2A672FA288D500F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
+				B28C2A682FA288D500F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
+				B28C2A692FA288D500F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -440,12 +338,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F3DCED4B3D04FF3DDC1BC61E /* AgenticToolkitCore.framework in Frameworks */,
-				22A32219BBA0E7DC28855356 /* AgenticToolkitScripting.framework in Frameworks */,
-				FBF9F9D2FFE7DA17904C4A17 /* AgenticToolkitCoreUI.framework in Frameworks */,
-				5790619C2B4ED895BEECE45F /* AgenticToolkitSettingsWindow.framework in Frameworks */,
-				0DA884CB9A87DD8096B1803D /* AgenticToolkitChatWindow.framework in Frameworks */,
-				F8A018E71314EE90CAB6ECA6 /* AgenticToolkitAIPlugins.framework in Frameworks */,
+				B28C2A5A2FA288BE00F2F7FD /* AgenticToolkitCore.framework in Frameworks */,
+				B28C2A5B2FA288BE00F2F7FD /* AgenticToolkitCoreMacOS.framework in Frameworks */,
+				B28C2A5C2FA288BE00F2F7FD /* AgenticToolkitCoreUI.framework in Frameworks */,
+				B28C2A5D2FA288BE00F2F7FD /* AgenticToolkitMacOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,6 +358,7 @@
 				FE96172D919F63BB17190BCD /* OpenAICompatible */,
 				512156939C8E6A387DA6BA98 /* Products */,
 				8F29C301737460E330F4AAEA /* Projects */,
+				B28C2A552FA288B400F2F7FD /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -489,11 +386,9 @@
 			isa = PBXGroup;
 			children = (
 				CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */,
-				5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */,
+				B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */,
 				B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */,
-				5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */,
-				935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */,
-				A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */,
+				B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -506,6 +401,13 @@
 				FA80348269FA84C5F83CD447 /* Info.plist */,
 			);
 			path = Google;
+			sourceTree = "<group>";
+		};
+		B28C2A552FA288B400F2F7FD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		D2138CB62BB44E61B98DD24C /* OpenAI */ = {
@@ -562,12 +464,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				B27CD2E72FA28874004B7DE8 /* PBXTargetDependency */,
+				B27CD2E92FA28874004B7DE8 /* PBXTargetDependency */,
 				59CB9F86534CE0DBF1FA378D /* PBXTargetDependency */,
-				27087D8DFAB1AA582BD1F429 /* PBXTargetDependency */,
 				33FE3556D9EED58D85381987 /* PBXTargetDependency */,
-				2056F658D176ED15369459B0 /* PBXTargetDependency */,
-				3ADB5F2C203EE92A09C466D0 /* PBXTargetDependency */,
-				945B2AF7C3FAA942640D25F3 /* PBXTargetDependency */,
 			);
 			name = OpenAI;
 			packageProductDependencies = (
@@ -587,12 +487,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				B27CD2EB2FA2887C004B7DE8 /* PBXTargetDependency */,
+				B27CD2ED2FA2887C004B7DE8 /* PBXTargetDependency */,
 				DE1F042949C3243EAC540BFF /* PBXTargetDependency */,
-				A3D98163F86BC9483964DBA8 /* PBXTargetDependency */,
 				3011A61919F710659A3540DD /* PBXTargetDependency */,
-				30CDC6BC2AF5B4DF9076526D /* PBXTargetDependency */,
-				EF865CBA0BC5F4B8B43869E2 /* PBXTargetDependency */,
-				36C932794E092B91C2661B70 /* PBXTargetDependency */,
 			);
 			name = OpenAICompatible;
 			packageProductDependencies = (
@@ -612,12 +510,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				B27CD2DF2FA2885C004B7DE8 /* PBXTargetDependency */,
+				B27CD2E12FA2885C004B7DE8 /* PBXTargetDependency */,
 				D7487455733E9E180F04AC58 /* PBXTargetDependency */,
-				24EF5BDC21C92A08997D4241 /* PBXTargetDependency */,
 				0A90B4905FB1A3B84568510F /* PBXTargetDependency */,
-				DB2B52A85B929FF1009C11F0 /* PBXTargetDependency */,
-				5C71160333842A41FAF2B538 /* PBXTargetDependency */,
-				5D8485C9995020A5A563567A /* PBXTargetDependency */,
 			);
 			name = ClaudeLocal;
 			packageProductDependencies = (
@@ -637,12 +533,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				B27CD2DB2FA2884C004B7DE8 /* PBXTargetDependency */,
+				B27CD2DD2FA2884C004B7DE8 /* PBXTargetDependency */,
 				BBDE29717DB0B14F5E3E8212 /* PBXTargetDependency */,
-				8C51B47836930750C32332E3 /* PBXTargetDependency */,
 				2F6214C10AE0918FA1238ECE /* PBXTargetDependency */,
-				297482506FD35BA09F832E94 /* PBXTargetDependency */,
-				D66BD6F7EE3C02AC4A24A50E /* PBXTargetDependency */,
-				1B30FE2745063A09EF53FE1A /* PBXTargetDependency */,
 			);
 			name = ClaudeAPI;
 			packageProductDependencies = (
@@ -662,12 +556,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				B27CD2E32FA2886C004B7DE8 /* PBXTargetDependency */,
+				B27CD2E52FA2886C004B7DE8 /* PBXTargetDependency */,
 				7A4C7536F16E0B79888FCD5F /* PBXTargetDependency */,
-				D4295FD645508CEA8C4B1669 /* PBXTargetDependency */,
 				A7C82D478ED423A7FC54C7F2 /* PBXTargetDependency */,
-				31AD50AA6AB23825FA888A12 /* PBXTargetDependency */,
-				D2C279A2F34833B7523A3126 /* PBXTargetDependency */,
-				AF4CF327B59F426902AC9E10 /* PBXTargetDependency */,
 			);
 			name = Google;
 			packageProductDependencies = (
@@ -684,8 +576,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 2312467F2C7A6F62BE9A00A7 /* Build configuration list for PBXProject "AIPlugins" */;
 			developmentRegion = en;
@@ -718,39 +608,25 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		5AA33E523F91E483A939DE7B /* AgenticToolkitSettingsWindow.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = AgenticToolkitSettingsWindow.framework;
-			remoteRef = C5C9A1843FCF88E83EF2B445 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		5EFA0712FBF7F3C9AFE5C45D /* AgenticToolkitScripting.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = AgenticToolkitScripting.framework;
-			remoteRef = 0FD36559FC32EE51C8FD8D73 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		935E04EC354658A523DE06F5 /* AgenticToolkitChatWindow.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = AgenticToolkitChatWindow.framework;
-			remoteRef = 10CA56E3AC40E21109B144A0 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		A25AA4BBEA8259AF2641AC89 /* AgenticToolkitAIPlugins.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = AgenticToolkitAIPlugins.framework;
-			remoteRef = 88F034E31DD744E3D8B4D473 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
 		B1FE388575634374C6EF31CA /* AgenticToolkitCoreUI.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = AgenticToolkitCoreUI.framework;
 			remoteRef = 49121C9EF75F34F8337F1A93 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B28C2A4A2FA288B200F2F7FD /* AgenticToolkitCoreMacOS.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = AgenticToolkitCoreMacOS.framework;
+			remoteRef = B28C2A492FA288B200F2F7FD /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B28C2A522FA288B200F2F7FD /* AgenticToolkitMacOS.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = AgenticToolkitMacOS.framework;
+			remoteRef = B28C2A512FA288B200F2F7FD /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		CF66E50A0D1A855958BEA428 /* AgenticToolkitCore.framework */ = {
@@ -919,35 +795,10 @@
 			target = 40E8B4B9D4D13B107306FAD1 /* OpenAI */;
 			targetProxy = 8E9C5C4B57CCB85363860865 /* PBXContainerItemProxy */;
 		};
-		1B30FE2745063A09EF53FE1A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitAIPlugins;
-			targetProxy = 2BA53D34DA0299009A0469C3 /* PBXContainerItemProxy */;
-		};
-		2056F658D176ED15369459B0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitSettingsWindow;
-			targetProxy = 8DD02408E07A1A2E1BDA73F7 /* PBXContainerItemProxy */;
-		};
 		23AF41FAFB6C9CADCCE36C10 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = BA37AF4B2F16BE7AB23931CA /* Google */;
 			targetProxy = 307C883E7C228611087C0E20 /* PBXContainerItemProxy */;
-		};
-		24EF5BDC21C92A08997D4241 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitScripting;
-			targetProxy = CF311F327C75BC5248E7023E /* PBXContainerItemProxy */;
-		};
-		27087D8DFAB1AA582BD1F429 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitScripting;
-			targetProxy = FEB1B157B8D7E524C42AB57C /* PBXContainerItemProxy */;
-		};
-		297482506FD35BA09F832E94 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitSettingsWindow;
-			targetProxy = CCA53F491E2A3C38F8C0E55A /* PBXContainerItemProxy */;
 		};
 		2F6214C10AE0918FA1238ECE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -959,30 +810,10 @@
 			name = AgenticToolkitCoreUI;
 			targetProxy = BB97026E39272E7F8E606214 /* PBXContainerItemProxy */;
 		};
-		30CDC6BC2AF5B4DF9076526D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitSettingsWindow;
-			targetProxy = F83FB12DB0A777E906B7BDFF /* PBXContainerItemProxy */;
-		};
-		31AD50AA6AB23825FA888A12 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitSettingsWindow;
-			targetProxy = A8FF8A422907B090144E592F /* PBXContainerItemProxy */;
-		};
 		33FE3556D9EED58D85381987 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCoreUI;
 			targetProxy = E014F487ACD1DB023FF06B43 /* PBXContainerItemProxy */;
-		};
-		36C932794E092B91C2661B70 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitAIPlugins;
-			targetProxy = 7C5CE2A42180512640C0B91E /* PBXContainerItemProxy */;
-		};
-		3ADB5F2C203EE92A09C466D0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitChatWindow;
-			targetProxy = 40360A8E0715C523CE1DAC50 /* PBXContainerItemProxy */;
 		};
 		58B0E91EFFF5733F13902F9A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -994,50 +825,70 @@
 			name = AgenticToolkitCore;
 			targetProxy = 97291B4790BAA7A3A1162ECC /* PBXContainerItemProxy */;
 		};
-		5C71160333842A41FAF2B538 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitChatWindow;
-			targetProxy = 3FAAC9B44FE7292CEB5D2E95 /* PBXContainerItemProxy */;
-		};
-		5D8485C9995020A5A563567A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitAIPlugins;
-			targetProxy = D5781EBCE6968EAF291FE146 /* PBXContainerItemProxy */;
-		};
 		7A4C7536F16E0B79888FCD5F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCore;
 			targetProxy = 4CC90DECE451BFF4A540AA7A /* PBXContainerItemProxy */;
-		};
-		8C51B47836930750C32332E3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitScripting;
-			targetProxy = 42D2C049431A82D08155FB2B /* PBXContainerItemProxy */;
-		};
-		945B2AF7C3FAA942640D25F3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitAIPlugins;
-			targetProxy = BDC08D0CCCF0ADF8BCB8ACF5 /* PBXContainerItemProxy */;
 		};
 		96F598025276C350A67BA411 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4902207C4C9CDF009D44C9FA /* OpenAICompatible */;
 			targetProxy = A375FD72EAA4A9D8E6B7AB12 /* PBXContainerItemProxy */;
 		};
-		A3D98163F86BC9483964DBA8 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitScripting;
-			targetProxy = DCD455C19960A2634F6B319A /* PBXContainerItemProxy */;
-		};
 		A7C82D478ED423A7FC54C7F2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCoreUI;
 			targetProxy = 412C808986443A07B7661CF4 /* PBXContainerItemProxy */;
 		};
-		AF4CF327B59F426902AC9E10 /* PBXTargetDependency */ = {
+		B27CD2DB2FA2884C004B7DE8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			name = AgenticToolkitAIPlugins;
-			targetProxy = 7DE22875B01DF0F4883408DA /* PBXContainerItemProxy */;
+			name = AgenticToolkitCoreMacOS;
+			targetProxy = B27CD2DA2FA2884C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2DD2FA2884C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitMacOS;
+			targetProxy = B27CD2DC2FA2884C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2DF2FA2885C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCoreMacOS;
+			targetProxy = B27CD2DE2FA2885C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2E12FA2885C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitMacOS;
+			targetProxy = B27CD2E02FA2885C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2E32FA2886C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCoreMacOS;
+			targetProxy = B27CD2E22FA2886C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2E52FA2886C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitMacOS;
+			targetProxy = B27CD2E42FA2886C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2E72FA28874004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCoreMacOS;
+			targetProxy = B27CD2E62FA28874004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2E92FA28874004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitMacOS;
+			targetProxy = B27CD2E82FA28874004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2EB2FA2887C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitCoreMacOS;
+			targetProxy = B27CD2EA2FA2887C004B7DE8 /* PBXContainerItemProxy */;
+		};
+		B27CD2ED2FA2887C004B7DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AgenticToolkitMacOS;
+			targetProxy = B27CD2EC2FA2887C004B7DE8 /* PBXContainerItemProxy */;
 		};
 		BBDE29717DB0B14F5E3E8212 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1049,40 +900,15 @@
 			target = 69B12492E5D241F6EF3DAC75 /* ClaudeLocal */;
 			targetProxy = D4E061321EE41AAB61210FAF /* PBXContainerItemProxy */;
 		};
-		D2C279A2F34833B7523A3126 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitChatWindow;
-			targetProxy = A620A7D1F64D069B23DF398B /* PBXContainerItemProxy */;
-		};
-		D4295FD645508CEA8C4B1669 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitScripting;
-			targetProxy = 172024E23D894C85DB6B1D2F /* PBXContainerItemProxy */;
-		};
-		D66BD6F7EE3C02AC4A24A50E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitChatWindow;
-			targetProxy = 4291E746F9A5145A153EE6E0 /* PBXContainerItemProxy */;
-		};
 		D7487455733E9E180F04AC58 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCore;
 			targetProxy = B8B16DD4E67DE0B147CAC0A0 /* PBXContainerItemProxy */;
 		};
-		DB2B52A85B929FF1009C11F0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitSettingsWindow;
-			targetProxy = CB40C51F53935C8A8206FB53 /* PBXContainerItemProxy */;
-		};
 		DE1F042949C3243EAC540BFF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCore;
 			targetProxy = 2841EABE660F3A4F34A9298F /* PBXContainerItemProxy */;
-		};
-		EF865CBA0BC5F4B8B43869E2 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = AgenticToolkitChatWindow;
-			targetProxy = 939B5966528B77E8FE2A1F87 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
