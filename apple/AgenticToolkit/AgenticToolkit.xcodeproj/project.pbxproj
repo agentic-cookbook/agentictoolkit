@@ -55,6 +55,7 @@
 		0D2E2A534D3AE72A087A7765 /* ScreenMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11487F0099972A68141118FF /* ScreenMatcherTests.swift */; };
 		0E9ABF4774F8B8760F1FB631 /* ScriptingContributor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A533B6A1F6A9441BB27D717 /* ScriptingContributor.swift */; };
 		F22A5D6B01E595716D0925AC /* ActivateAppCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D2858C1DB1F1E63A88E3D7A /* ActivateAppCommand.swift */; };
+		3DDEF6331C897A0715F5BB3D /* SettingsWindowCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1FC00B627F5E0E8739FC9D8 /* SettingsWindowCommands.swift */; };
 		16096C68C733B4F3049287CA /* ScriptingHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA7717F495A2013514B3FA /* ScriptingHost.swift */; };
 		B9EDD5A98934CC2C27315878 /* ScriptingRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43D297D5C616341B252C515 /* ScriptingRouter.swift */; };
 		0F52124772A431237C5F45F0 /* LogLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C80EC3C20D1602D7383A72 /* LogLine.swift */; };
@@ -253,6 +254,8 @@
 		B2A94ABB2FA1630900ED0CEB /* UserDefaultsWindowStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D236E01DC8A557068EA02548 /* UserDefaultsWindowStateStorage.swift */; };
 		B2A94ABC2FA1630900ED0CEB /* SingleWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE1BBE6C309241514ED33D0 /* SingleWindowController.swift */; };
 		B2A94ABD2FA1630900ED0CEB /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61D195496C5D5D7F946A4A1A /* WindowManager.swift */; };
+		68A7EBFB032C3EC472FD605C /* WindowFrameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52E149B909C3BFB518BEE27A /* WindowFrameManager.swift */; };
+		E7528B803DCFE20B4D88BFCD /* WindowRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02793945193B5E155D95D260 /* WindowRegistry.swift */; };
 		B2A94ABE2FA1630900ED0CEB /* PerIDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8FAD707C8E96D77BF6D792 /* PerIDWindowController.swift */; };
 		B2A94ABF2FA1630900ED0CEB /* WindowActivationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0598E1E6B9C0D9A2F765B9 /* WindowActivationTarget.swift */; };
 		B2A94AC02FA1630900ED0CEB /* PersistedWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F0B3AA03B4434860B371182 /* PersistedWindowState.swift */; };
@@ -678,6 +681,7 @@
 		5901CA876FAFB7BB1CECC87F /* CodableIgnored.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableIgnored.swift; sourceTree = "<group>"; };
 		5A533B6A1F6A9441BB27D717 /* ScriptingContributor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptingContributor.swift; sourceTree = "<group>"; };
 		8D2858C1DB1F1E63A88E3D7A /* ActivateAppCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivateAppCommand.swift; sourceTree = "<group>"; };
+		E1FC00B627F5E0E8739FC9D8 /* SettingsWindowCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowCommands.swift; sourceTree = "<group>"; };
 		D3EA7717F495A2013514B3FA /* ScriptingHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptingHost.swift; sourceTree = "<group>"; };
 		F43D297D5C616341B252C515 /* ScriptingRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptingRouter.swift; sourceTree = "<group>"; };
 		5A76CA785962BC769253EF70 /* SummarizerDebugCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizerDebugCoordinator.swift; sourceTree = "<group>"; };
@@ -687,6 +691,8 @@
 		602EBD5FCAEB6A6685393F52 /* SQLiteProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteProjectStore.swift; sourceTree = "<group>"; };
 		61310A916E242BA60A9FE8C1 /* AgenticToolkitCoreMacOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AgenticToolkitCoreMacOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		61D195496C5D5D7F946A4A1A /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
+		52E149B909C3BFB518BEE27A /* WindowFrameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowFrameManager.swift; sourceTree = "<group>"; };
+		02793945193B5E155D95D260 /* WindowRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowRegistry.swift; sourceTree = "<group>"; };
 		62B4BE4500D545AD0E18EEDC /* LanguageDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetection.swift; sourceTree = "<group>"; };
 		649DBA98408E35AF8452119D /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		662D7755AAC5265FD6D2BD78 /* SessionLayoutStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLayoutStateTests.swift; sourceTree = "<group>"; };
@@ -1208,6 +1214,7 @@
 			isa = PBXGroup;
 			children = (
 				8D2858C1DB1F1E63A88E3D7A /* ActivateAppCommand.swift */,
+				E1FC00B627F5E0E8739FC9D8 /* SettingsWindowCommands.swift */,
 			);
 			path = Scripting;
 			sourceTree = "<group>";
@@ -1275,6 +1282,8 @@
 				2A0598E1E6B9C0D9A2F765B9 /* WindowActivationTarget.swift */,
 				1EB7583525C2DD3A9BBE45D6 /* WindowActivationTester.swift */,
 				61D195496C5D5D7F946A4A1A /* WindowManager.swift */,
+				52E149B909C3BFB518BEE27A /* WindowFrameManager.swift */,
+				02793945193B5E155D95D260 /* WindowRegistry.swift */,
 				EC5FC2B28A30AAD2FA2B53F7 /* WindowPosition.swift */,
 				1A41D9015BE50BF10CFC3F47 /* WindowScreenshot.swift */,
 				6D3D38FEBAC00B8AF6B06AE3 /* WindowSpec.swift */,
@@ -2142,6 +2151,8 @@
 				B2A94ABB2FA1630900ED0CEB /* UserDefaultsWindowStateStorage.swift in Sources */,
 				B2A94ABC2FA1630900ED0CEB /* SingleWindowController.swift in Sources */,
 				B2A94ABD2FA1630900ED0CEB /* WindowManager.swift in Sources */,
+				68A7EBFB032C3EC472FD605C /* WindowFrameManager.swift in Sources */,
+				E7528B803DCFE20B4D88BFCD /* WindowRegistry.swift in Sources */,
 				B2A94ABE2FA1630900ED0CEB /* PerIDWindowController.swift in Sources */,
 				B2A94ABF2FA1630900ED0CEB /* WindowActivationTarget.swift in Sources */,
 				B2A94AC02FA1630900ED0CEB /* PersistedWindowState.swift in Sources */,
@@ -2242,6 +2253,7 @@
 				9E878857579C919D0D4DBDA5 /* ClosureMenuItemTarget.swift in Sources */,
 				0E9ABF4774F8B8760F1FB631 /* ScriptingContributor.swift in Sources */,
 				F22A5D6B01E595716D0925AC /* ActivateAppCommand.swift in Sources */,
+				3DDEF6331C897A0715F5BB3D /* SettingsWindowCommands.swift in Sources */,
 				16096C68C733B4F3049287CA /* ScriptingHost.swift in Sources */,
 				B9EDD5A98934CC2C27315878 /* ScriptingRouter.swift in Sources */,
 				FE3C3753B9D2F7879A48431A /* ScriptableSession.swift in Sources */,

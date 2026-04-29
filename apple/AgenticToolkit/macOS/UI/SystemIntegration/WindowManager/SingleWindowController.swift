@@ -39,6 +39,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         self.windowID = windowID
         super.init(window: nil)
         self.contentViewController = contentViewController
+        WindowManager.shared.registry.register(self)
     }
 
     @available(*, unavailable)
@@ -115,7 +116,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         // spec → geometric center fallback. A post-call `window.center()`
         // here would override that with AppKit's upper-center (y ≈ 1/3
         // from top), which is what it does despite the misleading name.
-        WindowManager.shared.restoreFrame(for: newWindow, id: windowID)
+        WindowManager.shared.frames.restoreFrame(for: newWindow, id: windowID)
         configureWindow(newWindow)
         // Wire the delegate last — setting `contentViewController` above
         // resizes the window to the view's size and posts
@@ -168,12 +169,12 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     open func windowDidMove(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
-        WindowManager.shared.saveFrame(for: window, id: windowID)
+        WindowManager.shared.frames.saveFrame(for: window, id: windowID)
     }
 
     open func windowDidResize(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
-        WindowManager.shared.saveFrame(for: window, id: windowID)
+        WindowManager.shared.frames.saveFrame(for: window, id: windowID)
     }
 
     open func windowWillClose(_ notification: Notification) {}

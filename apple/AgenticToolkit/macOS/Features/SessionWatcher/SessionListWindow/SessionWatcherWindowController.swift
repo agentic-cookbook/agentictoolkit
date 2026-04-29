@@ -110,7 +110,7 @@ extension SessionWatcher {
         public func hidePanel() {
             UserDefaults.standard.set(false, forKey: Self.visibilityDefaultsKey)
             guard didShowOnce, let w = window else { return }
-            WindowManager.shared.saveFrame(for: w, id: windowID)
+            WindowManager.shared.frames.saveFrame(for: w, id: windowID)
             w.orderOut(nil)
             logger.debug("SessionWatcherSession window hidden")
         }

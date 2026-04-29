@@ -104,7 +104,7 @@ final class SingleWindowControllerTests: XCTestCase {
         // WindowSpec with `.center` and let WindowManager.restoreFrame do
         // the positioning via FrameCalculator.defaultFrame.
         let id = "test.center.spec.\(UUID().uuidString)"
-        WindowManager.shared.register(
+        WindowManager.shared.frames.register(
             id: id,
             spec: WindowSpec(
                 defaultSize: NSSize(width: 800, height: 500),
@@ -113,7 +113,7 @@ final class SingleWindowControllerTests: XCTestCase {
                 persistsFrame: true
             )
         )
-        WindowManager.shared.clearSavedState(for: id)
+        WindowManager.shared.frames.clearSavedState(for: id)
 
         let wc = ViewControllerBasedWC(windowID: id)
         wc.showWindow()
@@ -140,7 +140,7 @@ final class SingleWindowControllerTests: XCTestCase {
         // never reach `saveFrame`, so `restoreFrame` sees a clean "no saved
         // state" and applies the spec's default center.
         let id = "test.delegate.order.\(UUID().uuidString)"
-        WindowManager.shared.register(
+        WindowManager.shared.frames.register(
             id: id,
             spec: WindowSpec(
                 defaultSize: NSSize(width: 800, height: 500),
@@ -149,7 +149,7 @@ final class SingleWindowControllerTests: XCTestCase {
                 persistsFrame: true
             )
         )
-        WindowManager.shared.clearSavedState(for: id)
+        WindowManager.shared.frames.clearSavedState(for: id)
 
         let wc = ViewControllerBasedWC(windowID: id)
         wc.showWindow()
@@ -159,7 +159,7 @@ final class SingleWindowControllerTests: XCTestCase {
         // must correspond to the spec's default position, not the pre-
         // restore default NSWindow frame. Read the raw persisted state via
         // the shared storage.
-        if let saved = WindowManager.shared.storage.loadState(for: id) {
+        if let saved = WindowManager.shared.frames.storage.loadState(for: id) {
             XCTAssertEqual(saved.width, 800, accuracy: 2.0,
                 "saved width must reflect spec default, not pre-restore NSWindow default")
             XCTAssertEqual(saved.height, 500, accuracy: 2.0,
