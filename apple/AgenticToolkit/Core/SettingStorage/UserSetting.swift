@@ -58,8 +58,14 @@ public class UserSettingObserver<Value: Codable & Sendable> {
         self.setting = setting
         self.onChange = onChange
 
+        // `@Published` emits inside `willSet`, so subscribers reading
+        // `setting.currentValue` synchronously would still see the prior
+        // value. Hop to the next runloop tick so the assignment has landed
+        // before observers fire — matters for UI views that rebind from
+        // `viewModel.value` instead of using the `newValue` parameter.
         self.cancellable = setting.$currentValue
             .dropFirst()
+            .receive(on: RunLoop.main)
             .sink { [weak self] newValue in
                 guard let self else { return }
                 self.onChange?(newValue)
