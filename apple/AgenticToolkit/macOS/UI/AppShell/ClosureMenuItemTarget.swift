@@ -15,7 +15,7 @@ public final class ClosureMenuItemTarget: NSObject {
         self.isEnabled = isEnabled
     }
 
-    @objc public func perform(_ sender: Any?) {
+    @objc(performMenuAction:) public func performMenuAction(_ sender: Any?) {
         action()
     }
 

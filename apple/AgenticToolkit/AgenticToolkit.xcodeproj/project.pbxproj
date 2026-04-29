@@ -1009,7 +1009,6 @@
 			children = (
 				B2A94AD02FA1632000ED0CEB /* UI */,
 				B2A94AB42FA1620500ED0CEB /* Features */,
-				B2A94AFB2FA23C0F00ED0CEB /* New Group 2 */,
 				3FC61ABAC771A1043951BD2A /* Sessions */,
 				B2A94AFA2FA23BE800ED0CEB /* New Group */,
 				A47F6DFE117AC17601E2520F /* Scripting */,
@@ -1590,13 +1589,6 @@
 			children = (
 			);
 			path = "New Group";
-			sourceTree = "<group>";
-		};
-		B2A94AFB2FA23C0F00ED0CEB /* New Group 2 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = "New Group 2";
 			sourceTree = "<group>";
 		};
 		B2A94AFF2FA2401400ED0CEB /* SessionListWindow */ = {
