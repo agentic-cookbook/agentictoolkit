@@ -3,7 +3,7 @@ options:
   bundleIdPrefix: com.mikefullerton.agentictoolkit
   developmentLanguage: en
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "26.0"
   groupSortPosition: top
   generateEmptyDirectories: false
   xcodeVersion: "2640"
@@ -12,8 +12,9 @@ settings:
   base:
     SWIFT_VERSION: "6.3"
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
     SWIFT_STRICT_CONCURRENCY: complete
-    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
     SDKROOT: macosx
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
