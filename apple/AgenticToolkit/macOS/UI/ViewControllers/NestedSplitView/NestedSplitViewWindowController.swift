@@ -25,6 +25,15 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     /// when the user splits / closes panes inside a tab.
     private var splitControllersByTabID: [UUID: NestingSplitViewController] = [:]
 
+    /// Last focused leaf nodeID per tab — written through every time the
+    /// window's first responder changes inside the active tab. Persisted
+    /// alongside the layout tree on the next save.
+    private var focusedLeafByTabID: [UUID: UUID] = [:]
+
+    private var firstResponderObserver: NSObjectProtocol?
+    private var pendingFocusPersist: DispatchWorkItem?
+    private static let focusPersistDelay: DispatchTimeInterval = .milliseconds(250)
+
     public init(document: NestedSplitViewDocument) {
         self.splitDocument = document
         self.tabbed = TabbedViewController()
@@ -44,6 +53,12 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         installInitialTabs()
     }
 
+    isolated deinit {
+        if let firstResponderObserver {
+            NotificationCenter.default.removeObserver(firstResponderObserver)
+        }
+    }
+
     public override func showWindow(_ sender: Any?) {
         // `NSWindowController.init(window: nil)` (which SingleWindowController
         // chains into) leaves `isWindowLoaded = true`, so the default
@@ -51,6 +66,60 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         // `NSDocument.showWindows()` actually produces a visible window.
         if window == nil { loadWindow() }
         super.showWindow(sender)
+        installFirstResponderObserverIfNeeded()
+        restoreFocusedLeafForActiveTab()
+    }
+
+    // MARK: - Focused-leaf tracking
+
+    private func installFirstResponderObserverIfNeeded() {
+        guard firstResponderObserver == nil, let window else { return }
+        // `NSWindow.didUpdateNotification` fires on every event-loop turn
+        // where the window state changed — including first-responder
+        // changes. Cheap to observe, debounced before we hit SQLite.
+        firstResponderObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didUpdateNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.refreshFocusedLeaf()
+            }
+        }
+    }
+
+    private func refreshFocusedLeaf() {
+        guard let activeTabID = tabbed.selectedTabID,
+              let activeSplit = splitControllersByTabID[activeTabID] else { return }
+        let newLeaf = activeSplit.focusedLeafNodeID
+        let prior = focusedLeafByTabID[activeTabID]
+        guard newLeaf != prior else { return }
+        if let newLeaf {
+            focusedLeafByTabID[activeTabID] = newLeaf
+        } else {
+            focusedLeafByTabID.removeValue(forKey: activeTabID)
+        }
+        scheduleFocusPersist()
+    }
+
+    private func scheduleFocusPersist() {
+        pendingFocusPersist?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.persistAllTabs()
+        }
+        pendingFocusPersist = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.focusPersistDelay, execute: work)
+    }
+
+    private func restoreFocusedLeafForActiveTab() {
+        guard let activeTabID = tabbed.selectedTabID,
+              let activeSplit = splitControllersByTabID[activeTabID],
+              let focusedNodeID = focusedLeafByTabID[activeTabID] else { return }
+        // Defer one runloop tick so the tab's view hierarchy is fully
+        // mounted before we try to make a leaf first responder.
+        DispatchQueue.main.async {
+            activeSplit.makeLeafFirstResponder(nodeID: focusedNodeID)
+        }
     }
 
     // MARK: - Tab installation
@@ -65,6 +134,9 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
             )
             wireLayoutCallback(on: split, tabID: record.id)
             splitControllersByTabID[record.id] = split
+            if let focusedNodeID = record.focusedNodeID {
+                focusedLeafByTabID[record.id] = focusedNodeID
+            }
             tabbed.addTab(.init(id: record.id, title: record.title, viewController: split))
         }
         tabbed.selectedTabID = initial.activeTabID
@@ -87,7 +159,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
                 id: tab.id,
                 title: tab.title,
                 root: split.snapshotNode(),
-                focusedNodeID: nil // Phase 5 fills this in
+                focusedNodeID: focusedLeafByTabID[tab.id]
             ))
         }
         splitDocument.persistTabs(records, activeTabID: tabbed.selectedTabID)
@@ -122,6 +194,7 @@ extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
     }
 
     public func tabbedViewController(_ controller: TabbedViewController, didSelectTab id: UUID) {
+        restoreFocusedLeafForActiveTab()
         persistAllTabs()
     }
 
@@ -130,6 +203,7 @@ extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
         guard controller.tabs.count > 1 else { return }
         controller.removeTab(id: id)
         splitControllersByTabID.removeValue(forKey: id)
+        focusedLeafByTabID.removeValue(forKey: id)
         persistAllTabs()
     }
 
