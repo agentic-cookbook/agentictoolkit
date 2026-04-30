@@ -159,14 +159,14 @@ targets:
         codeSign: true
 
 aggregateTargets:
-  AgenticToolkitAll:
+  AgenticToolkitMacOSAll:
     targets:
       - AgenticToolkitCore
       - AgenticToolkitCoreUI
       - AgenticToolkitCoreMacOS
       - AgenticToolkitMacOS
 
-  AgenticToolkitTests:
+  AgenticToolkitMacOSTestsAll:
     targets:
       - AgenticToolkitCore
       - AgenticToolkitCoreMacOS

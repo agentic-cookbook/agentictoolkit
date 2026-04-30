@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B417D4C5F1E47358DAFB600D"
-               BuildableName = "AllPlugins"
-               BlueprintName = "AllPlugins"
+               BlueprintIdentifier = "0B633CF7EA0D73DBF4070B3D"
+               BuildableName = "AIPluginsMacOSAll"
+               BlueprintName = "AIPluginsMacOSAll"
                ReferencedContainer = "container:AIPlugins.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B417D4C5F1E47358DAFB600D"
-            BuildableName = "AllPlugins"
-            BlueprintName = "AllPlugins"
+            BlueprintIdentifier = "0B633CF7EA0D73DBF4070B3D"
+            BuildableName = "AIPluginsMacOSAll"
+            BlueprintName = "AIPluginsMacOSAll"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -54,9 +54,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B417D4C5F1E47358DAFB600D"
-            BuildableName = "AllPlugins"
-            BlueprintName = "AllPlugins"
+            BlueprintIdentifier = "0B633CF7EA0D73DBF4070B3D"
+            BuildableName = "AIPluginsMacOSAll"
+            BlueprintName = "AIPluginsMacOSAll"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -74,9 +74,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B417D4C5F1E47358DAFB600D"
-            BuildableName = "AllPlugins"
-            BlueprintName = "AllPlugins"
+            BlueprintIdentifier = "0B633CF7EA0D73DBF4070B3D"
+            BuildableName = "AIPluginsMacOSAll"
+            BlueprintName = "AIPluginsMacOSAll"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

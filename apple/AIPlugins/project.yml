@@ -253,7 +253,7 @@ targets:
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
 
 aggregateTargets:
-  AllPlugins:
+  AIPluginsMacOSAll:
     targets:
       - ClaudeAPI
       - ClaudeLocal
@@ -283,10 +283,10 @@ schemes:
     archive:
       config: Release
 
-  AllPlugins:
+  AIPluginsMacOSAll:
     build:
       targets:
-        AllPlugins: all
+        AIPluginsMacOSAll: all
     run:
       config: Debug
     profile:

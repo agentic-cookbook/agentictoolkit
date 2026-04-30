@@ -35,7 +35,7 @@ xcodebuild -workspace apple/AgenticToolkit.xcworkspace \
 xcodebuild -workspace apple/AgenticToolkit.xcworkspace -scheme AgenticToolkitApp ... build
 
 # All plugins:
-xcodebuild -workspace apple/AgenticToolkit.xcworkspace -scheme AllPlugins ... build
+xcodebuild -workspace apple/AgenticToolkit.xcworkspace -scheme AIPluginsMacOSAll ... build
 
 # Or open the workspace in Xcode:
 open apple/AgenticToolkit.xcworkspace
@@ -62,8 +62,8 @@ Cross-platform repo with per-platform directories:
 `AgenticToolkitCore` is Foundation-only; `AgenticToolkitCoreUI` holds cross-cutting AppKit utilities; `AgenticToolkitCoreMacOS` adds macOS-only foundations; `AgenticToolkitMacOS` is the feature-rich macOS framework consumed by the host app, plugins, Whippet, and Stenographer.
 
 Aggregate targets defined in `apple/AgenticToolkit/project.yml`:
-- `AgenticToolkitAll` — builds the four frameworks
-- `AgenticToolkitTests` — builds the four frameworks plus all four test bundles
+- `AgenticToolkitMacOSAll` — builds the four frameworks
+- `AgenticToolkitMacOSTestsAll` — builds the four frameworks plus all four test bundles
 
 ### Plugin runtime model
 

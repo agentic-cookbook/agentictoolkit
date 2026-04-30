@@ -7,41 +7,41 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		B564FCBCAD75FE858541B041 /* AgenticToolkitAll */ = {
+		08C790CB80E02BE304F322E8 /* AgenticToolkitMacOSTestsAll */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 2E15F9E222B0B8FBF0C075DF /* Build configuration list for PBXAggregateTarget "AgenticToolkitAll" */;
+			buildConfigurationList = CBD4393B651E440500EF27D2 /* Build configuration list for PBXAggregateTarget "AgenticToolkitMacOSTestsAll" */;
 			buildPhases = (
 			);
 			dependencies = (
-				991C721CEE06A25AA892B295 /* PBXTargetDependency */,
-				DA44B01CA83F32006DF44982 /* PBXTargetDependency */,
-				E5A29FD59EB60B3A3898F632 /* PBXTargetDependency */,
-				91EC256F7E559C998253B1EE /* PBXTargetDependency */,
+				CE24DEB9642EDE54C68D8ACF /* PBXTargetDependency */,
+				D4C12EBAF0664D1B4258EAB8 /* PBXTargetDependency */,
+				20CB63307B386944748F33DB /* PBXTargetDependency */,
+				C9332BDC671F910098885050 /* PBXTargetDependency */,
+				DB75E398C6A4EEBC3545AE16 /* PBXTargetDependency */,
+				ED9F38BBFF4726E7BA5A9FA6 /* PBXTargetDependency */,
+				089EB5834A552F0569C49CC2 /* PBXTargetDependency */,
+				8166F64FC0AD56683DCABF35 /* PBXTargetDependency */,
 			);
-			name = AgenticToolkitAll;
+			name = AgenticToolkitMacOSTestsAll;
 			packageProductDependencies = (
 			);
-			productName = AgenticToolkitAll;
+			productName = AgenticToolkitMacOSTestsAll;
 		};
-		F39F8B2DD78905102E10739E /* AgenticToolkitTests */ = {
+		71FF76228FFC8AFA556CF5AE /* AgenticToolkitMacOSAll */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 3BB16C2A746E849C290F425D /* Build configuration list for PBXAggregateTarget "AgenticToolkitTests" */;
+			buildConfigurationList = 1885ED772652F8B380EE198C /* Build configuration list for PBXAggregateTarget "AgenticToolkitMacOSAll" */;
 			buildPhases = (
 			);
 			dependencies = (
-				BD0D6951250C69DE8406C318 /* PBXTargetDependency */,
-				F21EF2B4FF1B1D57677F1EFC /* PBXTargetDependency */,
-				EA14BF2F98B2298A070A9B2C /* PBXTargetDependency */,
-				9A9F68AB10AD8A0D27E81DA1 /* PBXTargetDependency */,
-				7B1693505E1EE05916088CEB /* PBXTargetDependency */,
-				01828709CE1B8A7C1339F3DF /* PBXTargetDependency */,
-				90AB27F00110BC31605CA6BB /* PBXTargetDependency */,
-				104D04F7C3F5AC961291F224 /* PBXTargetDependency */,
+				1ED5C420446C4AE72D1F0AA2 /* PBXTargetDependency */,
+				440165D5CA94B900DA88BEF9 /* PBXTargetDependency */,
+				716F92CF239D2E9D470DFA98 /* PBXTargetDependency */,
+				2F3E550ABE8EBDB58D4F1E78 /* PBXTargetDependency */,
 			);
-			name = AgenticToolkitTests;
+			name = AgenticToolkitMacOSAll;
 			packageProductDependencies = (
 			);
-			productName = AgenticToolkitTests;
+			productName = AgenticToolkitMacOSAll;
 		};
 /* End PBXAggregateTarget section */
 
@@ -349,7 +349,7 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		195F734D45A400429EE207C5 /* PBXContainerItemProxy */ = {
+		0DEE7F82B34601737AF726F9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
@@ -370,26 +370,12 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		2459E72C7E0D2B74391FE3CB /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 0C146E1D667CC0539A0AE0E6;
-			remoteInfo = AgenticToolkitCoreUITests;
-		};
 		294273EE4FA5D4110B8C0345 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
-		};
-		306A1E728A51F18C31D1496F /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F2116E5AFEEF6DE97574A067;
-			remoteInfo = AgenticToolkitCoreMacOSTests;
 		};
 		351700E9725923B37583377F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -398,6 +384,20 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
+		4DB3446B7D2779B255A45E59 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
+		};
+		5DB967D0AE15DB02D2ABE9CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F7587C3114CC9BBF138D57B4;
+			remoteInfo = AgenticToolkitCoreTests;
+		};
 		65F4A9E94B2CDF8542C29BD6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
@@ -405,26 +405,19 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		69DF675961F2183C06EFF567 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
-			remoteInfo = AgenticToolkitMacOS;
-		};
-		6EE21F4A52D3817A1DD1B229 /* PBXContainerItemProxy */ = {
+		6B3EE75DFD1A458F5C548209 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		84AD8402E1C394B472475AAC /* PBXContainerItemProxy */ = {
+		6E9EE596EE92EB16C1D7F0B8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
-			remoteInfo = AgenticToolkitCore;
+			remoteGlobalIDString = 0C146E1D667CC0539A0AE0E6;
+			remoteInfo = AgenticToolkitCoreUITests;
 		};
 		84E2EE43F6C46EA7C3C3C0A4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -447,19 +440,26 @@
 			remoteGlobalIDString = 1E3A144560D2664472251EE8;
 			remoteInfo = AgenticToolkitCoreMacOS;
 		};
-		9512D94F3AE0830DEBFDC4A6 /* PBXContainerItemProxy */ = {
+		9AACE798ED5F289101BFB900 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
-			remoteInfo = AgenticToolkitMacOS;
+			remoteGlobalIDString = FB6FD55DBA606361A9BEEB56;
+			remoteInfo = AgenticToolkitMacOSTests;
 		};
-		B28096A20CD5048F5000249F /* PBXContainerItemProxy */ = {
+		A26F581EC9854CE69F160EB6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
+		};
+		A3DED08A41501E4AF81BA24D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
+			remoteInfo = AgenticToolkitCore;
 		};
 		C1EE7A59084843A50B59FD2C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -468,12 +468,12 @@
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
 		};
-		C8478AA05B08C2C97036C615 /* PBXContainerItemProxy */ = {
+		C7D164D9254C2065EDEAADCD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
-			remoteInfo = AgenticToolkitCoreUI;
+			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
+			remoteInfo = AgenticToolkitMacOS;
 		};
 		D2D9AABD1BEEA234E4128EE3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -489,13 +489,6 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		DFD7026BDEB696654525C1ED /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1E3A144560D2664472251EE8;
-			remoteInfo = AgenticToolkitCoreMacOS;
-		};
 		E57FE2C4AA4F3FFB44D4E395 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
@@ -503,12 +496,26 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		F8D985DD0C51550C5858BDC3 /* PBXContainerItemProxy */ = {
+		ED9E6993BA6732B44B2D01FA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F7587C3114CC9BBF138D57B4;
-			remoteInfo = AgenticToolkitCoreTests;
+			remoteGlobalIDString = F2116E5AFEEF6DE97574A067;
+			remoteInfo = AgenticToolkitCoreMacOSTests;
+		};
+		F1B612B9BE40FBD1D502F974 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E3A144560D2664472251EE8;
+			remoteInfo = AgenticToolkitCoreMacOS;
+		};
+		F68496B74A67B7FD0C3F3FBF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
+			remoteInfo = AgenticToolkitCoreUI;
 		};
 		F8EBCAB1B465E854C14CAFF7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -523,13 +530,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
-		};
-		FEAFF6C4AA5E49C1022E781B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = FB6FD55DBA606361A9BEEB56;
-			remoteInfo = AgenticToolkitMacOSTests;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -1809,7 +1809,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_ABC64BBE-5B26-4CC9-89D4-AA6120466777" /* Settings */ = {
+		"TEMP_9C51C4A5-09F0-4F0D-A1F7-2B10356DEA19" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2014,7 +2014,6 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B564FCBCAD75FE858541B041 /* AgenticToolkitAll */,
 				003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */,
 				1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */,
 				F2116E5AFEEF6DE97574A067 /* AgenticToolkitCoreMacOSTests */,
@@ -2022,8 +2021,9 @@
 				AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */,
 				0C146E1D667CC0539A0AE0E6 /* AgenticToolkitCoreUITests */,
 				365680A3AF7F55383EB7E763 /* AgenticToolkitMacOS */,
+				71FF76228FFC8AFA556CF5AE /* AgenticToolkitMacOSAll */,
 				FB6FD55DBA606361A9BEEB56 /* AgenticToolkitMacOSTests */,
-				F39F8B2DD78905102E10739E /* AgenticToolkitTests */,
+				08C790CB80E02BE304F322E8 /* AgenticToolkitMacOSTestsAll */,
 			);
 		};
 /* End PBXProject section */
@@ -2354,20 +2354,35 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		01828709CE1B8A7C1339F3DF /* PBXTargetDependency */ = {
+		089EB5834A552F0569C49CC2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F7587C3114CC9BBF138D57B4 /* AgenticToolkitCoreTests */;
-			targetProxy = F8D985DD0C51550C5858BDC3 /* PBXContainerItemProxy */;
-		};
-		104D04F7C3F5AC961291F224 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = FB6FD55DBA606361A9BEEB56 /* AgenticToolkitMacOSTests */;
-			targetProxy = FEAFF6C4AA5E49C1022E781B /* PBXContainerItemProxy */;
+			target = 0C146E1D667CC0539A0AE0E6 /* AgenticToolkitCoreUITests */;
+			targetProxy = 6E9EE596EE92EB16C1D7F0B8 /* PBXContainerItemProxy */;
 		};
 		1484B0BA3605B951C51F4153 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 365680A3AF7F55383EB7E763 /* AgenticToolkitMacOS */;
 			targetProxy = 85777C531EB5266185B48185 /* PBXContainerItemProxy */;
+		};
+		1ED5C420446C4AE72D1F0AA2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
+			targetProxy = 6B3EE75DFD1A458F5C548209 /* PBXContainerItemProxy */;
+		};
+		20CB63307B386944748F33DB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */;
+			targetProxy = F68496B74A67B7FD0C3F3FBF /* PBXContainerItemProxy */;
+		};
+		2F3E550ABE8EBDB58D4F1E78 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 365680A3AF7F55383EB7E763 /* AgenticToolkitMacOS */;
+			targetProxy = C7D164D9254C2065EDEAADCD /* PBXContainerItemProxy */;
+		};
+		440165D5CA94B900DA88BEF9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */;
+			targetProxy = A26F581EC9854CE69F160EB6 /* PBXContainerItemProxy */;
 		};
 		44C346DC041C409E2C749C5D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2384,6 +2399,11 @@
 			target = AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */;
 			targetProxy = 294273EE4FA5D4110B8C0345 /* PBXContainerItemProxy */;
 		};
+		716F92CF239D2E9D470DFA98 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */;
+			targetProxy = 0DEE7F82B34601737AF726F9 /* PBXContainerItemProxy */;
+		};
 		74996F8BC98EB67E908673CE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
@@ -2394,10 +2414,10 @@
 			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
 			targetProxy = DDDB0FC4C8552BC2B38BAF52 /* PBXContainerItemProxy */;
 		};
-		7B1693505E1EE05916088CEB /* PBXTargetDependency */ = {
+		8166F64FC0AD56683DCABF35 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F2116E5AFEEF6DE97574A067 /* AgenticToolkitCoreMacOSTests */;
-			targetProxy = 306A1E728A51F18C31D1496F /* PBXContainerItemProxy */;
+			target = FB6FD55DBA606361A9BEEB56 /* AgenticToolkitMacOSTests */;
+			targetProxy = 9AACE798ED5F289101BFB900 /* PBXContainerItemProxy */;
 		};
 		83AB2D83DF7B3A112448D728 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2409,35 +2429,15 @@
 			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
 			targetProxy = 047FE0C7126D2D51B2B15B83 /* PBXContainerItemProxy */;
 		};
-		90AB27F00110BC31605CA6BB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 0C146E1D667CC0539A0AE0E6 /* AgenticToolkitCoreUITests */;
-			targetProxy = 2459E72C7E0D2B74391FE3CB /* PBXContainerItemProxy */;
-		};
-		91EC256F7E559C998253B1EE /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 365680A3AF7F55383EB7E763 /* AgenticToolkitMacOS */;
-			targetProxy = 69DF675961F2183C06EFF567 /* PBXContainerItemProxy */;
-		};
-		991C721CEE06A25AA892B295 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
-			targetProxy = 84AD8402E1C394B472475AAC /* PBXContainerItemProxy */;
-		};
-		9A9F68AB10AD8A0D27E81DA1 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 365680A3AF7F55383EB7E763 /* AgenticToolkitMacOS */;
-			targetProxy = 9512D94F3AE0830DEBFDC4A6 /* PBXContainerItemProxy */;
-		};
 		A9F124BF2DC6F670CDA8B492 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */;
 			targetProxy = 1D794A38A21D0815FE3B3022 /* PBXContainerItemProxy */;
 		};
-		BD0D6951250C69DE8406C318 /* PBXTargetDependency */ = {
+		C9332BDC671F910098885050 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
-			targetProxy = 6EE21F4A52D3817A1DD1B229 /* PBXContainerItemProxy */;
+			target = 365680A3AF7F55383EB7E763 /* AgenticToolkitMacOS */;
+			targetProxy = 4DB3446B7D2779B255A45E59 /* PBXContainerItemProxy */;
 		};
 		C982BAF1A980D1385670C7C9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2449,40 +2449,40 @@
 			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
 			targetProxy = 65F4A9E94B2CDF8542C29BD6 /* PBXContainerItemProxy */;
 		};
+		CE24DEB9642EDE54C68D8ACF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
+			targetProxy = A3DED08A41501E4AF81BA24D /* PBXContainerItemProxy */;
+		};
 		D2C70C2A52B10CFF83029C86 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 003F8A478BDB5243DE76FA9E /* AgenticToolkitCore */;
 			targetProxy = FD01A149F0B336A8181186DC /* PBXContainerItemProxy */;
+		};
+		D4C12EBAF0664D1B4258EAB8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */;
+			targetProxy = F1B612B9BE40FBD1D502F974 /* PBXContainerItemProxy */;
 		};
 		D581BB108C755CD4481FE928 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */;
 			targetProxy = 867001B2BAE9C2E639D8110A /* PBXContainerItemProxy */;
 		};
-		DA44B01CA83F32006DF44982 /* PBXTargetDependency */ = {
+		DB75E398C6A4EEBC3545AE16 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */;
-			targetProxy = B28096A20CD5048F5000249F /* PBXContainerItemProxy */;
+			target = F2116E5AFEEF6DE97574A067 /* AgenticToolkitCoreMacOSTests */;
+			targetProxy = ED9E6993BA6732B44B2D01FA /* PBXContainerItemProxy */;
 		};
-		E5A29FD59EB60B3A3898F632 /* PBXTargetDependency */ = {
+		ED9F38BBFF4726E7BA5A9FA6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */;
-			targetProxy = DFD7026BDEB696654525C1ED /* PBXContainerItemProxy */;
-		};
-		EA14BF2F98B2298A070A9B2C /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */;
-			targetProxy = C8478AA05B08C2C97036C615 /* PBXContainerItemProxy */;
+			target = F7587C3114CC9BBF138D57B4 /* AgenticToolkitCoreTests */;
+			targetProxy = 5DB967D0AE15DB02D2ABE9CB /* PBXContainerItemProxy */;
 		};
 		F0B3B5C4936B3D39A62FC1E7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = AC88CFADE46A8B4C98268076 /* AgenticToolkitCoreUI */;
 			targetProxy = 84E2EE43F6C46EA7C3C3C0A4 /* PBXContainerItemProxy */;
-		};
-		F21EF2B4FF1B1D57677F1EFC /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1E3A144560D2664472251EE8 /* AgenticToolkitCoreMacOS */;
-			targetProxy = 195F734D45A400429EE207C5 /* PBXContainerItemProxy */;
 		};
 		FD8C61554EA427BC4F6E291F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2511,6 +2511,12 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		35CD555EF8FF5607C9A3454A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
 			};
 			name = Debug;
 		};
@@ -2573,12 +2579,6 @@
 			};
 			name = Release;
 		};
-		5777E15339BCE9652EFF6241 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Release;
-		};
 		68443BF6AF6E3A312A7C3F8D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2606,12 +2606,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitCoreMacOSTests;
 				SDKROOT = macosx;
-			};
-			name = Release;
-		};
-		92EE903E3D72A80A634C0F3E /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
 			};
 			name = Release;
 		};
@@ -2760,12 +2754,6 @@
 			};
 			name = Release;
 		};
-		B92D274A57C4F76818897F55 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Debug;
-		};
 		BD84747AE676A702D5613894 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2780,6 +2768,12 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		BE5530D9F50EFAD9DF44A3F5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
 		};
 		C71E3158F01CA2B2E1F001AE /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -2902,11 +2896,11 @@
 			};
 			name = Debug;
 		};
-		DECDCA6E2131D74260DA8D6F /* Debug */ = {
+		EB632A76A462052A15338A9E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 			};
-			name = Debug;
+			name = Release;
 		};
 		EBA56E2F9A40D95A3D63252C /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2945,6 +2939,12 @@
 			};
 			name = Release;
 		};
+		F39AD9B0831D745E62843F87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
 		F76BCF8949C030FA7EFF7763 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2972,29 +2972,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		1885ED772652F8B380EE198C /* Build configuration list for PBXAggregateTarget "AgenticToolkitMacOSAll" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				35CD555EF8FF5607C9A3454A /* Debug */,
+				EB632A76A462052A15338A9E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		1A998A83945235291EAA0EBC /* Build configuration list for PBXNativeTarget "AgenticToolkitCoreUI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1C09D778545AD80B4CAEF303 /* Debug */,
 				C71E3158F01CA2B2E1F001AE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		2E15F9E222B0B8FBF0C075DF /* Build configuration list for PBXAggregateTarget "AgenticToolkitAll" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				DECDCA6E2131D74260DA8D6F /* Debug */,
-				5777E15339BCE9652EFF6241 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		3BB16C2A746E849C290F425D /* Build configuration list for PBXAggregateTarget "AgenticToolkitTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B92D274A57C4F76818897F55 /* Debug */,
-				92EE903E3D72A80A634C0F3E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -3013,6 +3004,15 @@
 			buildConfigurations = (
 				36D73F794D8D82687F97AC6B /* Debug */,
 				730D013AD4ED78A53A209727 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CBD4393B651E440500EF27D2 /* Build configuration list for PBXAggregateTarget "AgenticToolkitMacOSTestsAll" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BE5530D9F50EFAD9DF44A3F5 /* Debug */,
+				F39AD9B0831D745E62843F87 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

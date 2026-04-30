@@ -7,22 +7,22 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		B417D4C5F1E47358DAFB600D /* AllPlugins */ = {
+		0B633CF7EA0D73DBF4070B3D /* AIPluginsMacOSAll */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllPlugins" */;
+			buildConfigurationList = 5C0A46802A7E32079C8EFA85 /* Build configuration list for PBXAggregateTarget "AIPluginsMacOSAll" */;
 			buildPhases = (
 			);
 			dependencies = (
-				58B0E91EFFF5733F13902F9A /* PBXTargetDependency */,
-				C465F330E2B779C056B83440 /* PBXTargetDependency */,
-				23AF41FAFB6C9CADCCE36C10 /* PBXTargetDependency */,
-				15B5DFC6F986E6AFFC7895ED /* PBXTargetDependency */,
-				96F598025276C350A67BA411 /* PBXTargetDependency */,
+				EACCC7FB25E65C81775FB12B /* PBXTargetDependency */,
+				6861750D26C43A7D8641ACBF /* PBXTargetDependency */,
+				1A5681112944FCD9FC9F4803 /* PBXTargetDependency */,
+				BC846C53425711A4BF06F2AF /* PBXTargetDependency */,
+				090B523CFAA1003160E8BAD5 /* PBXTargetDependency */,
 			);
-			name = AllPlugins;
+			name = AIPluginsMacOSAll;
 			packageProductDependencies = (
 			);
-			productName = AllPlugins;
+			productName = AIPluginsMacOSAll;
 		};
 /* End PBXAggregateTarget section */
 
@@ -116,13 +116,6 @@
 			remoteGlobalIDString = 3273A57251DF85E655903D56;
 			remoteInfo = AIPluginsShared;
 		};
-		307C883E7C228611087C0E20 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = BA37AF4B2F16BE7AB23931CA;
-			remoteInfo = Google;
-		};
 		370832373A65CFEEF49A10D2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
@@ -136,6 +129,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
+		};
+		48282FFF22F82D40BBFB9E95 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 78D0E6AA9542822FD01209E4;
+			remoteInfo = ClaudeAPI;
 		};
 		49121C9EF75F34F8337F1A93 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -179,6 +179,13 @@
 			remoteGlobalIDString = 3273A57251DF85E655903D56;
 			remoteInfo = AIPluginsShared;
 		};
+		840D9D7C9DECD44B35C1B072 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 69B12492E5D241F6EF3DAC75;
+			remoteInfo = ClaudeLocal;
+		};
 		8BA7673417DE3216CC60C3AD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
@@ -192,13 +199,6 @@
 			proxyType = 2;
 			remoteGlobalIDString = F03FB5CC81FF718A106A6513;
 			remoteInfo = AgenticToolkitMacOS;
-		};
-		8E9C5C4B57CCB85363860865 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 40E8B4B9D4D13B107306FAD1;
-			remoteInfo = OpenAI;
 		};
 		939F4CFC05AE502C28D2AABC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -214,12 +214,12 @@
 			remoteGlobalIDString = 003F8A478BDB5243DE76FA9E;
 			remoteInfo = AgenticToolkitCore;
 		};
-		A375FD72EAA4A9D8E6B7AB12 /* PBXContainerItemProxy */ = {
+		B0E3594C8FAA077B86CB91D1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 4902207C4C9CDF009D44C9FA;
-			remoteInfo = OpenAICompatible;
+			remoteGlobalIDString = BA37AF4B2F16BE7AB23931CA;
+			remoteInfo = Google;
 		};
 		B8B16DD4E67DE0B147CAC0A0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -277,19 +277,19 @@
 			remoteGlobalIDString = AC88CFADE46A8B4C98268076;
 			remoteInfo = AgenticToolkitCoreUI;
 		};
-		D4E061321EE41AAB61210FAF /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 69B12492E5D241F6EF3DAC75;
-			remoteInfo = ClaudeLocal;
-		};
 		DA55620CA1444FD0E7FEA7C3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
 			proxyType = 1;
 			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
 			remoteInfo = AgenticToolkitMacOS;
+		};
+		DD678D36375EC41B9A63D71F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4902207C4C9CDF009D44C9FA;
+			remoteInfo = OpenAICompatible;
 		};
 		DDE1E4A58BC21C89A4B9F4C5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -333,12 +333,12 @@
 			remoteGlobalIDString = 3273A57251DF85E655903D56;
 			remoteInfo = AIPluginsShared;
 		};
-		F8A96052A249C227E0CB9F5F /* PBXContainerItemProxy */ = {
+		F91AAC41B8E56FF85764CCD9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 78D0E6AA9542822FD01209E4;
-			remoteInfo = ClaudeAPI;
+			remoteGlobalIDString = 40E8B4B9D4D13B107306FAD1;
+			remoteInfo = OpenAI;
 		};
 		FE63073EA65B8D9915798BE7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -771,9 +771,9 @@
 			);
 			projectRoot = "";
 			targets = (
+				0B633CF7EA0D73DBF4070B3D /* AIPluginsMacOSAll */,
 				3273A57251DF85E655903D56 /* AIPluginsShared */,
 				1A8925297D647E573ACF0677 /* AIPluginsSharedTests */,
-				B417D4C5F1E47358DAFB600D /* AllPlugins */,
 				78D0E6AA9542822FD01209E4 /* ClaudeAPI */,
 				69B12492E5D241F6EF3DAC75 /* ClaudeLocal */,
 				BA37AF4B2F16BE7AB23931CA /* Google */,
@@ -974,6 +974,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		090B523CFAA1003160E8BAD5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4902207C4C9CDF009D44C9FA /* OpenAICompatible */;
+			targetProxy = DD678D36375EC41B9A63D71F /* PBXContainerItemProxy */;
+		};
 		0A90B4905FB1A3B84568510F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCoreUI;
@@ -994,10 +999,10 @@
 			name = AgenticToolkitCoreMacOS;
 			targetProxy = DDE1E4A58BC21C89A4B9F4C5 /* PBXContainerItemProxy */;
 		};
-		15B5DFC6F986E6AFFC7895ED /* PBXTargetDependency */ = {
+		1A5681112944FCD9FC9F4803 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 40E8B4B9D4D13B107306FAD1 /* OpenAI */;
-			targetProxy = 8E9C5C4B57CCB85363860865 /* PBXContainerItemProxy */;
+			target = BA37AF4B2F16BE7AB23931CA /* Google */;
+			targetProxy = B0E3594C8FAA077B86CB91D1 /* PBXContainerItemProxy */;
 		};
 		1ED5FDE5542A6CA7F70B1CF9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1008,11 +1013,6 @@
 			isa = PBXTargetDependency;
 			name = AgenticToolkitMacOS;
 			targetProxy = 8BA7673417DE3216CC60C3AD /* PBXContainerItemProxy */;
-		};
-		23AF41FAFB6C9CADCCE36C10 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = BA37AF4B2F16BE7AB23931CA /* Google */;
-			targetProxy = 307C883E7C228611087C0E20 /* PBXContainerItemProxy */;
 		};
 		2F6214C10AE0918FA1238ECE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1029,11 +1029,6 @@
 			name = AgenticToolkitCoreUI;
 			targetProxy = E014F487ACD1DB023FF06B43 /* PBXContainerItemProxy */;
 		};
-		58B0E91EFFF5733F13902F9A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 78D0E6AA9542822FD01209E4 /* ClaudeAPI */;
-			targetProxy = F8A96052A249C227E0CB9F5F /* PBXContainerItemProxy */;
-		};
 		59CB9F86534CE0DBF1FA378D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCore;
@@ -1048,6 +1043,11 @@
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCoreMacOS;
 			targetProxy = EEB99B077AF1795D948409CC /* PBXContainerItemProxy */;
+		};
+		6861750D26C43A7D8641ACBF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 69B12492E5D241F6EF3DAC75 /* ClaudeLocal */;
+			targetProxy = 840D9D7C9DECD44B35C1B072 /* PBXContainerItemProxy */;
 		};
 		72D8603302ABC07FE9E9C6A4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1074,11 +1074,6 @@
 			target = 3273A57251DF85E655903D56 /* AIPluginsShared */;
 			targetProxy = 6B4C2F6F911068D3C56CBD7E /* PBXContainerItemProxy */;
 		};
-		96F598025276C350A67BA411 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4902207C4C9CDF009D44C9FA /* OpenAICompatible */;
-			targetProxy = A375FD72EAA4A9D8E6B7AB12 /* PBXContainerItemProxy */;
-		};
 		A7C82D478ED423A7FC54C7F2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCoreUI;
@@ -1104,15 +1099,15 @@
 			name = AgenticToolkitCore;
 			targetProxy = C4BE1928FFBCEB43F421A081 /* PBXContainerItemProxy */;
 		};
+		BC846C53425711A4BF06F2AF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 40E8B4B9D4D13B107306FAD1 /* OpenAI */;
+			targetProxy = F91AAC41B8E56FF85764CCD9 /* PBXContainerItemProxy */;
+		};
 		BF23E1A5895ED390C7B2219B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCoreUI;
 			targetProxy = D0757490EA15800F71D7107F /* PBXContainerItemProxy */;
-		};
-		C465F330E2B779C056B83440 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 69B12492E5D241F6EF3DAC75 /* ClaudeLocal */;
-			targetProxy = D4E061321EE41AAB61210FAF /* PBXContainerItemProxy */;
 		};
 		D5A90E70D0B94E76978C4C8B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1138,6 +1133,11 @@
 			isa = PBXTargetDependency;
 			name = AgenticToolkitCore;
 			targetProxy = 2841EABE660F3A4F34A9298F /* PBXContainerItemProxy */;
+		};
+		EACCC7FB25E65C81775FB12B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 78D0E6AA9542822FD01209E4 /* ClaudeAPI */;
+			targetProxy = 48282FFF22F82D40BBFB9E95 /* PBXContainerItemProxy */;
 		};
 		ED1FAE52A8F5149DF5F8AE2E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1275,12 +1275,6 @@
 			};
 			name = Debug;
 		};
-		4DF1BE81EBAA50902CF7C17A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Release;
-		};
 		58D1F671C260CC023813E445 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1387,6 +1381,12 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsSharedTests;
 				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		89046D709A6F1D966B2B3C27 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
 			};
 			name = Release;
 		};
@@ -1556,7 +1556,7 @@
 			};
 			name = Debug;
 		};
-		D8097E575C23E06BBA281024 /* Debug */ = {
+		ED790E1F5432A6D069CEB92B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 			};
@@ -1592,20 +1592,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		5C0A46802A7E32079C8EFA85 /* Build configuration list for PBXAggregateTarget "AIPluginsMacOSAll" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED790E1F5432A6D069CEB92B /* Debug */,
+				89046D709A6F1D966B2B3C27 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		6185C7BC778FFBEE7958F7FB /* Build configuration list for PBXNativeTarget "AIPluginsSharedTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AF1F78DE0CECD188CD64344E /* Debug */,
 				820FBA24766D77ABEB1EED1C /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		8199FBE91D27698BA0CD9759 /* Build configuration list for PBXAggregateTarget "AllPlugins" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D8097E575C23E06BBA281024 /* Debug */,
-				4DF1BE81EBAA50902CF7C17A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
