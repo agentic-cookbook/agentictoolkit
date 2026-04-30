@@ -1,0 +1,195 @@
+name: AgenticToolkit
+options:
+  bundleIdPrefix: com.mikefullerton.agentictoolkit
+  developmentLanguage: en
+  deploymentTarget:
+    macOS: "14.0"
+  groupSortPosition: top
+  generateEmptyDirectories: false
+  xcodeVersion: "2640"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.3"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SDKROOT: macosx
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_TESTABILITY: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ENABLE_MODULE_VERIFIER: YES
+    GENERATE_INFOPLIST_FILE: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
+    SWIFT_ENABLE_EXPLICIT_MODULES: NO
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGN_IDENTITY: ""
+    PRODUCT_NAME: $(TARGET_NAME)
+
+packages:
+  CodeEditLanguages:
+    url: https://github.com/CodeEditApp/CodeEditLanguages.git
+    exactVersion: "0.1.20"
+  CodeEditSourceEditor:
+    url: https://github.com/CodeEditApp/CodeEditSourceEditor.git
+    minVersion: "0.15.2"
+    maxVersion: "1.0.0"
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    minVersion: "1.2.0"
+    maxVersion: "2.0.0"
+
+targets:
+  AgenticToolkitCore:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Core
+      - path: macOS/Features/AIChatWindow/ChatBackend.swift
+        group: Core
+
+  AgenticToolkitCoreUI:
+    type: framework
+    platform: macOS
+    sources:
+      - CoreUI
+    dependencies:
+      - target: AgenticToolkitCore
+
+  AgenticToolkitCoreMacOS:
+    type: framework
+    platform: macOS
+    sources:
+      - path: CoreMacOS
+      - path: macOS/UI/Settings/SettingStorage/RGBAColor+NSColor.swift
+        group: CoreMacOS
+    dependencies:
+      - target: AgenticToolkitCore
+      - target: AgenticToolkitCoreUI
+
+  AgenticToolkitMacOS:
+    type: framework
+    platform: macOS
+    sources:
+      - path: macOS
+        excludes:
+          - "Features/AIChatWindow/ChatBackend.swift"
+          - "Features/AIPlugins/Settings/OldAIPanelViewController.swift"
+          - "Features/AIPlugins/Settings/OldAISettingsPane.swift"
+          - "Features/AIPlugins/Settings/OldPluginsSettingsPanelViewController.swift"
+          - "Features/SessionWatcher/Old/OldSessionWindowPanelViewController.swift"
+          - "Features/SessionWatcher/Old/OldSessionWindowSettingsPane.swift"
+          - "Features/TerminalSession/Settings/OldNotificationsPanelViewController.swift"
+          - "Features/TerminalSession/Settings/OldNotificationsSettingsPane.swift"
+          - "Features/TerminalSession/Settings/OldTerminalGeneralPanelViewController.swift"
+          - "Features/TerminalSession/Settings/OldTerminalProfilesPanelViewController.swift"
+          - "Features/TerminalSession/Settings/TerminalProfilesSettingsPanelViewController.swift"
+          - "Features/TerminalSession/Settings/TerminalSessionGeneralSettingsView.swift"
+          - "Features/TerminalSession/Settings/TerminalSessionProfilesSettingsView.swift"
+          - "Features/TerminalSession/Settings/TerminalSettingsPanelViewController.swift"
+          - "SystemIntegration/Appearance/OldAppearanceSettingsPane.swift"
+          - "SystemIntegration/Appearance/OldAppearanceSettingsPanelViewController.swift"
+          - "SystemIntegration/PermissionWalkthrough/OldSystemSettingsPane.swift"
+          - "UI/Settings/SettingStorage/RGBAColor+NSColor.swift"
+    dependencies:
+      - target: AgenticToolkitCore
+      - target: AgenticToolkitCoreUI
+      - target: AgenticToolkitCoreMacOS
+      - package: SwiftTerm
+      - package: CodeEditSourceEditor
+      - package: CodeEditLanguages
+
+  AgenticToolkitCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/AgenticToolkitCoreTests
+    dependencies:
+      - target: AgenticToolkitCore
+        embed: true
+        codeSign: true
+
+  AgenticToolkitCoreUITests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/AgenticToolkitCoreUITests
+    dependencies:
+      - target: AgenticToolkitCoreUI
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitCore
+        embed: true
+        codeSign: true
+
+  AgenticToolkitCoreMacOSTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/AgenticToolkitCoreMacOSTests
+    dependencies:
+      - target: AgenticToolkitCoreMacOS
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitCore
+        embed: true
+        codeSign: true
+
+  AgenticToolkitMacOSTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/AgenticToolkitMacOSTests
+    dependencies:
+      - target: AgenticToolkitMacOS
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitCoreMacOS
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitCoreUI
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitCore
+        embed: true
+        codeSign: true
+
+aggregateTargets:
+  AgenticToolkitAll:
+    targets:
+      - AgenticToolkitCore
+      - AgenticToolkitCoreUI
+      - AgenticToolkitCoreMacOS
+      - AgenticToolkitMacOS
+
+  AgenticToolkitTests:
+    targets:
+      - AgenticToolkitCore
+      - AgenticToolkitCoreMacOS
+      - AgenticToolkitCoreUI
+      - AgenticToolkitMacOS
+      - AgenticToolkitCoreMacOSTests
+      - AgenticToolkitCoreTests
+      - AgenticToolkitCoreUITests
+      - AgenticToolkitMacOSTests
+
+schemes:
+  AgenticToolkitMacOS:
+    build:
+      targets:
+        AgenticToolkitMacOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitMacOSTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

@@ -93,6 +93,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "1A8925297D647E573ACF0677"
+               BuildableName = "AIPluginsSharedTests.xctest"
+               BlueprintName = "AIPluginsSharedTests"
+               ReferencedContainer = "container:AIPlugins.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
