@@ -39,12 +39,12 @@ public final class WindowDiscoveryWindowController: WindowController<WindowConte
     /// Shows the window discovery panel for the given session. Replaces any
     /// existing discovery view with a new one.
     public func showDiscovery(for session: SessionWatcher.SessionWatcherSession) {
-        let vm = WindowDiscoveryViewModel(session: session)
-        vm.onWindowActivated = { [weak self] in
+        let viewModel = WindowDiscoveryViewModel(session: session)
+        viewModel.onWindowActivated = { [weak self] in
             self?.dismiss()
         }
 
-        let view = WindowDiscoveryView(viewModel: vm)
+        let view = WindowDiscoveryView(viewModel: viewModel)
         view.translatesAutoresizingMaskIntoConstraints = false
 
         showWindow()

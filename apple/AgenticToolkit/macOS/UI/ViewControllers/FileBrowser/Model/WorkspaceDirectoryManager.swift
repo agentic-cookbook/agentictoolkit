@@ -167,7 +167,7 @@ public final class WorkspaceDirectoryManager: ObservableObject {
         into results: inout [DiscoveredProject]
     ) {
         if node.isPackage && packageExtensions.contains(node.url.pathExtension) {
-            let dp = DiscoveredProject(
+            let project = DiscoveredProject(
                 id: nextID,
                 entryID: entryID,
                 projectPath: node.url.path,
@@ -175,7 +175,7 @@ public final class WorkspaceDirectoryManager: ObservableObject {
                 lastSeen: Date()
             )
             nextID += 1
-            results.append(dp)
+            results.append(project)
             return // don't recurse into packages
         }
         if let children = node.children {

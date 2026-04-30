@@ -32,11 +32,17 @@ extension SessionWatcher {
             let databaseManager = SessionWatcherDatabaseManager()
             self.databaseManager     = databaseManager
             self.windowController    = SessionWatcherWindowController(databaseManager: databaseManager)
-            self.ingestionManager    = SessionWatcherEventIngestionManager(SessionWatcherDatabaseManager: databaseManager)
-            self.livenessMonitor     = SessionWatcherLivenessMonitor(SessionWatcherDatabaseManager: databaseManager)
+            self.ingestionManager    = SessionWatcherEventIngestionManager(
+                sessionWatcherDatabaseManager: databaseManager
+            )
+            self.livenessMonitor     = SessionWatcherLivenessMonitor(
+                sessionWatcherDatabaseManager: databaseManager
+            )
             self.notificationManager = SessionWatcherNotificationManager(settingsStore: settingsStore)
-            self.summarizer          = SessionWatcherSummarizer(SessionWatcherDatabaseManager: databaseManager,
-                                                                settingsStore: settingsStore)
+            self.summarizer          = SessionWatcherSummarizer(
+                sessionWatcherDatabaseManager: databaseManager,
+                settingsStore: settingsStore
+            )
             self.hookInstaller       = SessionWatcherHookInstaller()
             super.init()
 
@@ -47,10 +53,20 @@ extension SessionWatcher {
 //                MenuContribution(slot: .window, title: "Window Discovery", order: 20, key: "2") { [weak self] in
 //                    self?.showWindowDiscovery()
 //                },
-                MenuContribution(slot: .statusItem(section: 0), title: "Show Sessions", order: 0, key: "s") { [weak self] in
+                MenuContribution(
+                    slot: .statusItem(section: 0),
+                    title: "Show Sessions",
+                    order: 0,
+                    key: "s"
+                ) { [weak self] in
                     self?.windowController.togglePanel()
                 },
-                MenuContribution(slot: .statusItem(section: 3), title: "Test Window Activation", order: 0, key: "t") { [weak self] in
+                MenuContribution(
+                    slot: .statusItem(section: 3),
+                    title: "Test Window Activation",
+                    order: 0,
+                    key: "t"
+                ) { [weak self] in
                     self?.runWindowActivationTest()
                 }
             ]
@@ -152,7 +168,11 @@ extension SessionWatcher {
                 return ((try? databaseManager.fetchAllSessions()) ?? []).map(ScriptableSession.init(session:))
             case "scriptingSettings":
                 return ((try? databaseManager.fetchAllSettings()) ?? [:]).map {
-                    ScriptableSetting(name: $0.key, value: $0.value, SessionWatcherDatabaseManager: databaseManager)
+                    ScriptableSetting(
+                        name: $0.key,
+                        value: $0.value,
+                        sessionWatcherDatabaseManager: databaseManager
+                    )
                 }
             case "scriptingSessionCount":
                 return (try? databaseManager.fetchAllSessions())?.count ?? 0
@@ -172,11 +192,15 @@ extension SessionWatcher {
         public override func setValue(_ value: Any?, forScriptingKey key: String) {
             switch key {
             case "scriptingPanelVisible":
-                (value as? Bool) == true ? windowController.showPanel() : windowController.hidePanel()
+                if (value as? Bool) == true {
+                    windowController.showPanel()
+                } else {
+                    windowController.hidePanel()
+                }
             case "scriptingPanelFloating":
-                if let b = value as? Bool { windowController.isFloating = b }
+                if let flag = value as? Bool { windowController.isFloating = flag }
             case "scriptingPanelTransparency":
-                if let d = value as? Double { windowController.transparency = CGFloat(d) }
+                if let amount = value as? Double { windowController.transparency = CGFloat(amount) }
             default:
                 break
             }
@@ -190,8 +214,12 @@ extension SessionWatcher {
 
         /// Cocoa Scripting indexed accessor: `tell application "Whippet" to get setting "X"`.
         public func scriptableSetting(named name: String) -> ScriptableSetting? {
-            let v = (try? databaseManager.getSetting(key: name)) ?? nil
-            return ScriptableSetting(name: name, value: v ?? "", SessionWatcherDatabaseManager: databaseManager)
+            let value = (try? databaseManager.getSetting(key: name)) ?? nil
+            return ScriptableSetting(
+                name: name,
+                value: value ?? "",
+                sessionWatcherDatabaseManager: databaseManager
+            )
         }
 
         // MARK: - Internal wiring
@@ -226,8 +254,9 @@ extension SessionWatcher {
                 self.windowController.viewController?.viewModel.lastActionError = display
                 // Auto-clear after 10s, but only if no other error replaced ours.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
-                    if self?.windowController.viewController?.viewModel.lastActionError?.hasPrefix("Summarizer") == true {
-                        self?.windowController.viewController?.viewModel.lastActionError = nil
+                    let viewModel = self?.windowController.viewController?.viewModel
+                    if viewModel?.lastActionError?.hasPrefix("Summarizer") == true {
+                        viewModel?.lastActionError = nil
                     }
                 }
             }

@@ -99,11 +99,11 @@ public final class TerminalSessionContentViewController: NSViewController {
     private func applyProfile(to terminalView: LocalProcessTerminalView) {
         let profile = resolveProfile()
 
-        if let fg = NSColor(hex: profile.colors.foreground) {
-            terminalView.nativeForegroundColor = fg
+        if let foreground = NSColor(hex: profile.colors.foreground) {
+            terminalView.nativeForegroundColor = foreground
         }
-        if let bg = NSColor(hex: profile.colors.background) {
-            terminalView.nativeBackgroundColor = bg
+        if let background = NSColor(hex: profile.colors.background) {
+            terminalView.nativeBackgroundColor = background
         }
         if let cursor = NSColor(hex: profile.colors.cursor) {
             terminalView.caretColor = cursor

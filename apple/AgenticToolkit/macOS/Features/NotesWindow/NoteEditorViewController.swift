@@ -45,27 +45,27 @@ public final class NoteEditorViewController: NSViewController {
     }()
 
     private lazy var contentScrollView: NSScrollView = {
-        let sv = NSScrollView()
-        sv.hasVerticalScroller = true
-        sv.autohidesScrollers = true
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        return sv
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        return scroll
     }()
 
     private lazy var contentTextView: NSTextView = {
-        let tv = NSTextView()
-        tv.isEditable = true
-        tv.isSelectable = true
-        tv.isRichText = false
-        tv.font = .systemFont(ofSize: 14)
-        tv.textContainerInset = NSSize(width: 8, height: 8)
-        tv.isAutomaticQuoteSubstitutionEnabled = false
-        tv.isAutomaticDashSubstitutionEnabled = false
-        tv.allowsUndo = true
-        tv.delegate = self
-        tv.textContainer?.widthTracksTextView = true
-        tv.autoresizingMask = [.width]
-        return tv
+        let textView = NSTextView()
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.font = .systemFont(ofSize: 14)
+        textView.textContainerInset = NSSize(width: 8, height: 8)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.allowsUndo = true
+        textView.delegate = self
+        textView.textContainer?.widthTracksTextView = true
+        textView.autoresizingMask = [.width]
+        return textView
     }()
 
     private lazy var pinButton: NSButton = {

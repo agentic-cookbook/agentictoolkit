@@ -32,7 +32,7 @@ final class MockLaunchAtLoginService: LaunchAtLoginServiceProtocol {
 final class LaunchAtLoginManagerTests: XCTestCase {
 
     private var settingsStore: SettingsStore!
-    private var SessionWatcherDatabaseManager: SessionWatcherDatabaseManager!
+    private var sessionWatcherDatabaseManager: SessionWatcherDatabaseManager!
     private var tempDBPath: String!
     private var mockService: MockLaunchAtLoginService!
 
@@ -47,15 +47,15 @@ final class LaunchAtLoginManagerTests: XCTestCase {
         // only consults `settingsStore`.
         let tempDir = NSTemporaryDirectory()
         tempDBPath = (tempDir as NSString).appendingPathComponent("whippet_launch_test_\(UUID().uuidString).db")
-        SessionWatcherDatabaseManager = try AgenticToolkitMacOS.SessionWatcherDatabaseManager(path: tempDBPath)
+        sessionWatcherDatabaseManager = try AgenticToolkitMacOS.SessionWatcherDatabaseManager(path: tempDBPath)
         mockService = MockLaunchAtLoginService()
     }
 
     override func tearDown() async throws {
-        SessionWatcherDatabaseManager?.close()
+        sessionWatcherDatabaseManager?.close()
         if let tempDBPath { try? FileManager.default.removeItem(atPath: tempDBPath) }
         settingsStore = nil
-        SessionWatcherDatabaseManager = nil
+        sessionWatcherDatabaseManager = nil
         tempDBPath = nil
         mockService = nil
         try await super.tearDown()

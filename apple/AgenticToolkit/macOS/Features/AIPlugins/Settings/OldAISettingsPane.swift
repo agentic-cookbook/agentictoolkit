@@ -34,7 +34,13 @@ final class AISettingsPane: OldSettingsPanelView {
     init(viewModel: WhippetSettingsViewModel) {
         self.viewModel = viewModel
 
-        let aiConfig = AIModelChatConfig(aiProvider: .anthropic, aiModel: "", aiBaseURL: "", apiKey: "", aiSummariesEnabled: false)
+        let aiConfig = AIModelChatConfig(
+            aiProvider: .anthropic,
+            aiModel: "",
+            aiBaseURL: "",
+            apiKey: "",
+            aiSummariesEnabled: false
+        )
 
         let backend = WhippetChatBackend(aiInfo: aiConfig)
         self.chatViewModel = ChatViewModel(backend: backend)
@@ -99,7 +105,9 @@ final class AISettingsPane: OldSettingsPanelView {
         maskedKeyRow.orientation = .horizontal
         maskedKeyRow.spacing = 8
         maskedKeyRow.translatesAutoresizingMaskIntoConstraints = false
-        let maskedLabel = NSTextField(labelWithString: "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}")
+        let maskedLabel = NSTextField(
+            labelWithString: String(repeating: "\u{2022}", count: 12)
+        )
         maskedLabel.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
         maskedLabel.textColor = .secondaryLabelColor
         let clearButton = NSButton(title: "Clear", target: self, action: #selector(clearAPIKey))
@@ -112,7 +120,9 @@ final class AISettingsPane: OldSettingsPanelView {
         maskedKeyRow.isHidden = !(viewModel.hasStoredAPIKey && viewModel.aiAPIKey.isEmpty)
         apiKeyContainer.addArrangedSubview(maskedKeyRow)
 
-        apiKeyField.placeholderString = viewModel.hasStoredAPIKey ? "Enter new key to replace" : viewModel.aiProvider.apiKeyPlaceholder
+        apiKeyField.placeholderString = viewModel.hasStoredAPIKey
+            ? "Enter new key to replace"
+            : viewModel.aiProvider.apiKeyPlaceholder
         apiKeyField.target = self
         apiKeyField.action = #selector(apiKeyChanged(_:))
         apiKeyField.translatesAutoresizingMaskIntoConstraints = false

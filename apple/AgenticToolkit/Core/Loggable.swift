@@ -8,16 +8,13 @@
 import Foundation
 import OSLog
 
-/// Mix this into any struct or class like this
-/*
- struct MyStruct {
-    // stuff
- }
- 
- extension MyStruct: Loggable {
-    public static nonisolated let logger = makeLogger()
- }
- */
+// Mix this into any struct or class like this:
+//
+// struct MyStruct { /* stuff */ }
+//
+// extension MyStruct: Loggable {
+//     public static nonisolated let logger = makeLogger()
+// }
 public protocol Loggable {
 
     /// Implement this by simplly calling makeLogger
@@ -47,9 +44,11 @@ extension Loggable {
 /// Begin LLM Instrructions
 
 /// Loggable usage
-/// - for any type that logs using Swift's OSLog / Logger create an extension that conforms to Loggable instead of using Loggers scoped to an enum, struct, or class.
+/// - for any type that logs using Swift's OSLog / Logger create an extension that conforms
+///   to Loggable instead of using Loggers scoped to an enum, struct, or class.
 /// - to conform to Loggable for each type, ONLY conform to Loggable in an extension.
-/// - Loggable defaults subsystem to Bundle.main.bundleIdentifier and category to th type name. Every conformer uses those defaults — no overrides.
+/// - Loggable defaults subsystem to Bundle.main.bundleIdentifier and category to the type
+///   name. Every conformer uses those defaults — no overrides.
 
 /// Example conformance
 
@@ -80,7 +79,8 @@ extension CorrectUsageExample: Loggable {
 }
 
 /// Scoping notes:
-/// if one type calls into another type's Logger, add an extension to both types. This automatically makes specific logging categories in the logs.
+/// if one type calls into another type's Logger, add an extension to both types. This
+/// automatically makes specific logging categories in the logs.
 
 /// Incorrect Examples:
 

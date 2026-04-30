@@ -12,6 +12,7 @@ import Combine
 /// Conflict resolution is last-write-wins, handled by iCloud itself. External
 /// changes (from another device) are surfaced through the `changes` publisher.
 @MainActor
+// swiftlint:disable:next type_name
 public final class iCloudSettingsStorageProvider: SettingsStorageProvider {
     private let store: NSUbiquitousKeyValueStore
     private let encoder: JSONEncoder

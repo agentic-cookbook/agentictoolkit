@@ -9,7 +9,7 @@ public final class SessionSummarizer: @unchecked Sendable {
 
     // MARK: - Properties
 
-    private let SessionsDatabaseManager: SessionsDatabaseManager
+    private let sessionsDatabaseManager: SessionsDatabaseManager
 
     /// Approximate character budget for the events portion of the prompt.
     public static let defaultEventCharBudget = 3_000
@@ -33,8 +33,8 @@ public final class SessionSummarizer: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    public init(SessionsDatabaseManager: SessionsDatabaseManager) {
-        self.SessionsDatabaseManager = SessionsDatabaseManager
+    public init(sessionsDatabaseManager: SessionsDatabaseManager) {
+        self.sessionsDatabaseManager = sessionsDatabaseManager
     }
 
     // MARK: - Public API
@@ -78,7 +78,7 @@ public final class SessionSummarizer: @unchecked Sendable {
     /// Throws `SummarizerError` on failure.
     public func summarize(sessionId: String) async throws -> String {
         // Check if enabled before any logging
-        let enabledStr = try? SessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
+        let enabledStr = try? sessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else {
             throw SummarizerError.disabled
         }
@@ -86,13 +86,13 @@ public final class SessionSummarizer: @unchecked Sendable {
         let dbg = SessionWatcher.SummarizerDebugLog.shared
         dbg.append("--- summarize(\(sessionId)) called ---")
 
-        let providerStr = (try? SessionsDatabaseManager.getSetting(key: "ai_provider")) ?? "claude_cli"
+        let providerStr = (try? sessionsDatabaseManager.getSetting(key: "ai_provider")) ?? "claude_cli"
         let provider = AIProvider(rawValue: providerStr) ?? .anthropic
-        let model = (try? SessionsDatabaseManager.getSetting(key: "ai_model")) ?? provider.recommendedModel
+        let model = (try? sessionsDatabaseManager.getSetting(key: "ai_model")) ?? provider.recommendedModel
         dbg.append("Provider: \(provider.rawValue), Model: \(model)")
 
         // Fetch session and events
-        guard let session = try? SessionsDatabaseManager.fetchSession(bySessionId: sessionId) else {
+        guard let session = try? sessionsDatabaseManager.fetchSession(bySessionId: sessionId) else {
             dbg.append("BAIL: Session not found in database")
             throw SummarizerError.sessionNotFound(sessionId)
         }
@@ -100,7 +100,7 @@ public final class SessionSummarizer: @unchecked Sendable {
 
         let events: [SessionEvent]
         do {
-            events = try SessionsDatabaseManager.fetchEvents(forSessionId: sessionId)
+            events = try sessionsDatabaseManager.fetchEvents(forSessionId: sessionId)
         } catch {
             dbg.append("BAIL: Failed to fetch events — \(error.localizedDescription)")
             throw SummarizerError.apiError("Failed to fetch events: \(error.localizedDescription)")
@@ -120,16 +120,32 @@ public final class SessionSummarizer: @unchecked Sendable {
 
         // Route to CLI or API based on provider
         if provider.usesCLI {
-            return try await summarizeViaCLI(prompt: userMessage, model: model, dbg: dbg, sessionId: sessionId)
+            return try await summarizeViaCLI(
+                prompt: userMessage,
+                model: model,
+                dbg: dbg,
+                sessionId: sessionId
+            )
         } else {
-            return try await summarizeViaAPI(prompt: userMessage, provider: provider, model: model, dbg: dbg, sessionId: sessionId)
+            return try await summarizeViaAPI(
+                prompt: userMessage,
+                provider: provider,
+                model: model,
+                dbg: dbg,
+                sessionId: sessionId
+            )
         }
     }
 
     // MARK: - Claude CLI Summarization
 
     /// Runs `claude -p` with the prompt piped to stdin.
-    private func summarizeViaCLI(prompt: String, model: String, dbg: SessionWatcher.SummarizerDebugLog, sessionId: String) async throws -> String {
+    private func summarizeViaCLI(
+        prompt: String,
+        model: String,
+        dbg: SessionWatcher.SummarizerDebugLog,
+        sessionId: String
+    ) async throws -> String {
         dbg.append("Using Claude CLI (model: \(model))")
 
         // Find the claude binary
@@ -191,8 +207,10 @@ public final class SessionSummarizer: @unchecked Sendable {
 
         let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        let reply = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let errorOutput = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let reply = String(data: stdoutData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let errorOutput = String(data: stderrData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         dbg.append("Exit code: \(process.terminationStatus)")
         if !errorOutput.isEmpty {
@@ -226,17 +244,21 @@ public final class SessionSummarizer: @unchecked Sendable {
             "/usr/local/bin/claude",
             "/opt/homebrew/bin/claude"
         ]
-        for path in candidates {
-            if FileManager.default.isExecutableFile(atPath: path) {
-                return path
-            }
+        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
+            return path
         }
         return nil
     }
 
     // MARK: - API-based Summarization
 
-    private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcher.SummarizerDebugLog, sessionId: String) async throws -> String {
+    private func summarizeViaAPI(
+        prompt: String,
+        provider: AIProvider,
+        model: String,
+        dbg: SessionWatcher.SummarizerDebugLog,
+        sessionId: String
+    ) async throws -> String {
         let apiKey = KeychainHelper.get(forKey: "ai_api_key") ?? ""
         dbg.append("API key present = \(!apiKey.isEmpty) (length: \(apiKey.count))")
         guard !apiKey.isEmpty else {
@@ -244,7 +266,7 @@ public final class SessionSummarizer: @unchecked Sendable {
             throw SummarizerError.noAPIKey
         }
 
-        let baseURL = (try? SessionsDatabaseManager.getSetting(key: "ai_base_url")) ?? ""
+        let baseURL = (try? sessionsDatabaseManager.getSetting(key: "ai_base_url")) ?? ""
         dbg.append("BaseURL: \(baseURL.isEmpty ? "(none)" : baseURL)")
 
         let config = AIRequestConfig(
@@ -312,7 +334,7 @@ public final class SessionSummarizer: @unchecked Sendable {
     /// Throws on fatal errors (API/config), returns silently on non-fatal ones (no events, etc.).
     public func summarizeAndStore(sessionId: String) async throws {
         // Bail early if disabled — no logging at all
-        let enabledStr = try? SessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
+        let enabledStr = try? sessionsDatabaseManager.getSetting(key: "ai_summaries_enabled")
         guard enabledStr == "true" else { return }
 
         SessionWatcher.SummarizerDebugLog.shared.append("summarizeAndStore(\(sessionId)) entered")
@@ -321,20 +343,25 @@ public final class SessionSummarizer: @unchecked Sendable {
         do {
             summary = try await summarize(sessionId: sessionId)
         } catch let error as SummarizerError where !error.isFatal {
-            logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.debug("Skipping summarization for \(sessionId, privacy: .public): "
+                         + "\(error.localizedDescription, privacy: .public)")
             return
         }
 
         do {
-            try SessionsDatabaseManager.updateSessionSummary(sessionId: sessionId, summary: summary)
+            try sessionsDatabaseManager.updateSessionSummary(
+                sessionId: sessionId,
+                summary: summary
+            )
             logger.info("Stored AI summary for session \(sessionId, privacy: .public)")
 
             await MainActor.run {
-                // TODO: remove this coupling
+                // Notification fan-out — coupling that ought to live elsewhere.
                 SessionWatcher.SessionListViewModel.notifySessionsChanged()
             }
         } catch {
-            logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to store summary for \(sessionId, privacy: .public): "
+                         + "\(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -525,8 +552,8 @@ public final class SessionSummarizer: @unchecked Sendable {
         if bytes < 1024 {
             return "\(bytes)B"
         } else {
-            let kb = Double(bytes) / 1024.0
-            return String(format: "%.1fKB", kb)
+            let kilobytes = Double(bytes) / 1024.0
+            return String(format: "%.1fKB", kilobytes)
         }
     }
 }

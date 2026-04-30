@@ -24,7 +24,7 @@ extension SessionWatcher {
 
         // MARK: - Properties
 
-        private let SessionWatcherDatabaseManager: SessionWatcherDatabaseManager
+        private let sessionWatcherDatabaseManager: SessionWatcherDatabaseManager
         /// Cached staleness timeout. Read once at init time from `settingsStore` (if provided).
         /// Background liveness checks use this without crossing the MainActor boundary.
         private let cachedTimeout: TimeInterval
@@ -52,14 +52,17 @@ extension SessionWatcher {
 
         /// Creates a liveness monitor that uses the given database manager.
         /// - Parameters:
-        ///   - SessionWatcherDatabaseManager: The database manager for querying and updating sessions.
+        ///   - sessionWatcherDatabaseManager: The database manager for querying and updating sessions.
         ///   - settingsStore: The settings store for reading the staleness timeout. Pass `nil`
         ///     to fall back to the default timeout (legacy code path; new callers should pass
         ///     `SettingsStore.shared`). Read once at init; subsequent setting changes won't be
         ///     reflected until the monitor is reconstructed.
         @MainActor
-        public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore? = nil) {
-            self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+        public init(
+            sessionWatcherDatabaseManager: SessionWatcherDatabaseManager,
+            settingsStore: SettingsStore? = nil
+        ) {
+            self.sessionWatcherDatabaseManager = sessionWatcherDatabaseManager
             self.cachedTimeout = UserSettings.stalenessTimeout.value
         }
 
@@ -114,9 +117,9 @@ extension SessionWatcher {
 
             do {
                 // Capture sessions that are about to go stale (for per-session callbacks)
-                let aboutToGoStale = try SessionWatcherDatabaseManager.fetchActiveSessionsPastTimeout(timeout)
+                let aboutToGoStale = try sessionWatcherDatabaseManager.fetchActiveSessionsPastTimeout(timeout)
 
-                let count = try SessionWatcherDatabaseManager.markStaleSessions(olderThan: timeout)
+                let count = try sessionWatcherDatabaseManager.markStaleSessions(olderThan: timeout)
                 if count > 0 {
                     logger.info("Marked \(count) session(s) as stale (timeout: \(timeout)s)")
                     onSessionsMarkedStale?(count)
@@ -144,19 +147,18 @@ extension SessionWatcher {
         @discardableResult
         private func performPidLivenessCheck() -> Int {
             do {
-                let sessions = try SessionWatcherDatabaseManager.fetchLiveSessionsWithPid()
+                let sessions = try sessionWatcherDatabaseManager.fetchLiveSessionsWithPid()
                 var endedCount = 0
 
-                for session in sessions {
-                    if !isProcessAlive(pid: session.pid) {
-                        try SessionWatcherDatabaseManager.updateSessionStatus(
-                            sessionId: session.sessionId,
-                            status: .ended
-                        )
-                        onSessionProcessDied?(session.sessionId, session.projectName)
-                        endedCount += 1
-                        logger.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
-                    }
+                for session in sessions where !isProcessAlive(pid: session.pid) {
+                    try sessionWatcherDatabaseManager.updateSessionStatus(
+                        sessionId: session.sessionId,
+                        status: .ended
+                    )
+                    onSessionProcessDied?(session.sessionId, session.projectName)
+                    endedCount += 1
+                    logger.info("Process \(session.pid) dead — "
+                                + "ended session '\(session.projectName, privacy: .public)'")
                 }
 
                 // End stale sessions with no PID — their liveness cannot be verified
@@ -177,10 +179,10 @@ extension SessionWatcher {
         /// Ends stale sessions that have no PID (pid = 0). These cannot be verified
         /// as alive, so once they go stale they should be cleaned up.
         private func endStalePidlessSessions() throws -> Int {
-            let allSessions = try SessionWatcherDatabaseManager.fetchAllSessions()
+            let allSessions = try sessionWatcherDatabaseManager.fetchAllSessions()
             let stalePidless = allSessions.filter { $0.status == .stale && $0.pid <= 0 }
             for session in stalePidless {
-                try SessionWatcherDatabaseManager.updateSessionStatus(
+                try sessionWatcherDatabaseManager.updateSessionStatus(
                     sessionId: session.sessionId,
                     status: .ended
                 )

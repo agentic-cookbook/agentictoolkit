@@ -20,7 +20,7 @@ extension SessionWatcher {
         public let errorsDirectoryURL: URL
 
         /// The database manager used to persist events and sessions.
-        private let SessionWatcherDatabaseManager: SessionWatcherDatabaseManager
+        private let sessionWatcherDatabaseManager: SessionWatcherDatabaseManager
 
         /// File system event stream for watching the drop directory.
         private var eventStream: FSEventStreamRef?
@@ -71,8 +71,11 @@ extension SessionWatcher {
         /// Creates an SessionWatcherEventIngestionManager with the given drop directory and database manager.
         /// - Parameters:
         ///   - dropDirectoryURL: The directory to watch for event files. Defaults to `~/.claude/session-events/`.
-        ///   - SessionWatcherDatabaseManager: The database manager for persisting events.
-        public init(dropDirectoryURL: URL? = nil, SessionWatcherDatabaseManager: SessionWatcherDatabaseManager) {
+        ///   - sessionWatcherDatabaseManager: The database manager for persisting events.
+        public init(
+            dropDirectoryURL: URL? = nil,
+            sessionWatcherDatabaseManager: SessionWatcherDatabaseManager
+        ) {
             if let url = dropDirectoryURL {
                 self.dropDirectoryURL = url
             } else {
@@ -81,7 +84,7 @@ extension SessionWatcher {
                     .appendingPathComponent("session-events")
             }
             self.errorsDirectoryURL = self.dropDirectoryURL.appendingPathComponent("errors")
-            self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+            self.sessionWatcherDatabaseManager = sessionWatcherDatabaseManager
         }
 
         deinit {
@@ -92,12 +95,12 @@ extension SessionWatcher {
 
         /// Creates the drop directory and errors subdirectory if they don't exist.
         public func ensureDirectoriesExist() throws {
-            let fm = FileManager.default
-            if !fm.fileExists(atPath: dropDirectoryURL.path) {
-                try fm.createDirectory(at: dropDirectoryURL, withIntermediateDirectories: true)
+            let fileManager = FileManager.default
+            if !fileManager.fileExists(atPath: dropDirectoryURL.path) {
+                try fileManager.createDirectory(at: dropDirectoryURL, withIntermediateDirectories: true)
             }
-            if !fm.fileExists(atPath: errorsDirectoryURL.path) {
-                try fm.createDirectory(at: errorsDirectoryURL, withIntermediateDirectories: true)
+            if !fileManager.fileExists(atPath: errorsDirectoryURL.path) {
+                try fileManager.createDirectory(at: errorsDirectoryURL, withIntermediateDirectories: true)
             }
         }
 
@@ -131,15 +134,18 @@ extension SessionWatcher {
         // MARK: - File System Watching
 
         private func startWatching() {
-            let fd = open(dropDirectoryURL.path, O_EVTONLY)
-            guard fd >= 0 else {
-                logger.error("Failed to open directory for monitoring: \(self.dropDirectoryURL.path, privacy: .public)")
+            let fileDescriptor = open(dropDirectoryURL.path, O_EVTONLY)
+            guard fileDescriptor >= 0 else {
+                logger.error(
+                    "Failed to open directory for monitoring:"
+                    + " \(self.dropDirectoryURL.path, privacy: .public)"
+                )
                 return
             }
-            directoryFileDescriptor = fd
+            directoryFileDescriptor = fileDescriptor
 
             let source = DispatchSource.makeFileSystemObjectSource(
-                fileDescriptor: fd,
+                fileDescriptor: fileDescriptor,
                 eventMask: .write,
                 queue: processingQueue
             )
@@ -154,8 +160,8 @@ extension SessionWatcher {
             }
 
             source.setCancelHandler { [weak self] in
-                if let fd = self?.directoryFileDescriptor, fd >= 0 {
-                    close(fd)
+                if let fileDescriptor = self?.directoryFileDescriptor, fileDescriptor >= 0 {
+                    close(fileDescriptor)
                     self?.directoryFileDescriptor = -1
                 }
             }
@@ -173,9 +179,9 @@ extension SessionWatcher {
 
         /// Scans the drop directory for JSON files and processes each one.
         public func processExistingFiles() {
-            let fm = FileManager.default
+            let fileManager = FileManager.default
 
-            guard let contents = try? fm.contentsOfDirectory(
+            guard let contents = try? fileManager.contentsOfDirectory(
                 at: dropDirectoryURL,
                 includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
                 options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
@@ -203,10 +209,10 @@ extension SessionWatcher {
         /// Processes a single event JSON file.
         /// - Parameter fileURL: The URL of the JSON file to process.
         public func processFile(at fileURL: URL) {
-            let fm = FileManager.default
+            let fileManager = FileManager.default
 
             // Check file age to handle concurrent writes
-            if let attributes = try? fm.attributesOfItem(atPath: fileURL.path),
+            if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
                let modDate = attributes[.modificationDate] as? Date {
                 let age = Date().timeIntervalSince(modDate)
                 if age < Self.minimumFileAge {
@@ -225,11 +231,11 @@ extension SessionWatcher {
             // Empty files: if old enough, delete them (failed hook writes).
             // If very recent, skip — the hook may still be writing.
             if data.isEmpty {
-                if let attributes = try? fm.attributesOfItem(atPath: fileURL.path),
+                if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
                    let modDate = attributes[.modificationDate] as? Date,
                    Date().timeIntervalSince(modDate) > 5.0 {
                     logger.debug("Deleting empty file: \(fileURL.lastPathComponent, privacy: .public)")
-                    try? fm.removeItem(at: fileURL)
+                    try? fileManager.removeItem(at: fileURL)
                 }
                 return
             }
@@ -245,10 +251,17 @@ extension SessionWatcher {
             do {
                 try ingestEvent(eventFile, rawData: data)
                 // Delete the consumed file
-                try fm.removeItem(at: fileURL)
-                logger.debug("Ingested \(eventFile.event, privacy: .public) for session \(eventFile.sessionId, privacy: .public) from \(fileURL.lastPathComponent, privacy: .public)")
+                try fileManager.removeItem(at: fileURL)
+                logger.debug(
+                    "Ingested \(eventFile.event, privacy: .public)"
+                    + " for session \(eventFile.sessionId, privacy: .public)"
+                    + " from \(fileURL.lastPathComponent, privacy: .public)"
+                )
             } catch {
-                logger.error("Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                logger.error(
+                    "Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public):"
+                    + " \(error.localizedDescription, privacy: .public)"
+                )
                 moveToErrors(fileURL)
             }
         }
@@ -287,7 +300,7 @@ extension SessionWatcher {
 
             // Create or update the session record
             let session = sessionFromEvent(eventFile)
-            try SessionWatcherDatabaseManager.upsertSession(session)
+            try sessionWatcherDatabaseManager.upsertSession(session)
 
             // Insert the event record
             let event = SessionWatcherEvent(
@@ -296,11 +309,11 @@ extension SessionWatcher {
                 timestamp: eventFile.timestamp,
                 rawJson: rawJson
             )
-            try SessionWatcherDatabaseManager.insertEvent(event)
+            try sessionWatcherDatabaseManager.insertEvent(event)
 
             // If this is a SessionEnd event, mark the session as ended
             if eventFile.event == "SessionEnd" {
-                try SessionWatcherDatabaseManager.updateSessionStatus(
+                try sessionWatcherDatabaseManager.updateSessionStatus(
                     sessionId: eventFile.sessionId,
                     status: .ended
                 )
@@ -360,7 +373,10 @@ extension SessionWatcher {
                         try await summarizer.summarizeAndStore(sessionId: sessionId)
                     } catch {
                         SessionWatcher.SummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription)")
-                        Self.logger.error("Summarization error for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                        Self.logger.error(
+                            "Summarization error for \(sessionId, privacy: .public):"
+                            + " \(error.localizedDescription, privacy: .public)"
+                        )
                         await MainActor.run {
                             self?.onSummarizerError?(error.localizedDescription)
                         }
@@ -390,19 +406,30 @@ extension SessionWatcher {
             }
 
             Task.detached(priority: .utility) { [weak self] in
-                guard let sessions = try? self?.SessionWatcherDatabaseManager.fetchAllSessions() else {
-                    SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: failed to fetch sessions")
+                guard let sessions = try? self?.sessionWatcherDatabaseManager.fetchAllSessions() else {
+                    SessionWatcher.SummarizerDebugLog.shared.append(
+                        "summarizeExistingSessions: failed to fetch sessions"
+                    )
                     return
                 }
-                SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: \(sessions.count) session(s) total")
+                SessionWatcher.SummarizerDebugLog.shared.append(
+                    "summarizeExistingSessions: \(sessions.count) session(s) total"
+                )
 
                 for session in sessions {
-                    SessionWatcher.SummarizerDebugLog.shared.append("  summarizing: \(session.sessionId) (\(session.status.rawValue))")
+                    SessionWatcher.SummarizerDebugLog.shared.append(
+                        "  summarizing: \(session.sessionId) (\(session.status.rawValue))"
+                    )
                     do {
                         try await summarizer.summarizeAndStore(sessionId: session.sessionId)
                     } catch {
-                        SessionWatcher.SummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription) — stopping summarization loop")
-                        Self.logger.error("Summarization loop stopped: \(error.localizedDescription, privacy: .public)")
+                        SessionWatcher.SummarizerDebugLog.shared.append(
+                            "ERROR: \(error.localizedDescription) — stopping summarization loop"
+                        )
+                        Self.logger.error(
+                            "Summarization loop stopped:"
+                            + " \(error.localizedDescription, privacy: .public)"
+                        )
                         await MainActor.run {
                             self?.onSummarizerError?(error.localizedDescription)
                         }
@@ -417,21 +444,24 @@ extension SessionWatcher {
 
         /// Moves a file to the errors subdirectory.
         private func moveToErrors(_ fileURL: URL) {
-            let fm = FileManager.default
+            let fileManager = FileManager.default
             let destination = errorsDirectoryURL.appendingPathComponent(fileURL.lastPathComponent)
 
             do {
                 try ensureDirectoriesExist()
                 // If a file with the same name already exists in errors, remove it first
-                if fm.fileExists(atPath: destination.path) {
-                    try fm.removeItem(at: destination)
+                if fileManager.fileExists(atPath: destination.path) {
+                    try fileManager.removeItem(at: destination)
                 }
-                try fm.moveItem(at: fileURL, to: destination)
+                try fileManager.moveItem(at: fileURL, to: destination)
                 logger.info("Moved malformed file to errors/: \(fileURL.lastPathComponent, privacy: .public)")
             } catch {
-                logger.error("Failed to move file to errors directory: \(error.localizedDescription, privacy: .public)")
+                logger.error(
+                    "Failed to move file to errors directory:"
+                    + " \(error.localizedDescription, privacy: .public)"
+                )
                 // Last resort: try to delete the problematic file
-                try? fm.removeItem(at: fileURL)
+                try? fileManager.removeItem(at: fileURL)
             }
         }
     }

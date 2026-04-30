@@ -25,8 +25,10 @@ extension SessionWatcher {
         private let textView = NSTextView()
         private let scrollView = NSScrollView()
         private let emptyLabel = NSTextField(labelWithString: "No summarizer activity yet.")
-        private let emptyHintLabel = NSTextField(wrappingLabelWithString:
-                                                    "Trigger a session end or right-click a session and choose \"Summarize with AI\".")
+        private let emptyHintLabel = NSTextField(
+            wrappingLabelWithString:
+                "Trigger a session end or right-click a session and choose \"Summarize with AI\"."
+        )
 
         public override init(frame: NSRect) {
             super.init(frame: frame)

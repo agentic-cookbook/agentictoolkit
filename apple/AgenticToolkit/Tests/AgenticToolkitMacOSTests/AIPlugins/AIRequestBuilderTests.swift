@@ -62,31 +62,31 @@ final class AIRequestBuilderTests: XCTestCase {
     }
 
     func testParseAnthropicReply() {
-        let json = """
+        let json = Data("""
         {"content":[{"text":"Hello back","type":"text"}]}
-        """.data(using: .utf8)!
+        """.utf8)
         let reply = AIRequestBuilder.parseAssistantReply(from: json, provider: .anthropic)
         XCTAssertEqual(reply, "Hello back")
     }
 
     func testParseOpenAIReply() {
-        let json = """
+        let json = Data("""
         {"choices":[{"message":{"role":"assistant","content":"Hi there"}}]}
-        """.data(using: .utf8)!
+        """.utf8)
         let reply = AIRequestBuilder.parseAssistantReply(from: json, provider: .openai)
         XCTAssertEqual(reply, "Hi there")
     }
 
     func testParseGoogleReply() {
-        let json = """
+        let json = Data("""
         {"candidates":[{"content":{"parts":[{"text":"Hey"}]}}]}
-        """.data(using: .utf8)!
+        """.utf8)
         let reply = AIRequestBuilder.parseAssistantReply(from: json, provider: .google)
         XCTAssertEqual(reply, "Hey")
     }
 
     func testParseUnrecognizedReplyFallback() {
-        let json = "{}".data(using: .utf8)!
+        let json = Data("{}".utf8)
         let reply = AIRequestBuilder.parseAssistantReply(from: json, provider: .anthropic)
         XCTAssertEqual(reply, "(Empty response)")
     }

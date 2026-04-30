@@ -65,7 +65,9 @@ public enum TerminalSessionSummarizer {
 
         let lineCount = terminalText.components(separatedBy: "\n").count
         guard lineCount >= minimumLineCount, terminalText.count >= minimumCharCount else {
-            logger.debug("Skipping summarization — insufficient content (\(lineCount) lines, \(terminalText.count) chars)")
+            logger.debug(
+                "Skipping summarization — insufficient content (\(lineCount) lines, \(terminalText.count) chars)"
+            )
             return nil
         }
 

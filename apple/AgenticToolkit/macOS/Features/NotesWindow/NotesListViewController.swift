@@ -36,11 +36,11 @@ public final class NotesListViewController: NSViewController {
     private var filteredNotes: [Note] = []
 
     private lazy var searchField: NSSearchField = {
-        let sf = NSSearchField()
-        sf.placeholderString = "Search notes"
-        sf.delegate = self
-        sf.translatesAutoresizingMaskIntoConstraints = false
-        return sf
+        let field = NSSearchField()
+        field.placeholderString = "Search notes"
+        field.delegate = self
+        field.translatesAutoresizingMaskIntoConstraints = false
+        return field
     }()
 
     private lazy var newNoteButton: NSButton = {
@@ -63,25 +63,25 @@ public final class NotesListViewController: NSViewController {
     }()
 
     private lazy var scrollView: NSScrollView = {
-        let sv = NSScrollView()
-        sv.hasVerticalScroller = true
-        sv.autohidesScrollers = true
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        return sv
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        return scroll
     }()
 
     private lazy var tableView: NSTableView = {
-        let tv = NSTableView()
-        tv.headerView = nil
-        tv.rowHeight = 60
-        tv.selectionHighlightStyle = .regular
-        tv.delegate = self
-        tv.dataSource = self
-        tv.rowSizeStyle = .custom
+        let table = NSTableView()
+        table.headerView = nil
+        table.rowHeight = 60
+        table.selectionHighlightStyle = .regular
+        table.delegate = self
+        table.dataSource = self
+        table.rowSizeStyle = .custom
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("note"))
         col.resizingMask = .autoresizingMask
-        tv.addTableColumn(col)
-        return tv
+        table.addTableColumn(col)
+        return table
     }()
 
     // MARK: - View Lifecycle
@@ -187,9 +187,9 @@ extension NotesListViewController: NSTableViewDelegate {
 public final class NoteListCellView: NSTableCellView {
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .abbreviated
-        return f
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter
     }()
 
     private let pinIndicator = NSImageView()

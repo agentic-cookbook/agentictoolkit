@@ -5,7 +5,7 @@ import AgenticToolkitCoreMacOS
 /// rationale as `TerminalSettingsPanelViewController`: lives in the MacOS
 /// target because the inner view does.
 @MainActor
-public final class TerminalProfilesSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
+public final class TerminalProfilesPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     public init() {
         super.init(with: ComposableSettings.SettingsPanelDescriptor(

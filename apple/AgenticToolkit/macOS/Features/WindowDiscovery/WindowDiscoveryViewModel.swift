@@ -98,7 +98,7 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
                   let axWindows = windowsRef as? [AXUIElement] else { continue }
 
             var windows: [DiscoveredWindow] = []
-            for (i, axWindow) in axWindows.enumerated() {
+            for (index, axWindow) in axWindows.enumerated() {
                 var titleRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &titleRef)
                 let title = (titleRef as? String) ?? ""
@@ -111,7 +111,7 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
                     && title.localizedCaseInsensitiveContains(projectName)
 
                 windows.append(DiscoveredWindow(
-                    id: Int(app.pid) * 10000 + i,
+                    id: Int(app.pid) * 10000 + index,
                     title: title,
                     pid: app.pid,
                     axElement: axWindow,

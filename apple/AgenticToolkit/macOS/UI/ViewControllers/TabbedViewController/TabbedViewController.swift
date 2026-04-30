@@ -166,21 +166,21 @@ open class TabbedViewController: NSViewController {
         tabBar.setSelected(id)
     }
 
-    private func mount(_ vc: NSViewController) {
-        addChild(vc)
-        vc.view.translatesAutoresizingMaskIntoConstraints = false
-        contentContainer.addSubview(vc.view)
+    private func mount(_ viewController: NSViewController) {
+        addChild(viewController)
+        viewController.view.translatesAutoresizingMaskIntoConstraints = false
+        contentContainer.addSubview(viewController.view)
         NSLayoutConstraint.activate([
-            vc.view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
-            vc.view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
-            vc.view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
-            vc.view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
+            viewController.view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            viewController.view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            viewController.view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            viewController.view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
         ])
     }
 
-    private func unmount(_ vc: NSViewController) {
-        vc.view.removeFromSuperview()
-        vc.removeFromParent()
+    private func unmount(_ viewController: NSViewController) {
+        viewController.view.removeFromSuperview()
+        viewController.removeFromParent()
     }
 
     // MARK: - Sync

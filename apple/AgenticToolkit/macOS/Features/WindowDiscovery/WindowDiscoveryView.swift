@@ -150,7 +150,9 @@ public final class WindowDiscoveryView: NSView {
         let title = NSTextField(labelWithString: "Accessibility Access Required")
         title.font = .systemFont(ofSize: 12, weight: .medium)
 
-        let desc = NSTextField(wrappingLabelWithString: "Grant Whippet Accessibility access to discover and activate windows.")
+        let desc = NSTextField(
+            wrappingLabelWithString: "Grant Whippet Accessibility access to discover and activate windows."
+        )
         desc.font = .systemFont(ofSize: 11)
         desc.textColor = .secondaryLabelColor
         desc.alignment = .center
@@ -305,8 +307,8 @@ public final class DiscoveredAppSectionView: NSView {
         windowsStack.translatesAutoresizingMaskIntoConstraints = false
 
         for window in app.windows {
-            let row = DiscoveredWindowRowView(window: window) { [weak self] w in
-                self?.onWindowSelected(w)
+            let row = DiscoveredWindowRowView(window: window) { [weak self] selected in
+                self?.onWindowSelected(selected)
             }
             windowsStack.addArrangedSubview(row)
         }

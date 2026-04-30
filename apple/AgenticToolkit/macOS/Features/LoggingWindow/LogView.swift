@@ -76,12 +76,12 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
         tableView.doubleAction = #selector(tableDoubleClicked)
 
         for (index, column) in provider.columns.enumerated() {
-            let tc = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(column.id))
-            tc.title = column.title
-            tc.width = column.defaultWidth
-            tc.minWidth = column.minWidth
-            tc.maxWidth = column.maxWidth
-            tableView.addTableColumn(tc)
+            let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(column.id))
+            tableColumn.title = column.title
+            tableColumn.width = column.defaultWidth
+            tableColumn.minWidth = column.minWidth
+            tableColumn.maxWidth = column.maxWidth
+            tableView.addTableColumn(tableColumn)
             columnIDByIndex[index] = column.id
         }
     }
@@ -156,10 +156,10 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
 
         if let value = line.values[columnID] {
             switch value {
-            case .plain(let s):
-                cell.stringValue = s
-            case .attributed(let a):
-                cell.attributedStringValue = a
+            case .plain(let plain):
+                cell.stringValue = plain
+            case .attributed(let attributed):
+                cell.attributedStringValue = attributed
             }
         } else {
             cell.stringValue = ""

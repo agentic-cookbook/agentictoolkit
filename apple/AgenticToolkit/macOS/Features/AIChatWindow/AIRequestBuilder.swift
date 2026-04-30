@@ -10,7 +10,14 @@ public struct AIRequestConfig {
     public let maxTokens: Int
     public let timeoutInterval: TimeInterval
 
-    public init(provider: AIProvider, model: String, apiKey: String, customBaseURL: String, maxTokens: Int, timeoutInterval: TimeInterval) {
+    public init(
+        provider: AIProvider,
+        model: String,
+        apiKey: String,
+        customBaseURL: String,
+        maxTokens: Int,
+        timeoutInterval: TimeInterval
+    ) {
         self.provider = provider
         self.model = model
         self.apiKey = apiKey
@@ -46,7 +53,7 @@ public enum AIRequestBuilder {
             }
             return try buildOpenAIRequest(config: config, messages: messages, systemPrompt: systemPrompt,
                                           baseURL: config.customBaseURL)
-                                          case .claudeCLI:
+        case .claudeCLI:
             fatalError("This needs to be implemented")
         }
     }
@@ -172,7 +179,9 @@ public enum AIRequestBuilder {
         systemPrompt: String?
     ) -> URLRequest {
         let effectiveModel = config.model.isEmpty ? "gemini-2.0-flash" : config.model
-        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(effectiveModel):generateContent?key=\(config.apiKey)")!
+        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/"
+            + "\(effectiveModel):generateContent?key=\(config.apiKey)"
+        let url = URL(string: urlString)!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "content-type")

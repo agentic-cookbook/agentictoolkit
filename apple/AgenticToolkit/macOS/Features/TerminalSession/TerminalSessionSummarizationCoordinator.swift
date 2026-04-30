@@ -6,7 +6,7 @@ import os
 /// Host app hook for supplying summarization settings on demand. The coordinator calls
 /// `currentSettings()` each time it needs to summarize, so UI changes take effect
 /// without reconfiguring the coordinator.
-public protocol TerminalSessionTerminalSessionSummarizationSettingsProviding: AnyObject, Sendable {
+public protocol TerminalSummarizationSettingsProviding: AnyObject, Sendable {
     @MainActor func currentSettings() -> TerminalSessionSummarizationSettings
 }
 
@@ -18,7 +18,7 @@ public protocol TerminalSessionTerminalSessionSummarizationSettingsProviding: An
 public final class TerminalSessionSummarizationCoordinator {
 
     private weak var sessionManager: TerminalSessionManager?
-    private let settingsProvider: TerminalSessionTerminalSessionSummarizationSettingsProviding
+    private let settingsProvider: TerminalSummarizationSettingsProviding
 
     private var pendingWork: [UUID: Task<Void, Never>] = [:]
     private var subscriptions: [UUID: Set<AnyCancellable>] = [:]
@@ -29,7 +29,10 @@ public final class TerminalSessionSummarizationCoordinator {
     private let debounceDelay: TimeInterval = 5.0
     private let periodicInterval: TimeInterval = 60.0
 
-    public init(sessionManager: TerminalSessionManager, settingsProvider: TerminalSessionTerminalSessionSummarizationSettingsProviding) {
+    public init(
+        sessionManager: TerminalSessionManager,
+        settingsProvider: TerminalSummarizationSettingsProviding
+    ) {
         self.sessionManager = sessionManager
         self.settingsProvider = settingsProvider
 
@@ -163,8 +166,11 @@ extension TerminalSessionManager {
 
     /// Enables AI summarization for all sessions managed by this manager. Idempotent —
     /// a second call replaces the existing coordinator.
-    public func enableSummarization(settingsProvider: TerminalSessionTerminalSessionSummarizationSettingsProviding) {
-        let coordinator = TerminalSessionSummarizationCoordinator(sessionManager: self, settingsProvider: settingsProvider)
+    public func enableSummarization(settingsProvider: TerminalSummarizationSettingsProviding) {
+        let coordinator = TerminalSessionSummarizationCoordinator(
+            sessionManager: self,
+            settingsProvider: settingsProvider
+        )
         _coordinatorStorage[ObjectIdentifier(self)] = coordinator
     }
 

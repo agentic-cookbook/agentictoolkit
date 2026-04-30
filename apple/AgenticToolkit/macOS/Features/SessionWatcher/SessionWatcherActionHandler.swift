@@ -138,13 +138,24 @@ extension SessionWatcher {
         @discardableResult
         public func execute(for session: SessionWatcherSession) -> SessionWatcherActionResult {
             let action = currentAction
-            logger.info("SessionWatcherSession clicked: \(session.sessionId, privacy: .public) project=\(session.projectName, privacy: .public) cwd=\(session.cwd, privacy: .public) action=\(action.rawValue, privacy: .public)")
+            logger.info(
+                "SessionWatcherSession clicked: \(session.sessionId, privacy: .public)"
+                + " project=\(session.projectName, privacy: .public)"
+                + " cwd=\(session.cwd, privacy: .public)"
+                + " action=\(action.rawValue, privacy: .public)"
+            )
             return execute(action: action, for: session)
         }
 
         @discardableResult
-        public func execute(action: SessionWatcherClickAction, for session: SessionWatcherSession) -> SessionWatcherActionResult {
-            logger.info("Executing action '\(action.rawValue, privacy: .public)' for session \(session.sessionId, privacy: .public)")
+        public func execute(
+            action: SessionWatcherClickAction,
+            for session: SessionWatcherSession
+        ) -> SessionWatcherActionResult {
+            logger.info(
+                "Executing action '\(action.rawValue, privacy: .public)'"
+                + " for session \(session.sessionId, privacy: .public)"
+            )
             let result: SessionWatcherActionResult
             switch action {
             case .openTerminal:
@@ -167,7 +178,10 @@ extension SessionWatcher {
             case .success:
                 logger.info("Action '\(action.rawValue, privacy: .public)' succeeded")
             case .failure(let error):
-                logger.error("Action '\(action.rawValue, privacy: .public)' failed: \(error.localizedDescription, privacy: .public)")
+                logger.error(
+                    "Action '\(action.rawValue, privacy: .public)' failed:"
+                    + " \(error.localizedDescription, privacy: .public)"
+                )
             }
             return result
         }
@@ -239,7 +253,10 @@ extension SessionWatcher {
         // MARK: - Activate Warp SessionWatcherSession
 
         private func activateWarpSession(for session: SessionWatcherSession) -> SessionWatcherActionResult {
-            logger.info("activateWarp: cwd='\(session.cwd, privacy: .public)' project='\(session.projectName, privacy: .public)'")
+            logger.info(
+                "activateWarp: cwd='\(session.cwd, privacy: .public)'"
+                + " project='\(session.projectName, privacy: .public)'"
+            )
 
             guard !session.cwd.isEmpty else {
                 logger.warning("activateWarp: empty cwd")
@@ -259,10 +276,16 @@ extension SessionWatcher {
 
             let expandedCwd = (session.cwd as NSString).expandingTildeInPath
             let projectName = session.projectName
-            logger.debug("activateWarp: looking for window matching project='\(projectName, privacy: .public)' or cwd='\(expandedCwd, privacy: .public)'")
+            logger.debug(
+                "activateWarp: looking for window matching"
+                + " project='\(projectName, privacy: .public)'"
+                + " or cwd='\(expandedCwd, privacy: .public)'"
+            )
 
             // Strategy 1: Use CGWindowList to find Warp windows and match by title
-            guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            let windowListOptions: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+            let cgWindows = CGWindowListCopyWindowInfo(windowListOptions, kCGNullWindowID) as? [[String: Any]]
+            guard let windowList = cgWindows else {
                 logger.error("activateWarp: CGWindowListCopyWindowInfo returned nil")
                 return .failure(.commandFailed("Unable to read window list"))
             }
@@ -296,10 +319,14 @@ extension SessionWatcher {
             var bestMatch: (name: String, number: Int)?
             for candidate in matchCandidates {
                 guard !candidate.isEmpty else { continue }
-                for w in warpWindows where w.layer == 0 { // layer 0 = normal windows
-                    if w.name.localizedCaseInsensitiveContains(candidate) {
-                        logger.info("activateWarp: matched window #\(w.number) title='\(w.name, privacy: .public)' via candidate='\(candidate, privacy: .public)'")
-                        bestMatch = (name: w.name, number: w.number)
+                for entry in warpWindows where entry.layer == 0 { // layer 0 = normal windows
+                    if entry.name.localizedCaseInsensitiveContains(candidate) {
+                        logger.info(
+                            "activateWarp: matched window #\(entry.number)"
+                            + " title='\(entry.name, privacy: .public)'"
+                            + " via candidate='\(candidate, privacy: .public)'"
+                        )
+                        bestMatch = (name: entry.name, number: entry.number)
                         break
                     }
                 }
@@ -328,11 +355,11 @@ extension SessionWatcher {
             let axWindows = (axWindowsRef as? [AXUIElement]) ?? []
             logger.debug("activateWarp: Accessibility found \(axWindows.count) window(s)")
 
-            for (i, window) in axWindows.enumerated() {
+            for (index, window) in axWindows.enumerated() {
                 var titleRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
                 let axTitle = titleRef as? String ?? "<no title>"
-                logger.debug("activateWarp: AX window[\(i)] title='\(axTitle, privacy: .public)'")
+                logger.debug("activateWarp: AX window[\(index)] title='\(axTitle, privacy: .public)'")
             }
 
             // Activate Warp first
@@ -358,7 +385,10 @@ extension SessionWatcher {
 
             // No title match — fall back to raising the first normal-layer window
             if let firstNormal = warpWindows.first(where: { $0.layer == 0 }) {
-                logger.info("activateWarp: no title match, raising first window '\(firstNormal.name, privacy: .public)'")
+                logger.info(
+                    "activateWarp: no title match,"
+                    + " raising first window '\(firstNormal.name, privacy: .public)'"
+                )
                 for window in axWindows {
                     var titleRef: CFTypeRef?
                     AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
@@ -489,8 +519,8 @@ extension SessionWatcher {
             let sorted = candidates.sorted { $0.score > $1.score }
 
             log.append("  Candidates: \(sorted.count)")
-            for (i, c) in sorted.enumerated() {
-                log.append("    [\(i)] score=\(c.score) \"\(c.title)\"")
+            for (index, candidate) in sorted.enumerated() {
+                log.append("    [\(index)] score=\(candidate.score) \"\(candidate.title)\"")
             }
 
             guard !sorted.isEmpty else {
@@ -508,20 +538,21 @@ extension SessionWatcher {
                 let axFrontApp = AXUIElementCreateApplication(frontApp.processIdentifier)
                 var mainRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(axFrontApp, kAXMainWindowAttribute as CFString, &mainRef)
+                let currentMain: AXUIElement? = mainRef.map { unsafeBitCast($0, to: AXUIElement.self) }
                 var currentTitle = ""
-                if let main = mainRef {
+                if let main = currentMain {
                     var titleRef: CFTypeRef?
-                    AXUIElementCopyAttributeValue(main as! AXUIElement, kAXTitleAttribute as CFString, &titleRef)
+                    AXUIElementCopyAttributeValue(main, kAXTitleAttribute as CFString, &titleRef)
                     currentTitle = (titleRef as? String) ?? ""
                 }
 
                 if currentTitle.localizedCaseInsensitiveContains(projectName),
                    sorted.count > 1,
-                   let currentMain = mainRef {
+                   let currentMainWindow = currentMain {
                     // Current window already matches — cycle to the next AX element.
                     // Compare by AX element identity (CFEqual), not title, since
                     // multiple tabs can have identical titles.
-                    if let next = sorted.first(where: { !CFEqual($0.axWindow, currentMain as! AXUIElement) }) {
+                    if let next = sorted.first(where: { !CFEqual($0.axWindow, currentMainWindow) }) {
                         best = next
                         log.append("  Cycling: current=\"\(currentTitle)\" → next=\"\(best.title)\"")
                     } else {
@@ -590,17 +621,16 @@ extension SessionWatcher {
                 "\(homeDir)/.claude/sessions/\(session.sessionId)/transcript.json"
             ]
 
-            for path in possiblePaths {
-                if FileManager.default.fileExists(atPath: path) {
-                    logger.info("openTranscript: found at \(path, privacy: .public)")
-                    NSWorkspace.shared.open(URL(fileURLWithPath: path))
-                    return .success
-                }
+            for path in possiblePaths where FileManager.default.fileExists(atPath: path) {
+                logger.info("openTranscript: found at \(path, privacy: .public)")
+                NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                return .success
             }
 
             logger.info("openTranscript: not found in any location")
             return .failure(.transcriptNotFound(
-                "No transcript found for session \(session.sessionId). Looked in ~/.claude/projects/ and ~/.claude/sessions/."
+                "No transcript found for session \(session.sessionId)."
+                + " Looked in ~/.claude/projects/ and ~/.claude/sessions/."
             ))
         }
 
@@ -619,7 +649,10 @@ extension SessionWatcher {
         private func runCustomCommand(for session: SessionWatcherSession) -> SessionWatcherActionResult {
             let template = customCommandTemplate
             let command = substituteVariables(in: template, session: session)
-            logger.info("runCustomCommand: template='\(template, privacy: .public)' expanded='\(command, privacy: .public)'")
+            logger.info(
+                "runCustomCommand: template='\(template, privacy: .public)'"
+                + " expanded='\(command, privacy: .public)'"
+            )
 
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -636,7 +669,10 @@ extension SessionWatcher {
                     if process.terminationStatus != 0 {
                         let data = pipe.fileHandleForReading.readDataToEndOfFile()
                         let output = String(data: data, encoding: .utf8) ?? "Unknown error"
-                        Self.logger.error("Custom command failed (exit \(process.terminationStatus)): \(output, privacy: .public)")
+                        Self.logger.error(
+                            "Custom command failed (exit \(process.terminationStatus)):"
+                            + " \(output, privacy: .public)"
+                        )
                     } else {
                         Self.logger.debug("Custom command completed successfully")
                     }
@@ -654,7 +690,9 @@ extension SessionWatcher {
             logger.debug("sendNotification: \(session.projectName, privacy: .public)")
             let content = UNMutableNotificationContent()
             content.title = "Whippet: \(session.projectName)"
-            content.body = "SessionWatcherSession: \(session.sessionId)\nModel: \(session.model)\nStatus: \(session.status.rawValue)"
+            content.body = "SessionWatcherSession: \(session.sessionId)"
+                + "\nModel: \(session.model)"
+                + "\nStatus: \(session.status.rawValue)"
             content.sound = .default
 
             let request = UNNotificationRequest(
@@ -752,9 +790,13 @@ extension SessionWatcher {
             if errorNumber == -1743 || errorNumber == -1744
                 || errorMessage.localizedCaseInsensitiveContains("not authorized")
                 || errorMessage.localizedCaseInsensitiveContains("privilege violation") {
-                logger.error("AppleScript permission denied for \(appName, privacy: .public): \(errorMessage, privacy: .public)")
+                logger.error(
+                    "AppleScript permission denied for \(appName, privacy: .public):"
+                    + " \(errorMessage, privacy: .public)"
+                )
                 return .permissionDenied(
-                    "Whippet needs permission to control \(appName). Grant access in System Settings > Privacy & Security > Automation.",
+                    "Whippet needs permission to control \(appName)."
+                    + " Grant access in System Settings > Privacy & Security > Automation.",
                     pane: .automation
                 )
             }

@@ -327,7 +327,11 @@ extension SessionWatcher {
         }
 
         private func _fetchSession(bySessionId sessionId: String) throws -> SessionWatcherSession? {
-            let sql = "SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program FROM sessions WHERE session_id = ?"
+            let sql = """
+                SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                       last_tool, status, git_branch, summary, pid, term_program
+                FROM sessions WHERE session_id = ?
+                """
 
             var stmt: OpaquePointer?
             defer { sqlite3_finalize(stmt) }
@@ -352,7 +356,11 @@ extension SessionWatcher {
                 defer { sqlite3_finalize(stmt) }
 
                 if let status = status {
-                    let sql = "SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program FROM sessions WHERE status = ? ORDER BY started_at ASC"
+                    let sql = """
+                        SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                               last_tool, status, git_branch, summary, pid, term_program
+                        FROM sessions WHERE status = ? ORDER BY started_at ASC
+                        """
 
                     guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                         throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
@@ -360,7 +368,11 @@ extension SessionWatcher {
 
                     sqlite3_bind_text(stmt, 1, (status.rawValue as NSString).utf8String, -1, nil)
                 } else {
-                    let sql = "SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program FROM sessions ORDER BY started_at ASC"
+                    let sql = """
+                        SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                               last_tool, status, git_branch, summary, pid, term_program
+                        FROM sessions ORDER BY started_at ASC
+                        """
 
                     guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                         throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
@@ -377,8 +389,14 @@ extension SessionWatcher {
 
         /// Updates the status of a session.
         public func updateSessionStatus(sessionId: String, status: SessionWatcherStatus) throws {
-            logger.debug("Updating session \(sessionId, privacy: .public) → \(status.rawValue, privacy: .public)")
-            let sql = "UPDATE sessions SET status = ?, last_activity_at = datetime('now') WHERE session_id = ?"
+            logger.debug(
+                "Updating session \(sessionId, privacy: .public) → " +
+                "\(status.rawValue, privacy: .public)"
+            )
+            let sql = """
+                UPDATE sessions SET status = ?, last_activity_at = datetime('now')
+                WHERE session_id = ?
+                """
 
             var stmt: OpaquePointer?
             defer { sqlite3_finalize(stmt) }
@@ -443,7 +461,10 @@ extension SessionWatcher {
             guard sqlite3_prepare_v2(database, deleteEventsSql, -1, &evtStmt, nil) == SQLITE_OK else {
                 throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
             }
-            sqlite3_bind_text(evtStmt, 1, (sessionId as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            sqlite3_bind_text(
+                evtStmt, 1, (sessionId as NSString).utf8String, -1,
+                unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            )
             guard sqlite3_step(evtStmt) == SQLITE_DONE else {
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
             }
@@ -455,7 +476,10 @@ extension SessionWatcher {
             guard sqlite3_prepare_v2(database, deleteSessionSql, -1, &sessStmt, nil) == SQLITE_OK else {
                 throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
             }
-            sqlite3_bind_text(sessStmt, 1, (sessionId as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            sqlite3_bind_text(
+                sessStmt, 1, (sessionId as NSString).utf8String, -1,
+                unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            )
             guard sqlite3_step(sessStmt) == SQLITE_DONE else {
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
             }
@@ -465,7 +489,8 @@ extension SessionWatcher {
         /// Used by the liveness monitor to know which sessions will transition to stale.
         public func fetchActiveSessionsPastTimeout(_ seconds: TimeInterval) throws -> [SessionWatcherSession] {
             let sql = """
-            SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program
+            SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                   last_tool, status, git_branch, summary, pid, term_program
             FROM sessions
             WHERE status = 'active'
             AND datetime(last_activity_at, '+' || ? || ' seconds') < datetime('now')
@@ -479,7 +504,10 @@ extension SessionWatcher {
             }
 
             let secondsStr = String(max(0, Int(seconds)))
-            sqlite3_bind_text(stmt, 1, (secondsStr as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            sqlite3_bind_text(
+                stmt, 1, (secondsStr as NSString).utf8String, -1,
+                unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            )
 
             var sessions: [SessionWatcherSession] = []
             while sqlite3_step(stmt) == SQLITE_ROW {
@@ -492,7 +520,8 @@ extension SessionWatcher {
         /// Used by the liveness monitor to check if the originating process is still alive.
         public func fetchLiveSessionsWithPid() throws -> [SessionWatcherSession] {
             let sql = """
-            SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program
+            SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                   last_tool, status, git_branch, summary, pid, term_program
             FROM sessions
             WHERE status IN ('active', 'stale')
             AND pid > 0
@@ -528,7 +557,10 @@ extension SessionWatcher {
             }
 
             let secondsStr = String(max(0, Int(seconds)))
-            sqlite3_bind_text(stmt, 1, (secondsStr as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            sqlite3_bind_text(
+                stmt, 1, (secondsStr as NSString).utf8String, -1,
+                unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            )
 
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
@@ -596,7 +628,10 @@ extension SessionWatcher {
         /// Fetches events for a given session. Thread-safe.
         public func fetchEvents(forSessionId sessionId: String) throws -> [SessionWatcherEvent] {
             try queue.sync {
-                let sql = "SELECT id, session_id, event_type, timestamp, raw_json FROM events WHERE session_id = ? ORDER BY timestamp ASC"
+                let sql = """
+                    SELECT id, session_id, event_type, timestamp, raw_json FROM events
+                    WHERE session_id = ? ORDER BY timestamp ASC
+                    """
 
                 var stmt: OpaquePointer?
                 defer { sqlite3_finalize(stmt) }
@@ -621,7 +656,10 @@ extension SessionWatcher {
             defer { sqlite3_finalize(stmt) }
 
             if let eventType = eventType {
-                let sql = "SELECT id, session_id, event_type, timestamp, raw_json FROM events WHERE event_type = ? ORDER BY timestamp DESC"
+                let sql = """
+                    SELECT id, session_id, event_type, timestamp, raw_json FROM events
+                    WHERE event_type = ? ORDER BY timestamp DESC
+                    """
 
                 guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                     throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
@@ -814,9 +852,9 @@ extension SessionWatcher {
         private static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
         nonisolated(unsafe) private static let iso8601: ISO8601DateFormatter = {
-            let f = ISO8601DateFormatter()
-            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            return f
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return formatter
         }()
 
         /// Inserts a new note. Thread-safe.
@@ -834,11 +872,14 @@ extension SessionWatcher {
             guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
             }
-            sqlite3_bind_text(stmt, 1, (note.id.uuidString as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
-            sqlite3_bind_text(stmt, 2, (note.title as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
-            sqlite3_bind_text(stmt, 3, (note.content as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
-            sqlite3_bind_text(stmt, 4, (SessionWatcherDatabaseManager.iso8601.string(from: note.createdDate) as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
-            sqlite3_bind_text(stmt, 5, (SessionWatcherDatabaseManager.iso8601.string(from: note.modifiedDate) as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
+            let transient = SessionWatcherDatabaseManager.sqliteTransient
+            let createdString = SessionWatcherDatabaseManager.iso8601.string(from: note.createdDate)
+            let modifiedString = SessionWatcherDatabaseManager.iso8601.string(from: note.modifiedDate)
+            sqlite3_bind_text(stmt, 1, (note.id.uuidString as NSString).utf8String, -1, transient)
+            sqlite3_bind_text(stmt, 2, (note.title as NSString).utf8String, -1, transient)
+            sqlite3_bind_text(stmt, 3, (note.content as NSString).utf8String, -1, transient)
+            sqlite3_bind_text(stmt, 4, (createdString as NSString).utf8String, -1, transient)
+            sqlite3_bind_text(stmt, 5, (modifiedString as NSString).utf8String, -1, transient)
             sqlite3_bind_int(stmt, 6, note.isPinned ? 1 : 0)
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
@@ -858,11 +899,13 @@ extension SessionWatcher {
             guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
             }
-            sqlite3_bind_text(stmt, 1, (note.title as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
-            sqlite3_bind_text(stmt, 2, (note.content as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
-            sqlite3_bind_text(stmt, 3, (SessionWatcherDatabaseManager.iso8601.string(from: note.modifiedDate) as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
+            let transient = SessionWatcherDatabaseManager.sqliteTransient
+            let modifiedString = SessionWatcherDatabaseManager.iso8601.string(from: note.modifiedDate)
+            sqlite3_bind_text(stmt, 1, (note.title as NSString).utf8String, -1, transient)
+            sqlite3_bind_text(stmt, 2, (note.content as NSString).utf8String, -1, transient)
+            sqlite3_bind_text(stmt, 3, (modifiedString as NSString).utf8String, -1, transient)
             sqlite3_bind_int(stmt, 4, note.isPinned ? 1 : 0)
-            sqlite3_bind_text(stmt, 5, (note.id.uuidString as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
+            sqlite3_bind_text(stmt, 5, (note.id.uuidString as NSString).utf8String, -1, transient)
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
             }
@@ -881,7 +924,8 @@ extension SessionWatcher {
             guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw SessionWatcherDatabaseError.prepareFailed(lastErrorMessage)
             }
-            sqlite3_bind_text(stmt, 1, (id.uuidString as NSString).utf8String, -1, SessionWatcherDatabaseManager.sqliteTransient)
+            let transient = SessionWatcherDatabaseManager.sqliteTransient
+            sqlite3_bind_text(stmt, 1, (id.uuidString as NSString).utf8String, -1, transient)
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
             }

@@ -73,7 +73,7 @@ extension SessionWatcher {
                 return ""
             }
             let summarizer = watcher.summarizer
-            let db = watcher.databaseManager
+            let database = watcher.databaseManager
 
             // Box ferries the result out of the @Sendable Task closure;
             // the semaphore enforces happens-before so the unchecked Sendable
@@ -84,7 +84,7 @@ extension SessionWatcher {
             Task {
                 do {
                     try await summarizer.summarizeAndStore(sessionId: sessionId)
-                    if let updated = try? db.fetchSession(bySessionId: sessionId) {
+                    if let updated = try? database.fetchSession(bySessionId: sessionId) {
                         box.value = updated.summary
                     }
                 } catch {

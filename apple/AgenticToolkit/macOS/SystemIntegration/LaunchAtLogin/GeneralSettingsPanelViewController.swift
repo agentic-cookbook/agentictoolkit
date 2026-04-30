@@ -33,7 +33,8 @@ public final class GeneralSettingsPanelViewController: ComposableSettings.Settin
         ))
 
         group.addSettingSubview(ComposableSettings.DismissibleHintView(
-            text: "Whippet works best when it starts automatically with your Mac. Enable launch at login so you never miss a Claude Code session.",
+            text: "Whippet works best when it starts automatically with your Mac. "
+                + "Enable launch at login so you never miss a Claude Code session.",
             dismissedSetting: UserSettings.launchAtLoginHintDismissed
         ))
 

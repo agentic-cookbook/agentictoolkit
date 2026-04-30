@@ -47,7 +47,12 @@ extension ComposableSettings {
 
         private static func buildSections(from panels: [any ComposableSettingsPanel]) -> [TopicListSection] {
             let items = panels.enumerated().map { index, panel in
-                TopicListItem(id: String(index), title: panel.descriptor.title, icon: panel.descriptor.icon, isDisabled: panel.descriptor.isDisabled)
+                TopicListItem(
+                    id: String(index),
+                    title: panel.descriptor.title,
+                    icon: panel.descriptor.icon,
+                    isDisabled: panel.descriptor.isDisabled
+                )
             }
 
             let hasSections = panels.contains { $0.descriptor.section != nil }

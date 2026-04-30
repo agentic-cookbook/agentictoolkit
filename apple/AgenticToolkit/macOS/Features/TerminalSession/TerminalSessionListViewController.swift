@@ -110,8 +110,10 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
         guard row < sessionManager.sessions.count else { return nil }
         let session = sessionManager.sessions[row]
 
-        let cell = tableView.makeView(withIdentifier: TerminalSessionRowCellView.identifier, owner: nil) as? TerminalSessionRowCellView
-            ?? TerminalSessionRowCellView(frame: .zero)
+        let cell = tableView.makeView(
+            withIdentifier: TerminalSessionRowCellView.identifier,
+            owner: nil
+        ) as? TerminalSessionRowCellView ?? TerminalSessionRowCellView(frame: .zero)
         cell.identifier = TerminalSessionRowCellView.identifier
         cell.configure(with: session)
         return cell

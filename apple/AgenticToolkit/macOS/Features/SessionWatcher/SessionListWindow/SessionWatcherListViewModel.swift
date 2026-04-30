@@ -114,7 +114,8 @@ extension SessionWatcher {
                 // Build groups for apps with live sessions, sorted by app name.
                 // Sessions within each group keep their DB insertion order (started_at ASC)
                 // so new sessions appear at the bottom.
-                let sortedGroups = sessionsByApp.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+                let sortedGroups = sessionsByApp.keys
+                    .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
                     .compactMap { app -> SessionWatcherGroup? in
                         let sessions = sessionsByApp[app] ?? []
                         guard !sessions.isEmpty else { return nil }
@@ -180,7 +181,9 @@ extension SessionWatcher {
         }
 
         public func stopListening() {
-            NotificationCenter.default.removeObserver(self)
+            let center = NotificationCenter.default
+            center.removeObserver(self, name: Self.sessionsDidChangeNotification, object: nil)
+            center.removeObserver(self, name: NSApplication.didBecomeActiveNotification, object: nil)
             refreshTimer?.invalidate()
             refreshTimer = nil
             accessibilityTimer?.invalidate()
@@ -242,12 +245,17 @@ extension SessionWatcher {
                         // Verify: either the title matches the project name, or the correct
                         // terminal app is now frontmost (iTerm2 titles don't contain project names)
                         let titleMatches = mainTitle.localizedCaseInsensitiveContains(projectName)
-                        let appMatches = Self.bundleIdMatchesTermProgram(frontBundleId, termProgram: session.termProgram)
+                        let appMatches = Self.bundleIdMatchesTermProgram(
+                            frontBundleId,
+                            termProgram: session.termProgram
+                        )
                         let verified = titleMatches || appMatches
                         log.append("  After:  main=\"\(mainTitle)\" front=\(frontBundleId) verified=\(verified)")
                         DispatchQueue.main.async {
                             if !verified {
-                                self?.lastActionError = "Activation failed: main=\"\(mainTitle)\", expected \"\(projectName)\" or \(session.termProgram)"
+                                self?.lastActionError =
+                                    "Activation failed: main=\"\(mainTitle)\", "
+                                    + "expected \"\(projectName)\" or \(session.termProgram)"
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
                                     if self?.lastActionError?.hasPrefix("Activation") == true {
                                         self?.lastActionError = nil
@@ -290,7 +298,10 @@ extension SessionWatcher {
             case .failure(let error):
                 lastActionError = error.localizedDescription
                 lastPermissionPane = error.permissionPane
-                logger.warning("Click action failed for session \(session.sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                logger.warning(
+                    "Click action failed for session \(session.sessionId, privacy: .public): "
+                    + "\(error.localizedDescription, privacy: .public)"
+                )
 
                 let delay: TimeInterval = error.permissionPane != nil ? 10 : 4
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
@@ -373,7 +384,9 @@ extension SessionWatcher {
 
                 DispatchQueue.main.async {
                     NSApp.activate(ignoringOtherApps: true)
-                    self.lastActionError = "Test: \(passCount) passed, \(failCount) failed — see \((ActivationTestLog.whippetShared.logPath ?? "(no path)"))"
+                    let logPath = ActivationTestLog.whippetShared.logPath ?? "(no path)"
+                    self.lastActionError =
+                        "Test: \(passCount) passed, \(failCount) failed — see \(logPath)"
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
                         if self?.lastActionError?.hasPrefix("Test:") == true {
@@ -449,8 +462,10 @@ extension SessionWatcher {
             let result = AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRef)
             guard result == .success, let window = windowRef else { return "" }
 
+            guard CFGetTypeID(window) == AXUIElementGetTypeID() else { return "" }
+            let windowElement = window as! AXUIElement // swiftlint:disable:this force_cast
             var titleRef: CFTypeRef?
-            AXUIElementCopyAttributeValue(window as! AXUIElement, kAXTitleAttribute as CFString, &titleRef)
+            AXUIElementCopyAttributeValue(windowElement, kAXTitleAttribute as CFString, &titleRef)
             return (titleRef as? String) ?? ""
         }
 

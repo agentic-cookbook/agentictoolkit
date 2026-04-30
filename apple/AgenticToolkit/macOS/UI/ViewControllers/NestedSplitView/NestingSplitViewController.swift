@@ -128,19 +128,19 @@ public final class NestingSplitViewController: NSSplitViewController {
         return LayoutNode.split(id: nodeID, orientation: orientationString, first: firstSnap, second: secondSnap)
     }
 
-    private func snapshotChild(_ vc: NSViewController) -> LayoutNode {
-        if let split = vc as? NestingSplitViewController {
+    private func snapshotChild(_ viewController: NSViewController) -> LayoutNode {
+        if let split = viewController as? NestingSplitViewController {
             return split.snapshotNode()
         }
-        if let leaf = vc as? NestedViewController {
+        if let leaf = viewController as? NestedViewController {
             return LayoutNode.leaf(id: leaf.nodeID, contentType: leaf.contentTypeIdentifier)
         }
         // Fallback — should not occur under the current class hierarchy.
         return LayoutNode.leaf(id: UUID(), contentType: NestedContentRegistry.placeholderIdentifier)
     }
 
-    private static func makeItem(for vc: NSViewController) -> NSSplitViewItem {
-        let item = NSSplitViewItem(viewController: vc)
+    private static func makeItem(for viewController: NSViewController) -> NSSplitViewItem {
+        let item = NSSplitViewItem(viewController: viewController)
         item.minimumThickness = 120
         item.holdingPriority = .defaultLow
         return item

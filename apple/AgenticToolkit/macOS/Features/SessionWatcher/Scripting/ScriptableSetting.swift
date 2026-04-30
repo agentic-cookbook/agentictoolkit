@@ -7,12 +7,16 @@ extension SessionWatcher {
     public class ScriptableSetting: NSObject {
 
         @objc public let name: String
-        public weak var SessionWatcherDatabaseManager: SessionWatcherDatabaseManager?
+        public weak var sessionWatcherDatabaseManager: SessionWatcherDatabaseManager?
 
-        public init(name: String, value: String, SessionWatcherDatabaseManager: SessionWatcherDatabaseManager?) {
+        public init(
+            name: String,
+            value: String,
+            sessionWatcherDatabaseManager: SessionWatcherDatabaseManager?
+        ) {
             self.name = name
             self._value = value
-            self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+            self.sessionWatcherDatabaseManager = sessionWatcherDatabaseManager
             super.init()
         }
 
@@ -24,7 +28,7 @@ extension SessionWatcher {
             get { _value }
             set {
                 _value = newValue
-                try? SessionWatcherDatabaseManager?.setSetting(key: name, value: newValue)
+                try? sessionWatcherDatabaseManager?.setSetting(key: name, value: newValue)
             }
         }
 

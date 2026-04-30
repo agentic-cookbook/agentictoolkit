@@ -5,13 +5,13 @@ import CoreGraphics
 public enum WindowPosition: Equatable, Sendable, Codable {
     case center
     case topRight
-    case custom(x: CGFloat, y: CGFloat)
+    case custom(horizontal: CGFloat, vertical: CGFloat)
 
     public var proportionalX: CGFloat {
         switch self {
         case .center: return 0.5
         case .topRight: return 0.85
-        case .custom(let x, _): return x
+        case .custom(let horizontal, _): return horizontal
         }
     }
 
@@ -19,7 +19,7 @@ public enum WindowPosition: Equatable, Sendable, Codable {
         switch self {
         case .center: return 0.5
         case .topRight: return 0.85
-        case .custom(_, let y): return y
+        case .custom(_, let vertical): return vertical
         }
     }
 }

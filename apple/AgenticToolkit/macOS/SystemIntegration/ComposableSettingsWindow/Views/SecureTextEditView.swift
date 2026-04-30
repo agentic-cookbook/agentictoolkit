@@ -8,6 +8,7 @@ extension ComposableSettings {
     /// backing storage is the keychain — `isSecure: true`).
     @MainActor
     public final class SecureTextEditView: TextEditView {
+        // swiftlint:disable:next static_over_final_class
         public override class func makeTextField(initialValue: String) -> NSTextField {
             NSSecureTextField(string: initialValue)
         }

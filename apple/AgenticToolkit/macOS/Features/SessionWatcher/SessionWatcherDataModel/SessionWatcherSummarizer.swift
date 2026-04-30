@@ -10,7 +10,7 @@ extension SessionWatcher {
 
         // MARK: - Properties
 
-        private let SessionWatcherDatabaseManager: SessionWatcherDatabaseManager
+        private let sessionWatcherDatabaseManager: SessionWatcherDatabaseManager
 
         /// Approximate character budget for the events portion of the prompt.
         public static let defaultEventCharBudget = 3_000
@@ -34,8 +34,11 @@ extension SessionWatcher {
 
         // MARK: - Initialization
 
-        public init(SessionWatcherDatabaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore) {
-            self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
+        public init(
+            sessionWatcherDatabaseManager: SessionWatcherDatabaseManager,
+            settingsStore: SettingsStore
+        ) {
+            self.sessionWatcherDatabaseManager = sessionWatcherDatabaseManager
             self.settingsStore = settingsStore
         }
 
@@ -93,26 +96,27 @@ extension SessionWatcher {
             dbg.append("--- summarize(\(sessionId)) called ---")
 
             let providerStr: String = await MainActor.run {
-                let v = settingsStore.get(UserSettings.aiProvider)
-                return v.isEmpty ? "claude_cli" : v
+                let value = settingsStore.get(UserSettings.aiProvider)
+                return value.isEmpty ? "claude_cli" : value
             }
             let provider = AIProvider(rawValue: providerStr) ?? .anthropic
             let model: String = await MainActor.run {
-                let v = settingsStore.get(UserSettings.aiModel)
-                return v.isEmpty ? provider.recommendedModel : v
+                let value = settingsStore.get(UserSettings.aiModel)
+                return value.isEmpty ? provider.recommendedModel : value
             }
             dbg.append("Provider: \(provider.rawValue), Model: \(model)")
 
             // Fetch session and events
-            guard let session = try? SessionWatcherDatabaseManager.fetchSession(bySessionId: sessionId) else {
+            guard let session = try? sessionWatcherDatabaseManager.fetchSession(bySessionId: sessionId) else {
                 dbg.append("BAIL: SessionWatcherSession not found in database")
                 throw SummarizerError.sessionNotFound(sessionId)
             }
-            dbg.append("SessionWatcherSession found: project=\(session.projectName), status=\(session.status.rawValue)")
+            dbg.append("SessionWatcherSession found: project=\(session.projectName), "
+                       + "status=\(session.status.rawValue)")
 
             let events: [SessionWatcherEvent]
             do {
-                events = try SessionWatcherDatabaseManager.fetchEvents(forSessionId: sessionId)
+                events = try sessionWatcherDatabaseManager.fetchEvents(forSessionId: sessionId)
             } catch {
                 dbg.append("BAIL: Failed to fetch events — \(error.localizedDescription)")
                 throw SummarizerError.apiError("Failed to fetch events: \(error.localizedDescription)")
@@ -132,16 +136,32 @@ extension SessionWatcher {
 
             // Route to CLI or API based on provider
             if provider.usesCLI {
-                return try await summarizeViaCLI(prompt: userMessage, model: model, dbg: dbg, sessionId: sessionId)
+                return try await summarizeViaCLI(
+                    prompt: userMessage,
+                    model: model,
+                    dbg: dbg,
+                    sessionId: sessionId
+                )
             } else {
-                return try await summarizeViaAPI(prompt: userMessage, provider: provider, model: model, dbg: dbg, sessionId: sessionId)
+                return try await summarizeViaAPI(
+                    prompt: userMessage,
+                    provider: provider,
+                    model: model,
+                    dbg: dbg,
+                    sessionId: sessionId
+                )
             }
         }
 
         // MARK: - Claude CLI Summarization
 
         /// Runs `claude -p` with the prompt piped to stdin.
-        private func summarizeViaCLI(prompt: String, model: String, dbg: SessionWatcher.SummarizerDebugLog, sessionId: String) async throws -> String {
+        private func summarizeViaCLI(
+            prompt: String,
+            model: String,
+            dbg: SessionWatcher.SummarizerDebugLog,
+            sessionId: String
+        ) async throws -> String {
             dbg.append("Using Claude CLI (model: \(model))")
 
             // Find the claude binary
@@ -203,8 +223,10 @@ extension SessionWatcher {
 
             let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            let reply = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let errorOutput = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let reply = String(data: stdoutData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let errorOutput = String(data: stderrData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
             dbg.append("Exit code: \(process.terminationStatus)")
             if !errorOutput.isEmpty {
@@ -238,17 +260,21 @@ extension SessionWatcher {
                 "/usr/local/bin/claude",
                 "/opt/homebrew/bin/claude"
             ]
-            for path in candidates {
-                if FileManager.default.isExecutableFile(atPath: path) {
-                    return path
-                }
+            for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
+                return path
             }
             return nil
         }
 
         // MARK: - API-based Summarization
 
-        private func summarizeViaAPI(prompt: String, provider: AIProvider, model: String, dbg: SessionWatcher.SummarizerDebugLog, sessionId: String) async throws -> String {
+        private func summarizeViaAPI(
+            prompt: String,
+            provider: AIProvider,
+            model: String,
+            dbg: SessionWatcher.SummarizerDebugLog,
+            sessionId: String
+        ) async throws -> String {
             let apiKey: String = await MainActor.run {
                 settingsStore.get(UserSettings.aiAPIKey)
             }
@@ -340,19 +366,24 @@ extension SessionWatcher {
             do {
                 summary = try await summarize(sessionId: sessionId)
             } catch let error as SummarizerError where !error.isFatal {
-                logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                logger.debug("Skipping summarization for \(sessionId, privacy: .public): "
+                             + "\(error.localizedDescription, privacy: .public)")
                 return
             }
 
             do {
-                try SessionWatcherDatabaseManager.updateSessionSummary(sessionId: sessionId, summary: summary)
+                try sessionWatcherDatabaseManager.updateSessionSummary(
+                    sessionId: sessionId,
+                    summary: summary
+                )
                 logger.info("Stored AI summary for session \(sessionId, privacy: .public)")
 
                 await MainActor.run {
                     SessionListViewModel.notifySessionsChanged()
                 }
             } catch {
-                logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to store summary for \(sessionId, privacy: .public): "
+                             + "\(error.localizedDescription, privacy: .public)")
             }
         }
 
@@ -543,8 +574,8 @@ extension SessionWatcher {
             if bytes < 1024 {
                 return "\(bytes)B"
             } else {
-                let kb = Double(bytes) / 1024.0
-                return String(format: "%.1fKB", kb)
+                let kilobytes = Double(bytes) / 1024.0
+                return String(format: "%.1fKB", kilobytes)
             }
         }
     }

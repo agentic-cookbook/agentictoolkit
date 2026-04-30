@@ -19,8 +19,8 @@ public enum WindowScreenshot {
     /// Captures the given window as a CGImage. Returns nil if the legacy
     /// CoreGraphics symbol is unavailable or the capture failed.
     public static func captureOwnWindow(_ windowID: CGWindowID) -> CGImage? {
-        guard let fn = windowImageFn else { return nil }
-        return fn(.null, .optionIncludingWindow, windowID, [.boundsIgnoreFraming, .bestResolution])?
+        guard let captureFn = windowImageFn else { return nil }
+        return captureFn(.null, .optionIncludingWindow, windowID, [.boundsIgnoreFraming, .bestResolution])?
             .takeRetainedValue()
     }
 

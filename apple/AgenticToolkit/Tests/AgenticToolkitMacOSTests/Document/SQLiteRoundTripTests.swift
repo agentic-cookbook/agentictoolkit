@@ -91,7 +91,13 @@ final class SQLiteRoundTripTests: XCTestCase {
                 WorkspaceEntry(id: 2, type: .project, path: "/tmp/b.catnip-proj", name: "b", addedDate: added)
             ],
             discoveredProjects: [
-                DiscoveredProject(id: 1, entryID: 1, projectPath: "/tmp/a/x.catnip-proj", projectName: "x", lastSeen: added)
+                DiscoveredProject(
+                    id: 1,
+                    entryID: 1,
+                    projectPath: "/tmp/a/x.catnip-proj",
+                    projectName: "x",
+                    lastSeen: added
+                )
             ],
             settings: WorkspaceSettings()
         )

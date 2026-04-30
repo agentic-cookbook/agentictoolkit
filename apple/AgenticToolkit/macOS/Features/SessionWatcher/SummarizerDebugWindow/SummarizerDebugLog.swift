@@ -13,8 +13,8 @@ extension SessionWatcher {
         @Published private(set) var entries: [String] = []
 
         public func append(_ message: String) {
-            let ts = Self.timestampFormatter.string(from: Date())
-            let line = "[\(ts)] \(message)"
+            let timestamp = Self.timestampFormatter.string(from: Date())
+            let line = "[\(timestamp)] \(message)"
             if Thread.isMainThread {
                 entries.append(line)
             } else {
@@ -27,9 +27,9 @@ extension SessionWatcher {
         }
 
         private static let timestampFormatter: DateFormatter = {
-            let f = DateFormatter()
-            f.dateFormat = "HH:mm:ss.SSS"
-            return f
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss.SSS"
+            return formatter
         }()
     }
 }

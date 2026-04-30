@@ -11,7 +11,8 @@ extension SessionWatcher {
 
     /// AppKit window controller for the debug log.
     @MainActor
-    public final class SummarizerDebugWindowController: WindowController<WindowContentViewController<SummarizerDebugView>> {
+    public final class SummarizerDebugWindowController:
+        WindowController<WindowContentViewController<SummarizerDebugView>> {
 
         public static let windowID = "summarizerDebug"
 

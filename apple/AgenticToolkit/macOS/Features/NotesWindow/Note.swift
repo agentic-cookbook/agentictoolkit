@@ -25,9 +25,9 @@ public struct Note: Identifiable, Equatable, Sendable {
     }
 
     /// Sort comparator: pinned notes first, then by modifiedDate descending.
-    public static let defaultSort: @Sendable (Note, Note) -> Bool = { a, b in
-        if a.isPinned != b.isPinned { return a.isPinned }
-        return a.modifiedDate > b.modifiedDate
+    public static let defaultSort: @Sendable (Note, Note) -> Bool = { lhs, rhs in
+        if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
+        return lhs.modifiedDate > rhs.modifiedDate
     }
 
     /// Creates a new note with sane defaults. Treats empty/whitespace titles as "Untitled Note".

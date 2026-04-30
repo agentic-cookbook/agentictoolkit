@@ -8,7 +8,7 @@ public class SessionsDatabaseManager {
 
     // MARK: - Properties
 
-    private var db: OpaquePointer?
+    private var database: OpaquePointer?
     private let dbPath: String
     private let queue = DispatchQueue(label: "com.mikefullerton.whippet.database", qos: .userInitiated)
 
@@ -59,12 +59,12 @@ public class SessionsDatabaseManager {
         // Use FULLMUTEX (serialized mode) so SQLite handles thread-safety internally.
         // This allows concurrent access from the summarizer, liveness monitor, and ingestion.
         let result = sqlite3_open_v2(
-            dbPath, &db,
+            dbPath, &database,
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
             nil
         )
         guard result == SQLITE_OK else {
-            let message = String(cString: sqlite3_errmsg(db))
+            let message = String(cString: sqlite3_errmsg(database))
             logger.error("Failed to open database: \(message, privacy: .public)")
             throw DatabaseError.openFailed(message)
         }
@@ -77,9 +77,9 @@ public class SessionsDatabaseManager {
     }
 
     public func close() {
-        if let db = db {
-            sqlite3_close(db)
-            self.db = nil
+        if let database = database {
+            sqlite3_close(database)
+            self.database = nil
             logger.info("Database connection closed")
         }
     }
@@ -128,7 +128,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -221,8 +221,8 @@ public class SessionsDatabaseManager {
     // MARK: - SQL Helpers
 
     private var lastErrorMessage: String {
-        if let db = db {
-            return String(cString: sqlite3_errmsg(db))
+        if let database = database {
+            return String(cString: sqlite3_errmsg(database))
         }
         return "Database not open"
     }
@@ -230,7 +230,7 @@ public class SessionsDatabaseManager {
     @discardableResult
     public func execute(_ sql: String) throws -> Int32 {
         var errorMessage: UnsafeMutablePointer<CChar>?
-        let result = sqlite3_exec(db, sql, nil, nil, &errorMessage)
+        let result = sqlite3_exec(database, sql, nil, nil, &errorMessage)
         if result != SQLITE_OK {
             let message = errorMessage.map { String(cString: $0) } ?? "Unknown error"
             sqlite3_free(errorMessage)
@@ -252,24 +252,34 @@ public class SessionsDatabaseManager {
 
     private func _upsertSession(_ session: Session) throws -> Session {
         let sql = """
-            INSERT INTO sessions (session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program)
+            INSERT INTO sessions (
+                session_id, cwd, model, started_at, last_activity_at,
+                last_tool, status, git_branch, summary, pid, term_program
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(session_id) DO UPDATE SET
-                cwd = CASE WHEN excluded.cwd != '' THEN excluded.cwd ELSE sessions.cwd END,
-                model = CASE WHEN excluded.model != '' THEN excluded.model ELSE sessions.model END,
+                cwd = CASE WHEN excluded.cwd != '' THEN excluded.cwd
+                    ELSE sessions.cwd END,
+                model = CASE WHEN excluded.model != '' THEN excluded.model
+                    ELSE sessions.model END,
                 last_activity_at = excluded.last_activity_at,
-                last_tool = CASE WHEN excluded.last_tool != '' THEN excluded.last_tool ELSE sessions.last_tool END,
+                last_tool = CASE WHEN excluded.last_tool != '' THEN excluded.last_tool
+                    ELSE sessions.last_tool END,
                 status = excluded.status,
-                git_branch = CASE WHEN excluded.git_branch != '' THEN excluded.git_branch ELSE sessions.git_branch END,
-                summary = CASE WHEN excluded.summary != '' THEN excluded.summary ELSE sessions.summary END,
-                pid = CASE WHEN excluded.pid != 0 THEN excluded.pid ELSE sessions.pid END,
-                term_program = CASE WHEN excluded.term_program != '' THEN excluded.term_program ELSE sessions.term_program END
+                git_branch = CASE WHEN excluded.git_branch != '' THEN excluded.git_branch
+                    ELSE sessions.git_branch END,
+                summary = CASE WHEN excluded.summary != '' THEN excluded.summary
+                    ELSE sessions.summary END,
+                pid = CASE WHEN excluded.pid != 0 THEN excluded.pid
+                    ELSE sessions.pid END,
+                term_program = CASE WHEN excluded.term_program != '' THEN excluded.term_program
+                    ELSE sessions.term_program END
         """
 
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -286,11 +296,17 @@ public class SessionsDatabaseManager {
         sqlite3_bind_text(stmt, 11, (session.termProgram as NSString).utf8String, -1, nil)
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
-            logger.error("Upsert session failed for \(session.sessionId, privacy: .public): \(self.lastErrorMessage, privacy: .public)")
+            logger.error(
+                "Upsert session failed for \(session.sessionId, privacy: .public): " +
+                "\(self.lastErrorMessage, privacy: .public)"
+            )
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
 
-        logger.debug("Upserted session \(session.sessionId, privacy: .public) status=\(session.status.rawValue, privacy: .public)")
+        logger.debug(
+            "Upserted session \(session.sessionId, privacy: .public) " +
+            "status=\(session.status.rawValue, privacy: .public)"
+        )
 
         // Return the session with its database ID
         if let fetched = try _fetchSession(bySessionId: session.sessionId) {
@@ -307,12 +323,16 @@ public class SessionsDatabaseManager {
     }
 
     private func _fetchSession(bySessionId sessionId: String) throws -> Session? {
-        let sql = "SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program FROM sessions WHERE session_id = ?"
+        let sql = """
+            SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                   last_tool, status, git_branch, summary, pid, term_program
+            FROM sessions WHERE session_id = ?
+            """
 
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -332,17 +352,25 @@ public class SessionsDatabaseManager {
             defer { sqlite3_finalize(stmt) }
 
             if let status = status {
-                let sql = "SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program FROM sessions WHERE status = ? ORDER BY started_at ASC"
+                let sql = """
+                    SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                           last_tool, status, git_branch, summary, pid, term_program
+                    FROM sessions WHERE status = ? ORDER BY started_at ASC
+                    """
 
-                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                     throw DatabaseError.prepareFailed(lastErrorMessage)
                 }
 
                 sqlite3_bind_text(stmt, 1, (status.rawValue as NSString).utf8String, -1, nil)
             } else {
-                let sql = "SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program FROM sessions ORDER BY started_at ASC"
+                let sql = """
+                    SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                           last_tool, status, git_branch, summary, pid, term_program
+                    FROM sessions ORDER BY started_at ASC
+                    """
 
-                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                     throw DatabaseError.prepareFailed(lastErrorMessage)
                 }
             }
@@ -363,7 +391,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -382,7 +410,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -401,7 +429,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -420,10 +448,13 @@ public class SessionsDatabaseManager {
         let deleteEventsSql = "DELETE FROM events WHERE session_id = ?"
         var evtStmt: OpaquePointer?
         defer { sqlite3_finalize(evtStmt) }
-        guard sqlite3_prepare_v2(db, deleteEventsSql, -1, &evtStmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, deleteEventsSql, -1, &evtStmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
-        sqlite3_bind_text(evtStmt, 1, (sessionId as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            evtStmt, 1, (sessionId as NSString).utf8String, -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        )
         guard sqlite3_step(evtStmt) == SQLITE_DONE else {
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
@@ -432,10 +463,13 @@ public class SessionsDatabaseManager {
         let deleteSessionSql = "DELETE FROM sessions WHERE session_id = ?"
         var sessStmt: OpaquePointer?
         defer { sqlite3_finalize(sessStmt) }
-        guard sqlite3_prepare_v2(db, deleteSessionSql, -1, &sessStmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, deleteSessionSql, -1, &sessStmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
-        sqlite3_bind_text(sessStmt, 1, (sessionId as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            sessStmt, 1, (sessionId as NSString).utf8String, -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        )
         guard sqlite3_step(sessStmt) == SQLITE_DONE else {
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
@@ -445,7 +479,8 @@ public class SessionsDatabaseManager {
     /// Used by the liveness monitor to know which sessions will transition to stale.
     public func fetchActiveSessionsPastTimeout(_ seconds: TimeInterval) throws -> [Session] {
         let sql = """
-            SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program
+            SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                   last_tool, status, git_branch, summary, pid, term_program
             FROM sessions
             WHERE status = 'active'
             AND datetime(last_activity_at, '+' || ? || ' seconds') < datetime('now')
@@ -454,12 +489,15 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
         let secondsStr = String(max(0, Int(seconds)))
-        sqlite3_bind_text(stmt, 1, (secondsStr as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            stmt, 1, (secondsStr as NSString).utf8String, -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        )
 
         var sessions: [Session] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -472,7 +510,8 @@ public class SessionsDatabaseManager {
     /// Used by the liveness monitor to check if the originating process is still alive.
     public func fetchLiveSessionsWithPid() throws -> [Session] {
         let sql = """
-            SELECT id, session_id, cwd, model, started_at, last_activity_at, last_tool, status, git_branch, summary, pid, term_program
+            SELECT id, session_id, cwd, model, started_at, last_activity_at,
+                   last_tool, status, git_branch, summary, pid, term_program
             FROM sessions
             WHERE status IN ('active', 'stale')
             AND pid > 0
@@ -481,7 +520,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -503,17 +542,20 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
         let secondsStr = String(max(0, Int(seconds)))
-        sqlite3_bind_text(stmt, 1, (secondsStr as NSString).utf8String, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            stmt, 1, (secondsStr as NSString).utf8String, -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        )
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
-        let count = Int(sqlite3_changes(db))
+        let count = Int(sqlite3_changes(database))
         if count > 0 {
             logger.debug("Marked \(count) session(s) as stale (timeout: \(Int(seconds))s)")
         }
@@ -550,7 +592,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -563,7 +605,7 @@ public class SessionsDatabaseManager {
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
 
-        let lastId = Int(sqlite3_last_insert_rowid(db))
+        let lastId = Int(sqlite3_last_insert_rowid(database))
         return SessionEvent(
             id: lastId,
             sessionId: event.sessionId,
@@ -576,12 +618,15 @@ public class SessionsDatabaseManager {
     /// Fetches events for a given session. Thread-safe.
     public func fetchEvents(forSessionId sessionId: String) throws -> [SessionEvent] {
         try queue.sync {
-            let sql = "SELECT id, session_id, event_type, timestamp, raw_json FROM events WHERE session_id = ? ORDER BY timestamp ASC"
+            let sql = """
+                SELECT id, session_id, event_type, timestamp, raw_json FROM events
+                WHERE session_id = ? ORDER BY timestamp ASC
+                """
 
             var stmt: OpaquePointer?
             defer { sqlite3_finalize(stmt) }
 
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw DatabaseError.prepareFailed(lastErrorMessage)
             }
 
@@ -601,9 +646,12 @@ public class SessionsDatabaseManager {
         defer { sqlite3_finalize(stmt) }
 
         if let eventType = eventType {
-            let sql = "SELECT id, session_id, event_type, timestamp, raw_json FROM events WHERE event_type = ? ORDER BY timestamp DESC"
+            let sql = """
+                SELECT id, session_id, event_type, timestamp, raw_json FROM events
+                WHERE event_type = ? ORDER BY timestamp DESC
+                """
 
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw DatabaseError.prepareFailed(lastErrorMessage)
             }
 
@@ -611,7 +659,7 @@ public class SessionsDatabaseManager {
         } else {
             let sql = "SELECT id, session_id, event_type, timestamp, raw_json FROM events ORDER BY timestamp DESC"
 
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw DatabaseError.prepareFailed(lastErrorMessage)
             }
         }
@@ -630,7 +678,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -661,7 +709,7 @@ public class SessionsDatabaseManager {
             var stmt: OpaquePointer?
             defer { sqlite3_finalize(stmt) }
 
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw DatabaseError.prepareFailed(lastErrorMessage)
             }
 
@@ -686,7 +734,7 @@ public class SessionsDatabaseManager {
             var stmt: OpaquePointer?
             defer { sqlite3_finalize(stmt) }
 
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
                 throw DatabaseError.prepareFailed(lastErrorMessage)
             }
 
@@ -706,7 +754,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -724,7 +772,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -746,7 +794,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -768,7 +816,7 @@ public class SessionsDatabaseManager {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
 
@@ -794,9 +842,9 @@ public class SessionsDatabaseManager {
     private static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     nonisolated(unsafe) private static let iso8601: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
     }()
 
     /// Inserts a new note. Thread-safe.
@@ -811,14 +859,17 @@ public class SessionsDatabaseManager {
         """
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
-        sqlite3_bind_text(stmt, 1, (note.id.uuidString as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, (note.title as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 3, (note.content as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 4, (SessionsDatabaseManager.iso8601.string(from: note.createdDate) as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 5, (SessionsDatabaseManager.iso8601.string(from: note.modifiedDate) as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
+        let transient = SessionsDatabaseManager.sqliteTransient
+        let createdString = SessionsDatabaseManager.iso8601.string(from: note.createdDate)
+        let modifiedString = SessionsDatabaseManager.iso8601.string(from: note.modifiedDate)
+        sqlite3_bind_text(stmt, 1, (note.id.uuidString as NSString).utf8String, -1, transient)
+        sqlite3_bind_text(stmt, 2, (note.title as NSString).utf8String, -1, transient)
+        sqlite3_bind_text(stmt, 3, (note.content as NSString).utf8String, -1, transient)
+        sqlite3_bind_text(stmt, 4, (createdString as NSString).utf8String, -1, transient)
+        sqlite3_bind_text(stmt, 5, (modifiedString as NSString).utf8String, -1, transient)
         sqlite3_bind_int(stmt, 6, note.isPinned ? 1 : 0)
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DatabaseError.executionFailed(lastErrorMessage)
@@ -835,14 +886,16 @@ public class SessionsDatabaseManager {
         let sql = "UPDATE notes SET title=?, content=?, modified_date=?, is_pinned=? WHERE id=?"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
-        sqlite3_bind_text(stmt, 1, (note.title as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, (note.content as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 3, (SessionsDatabaseManager.iso8601.string(from: note.modifiedDate) as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
+        let transient = SessionsDatabaseManager.sqliteTransient
+        let modifiedString = SessionsDatabaseManager.iso8601.string(from: note.modifiedDate)
+        sqlite3_bind_text(stmt, 1, (note.title as NSString).utf8String, -1, transient)
+        sqlite3_bind_text(stmt, 2, (note.content as NSString).utf8String, -1, transient)
+        sqlite3_bind_text(stmt, 3, (modifiedString as NSString).utf8String, -1, transient)
         sqlite3_bind_int(stmt, 4, note.isPinned ? 1 : 0)
-        sqlite3_bind_text(stmt, 5, (note.id.uuidString as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
+        sqlite3_bind_text(stmt, 5, (note.id.uuidString as NSString).utf8String, -1, transient)
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
@@ -858,7 +911,7 @@ public class SessionsDatabaseManager {
         let sql = "DELETE FROM notes WHERE id=?"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
         sqlite3_bind_text(stmt, 1, (id.uuidString as NSString).utf8String, -1, SessionsDatabaseManager.sqliteTransient)
@@ -881,7 +934,7 @@ public class SessionsDatabaseManager {
         """
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DatabaseError.prepareFailed(lastErrorMessage)
         }
         var notes: [Note] = []

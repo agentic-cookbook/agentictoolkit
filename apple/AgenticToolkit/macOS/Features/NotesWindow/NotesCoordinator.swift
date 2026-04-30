@@ -91,7 +91,11 @@ public final class NotesCoordinator: AppFeature {
     public override func setValue(_ value: Any?, forScriptingKey key: String) {
         switch key {
         case "scriptingNotesVisible":
-            (value as? Bool) == true ? notesWindowController.showNotes() : notesWindowController.dismiss()
+            if (value as? Bool) == true {
+                notesWindowController.showNotes()
+            } else {
+                notesWindowController.dismiss()
+            }
         default:
             break
         }

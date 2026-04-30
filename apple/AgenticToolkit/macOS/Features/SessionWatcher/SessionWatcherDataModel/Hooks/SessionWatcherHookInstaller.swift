@@ -95,7 +95,10 @@ extension SessionWatcher {
                 // Write the updated settings back
                 try saveSettings(settings)
 
-                logger.info("Hooks installed for \(Self.hookedEventTypes.count) event types in \(self.settingsURL.path, privacy: .public)")
+                logger.info(
+                    "Hooks installed for \(Self.hookedEventTypes.count) event types"
+                    + " in \(self.settingsURL.path, privacy: .public)"
+                )
                 return .installed
             } catch {
                 logger.error("Failed to install hooks: \(error.localizedDescription, privacy: .public)")
@@ -155,12 +158,9 @@ extension SessionWatcher {
 
             // Check if at least one event type has a Whippet hook
             for eventType in Self.hookedEventTypes {
-                if let matcherGroups = hooks[eventType] as? [[String: Any]] {
-                    for group in matcherGroups {
-                        if isWhippetMatcherGroup(group) {
-                            return true
-                        }
-                    }
+                guard let matcherGroups = hooks[eventType] as? [[String: Any]] else { continue }
+                for group in matcherGroups where isWhippetMatcherGroup(group) {
+                    return true
                 }
             }
 
@@ -264,56 +264,75 @@ extension SessionWatcher {
         private func makeJqFilter(eventType: String) -> String {
             // Common fields: event type, session_id, timestamp, and a data object
             // with event-specific fields extracted from the stdin payload.
+            // jq is whitespace-insensitive, so newlines are safe inside these filters.
             switch eventType {
             case "SessionStart":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, model: (.model // ""), source: (.source // ""), pid: ($ppid | tonumber), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, model: (.model // ""), source: (.source // ""),
+                    pid: ($ppid | tonumber), term_program: $term}}
             """
 
             case "SessionEnd":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, reason: (.reason // ""), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, reason: (.reason // ""), term_program: $term}}
             """
 
             case "UserPromptSubmit":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, prompt: (.prompt // ""), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, prompt: (.prompt // ""), term_program: $term}}
             """
 
             case "PreToolUse":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, tool: (.tool_name // ""), tool_input: (.tool_input // {}), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, tool: (.tool_name // ""),
+                    tool_input: (.tool_input // {}), term_program: $term}}
             """
 
             case "PostToolUse":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, tool: (.tool_name // ""), tool_input: (.tool_input // {}), tool_response: (.tool_response // {}), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, tool: (.tool_name // ""),
+                    tool_input: (.tool_input // {}),
+                    tool_response: (.tool_response // {}), term_program: $term}}
             """
 
             case "Stop":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, term_program: $term}}
             """
 
             case "SubagentStart":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, agent_id: (.agent_id // ""), agent_type: (.agent_type // ""), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, agent_id: (.agent_id // ""),
+                    agent_type: (.agent_type // ""), term_program: $term}}
             """
 
             case "SubagentStop":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, agent_id: (.agent_id // ""), agent_type: (.agent_type // ""), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, agent_id: (.agent_id // ""),
+                    agent_type: (.agent_type // ""), term_program: $term}}
             """
 
             case "Notification":
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, message: (.message // ""), title: (.title // ""), notification_type: (.notification_type // ""), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, message: (.message // ""),
+                    title: (.title // ""),
+                    notification_type: (.notification_type // ""), term_program: $term}}
             """
 
             default:
                 // Generic fallback: capture session_id and cwd
                 return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+             data: {cwd: .cwd, term_program: $term}}
             """
             }
         }
@@ -323,15 +342,15 @@ extension SessionWatcher {
         /// Loads and parses the Claude Code settings.json file.
         /// Returns an empty dictionary if the file doesn't exist.
         public func loadSettings() throws -> [String: Any] {
-            let fm = FileManager.default
+            let fileManager = FileManager.default
 
             // Ensure the .claude directory exists
             let claudeDir = settingsURL.deletingLastPathComponent()
-            if !fm.fileExists(atPath: claudeDir.path) {
-                try fm.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+            if !fileManager.fileExists(atPath: claudeDir.path) {
+                try fileManager.createDirectory(at: claudeDir, withIntermediateDirectories: true)
             }
 
-            guard fm.fileExists(atPath: settingsURL.path) else {
+            guard fileManager.fileExists(atPath: settingsURL.path) else {
                 return [:]
             }
 
@@ -352,12 +371,12 @@ extension SessionWatcher {
         /// Writes the settings dictionary back to the settings.json file.
         /// Uses pretty-printed JSON with sorted keys for readability.
         public func saveSettings(_ settings: [String: Any]) throws {
-            let fm = FileManager.default
+            let fileManager = FileManager.default
 
             // Ensure the directory exists
             let claudeDir = settingsURL.deletingLastPathComponent()
-            if !fm.fileExists(atPath: claudeDir.path) {
-                try fm.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+            if !fileManager.fileExists(atPath: claudeDir.path) {
+                try fileManager.createDirectory(at: claudeDir, withIntermediateDirectories: true)
             }
 
             let data = try JSONSerialization.data(

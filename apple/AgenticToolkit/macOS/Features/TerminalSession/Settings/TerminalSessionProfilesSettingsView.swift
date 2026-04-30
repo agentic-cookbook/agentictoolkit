@@ -6,7 +6,8 @@ import AppKit
 
 /// Terminal profiles settings: split layout with profile list (left) and detail (right).
 /// Built-in profiles are read-only but can be duplicated. Custom profiles are editable and deletable.
-public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
+public final class TerminalSessionProfilesSettingsView:
+    NSView, NSTableViewDataSource, NSTableViewDelegate, NSSplitViewDelegate {
 
     private var profiles: [TerminalSessionProfile] = TerminalSessionProfile.builtInProfiles()
     private var selectedProfileIndex: Int? {
@@ -340,11 +341,17 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
 
     // MARK: - NSSplitViewDelegate
 
-    public func splitView(_ splitView: NSSplitView, constrainMinCoordinate proposedMinimumPosition: CGFloat,
-                   ofSubviewAt dividerIndex: Int) -> CGFloat { 140 }
+    public func splitView(
+        _ splitView: NSSplitView,
+        constrainMinCoordinate proposedMinimumPosition: CGFloat,
+        ofSubviewAt dividerIndex: Int
+    ) -> CGFloat { 140 }
 
-    public func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat,
-                   ofSubviewAt dividerIndex: Int) -> CGFloat { 200 }
+    public func splitView(
+        _ splitView: NSSplitView,
+        constrainMaxCoordinate proposedMaximumPosition: CGFloat,
+        ofSubviewAt dividerIndex: Int
+    ) -> CGFloat { 200 }
 
     // MARK: - Detail Updates
 
@@ -361,22 +368,20 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
             nameLabel.stringValue = profile.name
         }
 
-        for (i, item) in appearancePopUp.itemArray.enumerated() {
-            if item.representedObject as? TerminalSessionProfileAppearance == profile.appearance {
-                appearancePopUp.selectItem(at: i)
-                break
-            }
+        for (index, item) in appearancePopUp.itemArray.enumerated()
+        where item.representedObject as? TerminalSessionProfileAppearance == profile.appearance {
+            appearancePopUp.selectItem(at: index)
+            break
         }
 
         fontNameLabel.stringValue = profile.fontName
         fontSizeStepper.doubleValue = profile.fontSize
         fontSizeLabel.stringValue = "\(Int(profile.fontSize)) pt"
 
-        for (i, item) in cursorPopUp.itemArray.enumerated() {
-            if item.representedObject as? TerminalSessionCursorStyle == profile.cursorStyle {
-                cursorPopUp.selectItem(at: i)
-                break
-            }
+        for (index, item) in cursorPopUp.itemArray.enumerated()
+        where item.representedObject as? TerminalSessionCursorStyle == profile.cursorStyle {
+            cursorPopUp.selectItem(at: index)
+            break
         }
 
         deleteButton.isEnabled = isDeletable
@@ -413,16 +418,16 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
         let normalRow = NSStackView()
         normalRow.orientation = .horizontal
         normalRow.spacing = 4
-        for i in 0..<min(8, profile.colors.ansi.count) {
-            normalRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[i], index: i))
+        for index in 0..<min(8, profile.colors.ansi.count) {
+            normalRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[index], index: index))
         }
         stack.addArrangedSubview(normalRow)
 
         let brightRow = NSStackView()
         brightRow.orientation = .horizontal
         brightRow.spacing = 4
-        for i in 8..<min(16, profile.colors.ansi.count) {
-            brightRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[i], index: i))
+        for index in 8..<min(16, profile.colors.ansi.count) {
+            brightRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[index], index: index))
         }
         stack.addArrangedSubview(brightRow)
 
@@ -552,9 +557,13 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
 
     @objc private func appearanceChanged() {
         guard let index = selectedProfileIndex,
-              let appearance = appearancePopUp.selectedItem?.representedObject as? TerminalSessionProfileAppearance else { return }
+              let appearance = appearancePopUp.selectedItem?.representedObject
+                as? TerminalSessionProfileAppearance else { return }
         profiles[index].appearance = appearance
-        profileTable.reloadData(forRowIndexes: IndexSet(integer: index), columnIndexes: IndexSet(integer: 0))
+        profileTable.reloadData(
+            forRowIndexes: IndexSet(integer: index),
+            columnIndexes: IndexSet(integer: 0)
+        )
     }
 
     @objc private func fontSizeChanged() {

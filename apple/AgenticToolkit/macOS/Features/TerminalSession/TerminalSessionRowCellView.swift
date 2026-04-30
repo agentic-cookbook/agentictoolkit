@@ -109,7 +109,9 @@ public final class TerminalSessionRowCellView: NSTableCellView {
         subtitleStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         if let dir = tildeAbbreviate(directory) {
-            subtitleStack.addArrangedSubview(makeSubtitleLine(icon: "folder", text: dir, truncation: .byTruncatingMiddle))
+            subtitleStack.addArrangedSubview(
+                makeSubtitleLine(icon: "folder", text: dir, truncation: .byTruncatingMiddle)
+            )
         }
         if let branch = gitBranch {
             subtitleStack.addArrangedSubview(makeSubtitleLine(icon: "arrow.triangle.branch", text: branch))
@@ -125,7 +127,11 @@ public final class TerminalSessionRowCellView: NSTableCellView {
         }
     }
 
-    private func makeSubtitleLine(icon: String, text: String, truncation: NSLineBreakMode = .byTruncatingTail) -> NSView {
+    private func makeSubtitleLine(
+        icon: String,
+        text: String,
+        truncation: NSLineBreakMode = .byTruncatingTail
+    ) -> NSView {
         let imageView = NSImageView()
         if let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
             imageView.image = image

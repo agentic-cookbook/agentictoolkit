@@ -55,9 +55,9 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
 }
 
 public enum AppearanceMode: String, CaseIterable, Sendable, Codable {
-    case auto = "auto"
-    case light = "light"
-    case dark = "dark"
+    case auto
+    case light
+    case dark
 
     public var label: String {
         switch self {

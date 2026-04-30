@@ -9,7 +9,8 @@ public struct WorkspaceSettings: Codable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = WorkspaceSettings()
-        sidebarProportion = try container.decodeIfPresent(Double.self, forKey: .sidebarProportion) ?? defaults.sidebarProportion
+        sidebarProportion = try container.decodeIfPresent(Double.self, forKey: .sidebarProportion)
+            ?? defaults.sidebarProportion
     }
 }
 

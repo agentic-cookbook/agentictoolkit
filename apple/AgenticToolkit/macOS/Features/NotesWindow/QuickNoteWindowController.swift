@@ -15,34 +15,34 @@ public final class QuickNoteWindowController: NSWindowController {
     // MARK: - Views
 
     private lazy var titleField: NSTextField = {
-        let f = NSTextField()
-        f.placeholderString = "Note title..."
-        f.bezelStyle = .roundedBezel
-        f.font = .systemFont(ofSize: 14, weight: .medium)
-        f.translatesAutoresizingMaskIntoConstraints = false
-        return f
+        let field = NSTextField()
+        field.placeholderString = "Note title..."
+        field.bezelStyle = .roundedBezel
+        field.font = .systemFont(ofSize: 14, weight: .medium)
+        field.translatesAutoresizingMaskIntoConstraints = false
+        return field
     }()
 
     private lazy var contentScrollView: NSScrollView = {
-        let sv = NSScrollView()
-        sv.hasVerticalScroller = true
-        sv.autohidesScrollers = true
-        sv.borderType = .bezelBorder
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        return sv
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .bezelBorder
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        return scroll
     }()
 
     private lazy var contentTextView: NSTextView = {
-        let tv = NSTextView()
-        tv.isEditable = true
-        tv.isSelectable = true
-        tv.isRichText = false
-        tv.font = .systemFont(ofSize: 13)
-        tv.textContainerInset = NSSize(width: 6, height: 6)
-        tv.isAutomaticQuoteSubstitutionEnabled = false
-        tv.isAutomaticDashSubstitutionEnabled = false
-        tv.allowsUndo = true
-        return tv
+        let textView = NSTextView()
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.font = .systemFont(ofSize: 13)
+        textView.textContainerInset = NSSize(width: 6, height: 6)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.allowsUndo = true
+        return textView
     }()
 
     private lazy var saveButton: NSButton = {

@@ -14,8 +14,8 @@ public enum LogCellValue {
     /// Plain-text representation — used for tooltips and accessibility.
     public var text: String {
         switch self {
-        case .plain(let s): return s
-        case .attributed(let a): return a.string
+        case .plain(let plain): return plain
+        case .attributed(let attributed): return attributed.string
         }
     }
 }

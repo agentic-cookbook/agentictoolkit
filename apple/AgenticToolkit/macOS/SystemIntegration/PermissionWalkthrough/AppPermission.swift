@@ -89,7 +89,9 @@ public enum AppPermission: Int, CaseIterable, Sendable {
             AXIsProcessTrustedWithOptions(options)
         case .notifications:
             if let bundleId = Bundle.main.bundleIdentifier,
-               let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(bundleId)") {
+               let url = URL(
+                string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(bundleId)"
+               ) {
                 NSWorkspace.shared.open(url)
             }
         case .automation:

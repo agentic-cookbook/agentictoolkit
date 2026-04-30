@@ -116,10 +116,8 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
 
     /// Returns true if the filename matches any of the given ignore patterns.
     private static func shouldIgnore(_ filename: String, patterns: [String]) -> Bool {
-        for pattern in patterns {
-            if fnmatch(pattern, filename, 0) == 0 {
-                return true
-            }
+        for pattern in patterns where fnmatch(pattern, filename, 0) == 0 {
+            return true
         }
         return false
     }
@@ -247,7 +245,7 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
         nonisolated(unsafe) var dirResults: [(url: URL, node: FileTreeNode)] = []
 
         for (_, dirURL) in topLevelDirs {
-            let op = BlockOperation {
+            let operation = BlockOperation {
                 let node = FileTreeNode(
                     url: dirURL,
                     isDirectory: true,
@@ -259,7 +257,7 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
                 dirResults.append((url: dirURL, node: node))
                 lock.unlock()
             }
-            operationQueue.addOperation(op)
+            operationQueue.addOperation(operation)
         }
 
         operationQueue.waitUntilAllOperationsAreFinished()

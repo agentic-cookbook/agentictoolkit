@@ -85,21 +85,21 @@ struct KeychainHelperTests {
 
     @Test("isolated keys don't interfere")
     func keyIsolation() {
-        let a = uniqueKey("a")
-        let b = uniqueKey("b")
+        let keyA = uniqueKey("a")
+        let keyB = uniqueKey("b")
         defer {
-            KeychainHelper.delete(forKey: a)
-            KeychainHelper.delete(forKey: b)
+            KeychainHelper.delete(forKey: keyA)
+            KeychainHelper.delete(forKey: keyB)
         }
 
-        #expect(KeychainHelper.set("alpha", forKey: a))
-        #expect(KeychainHelper.set("beta", forKey: b))
+        #expect(KeychainHelper.set("alpha", forKey: keyA))
+        #expect(KeychainHelper.set("beta", forKey: keyB))
 
-        #expect(KeychainHelper.get(forKey: a) == "alpha")
-        #expect(KeychainHelper.get(forKey: b) == "beta")
+        #expect(KeychainHelper.get(forKey: keyA) == "alpha")
+        #expect(KeychainHelper.get(forKey: keyB) == "beta")
 
-        #expect(KeychainHelper.delete(forKey: a))
-        #expect(KeychainHelper.get(forKey: a) == nil)
-        #expect(KeychainHelper.get(forKey: b) == "beta")
+        #expect(KeychainHelper.delete(forKey: keyA))
+        #expect(KeychainHelper.get(forKey: keyA) == nil)
+        #expect(KeychainHelper.get(forKey: keyB) == "beta")
     }
 }

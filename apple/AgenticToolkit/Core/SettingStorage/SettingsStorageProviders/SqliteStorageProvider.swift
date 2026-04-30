@@ -18,7 +18,7 @@ public final class SqliteStorageProvider: SettingsStorageProvider {
 
     // MARK: - State
 
-    nonisolated(unsafe) private var db: OpaquePointer?
+    nonisolated(unsafe) private var database: OpaquePointer?
     private let path: String
     private let queue = DispatchQueue(label: "SqliteStorageProvider")
     private let encoder: JSONEncoder
@@ -48,7 +48,7 @@ public final class SqliteStorageProvider: SettingsStorageProvider {
             sqlite3_close(handle)
             throw SqliteSettingsError.cannotOpen(path: path, message: message)
         }
-        self.db = handle
+        self.database = handle
 
         // Create the schema if needed.
         let createResult = sqlite3_exec(
@@ -59,14 +59,14 @@ public final class SqliteStorageProvider: SettingsStorageProvider {
         guard createResult == SQLITE_OK else {
             let message = String(cString: sqlite3_errmsg(handle))
             sqlite3_close(handle)
-            self.db = nil
+            self.database = nil
             throw SqliteSettingsError.schemaFailed(message: message)
         }
     }
 
     deinit {
-        if let db {
-            sqlite3_close(db)
+        if let database {
+            sqlite3_close(database)
         }
     }
 
@@ -113,12 +113,12 @@ public final class SqliteStorageProvider: SettingsStorageProvider {
     // MARK: - SQL helpers (run on `queue`)
 
     private func readData(forKey name: String) -> Data? {
-        guard let db else { return nil }
+        guard let database else { return nil }
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
-        let prepare = sqlite3_prepare_v2(db, "SELECT value FROM settings_kv WHERE key = ?;", -1, &statement, nil)
+        let prepare = sqlite3_prepare_v2(database, "SELECT value FROM settings_kv WHERE key = ?;", -1, &statement, nil)
         guard prepare == SQLITE_OK else {
-            Self.logger.error("prepare SELECT failed: \(String(cString: sqlite3_errmsg(db)), privacy: .public)")
+            Self.logger.error("prepare SELECT failed: \(String(cString: sqlite3_errmsg(database)), privacy: .public)")
             return nil
         }
         sqlite3_bind_text(statement, 1, (name as NSString).utf8String, -1, Self.transient)
@@ -129,17 +129,17 @@ public final class SqliteStorageProvider: SettingsStorageProvider {
     }
 
     private func writeData(_ data: Data, forKey name: String) -> Bool {
-        guard let db else { return false }
+        guard let database else { return false }
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
         let prepare = sqlite3_prepare_v2(
-            db,
+            database,
             "INSERT INTO settings_kv (key, value) VALUES (?, ?) " +
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
             -1, &statement, nil
         )
         guard prepare == SQLITE_OK else {
-            Self.logger.error("prepare UPSERT failed: \(String(cString: sqlite3_errmsg(db)), privacy: .public)")
+            Self.logger.error("prepare UPSERT failed: \(String(cString: sqlite3_errmsg(database)), privacy: .public)")
             return false
         }
         sqlite3_bind_text(statement, 1, (name as NSString).utf8String, -1, Self.transient)
@@ -147,31 +147,32 @@ public final class SqliteStorageProvider: SettingsStorageProvider {
             sqlite3_bind_blob(statement, 2, buffer.baseAddress, Int32(buffer.count), Self.transient)
         }
         guard bound == SQLITE_OK else {
-            Self.logger.error("bind blob failed: \(String(cString: sqlite3_errmsg(db)), privacy: .public)")
+            Self.logger.error("bind blob failed: \(String(cString: sqlite3_errmsg(database)), privacy: .public)")
             return false
         }
         guard sqlite3_step(statement) == SQLITE_DONE else {
-            Self.logger.error("UPSERT step failed: \(String(cString: sqlite3_errmsg(db)), privacy: .public)")
+            Self.logger.error("UPSERT step failed: \(String(cString: sqlite3_errmsg(database)), privacy: .public)")
             return false
         }
         return true
     }
 
     private func deleteRow(forKey name: String) -> Bool {
-        guard let db else { return false }
+        guard let database else { return false }
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
-        let prepare = sqlite3_prepare_v2(db, "DELETE FROM settings_kv WHERE key = ?;", -1, &statement, nil)
+        let prepare = sqlite3_prepare_v2(database, "DELETE FROM settings_kv WHERE key = ?;", -1, &statement, nil)
         guard prepare == SQLITE_OK else { return false }
         sqlite3_bind_text(statement, 1, (name as NSString).utf8String, -1, Self.transient)
         return sqlite3_step(statement) == SQLITE_DONE
     }
 
     private func rowExists(forKey name: String) -> Bool {
-        guard let db else { return false }
+        guard let database else { return false }
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
-        let prepare = sqlite3_prepare_v2(db, "SELECT 1 FROM settings_kv WHERE key = ? LIMIT 1;", -1, &statement, nil)
+        let sql = "SELECT 1 FROM settings_kv WHERE key = ? LIMIT 1;"
+        let prepare = sqlite3_prepare_v2(database, sql, -1, &statement, nil)
         guard prepare == SQLITE_OK else { return false }
         sqlite3_bind_text(statement, 1, (name as NSString).utf8String, -1, Self.transient)
         return sqlite3_step(statement) == SQLITE_ROW

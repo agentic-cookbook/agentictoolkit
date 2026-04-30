@@ -46,8 +46,8 @@ final class LogBufferTests: XCTestCase {
 
     func testCapDropsOldestOnOverflow() {
         let buffer = LogBuffer(columns: makeColumns(), maxLines: 3)
-        for i in 1...5 {
-            buffer.append(makeLine("m\(i)"))
+        for index in 1...5 {
+            buffer.append(makeLine("m\(index)"))
         }
         XCTAssertEqual(buffer.lines.count, 3)
         XCTAssertEqual(buffer.lines.map { $0["msg"]?.text }, ["m3", "m4", "m5"])

@@ -16,9 +16,9 @@ public final class ActivationTestLog: @unchecked Sendable {
     /// Reused per-instance formatter — `ISO8601DateFormatter` is expensive to construct.
     /// Access is serialized through `queue`.
     private let timestampFormatter: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
     }()
 
     /// Creates a log that writes to
@@ -52,9 +52,9 @@ public final class ActivationTestLog: @unchecked Sendable {
         let now = Date()
         let line = queue.sync { () -> String in
             let timestamp = self.timestampFormatter.string(from: now)
-            let l = "[\(timestamp)] \(message)"
-            _entries.append(l)
-            return l
+            let entry = "[\(timestamp)] \(message)"
+            _entries.append(entry)
+            return entry
         }
         appendToFile(line)
     }
@@ -110,7 +110,6 @@ public final class ActivationTestLog: @unchecked Sendable {
     }
 }
 
-// TODO: This doesn't belong here
 extension ActivationTestLog {
     /// Process-wide log instance used by the session list for click diagnostics
     /// and the menu item's full test harness run. Both write to

@@ -7,9 +7,9 @@ import AgenticToolkitCoreMacOS
 public final class MessageBubbleView: NSView {
 
     private static let timeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
     }()
 
     public init(message: ChatMessage, maxWidth: CGFloat) {

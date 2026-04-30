@@ -99,12 +99,12 @@ public final class AIPluginManager {
     /// Does not load any plugin binaries.
     public func discoverPlugins() {
         var discovered: [AIPluginRecord] = []
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
         for searchPath in searchPaths {
-            guard fm.fileExists(atPath: searchPath.path) else { continue }
+            guard fileManager.fileExists(atPath: searchPath.path) else { continue }
 
-            guard let contents = try? fm.contentsOfDirectory(
+            guard let contents = try? fileManager.contentsOfDirectory(
                 at: searchPath,
                 includingPropertiesForKeys: nil,
                 options: [.skipsHiddenFiles]
@@ -118,12 +118,19 @@ public final class AIPluginManager {
                 }
 
                 if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
-                    logger.warning("Skipping incompatible plugin '\(record.displayName, privacy: .public)': SDK \(record.sdkVersion, privacy: .public) != \(AIPluginInfoRegistry.currentSDKVersion, privacy: .public)")
+                    logger.warning(
+                        "Skipping incompatible plugin '\(record.displayName, privacy: .public)': "
+                        + "SDK \(record.sdkVersion, privacy: .public) "
+                        + "!= \(AIPluginInfoRegistry.currentSDKVersion, privacy: .public)"
+                    )
                     continue
                 }
 
                 discovered.append(record)
-                logger.info("Discovered plugin: \(record.displayName, privacy: .public) (\(record.identifier, privacy: .public))")
+                logger.info(
+                    "Discovered plugin: \(record.displayName, privacy: .public) "
+                    + "(\(record.identifier, privacy: .public))"
+                )
             }
         }
 
@@ -246,7 +253,10 @@ public final class AIPluginManager {
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             baseDir = appSupport
         } else {
-            logger.warning("Application Support directory unavailable; falling back to temporary directory for plugin \(identifier, privacy: .public)")
+            logger.warning(
+                "Application Support directory unavailable; falling back to temporary "
+                + "directory for plugin \(identifier, privacy: .public)"
+            )
             baseDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         }
 

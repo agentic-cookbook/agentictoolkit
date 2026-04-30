@@ -30,7 +30,7 @@ public final class FileSystemWatcher: @unchecked Sendable {
             guard let info = clientCallBackInfo else { return }
             let watcher = Unmanaged<FileSystemWatcher>.fromOpaque(info).takeUnretainedValue()
 
-            let paths = unsafeBitCast(eventPaths, to: NSArray.self) as! [String]
+            let paths = unsafeBitCast(eventPaths, to: NSArray.self) as! [String] // swiftlint:disable:this force_cast
             let filtered = paths.filter { path in
                 !watcher.excludedPrefixes.contains(where: { path.hasPrefix($0) })
             }

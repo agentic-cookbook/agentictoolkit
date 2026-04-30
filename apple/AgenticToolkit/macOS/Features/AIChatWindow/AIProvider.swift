@@ -19,7 +19,8 @@ import Foundation
 //
 //    public var defaultModels: [String] {
 //        switch self {
-//        case .anthropic: return ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250514", "claude-opus-4-5-20250514"]
+//        case .anthropic:
+//            return ["claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250514", "claude-opus-4-5-20250514"]
 //        case .openai: return ["gpt-4.1-nano", "gpt-4.1-mini", "gpt-4o-mini", "gpt-4o"]
 //        case .google: return ["gemini-2.0-flash", "gemini-2.5-flash-preview-05-20", "gemini-2.5-pro-preview-05-06"]
 //        case .custom: return []

@@ -57,12 +57,18 @@ public struct ProjectSettings: Codable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = ProjectSettings()
-        defaultShell = try container.decodeIfPresent(String.self, forKey: .defaultShell) ?? defaults.defaultShell
-        autoOpenTerminal = try container.decodeIfPresent(Bool.self, forKey: .autoOpenTerminal) ?? defaults.autoOpenTerminal
-        isSessionPanelVisible = try container.decodeIfPresent(Bool.self, forKey: .isSessionPanelVisible) ?? defaults.isSessionPanelVisible
-        sessionPanelProportion = try container.decodeIfPresent(Double.self, forKey: .sessionPanelProportion) ?? defaults.sessionPanelProportion
-        fileTreeProportion = try container.decodeIfPresent(Double.self, forKey: .fileTreeProportion) ?? defaults.fileTreeProportion
-        isFileTreeVisible = try container.decodeIfPresent(Bool.self, forKey: .isFileTreeVisible) ?? defaults.isFileTreeVisible
+        defaultShell = try container.decodeIfPresent(String.self, forKey: .defaultShell)
+            ?? defaults.defaultShell
+        autoOpenTerminal = try container.decodeIfPresent(Bool.self, forKey: .autoOpenTerminal)
+            ?? defaults.autoOpenTerminal
+        isSessionPanelVisible = try container.decodeIfPresent(Bool.self, forKey: .isSessionPanelVisible)
+            ?? defaults.isSessionPanelVisible
+        sessionPanelProportion = try container.decodeIfPresent(Double.self, forKey: .sessionPanelProportion)
+            ?? defaults.sessionPanelProportion
+        fileTreeProportion = try container.decodeIfPresent(Double.self, forKey: .fileTreeProportion)
+            ?? defaults.fileTreeProportion
+        isFileTreeVisible = try container.decodeIfPresent(Bool.self, forKey: .isFileTreeVisible)
+            ?? defaults.isFileTreeVisible
 
         // Migration: read legacy per-session fields into defaultSessionLayout
         if let layout = try container.decodeIfPresent(TerminalSessionLayoutState.self, forKey: .defaultSessionLayout) {
@@ -77,8 +83,10 @@ public struct ProjectSettings: Codable, Equatable, Sendable {
                 isInspectorPresented: isInspectorPresented
             )
         }
-        detectedIDEs = try container.decodeIfPresent([IDEProject].self, forKey: .detectedIDEs) ?? defaults.detectedIDEs
-        ignorePatterns = try container.decodeIfPresent([String].self, forKey: .ignorePatterns) ?? defaults.ignorePatterns
+        detectedIDEs = try container.decodeIfPresent([IDEProject].self, forKey: .detectedIDEs)
+            ?? defaults.detectedIDEs
+        ignorePatterns = try container.decodeIfPresent([String].self, forKey: .ignorePatterns)
+            ?? defaults.ignorePatterns
     }
 
     public func encode(to encoder: Encoder) throws {

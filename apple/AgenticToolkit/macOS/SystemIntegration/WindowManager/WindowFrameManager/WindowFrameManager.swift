@@ -221,8 +221,8 @@ public final class WindowFrameManager {
         }
         if let best = bestScreen { return best }
         // Fall back to window's own screen or main
-        if let ws = window.screen {
-            return RealScreenInfo(screen: ws)
+        if let windowScreen = window.screen {
+            return RealScreenInfo(screen: windowScreen)
         }
         return NSScreen.main.map { RealScreenInfo(screen: $0) }
     }

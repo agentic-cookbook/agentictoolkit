@@ -12,10 +12,10 @@ public enum SQLiteProjectStore {
         let tempURL = SQLiteHelpers.tempDatabaseURL()
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        let db = try SQLiteHelpers.openDatabase(at: tempURL)
-        defer { sqlite3_close(db) }
+        let database = try SQLiteHelpers.openDatabase(at: tempURL)
+        defer { sqlite3_close(database) }
 
-        try SQLiteHelpers.exec(db, """
+        try SQLiteHelpers.exec(database, """
             PRAGMA journal_mode = OFF;
             PRAGMA user_version = \(formatVersion);
             CREATE TABLE project (
@@ -36,27 +36,30 @@ public enum SQLiteProjectStore {
         """)
 
         let dateString = ISO8601DateFormatter().string(from: project.createdDate)
-        try SQLiteHelpers.exec(db, "INSERT INTO project (name, schema_version, created_date) VALUES (?, ?, ?)",
+        try SQLiteHelpers.exec(database, "INSERT INTO project (name, schema_version, created_date) VALUES (?, ?, ?)",
                  bindings: [.text(project.name), .int(Int64(project.version)), .text(dateString)])
 
         for (key, value) in project.settings.toKeyValueMap() {
-            try SQLiteHelpers.exec(db, "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            try SQLiteHelpers.exec(database, "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
                      bindings: [.text(key), .text(value)])
         }
 
         let encoder = JSONEncoder()
         for record in project.sessionRecords {
             let layoutJSON = String(data: try encoder.encode(record.layoutState), encoding: .utf8) ?? "{}"
-            try SQLiteHelpers.exec(db, "INSERT INTO sessions (id, name, sort_order, layout_state) VALUES (?, ?, ?, ?)",
-                     bindings: [
-                        .text(record.id.uuidString),
-                        .text(record.name),
-                        .int(Int64(record.sortOrder)),
-                        .text(layoutJSON)
-                     ])
+            try SQLiteHelpers.exec(
+                database,
+                "INSERT INTO sessions (id, name, sort_order, layout_state) VALUES (?, ?, ?, ?)",
+                bindings: [
+                    .text(record.id.uuidString),
+                    .text(record.name),
+                    .int(Int64(record.sortOrder)),
+                    .text(layoutJSON)
+                ]
+            )
         }
 
-        sqlite3_close(db)
+        sqlite3_close(database)
         let data = try Data(contentsOf: tempURL)
         logger.info("Serialized project to SQLite: \(data.count) bytes")
         return data
@@ -67,10 +70,10 @@ public enum SQLiteProjectStore {
         try data.write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        let db = try SQLiteHelpers.openDatabase(at: tempURL)
-        defer { sqlite3_close(db) }
+        let database = try SQLiteHelpers.openDatabase(at: tempURL)
+        defer { sqlite3_close(database) }
 
-        let row = try SQLiteHelpers.queryRow(db, "SELECT name, schema_version, created_date FROM project LIMIT 1")
+        let row = try SQLiteHelpers.queryRow(database, "SELECT name, schema_version, created_date FROM project LIMIT 1")
         guard row.count == 3 else {
             throw SQLiteHelpers.SQLiteError.missingData("project table is empty")
         }
@@ -81,11 +84,10 @@ public enum SQLiteProjectStore {
             throw SQLiteHelpers.SQLiteError.invalidDate(row[2])
         }
 
-        let settingsRows = try SQLiteHelpers.queryAll(db, "SELECT key, value FROM settings")
+        let settingsRows = try SQLiteHelpers.queryAll(database, "SELECT key, value FROM settings")
         var settingsMap: [String: String] = [:]
-        for r in settingsRows {
-            guard r.count == 2 else { continue }
-            settingsMap[r[0]] = r[1]
+        for row in settingsRows where row.count == 2 {
+            settingsMap[row[0]] = row[1]
         }
 
         let settings = ProjectSettings.fromKeyValueMap(settingsMap)
@@ -93,22 +95,29 @@ public enum SQLiteProjectStore {
         // Read session records (table may not exist in v2 projects)
         var sessionRecords: [TerminalSessionSessionRecord] = []
         let decoder = JSONDecoder()
-        if let sessionRows = try? SQLiteHelpers.queryAll(db, "SELECT id, name, sort_order, layout_state FROM sessions ORDER BY sort_order") {
-            for r in sessionRows where r.count == 4 {
-                guard let uuid = UUID(uuidString: r[0]) else { continue }
-                let sortOrder = Int(r[2]) ?? 0
+        let sessionsQuery = "SELECT id, name, sort_order, layout_state FROM sessions ORDER BY sort_order"
+        if let sessionRows = try? SQLiteHelpers.queryAll(database, sessionsQuery) {
+            for row in sessionRows where row.count == 4 {
+                guard let uuid = UUID(uuidString: row[0]) else { continue }
+                let sortOrder = Int(row[2]) ?? 0
                 let layoutState: TerminalSessionLayoutState
-                if let layoutData = r[3].data(using: .utf8),
+                if let layoutData = row[3].data(using: .utf8),
                    let decoded = try? decoder.decode(TerminalSessionLayoutState.self, from: layoutData) {
                     layoutState = decoded
                 } else {
                     layoutState = settings.defaultSessionLayout
                 }
-                sessionRecords.append(TerminalSessionSessionRecord(id: uuid, name: r[1], sortOrder: sortOrder, layoutState: layoutState))
+                sessionRecords.append(TerminalSessionSessionRecord(
+                    id: uuid,
+                    name: row[1],
+                    sortOrder: sortOrder,
+                    layoutState: layoutState
+                ))
             }
         }
 
-        logger.info("Deserialized project '\(name)' from SQLite (v\(version), \(sessionRecords.count) sessions)")
+        logger.info("Deserialized project '\(name)' from SQLite "
+                    + "(v\(version), \(sessionRecords.count) sessions)")
         var project = Project(name: name, version: version, createdDate: createdDate, settings: settings)
         project.sessionRecords = sessionRecords
         return project
@@ -124,23 +133,28 @@ extension SQLiteProjectStore: Loggable {
 extension ProjectSettings {
     public static func fromKeyValueMap(_ map: [String: String]) -> ProjectSettings {
         let defaults = ProjectSettings()
-        var s = ProjectSettings()
-        s.defaultShell = map["defaultShell"] ?? defaults.defaultShell
-        s.autoOpenTerminal = map["autoOpenTerminal"].flatMap(Bool.init(fromSQLite:)) ?? defaults.autoOpenTerminal
-        s.isSessionPanelVisible = map["isSessionPanelVisible"].flatMap(Bool.init(fromSQLite:)) ?? defaults.isSessionPanelVisible
-        s.sessionPanelProportion = map["sessionPanelProportion"].flatMap(Double.init) ?? defaults.sessionPanelProportion
-        s.fileTreeProportion = map["fileTreeProportion"].flatMap(Double.init) ?? defaults.fileTreeProportion
-        s.isFileTreeVisible = map["isFileTreeVisible"].flatMap(Bool.init(fromSQLite:)) ?? defaults.isFileTreeVisible
+        var settings = ProjectSettings()
+        settings.defaultShell = map["defaultShell"] ?? defaults.defaultShell
+        settings.autoOpenTerminal = map["autoOpenTerminal"]
+            .flatMap(Bool.init(fromSQLite:)) ?? defaults.autoOpenTerminal
+        settings.isSessionPanelVisible = map["isSessionPanelVisible"]
+            .flatMap(Bool.init(fromSQLite:)) ?? defaults.isSessionPanelVisible
+        settings.sessionPanelProportion = map["sessionPanelProportion"]
+            .flatMap(Double.init) ?? defaults.sessionPanelProportion
+        settings.fileTreeProportion = map["fileTreeProportion"]
+            .flatMap(Double.init) ?? defaults.fileTreeProportion
+        settings.isFileTreeVisible = map["isFileTreeVisible"]
+            .flatMap(Bool.init(fromSQLite:)) ?? defaults.isFileTreeVisible
 
         // Read defaultSessionLayout, falling back to legacy boolean fields for migration
         if let json = map["defaultSessionLayout"], let data = json.data(using: .utf8),
            let decoded = try? JSONDecoder().decode(TerminalSessionLayoutState.self, from: data) {
-            s.defaultSessionLayout = decoded
+            settings.defaultSessionLayout = decoded
         } else {
             let isFileViewerVisible = map["isFileViewerVisible"].flatMap(Bool.init(fromSQLite:)) ?? true
             let isTerminalVisible = map["isTerminalVisible"].flatMap(Bool.init(fromSQLite:)) ?? true
             let isInspectorPresented = map["isInspectorPresented"].flatMap(Bool.init(fromSQLite:)) ?? false
-            s.defaultSessionLayout = .fromLegacy(
+            settings.defaultSessionLayout = .fromLegacy(
                 isFileViewerVisible: isFileViewerVisible,
                 isTerminalVisible: isTerminalVisible,
                 isInspectorPresented: isInspectorPresented
@@ -148,10 +162,11 @@ extension ProjectSettings {
         }
 
         if let json = map["detectedIDEs"], let data = json.data(using: .utf8) {
-            s.detectedIDEs = (try? JSONDecoder().decode([IDEProject].self, from: data)) ?? defaults.detectedIDEs
+            settings.detectedIDEs = (try? JSONDecoder().decode([IDEProject].self, from: data))
+                ?? defaults.detectedIDEs
         }
-        s.ignorePatterns = defaults.ignorePatterns
-        return s
+        settings.ignorePatterns = defaults.ignorePatterns
+        return settings
     }
 
     public func toKeyValueMap() -> [(String, String)] {

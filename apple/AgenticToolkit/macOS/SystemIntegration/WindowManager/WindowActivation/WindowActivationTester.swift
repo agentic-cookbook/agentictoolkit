@@ -64,8 +64,8 @@ public final class WindowActivationTester: @unchecked Sendable {
         var failed = 0
 
         for target in targets {
-            let ok = testTarget(target)
-            if ok { passed += 1 } else { failed += 1 }
+            let succeeded = testTarget(target)
+            if succeeded { passed += 1 } else { failed += 1 }
             Thread.sleep(forTimeInterval: 1.0)
         }
 
@@ -132,11 +132,11 @@ public final class WindowActivationTester: @unchecked Sendable {
             return
         }
 
-        for (i, window) in windows.enumerated() {
+        for (index, window) in windows.enumerated() {
             var titleRef: CFTypeRef?
             AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
             let title = (titleRef as? String) ?? "<no title>"
-            log.append("  AX[\(i)]: \"\(title)\"")
+            log.append("  AX[\(index)]: \"\(title)\"")
         }
     }
 
@@ -186,7 +186,8 @@ public final class WindowActivationTester: @unchecked Sendable {
               let window = windowRef,
               CFGetTypeID(window) == AXUIElementGetTypeID() else { return "" }
 
-        let axWindow = window as! AXUIElement  // Safe: verified via CFGetTypeID check above.
+        // Safe: verified via CFGetTypeID check above.
+        let axWindow = window as! AXUIElement // swiftlint:disable:this force_cast
         var titleRef: CFTypeRef?
         AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &titleRef)
         return (titleRef as? String) ?? ""

@@ -39,7 +39,11 @@ final class OldSessionWindowSettingsPane: OldSettingsPanelView {
 
         // --- Window Behavior ---
         let windowHeader = Self.makeHeader("Window Behavior")
-        let toggle = NSButton(checkboxWithTitle: "Always on Top", target: self, action: #selector(alwaysOnTopChanged(_:)))
+        let toggle = NSButton(
+            checkboxWithTitle: "Always on Top",
+            target: self,
+            action: #selector(alwaysOnTopChanged(_:))
+        )
         toggle.state = viewModel.alwaysOnTop ? .on : .off
 
         let divider1 = NSBox()
@@ -48,7 +52,13 @@ final class OldSessionWindowSettingsPane: OldSettingsPanelView {
         // --- Transparency ---
         let transHeader = Self.makeHeader("Transparency")
 
-        let transSlider = NSSlider(value: viewModel.transparency, minValue: 0.3, maxValue: 1.0, target: self, action: #selector(transparencyChanged(_:)))
+        let transSlider = NSSlider(
+            value: viewModel.transparency,
+            minValue: 0.3,
+            maxValue: 1.0,
+            target: self,
+            action: #selector(transparencyChanged(_:))
+        )
         transSlider.translatesAutoresizingMaskIntoConstraints = false
 
         percentLabel.stringValue = "\(Int(viewModel.transparency * 100))%"
@@ -66,7 +76,13 @@ final class OldSessionWindowSettingsPane: OldSettingsPanelView {
         // --- Staleness Timeout ---
         let timeoutHeader = Self.makeHeader("Staleness Timeout")
 
-        let timeoutSlider = NSSlider(value: viewModel.stalenessTimeout, minValue: 30, maxValue: 600, target: self, action: #selector(timeoutChanged(_:)))
+        let timeoutSlider = NSSlider(
+            value: viewModel.stalenessTimeout,
+            minValue: 30,
+            maxValue: 600,
+            target: self,
+            action: #selector(timeoutChanged(_:))
+        )
         timeoutSlider.translatesAutoresizingMaskIntoConstraints = false
 
         timeoutValueLabel.stringValue = viewModel.stalenessTimeoutDisplay
@@ -78,7 +94,9 @@ final class OldSessionWindowSettingsPane: OldSettingsPanelView {
         timeoutRow.orientation = .horizontal
         timeoutRow.spacing = 8
 
-        let timeoutHint = NSTextField(labelWithString: "Sessions with no events within this timeout are marked as stale.")
+        let timeoutHint = NSTextField(
+            labelWithString: "Sessions with no events within this timeout are marked as stale."
+        )
         timeoutHint.font = .systemFont(ofSize: 11)
         timeoutHint.textColor = .secondaryLabelColor
 
@@ -141,7 +159,9 @@ final class OldSessionWindowSettingsPane: OldSettingsPanelView {
         enableToggle.target = self
         enableToggle.action = #selector(summariesEnableChanged(_:))
 
-        let enableHint = NSTextField(labelWithString: "Uses AI to generate a short description of what each session is doing.")
+        let enableHint = NSTextField(
+            labelWithString: "Uses AI to generate a short description of what each session is doing."
+        )
         enableHint.font = .systemFont(ofSize: 11)
         enableHint.textColor = .secondaryLabelColor
 

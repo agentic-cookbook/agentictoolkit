@@ -50,7 +50,7 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
 
     deinit {
         lock.lock()
-        for (_, c) in subscribers { c.finish() }
+        for (_, continuation) in subscribers { continuation.finish() }
         subscribers.removeAll()
         lock.unlock()
     }

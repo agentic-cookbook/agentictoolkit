@@ -32,15 +32,18 @@ open class SettingsStore: SettingsStorageProvider {
         storageProvider(for: key).get(key)
     }
 
-    public func set<Value>(_ value: Value, for key: any StorableSetting<Value>) where Value: Decodable, Value: Encodable, Value: Sendable {
+    public func set<Value>(_ value: Value, for key: any StorableSetting<Value>)
+    where Value: Decodable, Value: Encodable, Value: Sendable {
         storageProvider(for: key).set(value, for: key)
     }
 
-    public func remove<Value>(_ key: any StorableSetting<Value>) where Value: Decodable, Value: Encodable, Value: Sendable {
+    public func remove<Value>(_ key: any StorableSetting<Value>)
+    where Value: Decodable, Value: Encodable, Value: Sendable {
         storageProvider(for: key).remove(key)
     }
 
-    public func contains<Value>(_ key: any StorableSetting<Value>) -> Bool where Value: Decodable, Value: Encodable, Value: Sendable {
+    public func contains<Value>(_ key: any StorableSetting<Value>) -> Bool
+    where Value: Decodable, Value: Encodable, Value: Sendable {
         storageProvider(for: key).contains(key)
     }
 }

@@ -10,7 +10,12 @@ public final class GitStatusProvider: @unchecked Sendable {
         self.repoRoot = repoRoot
     }
 
-    public func refresh(completion: @escaping @Sendable (_ fileStatuses: [String: GitFileStatus], _ dirStatuses: [String: GitFileStatus]) -> Void) {
+    public func refresh(
+        completion: @escaping @Sendable (
+            _ fileStatuses: [String: GitFileStatus],
+            _ dirStatuses: [String: GitFileStatus]
+        ) -> Void
+    ) {
         let requestID = UUID()
         self.requestID = requestID
 
@@ -57,7 +62,9 @@ public final class GitStatusProvider: @unchecked Sendable {
     }
 
     /// Parses `git status --porcelain=v1` output into file and directory status maps.
-    public static func parse(porcelain output: String) -> (files: [String: GitFileStatus], dirs: [String: GitFileStatus]) {
+    public static func parse(
+        porcelain output: String
+    ) -> (files: [String: GitFileStatus], dirs: [String: GitFileStatus]) {
         var fileStatuses: [String: GitFileStatus] = [:]
 
         for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -65,23 +72,23 @@ public final class GitStatusProvider: @unchecked Sendable {
             let statusChars = String(line.prefix(2))
             let filePath = String(line.dropFirst(3))
 
-            let x = statusChars.first ?? " "
-            let y = statusChars.last ?? " "
+            let indexStatus = statusChars.first ?? " "
+            let workTreeStatus = statusChars.last ?? " "
 
             let status: GitFileStatus?
-            if x == "?" || y == "?" {
+            if indexStatus == "?" || workTreeStatus == "?" {
                 status = .untracked
-            } else if x == "U" || y == "U" {
+            } else if indexStatus == "U" || workTreeStatus == "U" {
                 status = .conflicted
-            } else if x == "!" || y == "!" {
+            } else if indexStatus == "!" || workTreeStatus == "!" {
                 status = .ignored
-            } else if y == "M" || x == "M" {
+            } else if workTreeStatus == "M" || indexStatus == "M" {
                 status = .modified
-            } else if y == "A" || x == "A" {
+            } else if workTreeStatus == "A" || indexStatus == "A" {
                 status = .added
-            } else if y == "D" || x == "D" {
+            } else if workTreeStatus == "D" || indexStatus == "D" {
                 status = .deleted
-            } else if x == "R" {
+            } else if indexStatus == "R" {
                 status = .renamed
                 if let arrowRange = filePath.range(of: " -> ") {
                     let newPath = String(filePath[arrowRange.upperBound...])
@@ -92,8 +99,8 @@ public final class GitStatusProvider: @unchecked Sendable {
                 status = nil
             }
 
-            if let s = status {
-                fileStatuses[filePath] = s
+            if let resolved = status {
+                fileStatuses[filePath] = resolved
             }
         }
 

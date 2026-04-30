@@ -98,4 +98,3 @@ extension UserSettings {
 
     static public var launchAtLoginHintDismissed = UserSetting<Bool>("launchAtLoginHintDismissed", default: false)
 }
-

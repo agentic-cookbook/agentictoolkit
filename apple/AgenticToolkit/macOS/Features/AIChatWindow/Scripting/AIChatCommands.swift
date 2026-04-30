@@ -36,21 +36,21 @@ public final class SendChatMessageCommand: MainActorScriptCommand, @unchecked Se
             return nil
         }
         aiChat.ensureWindow()
-        guard let vm = aiChat.viewModel else {
+        guard let viewModel = aiChat.viewModel else {
             scriptErrorNumber = errOSACantAssign
             scriptErrorString = "Could not create chat view model."
             return nil
         }
-        vm.sendMessage(text)
-        return vm.messages.count
+        viewModel.sendMessage(text)
+        return viewModel.messages.count
     }
 }
 
 @objc(GetChatMessagesCommand)
 public final class GetChatMessagesCommand: MainActorScriptCommand, @unchecked Sendable {
     public override func performMain() -> Any? {
-        guard let vm = coordinator?.viewModel else { return [] }
-        return vm.messages.map { msg -> String in
+        guard let viewModel = coordinator?.viewModel else { return [] }
+        return viewModel.messages.map { msg -> String in
             let role: String
             switch msg.role {
             case .user:      role = "user"

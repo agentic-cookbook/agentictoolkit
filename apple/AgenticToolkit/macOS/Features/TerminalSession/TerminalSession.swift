@@ -93,7 +93,10 @@ public final class TerminalSession: ObservableObject, Identifiable {
     private func startShellProcess(in view: LocalProcessTerminalView) {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let startDir = workingDirectory ?? FileManager.default.homeDirectoryForCurrentUser.path
-        logger.info("Starting shell '\(shell, privacy: .public)' for session '\(self.name)' in \(startDir, privacy: .public)")
+        logger.info(
+            "Starting shell '\(shell, privacy: .public)' for session "
+            + "'\(self.name)' in \(startDir, privacy: .public)"
+        )
 
         var env = Terminal.getEnvironmentVariables(termName: "xterm-256color")
         let processEnv = ProcessInfo.processInfo.environment
@@ -168,10 +171,10 @@ public final class TerminalSession: ObservableObject, Identifiable {
             return
         }
 
-        let fd = terminalView.process.childfd
-        guard fd >= 0 else { return }
+        let descriptor = terminalView.process.childfd
+        guard descriptor >= 0 else { return }
 
-        let fgpid = tcgetpgrp(fd)
+        let fgpid = tcgetpgrp(descriptor)
         guard fgpid > 0 else { return }
 
         let pathBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(kMaxProcPathSize))

@@ -4,7 +4,11 @@ import AgenticToolkitCore
 @MainActor
 public enum NestedContentRegistry {
 
-    public typealias Factory = @MainActor (_ nodeID: UUID, _ document: NestedSplitViewDocument, _ paneNumber: Int) -> NSView
+    public typealias Factory = @MainActor (
+        _ nodeID: UUID,
+        _ document: NestedSplitViewDocument,
+        _ paneNumber: Int
+    ) -> NSView
 
     public static let placeholderIdentifier = "whippet.placeholder"
 

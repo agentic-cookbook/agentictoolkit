@@ -19,9 +19,9 @@ public struct RGBAColor: Codable, Sendable, Equatable {
     /// Parses `"#RRGGBBAA"` (the leading `#` is optional, case-insensitive).
     /// Returns nil on any parse failure.
     public init?(hexString: String) {
-        var s = hexString
-        if s.hasPrefix("#") { s.removeFirst() }
-        guard s.count == 8, let value = UInt32(s, radix: 16) else { return nil }
+        var hex = hexString
+        if hex.hasPrefix("#") { hex.removeFirst() }
+        guard hex.count == 8, let value = UInt32(hex, radix: 16) else { return nil }
         self.red   = Double((value >> 24) & 0xFF) / 255
         self.green = Double((value >> 16) & 0xFF) / 255
         self.blue  = Double((value >> 8)  & 0xFF) / 255
@@ -30,11 +30,11 @@ public struct RGBAColor: Codable, Sendable, Equatable {
 
     /// Serializes to `"#RRGGBBAA"` (uppercase, always 9 characters).
     public var hexString: String {
-        let r = Int((red.clamped() * 255).rounded())
-        let g = Int((green.clamped() * 255).rounded())
-        let b = Int((blue.clamped() * 255).rounded())
-        let a = Int((alpha.clamped() * 255).rounded())
-        return String(format: "#%02X%02X%02X%02X", r, g, b, a)
+        let redByte = Int((red.clamped() * 255).rounded())
+        let greenByte = Int((green.clamped() * 255).rounded())
+        let blueByte = Int((blue.clamped() * 255).rounded())
+        let alphaByte = Int((alpha.clamped() * 255).rounded())
+        return String(format: "#%02X%02X%02X%02X", redByte, greenByte, blueByte, alphaByte)
     }
 
     public init(from decoder: Decoder) throws {

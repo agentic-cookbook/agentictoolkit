@@ -20,7 +20,12 @@ extension SessionWatcher {
                 MenuContribution(slot: .window, title: "Summarizer Debug Log", order: 50) { [weak self] in
                     self?.showWindow()
                 },
-                MenuContribution(slot: .statusItem(section: 1), title: "Summarizer Debug Log", order: 10, key: "d") { [weak self] in
+                MenuContribution(
+                    slot: .statusItem(section: 1),
+                    title: "Summarizer Debug Log",
+                    order: 10,
+                    key: "d"
+                ) { [weak self] in
                     self?.showWindow()
                 }
             ]
@@ -42,7 +47,11 @@ extension SessionWatcher {
         public override func setValue(_ value: Any?, forScriptingKey key: String) {
             switch key {
             case "scriptingSummarizerDebugVisible":
-                (value as? Bool) == true ? windowController.showWindow() : windowController.dismiss()
+                if (value as? Bool) == true {
+                    windowController.showWindow()
+                } else {
+                    windowController.dismiss()
+                }
             default:
                 break
             }

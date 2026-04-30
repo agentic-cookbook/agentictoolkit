@@ -36,9 +36,9 @@ public final class AIChatCoordinator: AppFeature {
     public func ensureWindow() {
         guard windowController == nil else { return }
         let backend = makeBackend()
-        let vm = ChatViewModel(backend: backend)
-        viewModel = vm
-        windowController = AIChatWindowController(viewModel: vm)
+        let chatViewModel = ChatViewModel(backend: backend)
+        viewModel = chatViewModel
+        windowController = AIChatWindowController(viewModel: chatViewModel)
     }
 
     public func showWindow() {

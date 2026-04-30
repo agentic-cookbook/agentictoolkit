@@ -9,11 +9,10 @@ import Foundation
 @Suite("AppleScriptRunner", .serialized)
 struct AppleScriptRunnerTests {
 
-    // TODO: Exercise the `.compileFailed` path. Empirically `NSAppleScript(source:)`
-    // never returns nil — it accepts any string and defers all syntax/tokenizer
-    // errors to `executeAndReturnError` (surfaced as `.runtimeFailed`). The
-    // `.compileFailed` enum case exists as a defensive catch, but no observed
-    // input reaches it via `AppleScriptRunner.run(_:)`.
+    // The `.compileFailed` path is unreachable in practice: `NSAppleScript(source:)`
+    // never returns nil — it accepts any string and defers syntax/tokenizer errors
+    // to `executeAndReturnError` (surfaced as `.runtimeFailed`). The enum case
+    // exists as a defensive catch.
 
     @Test("simple return string yields .success with that string")
     func successReturnsString() {

@@ -3,6 +3,7 @@ import XCTest
 import CodeEditLanguages
 
 final class LanguageDetectionTests: XCTestCase {
+    // swiftlint:disable:next static_over_final_class
     override class func setUp() {
         super.setUp()
         // CodeEditLanguages ships a resource bundle via SwiftPM. When the

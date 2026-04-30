@@ -108,9 +108,9 @@ extension SessionWatcher {
 
         public func hidePanel() {
             UserDefaults.standard.set(false, forKey: Self.visibilityDefaultsKey)
-            guard didShowOnce, let w = window else { return }
-            WindowManager.shared.frames.saveFrame(for: w, id: windowID)
-            w.orderOut(nil)
+            guard didShowOnce, let panelWindow = window else { return }
+            WindowManager.shared.frames.saveFrame(for: panelWindow, id: windowID)
+            panelWindow.orderOut(nil)
             logger.debug("SessionWatcherSession window hidden")
         }
 
@@ -128,21 +128,21 @@ extension SessionWatcher {
         }
 
         @objc private func handleContentSizeChange() {
-            guard let v = self.viewController?.view else { return }
-            let h = v.intrinsicContentSize.height
-            if h > 0 { updatePanelHeight(to: h) }
+            guard let view = self.viewController?.view else { return }
+            let height = view.intrinsicContentSize.height
+            if height > 0 { updatePanelHeight(to: height) }
         }
 
         private func updatePanelHeight(to contentHeight: CGFloat) {
-            guard let w = window else { return }
-            let titleBarHeight = w.frame.height - w.contentLayoutRect.height
-            let screenMax = (w.screen ?? NSScreen.main)?.visibleFrame.height ?? 800
-            let newHeight = min(max(contentHeight + titleBarHeight, w.minSize.height), screenMax)
-            var f = w.frame
-            guard abs(f.height - newHeight) > 1 else { return }
-            f.origin.y -= (newHeight - f.height)
-            f.size.height = newHeight
-            w.setFrame(f, display: true, animate: false)
+            guard let panelWindow = window else { return }
+            let titleBarHeight = panelWindow.frame.height - panelWindow.contentLayoutRect.height
+            let screenMax = (panelWindow.screen ?? NSScreen.main)?.visibleFrame.height ?? 800
+            let newHeight = min(max(contentHeight + titleBarHeight, panelWindow.minSize.height), screenMax)
+            var frame = panelWindow.frame
+            guard abs(frame.height - newHeight) > 1 else { return }
+            frame.origin.y -= (newHeight - frame.height)
+            frame.size.height = newHeight
+            panelWindow.setFrame(frame, display: true, animate: false)
         }
 
         // MARK: - NSWindowDelegate
@@ -164,8 +164,8 @@ extension SessionWatcher {
 
         public var isFloating: Bool {
             get {
-                guard didShowOnce, let w = window else { return pendingIsFloating }
-                return w.level == .floating
+                guard didShowOnce, let panelWindow = window else { return pendingIsFloating }
+                return panelWindow.level == .floating
             }
             set {
                 pendingIsFloating = newValue

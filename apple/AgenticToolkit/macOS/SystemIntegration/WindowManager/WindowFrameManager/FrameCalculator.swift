@@ -31,16 +31,16 @@ public enum FrameCalculator {
         screenVisibleFrame: NSRect,
         minSize: NSSize
     ) -> NSRect {
-        let w = Swift.min(Swift.max(width, minSize.width), screenVisibleFrame.width)
-        let h = Swift.min(Swift.max(height, minSize.height), screenVisibleFrame.height)
+        let clampedWidth = Swift.min(Swift.max(width, minSize.width), screenVisibleFrame.width)
+        let clampedHeight = Swift.min(Swift.max(height, minSize.height), screenVisibleFrame.height)
 
-        let availableWidth = screenVisibleFrame.width - w
-        let availableHeight = screenVisibleFrame.height - h
+        let availableWidth = screenVisibleFrame.width - clampedWidth
+        let availableHeight = screenVisibleFrame.height - clampedHeight
 
-        let x = screenVisibleFrame.origin.x + proportionalX * Swift.max(availableWidth, 0)
-        let y = screenVisibleFrame.origin.y + proportionalY * Swift.max(availableHeight, 0)
+        let originX = screenVisibleFrame.origin.x + proportionalX * Swift.max(availableWidth, 0)
+        let originY = screenVisibleFrame.origin.y + proportionalY * Swift.max(availableHeight, 0)
 
-        return NSRect(x: x, y: y, width: w, height: h)
+        return NSRect(x: originX, y: originY, width: clampedWidth, height: clampedHeight)
     }
 
     /// Computes a default frame for a spec on a screen.

@@ -104,7 +104,8 @@ private struct FileEditorContentView: View {
                     configuration: SourceEditorConfiguration(
                         appearance: .init(
                             theme: theme,
-                            font: NSFont(name: "Menlo", size: 13) ?? .monospacedSystemFont(ofSize: 13, weight: .regular),
+                            font: NSFont(name: "Menlo", size: 13)
+                                ?? .monospacedSystemFont(ofSize: 13, weight: .regular),
                             wrapLines: false
                         ),
                         peripherals: .init(

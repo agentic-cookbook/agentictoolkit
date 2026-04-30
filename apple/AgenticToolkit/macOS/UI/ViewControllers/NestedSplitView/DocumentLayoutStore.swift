@@ -24,7 +24,12 @@ public struct LayoutNode {
         LayoutNode(id: id, kind: .leaf(contentType: contentType, paneLabel: paneLabel))
     }
 
-    public static func split(id: UUID = UUID(), orientation: String, first: LayoutNode, second: LayoutNode) -> LayoutNode {
+    public static func split(
+        id: UUID = UUID(),
+        orientation: String,
+        first: LayoutNode,
+        second: LayoutNode
+    ) -> LayoutNode {
         LayoutNode(id: id, kind: .split(orientation: orientation, first: first, second: second))
     }
 }
@@ -45,7 +50,7 @@ public struct TabRecord {
 
 public final class DocumentLayoutStore {
 
-    private var db: OpaquePointer?
+    private var database: OpaquePointer?
     public let databasePath: String
 
     public static let currentSchemaVersion = 2
@@ -57,14 +62,14 @@ public final class DocumentLayoutStore {
     }
 
     deinit {
-        if let db = db {
-            sqlite3_close(db)
+        if let database = database {
+            sqlite3_close(database)
         }
     }
 
     private func openDatabase() throws {
         let result = sqlite3_open_v2(
-            databasePath, &db,
+            databasePath, &database,
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
             nil
         )
@@ -98,7 +103,7 @@ public final class DocumentLayoutStore {
         let sql = "SELECT COALESCE(MAX(version), 0) FROM schema_migrations"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
         guard sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
@@ -152,7 +157,10 @@ public final class DocumentLayoutStore {
         // Migrate any existing v1 single-root layout into one tab.
         if let oldRoot: String = try queryScalarString("SELECT root_node_id FROM layout_root WHERE id = 1") {
             let tabID = UUID().uuidString
-            let insertTab = "INSERT INTO document_tabs (id, position, title, root_node_id, focused_node_id) VALUES (?, 0, 'Tab 1', ?, NULL)"
+            let insertTab = """
+                INSERT INTO document_tabs (id, position, title, root_node_id, focused_node_id)
+                VALUES (?, 0, 'Tab 1', ?, NULL)
+                """
             try executeBound(insertTab) { stmt in
                 sqlite3_bind_text(stmt, 1, (tabID as NSString).utf8String, -1, nil)
                 sqlite3_bind_text(stmt, 2, (oldRoot as NSString).utf8String, -1, nil)
@@ -169,14 +177,14 @@ public final class DocumentLayoutStore {
     // MARK: - SQL helpers
 
     private var lastErrorMessage: String {
-        if let db = db { return String(cString: sqlite3_errmsg(db)) }
+        if let database = database { return String(cString: sqlite3_errmsg(database)) }
         return "Database not open"
     }
 
     @discardableResult
     private func execute(_ sql: String) throws -> Int32 {
         var errorMessage: UnsafeMutablePointer<CChar>?
-        let result = sqlite3_exec(db, sql, nil, nil, &errorMessage)
+        let result = sqlite3_exec(database, sql, nil, nil, &errorMessage)
         if result != SQLITE_OK {
             let message = errorMessage.map { String(cString: $0) } ?? "Unknown error"
             sqlite3_free(errorMessage)
@@ -190,7 +198,7 @@ public final class DocumentLayoutStore {
     private func executeBound(_ sql: String, bind: (OpaquePointer?) -> Void) throws {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
         bind(stmt)
@@ -208,7 +216,7 @@ public final class DocumentLayoutStore {
         let sql = "SELECT id, title, root_node_id, focused_node_id FROM document_tabs ORDER BY position"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
         var tabs: [TabRecord] = []
@@ -270,7 +278,7 @@ public final class DocumentLayoutStore {
         """
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
         sqlite3_bind_text(stmt, 1, (node.id.uuidString as NSString).utf8String, -1, nil)
@@ -323,7 +331,7 @@ public final class DocumentLayoutStore {
         let sql = "SELECT id, parent_id, position, kind, orientation, content_type, pane_label FROM layout_nodes"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
         var rows: [UUID: NodeRow] = [:]
@@ -333,8 +341,8 @@ public final class DocumentLayoutStore {
                 continue
             }
             let parentID: UUID? = {
-                guard let c = sqlite3_column_text(stmt, 1) else { return nil }
-                return UUID(uuidString: String(cString: c))
+                guard let cstring = sqlite3_column_text(stmt, 1) else { return nil }
+                return UUID(uuidString: String(cString: cstring))
             }()
             let position = Int(sqlite3_column_int(stmt, 2))
             let kind = sqlite3_column_text(stmt, 3).map { String(cString: $0) } ?? ""
@@ -377,11 +385,11 @@ public final class DocumentLayoutStore {
     private func queryScalarString(_ sql: String) throws -> String? {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-        guard let c = sqlite3_column_text(stmt, 0) else { return nil }
-        return String(cString: c)
+        guard let cstring = sqlite3_column_text(stmt, 0) else { return nil }
+        return String(cString: cstring)
     }
 }

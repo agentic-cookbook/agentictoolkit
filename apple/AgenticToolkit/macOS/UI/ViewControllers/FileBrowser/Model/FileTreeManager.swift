@@ -125,7 +125,12 @@ public final class FileTreeManager: ObservableObject {
         }
     }
 
-    private func applyGitStatuses(node: FileTreeNode, repoPath: String, fileStatuses: [String: GitFileStatus], dirStatuses: [String: GitFileStatus]) {
+    private func applyGitStatuses(
+        node: FileTreeNode,
+        repoPath: String,
+        fileStatuses: [String: GitFileStatus],
+        dirStatuses: [String: GitFileStatus]
+    ) {
         let fullPath = node.url.path
         let relativePath: String
         if fullPath.hasPrefix(repoPath + "/") {

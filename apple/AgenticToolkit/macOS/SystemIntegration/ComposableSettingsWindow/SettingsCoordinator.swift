@@ -48,7 +48,7 @@ extension ComposableSettings {
         /// panels whose dependencies (plugin managers, coordinators) aren't
         /// available when `SettingsCoordinator` is built.
         public func addPanel(_ panel: any ComposableSettingsPanel) {
-            settingsWindow.settingPanels = settingsWindow.settingPanels + [panel]
+            settingsWindow.settingPanels += [panel]
         }
 
         public override func value(forScriptingKey key: String) -> Any? {
@@ -61,7 +61,11 @@ extension ComposableSettings {
         public override func setValue(_ value: Any?, forScriptingKey key: String) {
             switch key {
             case "scriptingSettingsVisible":
-                (value as? Bool) == true ? settingsWindow.showWindow() : settingsWindow.dismiss()
+                if (value as? Bool) == true {
+                    settingsWindow.showWindow()
+                } else {
+                    settingsWindow.dismiss()
+                }
             default:
                 break
             }

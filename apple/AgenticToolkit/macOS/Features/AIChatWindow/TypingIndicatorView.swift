@@ -60,10 +60,10 @@ public final class TypingIndicatorView: NSView {
 
     private func tick() {
         let active = step % 3
-        for (i, dot) in dots.enumerated() {
+        for (index, dot) in dots.enumerated() {
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.2
-                dot.animator().alphaValue = (i == active) ? 1.0 : 0.3
+                dot.animator().alphaValue = (index == active) ? 1.0 : 0.3
             }
         }
         step += 1

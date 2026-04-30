@@ -95,7 +95,9 @@ public class WhippetChatBackend: ChatBackend {
         }
         guard http.statusCode == 200 || http.statusCode == 201 else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            throw WhippetChatBackendError.httpError(AIRequestBuilder.parseErrorMessage(from: body, statusCode: http.statusCode))
+            throw WhippetChatBackendError.httpError(
+                AIRequestBuilder.parseErrorMessage(from: body, statusCode: http.statusCode)
+            )
         }
         return AIRequestBuilder.parseAssistantReply(from: data, provider: provider)
     }
@@ -149,7 +151,8 @@ public class WhippetChatBackend: ChatBackend {
         let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
         let reply = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let errorOutput = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let errorOutput = String(data: stderrData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         guard process.terminationStatus == 0 else {
             let msg = errorOutput.isEmpty ? "Exit code \(process.terminationStatus)" : errorOutput
@@ -169,10 +172,8 @@ public class WhippetChatBackend: ChatBackend {
             "/usr/local/bin/claude",
             "/opt/homebrew/bin/claude"
         ]
-        for path in candidates {
-            if FileManager.default.isExecutableFile(atPath: path) {
-                return path
-            }
+        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
+            return path
         }
         return nil
     }

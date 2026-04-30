@@ -10,18 +10,18 @@ final class PerIDWindowControllerTests: XCTestCase {
     private final class StringIDWC: PerIDWindowController<String> {
         override var windowTitle: String { "string-\(id)" }
         override func makeContentViewController() -> NSViewController? {
-            let vc = NSViewController()
-            vc.view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
-            return vc
+            let viewController = NSViewController()
+            viewController.view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
+            return viewController
         }
     }
 
     private final class Int64IDWC: PerIDWindowController<Int64> {
         override var windowTitle: String { "int-\(id)" }
         override func makeContentViewController() -> NSViewController? {
-            let vc = NSViewController()
-            vc.view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
-            return vc
+            let viewController = NSViewController()
+            viewController.view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
+            return viewController
         }
     }
 
@@ -42,26 +42,26 @@ final class PerIDWindowControllerTests: XCTestCase {
     }
 
     func testDifferentIDsHaveDistinctControllers() {
-        let a = StringIDWC.present(id: "a") {
+        let controllerA = StringIDWC.present(id: "a") {
             StringIDWC(id: "a", windowID: "t2.a")
         }
-        let b = StringIDWC.present(id: "b") {
+        let controllerB = StringIDWC.present(id: "b") {
             StringIDWC(id: "b", windowID: "t2.b")
         }
-        XCTAssertFalse(a === b)
-        XCTAssertEqual(StringIDWC.controller(for: "a"), a)
-        XCTAssertEqual(StringIDWC.controller(for: "b"), b)
+        XCTAssertFalse(controllerA === controllerB)
+        XCTAssertEqual(StringIDWC.controller(for: "a"), controllerA)
+        XCTAssertEqual(StringIDWC.controller(for: "b"), controllerB)
 
-        a.windowWillClose(Notification(name: NSWindow.willCloseNotification))
-        b.windowWillClose(Notification(name: NSWindow.willCloseNotification))
+        controllerA.windowWillClose(Notification(name: NSWindow.willCloseNotification))
+        controllerB.windowWillClose(Notification(name: NSWindow.willCloseNotification))
     }
 
     func testWindowWillCloseClearsRegistry() {
-        let wc = StringIDWC.present(id: "closeme") {
+        let windowController = StringIDWC.present(id: "closeme") {
             StringIDWC(id: "closeme", windowID: "t3.closeme")
         }
         XCTAssertNotNil(StringIDWC.controller(for: "closeme"))
-        wc.windowWillClose(Notification(name: NSWindow.willCloseNotification))
+        windowController.windowWillClose(Notification(name: NSWindow.willCloseNotification))
         XCTAssertNil(StringIDWC.controller(for: "closeme"))
     }
 

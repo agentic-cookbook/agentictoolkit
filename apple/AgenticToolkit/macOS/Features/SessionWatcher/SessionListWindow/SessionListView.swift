@@ -301,7 +301,8 @@ extension SessionWatcher {
             titleLabel.textColor = .labelColor
             titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-            let countLabel = NSTextField(labelWithString: "\(group.sessions.count) session\(group.sessions.count == 1 ? "" : "s")")
+            let suffix = group.sessions.count == 1 ? "" : "s"
+            let countLabel = NSTextField(labelWithString: "\(group.sessions.count) session\(suffix)")
             countLabel.font = .systemFont(ofSize: 10)
             countLabel.textColor = .tertiaryLabelColor
             countLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -648,7 +649,11 @@ extension SessionWatcher {
             stack.addArrangedSubview(messageRow)
 
             if isPermissionError {
-                let button = NSButton(title: "Open System Settings", target: self, action: #selector(openSettingsClicked))
+                let button = NSButton(
+                    title: "Open System Settings",
+                    target: self,
+                    action: #selector(openSettingsClicked)
+                )
                 button.font = .systemFont(ofSize: 11, weight: .medium)
                 button.bezelStyle = .recessed
                 stack.addArrangedSubview(button)

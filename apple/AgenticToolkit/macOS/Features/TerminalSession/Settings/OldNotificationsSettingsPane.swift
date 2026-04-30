@@ -33,13 +33,25 @@ final class OldNotificationsSettingsPane: OldSettingsPanelView {
 
         stack.addArrangedSubview(Self.makeHeader("Notify When"))
 
-        let startToggle = NSButton(checkboxWithTitle: "Session Started", target: self, action: #selector(startChanged(_:)))
+        let startToggle = NSButton(
+            checkboxWithTitle: "Session Started",
+            target: self,
+            action: #selector(startChanged(_:))
+        )
         startToggle.state = viewModel.notifySessionStart ? .on : .off
 
-        let endToggle = NSButton(checkboxWithTitle: "Session Ended", target: self, action: #selector(endChanged(_:)))
+        let endToggle = NSButton(
+            checkboxWithTitle: "Session Ended",
+            target: self,
+            action: #selector(endChanged(_:))
+        )
         endToggle.state = viewModel.notifySessionEnd ? .on : .off
 
-        let staleToggle = NSButton(checkboxWithTitle: "Session Became Stale", target: self, action: #selector(staleChanged(_:)))
+        let staleToggle = NSButton(
+            checkboxWithTitle: "Session Became Stale",
+            target: self,
+            action: #selector(staleChanged(_:))
+        )
         staleToggle.state = viewModel.notifyStale ? .on : .off
 
         let hint = NSTextField(labelWithString: "Notifications require permission. macOS will prompt you on first use.")

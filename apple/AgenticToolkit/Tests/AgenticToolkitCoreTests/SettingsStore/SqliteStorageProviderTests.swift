@@ -93,7 +93,7 @@ final class SqliteStorageProviderTests: XCTestCase {
         // Inject garbage by writing a String value under a key that expects UserPreferences.
         // Since the JSON decoder will fail, the get should return the key's default value.
         // Use the underlying JSON path: write a String wrapped value.
-        let badData = "not json".data(using: .utf8)!
+        let badData = Data("not json".utf8)
         // Open a parallel handle and inject bytes — easier: set a String to the same key name
         // through a manually-crafted JSON. The simplest hack: set a nonsense type's blob via a
         // separate temporary key won't trigger the path. Instead, rely on the implementation:

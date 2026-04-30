@@ -263,10 +263,10 @@ extension LogView {
     /// exercises on screen.
     @MainActor
     func testCell(column columnID: String, row: Int) -> NSTextField? {
-        guard let tc = testTable.tableColumns.first(where: { $0.identifier.rawValue == columnID }) else {
+        guard let column = testTable.tableColumns.first(where: { $0.identifier.rawValue == columnID }) else {
             return nil
         }
-        return self.tableView(testTable, viewFor: tc, row: row) as? NSTextField
+        return self.tableView(testTable, viewFor: column, row: row) as? NSTextField
     }
 
     @MainActor

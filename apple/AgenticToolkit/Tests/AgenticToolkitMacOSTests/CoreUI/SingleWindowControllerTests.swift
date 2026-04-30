@@ -8,7 +8,7 @@ final class SingleWindowControllerTests: XCTestCase {
     // MARK: - Subclasses under test
 
     private final class ViewControllerBasedWC: SingleWindowController {
-        let vc = FakeVC()
+        let viewController = FakeVC()
 
         override var windowTitle: String { "VC-Based" }
         override var defaultContentRect: NSRect { NSRect(x: 0, y: 0, width: 321, height: 234) }
@@ -16,7 +16,7 @@ final class SingleWindowControllerTests: XCTestCase {
             [.titled, .closable, .miniaturizable, .resizable]
         }
         override var minSize: NSSize? { NSSize(width: 100, height: 100) }
-        override func makeContentViewController() -> NSViewController? { vc }
+        override func makeContentViewController() -> NSViewController? { viewController }
     }
 
     private final class ViewBasedWC: SingleWindowController {
@@ -36,47 +36,47 @@ final class SingleWindowControllerTests: XCTestCase {
     // MARK: - Tests
 
     func testSubclassOverridesDriveWindowConfig() throws {
-        let wc = ViewControllerBasedWC(windowID: "test.vc")
-        wc.showWindow()
+        let windowController = ViewControllerBasedWC(windowID: "test.viewController")
+        windowController.showWindow()
 
-        let window = try XCTUnwrap(wc.window)
+        let window = try XCTUnwrap(windowController.window)
         XCTAssertEqual(window.title, "VC-Based")
-        XCTAssertEqual(window.contentViewController, wc.vc)
+        XCTAssertEqual(window.contentViewController, windowController.viewController)
         XCTAssertTrue(window.styleMask.contains(.miniaturizable))
         XCTAssertEqual(window.minSize, NSSize(width: 100, height: 100))
     }
 
     func testContentViewControllerLifecycleWiresUp() {
-        let wc = ViewControllerBasedWC(windowID: "test.vc.lifecycle")
-        wc.showWindow()
-        XCTAssertGreaterThan(wc.vc.loadViewCallCount, 0,
+        let windowController = ViewControllerBasedWC(windowID: "test.viewController.lifecycle")
+        windowController.showWindow()
+        XCTAssertGreaterThan(windowController.viewController.loadViewCallCount, 0,
             "loadView should fire when contentViewController is set")
     }
 
     func testViewBasedSubclassInstallsContentView() {
-        let wc = ViewBasedWC(windowID: "test.view")
-        wc.showWindow()
-        XCTAssertNil(wc.window?.contentViewController,
+        let windowController = ViewBasedWC(windowID: "test.view")
+        windowController.showWindow()
+        XCTAssertNil(windowController.window?.contentViewController,
             "view-based path should NOT set contentViewController")
-        XCTAssertTrue(wc.customView.isDescendant(of: wc.window?.contentView ?? NSView()),
+        XCTAssertTrue(windowController.customView.isDescendant(of: windowController.window?.contentView ?? NSView()),
             "custom view should be a subview of the window's contentView")
     }
 
     func testReshowReusesSameWindow() {
-        let wc = ViewControllerBasedWC(windowID: "test.reuse")
-        wc.showWindow()
-        let first = wc.window
-        wc.showWindow()
-        XCTAssertTrue(first === wc.window, "second showWindow should not create a new NSWindow")
+        let windowController = ViewControllerBasedWC(windowID: "test.reuse")
+        windowController.showWindow()
+        let first = windowController.window
+        windowController.showWindow()
+        XCTAssertTrue(first === windowController.window, "second showWindow should not create a new NSWindow")
     }
 
     func testIsVisibleReflectsWindowState() {
-        let wc = ViewControllerBasedWC(windowID: "test.visible")
-        XCTAssertFalse(wc.isVisible, "no window created yet")
-        wc.showWindow()
-        XCTAssertTrue(wc.isVisible)
-        wc.dismiss()
-        XCTAssertFalse(wc.isVisible)
+        let windowController = ViewControllerBasedWC(windowID: "test.visible")
+        XCTAssertFalse(windowController.isVisible, "no window created yet")
+        windowController.showWindow()
+        XCTAssertTrue(windowController.isVisible)
+        windowController.dismiss()
+        XCTAssertFalse(windowController.isVisible)
     }
 
     func testWindowWithNoSavedGeometryIsGeometricallyCenteredOnMainScreen() throws {
@@ -86,10 +86,10 @@ final class SingleWindowControllerTests: XCTestCase {
         // which overrode the correct proportional centering with AppKit's
         // upper-center. Verify BOTH midX and midY match the visible frame's
         // center — an X-only check passed the buggy version.
-        let wc = ViewControllerBasedWC(windowID: "test.center.\(UUID().uuidString)")
-        wc.showWindow()
+        let windowController = ViewControllerBasedWC(windowID: "test.center.\(UUID().uuidString)")
+        windowController.showWindow()
 
-        let window = try XCTUnwrap(wc.window)
+        let window = try XCTUnwrap(windowController.window)
         let screen = try XCTUnwrap(window.screen ?? NSScreen.main)
         let visible = screen.visibleFrame
 
@@ -115,10 +115,10 @@ final class SingleWindowControllerTests: XCTestCase {
         )
         WindowManager.shared.frames.clearSavedState(for: id)
 
-        let wc = ViewControllerBasedWC(windowID: id)
-        wc.showWindow()
+        let windowController = ViewControllerBasedWC(windowID: id)
+        windowController.showWindow()
 
-        let window = try XCTUnwrap(wc.window)
+        let window = try XCTUnwrap(windowController.window)
         let screen = try XCTUnwrap(window.screen ?? NSScreen.main)
         let visible = screen.visibleFrame
 
@@ -151,10 +151,10 @@ final class SingleWindowControllerTests: XCTestCase {
         )
         WindowManager.shared.frames.clearSavedState(for: id)
 
-        let wc = ViewControllerBasedWC(windowID: id)
-        wc.showWindow()
+        let windowController = ViewControllerBasedWC(windowID: id)
+        windowController.showWindow()
 
-        let window = try XCTUnwrap(wc.window)
+        let window = try XCTUnwrap(windowController.window)
         // After construction the persisted state — if anything was saved —
         // must correspond to the spec's default position, not the pre-
         // restore default NSWindow frame. Read the raw persisted state via

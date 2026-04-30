@@ -40,10 +40,10 @@ public class NestedSplitViewDocument: NSDocument {
     @MainActor
     public func allocatePaneNumber() -> Int {
         stateLock.lock()
-        let n = nextPaneNumber
+        let allocated = nextPaneNumber
         nextPaneNumber += 1
         stateLock.unlock()
-        return n
+        return allocated
     }
 
     /// Returns the tabs the window controller should display: either the
@@ -89,9 +89,9 @@ public class NestedSplitViewDocument: NSDocument {
     // MARK: - NSDocument writing
 
     public override func write(to url: URL, ofType typeName: String) throws {
-        let fm = FileManager.default
-        if !fm.fileExists(atPath: url.path) {
-            try fm.createDirectory(at: url, withIntermediateDirectories: true)
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: url.path) {
+            try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
         }
         let dbURL = url.appendingPathComponent(Self.databaseFilename)
 
@@ -99,9 +99,9 @@ public class NestedSplitViewDocument: NSDocument {
             return
         }
 
-        if !fm.fileExists(atPath: dbURL.path), let source = layoutStore?.databasePath,
-           fm.fileExists(atPath: source) {
-            try fm.copyItem(atPath: source, toPath: dbURL.path)
+        if !fileManager.fileExists(atPath: dbURL.path), let source = layoutStore?.databasePath,
+           fileManager.fileExists(atPath: source) {
+            try fileManager.copyItem(atPath: source, toPath: dbURL.path)
         }
 
         let newStore = try DocumentLayoutStore(path: dbURL.path)
@@ -124,7 +124,11 @@ public class NestedSplitViewDocument: NSDocument {
         setLayoutStore(newStore)
     }
 
-    public override func writeSafely(to url: URL, ofType typeName: String, for saveOperation: NSDocument.SaveOperationType) throws {
+    public override func writeSafely(
+        to url: URL,
+        ofType typeName: String,
+        for saveOperation: NSDocument.SaveOperationType
+    ) throws {
         try write(to: url, ofType: typeName)
     }
 
@@ -152,8 +156,8 @@ public class NestedSplitViewDocument: NSDocument {
                 setLayoutStore(store)
             }
         }
-        let wc = NestedSplitViewWindowController(document: self)
-        addWindowController(wc)
+        let controller = NestedSplitViewWindowController(document: self)
+        addWindowController(controller)
     }
 }
 

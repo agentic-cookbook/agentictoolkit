@@ -135,11 +135,9 @@ public final class TerminalSessionGeneralSettingsView: NSView {
     }
 
     private func selectPopUpItem(_ popUp: NSPopUpButton, withValue value: String) {
-        for (index, item) in popUp.itemArray.enumerated() {
-            if item.representedObject as? String == value {
-                popUp.selectItem(at: index)
-                return
-            }
+        for (index, item) in popUp.itemArray.enumerated() where item.representedObject as? String == value {
+            popUp.selectItem(at: index)
+            return
         }
     }
 
@@ -171,8 +169,8 @@ public final class TerminalSessionGeneralSettingsView: NSView {
 // MARK: - Supporting Types
 
 public enum TerminalSessionStartupBehavior: String, CaseIterable {
-    case newWindow = "newWindow"
-    case nothing = "nothing"
+    case newWindow
+    case nothing
 
     public var label: String {
         switch self {

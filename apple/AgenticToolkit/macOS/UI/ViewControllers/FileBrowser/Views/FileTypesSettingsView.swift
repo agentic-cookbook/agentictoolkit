@@ -101,7 +101,9 @@ private struct BuiltInFileType: Identifiable {
                 ))
             }
         }
-        return entries.sorted { $0.fileExtension.localizedCaseInsensitiveCompare($1.fileExtension) == .orderedAscending }
+        return entries.sorted {
+            $0.fileExtension.localizedCaseInsensitiveCompare($1.fileExtension) == .orderedAscending
+        }
     }
 
     /// Maps a file extension to an SF Symbol icon, matching the logic in FileTreeNode.

@@ -37,17 +37,17 @@ public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecyc
     }
 
     public func openNewTerminalWindow() {
-        let wc = TerminalSessionWindowController()
-        wc.lifecycleDelegate = self
-        windowControllers.append(wc)
-        wc.showWindow(nil)
-        wc.window?.makeKeyAndOrderFront(nil)
+        let controller = TerminalSessionWindowController()
+        controller.lifecycleDelegate = self
+        windowControllers.append(controller)
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
         Self.logger.info("Opened terminal window, total: \(self.windowControllers.count, privacy: .public)")
     }
 
     public func openNewTerminalSession() {
-        if let wc = NSApp.mainWindow?.windowController as? TerminalSessionWindowController {
-            wc.sessionManager.addSession()
+        if let controller = NSApp.mainWindow?.windowController as? TerminalSessionWindowController {
+            controller.sessionManager.addSession()
         } else {
             openNewTerminalWindow()
         }
@@ -68,14 +68,17 @@ public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecyc
 
     public func terminalWindowWillClose(_ controller: TerminalSessionWindowController) {
         windowControllers.removeAll { $0 === controller }
-        Self.logger.info("Removed terminal window controller, remaining: \(self.windowControllers.count, privacy: .public)")
+        Self.logger.info(
+            "Removed terminal window controller, "
+            + "remaining: \(self.windowControllers.count, privacy: .public)"
+        )
     }
 
     public override func value(forScriptingKey key: String) -> Any? {
         switch key {
         case "terminalSessions":
-            return windowControllers.flatMap { wc in
-                wc.sessionManager.sessions.map(ScriptableTerminalSession.init(terminalSession:))
+            return windowControllers.flatMap { controller in
+                controller.sessionManager.sessions.map(ScriptableTerminalSession.init(terminalSession:))
             }
         default:
             return nil
@@ -84,8 +87,8 @@ public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecyc
 
     /// Cocoa Scripting indexed accessor: `tell application "Whippet" to get terminal session "X"`.
     public func terminalSession(uniqueID: String) -> ScriptableTerminalSession? {
-        for wc in windowControllers {
-            if let session = wc.sessionManager.sessions.first(where: { $0.id.uuidString == uniqueID }) {
+        for controller in windowControllers {
+            if let session = controller.sessionManager.sessions.first(where: { $0.id.uuidString == uniqueID }) {
                 return ScriptableTerminalSession(terminalSession: session)
             }
         }

@@ -3,7 +3,7 @@ import Combine
 @testable import AgenticToolkitCore
 
 @MainActor
-final class KeychainSecureSettingsStorageProviderTests: XCTestCase {
+final class KeychainSecureStorageProviderTests: XCTestCase {
     var serviceID: String!
     var store: KeychainSecureSettingsStorageProvider!
     var cancellables: Set<AnyCancellable>!
