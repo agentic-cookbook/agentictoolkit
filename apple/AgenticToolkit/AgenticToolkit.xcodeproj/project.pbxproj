@@ -63,6 +63,9 @@
 		16096C68C733B4F3049287CA /* ScriptingHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA7717F495A2013514B3FA /* ScriptingHost.swift */; };
 		163387E3904D4E21E24AF4F7 /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F03FB5CC81FF718A106A6513 /* AgenticToolkitMacOS.framework */; };
 		175030A47F41123DF1E0C62C /* NestedSplitViewWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E836BB4BD4F665B16A65F9A /* NestedSplitViewWindowController.swift */; };
+		EDDCD4D81A00E8DA2A2F10EB /* TabbedViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 145E9706E8AD407524C01282 /* TabbedViewControllerDelegate.swift */; };
+		5226921A2E7377E9BCE5423C /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A1DB7F39CCE2538CD02A14 /* TabBarView.swift */; };
+		7BFD9CCFB4654DE2A9E14CE2 /* TabbedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873C09E17D7F14365B6B8A72 /* TabbedViewController.swift */; };
 		17DB20F1071EC68B2F07700F /* NestedContentRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB392C384C2199BAFB5E5005 /* NestedContentRegistry.swift */; };
 		1A4536791E988DA097266207 /* TerminalSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CA52BDBB96183ABE88A2E0 /* TerminalSessionManager.swift */; };
 		1AB0A531C8F6FFA8720A4790 /* AppearanceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5811B43157F9A1F2F24227B8 /* AppearanceManager.swift */; };
@@ -703,6 +706,9 @@
 		6DF7332FAD712C722739CD89 /* MainActorScriptCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorScriptCommandTests.swift; sourceTree = "<group>"; };
 		6E6438E346780B812ED9E6DD /* LogController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogController.swift; sourceTree = "<group>"; };
 		6E836BB4BD4F665B16A65F9A /* NestedSplitViewWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedSplitViewWindowController.swift; sourceTree = "<group>"; };
+		145E9706E8AD407524C01282 /* TabbedViewControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabbedViewControllerDelegate.swift; sourceTree = "<group>"; };
+		C6A1DB7F39CCE2538CD02A14 /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
+		873C09E17D7F14365B6B8A72 /* TabbedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabbedViewController.swift; sourceTree = "<group>"; };
 		6EF94CCBBB1D79A58D826AFA /* SettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelViewController.swift; sourceTree = "<group>"; };
 		70C65EF6627F21D76D253B79 /* PermissionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionRowView.swift; sourceTree = "<group>"; };
 		720D5E0FC6533F06EFD422F0 /* ExplanationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplanationView.swift; sourceTree = "<group>"; };
@@ -1545,9 +1551,20 @@
 			children = (
 				5E40FEC8FA32F00B3449FD14 /* FileBrowser */,
 				DEF55812932E380817049F0A /* NestedSplitView */,
+				265D6C95A0F482A915093081 /* TabbedViewController */,
 				B470080A8B5B68198282D217 /* TopicListViewController.swift */,
 			);
 			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		265D6C95A0F482A915093081 /* TabbedViewController */ = {
+			isa = PBXGroup;
+			children = (
+				873C09E17D7F14365B6B8A72 /* TabbedViewController.swift */,
+				145E9706E8AD407524C01282 /* TabbedViewControllerDelegate.swift */,
+				C6A1DB7F39CCE2538CD02A14 /* TabBarView.swift */,
+			);
+			path = TabbedViewController;
 			sourceTree = "<group>";
 		};
 		B2A94AD02FA1632000ED0CEB /* UI */ = {
@@ -2145,6 +2162,9 @@
 				17DB20F1071EC68B2F07700F /* NestedContentRegistry.swift in Sources */,
 				A46D8B3ECCA9A95B2FCA21D3 /* NestedSplitViewDocument.swift in Sources */,
 				175030A47F41123DF1E0C62C /* NestedSplitViewWindowController.swift in Sources */,
+				EDDCD4D81A00E8DA2A2F10EB /* TabbedViewControllerDelegate.swift in Sources */,
+				5226921A2E7377E9BCE5423C /* TabBarView.swift in Sources */,
+				7BFD9CCFB4654DE2A9E14CE2 /* TabbedViewController.swift in Sources */,
 				8F4E408D31127A2594F8705C /* NestedViewController.swift in Sources */,
 				E9E038001EE863484F3C7953 /* NestingSplitViewController.swift in Sources */,
 				0307B266E97AA41DC0A33256 /* Note.swift in Sources */,
