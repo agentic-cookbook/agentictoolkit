@@ -10,7 +10,8 @@ public class NestedSplitViewDocument: NSDocument {
     public nonisolated static let databaseFilename = "project.sqlite"
 
     nonisolated(unsafe) private var _layoutStore: DocumentLayoutStore?
-    nonisolated(unsafe) private var pendingLayoutForLoad: LayoutNode?
+    nonisolated(unsafe) private var pendingTabsForLoad: [TabRecord]?
+    nonisolated(unsafe) private var pendingActiveTabIDForLoad: UUID?
     nonisolated(unsafe) private var nextPaneNumber: Int = 1
     private let stateLock = NSLock()
 
@@ -30,9 +31,10 @@ public class NestedSplitViewDocument: NSDocument {
         stateLock.unlock()
     }
 
-    private nonisolated func setPendingLayout(_ layout: LayoutNode?) {
+    private nonisolated func setPendingTabs(_ tabs: [TabRecord]?, activeTabID: UUID?) {
         stateLock.lock()
-        pendingLayoutForLoad = layout
+        pendingTabsForLoad = tabs
+        pendingActiveTabIDForLoad = activeTabID
         stateLock.unlock()
     }
 
@@ -45,26 +47,33 @@ public class NestedSplitViewDocument: NSDocument {
         return n
     }
 
+    /// Returns the tabs the window controller should display: either the
+    /// freshly-loaded set (after `read(from:)`) or a single default tab
+    /// for new documents.
     @MainActor
-    public func initialLayout() -> LayoutNode {
+    public func initialTabs() -> (tabs: [TabRecord], activeTabID: UUID) {
         stateLock.lock()
-        let pending = pendingLayoutForLoad
+        let pending = pendingTabsForLoad
+        let pendingActive = pendingActiveTabIDForLoad
         stateLock.unlock()
-        if let pending { return pending }
-        return LayoutNode.split(
-            orientation: "horizontal",
-            first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
-            second: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier)
-        )
+        if let pending, !pending.isEmpty {
+            let active = pendingActive ?? pending[0].id
+            return (pending, active)
+        }
+        let tab = TabRecord(title: "Tab 1", root: defaultLayout())
+        return ([tab], tab.id)
     }
 
+    /// Persist the current set of tabs and which one is active. Called by
+    /// the window controller whenever a tab is added/removed/reordered or
+    /// when split-view layout inside a tab changes.
     @MainActor
-    public func persistLayout(_ root: LayoutNode) {
+    public func persistTabs(_ tabs: [TabRecord], activeTabID: UUID?) {
         guard let store = layoutStore else { return }
         do {
-            try store.saveLayout(root)
+            try store.saveTabs(tabs, activeTabID: activeTabID)
         } catch {
-            logger.error("Failed to save document layout: \(error.localizedDescription, privacy: .public)")
+            logger.error("Failed to save document tabs: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -73,9 +82,9 @@ public class NestedSplitViewDocument: NSDocument {
     public override func read(from url: URL, ofType typeName: String) throws {
         let dbURL = url.appendingPathComponent(Self.databaseFilename)
         let store = try DocumentLayoutStore(path: dbURL.path)
-        let loaded = try store.loadLayout()
+        let loaded = try store.loadTabs()
         setLayoutStore(store)
-        setPendingLayout(loaded)
+        setPendingTabs(loaded.tabs, activeTabID: loaded.activeTabID)
     }
 
     // MARK: - NSDocument writing
@@ -97,11 +106,21 @@ public class NestedSplitViewDocument: NSDocument {
         }
 
         let newStore = try DocumentLayoutStore(path: dbURL.path)
-        if (try? newStore.loadLayout()) == nil {
+        let loaded = try newStore.loadTabs()
+        if loaded.tabs.isEmpty {
             stateLock.lock()
-            let pending = pendingLayoutForLoad
+            let pending = pendingTabsForLoad
+            let pendingActive = pendingActiveTabIDForLoad
             stateLock.unlock()
-            try newStore.saveLayout(pending ?? LayoutNode.split(orientation: "horizontal", first: LayoutNode.leaf(contentType: "placeholder"), second: LayoutNode.leaf(contentType: "placeholder")))
+            // `NestedContentRegistry.placeholderIdentifier` is MainActor-
+            // isolated; this writer can run off-main, so use the literal.
+            let tabs = pending ?? [TabRecord(title: "Tab 1", root: LayoutNode.split(
+                orientation: "horizontal",
+                first: LayoutNode.leaf(contentType: "placeholder"),
+                second: LayoutNode.leaf(contentType: "placeholder")
+            ))]
+            let active = pendingActive ?? tabs.first?.id
+            try newStore.saveTabs(tabs, activeTabID: active)
         }
         setLayoutStore(newStore)
     }
@@ -110,7 +129,7 @@ public class NestedSplitViewDocument: NSDocument {
         try write(to: url, ofType: typeName)
     }
 
-    @MainActor private func defaultInitialLayout() -> LayoutNode {
+    @MainActor private func defaultLayout() -> LayoutNode {
         LayoutNode.split(
             orientation: "horizontal",
             first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
@@ -129,7 +148,8 @@ public class NestedSplitViewDocument: NSDocument {
             try? FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
             let dbPath = tmpURL.appendingPathComponent(Self.databaseFilename).path
             if let store = try? DocumentLayoutStore(path: dbPath) {
-                try? store.saveLayout(defaultInitialLayout())
+                let tab = TabRecord(title: "Tab 1", root: defaultLayout())
+                try? store.saveTabs([tab], activeTabID: tab.id)
                 setLayoutStore(store)
             }
         }

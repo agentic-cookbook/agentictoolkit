@@ -146,7 +146,8 @@ public final class WhippetDocumentController: NSDocumentController {
             first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
             second: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier)
         )
-        try store.saveLayout(initialLayout)
+        let tab = TabRecord(title: "Tab 1", root: initialLayout)
+        try store.saveTabs([tab], activeTabID: tab.id)
         return finalURL
     }
 }

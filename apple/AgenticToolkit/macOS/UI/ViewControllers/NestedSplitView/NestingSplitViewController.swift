@@ -14,6 +14,13 @@ public final class NestingSplitViewController: NSSplitViewController {
     private weak var splitDocument: NestedSplitViewDocument?
     private let isRoot: Bool
 
+    /// Callback the host (e.g. window controller) installs on the *root*
+    /// `NestingSplitViewController` of each tab. Fires whenever a layout
+    /// change happens that should be persisted, with a fresh snapshot of
+    /// the tree. The host is responsible for routing this snapshot into
+    /// the document's tab list.
+    public var onLayoutDidChange: ((LayoutNode) -> Void)?
+
     public init(
         nodeID: UUID,
         orientation: NSUserInterfaceLayoutOrientation,
@@ -109,8 +116,8 @@ public final class NestingSplitViewController: NSSplitViewController {
     }
 
     fileprivate func persistTreeToDocument() {
-        guard isRoot, let document = splitDocument else { return }
-        document.persistLayout(snapshotNode())
+        guard isRoot else { return }
+        onLayoutDidChange?(snapshotNode())
     }
 
     /// Value-type snapshot of the live controller tree.

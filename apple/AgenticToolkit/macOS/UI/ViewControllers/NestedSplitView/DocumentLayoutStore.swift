@@ -30,12 +30,26 @@ public struct LayoutNode {
     }
 }
 
+public struct TabRecord {
+    public let id: UUID
+    public var title: String
+    public var root: LayoutNode
+    public var focusedNodeID: UUID?
+
+    public init(id: UUID = UUID(), title: String, root: LayoutNode, focusedNodeID: UUID? = nil) {
+        self.id = id
+        self.title = title
+        self.root = root
+        self.focusedNodeID = focusedNodeID
+    }
+}
+
 public final class DocumentLayoutStore {
 
     private var db: OpaquePointer?
     public let databasePath: String
 
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public init(path: String) throws {
         self.databasePath = path
@@ -76,6 +90,9 @@ public final class DocumentLayoutStore {
         if current < 1 {
             try migration001_createTables()
         }
+        if current < 2 {
+            try migration002_addTabs()
+        }
     }
 
     private func schemaVersion() throws -> Int {
@@ -111,6 +128,45 @@ public final class DocumentLayoutStore {
         try execute("INSERT INTO schema_migrations (version) VALUES (1)")
     }
 
+    /// Adds multi-tab support. Each tab points at a layout-node tree root,
+    /// optionally tracks a focused leaf, and the document remembers which
+    /// tab was active. v1 documents (which had a single `layout_root`
+    /// row) get migrated to a single tab pointing at the same root.
+    private func migration002_addTabs() throws {
+        try execute("""
+            CREATE TABLE document_tabs (
+                id TEXT PRIMARY KEY,
+                position INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                root_node_id TEXT REFERENCES layout_nodes(id),
+                focused_node_id TEXT REFERENCES layout_nodes(id)
+            )
+        """)
+        try execute("CREATE INDEX idx_document_tabs_position ON document_tabs(position)")
+        try execute("""
+            CREATE TABLE document_state (
+                id INTEGER PRIMARY KEY CHECK(id = 1),
+                active_tab_id TEXT REFERENCES document_tabs(id)
+            )
+        """)
+
+        // Migrate any existing v1 single-root layout into one tab.
+        if let oldRoot: String = try queryScalarString("SELECT root_node_id FROM layout_root WHERE id = 1") {
+            let tabID = UUID().uuidString
+            let insertTab = "INSERT INTO document_tabs (id, position, title, root_node_id, focused_node_id) VALUES (?, 0, 'Tab 1', ?, NULL)"
+            try executeBound(insertTab) { stmt in
+                sqlite3_bind_text(stmt, 1, (tabID as NSString).utf8String, -1, nil)
+                sqlite3_bind_text(stmt, 2, (oldRoot as NSString).utf8String, -1, nil)
+            }
+            try executeBound("INSERT INTO document_state (id, active_tab_id) VALUES (1, ?)") { stmt in
+                sqlite3_bind_text(stmt, 1, (tabID as NSString).utf8String, -1, nil)
+            }
+        }
+
+        try execute("DROP TABLE layout_root")
+        try execute("INSERT INTO schema_migrations (version) VALUES (2)")
+    }
+
     // MARK: - SQL helpers
 
     private var lastErrorMessage: String {
@@ -130,43 +186,81 @@ public final class DocumentLayoutStore {
         return result
     }
 
-    // MARK: - Layout persistence
-
-    public func loadLayout() throws -> LayoutNode? {
-        let rootIDString: String? = try queryScalarString(
-            "SELECT root_node_id FROM layout_root WHERE id = 1"
-        )
-        guard let rootIDString, let rootID = UUID(uuidString: rootIDString) else {
-            return nil
-        }
-        let allRows = try fetchAllNodeRows()
-        return try buildTree(id: rootID, rows: allRows)
-    }
-
-    public func saveLayout(_ root: LayoutNode) throws {
-        try execute("BEGIN IMMEDIATE TRANSACTION")
-        do {
-            try execute("DELETE FROM layout_root")
-            try execute("DELETE FROM layout_nodes")
-            try insertNode(root, parentID: nil, position: 0)
-            try insertRoot(root.id)
-            try execute("COMMIT")
-        } catch {
-            _ = try? execute("ROLLBACK")
-            throw error
-        }
-    }
-
-    private func insertRoot(_ id: UUID) throws {
-        let sql = "INSERT INTO layout_root (id, root_node_id) VALUES (1, ?)"
+    /// Prepares `sql`, lets `bind` populate parameters, then steps once.
+    /// Throws on prepare or execution failure.
+    private func executeBound(_ sql: String, bind: (OpaquePointer?) -> Void) throws {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
         }
-        sqlite3_bind_text(stmt, 1, (id.uuidString as NSString).utf8String, -1, nil)
+        bind(stmt)
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw DocumentLayoutStoreError.executionFailed(lastErrorMessage)
+        }
+    }
+
+    // MARK: - Tab persistence (v2)
+
+    /// Returns every persisted tab (in display order) plus the active tab's
+    /// id, or `(tabs: [], activeTabID: nil)` for a brand-new document.
+    public func loadTabs() throws -> (tabs: [TabRecord], activeTabID: UUID?) {
+        let allRows = try fetchAllNodeRows()
+        let sql = "SELECT id, title, root_node_id, focused_node_id FROM document_tabs ORDER BY position"
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
+        }
+        var tabs: [TabRecord] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let idC = sqlite3_column_text(stmt, 0),
+                  let id = UUID(uuidString: String(cString: idC)) else { continue }
+            let title = sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? ""
+            guard let rootIDC = sqlite3_column_text(stmt, 2),
+                  let rootID = UUID(uuidString: String(cString: rootIDC)) else { continue }
+            let focusedNodeID: UUID? = sqlite3_column_text(stmt, 3)
+                .flatMap { UUID(uuidString: String(cString: $0)) }
+            let root = try buildTree(id: rootID, rows: allRows)
+            tabs.append(TabRecord(id: id, title: title, root: root, focusedNodeID: focusedNodeID))
+        }
+        let activeTabID: UUID? = try queryScalarString("SELECT active_tab_id FROM document_state WHERE id = 1")
+            .flatMap { UUID(uuidString: $0) }
+        return (tabs, activeTabID)
+    }
+
+    public func saveTabs(_ tabs: [TabRecord], activeTabID: UUID?) throws {
+        try execute("BEGIN IMMEDIATE TRANSACTION")
+        do {
+            try execute("DELETE FROM document_state")
+            try execute("DELETE FROM document_tabs")
+            try execute("DELETE FROM layout_nodes")
+            for (index, tab) in tabs.enumerated() {
+                try insertNode(tab.root, parentID: nil, position: 0)
+                try executeBound("""
+                    INSERT INTO document_tabs (id, position, title, root_node_id, focused_node_id)
+                    VALUES (?, ?, ?, ?, ?)
+                """) { stmt in
+                    sqlite3_bind_text(stmt, 1, (tab.id.uuidString as NSString).utf8String, -1, nil)
+                    sqlite3_bind_int(stmt, 2, Int32(index))
+                    sqlite3_bind_text(stmt, 3, (tab.title as NSString).utf8String, -1, nil)
+                    sqlite3_bind_text(stmt, 4, (tab.root.id.uuidString as NSString).utf8String, -1, nil)
+                    if let focused = tab.focusedNodeID {
+                        sqlite3_bind_text(stmt, 5, (focused.uuidString as NSString).utf8String, -1, nil)
+                    } else {
+                        sqlite3_bind_null(stmt, 5)
+                    }
+                }
+            }
+            if let activeTabID, tabs.contains(where: { $0.id == activeTabID }) {
+                try executeBound("INSERT INTO document_state (id, active_tab_id) VALUES (1, ?)") { stmt in
+                    sqlite3_bind_text(stmt, 1, (activeTabID.uuidString as NSString).utf8String, -1, nil)
+                }
+            }
+            try execute("COMMIT")
+        } catch {
+            _ = try? execute("ROLLBACK")
+            throw error
         }
     }
 
