@@ -1,28 +1,26 @@
 import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitChatWindow
-import AgenticToolkitSettingsWindow
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 @MainActor
-final class AppearanceSettingsPanelViewController: SettingsPanelViewController {
+final class AppearanceSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
     private let viewModel: SettingsViewModel
 
     init(viewModel: SettingsViewModel) {
         self.viewModel = viewModel
-        super.init(nibName: nil, bundle: nil)
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
+            title: "Appearance",
+            icon: NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
+        ))
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    override var panelTitle: String { "Appearance" }
-    override var icon: NSImage? {
-        NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
-    }
-
     override func loadView() {
-        let container = SettingsPanelView(frame: NSRect(x: 0, y: 0, width: 480, height: 400))
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 400))
         let pane = AppearanceSettingsPane(viewModel: viewModel)
         pane.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(pane)

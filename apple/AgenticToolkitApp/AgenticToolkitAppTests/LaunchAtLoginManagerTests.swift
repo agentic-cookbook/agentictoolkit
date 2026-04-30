@@ -1,5 +1,5 @@
 import XCTest
-import AgenticToolkitAIPlugins
+import AgenticToolkitCoreMacOS
 import ServiceManagement
 @testable import AgenticToolkitApp
 

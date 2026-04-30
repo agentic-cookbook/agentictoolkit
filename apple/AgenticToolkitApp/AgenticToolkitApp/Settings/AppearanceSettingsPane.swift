@@ -2,8 +2,8 @@ import AppKit
 import Combine
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitChatWindow
-import AgenticToolkitSettingsWindow
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 final class AppearanceSettingsPane: NSView {
     private let viewModel: SettingsViewModel
@@ -25,8 +25,7 @@ final class AppearanceSettingsPane: NSView {
         stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        // Appearance mode
-        let modeHeader = SettingsPanelView.makeHeader("Appearance")
+        let modeHeader = Self.makeHeader("Appearance")
 
         let lightRadio = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(modeChanged(_:)))
         lightRadio.tag = 0
@@ -49,8 +48,7 @@ final class AppearanceSettingsPane: NSView {
         let divider = NSBox()
         divider.boxType = .separator
 
-        // Text size
-        let sizeHeader = SettingsPanelView.makeHeader("Text Size")
+        let sizeHeader = Self.makeHeader("Text Size")
 
         let slider = NSSlider(value: viewModel.textSize, minValue: -4, maxValue: 4, target: self, action: #selector(textSizeChanged(_:)))
         slider.numberOfTickMarks = 9
@@ -95,6 +93,12 @@ final class AppearanceSettingsPane: NSView {
             preview.widthAnchor.constraint(equalTo: stack.widthAnchor),
             preview.heightAnchor.constraint(equalToConstant: 32),
         ])
+    }
+
+    private static func makeHeader(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+        return label
     }
 
     @objc private func modeChanged(_ sender: NSButton) {

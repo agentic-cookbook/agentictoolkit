@@ -4,7 +4,7 @@ import OSLog
 import UserNotifications
 
 /// Protocol abstracting UNUserNotificationCenter for testability.
-protocol SessionWatcherNotificationCenterProtocol: AnyObject {
+protocol NotificationCenterProtocol: AnyObject {
     var delegate: (any UNUserNotificationCenterDelegate)? { get set }
     func requestAuthorization(options: UNAuthorizationOptions, completionHandler: @escaping @Sendable (Bool, (any Error)?) -> Void)
     func getNotificationSettings(completionHandler: @escaping @Sendable (UNNotificationSettings) -> Void)
@@ -23,7 +23,7 @@ extension UNUserNotificationCenter: NotificationCenterProtocol {}
 /// - Respects per-event-type toggles from the settings database
 /// - Handles notification click actions (brings floating window to front)
 @MainActor
-final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserNotificationCenterDelegate {
+final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCenterDelegate {
 
     // MARK: - Category Identifiers
 
@@ -235,6 +235,6 @@ final class SessionWatcherNotificationManager: NSObject, @preconcurrency UNUserN
     }
 }
 
-extension SessionWatcherNotificationManager: Loggable {
+extension NotificationManager: Loggable {
     public static nonisolated let logger = makeLogger()
 }

@@ -1,46 +1,46 @@
 import AppKit
-import AgenticToolkitAIPlugins
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitSettingsWindow
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 import OSLog
 
 /// Test-app Settings window controller. Subclasses the toolkit base to
 /// compose the panels visible in this app — host-owned (appearance,
 /// profiles, system) plus the nested `AIPlugins` panel.
 @MainActor
-final class AppSettingsWindowController: SettingsWindowController {
+final class AppSettingsWindowController: ComposableSettings.SettingsWindow {
 
-    private var SessionsDatabaseManager: SessionsDatabaseManager?
+    private var sessionsDatabaseManager: SessionsDatabaseManager?
     private var pluginManager: AIPluginManager?
     private(set) var viewModel: SettingsViewModel?
 
     func configure(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager) {
-        self.SessionsDatabaseManager = SessionsDatabaseManager
+        self.sessionsDatabaseManager = SessionsDatabaseManager
         self.pluginManager = pluginManager
+        self.windowTitle = "AgenticPluginTester Settings"
+        self.settingPanels = makeSettingsPanels()
     }
 
-    override var windowTitle: String { "AgenticPluginTester Settings" }
-
-    override func makeSettingsPanels() -> [SettingsPanelViewController] {
+    private func makeSettingsPanels() -> [any ComposableSettingsPanel] {
         ensureViewModel()
         guard let pm = pluginManager else {
             logger.error("Cannot show settings without plugin manager")
             return []
         }
 
-        var panels: [SettingsPanelViewController] = []
+        var panels: [any ComposableSettingsPanel] = []
         if let vm = viewModel {
             panels.append(AppearanceSettingsPanelViewController(viewModel: vm))
             panels.append(ProfilesSettingsPanelViewController())
             panels.append(SystemSettingsPanelViewController(viewModel: vm))
         }
-        panels.append(AIPluginsSettingsPanelViewController(pluginManager: pm))
+        panels.append(AIPanelViewController(pluginManager: pm))
         return panels
     }
 
     private func ensureViewModel() {
-        guard viewModel == nil, let db = SessionsDatabaseManager, let pm = pluginManager else { return }
+        guard viewModel == nil, let db = sessionsDatabaseManager, let pm = pluginManager else { return }
         let launchAtLoginManager = LaunchAtLoginManager(SessionsDatabaseManager: db)
         viewModel = SettingsViewModel(
             SessionsDatabaseManager: db,

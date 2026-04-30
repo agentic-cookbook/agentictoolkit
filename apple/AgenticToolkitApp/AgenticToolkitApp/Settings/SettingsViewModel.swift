@@ -1,8 +1,9 @@
 import Foundation
 import Combine
 import os
-import AgenticToolkitAIPlugins
 import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 /// View model for the Settings window. Reads and writes all configurable settings
 /// to the SQLite `settings` table via SessionsDatabaseManager. Changes are persisted
@@ -106,7 +107,7 @@ final class SettingsViewModel: ObservableObject {
             do {
                 try manager.setEnabled(launchAtLogin)
             } catch {
-                logger.error("Failed to \(launchAtLogin ? "enable" : "disable") launch at login: \(error.localizedDescription)")
+                logger.error("Failed to \(self.launchAtLogin ? "enable" : "disable") launch at login: \(error.localizedDescription)")
                 // Revert to actual state on failure (suppress re-trigger of didSet)
                 let actual = manager.isEnabled
                 if actual != launchAtLogin {

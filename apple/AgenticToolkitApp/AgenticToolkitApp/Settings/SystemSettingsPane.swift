@@ -1,8 +1,8 @@
 import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitChatWindow
-import AgenticToolkitSettingsWindow
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 final class SystemSettingsPane: NSView {
     private let viewModel: SettingsViewModel
@@ -31,7 +31,7 @@ final class SystemSettingsPane: NSView {
         stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        stack.addArrangedSubview(SettingsPanelView.makeHeader("Permissions"))
+        stack.addArrangedSubview(Self.makeHeader("Permissions"))
 
         let hint = NSTextField(wrappingLabelWithString:
             "AgenticPluginTester needs the following permissions to monitor and activate Claude Code sessions.")
@@ -67,6 +67,12 @@ final class SystemSettingsPane: NSView {
         ])
 
         updateStatuses()
+    }
+
+    private static func makeHeader(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+        return label
     }
 
     private func makePermissionRow(_ permission: AppPermission) -> NSView {

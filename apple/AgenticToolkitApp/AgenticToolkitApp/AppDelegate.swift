@@ -65,15 +65,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Window Specs
 
     private func registerWindowSpecs() {
-        let wm = WindowManager.shared
-        wm.startObservingScreenChanges()
-        wm.register(id: "settings", spec: WindowSpec(
+        let frames = WindowManager.shared.frames
+        frames.startObservingScreenChanges()
+        frames.register(id: "settings", spec: WindowSpec(
             defaultSize: NSSize(width: 600, height: 480),
             minSize: NSSize(width: 550, height: 420),
             defaultPosition: .center,
             persistsFrame: true
         ))
-        wm.register(id: "aiChat", spec: WindowSpec(
+        frames.register(id: "aiChat", spec: WindowSpec(
             defaultSize: NSSize(width: 420, height: 520),
             minSize: NSSize(width: 320, height: 400),
             defaultPosition: .center,

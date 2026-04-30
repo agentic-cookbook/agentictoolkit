@@ -1,8 +1,8 @@
 import Foundation
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
-import AgenticToolkitChatWindow
-import AgenticToolkitSettingsWindow
+import AgenticToolkitCoreMacOS
+import AgenticToolkitMacOS
 
 /// Placeholder `ChatBackend` used while `AIPluginChatBackend` is parked pending
 /// the per-plugin-secrets redesign. Reports "not ready" so the input stays
