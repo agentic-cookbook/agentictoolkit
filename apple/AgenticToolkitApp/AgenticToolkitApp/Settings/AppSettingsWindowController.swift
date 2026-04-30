@@ -24,27 +24,29 @@ final class AppSettingsWindowController: ComposableSettings.SettingsWindow {
 
     private func makeSettingsPanels() -> [any ComposableSettingsPanel] {
         ensureViewModel()
-        guard let pm = pluginManager else {
+        guard let pluginManager = pluginManager else {
             logger.error("Cannot show settings without plugin manager")
             return []
         }
 
         var panels: [any ComposableSettingsPanel] = []
-        if let vm = viewModel {
-            panels.append(AppearanceSettingsPanelViewController(viewModel: vm))
+        if let viewModel = viewModel {
+            panels.append(AppearanceSettingsPanelViewController(viewModel: viewModel))
             panels.append(ProfilesSettingsPanelViewController())
-            panels.append(SystemSettingsPanelViewController(viewModel: vm))
+            panels.append(SystemSettingsPanelViewController(viewModel: viewModel))
         }
-        panels.append(AIPanelViewController(pluginManager: pm))
+        panels.append(AIPanelViewController(pluginManager: pluginManager))
         return panels
     }
 
     private func ensureViewModel() {
-        guard viewModel == nil, let db = sessionsDatabaseManager, let pm = pluginManager else { return }
-        let launchAtLoginManager = LaunchAtLoginManager(sessionsDatabaseManager: db)
+        guard viewModel == nil,
+              let database = sessionsDatabaseManager,
+              let pluginManager = pluginManager else { return }
+        let launchAtLoginManager = LaunchAtLoginManager(sessionsDatabaseManager: database)
         viewModel = SettingsViewModel(
-            sessionsDatabaseManager: db,
-            pluginManager: pm,
+            sessionsDatabaseManager: database,
+            pluginManager: pluginManager,
             launchAtLoginManager: launchAtLoginManager
         )
     }

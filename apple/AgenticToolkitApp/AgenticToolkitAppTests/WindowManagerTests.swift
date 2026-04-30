@@ -207,14 +207,18 @@ final class FrameCalculatorTests: XCTestCase {
     func testValidateFrameFullyOnScreen() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         let frame = NSRect(x: 100, y: 100, width: 400, height: 300)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertEqual(result, frame)
     }
 
     func testValidateFramePushesFromRight() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         let frame = NSRect(x: 1800, y: 100, width: 400, height: 300)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertEqual(result.maxX, 1920, accuracy: 1)
         XCTAssertEqual(result.width, 400)
     }
@@ -222,28 +226,36 @@ final class FrameCalculatorTests: XCTestCase {
     func testValidateFramePushesFromTop() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         let frame = NSRect(x: 100, y: 900, width: 400, height: 300)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertEqual(result.maxY, 1080, accuracy: 1)
     }
 
     func testValidateFramePushesFromLeft() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         let frame = NSRect(x: -100, y: 100, width: 400, height: 300)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertEqual(result.origin.x, 0)
     }
 
     func testValidateFramePushesFromBottom() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         let frame = NSRect(x: 100, y: -50, width: 400, height: 300)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertEqual(result.origin.y, 0)
     }
 
     func testValidateFrameEnforcesMinSize() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         let frame = NSRect(x: 100, y: 100, width: 50, height: 30)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 200, height: 150))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 200, height: 150)
+        )
         XCTAssertEqual(result.width, 200)
         XCTAssertEqual(result.height, 150)
     }
@@ -251,7 +263,9 @@ final class FrameCalculatorTests: XCTestCase {
     func testValidateFrameClampsOversizeToScreen() {
         let screen = NSRect(x: 0, y: 0, width: 800, height: 600)
         let frame = NSRect(x: 0, y: 0, width: 1200, height: 900)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertEqual(result.width, 800)
         XCTAssertEqual(result.height, 600)
     }
@@ -260,7 +274,9 @@ final class FrameCalculatorTests: XCTestCase {
         // visibleFrame is shorter due to menu bar (25px)
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1055)
         let frame = NSRect(x: 100, y: 900, width: 400, height: 300)
-        let result = FrameCalculator.validateFrame(frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100))
+        let result = FrameCalculator.validateFrame(
+            frame, screenVisibleFrame: screen, minSize: NSSize(width: 100, height: 100)
+        )
         XCTAssertLessThanOrEqual(result.maxY, 1055)
     }
 
@@ -452,8 +468,8 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
 
         // "Launch 2": restore on same screen
         let provider = MockScreenProvider(screens: [screen])
-        let wm = WindowManager(screenProvider: provider, storage: storage)
-        wm.register(id: "test", spec: WindowSpec(
+        let windowManager = WindowManager(screenProvider: provider, storage: storage)
+        windowManager.register(id: "test", spec: WindowSpec(
             defaultSize: NSSize(width: 600, height: 480),
             minSize: NSSize(width: 200, height: 200),
             defaultPosition: .center,

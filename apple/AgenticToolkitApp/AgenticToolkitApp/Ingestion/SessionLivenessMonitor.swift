@@ -144,16 +144,14 @@ final class SessionLivenessMonitor {
             let sessions = try sessionsDatabaseManager.fetchLiveSessionsWithPid()
             var endedCount = 0
 
-            for session in sessions {
-                if !isProcessAlive(pid: session.pid) {
-                    try sessionsDatabaseManager.updateSessionStatus(
-                        sessionId: session.sessionId,
-                        status: .ended
-                    )
-                    onSessionProcessDied?(session.sessionId, session.projectName)
-                    endedCount += 1
-                    logger.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
-                }
+            for session in sessions where !isProcessAlive(pid: session.pid) {
+                try sessionsDatabaseManager.updateSessionStatus(
+                    sessionId: session.sessionId,
+                    status: .ended
+                )
+                onSessionProcessDied?(session.sessionId, session.projectName)
+                endedCount += 1
+                logger.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
             }
 
             // End stale sessions with no PID — their liveness cannot be verified

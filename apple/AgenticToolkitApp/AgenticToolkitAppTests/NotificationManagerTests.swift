@@ -13,7 +13,7 @@ final class NotificationManagerTests: XCTestCase {
     private var tempDBPath: String!
 
     override func setUpWithError() throws {
-        // TODO: Re-animate this suite when the notifications feature gets its
+        // Re-animate this suite when the notifications feature gets its
         // next pass. Under xctest, NotificationManager's auth check goes through
         // the real UNUserNotificationCenter (the mock only intercepts adds, not
         // authorizationStatus), which denies non-.app hosts. Tests that depend
@@ -97,7 +97,7 @@ final class NotificationManagerTests: XCTestCase {
     }
 
     func testNotificationEnabledWhenSettingIsTrue() throws {
-        // TODO: Re-animate when the notifications feature gets its next pass.
+        // Re-animate when the notifications feature gets its next pass.
         // Fails under xctest: NotificationManager's auth check goes through the
         // real UNUserNotificationCenter, which denies non-.app hosts. Needs a
         // mockable auth path or UNUserNotificationCenter injection.
@@ -314,7 +314,7 @@ final class NotificationManagerTests: XCTestCase {
     // MARK: - Multiple Event Types Test
 
     func testOnlyEnabledEventTypesPostNotifications() throws {
-        // TODO: Re-animate when the notifications feature gets its next pass.
+        // Re-animate when the notifications feature gets its next pass.
         // Fails under xctest: NotificationManager's auth check goes through the
         // real UNUserNotificationCenter, which denies non-.app hosts. Needs a
         // mockable auth path or UNUserNotificationCenter injection.
@@ -324,7 +324,7 @@ final class NotificationManagerTests: XCTestCase {
     // MARK: - Notification Sound Tests
 
     func testNotificationsHaveSound() throws {
-        // TODO: Re-animate when the notifications feature gets its next pass.
+        // Re-animate when the notifications feature gets its next pass.
         // Fails under xctest: NotificationManager's auth check goes through the
         // real UNUserNotificationCenter, which denies non-.app hosts. Needs a
         // mockable auth path or UNUserNotificationCenter injection.

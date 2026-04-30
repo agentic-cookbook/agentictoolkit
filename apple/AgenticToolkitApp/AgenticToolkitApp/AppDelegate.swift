@@ -85,7 +85,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupDatabase() {
         do {
-            sessionsDatabaseManager = try sessionsDatabaseManager()
+            sessionsDatabaseManager = try SessionsDatabaseManager()
             logger.info("Database initialized")
         } catch {
             logger.error("Failed to initialize database: \(error.localizedDescription, privacy: .public)")
@@ -95,23 +95,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Post-Database Setup
 
     private func setupAfterDatabase() {
-        guard let db = sessionsDatabaseManager else {
+        guard let database = sessionsDatabaseManager else {
             logger.warning("Cannot setup — no database")
             return
         }
 
         // Initialize the plugin system
-        let pm = AIPluginManager(appName: "AgenticPluginTester")
+        let pluginManager = AIPluginManager(appName: "AgenticPluginTester")
         // No plugins registered for now — per-plugin registration is pending.
-        pm.discoverPlugins()
-        self.pluginManager = pm
+        pluginManager.discoverPlugins()
+        self.pluginManager = pluginManager
         logger.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
 
         // Configure the standalone settings window
-        settingsWindowController.configure(sessionsDatabaseManager: db, pluginManager: pm)
+        settingsWindowController.configure(sessionsDatabaseManager: database, pluginManager: pluginManager)
 
         // Apply saved appearance mode
-        if let mode = try? db.getSetting(key: SettingsViewModel.appearanceModeKey) {
+        if let mode = try? database.getSetting(key: SettingsViewModel.appearanceModeKey) {
             applyAppearanceMode(mode)
         }
 
@@ -143,12 +143,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Notifications
 
     private func setupNotifications() {
-        guard let db = sessionsDatabaseManager else {
+        guard let database = sessionsDatabaseManager else {
             logger.warning("Cannot setup notifications — no database")
             return
         }
 
-        notificationManager = NotificationManager(sessionsDatabaseManager: db)
+        notificationManager = NotificationManager(sessionsDatabaseManager: database)
         notificationManager?.requestAuthorization()
         logger.debug("Notification manager configured")
     }
@@ -156,21 +156,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Ingestion
 
     private func setupIngestion() {
-        guard let db = sessionsDatabaseManager else {
+        guard let database = sessionsDatabaseManager else {
             logger.warning("Cannot start ingestion — no database")
             return
         }
 
-        ingestionManager = EventIngestionManager(sessionsDatabaseManager: db)
+        ingestionManager = EventIngestionManager(sessionsDatabaseManager: database)
 
         // Wire per-event callback for notifications
         ingestionManager?.onEventIngested = { [weak self] eventType, sessionId, projectName in
-            guard let nm = self?.notificationManager else { return }
+            guard let notifyManager = self?.notificationManager else { return }
             switch eventType {
             case "SessionStart":
-                nm.notifySessionStart(sessionId: sessionId, projectName: projectName)
+                notifyManager.notifySessionStart(sessionId: sessionId, projectName: projectName)
             case "SessionEnd":
-                nm.notifySessionEnd(sessionId: sessionId, projectName: projectName)
+                notifyManager.notifySessionEnd(sessionId: sessionId, projectName: projectName)
             default:
                 break
             }
@@ -186,12 +186,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Liveness Monitor
 
     private func setupLivenessMonitor() {
-        guard let db = sessionsDatabaseManager else {
+        guard let database = sessionsDatabaseManager else {
             logger.warning("Cannot start liveness monitor — no database")
             return
         }
 
-        livenessMonitor = SessionLivenessMonitor(sessionsDatabaseManager: db)
+        livenessMonitor = SessionLivenessMonitor(sessionsDatabaseManager: database)
 
         // Wire per-session stale callback for notifications
         livenessMonitor?.onSessionMarkedStale = { [weak self] sessionId, projectName in
@@ -217,19 +217,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenu = NSMenu()
         appMenuItem.submenu = appMenu
 
-        appMenu.addItem(withTitle: "About Agentic Toolkit", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(
+            withTitle: "About Agentic Toolkit",
+            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+            keyEquivalent: ""
+        )
         appMenu.addItem(.separator())
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
         settingsItem.target = self
         appMenu.addItem(settingsItem)
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide Agentic Toolkit", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        let hideOthers = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        appMenu.addItem(
+            withTitle: "Hide Agentic Toolkit",
+            action: #selector(NSApplication.hide(_:)),
+            keyEquivalent: "h"
+        )
+        let hideOthers = NSMenuItem(
+            title: "Hide Others",
+            action: #selector(NSApplication.hideOtherApplications(_:)),
+            keyEquivalent: "h"
+        )
         hideOthers.keyEquivalentModifierMask = [.command, .option]
         appMenu.addItem(hideOthers)
-        appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        appMenu.addItem(
+            withTitle: "Show All",
+            action: #selector(NSApplication.unhideAllApplications(_:)),
+            keyEquivalent: ""
+        )
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Agentic Toolkit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(
+            withTitle: "Quit Agentic Toolkit",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
 
         // File menu
         let fileMenuItem = NSMenuItem()
@@ -237,7 +261,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let fileMenu = NSMenu(title: "File")
         fileMenuItem.submenu = fileMenu
 
-        let closeItem = NSMenuItem(title: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        let closeItem = NSMenuItem(
+            title: "Close Window",
+            action: #selector(NSWindow.performClose(_:)),
+            keyEquivalent: "w"
+        )
         fileMenu.addItem(closeItem)
 
         // Edit menu
@@ -260,7 +288,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let viewMenu = NSMenu(title: "View")
         viewMenuItem.submenu = viewMenu
 
-        let toggleFullScreen = NSMenuItem(title: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        let toggleFullScreen = NSMenuItem(
+            title: "Enter Full Screen",
+            action: #selector(NSWindow.toggleFullScreen(_:)),
+            keyEquivalent: "f"
+        )
         toggleFullScreen.keyEquivalentModifierMask = [.command, .control]
         viewMenu.addItem(toggleFullScreen)
 
@@ -270,7 +302,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let windowMenu = NSMenu(title: "Window")
         windowMenuItem.submenu = windowMenu
 
-        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(
+            withTitle: "Minimize",
+            action: #selector(NSWindow.performMiniaturize(_:)),
+            keyEquivalent: "m"
+        )
         windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
         windowMenu.addItem(.separator())
 
@@ -279,7 +315,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         windowMenu.addItem(aiChatItem)
 
         windowMenu.addItem(.separator())
-        windowMenu.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
+        windowMenu.addItem(
+            withTitle: "Bring All to Front",
+            action: #selector(NSApplication.arrangeInFront(_:)),
+            keyEquivalent: ""
+        )
 
         NSApp.windowsMenu = windowMenu
 
@@ -299,7 +339,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "wrench.and.screwdriver.fill", accessibilityDescription: "AgenticToolkit")
+            button.image = NSImage(
+                systemSymbolName: "wrench.and.screwdriver.fill",
+                accessibilityDescription: "AgenticToolkit"
+            )
             button.image?.size = NSSize(width: 18, height: 18)
             button.image?.isTemplate = true
         }
@@ -316,13 +359,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let testItem = NSMenuItem(title: "Test Window Activation", action: #selector(testWindowActivation), keyEquivalent: "t")
+        let testItem = NSMenuItem(
+            title: "Test Window Activation",
+            action: #selector(testWindowActivation),
+            keyEquivalent: "t"
+        )
         testItem.target = self
         menu.addItem(testItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit Agentic Toolkit", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(
+            title: "Quit Agentic Toolkit",
+            action: #selector(quitApp),
+            keyEquivalent: "q"
+        )
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -344,10 +395,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func testWindowActivation() {
         logger.debug("Menu action: Test Window Activation")
-        guard let db = sessionsDatabaseManager else { return }
+        guard let database = sessionsDatabaseManager else { return }
 
         // Build activation targets from live sessions.
-        guard let sessions = try? db.fetchAllSessions() else {
+        guard let sessions = try? database.fetchAllSessions() else {
             logger.error("Failed to fetch sessions for activation test")
             return
         }

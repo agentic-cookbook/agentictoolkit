@@ -6,10 +6,18 @@ import UserNotifications
 /// Protocol abstracting UNUserNotificationCenter for testability.
 protocol NotificationCenterProtocol: AnyObject {
     var delegate: (any UNUserNotificationCenterDelegate)? { get set }
-    func requestAuthorization(options: UNAuthorizationOptions, completionHandler: @escaping @Sendable (Bool, (any Error)?) -> Void)
-    func getNotificationSettings(completionHandler: @escaping @Sendable (UNNotificationSettings) -> Void)
+    func requestAuthorization(
+        options: UNAuthorizationOptions,
+        completionHandler: @escaping @Sendable (Bool, (any Error)?) -> Void
+    )
+    func getNotificationSettings(
+        completionHandler: @escaping @Sendable (UNNotificationSettings) -> Void
+    )
     func setNotificationCategories(_ categories: Set<UNNotificationCategory>)
-    func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: (@Sendable ((any Error)?) -> Void)?)
+    func add(
+        _ request: UNNotificationRequest,
+        withCompletionHandler completionHandler: (@Sendable ((any Error)?) -> Void)?
+    )
 }
 
 /// Conform the real UNUserNotificationCenter to our protocol.
@@ -205,7 +213,10 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
                 return value == "true"
             }
         } catch {
-            logger.warning("Failed to read setting '\(key, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+            logger.warning(
+                "Failed to read setting '\(key, privacy: .public)': " +
+                "\(error.localizedDescription, privacy: .public)"
+            )
         }
         return false
     }
@@ -221,7 +232,10 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
 
         notificationCenter.add(request, withCompletionHandler: { error in
             if let error = error {
-                Self.logger.error("Failed to post notification '\(identifier, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+                Self.logger.error(
+                    "Failed to post notification '\(identifier, privacy: .public)': " +
+                    "\(error.localizedDescription, privacy: .public)"
+                )
             }
         })
     }

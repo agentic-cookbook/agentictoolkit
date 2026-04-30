@@ -45,7 +45,11 @@ final class SystemSettingsPane: NSView {
             row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
-        let resetButton = NSButton(title: "Reset Permission Walkthrough", target: self, action: #selector(resetWalkthrough))
+        let resetButton = NSButton(
+            title: "Reset Permission Walkthrough",
+            target: self,
+            action: #selector(resetWalkthrough)
+        )
         resetButton.bezelStyle = .rounded
         resetButton.controlSize = .regular
         stack.addArrangedSubview(resetButton)

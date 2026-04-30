@@ -31,7 +31,11 @@ final class AppearanceSettingsPane: NSView {
         lightRadio.tag = 0
         let darkRadio = NSButton(radioButtonWithTitle: "Dark", target: self, action: #selector(modeChanged(_:)))
         darkRadio.tag = 1
-        let autoRadio = NSButton(radioButtonWithTitle: "Auto (System)", target: self, action: #selector(modeChanged(_:)))
+        let autoRadio = NSButton(
+            radioButtonWithTitle: "Auto (System)",
+            target: self,
+            action: #selector(modeChanged(_:))
+        )
         autoRadio.tag = 2
 
         switch viewModel.appearanceMode {
@@ -50,7 +54,13 @@ final class AppearanceSettingsPane: NSView {
 
         let sizeHeader = Self.makeHeader("Text Size")
 
-        let slider = NSSlider(value: viewModel.textSize, minValue: -4, maxValue: 4, target: self, action: #selector(textSizeChanged(_:)))
+        let slider = NSSlider(
+            value: viewModel.textSize,
+            minValue: -4,
+            maxValue: 4,
+            target: self,
+            action: #selector(textSizeChanged(_:))
+        )
         slider.numberOfTickMarks = 9
         slider.allowsTickMarkValuesOnly = true
         slider.translatesAutoresizingMaskIntoConstraints = false

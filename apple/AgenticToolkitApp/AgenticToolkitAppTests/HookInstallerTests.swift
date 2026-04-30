@@ -54,7 +54,7 @@ final class HookInstallerTests: XCTestCase {
     }
 
     func testInstallHooksWithEmptyJsonObject() throws {
-        try "{}".data(using: .utf8)!.write(to: settingsURL)
+        try Data("{}".utf8).write(to: settingsURL)
         let installer = makeInstaller()
 
         let result = installer.installHooks()
@@ -297,7 +297,7 @@ final class HookInstallerTests: XCTestCase {
     }
 
     func testUninstallReturnsFalseWhenNoHooksPresent() throws {
-        try "{}".data(using: .utf8)!.write(to: settingsURL)
+        try Data("{}".utf8).write(to: settingsURL)
         let installer = makeInstaller()
         let removed = installer.uninstallHooks()
         XCTAssertFalse(removed)
@@ -457,7 +457,7 @@ final class HookInstallerTests: XCTestCase {
     }
 
     func testInvalidSettingsFileThrows() throws {
-        try "not valid json".data(using: .utf8)!.write(to: settingsURL)
+        try Data("not valid json".utf8).write(to: settingsURL)
         let installer = makeInstaller()
         XCTAssertThrowsError(try installer.loadSettings())
     }

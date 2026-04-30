@@ -359,22 +359,20 @@ final class ProfilesSettingsView: NSView, NSTableViewDataSource, NSTableViewDele
             nameLabel.stringValue = profile.name
         }
 
-        for (i, item) in appearancePopUp.itemArray.enumerated() {
-            if item.representedObject as? ProfileAppearance == profile.appearance {
-                appearancePopUp.selectItem(at: i)
-                break
-            }
+        for (index, item) in appearancePopUp.itemArray.enumerated()
+            where item.representedObject as? ProfileAppearance == profile.appearance {
+            appearancePopUp.selectItem(at: index)
+            break
         }
 
         fontNameLabel.stringValue = profile.fontName
         fontSizeStepper.doubleValue = profile.fontSize
         fontSizeLabel.stringValue = "\(Int(profile.fontSize)) pt"
 
-        for (i, item) in cursorPopUp.itemArray.enumerated() {
-            if item.representedObject as? CursorStyle == profile.cursorStyle {
-                cursorPopUp.selectItem(at: i)
-                break
-            }
+        for (index, item) in cursorPopUp.itemArray.enumerated()
+            where item.representedObject as? CursorStyle == profile.cursorStyle {
+            cursorPopUp.selectItem(at: index)
+            break
         }
 
         deleteButton.isEnabled = isDeletable
@@ -411,16 +409,16 @@ final class ProfilesSettingsView: NSView, NSTableViewDataSource, NSTableViewDele
         let normalRow = NSStackView()
         normalRow.orientation = .horizontal
         normalRow.spacing = 4
-        for i in 0..<min(8, profile.colors.ansi.count) {
-            normalRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[i], index: i))
+        for index in 0..<min(8, profile.colors.ansi.count) {
+            normalRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[index], index: index))
         }
         stack.addArrangedSubview(normalRow)
 
         let brightRow = NSStackView()
         brightRow.orientation = .horizontal
         brightRow.spacing = 4
-        for i in 8..<min(16, profile.colors.ansi.count) {
-            brightRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[i], index: i))
+        for index in 8..<min(16, profile.colors.ansi.count) {
+            brightRow.addArrangedSubview(makeAnsiSwatch(hex: profile.colors.ansi[index], index: index))
         }
         stack.addArrangedSubview(brightRow)
 

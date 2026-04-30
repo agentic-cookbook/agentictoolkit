@@ -196,7 +196,7 @@ final class SessionRowViewTests: XCTestCase {
 
     private func findFirstTextField(in view: NSView) -> NSTextField? {
         for subview in view.subviews {
-            if let tf = subview as? NSTextField { return tf }
+            if let textField = subview as? NSTextField { return textField }
             if let found = findFirstTextField(in: subview) { return found }
         }
         return nil
@@ -205,7 +205,7 @@ final class SessionRowViewTests: XCTestCase {
     private func findAllTextFields(in view: NSView) -> [NSTextField] {
         var result: [NSTextField] = []
         for subview in view.subviews {
-            if let tf = subview as? NSTextField { result.append(tf) }
+            if let textField = subview as? NSTextField { result.append(textField) }
             result.append(contentsOf: findAllTextFields(in: subview))
         }
         return result

@@ -15,7 +15,7 @@ final class EventIngestionManagerTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try sessionsDatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
 
         dropDir = tempDir.appendingPathComponent("session-events")
         try FileManager.default.createDirectory(at: dropDir, withIntermediateDirectories: true)
@@ -82,10 +82,10 @@ final class EventIngestionManagerTests: XCTestCase {
 
         try manager.ensureDirectoriesExist()
 
-        let fm = FileManager.default
-        XCTAssertTrue(fm.fileExists(atPath: freshDropDir.path), "Drop directory should be created")
+        let fileManager = FileManager.default
+        XCTAssertTrue(fileManager.fileExists(atPath: freshDropDir.path), "Drop directory should be created")
         XCTAssertTrue(
-            fm.fileExists(atPath: freshDropDir.appendingPathComponent("errors").path),
+            fileManager.fileExists(atPath: freshDropDir.appendingPathComponent("errors").path),
             "Errors subdirectory should be created"
         )
     }
@@ -222,7 +222,7 @@ final class EventIngestionManagerTests: XCTestCase {
     }
 
     func testParseMalformedJsonReturnsNil() {
-        let data = "this is not json".data(using: .utf8)!
+        let data = Data("this is not json".utf8)
         let eventFile = ingestionManager.parseEventFile(data: data, fileName: "bad.json")
         XCTAssertNil(eventFile)
     }
@@ -296,7 +296,7 @@ final class EventIngestionManagerTests: XCTestCase {
             rawJson: "{}"
         )
 
-        try ingestionManager.ingestEvent(eventFile, rawData: "{}".data(using: .utf8)!)
+        try ingestionManager.ingestEvent(eventFile, rawData: Data("{}".utf8))
 
         let session = try dbManager.fetchSession(bySessionId: "sess-ingest-001")
         XCTAssertNotNil(session)
@@ -318,7 +318,7 @@ final class EventIngestionManagerTests: XCTestCase {
             data: ["cwd": "/Users/test/app"],
             rawJson: "{}"
         )
-        try ingestionManager.ingestEvent(startEvent, rawData: "{}".data(using: .utf8)!)
+        try ingestionManager.ingestEvent(startEvent, rawData: Data("{}".utf8))
 
         // Then end it
         let endEvent = EventFile(
@@ -328,7 +328,7 @@ final class EventIngestionManagerTests: XCTestCase {
             data: [:],
             rawJson: "{}"
         )
-        try ingestionManager.ingestEvent(endEvent, rawData: "{}".data(using: .utf8)!)
+        try ingestionManager.ingestEvent(endEvent, rawData: Data("{}".utf8))
 
         let session = try dbManager.fetchSession(bySessionId: "sess-end-001")
         XCTAssertEqual(session?.status, .ended)
@@ -346,7 +346,7 @@ final class EventIngestionManagerTests: XCTestCase {
             data: ["cwd": "/Users/test/app"],
             rawJson: "{}"
         )
-        try ingestionManager.ingestEvent(startEvent, rawData: "{}".data(using: .utf8)!)
+        try ingestionManager.ingestEvent(startEvent, rawData: Data("{}".utf8))
 
         // Tool use event
         let toolEvent = EventFile(
@@ -356,7 +356,7 @@ final class EventIngestionManagerTests: XCTestCase {
             data: ["tool": "Edit"],
             rawJson: "{}"
         )
-        try ingestionManager.ingestEvent(toolEvent, rawData: "{}".data(using: .utf8)!)
+        try ingestionManager.ingestEvent(toolEvent, rawData: Data("{}".utf8))
 
         let session = try dbManager.fetchSession(bySessionId: "sess-tool-001")
         XCTAssertEqual(session?.lastTool, "Edit")
@@ -365,7 +365,8 @@ final class EventIngestionManagerTests: XCTestCase {
 
     func testIngestMultipleEventsForSameSession() throws {
         let events = [
-            ("SessionStart", "2026-03-24T10:00:00Z", ["cwd": "/test", "model": "claude-sonnet-4-20250514"] as [String: Any]),
+            ("SessionStart", "2026-03-24T10:00:00Z",
+             ["cwd": "/test", "model": "claude-sonnet-4-20250514"] as [String: Any]),
             ("PreToolUse", "2026-03-24T10:01:00Z", ["tool": "Read"] as [String: Any]),
             ("PostToolUse", "2026-03-24T10:01:01Z", ["tool": "Read"] as [String: Any]),
             ("PreToolUse", "2026-03-24T10:02:00Z", ["tool": "Edit"] as [String: Any]),
@@ -373,14 +374,14 @@ final class EventIngestionManagerTests: XCTestCase {
         ]
 
         for (eventType, timestamp, data) in events {
-            let ef = EventFile(
+            let eventFile = EventFile(
                 event: eventType,
                 sessionId: "sess-multi-001",
                 timestamp: timestamp,
                 data: data,
                 rawJson: "{}"
             )
-            try ingestionManager.ingestEvent(ef, rawData: "{}".data(using: .utf8)!)
+            try ingestionManager.ingestEvent(eventFile, rawData: Data("{}".utf8))
         }
 
         let session = try dbManager.fetchSession(bySessionId: "sess-multi-001")
@@ -515,20 +516,20 @@ final class EventIngestionManagerTests: XCTestCase {
     func testRapidFileIngestion() throws {
         // Drop 50 files rapidly
         let fileCount = 50
-        for i in 0..<fileCount {
-            let timestamp = String(format: "2026-03-24T10:%02d:00Z", i)
-            let sessionId = "sess-stress-\(i % 5)" // 5 different sessions
-            let eventType = i % 5 == 0 ? "SessionStart" : "PreToolUse"
-            let data: [String: Any] = i % 5 == 0
-                ? ["cwd": "/project-\(i % 5)", "model": "claude-sonnet-4-20250514"]
-                : ["tool": "Tool-\(i)"]
+        for index in 0..<fileCount {
+            let timestamp = String(format: "2026-03-24T10:%02d:00Z", index)
+            let sessionId = "sess-stress-\(index % 5)" // 5 different sessions
+            let eventType = index % 5 == 0 ? "SessionStart" : "PreToolUse"
+            let data: [String: Any] = index % 5 == 0
+                ? ["cwd": "/project-\(index % 5)", "model": "claude-sonnet-4-20250514"]
+                : ["tool": "Tool-\(index)"]
 
             try createEventFile(
                 event: eventType,
                 sessionId: sessionId,
                 timestamp: timestamp,
                 data: data,
-                fileName: String(format: "%03d-event.json", i)
+                fileName: String(format: "%03d-event.json", index)
             )
         }
 

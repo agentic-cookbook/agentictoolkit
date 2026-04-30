@@ -12,15 +12,15 @@ final class IngestionIntegrationTests: XCTestCase {
     private var ingestionManager: EventIngestionManager!
     private var tempDBPath: String!
 
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("agentic-ingestion-test-\(UUID().uuidString)")
         errorsDir = tempDir.appendingPathComponent("errors")
-        try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         tempDBPath = NSTemporaryDirectory() + "agentic_ingestion_test_\(UUID().uuidString).db"
-        databaseManager = try! DatabaseManager(path: tempDBPath)
+        databaseManager = try DatabaseManager(path: tempDBPath)
         ingestionManager = EventIngestionManager(dropDirectoryURL: tempDir, databaseManager: databaseManager)
     }
 
@@ -43,9 +43,9 @@ final class IngestionIntegrationTests: XCTestCase {
         sessionId: String = "test-session-001",
         cwd: String = "/tmp/test-project",
         extraData: [String: Any] = [:]
-    ) -> URL {
+    ) throws -> URL {
         var data: [String: Any] = ["cwd": cwd]
-        for (k, v) in extraData { data[k] = v }
+        for (key, value) in extraData { data[key] = value }
 
         let payload: [String: Any] = [
             "event": event,
@@ -53,10 +53,10 @@ final class IngestionIntegrationTests: XCTestCase {
             "timestamp": ISO8601DateFormatter().string(from: Date()),
             "data": data
         ]
-        let jsonData = try! JSONSerialization.data(withJSONObject: payload)
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
         let fileName = "\(Int(Date().timeIntervalSince1970 * 1000))-\(UUID().uuidString.prefix(8)).json"
         let fileURL = tempDir.appendingPathComponent(fileName)
-        try! jsonData.write(to: fileURL)
+        try jsonData.write(to: fileURL)
         // Backdate so the file passes the minimumFileAge check
         let past = Date().addingTimeInterval(-2)
         try? FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: fileURL.path)
@@ -77,10 +77,10 @@ final class IngestionIntegrationTests: XCTestCase {
 
     /// Writes a malformed (non-JSON) file to the drop directory.
     @discardableResult
-    private func writeMalformedFile() -> URL {
+    private func writeMalformedFile() throws -> URL {
         let fileName = "\(Int(Date().timeIntervalSince1970 * 1000))-\(UUID().uuidString.prefix(8)).json"
         let fileURL = tempDir.appendingPathComponent(fileName)
-        try! "this is not json".data(using: .utf8)!.write(to: fileURL)
+        try Data("this is not json".utf8).write(to: fileURL)
         let past = Date().addingTimeInterval(-2)
         try? FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: fileURL.path)
         return fileURL
@@ -104,7 +104,7 @@ final class IngestionIntegrationTests: XCTestCase {
     // MARK: - Tests
 
     func testValidFileIsIngestedAndDeleted() throws {
-        let fileURL = writeEventFile()
+        let fileURL = try writeEventFile()
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
 
         ingestionManager.processExistingFiles()
@@ -119,8 +119,8 @@ final class IngestionIntegrationTests: XCTestCase {
     }
 
     func testMultipleFilesAllDeleted() throws {
-        for i in 0..<10 {
-            writeEventFile(sessionId: "session-\(i)")
+        for index in 0..<10 {
+            try writeEventFile(sessionId: "session-\(index)")
         }
         XCTAssertEqual(jsonFileCount(), 10)
 
@@ -140,19 +140,25 @@ final class IngestionIntegrationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path), "Empty file should be deleted")
     }
 
-    func testMalformedFileMovedToErrors() {
-        let fileURL = writeMalformedFile()
+    func testMalformedFileMovedToErrors() throws {
+        let fileURL = try writeMalformedFile()
         let fileName = fileURL.lastPathComponent
 
         ingestionManager.processExistingFiles()
 
-        XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path), "Malformed file should be removed from drop dir")
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: fileURL.path),
+            "Malformed file should be removed from drop dir"
+        )
         let errorFile = errorsDir.appendingPathComponent(fileName)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: errorFile.path), "Malformed file should be in errors dir")
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: errorFile.path),
+            "Malformed file should be in errors dir"
+        )
     }
 
     func testSessionStartCreatesActiveSession() throws {
-        writeEventFile(event: "SessionStart", sessionId: "start-test", extraData: ["model": "claude-3.5-sonnet"])
+        try writeEventFile(event: "SessionStart", sessionId: "start-test", extraData: ["model": "claude-3.5-sonnet"])
 
         ingestionManager.processExistingFiles()
 
@@ -163,10 +169,10 @@ final class IngestionIntegrationTests: XCTestCase {
     }
 
     func testSessionEndMarksSessionEnded() throws {
-        writeEventFile(event: "SessionStart", sessionId: "end-test")
+        try writeEventFile(event: "SessionStart", sessionId: "end-test")
         ingestionManager.processExistingFiles()
 
-        writeEventFile(event: "SessionEnd", sessionId: "end-test")
+        try writeEventFile(event: "SessionEnd", sessionId: "end-test")
         ingestionManager.processExistingFiles()
 
         let session = try databaseManager.fetchSession(bySessionId: "end-test")
@@ -176,10 +182,14 @@ final class IngestionIntegrationTests: XCTestCase {
     func testUserPromptDoesNotSetSummary() throws {
         // UserPromptSubmit should NOT put the raw prompt into the summary field.
         // Summaries come only from the AI summarizer.
-        writeEventFile(event: "SessionStart", sessionId: "prompt-test")
+        try writeEventFile(event: "SessionStart", sessionId: "prompt-test")
         ingestionManager.processExistingFiles()
 
-        writeEventFile(event: "UserPromptSubmit", sessionId: "prompt-test", extraData: ["prompt": "fix the login bug"])
+        try writeEventFile(
+            event: "UserPromptSubmit",
+            sessionId: "prompt-test",
+            extraData: ["prompt": "fix the login bug"]
+        )
         ingestionManager.processExistingFiles()
 
         let session = try databaseManager.fetchSession(bySessionId: "prompt-test")
@@ -188,11 +198,11 @@ final class IngestionIntegrationTests: XCTestCase {
     }
 
     func testMixOfValidEmptyAndMalformedFiles() throws {
-        writeEventFile(sessionId: "good-1")
-        writeEventFile(sessionId: "good-2")
+        try writeEventFile(sessionId: "good-1")
+        try writeEventFile(sessionId: "good-2")
         writeEmptyFile()
         writeEmptyFile()
-        writeMalformedFile()
+        try writeMalformedFile()
 
         XCTAssertEqual(jsonFileCount(), 5)
 
@@ -212,7 +222,7 @@ final class IngestionIntegrationTests: XCTestCase {
 
         // Write a file after the watcher is running
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
-            self.writeEventFile(sessionId: "watcher-test")
+            try? self.writeEventFile(sessionId: "watcher-test")
         }
 
         // Wait for processing
@@ -231,8 +241,8 @@ final class IngestionIntegrationTests: XCTestCase {
 
     func testHighVolumeProcessing() throws {
         // Simulate a burst of 100 events
-        for i in 0..<100 {
-            writeEventFile(event: "PreToolUse", sessionId: "burst-session", extraData: ["tool": "Read-\(i)"])
+        for index in 0..<100 {
+            try writeEventFile(event: "PreToolUse", sessionId: "burst-session", extraData: ["tool": "Read-\(index)"])
         }
         XCTAssertEqual(jsonFileCount(), 100)
 

@@ -14,7 +14,7 @@ final class SessionLivenessMonitorTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try sessionsDatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
         monitor = SessionLivenessMonitor(sessionsDatabaseManager: dbManager)
     }
 

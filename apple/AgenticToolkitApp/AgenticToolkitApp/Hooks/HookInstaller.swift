@@ -93,7 +93,10 @@ final class HookInstaller {
             // Write the updated settings back
             try saveSettings(settings)
 
-            logger.info("Hooks installed for \(Self.hookedEventTypes.count) event types in \(self.settingsURL.path, privacy: .public)")
+            logger.info(
+                "Hooks installed for \(Self.hookedEventTypes.count) event types in " +
+                "\(self.settingsURL.path, privacy: .public)"
+            )
             return .installed
         } catch {
             logger.error("Failed to install hooks: \(error.localizedDescription, privacy: .public)")
@@ -154,10 +157,8 @@ final class HookInstaller {
         // Check if at least one event type has a AgenticPluginTester hook
         for eventType in Self.hookedEventTypes {
             if let matcherGroups = hooks[eventType] as? [[String: Any]] {
-                for group in matcherGroups {
-                    if isAgenticPluginTesterMatcherGroup(group) {
-                        return true
-                    }
+                for group in matcherGroups where isAgenticPluginTesterMatcherGroup(group) {
+                    return true
                 }
             }
         }
@@ -264,53 +265,68 @@ final class HookInstaller {
         switch eventType {
         case "SessionStart":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, model: (.model // ""), source: (.source // ""), pid: ($ppid | tonumber), term_program: $term}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, model: (.model // ""), source: (.source // ""),
+                     pid: ($ppid | tonumber), term_program: $term}}
             """
 
         case "SessionEnd":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, reason: (.reason // "")}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, reason: (.reason // "")}}
             """
 
         case "UserPromptSubmit":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, prompt: (.prompt // "")}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, prompt: (.prompt // "")}}
             """
 
         case "PreToolUse":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, tool: (.tool_name // ""), tool_input: (.tool_input // {})}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, tool: (.tool_name // ""), tool_input: (.tool_input // {})}}
             """
 
         case "PostToolUse":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, tool: (.tool_name // ""), tool_input: (.tool_input // {}), tool_response: (.tool_response // {})}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, tool: (.tool_name // ""), tool_input: (.tool_input // {}),
+                     tool_response: (.tool_response // {})}}
             """
 
         case "Stop":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd}}
             """
 
         case "SubagentStart":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, agent_id: (.agent_id // ""), agent_type: (.agent_type // "")}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, agent_id: (.agent_id // ""),
+                     agent_type: (.agent_type // "")}}
             """
 
         case "SubagentStop":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, agent_id: (.agent_id // ""), agent_type: (.agent_type // "")}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, agent_id: (.agent_id // ""),
+                     agent_type: (.agent_type // "")}}
             """
 
         case "Notification":
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd, message: (.message // ""), title: (.title // ""), notification_type: (.notification_type // "")}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd, message: (.message // ""), title: (.title // ""),
+                     notification_type: (.notification_type // "")}}
             """
 
         default:
             // Generic fallback: capture session_id and cwd
             return """
-            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate), data: {cwd: .cwd}}
+            {event: "\(eventType)", session_id: .session_id, timestamp: (now | todate),
+              data: {cwd: .cwd}}
             """
         }
     }
@@ -320,15 +336,15 @@ final class HookInstaller {
     /// Loads and parses the Claude Code settings.json file.
     /// Returns an empty dictionary if the file doesn't exist.
     func loadSettings() throws -> [String: Any] {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
         // Ensure the .claude directory exists
         let claudeDir = settingsURL.deletingLastPathComponent()
-        if !fm.fileExists(atPath: claudeDir.path) {
-            try fm.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+        if !fileManager.fileExists(atPath: claudeDir.path) {
+            try fileManager.createDirectory(at: claudeDir, withIntermediateDirectories: true)
         }
 
-        guard fm.fileExists(atPath: settingsURL.path) else {
+        guard fileManager.fileExists(atPath: settingsURL.path) else {
             return [:]
         }
 
@@ -349,12 +365,12 @@ final class HookInstaller {
     /// Writes the settings dictionary back to the settings.json file.
     /// Uses pretty-printed JSON with sorted keys for readability.
     func saveSettings(_ settings: [String: Any]) throws {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
         // Ensure the directory exists
         let claudeDir = settingsURL.deletingLastPathComponent()
-        if !fm.fileExists(atPath: claudeDir.path) {
-            try fm.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+        if !fileManager.fileExists(atPath: claudeDir.path) {
+            try fileManager.createDirectory(at: claudeDir, withIntermediateDirectories: true)
         }
 
         let data = try JSONSerialization.data(

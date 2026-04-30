@@ -163,21 +163,21 @@ final class PermissionWalkthrough {
             dot.heightAnchor.constraint(equalToConstant: 10)
         ])
 
-        let w = NSWindow(
+        let walkthroughWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 440, height: 310),
             styleMask: [.titled],
             backing: .buffered,
             defer: false
         )
-        w.title = "AgenticPluginTester Setup"
-        w.contentView = contentView
-        w.center()
-        w.isReleasedWhenClosed = false
-        w.level = .floating
-        w.makeKeyAndOrderFront(nil)
+        walkthroughWindow.title = "AgenticPluginTester Setup"
+        walkthroughWindow.contentView = contentView
+        walkthroughWindow.center()
+        walkthroughWindow.isReleasedWhenClosed = false
+        walkthroughWindow.level = .floating
+        walkthroughWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        self.window = w
+        self.window = walkthroughWindow
 
         // Request the permission (triggers system prompt for notifications, opens settings for others)
         permission.request { granted in

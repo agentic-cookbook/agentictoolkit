@@ -107,7 +107,10 @@ final class SettingsViewModel: ObservableObject {
             do {
                 try manager.setEnabled(launchAtLogin)
             } catch {
-                logger.error("Failed to \(self.launchAtLogin ? "enable" : "disable") launch at login: \(error.localizedDescription)")
+                logger.error(
+                    "Failed to \(self.launchAtLogin ? "enable" : "disable") " +
+                    "launch at login: \(error.localizedDescription)"
+                )
                 // Revert to actual state on failure (suppress re-trigger of didSet)
                 let actual = manager.isEnabled
                 if actual != launchAtLogin {
@@ -167,7 +170,11 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(sessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager, launchAtLoginManager: LaunchAtLoginManager? = nil) {
+    init(
+        sessionsDatabaseManager: SessionsDatabaseManager,
+        pluginManager: AIPluginManager,
+        launchAtLoginManager: LaunchAtLoginManager? = nil
+    ) {
         self.sessionsDatabaseManager = sessionsDatabaseManager
         self.pluginManager = pluginManager
         self.launchAtLoginManager = launchAtLoginManager

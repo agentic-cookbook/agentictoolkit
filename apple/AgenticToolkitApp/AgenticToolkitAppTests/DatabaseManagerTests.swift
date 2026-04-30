@@ -11,7 +11,7 @@ final class DatabaseManagerTests: XCTestCase {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try sessionsDatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
     }
 
     override func tearDownWithError() throws {
@@ -226,9 +226,15 @@ final class DatabaseManagerTests: XCTestCase {
         try dbManager.upsertSession(Session(sessionId: "sess-type-a"))
         try dbManager.upsertSession(Session(sessionId: "sess-type-b"))
 
-        try dbManager.insertEvent(SessionEvent(sessionId: "sess-type-a", eventType: "SessionStart", timestamp: "2026-03-24T10:00:00Z"))
-        try dbManager.insertEvent(SessionEvent(sessionId: "sess-type-a", eventType: "PreToolUse", timestamp: "2026-03-24T10:01:00Z"))
-        try dbManager.insertEvent(SessionEvent(sessionId: "sess-type-b", eventType: "SessionStart", timestamp: "2026-03-24T10:02:00Z"))
+        try dbManager.insertEvent(SessionEvent(
+            sessionId: "sess-type-a", eventType: "SessionStart", timestamp: "2026-03-24T10:00:00Z"
+        ))
+        try dbManager.insertEvent(SessionEvent(
+            sessionId: "sess-type-a", eventType: "PreToolUse", timestamp: "2026-03-24T10:01:00Z"
+        ))
+        try dbManager.insertEvent(SessionEvent(
+            sessionId: "sess-type-b", eventType: "SessionStart", timestamp: "2026-03-24T10:02:00Z"
+        ))
 
         let starts = try dbManager.fetchAllEvents(eventType: "SessionStart")
         XCTAssertEqual(starts.count, 2)
@@ -309,7 +315,7 @@ final class DatabaseManagerTests: XCTestCase {
         // Close and reopen with same path
         let dbPath = tempDir.appendingPathComponent("test.db").path
         dbManager.close()
-        dbManager = try sessionsDatabaseManager(path: dbPath)
+        dbManager = try SessionsDatabaseManager(path: dbPath)
 
         let tables = try dbManager.tableNames()
         // Count occurrences of each table name -- should have no duplicates

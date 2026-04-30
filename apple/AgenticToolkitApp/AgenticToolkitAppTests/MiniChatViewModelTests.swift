@@ -21,52 +21,52 @@ final class ChatViewModelIntegrationTests: XCTestCase {
     }
 
     private func makeViewModel() -> ChatViewModel {
-        let pm = AIPluginManager(searchPaths: [])
+        let pluginManager = AIPluginManager(searchPaths: [])
         let persistence = DatabaseManagerPersistence(databaseManager: databaseManager)
-        let aiSettings = AISettingsViewModel(pluginManager: pm, persistence: persistence)
-        return ChatViewModel(pluginManager: pm, configProvider: aiSettings)
+        let aiSettings = AISettingsViewModel(pluginManager: pluginManager, persistence: persistence)
+        return ChatViewModel(pluginManager: pluginManager, configProvider: aiSettings)
     }
 
     // MARK: - sendMessage
 
     func testSendMessageAddsUserMessage() {
-        let vm = makeViewModel()
-        XCTAssertTrue(vm.messages.isEmpty)
+        let viewModel = makeViewModel()
+        XCTAssertTrue(viewModel.messages.isEmpty)
 
-        vm.sendMessage("hello world")
+        viewModel.sendMessage("hello world")
 
-        XCTAssertGreaterThanOrEqual(vm.messages.count, 1)
-        XCTAssertEqual(vm.messages[0].role, .user)
-        XCTAssertEqual(vm.messages[0].text, "hello world")
+        XCTAssertGreaterThanOrEqual(viewModel.messages.count, 1)
+        XCTAssertEqual(viewModel.messages[0].role, .user)
+        XCTAssertEqual(viewModel.messages[0].text, "hello world")
     }
 
     func testSendMessageTrimsWhitespace() {
-        let vm = makeViewModel()
-        vm.sendMessage("  hello  ")
+        let viewModel = makeViewModel()
+        viewModel.sendMessage("  hello  ")
 
-        XCTAssertGreaterThanOrEqual(vm.messages.count, 1)
-        XCTAssertEqual(vm.messages[0].text, "hello")
+        XCTAssertGreaterThanOrEqual(viewModel.messages.count, 1)
+        XCTAssertEqual(viewModel.messages[0].text, "hello")
     }
 
     func testSendEmptyMessageDoesNothing() {
-        let vm = makeViewModel()
-        vm.sendMessage("")
-        XCTAssertTrue(vm.messages.isEmpty)
+        let viewModel = makeViewModel()
+        viewModel.sendMessage("")
+        XCTAssertTrue(viewModel.messages.isEmpty)
 
-        vm.sendMessage("   ")
-        XCTAssertTrue(vm.messages.isEmpty)
+        viewModel.sendMessage("   ")
+        XCTAssertTrue(viewModel.messages.isEmpty)
 
-        vm.sendMessage("\n\t")
-        XCTAssertTrue(vm.messages.isEmpty)
+        viewModel.sendMessage("\n\t")
+        XCTAssertTrue(viewModel.messages.isEmpty)
     }
 
     func testMultipleMessagesQueue() {
-        let vm = makeViewModel()
-        vm.sendMessage("first")
-        vm.sendMessage("second")
-        vm.sendMessage("third")
+        let viewModel = makeViewModel()
+        viewModel.sendMessage("first")
+        viewModel.sendMessage("second")
+        viewModel.sendMessage("third")
 
-        let userMessages = vm.messages.filter { $0.role == .user }
+        let userMessages = viewModel.messages.filter { $0.role == .user }
         XCTAssertEqual(userMessages.count, 3)
         XCTAssertEqual(userMessages[0].text, "first")
         XCTAssertEqual(userMessages[1].text, "second")
@@ -76,36 +76,36 @@ final class ChatViewModelIntegrationTests: XCTestCase {
     // MARK: - clearHistory
 
     func testClearHistory() {
-        let vm = makeViewModel()
-        vm.sendMessage("one")
-        vm.sendMessage("two")
-        XCTAssertFalse(vm.messages.isEmpty)
+        let viewModel = makeViewModel()
+        viewModel.sendMessage("one")
+        viewModel.sendMessage("two")
+        XCTAssertFalse(viewModel.messages.isEmpty)
 
-        vm.clearHistory()
+        viewModel.clearHistory()
 
-        XCTAssertTrue(vm.messages.isEmpty)
-        XCTAssertFalse(vm.isTyping)
+        XCTAssertTrue(viewModel.messages.isEmpty)
+        XCTAssertFalse(viewModel.isTyping)
     }
 
     // MARK: - Message properties
 
     func testMessageHasTimestamp() {
-        let vm = makeViewModel()
+        let viewModel = makeViewModel()
         let before = Date()
-        vm.sendMessage("timestamped")
+        viewModel.sendMessage("timestamped")
         let after = Date()
 
-        let msg = vm.messages[0]
+        let msg = viewModel.messages[0]
         XCTAssertGreaterThanOrEqual(msg.timestamp, before)
         XCTAssertLessThanOrEqual(msg.timestamp, after)
     }
 
     func testMessageHasUniqueID() {
-        let vm = makeViewModel()
-        vm.sendMessage("a")
-        vm.sendMessage("b")
+        let viewModel = makeViewModel()
+        viewModel.sendMessage("a")
+        viewModel.sendMessage("b")
 
-        let userMessages = vm.messages.filter { $0.role == .user }
+        let userMessages = viewModel.messages.filter { $0.role == .user }
         XCTAssertEqual(userMessages.count, 2)
         XCTAssertNotEqual(userMessages[0].id, userMessages[1].id)
     }
@@ -113,8 +113,8 @@ final class ChatViewModelIntegrationTests: XCTestCase {
     // MARK: - ChatView integration
 
     func testChatViewDoesNotCrashOnSendMessage() {
-        let vm = makeViewModel()
-        let chatView = ChatView(viewModel: vm)
+        let viewModel = makeViewModel()
+        let chatView = ChatView(viewModel: viewModel)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
@@ -132,7 +132,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
         ])
         window.layoutIfNeeded()
 
-        vm.sendMessage("test message")
+        viewModel.sendMessage("test message")
 
         let expectation = XCTestExpectation(description: "Rebuild completes")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -140,14 +140,14 @@ final class ChatViewModelIntegrationTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 2.0)
 
-        XCTAssertGreaterThanOrEqual(vm.messages.count, 1)
+        XCTAssertGreaterThanOrEqual(viewModel.messages.count, 1)
     }
 
     // MARK: - Queue error handling
 
     func testQueueProducesErrorWhenNoBackend() {
-        let vm = makeViewModel()
-        vm.sendMessage("test")
+        let viewModel = makeViewModel()
+        viewModel.sendMessage("test")
 
         let expectation = XCTestExpectation(description: "Queue processes")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -155,7 +155,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 3.0)
 
-        XCTAssertGreaterThanOrEqual(vm.messages.count, 1)
-        XCTAssertFalse(vm.isTyping)
+        XCTAssertGreaterThanOrEqual(viewModel.messages.count, 1)
+        XCTAssertFalse(viewModel.isTyping)
     }
 }

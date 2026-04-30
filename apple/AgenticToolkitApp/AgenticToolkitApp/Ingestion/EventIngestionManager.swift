@@ -81,12 +81,12 @@ final class EventIngestionManager: @unchecked Sendable {
 
     /// Creates the drop directory and errors subdirectory if they don't exist.
     func ensureDirectoriesExist() throws {
-        let fm = FileManager.default
-        if !fm.fileExists(atPath: dropDirectoryURL.path) {
-            try fm.createDirectory(at: dropDirectoryURL, withIntermediateDirectories: true)
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: dropDirectoryURL.path) {
+            try fileManager.createDirectory(at: dropDirectoryURL, withIntermediateDirectories: true)
         }
-        if !fm.fileExists(atPath: errorsDirectoryURL.path) {
-            try fm.createDirectory(at: errorsDirectoryURL, withIntermediateDirectories: true)
+        if !fileManager.fileExists(atPath: errorsDirectoryURL.path) {
+            try fileManager.createDirectory(at: errorsDirectoryURL, withIntermediateDirectories: true)
         }
     }
 
@@ -120,15 +120,15 @@ final class EventIngestionManager: @unchecked Sendable {
     // MARK: - File System Watching
 
     private func startWatching() {
-        let fd = open(dropDirectoryURL.path, O_EVTONLY)
-        guard fd >= 0 else {
+        let fileDescriptor = open(dropDirectoryURL.path, O_EVTONLY)
+        guard fileDescriptor >= 0 else {
             logger.error("Failed to open directory for monitoring: \(self.dropDirectoryURL.path, privacy: .public)")
             return
         }
-        directoryFileDescriptor = fd
+        directoryFileDescriptor = fileDescriptor
 
         let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
+            fileDescriptor: fileDescriptor,
             eventMask: .write,
             queue: processingQueue
         )
@@ -146,8 +146,8 @@ final class EventIngestionManager: @unchecked Sendable {
         }
 
         source.setCancelHandler { [weak self] in
-            if let fd = self?.directoryFileDescriptor, fd >= 0 {
-                close(fd)
+            if let fileDescriptor = self?.directoryFileDescriptor, fileDescriptor >= 0 {
+                close(fileDescriptor)
                 self?.directoryFileDescriptor = -1
             }
         }
@@ -165,9 +165,9 @@ final class EventIngestionManager: @unchecked Sendable {
 
     /// Scans the drop directory for JSON files and processes each one.
     func processExistingFiles() {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
-        guard let contents = try? fm.contentsOfDirectory(
+        guard let contents = try? fileManager.contentsOfDirectory(
             at: dropDirectoryURL,
             includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
             options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
@@ -194,10 +194,10 @@ final class EventIngestionManager: @unchecked Sendable {
     /// Processes a single event JSON file.
     /// - Parameter fileURL: The URL of the JSON file to process.
     func processFile(at fileURL: URL) {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
         // Check file age to handle concurrent writes
-        if let attributes = try? fm.attributesOfItem(atPath: fileURL.path),
+        if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
            let modDate = attributes[.modificationDate] as? Date {
             let age = Date().timeIntervalSince(modDate)
             if age < Self.minimumFileAge {
@@ -216,11 +216,11 @@ final class EventIngestionManager: @unchecked Sendable {
         // Empty files: if old enough, delete them (failed hook writes).
         // If very recent, skip — the hook may still be writing.
         if data.isEmpty {
-            if let attributes = try? fm.attributesOfItem(atPath: fileURL.path),
+            if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
                let modDate = attributes[.modificationDate] as? Date,
                Date().timeIntervalSince(modDate) > 5.0 {
                 logger.debug("Deleting empty file: \(fileURL.lastPathComponent, privacy: .public)")
-                try? fm.removeItem(at: fileURL)
+                try? fileManager.removeItem(at: fileURL)
             }
             return
         }
@@ -236,10 +236,17 @@ final class EventIngestionManager: @unchecked Sendable {
         do {
             try ingestEvent(eventFile, rawData: data)
             // Delete the consumed file
-            try fm.removeItem(at: fileURL)
-            logger.debug("Ingested \(eventFile.event, privacy: .public) for session \(eventFile.sessionId, privacy: .public) from \(fileURL.lastPathComponent, privacy: .public)")
+            try fileManager.removeItem(at: fileURL)
+            logger.debug(
+                "Ingested \(eventFile.event, privacy: .public) for session " +
+                "\(eventFile.sessionId, privacy: .public) " +
+                "from \(fileURL.lastPathComponent, privacy: .public)"
+            )
         } catch {
-            logger.error("Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error(
+                "Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): " +
+                "\(error.localizedDescription, privacy: .public)"
+            )
             moveToErrors(fileURL)
         }
     }
@@ -333,21 +340,21 @@ final class EventIngestionManager: @unchecked Sendable {
 
     /// Moves a file to the errors subdirectory.
     private func moveToErrors(_ fileURL: URL) {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let destination = errorsDirectoryURL.appendingPathComponent(fileURL.lastPathComponent)
 
         do {
             try ensureDirectoriesExist()
             // If a file with the same name already exists in errors, remove it first
-            if fm.fileExists(atPath: destination.path) {
-                try fm.removeItem(at: destination)
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
             }
-            try fm.moveItem(at: fileURL, to: destination)
+            try fileManager.moveItem(at: fileURL, to: destination)
             logger.info("Moved malformed file to errors/: \(fileURL.lastPathComponent, privacy: .public)")
         } catch {
             logger.error("Failed to move file to errors directory: \(error.localizedDescription, privacy: .public)")
             // Last resort: try to delete the problematic file
-            try? fm.removeItem(at: fileURL)
+            try? fileManager.removeItem(at: fileURL)
         }
     }
 }
