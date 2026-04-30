@@ -33,7 +33,6 @@ public final class AIPluginManager {
     /// App name used for the per-plugin data directory.
     private let appName: String
 
-
     // MARK: - Errors
 
     public enum AIPluginError: Error, LocalizedError {
@@ -132,7 +131,7 @@ public final class AIPluginManager {
     }
 
     // MARK: - Loading
-    
+
     public func loadAllPlugins() throws -> [any AIPlugin] {
         var plugins: [any AIPlugin] = []
         for availablePlugin in availablePlugins {

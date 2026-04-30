@@ -60,7 +60,6 @@ public final class QuickNoteWindowController: NSWindowController {
         return btn
     }()
 
-
     // MARK: - Initialization
 
     public init(onSave: @escaping (String, String) -> Void) {
@@ -111,7 +110,7 @@ public final class QuickNoteWindowController: NSWindowController {
 
             saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
             saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            saveButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
+            saveButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 60)
         ])
     }
 

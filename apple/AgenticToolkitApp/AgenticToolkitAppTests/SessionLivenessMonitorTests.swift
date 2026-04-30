@@ -14,8 +14,8 @@ final class SessionLivenessMonitorTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try SessionsDatabaseManager(path: dbPath)
-        monitor = SessionLivenessMonitor(SessionsDatabaseManager: dbManager)
+        dbManager = try sessionsDatabaseManager(path: dbPath)
+        monitor = SessionLivenessMonitor(sessionsDatabaseManager: dbManager)
     }
 
     override func tearDownWithError() throws {

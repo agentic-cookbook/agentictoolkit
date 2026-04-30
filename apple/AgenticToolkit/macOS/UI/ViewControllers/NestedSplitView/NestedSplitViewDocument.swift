@@ -4,7 +4,6 @@ import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import os
 
-
 public class NestedSplitViewDocument: NSDocument {
 
     public nonisolated static let databaseFilename = "project.sqlite"

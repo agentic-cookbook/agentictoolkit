@@ -8,7 +8,6 @@ extension ComposableSettings {
         public let textField: NSTextField
 
         private let viewModel: ViewModel<String>
-        
 
         public init(with viewModel: ViewModel<String>) {
             self.viewModel = viewModel

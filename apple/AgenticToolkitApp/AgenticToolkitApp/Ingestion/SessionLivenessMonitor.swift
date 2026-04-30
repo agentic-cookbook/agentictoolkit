@@ -23,7 +23,7 @@ final class SessionLivenessMonitor {
 
     // MARK: - Properties
 
-    private let SessionsDatabaseManager: SessionsDatabaseManager
+    private let sessionsDatabaseManager: SessionsDatabaseManager
     private var timer: DispatchSourceTimer?
     private let queue = DispatchQueue(
         label: "com.mikefullerton.agentic-plugin-tester.liveness",
@@ -47,9 +47,9 @@ final class SessionLivenessMonitor {
     // MARK: - Initialization
 
     /// Creates a liveness monitor that uses the given database manager.
-    /// - Parameter SessionsDatabaseManager: The database manager for querying and updating sessions.
-    init(SessionsDatabaseManager: SessionsDatabaseManager) {
-        self.SessionsDatabaseManager = SessionsDatabaseManager
+    /// - Parameter sessionsDatabaseManager: The database manager for querying and updating sessions.
+    init(sessionsDatabaseManager: SessionsDatabaseManager) {
+        self.sessionsDatabaseManager = sessionsDatabaseManager
     }
 
     deinit {
@@ -91,7 +91,7 @@ final class SessionLivenessMonitor {
     /// Reads the staleness timeout from settings, falling back to the default.
     func currentTimeout() -> TimeInterval {
         do {
-            if let value = try SessionsDatabaseManager.getSetting(key: Self.stalenessTimeoutKey),
+            if let value = try sessionsDatabaseManager.getSetting(key: Self.stalenessTimeoutKey),
                let seconds = TimeInterval(value), seconds > 0 {
                 return seconds
             }
@@ -113,9 +113,9 @@ final class SessionLivenessMonitor {
 
         do {
             // Capture sessions that are about to go stale (for per-session callbacks)
-            let aboutToGoStale = try SessionsDatabaseManager.fetchActiveSessionsPastTimeout(timeout)
+            let aboutToGoStale = try sessionsDatabaseManager.fetchActiveSessionsPastTimeout(timeout)
 
-            let count = try SessionsDatabaseManager.markStaleSessions(olderThan: timeout)
+            let count = try sessionsDatabaseManager.markStaleSessions(olderThan: timeout)
             if count > 0 {
                 logger.info("Marked \(count) session(s) as stale (timeout: \(timeout)s)")
                 onSessionsMarkedStale?(count)
@@ -141,12 +141,12 @@ final class SessionLivenessMonitor {
     @discardableResult
     private func performPidLivenessCheck() -> Int {
         do {
-            let sessions = try SessionsDatabaseManager.fetchLiveSessionsWithPid()
+            let sessions = try sessionsDatabaseManager.fetchLiveSessionsWithPid()
             var endedCount = 0
 
             for session in sessions {
                 if !isProcessAlive(pid: session.pid) {
-                    try SessionsDatabaseManager.updateSessionStatus(
+                    try sessionsDatabaseManager.updateSessionStatus(
                         sessionId: session.sessionId,
                         status: .ended
                     )
@@ -174,10 +174,10 @@ final class SessionLivenessMonitor {
     /// Ends stale sessions that have no PID (pid = 0). These cannot be verified
     /// as alive, so once they go stale they should be cleaned up.
     private func endStalePidlessSessions() throws -> Int {
-        let allSessions = try SessionsDatabaseManager.fetchAllSessions()
+        let allSessions = try sessionsDatabaseManager.fetchAllSessions()
         let stalePidless = allSessions.filter { $0.status == .stale && $0.pid <= 0 }
         for session in stalePidless {
-            try SessionsDatabaseManager.updateSessionStatus(
+            try sessionsDatabaseManager.updateSessionStatus(
                 sessionId: session.sessionId,
                 status: .ended
             )

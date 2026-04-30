@@ -79,7 +79,7 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
             bottomBar.heightAnchor.constraint(equalToConstant: 28),
 
             addButton.leadingAnchor.constraint(equalTo: bottomBar.leadingAnchor, constant: 8),
-            addButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
+            addButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor)
         ])
 
         self.view = container
@@ -116,7 +116,6 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
         cell.configure(with: session)
         return cell
     }
-
 
     public func tableViewSelectionDidChange(_ notification: Notification) {
         let selectedRow = tableView.selectedRow

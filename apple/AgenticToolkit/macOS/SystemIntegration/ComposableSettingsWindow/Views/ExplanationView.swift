@@ -7,8 +7,6 @@ extension ComposableSettings {
     public class ExplanationView: NSView, SettingsViewProtocol {
         public let label: NSTextField
 
-        
-
         public init(withText text: String) {
             self.label = Self.createLabel(title: text)
             super.init(frame: .zero)
@@ -24,7 +22,7 @@ extension ComposableSettings {
                 self.label.topAnchor.constraint(equalTo: self.topAnchor),
                 self.label.leadingAnchor.constraint(equalTo: self.leadingAnchor),
                 self.label.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-                self.label.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+                self.label.bottomAnchor.constraint(equalTo: self.bottomAnchor)
             ])
         }
 

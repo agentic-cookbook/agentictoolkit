@@ -13,7 +13,6 @@ extension ComposableSettings {
         public let valueLabel: NSTextField
 
         private let viewModel: ChoiceViewModel<Value>
-        
 
         public init(viewModel: ChoiceViewModel<Value>) {
             self.viewModel = viewModel

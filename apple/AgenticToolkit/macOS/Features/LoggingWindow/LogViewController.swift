@@ -83,7 +83,7 @@ open class LogViewController: NSViewController {
             logView.topAnchor.constraint(equalTo: divider.bottomAnchor),
             logView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             logView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            logView.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            logView.bottomAnchor.constraint(equalTo: root.bottomAnchor)
         ])
 
         self.view = root
@@ -160,7 +160,7 @@ open class LogViewController: NSViewController {
             trailing.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
             statusDot.widthAnchor.constraint(equalToConstant: 8),
-            statusDot.heightAnchor.constraint(equalToConstant: 8),
+            statusDot.heightAnchor.constraint(equalToConstant: 8)
         ])
         return container
     }

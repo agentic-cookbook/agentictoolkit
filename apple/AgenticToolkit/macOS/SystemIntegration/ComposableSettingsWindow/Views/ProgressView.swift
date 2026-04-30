@@ -8,7 +8,7 @@ extension ComposableSettings {
         public let progressIndicator: NSProgressIndicator
 
         private let viewModel: ProgressViewModel
-        
+
         private var cancellable: AnyCancellable?
 
         public init(viewModel: ProgressViewModel) {

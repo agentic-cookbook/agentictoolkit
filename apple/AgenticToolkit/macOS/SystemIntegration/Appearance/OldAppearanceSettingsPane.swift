@@ -101,7 +101,7 @@ final class OldAppearanceSettingsPane: OldSettingsPanelView {
             divider.widthAnchor.constraint(equalTo: stack.widthAnchor),
             sliderRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             preview.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            preview.heightAnchor.constraint(equalToConstant: 32),
+            preview.heightAnchor.constraint(equalToConstant: 32)
         ])
     }
 

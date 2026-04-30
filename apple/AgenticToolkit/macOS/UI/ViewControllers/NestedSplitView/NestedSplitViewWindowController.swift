@@ -3,7 +3,6 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
-
 /// Document window for `.whiproj` packages. All document windows share a
 /// single `WindowManager` spec so frame geometry persists in the app
 /// preferences (not per-document) — content layout (the per-tab nested

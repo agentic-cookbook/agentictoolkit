@@ -99,15 +99,13 @@ public enum TextSize: String, CaseIterable, Sendable, Codable, Equatable {
 }
 
 extension UserSettings {
-    
-     
+
     /// Whether the dock icon is visible.
     static public var showDockIcon = UserSetting<Bool>("show_dock_icon", default: false)
-    
+
     /// Appearance mode: "light" / "dark" / "auto".
     static public var appearanceMode = UserSetting<AppearanceMode>("appearance_mode", default: .auto)
-    
+
     /// Discrete text-size scale (xSmall…xxxLarge).
     static public var textSize = UserSetting<TextSize>("text_size", default: .medium)
 }
-

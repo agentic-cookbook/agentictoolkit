@@ -20,7 +20,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
     public let availableModels = [
         "claude-haiku-4-5-20251001",
         "claude-sonnet-4-6",
-        "claude-opus-4-6",
+        "claude-opus-4-6"
     ]
 
     public let recommendedModel = "claude-haiku-4-5-20251001"
@@ -107,7 +107,7 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
             "model": model.isEmpty ? recommendedModel : model,
             "max_tokens": maxTokens > 0 ? maxTokens : 4096,
             "messages": apiMessages,
-            "stream": stream,
+            "stream": stream
         ]
         if let systemPrompt, !systemPrompt.isEmpty {
             body["system"] = systemPrompt

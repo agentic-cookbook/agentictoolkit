@@ -9,7 +9,7 @@ public struct AIRequestConfig {
     public let customBaseURL: String
     public let maxTokens: Int
     public let timeoutInterval: TimeInterval
-    
+
     public init(provider: AIProvider, model: String, apiKey: String, customBaseURL: String, maxTokens: Int, timeoutInterval: TimeInterval) {
         self.provider = provider
         self.model = model
@@ -46,10 +46,8 @@ public enum AIRequestBuilder {
             }
             return try buildOpenAIRequest(config: config, messages: messages, systemPrompt: systemPrompt,
                                           baseURL: config.customBaseURL)
-        case .claudeCLI:
+                                          case .claudeCLI:
             fatalError("This needs to be implemented")
-            
-            break
         }
     }
 
@@ -86,7 +84,7 @@ public enum AIRequestBuilder {
             }
         case .claudeCLI:
             // todo: fix this
-            
+
             break
         }
 
@@ -125,7 +123,7 @@ public enum AIRequestBuilder {
         var body: [String: Any] = [
             "model": config.model.isEmpty ? "claude-haiku-4-5-20251001" : config.model,
             "max_tokens": config.maxTokens,
-            "messages": messages,
+            "messages": messages
         ]
         if let systemPrompt, !systemPrompt.isEmpty {
             body["system"] = systemPrompt
@@ -160,7 +158,7 @@ public enum AIRequestBuilder {
         let body: [String: Any] = [
             "model": config.model.isEmpty ? defaultModel : config.model,
             "max_tokens": config.maxTokens,
-            "messages": allMessages,
+            "messages": allMessages
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -186,7 +184,7 @@ public enum AIRequestBuilder {
 
         var body: [String: Any] = [
             "contents": contents,
-            "generationConfig": ["maxOutputTokens": config.maxTokens],
+            "generationConfig": ["maxOutputTokens": config.maxTokens]
         ]
         if let systemPrompt, !systemPrompt.isEmpty {
             body["systemInstruction"] = ["parts": [["text": systemPrompt]]]

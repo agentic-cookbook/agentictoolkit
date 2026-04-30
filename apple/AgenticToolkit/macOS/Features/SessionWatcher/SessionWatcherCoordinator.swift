@@ -3,7 +3,7 @@ import OSLog
 import AgenticToolkitCore
 
 extension SessionWatcher {
-    
+
     /// Owns the SessionWatcher feature stack — database, event ingestion, liveness
     /// monitor, notification manager, summarizer, and shell hook installer — plus
     /// the panel window controller it drives. Wires every cross-feature callback
@@ -17,7 +17,7 @@ extension SessionWatcher {
     /// Scripting reaches for.
     @MainActor
     public final class SessionWatcherCoordinator: AppFeature {
-        
+
         public let databaseManager: SessionWatcherDatabaseManager
         public let ingestionManager: SessionWatcherEventIngestionManager
         public let livenessMonitor: SessionWatcherLivenessMonitor
@@ -25,7 +25,7 @@ extension SessionWatcher {
         public let summarizer: SessionWatcherSummarizer
         public let hookInstaller: SessionWatcherHookInstaller
         public let windowController: SessionWatcherWindowController
-        
+
         public init(
             settingsStore: SettingsStore = UserSettings.shared
         ) {
@@ -39,7 +39,7 @@ extension SessionWatcher {
                                                                 settingsStore: settingsStore)
             self.hookInstaller       = SessionWatcherHookInstaller()
             super.init()
-            
+
             self.menuContributions =  [
                 MenuContribution(slot: .window, title: "Session Window", order: 10, key: "1") { [weak self] in
                     self?.windowController.togglePanel()
@@ -52,9 +52,9 @@ extension SessionWatcher {
                 },
                 MenuContribution(slot: .statusItem(section: 3), title: "Test Window Activation", order: 0, key: "t") { [weak self] in
                     self?.runWindowActivationTest()
-                },
+                }
             ]
-            
+
             self.scriptingKeys = [
                 "sessions",
                 "scriptingSettings",
@@ -62,18 +62,18 @@ extension SessionWatcher {
                 "scriptingActiveSessionCount",
                 "scriptingPanelVisible",
                 "scriptingPanelFloating",
-                "scriptingPanelTransparency",
+                "scriptingPanelTransparency"
             ]
-            
+
             windowController.setSessionSummarizer(self.summarizer)
             ingestionManager.sessionSummarizer = summarizer
-            
+
             self.wireNotifications()
             self.wireIngestionToPanelErrors()
         }
-        
+
         // MARK: - AppFeature
-        
+
         /// Boot order: refresh shell hooks, request notification authorization,
         /// start ingestion + liveness, then trigger a one-shot summarize-existing
         /// pass for sessions that already had data when the app launched.
@@ -87,26 +87,25 @@ extension SessionWatcher {
             case .alreadyInstalled: Self.logger.info("Hooks already installed")
             case .failed(let err):  Self.logger.error("Hook install failed: \(err, privacy: .public)")
             }
-            
+
             notificationManager.requestAuthorization()
             try ingestionManager.start()
             livenessMonitor.start()
             ingestionManager.summarizeExistingSessions()
-            
+
             if SessionWatcherWindowController.shouldShowOnLaunch() {
                 windowController.showPanel()
             }
         }
-        
+
         /// Graceful shutdown — stop the long-running monitors before the app exits.
         public override func stop() {
             livenessMonitor.stop()
             ingestionManager.stop()
         }
-        
+
         // MARK: - MenuContributor
-        
-     
+
 //        private func showWindowDiscovery() {
 //            guard let vm = windowController.viewModel else { return }
 //            let allSessions = vm.groups.flatMap(\.sessions)
@@ -116,7 +115,7 @@ extension SessionWatcher {
 //                windowController.showWindowDiscovery(for: session)
 //            }
 //        }
-        
+
         private func runWindowActivationTest() {
             let sessions = (try? databaseManager.fetchAllSessions()) ?? []
             let targets: [WindowActivationTarget] = sessions
@@ -144,9 +143,9 @@ extension SessionWatcher {
                 }
             }
         }
-        
+
         // MARK: - ScriptingContributor
-    
+
         public override func value(forScriptingKey key: String) -> Any? {
             switch key {
             case "sessions":
@@ -169,7 +168,7 @@ extension SessionWatcher {
                 return nil
             }
         }
-        
+
         public override func setValue(_ value: Any?, forScriptingKey key: String) {
             switch key {
             case "scriptingPanelVisible":
@@ -182,21 +181,21 @@ extension SessionWatcher {
                 break
             }
         }
-        
+
         /// Cocoa Scripting indexed accessor: `tell application "Whippet" to get session "X"`.
         public func session(uniqueID: String) -> ScriptableSession? {
             guard let session = try? databaseManager.fetchSession(bySessionId: uniqueID) else { return nil }
             return ScriptableSession(session: session)
         }
-        
+
         /// Cocoa Scripting indexed accessor: `tell application "Whippet" to get setting "X"`.
         public func scriptableSetting(named name: String) -> ScriptableSetting? {
             let v = (try? databaseManager.getSetting(key: name)) ?? nil
             return ScriptableSetting(name: name, value: v ?? "", SessionWatcherDatabaseManager: databaseManager)
         }
-        
+
         // MARK: - Internal wiring
-        
+
         private func wireNotifications() {
             ingestionManager.onEventIngested = { [weak self] eventType, sessionId, projectName in
                 guard let self else { return }
@@ -219,7 +218,7 @@ extension SessionWatcher {
                 self?.windowController.showPanel()
             }
         }
-        
+
         private func wireIngestionToPanelErrors() {
             ingestionManager.onSummarizerError = { [weak self] message in
                 guard let self else { return }

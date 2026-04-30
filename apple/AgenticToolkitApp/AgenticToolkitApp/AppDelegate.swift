@@ -85,7 +85,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupDatabase() {
         do {
-            sessionsDatabaseManager = try SessionsDatabaseManager()
+            sessionsDatabaseManager = try sessionsDatabaseManager()
             logger.info("Database initialized")
         } catch {
             logger.error("Failed to initialize database: \(error.localizedDescription, privacy: .public)")
@@ -108,7 +108,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         logger.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
 
         // Configure the standalone settings window
-        settingsWindowController.configure(SessionsDatabaseManager: db, pluginManager: pm)
+        settingsWindowController.configure(sessionsDatabaseManager: db, pluginManager: pm)
 
         // Apply saved appearance mode
         if let mode = try? db.getSetting(key: SettingsViewModel.appearanceModeKey) {
@@ -148,7 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        notificationManager = NotificationManager(SessionsDatabaseManager: db)
+        notificationManager = NotificationManager(sessionsDatabaseManager: db)
         notificationManager?.requestAuthorization()
         logger.debug("Notification manager configured")
     }
@@ -161,7 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        ingestionManager = EventIngestionManager(SessionsDatabaseManager: db)
+        ingestionManager = EventIngestionManager(sessionsDatabaseManager: db)
 
         // Wire per-event callback for notifications
         ingestionManager?.onEventIngested = { [weak self] eventType, sessionId, projectName in
@@ -191,7 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        livenessMonitor = SessionLivenessMonitor(SessionsDatabaseManager: db)
+        livenessMonitor = SessionLivenessMonitor(sessionsDatabaseManager: db)
 
         // Wire per-session stale callback for notifications
         livenessMonitor?.onSessionMarkedStale = { [weak self] sessionId, projectName in

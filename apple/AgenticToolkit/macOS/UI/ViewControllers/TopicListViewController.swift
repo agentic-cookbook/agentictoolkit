@@ -238,7 +238,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
         cell.textField = textField
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 2),
-            textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
         ])
         return cell
     }
@@ -268,7 +268,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
 
             textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
             textField.trailingAnchor.constraint(lessThanOrEqualTo: cell.trailingAnchor, constant: -4),
-            textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
         ])
 
         return cell

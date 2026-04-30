@@ -40,7 +40,7 @@ public enum NestedContentRegistry {
 
     private static let placeholderTints: [NSColor] = [
         .systemTeal, .systemOrange, .systemPurple, .systemPink,
-        .systemGreen, .systemIndigo, .systemYellow, .systemBrown,
+        .systemGreen, .systemIndigo, .systemYellow, .systemBrown
     ]
 
     private static func makePlaceholderView(paneNumber: Int) -> NSView {
@@ -55,7 +55,7 @@ public enum NestedContentRegistry {
         container.addSubview(title)
         NSLayoutConstraint.activate([
             title.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            title.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            title.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         ])
         return container
     }

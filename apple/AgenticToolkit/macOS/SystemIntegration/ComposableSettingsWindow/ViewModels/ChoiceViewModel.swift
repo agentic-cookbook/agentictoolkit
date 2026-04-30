@@ -19,7 +19,7 @@ extension ComposableSettings {
 }
 
 extension ComposableSettings.ChoiceViewModel {
-    
+
     /// A label/value pair for a `ChoiceViewModel`. Optionally carries a system
     /// symbol name; views that support iconography render it next to the label.
     public struct Choice: Sendable {

@@ -116,7 +116,7 @@ public final class NotesListViewController: NSViewController {
             scrollView.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: 4),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
@@ -244,7 +244,7 @@ public final class NoteListCellView: NSTableCellView {
 
             previewLabel.topAnchor.constraint(equalTo: dateLabel.bottomAnchor, constant: 2),
             previewLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            previewLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            previewLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12)
         ])
     }
 

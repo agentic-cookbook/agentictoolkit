@@ -164,7 +164,7 @@ extension ProjectSettings {
             ("fileTreeProportion", String(fileTreeProportion)),
             ("isFileTreeVisible", String(isFileTreeVisible)),
             ("defaultSessionLayout", layoutJSON),
-            ("detectedIDEs", (try? String(data: JSONEncoder().encode(detectedIDEs), encoding: .utf8)) ?? "[]"),
+            ("detectedIDEs", (try? String(data: JSONEncoder().encode(detectedIDEs), encoding: .utf8)) ?? "[]")
         ]
     }
 }

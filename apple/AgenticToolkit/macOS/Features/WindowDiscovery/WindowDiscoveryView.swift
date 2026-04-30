@@ -43,7 +43,7 @@ public final class WindowDiscoveryView: NSView {
             titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 12),
             titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             projectBadge.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -12),
-            projectBadge.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            projectBadge.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
         ])
 
         let divider = NSBox()
@@ -68,7 +68,7 @@ public final class WindowDiscoveryView: NSView {
             contentContainer.topAnchor.constraint(equalTo: divider.bottomAnchor),
             contentContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
             contentContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
-            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 
@@ -131,7 +131,7 @@ public final class WindowDiscoveryView: NSView {
         contentContainer.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: contentContainer.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
+            stack.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor)
         ])
     }
 
@@ -169,7 +169,7 @@ public final class WindowDiscoveryView: NSView {
         contentContainer.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: contentContainer.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
+            stack.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor)
         ])
     }
 
@@ -207,7 +207,7 @@ public final class WindowDiscoveryView: NSView {
             scrollView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
-            stack.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            stack.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
     }
 }
@@ -263,7 +263,7 @@ public final class DiscoveredAppSectionView: NSView {
             iconView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 iconView.widthAnchor.constraint(equalToConstant: 16),
-                iconView.heightAnchor.constraint(equalToConstant: 16),
+                iconView.heightAnchor.constraint(equalToConstant: 16)
             ])
             headerStack.addArrangedSubview(iconView)
         }
@@ -295,7 +295,7 @@ public final class DiscoveredAppSectionView: NSView {
             headerStack.topAnchor.constraint(equalTo: headerContainer.topAnchor),
             headerStack.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
             headerStack.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
-            headerStack.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor),
+            headerStack.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor)
         ])
         outerStack.addArrangedSubview(headerContainer)
 
@@ -317,7 +317,7 @@ public final class DiscoveredAppSectionView: NSView {
             outerStack.topAnchor.constraint(equalTo: topAnchor),
             outerStack.leadingAnchor.constraint(equalTo: leadingAnchor),
             outerStack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            outerStack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            outerStack.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 
@@ -388,7 +388,7 @@ public final class DiscoveredWindowRowView: NSView {
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 

@@ -16,16 +16,16 @@ public final class AIChatCoordinator: AppFeature {
     public init(makeBackend: @escaping () -> ChatBackend) {
         self.makeBackend = makeBackend
         super.init()
-        
+
         self.menuContributions = [
             MenuContribution(slot: .window, title: "AI Chat", order: 30, key: "3") { [weak self] in
                 self?.showWindow()
             },
             MenuContribution(slot: .statusItem(section: 1), title: "AI Chat", order: 20) { [weak self] in
                 self?.showWindow()
-            },
+            }
         ]
-        
+
         self.scriptingKeys.insert("scriptingAIChatVisible")
         self.scriptingKeys.insert("scriptingChatViewModel")
     }

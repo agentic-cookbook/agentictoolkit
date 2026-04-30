@@ -71,7 +71,7 @@ public class UserSettingObserver<Value: Codable & Sendable> {
                 self.onChange?(newValue)
             }
     }
-    
+
 }
 
 @propertyWrapper

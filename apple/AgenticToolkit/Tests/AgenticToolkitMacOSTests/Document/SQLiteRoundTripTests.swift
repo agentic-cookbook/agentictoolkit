@@ -1,7 +1,5 @@
 import AgenticToolkitMacOS
 import XCTest
-@testable import AgenticToolkitMacOS
-
 final class SQLiteRoundTripTests: XCTestCase {
 
     // MARK: - Project

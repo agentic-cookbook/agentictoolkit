@@ -15,7 +15,7 @@ extension ComposableSettings {
             self.translatesAutoresizingMaskIntoConstraints = false
             self.wantsLayer = true
             NSLayoutConstraint.activate([
-                self.heightAnchor.constraint(equalToConstant: SettingsLayout.default[.dividerThickness]),
+                self.heightAnchor.constraint(equalToConstant: SettingsLayout.default[.dividerThickness])
             ])
         }
 

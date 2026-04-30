@@ -8,9 +8,9 @@
 @MainActor
 public protocol StorableSetting<Value> {
     associatedtype Value: Codable & Sendable
-    
+
     var name: String { get }
     var isSecure: Bool { get }
-    
+
     var defaultValue: Value { get }
 }

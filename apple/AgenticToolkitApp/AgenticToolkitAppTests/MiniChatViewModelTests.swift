@@ -1,6 +1,5 @@
 import XCTest
 import AgenticToolkitAIPlugins
-import AgenticToolkitAIPlugins
 @testable import AgenticToolkitApp
 
 final class ChatViewModelIntegrationTests: XCTestCase {
@@ -129,7 +128,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
             chatView.topAnchor.constraint(equalTo: window.contentView!.topAnchor),
             chatView.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor),
             chatView.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor),
-            chatView.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor),
+            chatView.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor)
         ])
         window.layoutIfNeeded()
 

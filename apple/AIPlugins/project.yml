@@ -32,10 +32,24 @@ projectReferences:
   AgenticToolkit:
     path: ../AgenticToolkit/AgenticToolkit.xcodeproj
 
+targetTemplates:
+  SwiftLint:
+    preBuildScripts:
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          if which swiftlint >/dev/null; then
+            swiftlint lint --quiet
+          else
+            echo "warning: SwiftLint not installed; brew install swiftlint to enable"
+          fi
+
 targets:
   AIPluginsShared:
     type: framework
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - AIPluginsShared
     settings:
@@ -44,7 +58,7 @@ targets:
         PRODUCT_NAME: $(TARGET_NAME:c99extidentifier)
         DEVELOPMENT_TEAM: K2NA732JAX
         CODE_SIGN_STYLE: Automatic
-        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         ENABLE_MODULE_VERIFIER: YES
         GENERATE_INFOPLIST_FILE: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: NO
@@ -74,6 +88,8 @@ targets:
   AIPluginsSharedTests:
     type: bundle.unit-test
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - AIPluginsSharedTests
     settings:
@@ -81,7 +97,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentictoolkit.AIPluginsSharedTests
         DEVELOPMENT_TEAM: K2NA732JAX
         CODE_SIGN_STYLE: Automatic
-        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: AIPluginsShared
@@ -90,6 +106,8 @@ targets:
   ClaudeAPI:
     type: bundle
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: ClaudeAPI
         excludes:
@@ -123,6 +141,8 @@ targets:
   ClaudeLocal:
     type: bundle
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: ClaudeLocal
         excludes:
@@ -156,6 +176,8 @@ targets:
   Google:
     type: bundle
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: Google
         excludes:
@@ -189,6 +211,8 @@ targets:
   OpenAI:
     type: bundle
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: OpenAI
         excludes:
@@ -222,6 +246,8 @@ targets:
   OpenAICompatible:
     type: bundle
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: OpenAICompatible
         excludes:

@@ -1809,7 +1809,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_9C51C4A5-09F0-4F0D-A1F7-2B10356DEA19" /* Settings */ = {
+		"TEMP_9C2848D8-ABAE-419A-AF5A-A34C06621AFD" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -1823,6 +1823,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = E0AE7651C7F41FEFEE314F98 /* Build configuration list for PBXNativeTarget "AgenticToolkitCore" */;
 			buildPhases = (
+				0CB7C7BA0D8FFB9F5292C955 /* SwiftLint */,
 				409B4F00ADB5C79B0ACB8E66 /* Sources */,
 			);
 			buildRules = (
@@ -1840,6 +1841,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 62CFF62F4E1BBFE7DA536B31 /* Build configuration list for PBXNativeTarget "AgenticToolkitCoreUITests" */;
 			buildPhases = (
+				835CFF67F53CF8028023092B /* SwiftLint */,
 				3C1EED3E0EE80CF439E33970 /* Sources */,
 				CF5EEE65E5433C994E72614F /* Frameworks */,
 				38ECD57C19332655ACA81FC5 /* Embed Frameworks */,
@@ -1861,6 +1863,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CD17837CCC4E62D06A4FAD5E /* Build configuration list for PBXNativeTarget "AgenticToolkitCoreMacOS" */;
 			buildPhases = (
+				1C23B8D3450F96B9442E7BC7 /* SwiftLint */,
 				CE1C3A5E4C5DB733ADD0216E /* Sources */,
 				1781B957947E471FDECBED28 /* Frameworks */,
 			);
@@ -1881,6 +1884,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0CD71D8047BD58426C861410 /* Build configuration list for PBXNativeTarget "AgenticToolkitMacOS" */;
 			buildPhases = (
+				75FDCAA2E3E8CCDEDD50BB63 /* SwiftLint */,
 				1B546FB4C20F18C7F3C8F8FA /* Sources */,
 				15D9DB783B8C089D2715D3AA /* Frameworks */,
 			);
@@ -1905,6 +1909,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1A998A83945235291EAA0EBC /* Build configuration list for PBXNativeTarget "AgenticToolkitCoreUI" */;
 			buildPhases = (
+				D09D165CF365247E19E8026C /* SwiftLint */,
 				D2569B30C40776A633594FB0 /* Sources */,
 				0DF9F926F6C861876A5FCF80 /* Frameworks */,
 			);
@@ -1924,6 +1929,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 758128D5FB1CA8BE4C6A8155 /* Build configuration list for PBXNativeTarget "AgenticToolkitCoreMacOSTests" */;
 			buildPhases = (
+				8D4E21DE2A796F4F472900C9 /* SwiftLint */,
 				5A97A048E94A55DC62800F33 /* Sources */,
 				19ECF9FEACEAC7CC45DE58E1 /* Frameworks */,
 				6313C890CCD8344E8929F726 /* Embed Frameworks */,
@@ -1945,6 +1951,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = F275BFC4EC030B98B15DA556 /* Build configuration list for PBXNativeTarget "AgenticToolkitCoreTests" */;
 			buildPhases = (
+				D6A593F9653C8F8BAAA44DD5 /* SwiftLint */,
 				014E20509C40314B35F937E3 /* Sources */,
 				83813E2BB5774CAC6661D582 /* Frameworks */,
 				36554F139FD6BAD168102331 /* Embed Frameworks */,
@@ -1965,6 +1972,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = F74EC81451A6FCA2350EA570 /* Build configuration list for PBXNativeTarget "AgenticToolkitMacOSTests" */;
 			buildPhases = (
+				B9D4727FA6ACB079D005CC8C /* SwiftLint */,
 				B586059C45F644DBA9BEB4FF /* Sources */,
 				302024DA752617937018FC1E /* Frameworks */,
 				5E69B303960CA98BE8CE7800 /* Embed Frameworks */,
@@ -2027,6 +2035,161 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0CB7C7BA0D8FFB9F5292C955 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		1C23B8D3450F96B9442E7BC7 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		75FDCAA2E3E8CCDEDD50BB63 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		835CFF67F53CF8028023092B /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		8D4E21DE2A796F4F472900C9 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		B9D4727FA6ACB079D005CC8C /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		D09D165CF365247E19E8026C /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		D6A593F9653C8F8BAAA44DD5 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		014E20509C40314B35F937E3 /* Sources */ = {
@@ -2727,7 +2890,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -2862,7 +3025,7 @@
 				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;

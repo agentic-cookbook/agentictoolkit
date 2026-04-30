@@ -4,7 +4,6 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
-
 public enum DocumentLayoutStoreError: Error {
     case openFailed(String)
     case prepareFailed(String)

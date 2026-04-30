@@ -1,14 +1,8 @@
 import AgenticToolkitCore
 import Foundation
 import os
-import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
-import Foundation
-
-/// Settings required to perform a summarization API call. The host app is responsible
-/// for reading these from UserDefaults / Keychain and passing them in, so the toolkit
-/// stays free of host-specific storage keys.
 public struct TerminalSessionSummarizationSettings: Sendable {
     public let enabled: Bool
     public let provider: AIProvider

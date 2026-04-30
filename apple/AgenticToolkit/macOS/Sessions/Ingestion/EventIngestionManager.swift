@@ -194,7 +194,7 @@ public class EventIngestionManager: @unchecked Sendable {
 
         if !jsonFiles.isEmpty {
             onEventsIngested?()
-            
+
             // TODO: remove this coupling
             SessionWatcher.SessionListViewModel.notifySessionsChanged()
         }

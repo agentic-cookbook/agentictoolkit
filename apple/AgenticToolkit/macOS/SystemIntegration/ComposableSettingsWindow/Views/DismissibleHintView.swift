@@ -13,7 +13,6 @@ extension ComposableSettings {
         public let dismissButton: NSButton
 
         private let observer: UserSettingObserver<Bool>
-        
 
         public init(
             text: String,

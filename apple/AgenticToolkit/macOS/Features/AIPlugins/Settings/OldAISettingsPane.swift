@@ -33,9 +33,9 @@ final class AISettingsPane: OldSettingsPanelView {
 
     init(viewModel: WhippetSettingsViewModel) {
         self.viewModel = viewModel
-        
+
         let aiConfig = AIModelChatConfig(aiProvider: .anthropic, aiModel: "", aiBaseURL: "", apiKey: "", aiSummariesEnabled: false)
-        
+
         let backend = WhippetChatBackend(aiInfo: aiConfig)
         self.chatViewModel = ChatViewModel(backend: backend)
         super.init(frame: .zero)
@@ -195,7 +195,7 @@ final class AISettingsPane: OldSettingsPanelView {
             baseURLField.widthAnchor.constraint(equalTo: baseURLContainer.widthAnchor),
             chatHeaderRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             chatView.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            chatView.heightAnchor.constraint(greaterThanOrEqualToConstant: 240),
+            chatView.heightAnchor.constraint(greaterThanOrEqualToConstant: 240)
         ])
     }
 

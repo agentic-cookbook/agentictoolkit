@@ -22,7 +22,7 @@ final class SessionRowViewTests: XCTestCase {
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             row.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.topAnchor.constraint(equalTo: container.topAnchor)
         ])
         container.layoutSubtreeIfNeeded()
 
@@ -46,7 +46,7 @@ final class SessionRowViewTests: XCTestCase {
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             row.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.topAnchor.constraint(equalTo: container.topAnchor)
         ])
         container.layoutSubtreeIfNeeded()
 
@@ -78,7 +78,7 @@ final class SessionRowViewTests: XCTestCase {
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             row.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.topAnchor.constraint(equalTo: container.topAnchor)
         ])
         container.layoutSubtreeIfNeeded()
 
@@ -107,7 +107,7 @@ final class SessionRowViewTests: XCTestCase {
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             row.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.topAnchor.constraint(equalTo: container.topAnchor)
         ])
         container.layoutSubtreeIfNeeded()
 
@@ -133,7 +133,7 @@ final class SessionRowViewTests: XCTestCase {
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             row.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.topAnchor.constraint(equalTo: container.topAnchor)
         ])
         container.layoutSubtreeIfNeeded()
 
@@ -188,7 +188,7 @@ final class SessionRowViewTests: XCTestCase {
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             row.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            row.topAnchor.constraint(equalTo: container.topAnchor),
+            row.topAnchor.constraint(equalTo: container.topAnchor)
         ])
         container.layoutSubtreeIfNeeded()
         return row

@@ -11,7 +11,7 @@ final class DatabaseManagerTests: XCTestCase {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try SessionsDatabaseManager(path: dbPath)
+        dbManager = try sessionsDatabaseManager(path: dbPath)
     }
 
     override func tearDownWithError() throws {
@@ -309,7 +309,7 @@ final class DatabaseManagerTests: XCTestCase {
         // Close and reopen with same path
         let dbPath = tempDir.appendingPathComponent("test.db").path
         dbManager.close()
-        dbManager = try SessionsDatabaseManager(path: dbPath)
+        dbManager = try sessionsDatabaseManager(path: dbPath)
 
         let tables = try dbManager.tableNames()
         // Count occurrences of each table name -- should have no duplicates

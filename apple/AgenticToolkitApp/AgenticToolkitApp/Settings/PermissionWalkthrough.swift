@@ -160,7 +160,7 @@ final class PermissionWalkthrough {
             stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             explanation.widthAnchor.constraint(lessThanOrEqualToConstant: 340),
             dot.widthAnchor.constraint(equalToConstant: 10),
-            dot.heightAnchor.constraint(equalToConstant: 10),
+            dot.heightAnchor.constraint(equalToConstant: 10)
         ])
 
         let w = NSWindow(

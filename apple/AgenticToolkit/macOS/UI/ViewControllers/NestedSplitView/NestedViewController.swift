@@ -54,7 +54,7 @@ public final class NestedViewController: NSViewController {
             content.bottomAnchor.constraint(equalTo: container.bottomAnchor),
 
             splitButton.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
-            splitButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8),
+            splitButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)
         ])
 
         self.view = container
@@ -87,6 +87,6 @@ public final class NestedViewController: NSViewController {
         ("Split Left", .left),
         ("Split Right", .right),
         ("Split Above", .above),
-        ("Split Below", .below),
+        ("Split Below", .below)
     ]
 }

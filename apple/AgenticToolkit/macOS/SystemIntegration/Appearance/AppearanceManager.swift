@@ -15,7 +15,7 @@ public final class AppearanceManager: AppFeature {
 
     public override init() {
         super.init()
-        
+
         modeObserver = UserSettingObserver(UserSettings.appearanceMode) { [weak self] mode in
             self?.applyAppearance(mode)
         }

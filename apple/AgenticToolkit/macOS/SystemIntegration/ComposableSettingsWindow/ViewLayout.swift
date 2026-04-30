@@ -9,10 +9,10 @@ extension ComposableSettings {
         case rowSpacing
         case dividerThickness
     }
-    
+
     @MainActor
     public final class SettingsLayout: Observable {
-        
+
         public static let `default` = SettingsLayout([
             .panelInset: 24.0,
             .groupSpacing: 16.0,
@@ -21,16 +21,16 @@ extension ComposableSettings {
         ])
 
         @Published public private(set) var values: [LayoutKey: CGFloat]
-        
+
         public init(_ values: [LayoutKey: CGFloat]) {
             self.values = values
         }
-        
+
         subscript(_ index: LayoutKey) -> Double {
             guard let value = values[index] else {
                 return 0.0
             }
-            
+
             return value
         }
     }
@@ -59,7 +59,7 @@ extension NSView {
             view.topAnchor.constraint(equalTo: container.topAnchor),
             view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            view.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
     }
 }

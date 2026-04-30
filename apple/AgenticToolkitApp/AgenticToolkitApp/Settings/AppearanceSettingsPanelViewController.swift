@@ -28,7 +28,7 @@ final class AppearanceSettingsPanelViewController: ComposableSettings.SettingsPa
             pane.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
             pane.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
             pane.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
-            pane.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -20),
+            pane.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -20)
         ])
         self.view = container
     }

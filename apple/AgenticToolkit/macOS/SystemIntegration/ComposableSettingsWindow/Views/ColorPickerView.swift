@@ -8,7 +8,6 @@ extension ComposableSettings {
         public let colorWell: NSColorWell
 
         private let viewModel: ColorViewModel
-        
 
         public init(viewModel: ColorViewModel) {
             self.viewModel = viewModel

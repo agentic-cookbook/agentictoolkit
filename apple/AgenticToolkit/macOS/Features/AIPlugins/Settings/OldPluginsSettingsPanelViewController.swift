@@ -43,7 +43,7 @@ public final class AIPluginsSettingsPanelViewController: OldSettingsPanelViewCon
             innerSettings.view.topAnchor.constraint(equalTo: view.topAnchor),
             innerSettings.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             innerSettings.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            innerSettings.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            innerSettings.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 }

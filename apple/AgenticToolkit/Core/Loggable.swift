@@ -8,8 +8,6 @@
 import Foundation
 import OSLog
 
-
-
 /// Mix this into any struct or class like this
 /*
  struct MyStruct {
@@ -21,7 +19,7 @@ import OSLog
  }
  */
 public protocol Loggable {
-    
+
     /// Implement this by simplly calling makeLogger
     /// public static let logger = makeLogger()
     static nonisolated var logger: Logger { get }
@@ -39,7 +37,7 @@ extension Loggable {
     public var logger: Logger {
         Self.logger
     }
-    
+
     public static func makeLogger() -> Logger {
         Logger(subsystem: self.subsystem, category: self.category)
     }
@@ -67,7 +65,7 @@ extension YourType: Loggable {
 /// - prefer using the instance llogger var over the static logger var, unless necessary
 
 struct CorrectUsageExample {
-    
+
     func myFunc() {
         logger.info("my func!")
     }

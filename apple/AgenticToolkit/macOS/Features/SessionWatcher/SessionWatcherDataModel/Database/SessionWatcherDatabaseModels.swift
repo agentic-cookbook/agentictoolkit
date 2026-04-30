@@ -2,7 +2,7 @@ import Foundation
 
 extension SessionWatcher {
     // MARK: - SessionWatcherSession
-    
+
     /// Represents a Claude Code session being monitored.
     public struct SessionWatcherSession: Equatable, Sendable {
         public var id: Int?
@@ -17,7 +17,7 @@ extension SessionWatcher {
         public var summary: String
         public var pid: Int32
         public var termProgram: String
-        
+
         public init(
             id: Int? = nil,
             sessionId: String,
@@ -45,7 +45,7 @@ extension SessionWatcher {
             self.pid = pid
             self.termProgram = termProgram
         }
-        
+
         /// Returns the best available description for this session.
         /// Priority: summary > gitBranch > last path component of cwd.
         public var displayLabel: String {
@@ -54,25 +54,25 @@ extension SessionWatcher {
             guard !cwd.isEmpty, cwd != "/" else { return "Unknown" }
             return (cwd as NSString).lastPathComponent
         }
-        
+
         /// Derives the project name from the last path component of the working directory.
         public var projectName: String {
             guard !cwd.isEmpty, cwd != "/" else { return "Unknown" }
             return (cwd as NSString).lastPathComponent
         }
     }
-    
+
     // MARK: - SessionWatcherSession Status
-    
+
     /// The lifecycle status of a session.
     public enum SessionWatcherStatus: String, CaseIterable, Sendable {
         case active
         case stale
         case ended
     }
-    
+
     // MARK: - SessionWatcherSession Event
-    
+
     /// Represents a single event in a Claude Code session.
     public struct SessionWatcherEvent: Equatable, Sendable {
         public var id: Int?
@@ -80,7 +80,7 @@ extension SessionWatcher {
         public var eventType: String
         public var timestamp: String
         public var rawJson: String
-        
+
         public init(
             id: Int? = nil,
             sessionId: String,
@@ -95,16 +95,16 @@ extension SessionWatcher {
             self.rawJson = rawJson
         }
     }
-    
+
     // MARK: - Database Error
-    
+
     /// Errors that can occur during database operations.
     public enum SessionWatcherDatabaseError: Error, LocalizedError {
         case openFailed(String)
         case prepareFailed(String)
         case executionFailed(String)
         case migrationFailed(String)
-        
+
         public var errorDescription: String? {
             switch self {
             case .openFailed(let message):

@@ -361,6 +361,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1C57E820C07F7825C6A9DC7E /* Build configuration list for PBXNativeTarget "AgenticToolkitAppTests" */;
 			buildPhases = (
+				F819B20B143DE0405E72ABDB /* SwiftLint */,
 				A680996EF1890D5501CA84D8 /* Sources */,
 				7D1F7894C51790C9AD7AC4B9 /* Frameworks */,
 				DA7FC05D31DB6E2A49DA9955 /* Embed Frameworks */,
@@ -382,6 +383,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AF20017E82E7C8946E2BBDB8 /* Build configuration list for PBXNativeTarget "AgenticToolkitApp" */;
 			buildPhases = (
+				A28E6AC9A5282D4D284B3876 /* SwiftLint */,
 				A5EF2E27F0973AD78A78D8F3 /* Sources */,
 				232495A4EFF935D3E216C771 /* Frameworks */,
 				7B6EBCEC3AFC2D9ED7B035BF /* Embed Frameworks */,
@@ -475,6 +477,47 @@
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A28E6AC9A5282D4D284B3876 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		F819B20B143DE0405E72ABDB /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A5EF2E27F0973AD78A78D8F3 /* Sources */ = {

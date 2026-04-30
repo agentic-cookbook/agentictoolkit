@@ -72,7 +72,7 @@ struct AIPluginManagerTests {
             "AgenticPluginDisplayName": "Test Plugin",
             "AgenticPluginVersion": "1.0.0",
             "AgenticSDKVersion": AIPluginInfoRegistry.currentSDKVersion,
-            "NSPrincipalClass": "TestPlugin",
+            "NSPrincipalClass": "TestPlugin"
         ]
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))
@@ -101,7 +101,7 @@ struct AIPluginManagerTests {
             "AgenticPluginDisplayName": "Old Plugin",
             "AgenticPluginVersion": "1.0.0",
             "AgenticSDKVersion": "999",  // Incompatible
-            "NSPrincipalClass": "OldPlugin",
+            "NSPrincipalClass": "OldPlugin"
         ]
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))
@@ -127,7 +127,7 @@ struct AIPluginManagerTests {
         let plist: [String: Any] = [
             "AgenticPluginDisplayName": "Bad Plugin",
             "AgenticPluginVersion": "1.0.0",
-            "AgenticSDKVersion": "1",
+            "AgenticSDKVersion": "1"
         ]
         let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))

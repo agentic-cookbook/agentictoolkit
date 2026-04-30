@@ -91,7 +91,7 @@ public final class PermissionRowView: NSView, SettingsViewProtocol {
             self.statusDot.heightAnchor.constraint(equalToConstant: 8),
 
             button.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -12),
-            button.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            button.centerYAnchor.constraint(equalTo: self.centerYAnchor)
         ])
 
         refresh()

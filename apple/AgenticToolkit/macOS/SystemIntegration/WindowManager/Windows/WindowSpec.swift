@@ -19,4 +19,3 @@ public struct WindowSpec: Codable, Sendable, Equatable {
         self.persistsFrame = persistsFrame
     }
 }
-

@@ -17,16 +17,16 @@ extension ComposableSettings {
     /// subclass needs to inject (managers, view models, configuration)
     /// can be set up before the first call to `showWindow()`.
     @MainActor
-    open class SettingsWindow: WindowController<SplitViewController>  {
+    open class SettingsWindow: WindowController<SplitViewController> {
 
         private static let windowID = "settings"
-      
+
         public init() {
             super.init(windowID: Self.windowID, contentViewController: SplitViewController())
             self.windowTitle = "Settings"
             self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
         }
-        
+
         public var settingPanels: [any ComposableSettingsPanel] {
             get { viewController?.panels ?? [] }
             set { viewController?.setPanels(newValue) }

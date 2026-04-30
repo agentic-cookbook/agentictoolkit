@@ -85,7 +85,7 @@ public final class MessageBubbleView: NSView {
             textView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -vPad),
             textView.widthAnchor.constraint(equalToConstant: textWidth),
             textView.heightAnchor.constraint(equalToConstant: textHeight),
-            widthAnchor.constraint(equalToConstant: bubbleWidth),
+            widthAnchor.constraint(equalToConstant: bubbleWidth)
         ])
     }
 

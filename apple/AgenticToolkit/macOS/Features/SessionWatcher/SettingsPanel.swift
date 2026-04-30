@@ -3,23 +3,23 @@ import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
 extension SessionWatcher {
-    
+
     /// Session window panel: how the session-watcher window behaves and what
     /// happens when the user clicks a row.
     @MainActor
     public final class SettingsPanel: ComposableSettings.SettingsPanelViewController {
-        
+
         public init() {
             super.init(with: ComposableSettings.SettingsPanelDescriptor(
                 title: "Session Window",
                 icon: NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
             ))
         }
-        
+
         public required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
-        
+
         public override func viewDidLoad() {
             super.viewDidLoad()
             self.settingsView.addGroup(createWindowBehaviorGroup())
@@ -29,7 +29,7 @@ extension SessionWatcher {
             self.settingsView.addGroup(createSummariesGroup())
             self.settingsView.addGroup(createNotifyWhenGroup())
         }
-        
+
         private func createWindowBehaviorGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Window Behavior")
             group.addSettingSubview(ComposableSettings.CheckboxView(
@@ -40,7 +40,7 @@ extension SessionWatcher {
             ))
             return group
         }
-        
+
         private func createTransparencyGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Transparency")
             group.addSettingSubview(ComposableSettings.CaptionedSliderView(
@@ -54,7 +54,7 @@ extension SessionWatcher {
             ))
             return group
         }
-        
+
         private func createStalenessGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Staleness Timeout")
             group.addSettingSubview(ComposableSettings.CaptionedSliderView(
@@ -71,10 +71,10 @@ extension SessionWatcher {
             ))
             return group
         }
-        
+
         private func createClickActionGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Click Action")
-            
+
             let actionViewModel = ComposableSettings.ChoiceViewModel<String>(
                 title: "On Click",
                 setting: UserSettings.sessionClickAction,
@@ -83,7 +83,7 @@ extension SessionWatcher {
                 }
             )
             group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: actionViewModel))
-            
+
             let customCommandGroup = ComposableSettings.GroupView(withTitle: "Shell Command Template")
             customCommandGroup.addSettingSubview(ComposableSettings.TextEditView(
                 with: ComposableSettings.ViewModel<String>(
@@ -94,15 +94,15 @@ extension SessionWatcher {
             customCommandGroup.addSettingSubview(ComposableSettings.ExplanationView(
                 withText: "Available variables: $SESSION_ID, $CWD, $MODEL"
             ))
-            
+
             group.addSettingSubview(ComposableSettings.ConditionalView<String>(
                 observing: UserSettings.sessionClickAction,
                 child: customCommandGroup
             ) { $0 == SessionWatcherClickAction.customCommand.rawValue })
-            
+
             return group
         }
-        
+
         private func createSummariesGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Session Summaries")
             group.addSettingSubview(ComposableSettings.CheckboxView(
@@ -116,7 +116,7 @@ extension SessionWatcher {
             ))
             return group
         }
-        
+
         private func createNotifyWhenGroup() -> ComposableSettings.GroupView {
             let group = ComposableSettings.GroupView(withTitle: "Notify When")
 

@@ -89,13 +89,13 @@ extension LaunchAtLoginManager: Loggable {
 }
 
 extension UserSettings {
-    
+
     /// Whether the app launches at login.
     static public var launchAtLogin = UserSetting<Bool>("launchAtLogin", default: false)
-    
+
     /// Whether the first-launch prompt for "launch at login" has been shown.
     static public var launchAtLoginPromptShown = UserSetting<Bool>("launchAtLoginPromptShown", default: false)
-    
+
     static public var launchAtLoginHintDismissed = UserSetting<Bool>("launchAtLoginHintDismissed", default: false)
 }
-    
+

@@ -57,7 +57,7 @@ public final class WindowDiscoveryWindowController: WindowController<WindowConte
             view.topAnchor.constraint(equalTo: host.topAnchor),
             view.leadingAnchor.constraint(equalTo: host.leadingAnchor),
             view.trailingAnchor.constraint(equalTo: host.trailingAnchor),
-            view.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            view.bottomAnchor.constraint(equalTo: host.bottomAnchor)
         ])
 
         self.discoveryView = view

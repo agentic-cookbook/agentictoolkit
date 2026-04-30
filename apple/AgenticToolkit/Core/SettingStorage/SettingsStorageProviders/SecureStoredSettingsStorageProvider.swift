@@ -5,7 +5,6 @@
 //  Created by Mike Fullerton on 4/27/26.
 //
 
-
 public protocol SecureSettingsStorageProvider: SettingsStorageProvider {
 }
 

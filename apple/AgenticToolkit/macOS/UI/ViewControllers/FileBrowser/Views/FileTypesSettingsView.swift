@@ -323,7 +323,7 @@ private struct AddCustomFileTypeSheet: View {
         ("Hammer", "hammer.fill"),
         ("Lock", "lock.shield"),
         ("Eye Slash", "eye.slash"),
-        ("Circle", "circle.fill"),
+        ("Circle", "circle.fill")
     ]
 
     private var isValid: Bool {

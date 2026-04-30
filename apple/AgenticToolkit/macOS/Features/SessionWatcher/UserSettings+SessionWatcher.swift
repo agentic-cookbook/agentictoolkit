@@ -11,13 +11,13 @@ extension UserSettings {
 
     /// Raw value of the configured `SessionWatcherClickAction` for session list clicks.
     public static var clickAction = UserSetting<String>("click_action", default: "openTerminal")
-    
+
     /// Custom command template (shell expression) used by the custom-command click action.
     public static var customCommandTemplate = UserSetting<String>("custom_command_template", default: "")
-    
+
     /// Seconds of inactivity before a session is marked stale by the liveness monitor.
     public static var stalenessTimeout = UserSetting<Double>("staleness_timeout", default: 300.0)
-    
+
     /// Whether the session panel floats above all other windows.
     static public var alwaysOnTop = UserSetting<Bool>("always_on_top", default: true)
 }
@@ -48,13 +48,13 @@ extension UserSettings {
 }
 
 extension UserSettings {
-    
+
     /// Whether to post a notification when a Claude Code session starts.
     public static var notifySessionStart = UserSetting<Bool>("notify_session_start", default: false)
-    
+
     /// Whether to post a notification when a Claude Code session ends.
     public static var notifySessionEnd = UserSetting<Bool>("notify_session_end", default: false)
-    
+
     /// Whether to post a notification when a session goes stale.
     public static var notifyStale = UserSetting<Bool>("notify_stale", default: false)
 }

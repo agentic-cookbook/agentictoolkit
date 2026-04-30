@@ -15,14 +15,14 @@ final class EventIngestionManagerTests: XCTestCase {
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         let dbPath = tempDir.appendingPathComponent("test.db").path
-        dbManager = try SessionsDatabaseManager(path: dbPath)
+        dbManager = try sessionsDatabaseManager(path: dbPath)
 
         dropDir = tempDir.appendingPathComponent("session-events")
         try FileManager.default.createDirectory(at: dropDir, withIntermediateDirectories: true)
 
         ingestionManager = EventIngestionManager(
             dropDirectoryURL: dropDir,
-            SessionsDatabaseManager: dbManager
+            sessionsDatabaseManager: dbManager
         )
     }
 
@@ -77,7 +77,7 @@ final class EventIngestionManagerTests: XCTestCase {
         let freshDropDir = tempDir.appendingPathComponent("new-events")
         let manager = EventIngestionManager(
             dropDirectoryURL: freshDropDir,
-            SessionsDatabaseManager: dbManager
+            sessionsDatabaseManager: dbManager
         )
 
         try manager.ensureDirectoriesExist()
@@ -369,7 +369,7 @@ final class EventIngestionManagerTests: XCTestCase {
             ("PreToolUse", "2026-03-24T10:01:00Z", ["tool": "Read"] as [String: Any]),
             ("PostToolUse", "2026-03-24T10:01:01Z", ["tool": "Read"] as [String: Any]),
             ("PreToolUse", "2026-03-24T10:02:00Z", ["tool": "Edit"] as [String: Any]),
-            ("PostToolUse", "2026-03-24T10:02:01Z", ["tool": "Edit"] as [String: Any]),
+            ("PostToolUse", "2026-03-24T10:02:01Z", ["tool": "Edit"] as [String: Any])
         ]
 
         for (eventType, timestamp, data) in events {
@@ -564,7 +564,7 @@ final class EventIngestionManagerTests: XCTestCase {
 
         let manager = EventIngestionManager(
             dropDirectoryURL: freshDropDir,
-            SessionsDatabaseManager: dbManager
+            sessionsDatabaseManager: dbManager
         )
 
         // Put a file in before starting

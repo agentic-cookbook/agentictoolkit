@@ -15,7 +15,7 @@ final class LogViewTests: XCTestCase {
                 id: "msg",
                 title: "Message",
                 onClick: { line in clicked = line }
-            ),
+            )
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -32,7 +32,7 @@ final class LogViewTests: XCTestCase {
                 id: "msg",
                 title: "Message",
                 onDoubleClick: { line in doubled = line }
-            ),
+            )
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -57,7 +57,7 @@ final class LogViewTests: XCTestCase {
                 id: "msg",
                 title: "Message",
                 onDoubleClick: { _ in doubled += 1 }
-            ),
+            )
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -71,7 +71,7 @@ final class LogViewTests: XCTestCase {
         var bClicks = 0
         let columns = [
             LogColumn(id: "a", title: "A", onClick: { _ in aClicks += 1 }),
-            LogColumn(id: "b", title: "B", onClick: { _ in bClicks += 1 }),
+            LogColumn(id: "b", title: "B", onClick: { _ in bClicks += 1 })
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -93,7 +93,7 @@ final class LogViewTests: XCTestCase {
                 id: "msg",
                 title: "Message",
                 onClick: { line in seen = line.context as? Int64 }
-            ),
+            )
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -105,7 +105,7 @@ final class LogViewTests: XCTestCase {
     func testOutOfRangeClickIsIgnored() {
         var clicks = 0
         let columns = [
-            LogColumn(id: "msg", title: "Message", onClick: { _ in clicks += 1 }),
+            LogColumn(id: "msg", title: "Message", onClick: { _ in clicks += 1 })
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -128,7 +128,7 @@ final class LogViewTests: XCTestCase {
         buffer.append(contentsOf: [
             LogLine(values: ["msg": .plain("a")]),
             LogLine(values: ["msg": .plain("b")]),
-            LogLine(values: ["msg": .plain("c")]),
+            LogLine(values: ["msg": .plain("c")])
         ])
         XCTAssertEqual(view.testTable.numberOfRows, 3)
     }
@@ -136,7 +136,7 @@ final class LogViewTests: XCTestCase {
     func testColumnConfigIsAppliedAtInit() {
         let columns = [
             LogColumn(id: "a", title: "Alpha", defaultWidth: 80, minWidth: 40, maxWidth: 200),
-            LogColumn(id: "b", title: "Beta", defaultWidth: 220, minWidth: 100, maxWidth: 500, alignment: .right),
+            LogColumn(id: "b", title: "Beta", defaultWidth: 220, minWidth: 100, maxWidth: 500, alignment: .right)
         ]
         let view = LogView(provider: LogBuffer(columns: columns))
         let cols = view.testTable.tableColumns
@@ -181,7 +181,7 @@ final class LogViewTests: XCTestCase {
     func testMissingColumnValueRendersEmpty() {
         let columns = [
             LogColumn(id: "a", title: "A"),
-            LogColumn(id: "b", title: "B"),
+            LogColumn(id: "b", title: "B")
         ]
         let buffer = LogBuffer(columns: columns)
         let view = LogView(provider: buffer)
@@ -215,7 +215,7 @@ final class LogViewTests: XCTestCase {
         let view = LogView(provider: buffer)
         buffer.replace(with: [
             LogLine(values: ["msg": .plain("b")]),
-            LogLine(values: ["msg": .plain("c")]),
+            LogLine(values: ["msg": .plain("c")])
         ])
         XCTAssertEqual(view.testTable.numberOfRows, 2)
     }

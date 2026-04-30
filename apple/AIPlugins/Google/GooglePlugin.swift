@@ -19,7 +19,7 @@ public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {
     public let availableModels = [
         "gemini-2.0-flash",
         "gemini-2.5-flash-preview-05-20",
-        "gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-pro-preview-05-06"
     ]
 
     public let recommendedModel = "gemini-2.0-flash"
@@ -118,7 +118,7 @@ public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {
 
         var body: [String: Any] = [
             "contents": contents,
-            "generationConfig": ["maxOutputTokens": maxTokens],
+            "generationConfig": ["maxOutputTokens": maxTokens]
         ]
         if let systemPrompt, !systemPrompt.isEmpty {
             body["systemInstruction"] = ["parts": [["text": systemPrompt]]]

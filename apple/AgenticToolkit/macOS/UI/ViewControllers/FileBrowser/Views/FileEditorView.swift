@@ -134,7 +134,6 @@ private struct FileEditorContentView: View {
     }
 }
 
-
 // MARK: - Editor State
 
 /// Observable state for the file editor, managing content, dirty tracking, and file I/O.

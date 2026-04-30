@@ -63,7 +63,7 @@ final class SystemSettingsPane: NSView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
             hint.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            resetHint.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            resetHint.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
 
         updateStatuses()
@@ -149,7 +149,7 @@ final class SystemSettingsPane: NSView {
             statusDot.heightAnchor.constraint(equalToConstant: 8),
 
             button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
-            button.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            button.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         ])
 
         permissionRows.append((label: titleLabel, statusDot: statusDot, statusLabel: statusLabel))

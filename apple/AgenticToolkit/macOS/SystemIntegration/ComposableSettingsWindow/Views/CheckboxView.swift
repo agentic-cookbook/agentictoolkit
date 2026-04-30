@@ -8,7 +8,6 @@ extension ComposableSettings {
         public let checkbox: NSButton
 
         private let viewModel: ViewModel<Bool>
-        
 
         public init(with viewModel: ViewModel<Bool>) {
             self.viewModel = viewModel

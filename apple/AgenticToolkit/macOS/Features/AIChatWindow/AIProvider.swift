@@ -1,6 +1,6 @@
 import Foundation
 
-//public enum AIProvider: String, CaseIterable, Identifiable, Sendable {
+// public enum AIProvider: String, CaseIterable, Identifiable, Sendable {
 //    case anthropic
 //    case openai
 //    case google
@@ -61,8 +61,7 @@ import Foundation
 //        case .custom: return ""
 //        }
 //    }
-//}
-
+// }
 
 /// Supported AI providers for session summarization.
 public enum AIProvider: String, CaseIterable, Identifiable, Sendable {
@@ -145,4 +144,3 @@ public enum AIProvider: String, CaseIterable, Identifiable, Sendable {
         }
     }
 }
-

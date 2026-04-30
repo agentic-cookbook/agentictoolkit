@@ -8,7 +8,6 @@ extension ComposableSettings {
         public let popUpButton: NSPopUpButton
 
         private let viewModel: ChoiceViewModel<Value>
-        
 
         public init(viewModel: ChoiceViewModel<Value>) {
             self.viewModel = viewModel

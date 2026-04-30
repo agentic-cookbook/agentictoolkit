@@ -7,20 +7,20 @@ extension SessionWatcher {
     public struct SessionWatcherEventFile {
         /// The event type (e.g., "SessionStart", "SessionEnd", "PreToolUse", "PostToolUse", etc.)
         public let event: String
-        
+
         /// The unique session identifier from Claude Code.
         public let sessionId: String
-        
+
         /// ISO 8601 timestamp of when the event occurred.
         public let timestamp: String
-        
+
         /// Event-specific data payload.
         public let data: [String: Any]
-        
+
         /// The raw JSON string of the entire file contents.
         public let rawJson: String
     }
-    
+
     /// Known event types that can appear in drop directory files.
     public enum SessionWatcherEventType: String, CaseIterable {
         case sessionStart = "SessionStart"

@@ -13,10 +13,10 @@ public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecyc
     public private(set) var windowControllers: [TerminalSessionWindowController] = []
 
     // MARK: - Public API
-    
+
     public override init() {
         super.init()
-        
+
         self.scriptingKeys.insert("terminalSessions")
         self.menuContributions =  [
             MenuContribution(slot: .file, title: "New Terminal Window", order: 0, key: "t") { [weak self] in
@@ -32,10 +32,9 @@ public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecyc
             },
             MenuContribution(slot: .statusItem(section: 1), title: "New Terminal Window", order: 30) { [weak self] in
                 self?.openNewTerminalWindow()
-            },
+            }
         ]
     }
-    
 
     public func openNewTerminalWindow() {
         let wc = TerminalSessionWindowController()

@@ -157,5 +157,4 @@ final class LaunchAtLoginManagerTests: XCTestCase {
         XCTAssertTrue(manager.hasShownPrompt)
     }
 
-   
 }

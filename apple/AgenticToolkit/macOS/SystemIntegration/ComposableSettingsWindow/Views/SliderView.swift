@@ -8,7 +8,6 @@ extension ComposableSettings {
         public let slider: NSSlider
 
         private let viewModel: RangeViewModel<Double>
-        
 
         public init(viewModel: RangeViewModel<Double>) {
             self.viewModel = viewModel

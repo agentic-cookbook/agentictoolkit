@@ -31,7 +31,7 @@ public struct StoredSetting<Value: Codable & Sendable>: DynamicProperty {
             wrappedValue: Observer(key: key)
         )
     }
-   
+
     public var wrappedValue: Value {
         get { observer.value }
         nonmutating set { key.value = newValue }
@@ -46,14 +46,14 @@ public struct StoredSetting<Value: Codable & Sendable>: DynamicProperty {
 }
 
 extension StoredSetting {
-    
+
     /// Internal observer that bridges a `SettingsStorageProvider` change publisher into SwiftUI's
     /// `ObservableObject` machinery.
     @MainActor
     final class Observer: ObservableObject {
         @Published var value: Value
         private var cancellable: AnyCancellable?
-        
+
         init(key: any StorableSetting<Value>) {
             let store = UserSettings.shared
             self.value = key.value

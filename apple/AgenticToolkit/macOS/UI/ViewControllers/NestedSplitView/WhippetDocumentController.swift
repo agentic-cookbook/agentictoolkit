@@ -5,7 +5,6 @@ import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import os
 
-
 /// Abstracts the save/open panel modal prompts so tests can inject a fake
 /// that returns a URL synchronously without spinning AppKit's modal loop.
 @MainActor

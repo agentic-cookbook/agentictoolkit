@@ -38,12 +38,12 @@ public final class TypingIndicatorView: NSView {
             stack.centerXAnchor.constraint(equalTo: centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
             widthAnchor.constraint(equalToConstant: 48),
-            heightAnchor.constraint(equalToConstant: 28),
+            heightAnchor.constraint(equalToConstant: 28)
         ])
         for dot in dots {
             NSLayoutConstraint.activate([
                 dot.widthAnchor.constraint(equalToConstant: 7),
-                dot.heightAnchor.constraint(equalToConstant: 7),
+                dot.heightAnchor.constraint(equalToConstant: 7)
             ])
         }
     }

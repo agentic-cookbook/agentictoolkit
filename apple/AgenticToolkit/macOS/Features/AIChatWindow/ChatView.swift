@@ -85,7 +85,7 @@ public final class ChatView: NSView, NSTextFieldDelegate {
             inputRow.topAnchor.constraint(equalTo: divider.bottomAnchor),
             inputRow.leadingAnchor.constraint(equalTo: leadingAnchor),
             inputRow.trailingAnchor.constraint(equalTo: trailingAnchor),
-            inputRow.bottomAnchor.constraint(equalTo: bottomAnchor),
+            inputRow.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 

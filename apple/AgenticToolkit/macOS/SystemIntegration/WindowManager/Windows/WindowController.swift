@@ -13,20 +13,20 @@ open class WindowController<ViewControllerType: NSViewController>: SingleWindowC
 
 open class WindowContentViewController<ViewType: NSView>: NSViewController {
     public let contentView: ViewType
-    
+
     public init(contentView: ViewType) {
         self.contentView = contentView
         super.init(nibName: nil, bundle: nil)
     }
-    
+
     convenience public init() {
         self.init(contentView: ViewType())
     }
-    
+
     public required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     public override func loadView() {
         self.view = contentView
     }

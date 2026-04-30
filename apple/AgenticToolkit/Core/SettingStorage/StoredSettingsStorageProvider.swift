@@ -7,9 +7,9 @@ import Combine
 /// plus a Combine publisher and an `AsyncStream` for observing changes.
 @MainActor
 public protocol SettingsStorageProvider: AnyObject {
-    
+
     typealias ValueType = Codable & Sendable
-    
+
     /// Retrieves a value for the given key, returning the key's default if absent.
     func get<Value: ValueType>(_ key: any StorableSetting<Value>) -> Value
 
@@ -38,7 +38,7 @@ public extension SettingsStorageProvider {
             .prepend(currentValue)
             .eraseToAnyPublisher()
     }
-    
+
     /// An async sequence of values for a specific key, starting with the current value.
     func values<Value: ValueType>(for key: any StorableSetting<Value>) -> AsyncStream<Value> {
         AsyncStream { continuation in
@@ -50,7 +50,7 @@ public extension SettingsStorageProvider {
             }
         }
     }
-    
+
     /// Is this provider secure?
     var isSecure: Bool { false }
 }

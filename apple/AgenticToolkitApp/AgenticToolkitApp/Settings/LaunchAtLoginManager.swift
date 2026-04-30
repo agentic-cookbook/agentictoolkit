@@ -38,16 +38,16 @@ final class LaunchAtLoginManager {
     // MARK: - Properties
 
     private let service: LaunchAtLoginServiceProtocol
-    private let SessionsDatabaseManager: SessionsDatabaseManager
+    private let sessionsDatabaseManager: SessionsDatabaseManager
 
     // MARK: - Initialization
 
     /// Creates a LaunchAtLoginManager.
     /// - Parameters:
-    ///   - SessionsDatabaseManager: The database manager for persisting settings.
+    ///   - sessionsDatabaseManager: The database manager for persisting settings.
     ///   - service: The app service to use. Defaults to `SMAppService.mainApp`.
-    init(SessionsDatabaseManager: SessionsDatabaseManager, service: LaunchAtLoginServiceProtocol? = nil) {
-        self.SessionsDatabaseManager = SessionsDatabaseManager
+    init(sessionsDatabaseManager: SessionsDatabaseManager, service: LaunchAtLoginServiceProtocol? = nil) {
+        self.sessionsDatabaseManager = sessionsDatabaseManager
         self.service = service ?? SMAppService.mainApp
     }
 
@@ -62,7 +62,7 @@ final class LaunchAtLoginManager {
     /// Whether the first-launch prompt has already been shown.
     var hasShownPrompt: Bool {
         do {
-            if let value = try SessionsDatabaseManager.getSetting(key: Self.launchAtLoginPromptShownKey) {
+            if let value = try sessionsDatabaseManager.getSetting(key: Self.launchAtLoginPromptShownKey) {
                 return value == "true"
             }
         } catch {
@@ -86,7 +86,7 @@ final class LaunchAtLoginManager {
 
         // Persist the setting
         do {
-            try SessionsDatabaseManager.setSetting(key: Self.launchAtLoginKey, value: enabled ? "true" : "false")
+            try sessionsDatabaseManager.setSetting(key: Self.launchAtLoginKey, value: enabled ? "true" : "false")
         } catch {
             logger.error("Failed to persist launch-at-login setting: \(error.localizedDescription, privacy: .public)")
         }
@@ -95,7 +95,7 @@ final class LaunchAtLoginManager {
     /// Marks the first-launch prompt as shown.
     func markPromptShown() {
         do {
-            try SessionsDatabaseManager.setSetting(key: Self.launchAtLoginPromptShownKey, value: "true")
+            try sessionsDatabaseManager.setSetting(key: Self.launchAtLoginPromptShownKey, value: "true")
         } catch {
             logger.warning("Failed to persist launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
         }

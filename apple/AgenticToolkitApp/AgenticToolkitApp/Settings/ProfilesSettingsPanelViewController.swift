@@ -26,7 +26,7 @@ final class ProfilesSettingsPanelViewController: ComposableSettings.SettingsPane
             pane.topAnchor.constraint(equalTo: container.topAnchor),
             pane.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             pane.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            pane.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            pane.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
         self.view = container
     }

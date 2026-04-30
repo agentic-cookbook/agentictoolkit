@@ -6,7 +6,7 @@ extension ComposableSettings {
     public class GroupView: NSView, SettingsViewProtocol {
 
         private let stackView: NSStackView
-        
+
         public init(withTitle title: String) {
             self.stackView = NSStackView()
 
@@ -18,7 +18,7 @@ extension ComposableSettings {
 
             self.stackView.orientation = .vertical
             self.stackView.alignment = .leading
-            
+
             self.addSettingSubview(HeaderView(title: title))
         }
 
@@ -35,7 +35,7 @@ extension ComposableSettings {
             guard let parent = self.superview else { return }
             self.widthAnchor.constraint(equalTo: parent.widthAnchor).isActive = true
         }
-        
+
         public func addSettingSubview(_ view: NSView) {
             stackView.addArrangedSubview(view)
         }

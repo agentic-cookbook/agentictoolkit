@@ -28,7 +28,7 @@ public final class TerminalProfilesSettingsPanelViewController: ComposableSettin
             inner.topAnchor.constraint(equalTo: host.topAnchor),
             inner.leadingAnchor.constraint(equalTo: host.leadingAnchor),
             inner.trailingAnchor.constraint(equalTo: host.trailingAnchor),
-            inner.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            inner.bottomAnchor.constraint(equalTo: host.bottomAnchor)
         ])
         self.view = host
     }

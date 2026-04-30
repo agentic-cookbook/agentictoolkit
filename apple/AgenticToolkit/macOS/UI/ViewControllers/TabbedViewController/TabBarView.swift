@@ -72,7 +72,7 @@ final class TabBarView: NSView {
             bottomDivider.bottomAnchor.constraint(equalTo: bottomAnchor),
             bottomDivider.heightAnchor.constraint(equalToConstant: 1),
 
-            heightAnchor.constraint(equalToConstant: Self.preferredHeight),
+            heightAnchor.constraint(equalToConstant: Self.preferredHeight)
         ])
     }
 
@@ -180,7 +180,7 @@ private final class TabButton: NSView {
             closeButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -6),
             closeButton.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
             closeButton.widthAnchor.constraint(equalToConstant: 14),
-            closeButton.heightAnchor.constraint(equalToConstant: 14),
+            closeButton.heightAnchor.constraint(equalToConstant: 14)
         ])
 
         updateAppearance()

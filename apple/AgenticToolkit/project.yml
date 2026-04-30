@@ -20,7 +20,7 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     DEAD_CODE_STRIPPING: YES
     ENABLE_TESTABILITY: YES
-    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
     ENABLE_MODULE_VERIFIER: YES
     GENERATE_INFOPLIST_FILE: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
@@ -29,6 +29,18 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     CODE_SIGN_IDENTITY: ""
     PRODUCT_NAME: $(TARGET_NAME)
+
+targetTemplates:
+  SwiftLint:
+    preBuildScripts:
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          if which swiftlint >/dev/null; then
+            swiftlint lint --quiet
+          else
+            echo "warning: SwiftLint not installed; brew install swiftlint to enable"
+          fi
 
 packages:
   CodeEditLanguages:
@@ -47,6 +59,8 @@ targets:
   AgenticToolkitCore:
     type: framework
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: Core
       - path: macOS/Features/AIChatWindow/ChatBackend.swift
@@ -55,6 +69,8 @@ targets:
   AgenticToolkitCoreUI:
     type: framework
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - CoreUI
     dependencies:
@@ -63,6 +79,8 @@ targets:
   AgenticToolkitCoreMacOS:
     type: framework
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: CoreMacOS
       - path: macOS/UI/Settings/SettingStorage/RGBAColor+NSColor.swift
@@ -74,6 +92,8 @@ targets:
   AgenticToolkitMacOS:
     type: framework
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - path: macOS
         excludes:
@@ -106,6 +126,8 @@ targets:
   AgenticToolkitCoreTests:
     type: bundle.unit-test
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - Tests/AgenticToolkitCoreTests
     dependencies:
@@ -116,6 +138,8 @@ targets:
   AgenticToolkitCoreUITests:
     type: bundle.unit-test
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - Tests/AgenticToolkitCoreUITests
     dependencies:
@@ -129,6 +153,8 @@ targets:
   AgenticToolkitCoreMacOSTests:
     type: bundle.unit-test
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - Tests/AgenticToolkitCoreMacOSTests
     dependencies:
@@ -142,6 +168,8 @@ targets:
   AgenticToolkitMacOSTests:
     type: bundle.unit-test
     platform: macOS
+    templates:
+      - SwiftLint
     sources:
       - Tests/AgenticToolkitMacOSTests
     dependencies:

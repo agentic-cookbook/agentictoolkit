@@ -13,7 +13,7 @@ extension ComposableSettings {
         public let captionLabel: NSTextField
 
         private let viewModel: RangeViewModel<Double>
-        
+
         private let formatter: @MainActor (Double) -> String
 
         public init(

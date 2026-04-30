@@ -57,7 +57,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
             splitView.leadingAnchor.constraint(equalTo: leadingAnchor),
             splitView.trailingAnchor.constraint(equalTo: trailingAnchor),
             splitView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            splitView.heightAnchor.constraint(greaterThanOrEqualToConstant: 400),
+            splitView.heightAnchor.constraint(greaterThanOrEqualToConstant: 400)
         ])
         splitView.setPosition(160, ofDividerAt: 0)
     }
@@ -135,7 +135,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
             scrollView.bottomAnchor.constraint(equalTo: bottomBar.topAnchor, constant: -4),
 
             bottomBar.leadingAnchor.constraint(equalTo: pane.leadingAnchor, constant: 6),
-            bottomBar.bottomAnchor.constraint(equalTo: pane.bottomAnchor, constant: -6),
+            bottomBar.bottomAnchor.constraint(equalTo: pane.bottomAnchor, constant: -6)
         ])
 
         return pane
@@ -175,7 +175,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
             nameLabel.topAnchor.constraint(equalTo: nameContainer.topAnchor),
             nameLabel.leadingAnchor.constraint(equalTo: nameContainer.leadingAnchor),
             nameLabel.trailingAnchor.constraint(equalTo: nameContainer.trailingAnchor),
-            nameLabel.bottomAnchor.constraint(equalTo: nameContainer.bottomAnchor),
+            nameLabel.bottomAnchor.constraint(equalTo: nameContainer.bottomAnchor)
         ])
 
         appearancePopUp.removeAllItems()
@@ -188,7 +188,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
 
         let generalSection = makeSection("General", rows: [
             makeLabeledRow("Name:", control: nameContainer),
-            makeLabeledRow("Appearance:", control: appearancePopUp),
+            makeLabeledRow("Appearance:", control: appearancePopUp)
         ])
         stack.addArrangedSubview(generalSection)
 
@@ -207,7 +207,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
 
         let fontSection = makeSection("Font", rows: [
             makeLabeledRow("Name:", control: fontNameLabel),
-            makeLabeledRow("Size:", control: fontSizeRow),
+            makeLabeledRow("Size:", control: fontSizeRow)
         ])
         stack.addArrangedSubview(fontSection)
 
@@ -221,7 +221,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
         cursorPopUp.action = #selector(cursorChanged)
 
         let cursorSection = makeSection("Cursor", rows: [
-            makeLabeledRow("Style:", control: cursorPopUp),
+            makeLabeledRow("Style:", control: cursorPopUp)
         ])
         stack.addArrangedSubview(cursorSection)
 
@@ -234,7 +234,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: pane.topAnchor),
             stack.leadingAnchor.constraint(equalTo: pane.leadingAnchor),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: pane.trailingAnchor),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: pane.trailingAnchor)
         ])
 
         return pane
@@ -319,7 +319,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
 
             badge.leadingAnchor.constraint(greaterThanOrEqualTo: nameLabel.trailingAnchor, constant: 4),
             badge.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -6),
-            badge.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            badge.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
         ])
 
         return cell
@@ -434,7 +434,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
             stack.topAnchor.constraint(equalTo: colorPreviewView.topAnchor),
             stack.leadingAnchor.constraint(equalTo: colorPreviewView.leadingAnchor),
             stack.trailingAnchor.constraint(lessThanOrEqualTo: colorPreviewView.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: colorPreviewView.bottomAnchor),
+            stack.bottomAnchor.constraint(equalTo: colorPreviewView.bottomAnchor)
         ])
     }
 
@@ -453,7 +453,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
         swatch.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             swatch.widthAnchor.constraint(equalToConstant: 36),
-            swatch.heightAnchor.constraint(equalToConstant: 24),
+            swatch.heightAnchor.constraint(equalToConstant: 24)
         ])
 
         let labelField = NSTextField(labelWithString: label)
@@ -476,7 +476,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
         swatch.toolTip = "ANSI \(index)"
         NSLayoutConstraint.activate([
             swatch.widthAnchor.constraint(equalToConstant: 24),
-            swatch.heightAnchor.constraint(equalToConstant: 24),
+            swatch.heightAnchor.constraint(equalToConstant: 24)
         ])
         return swatch
     }
@@ -535,7 +535,7 @@ public final class TerminalSessionProfilesSettingsView: NSView, NSTableViewDataS
             line1.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 8),
 
             line2.topAnchor.constraint(equalTo: line1.bottomAnchor, constant: 1),
-            line2.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 8),
+            line2.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 8)
         ])
 
         stack.addArrangedSubview(previewBox)

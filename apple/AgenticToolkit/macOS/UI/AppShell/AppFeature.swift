@@ -10,34 +10,34 @@ import OSLog
 /// All hooks are optional — features only implement what they need.
 @MainActor
 open class AppFeature {
-    
+
     public var featureName: String = ""
 
     public var menuContributions: [MenuContribution] = []
-    
+
     public var scriptingKeys = Set<String>()
-    
+
     /// Called once per launch, after the feature has been constructed and
     /// other features in the same launch wave are visible. Bring up
     /// long-running services here (timers, file watchers, ingestion, …).
     public func start() throws {
     }
-    
+
     /// Called from `applicationWillTerminate(_:)`. Stop synchronous services
     /// here. Pair with `terminate()` for async cleanup.
     public func stop() {
     }
-    
+
     /// Called from `applicationWillTerminate(_:)`, after `stop()`. Use for
     /// async shutdown work like flushing pending saves.
     public func terminate() async {
-        
+
     }
-    
+
     public func register() {
         AppFeatureRegistry.shared.register(self)
     }
-    
+
     public func unregister() {
         AppFeatureRegistry.shared.unregister(self)
     }
@@ -45,12 +45,12 @@ open class AppFeature {
     public var defaultName: String {
         "\(type(of: self))".replacingOccurrences(of: ".Type", with: "")
     }
-    
+
     public init() {
         self.featureName = defaultName
         register()
     }
-    
+
     /// Read the value for a key in `scriptingKeys`. Return `nil` if the key
     /// is unknown — the router will move on to the next contributor.
     public func value(forScriptingKey key: String) -> Any? {
@@ -60,40 +60,40 @@ open class AppFeature {
     /// Write the value for a key in `scriptingKeys`. Default no-op; override
     /// for read-write keys.
     public func setValue(_ value: Any?, forScriptingKey key: String) {
-        
+
     }
 
 }
 
 @MainActor
 open class AppFeatureRegistry {
-    
+
     public static let shared = AppFeatureRegistry()
-    
+
     public private(set) var featureMap: [String: AppFeature] = [:]
-    
+
     public var features: [AppFeature] {
         Array(featureMap.values)
     }
-    
+
     public func register(_ feature: AppFeature) {
         featureMap[feature.featureName] = feature
         logger.info("Registered feature: \(feature.featureName)")
     }
-    
+
     public func unregister(_ feature: AppFeature) {
         featureMap.removeValue(forKey: feature.featureName)
         logger.info("Unegistered feature: \(feature.featureName)")
     }
-    
+
     public func feature(named name: String) -> AppFeature? {
         featureMap[name]
     }
-    
+
     public func contains(featureNamed name: String) -> Bool {
         featureMap.keys.contains(name)
     }
-    
+
     public func startAll() {
         for feature in features {
             do {
@@ -104,7 +104,7 @@ open class AppFeatureRegistry {
             }
         }
     }
-    
+
     public func stopAll() {
         for feature in features {
             feature.stop()

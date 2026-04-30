@@ -41,11 +41,11 @@ public final class ScriptingRouter: NSObject {
     // MARK: - Registration
 
     public func register(_ feature: AppFeature) {
-        
+
         guard !feature.scriptingKeys.isEmpty else {
             return
         }
-        
+
         for key in feature.scriptingKeys {
             keyToContributor[key] = feature
         }
@@ -58,8 +58,6 @@ public final class ScriptingRouter: NSObject {
     public func registerNameLookup(forKey key: String, _ lookup: @escaping NameLookup) {
         nameLookups[key] = lookup
     }
-
-    
 
     // MARK: - KVC routing (called from AppDelegate)
 

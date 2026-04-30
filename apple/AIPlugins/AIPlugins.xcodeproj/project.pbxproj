@@ -575,6 +575,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6185C7BC778FFBEE7958F7FB /* Build configuration list for PBXNativeTarget "AIPluginsSharedTests" */;
 			buildPhases = (
+				E4EA119FF5DDEFBFDB99C7F6 /* SwiftLint */,
 				2DEBD284A8DB83B83A093404 /* Sources */,
 				37DD630D5D8B26C7D88EA857 /* Frameworks */,
 			);
@@ -594,6 +595,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = E5DB9663F1B94AD285A800C3 /* Build configuration list for PBXNativeTarget "AIPluginsShared" */;
 			buildPhases = (
+				6A5CB89E1561E37E00A3D374 /* SwiftLint */,
 				7ED9B943CE1C748AF037534F /* Sources */,
 				0CA7216478AAF9B7CABC141C /* Frameworks */,
 			);
@@ -616,6 +618,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D87F537587DE84EC313B093E /* Build configuration list for PBXNativeTarget "OpenAI" */;
 			buildPhases = (
+				7D320D4AF7DE8B7386AD85E5 /* SwiftLint */,
 				500D95DB61344EC1088DBD06 /* Sources */,
 				EFB4957DD3809E5D70D985DA /* Frameworks */,
 				CB41CFE654A0F740A09F9DEA /* Install to ~/.agenticplugins */,
@@ -640,6 +643,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5AE1062D2A8250BB76099BDB /* Build configuration list for PBXNativeTarget "OpenAICompatible" */;
 			buildPhases = (
+				C026AF4D53BCF5BB6973B99F /* SwiftLint */,
 				B8852837DB3305F1754F92ED /* Sources */,
 				BB1BC382756F5F5B05AAC170 /* Frameworks */,
 				399DC83516F4F8D72F9E644F /* Install to ~/.agenticplugins */,
@@ -664,6 +668,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 98B5DE36FF4FA2B34568C118 /* Build configuration list for PBXNativeTarget "ClaudeLocal" */;
 			buildPhases = (
+				5AD4CBA22431D5C32738E2C8 /* SwiftLint */,
 				1AE37AA861A82C4B4F805E95 /* Sources */,
 				B8363725CBB07A8D107F344F /* Frameworks */,
 				C3CD6AB1A4A00D10F140CCA6 /* Install to ~/.agenticplugins */,
@@ -688,6 +693,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 82F655E28E948E662E77E028 /* Build configuration list for PBXNativeTarget "ClaudeAPI" */;
 			buildPhases = (
+				572192510E5E1A967BEACACE /* SwiftLint */,
 				BC45C9DB23EC021B6D5F64C3 /* Sources */,
 				EF5DE97AD8241ECE6A431536 /* Frameworks */,
 				B7811E083E81C37EE2134CFF /* Install to ~/.agenticplugins */,
@@ -712,6 +718,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1DADD78F4AF7AFC474C2CE6E /* Build configuration list for PBXNativeTarget "Google" */;
 			buildPhases = (
+				75DB6E38AB4962031F040020 /* SwiftLint */,
 				B4DD2844608E52AC614BD97A /* Sources */,
 				A485582FFBCEF05D094E364A /* Frameworks */,
 				C037A96FAA23E3B79C98945C /* Install to ~/.agenticplugins */,
@@ -833,6 +840,101 @@
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
 		};
+		572192510E5E1A967BEACACE /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		5AD4CBA22431D5C32738E2C8 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		6A5CB89E1561E37E00A3D374 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		75DB6E38AB4962031F040020 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
+		7D320D4AF7DE8B7386AD85E5 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
 		B7811E083E81C37EE2134CFF /* Install to ~/.agenticplugins */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -850,6 +952,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+		C026AF4D53BCF5BB6973B99F /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
 		};
 		C037A96FAA23E3B79C98945C /* Install to ~/.agenticplugins */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -904,6 +1025,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p \"$HOME/.agenticplugins\"\n/usr/bin/rsync -a --delete \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/\" \"$HOME/.agenticplugins/$FULL_PRODUCT_NAME/\"\n";
+		};
+		E4EA119FF5DDEFBFDB99C7F6 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1181,7 +1321,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1372,7 +1512,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = K2NA732JAX;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1488,7 +1628,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1529,7 +1669,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = K2NA732JAX;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

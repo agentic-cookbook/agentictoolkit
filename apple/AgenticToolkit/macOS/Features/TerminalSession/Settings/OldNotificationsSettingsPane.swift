@@ -12,7 +12,6 @@ import AgenticToolkitMacOS
 import AppKit
 import Combine
 
-
 final class OldNotificationsSettingsPane: OldSettingsPanelView {
     private let viewModel: WhippetSettingsViewModel
 
@@ -62,7 +61,7 @@ final class OldNotificationsSettingsPane: OldSettingsPanelView {
             stack.topAnchor.constraint(equalTo: topAnchor, constant: 20),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -20),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -20)
         ])
     }
 

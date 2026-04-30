@@ -10,7 +10,7 @@ final class LogBufferTests: XCTestCase {
     private func makeColumns() -> [LogColumn] {
         [
             LogColumn(id: "time", title: "Time"),
-            LogColumn(id: "msg", title: "Message"),
+            LogColumn(id: "msg", title: "Message")
         ]
     }
 

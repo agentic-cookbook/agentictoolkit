@@ -34,7 +34,7 @@ public final class TerminalSessionGeneralSettingsView: NSView {
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor)
         ])
     }
 

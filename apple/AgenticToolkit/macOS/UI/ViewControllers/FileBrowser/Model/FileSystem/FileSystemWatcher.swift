@@ -26,7 +26,7 @@ public final class FileSystemWatcher: @unchecked Sendable {
         var context = FSEventStreamContext()
         context.info = Unmanaged.passUnretained(self).toOpaque()
 
-        let callback: FSEventStreamCallback = { streamRef, clientCallBackInfo, numEvents, eventPaths, eventFlags, eventIds in
+        let callback: FSEventStreamCallback = { _, clientCallBackInfo, _, eventPaths, _, _ in
             guard let info = clientCallBackInfo else { return }
             let watcher = Unmanaged<FileSystemWatcher>.fromOpaque(info).takeUnretainedValue()
 

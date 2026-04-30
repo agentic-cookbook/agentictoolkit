@@ -75,7 +75,7 @@ public final class OldAppearanceSettingsPanelViewController: OldSettingsPanelVie
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 24),
             stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24)
         ])
 
         self.view = container
@@ -148,7 +148,7 @@ public final class OldAppearanceSettingsPanelViewController: OldSettingsPanelVie
         sliderRow.spacing = 6
 
         NSLayoutConstraint.activate([
-            slider.widthAnchor.constraint(equalToConstant: 250),
+            slider.widthAnchor.constraint(equalToConstant: 250)
         ])
 
         let stack = NSStackView(views: [sliderRow, valueLabel])

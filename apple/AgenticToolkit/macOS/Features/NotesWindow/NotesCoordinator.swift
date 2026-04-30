@@ -34,9 +34,9 @@ public final class NotesCoordinator: AppFeature {
                 _ = await manager.createNote(title: title, content: content)
             }
         })
-        
+
         super.init()
-        
+
         self.menuContributions = [
             MenuContribution(slot: .window, title: "Notes", order: 40, key: "4") { [weak self] in
                 self?.showNotesWindow()
@@ -46,9 +46,9 @@ public final class NotesCoordinator: AppFeature {
             },
             MenuContribution(slot: .statusItem(section: 0), title: "Quick Note", order: 20) { [weak self] in
                 self?.showQuickNoteWindow()
-            },
+            }
         ]
-        
+
         self.scriptingKeys.insert("scriptingNotesVisible")
     }
 

@@ -179,7 +179,7 @@ final class OldSessionWindowSettingsPane: OldSettingsPanelView {
             percentLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 40),
             timeoutValueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
             cmdDivider.widthAnchor.constraint(equalTo: customCommandContainer.widthAnchor),
-            cmdField.widthAnchor.constraint(equalTo: customCommandContainer.widthAnchor),
+            cmdField.widthAnchor.constraint(equalTo: customCommandContainer.widthAnchor)
         ])
     }
 

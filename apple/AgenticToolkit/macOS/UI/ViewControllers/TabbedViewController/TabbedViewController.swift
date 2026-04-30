@@ -69,7 +69,7 @@ open class TabbedViewController: NSViewController {
             contentContainer.topAnchor.constraint(equalTo: tabBar.bottomAnchor),
             contentContainer.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             contentContainer.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            contentContainer.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: root.bottomAnchor)
         ])
 
         self.view = root
@@ -174,7 +174,7 @@ open class TabbedViewController: NSViewController {
             vc.view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
             vc.view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             vc.view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
-            vc.view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
+            vc.view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
         ])
     }
 

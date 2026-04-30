@@ -19,10 +19,10 @@ open class LogWindowController: WindowController<LogViewController> {
     public init(windowID: String, controller: any LogController) {
         self.controller = controller
         super.init(windowID: windowID, contentViewController: LogViewController(controller: controller))
-        
+
         self.windowTitle = "Log"
         self.windowStyleMask = [.titled, .closable, .resizable, .miniaturizable]
-        
+
         self.windowSpec = WindowSpec(
             defaultSize: NSSize(width: 900, height: 600),
             minSize: NSSize(width: 550, height: 420),

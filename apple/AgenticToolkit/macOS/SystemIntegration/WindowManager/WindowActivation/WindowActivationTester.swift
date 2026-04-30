@@ -23,7 +23,7 @@ public final class WindowActivationTester: @unchecked Sendable {
     public static let defaultStrategies: [WindowActivationStrategy] = [
         ITermTTYStrategy(),
         AXTitleMatchStrategy(),
-        BringTerminalToFrontStrategy(),
+        BringTerminalToFrontStrategy()
     ]
 
     public init(

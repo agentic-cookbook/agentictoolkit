@@ -127,7 +127,7 @@ public class WhippetChatBackend: ChatBackend {
         let extraPaths = [
             "\(homeDir)/.local/bin",
             "/usr/local/bin",
-            "/opt/homebrew/bin",
+            "/opt/homebrew/bin"
         ]
         let existingPath = env["PATH"] ?? "/usr/bin:/bin"
         env["PATH"] = (extraPaths + [existingPath]).joined(separator: ":")
@@ -167,7 +167,7 @@ public class WhippetChatBackend: ChatBackend {
         let candidates = [
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/claude").path,
             "/usr/local/bin/claude",
-            "/opt/homebrew/bin/claude",
+            "/opt/homebrew/bin/claude"
         ]
         for path in candidates {
             if FileManager.default.isExecutableFile(atPath: path) {

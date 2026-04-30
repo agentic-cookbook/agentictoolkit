@@ -15,8 +15,8 @@ final class AppSettingsWindowController: ComposableSettings.SettingsWindow {
     private var pluginManager: AIPluginManager?
     private(set) var viewModel: SettingsViewModel?
 
-    func configure(SessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager) {
-        self.sessionsDatabaseManager = SessionsDatabaseManager
+    func configure(sessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager) {
+        self.sessionsDatabaseManager = sessionsDatabaseManager
         self.pluginManager = pluginManager
         self.windowTitle = "AgenticPluginTester Settings"
         self.settingPanels = makeSettingsPanels()
@@ -41,9 +41,9 @@ final class AppSettingsWindowController: ComposableSettings.SettingsWindow {
 
     private func ensureViewModel() {
         guard viewModel == nil, let db = sessionsDatabaseManager, let pm = pluginManager else { return }
-        let launchAtLoginManager = LaunchAtLoginManager(SessionsDatabaseManager: db)
+        let launchAtLoginManager = LaunchAtLoginManager(sessionsDatabaseManager: db)
         viewModel = SettingsViewModel(
-            SessionsDatabaseManager: db,
+            sessionsDatabaseManager: db,
             pluginManager: pm,
             launchAtLoginManager: launchAtLoginManager
         )

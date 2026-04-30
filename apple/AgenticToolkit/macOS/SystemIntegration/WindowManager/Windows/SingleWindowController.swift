@@ -27,7 +27,7 @@ import AppKit
 open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     public static let defaultSize = NSSize(width: 600, height: 480)
-    
+
     public var windowID: String = ""
 
     /// Initializes the controller. If a `spec` is provided it's registered
@@ -64,7 +64,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     /// Style mask for the window.
     open var windowStyleMask: NSWindow.StyleMask = [.titled, .closable, .resizable]
-    
+
     /// Optional minimum size. If non-nil it is applied to the window after
     /// creation.
     open var minSize: NSSize?
@@ -201,4 +201,3 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
 //        ])
 //    }
 }
-

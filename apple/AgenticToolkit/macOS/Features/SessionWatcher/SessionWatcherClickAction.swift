@@ -5,25 +5,25 @@ extension SessionWatcher {
     public enum SessionWatcherClickAction: String, CaseIterable {
         /// Opens the default terminal app at the session's working directory.
         case openTerminal = "open_terminal"
-        
+
         /// Activates the Warp terminal tab whose working directory matches the session's cwd.
         case activateWarp = "activate_warp"
-        
+
         /// Activates any window in any app whose title contains the session's project name.
         case activateWindow = "activate_window"
-        
+
         /// Opens the session transcript file in the default application.
         case openTranscript = "open_transcript"
-        
+
         /// Copies the session ID to the system clipboard.
         case copySessionId = "copy_session_id"
-        
+
         /// Runs a custom shell command with variable substitution.
         case customCommand = "custom_command"
-        
+
         /// Sends a macOS notification with session details.
         case sendNotification = "send_notification"
-        
+
         /// Human-readable display name for UI.
         public var displayName: String {
             switch self {
@@ -36,7 +36,7 @@ extension SessionWatcher {
             case .sendNotification: return "Send Notification"
             }
         }
-        
+
         /// System image name for UI icons.
         public var systemImage: String {
             switch self {

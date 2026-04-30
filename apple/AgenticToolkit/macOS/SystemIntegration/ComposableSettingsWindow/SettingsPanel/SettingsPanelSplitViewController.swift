@@ -1,8 +1,6 @@
 import AppKit
 import Foundation
 
-
-
 extension ComposableSettings {
 
     /// Base class for every settings panel. One instance is hosted in the
@@ -11,10 +9,10 @@ extension ComposableSettings {
     /// list item — no wrapper struct.
     @MainActor
     open class SettingsPanelSplitViewController: SplitViewController, ComposableSettingsPanel {
-        
+
         /// This is what is user for the settings panel list
         public let descriptor: SettingsPanelDescriptor
-        
+
         public init(with descriptor: SettingsPanelDescriptor? = nil) {
             if let descriptor {
                 self.descriptor = descriptor
@@ -23,10 +21,9 @@ extension ComposableSettings {
             }
             super.init()
         }
-        
+
         public required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
     }
 }
-

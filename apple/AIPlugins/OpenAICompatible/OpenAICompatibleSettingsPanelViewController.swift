@@ -9,6 +9,7 @@ import AIPluginsShared
 /// URL field and free-form Model field on top of the standard
 /// API-key flow — the OpenAI-compatible plugin has no preset model list.
 @MainActor
+// swiftlint:disable:next type_name
 final class OpenAICompatibleSettingsPanelViewController: PluginSettingsPanel {
 
     init(plugin: OpenAICompatiblePlugin) {
@@ -46,7 +47,10 @@ final class OpenAICompatibleSettingsPanelViewController: PluginSettingsPanel {
         ))
 
         group.addSettingSubview(ComposableSettings.ExplanationView(
-            withText: "Point at any OpenAI-compatible endpoint (e.g. a local server). Enter the model name your endpoint expects."
+            withText: """
+                Point at any OpenAI-compatible endpoint (e.g. a local server). \
+                Enter the model name your endpoint expects.
+                """
         ))
 
         return group

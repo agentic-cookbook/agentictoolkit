@@ -52,7 +52,7 @@ public final class TerminalSessionRowCellView: NSTableCellView {
             subtitleStack.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             subtitleStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
             subtitleStack.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
-            subtitleStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+            subtitleStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4)
         ])
     }
 
@@ -134,7 +134,7 @@ public final class TerminalSessionRowCellView: NSTableCellView {
         imageView.contentTintColor = .secondaryLabelColor
         NSLayoutConstraint.activate([
             imageView.widthAnchor.constraint(equalToConstant: 12),
-            imageView.heightAnchor.constraint(equalToConstant: 12),
+            imageView.heightAnchor.constraint(equalToConstant: 12)
         ])
 
         let label = NSTextField(labelWithString: text)

@@ -10,7 +10,7 @@ final class DatabaseManagerPersistence: AISettingsPersistence {
 
     /// Maps AISettingsViewModel keys to existing DB keys where they differ.
     private static let keyMap: [String: String] = [
-        AISettingsViewModel.pluginKey: "ai_provider",
+        AISettingsViewModel.pluginKey: "ai_provider"
     ]
 
     /// Old AIProvider raw values → plugin identifiers.
@@ -19,7 +19,7 @@ final class DatabaseManagerPersistence: AISettingsPersistence {
         "anthropic": "com.agentictoolkit.plugin.claude-api",
         "openai": "com.agentictoolkit.plugin.openai",
         "google": "com.agentictoolkit.plugin.google",
-        "custom": "com.agentictoolkit.plugin.openai-compatible",
+        "custom": "com.agentictoolkit.plugin.openai-compatible"
     ]
 
     init(databaseManager: DatabaseManager) {

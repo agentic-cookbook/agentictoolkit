@@ -11,7 +11,7 @@ import AgenticToolkitCore
 public final class AIPluginsCoordinator: AppFeature {
 
     public let pluginManager: AIPluginManager
-    
+
     public init(appName: String, additionalSearchPaths: [URL] = []) {
         self.pluginManager = .init(appName: appName, additionalSearchPaths: additionalSearchPaths)
         self.pluginManager.discoverPlugins()

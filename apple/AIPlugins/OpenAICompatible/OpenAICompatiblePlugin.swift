@@ -53,7 +53,10 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
                     }
                     guard http.statusCode == 200 || http.statusCode == 201 else {
                         let body = String(data: data, encoding: .utf8) ?? ""
-                        throw AIPluginRequestError.httpError(http.statusCode, OpenAIResponseParser.parseErrorMessage(from: body))
+                        throw AIPluginRequestError.httpError(
+                            http.statusCode,
+                            OpenAIResponseParser.parseErrorMessage(from: body)
+                        )
                     }
 
                     let reply = OpenAIResponseParser.parseReply(from: data)
@@ -120,7 +123,7 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
 
         var body: [String: Any] = [
             "max_tokens": maxTokens,
-            "messages": allMessages,
+            "messages": allMessages
         ]
         if !model.isEmpty {
             body["model"] = model

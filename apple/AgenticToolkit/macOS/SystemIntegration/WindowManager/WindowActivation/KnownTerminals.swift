@@ -40,7 +40,7 @@ public enum KnownTerminals {
                       termProgramValues: ["WarpTerminal"]),
         KnownTerminal(displayName: "VS Code",
                       bundleID: "com.microsoft.VSCode",
-                      termProgramValues: ["vscode"]),
+                      termProgramValues: ["vscode"])
     ]
 
     /// Returns the known terminal whose `termProgramValues` contains `termProgram`,

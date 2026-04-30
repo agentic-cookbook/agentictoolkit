@@ -28,7 +28,7 @@ final class HookInstaller {
         "Stop",
         "SubagentStart",
         "SubagentStop",
-        "Notification",
+        "Notification"
     ]
 
     // MARK: - Properties
@@ -196,12 +196,12 @@ final class HookInstaller {
         let command = makeHookCommand(eventType: eventType)
         let hookEntry: [String: Any] = [
             "type": "command",
-            "command": command,
+            "command": command
         ]
 
         // No matcher -- we want to capture all events of this type
         return [
-            "hooks": [hookEntry],
+            "hooks": [hookEntry]
         ]
     }
 

@@ -20,7 +20,7 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         "gpt-4.1-nano",
         "gpt-4.1-mini",
         "gpt-4o-mini",
-        "gpt-4o",
+        "gpt-4o"
     ]
 
     public let recommendedModel = "gpt-4.1-nano"
@@ -55,7 +55,10 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
                     }
                     guard http.statusCode == 200 || http.statusCode == 201 else {
                         let body = String(data: data, encoding: .utf8) ?? ""
-                        throw AIPluginRequestError.httpError(http.statusCode, OpenAIResponseParser.parseErrorMessage(from: body))
+                        throw AIPluginRequestError.httpError(
+                            http.statusCode,
+                            OpenAIResponseParser.parseErrorMessage(from: body)
+                        )
                     }
 
                     let reply = OpenAIResponseParser.parseReply(from: data)
@@ -121,7 +124,7 @@ public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         let body: [String: Any] = [
             "model": model.isEmpty ? recommendedModel : model,
             "max_tokens": maxTokens,
-            "messages": allMessages,
+            "messages": allMessages
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

@@ -5,16 +5,16 @@ extension SessionWatcher {
     /// Each property maps to a key declared in the host's `.sdef` scripting dictionary.
     @objc(ScriptableSession)
     public class ScriptableSession: NSObject {
-        
+
         public let session: SessionWatcherSession
-        
+
         public init(session: SessionWatcherSession) {
             self.session = session
             super.init()
         }
-        
+
         // MARK: - Scripting Properties
-        
+
         @objc var sessionId: String { session.sessionId }
         @objc var displayName: String { session.displayLabel }
         @objc var projectName: String { session.projectName }
@@ -27,7 +27,7 @@ extension SessionWatcher {
         @objc var lastActivity: String { session.lastActivityAt }
         @objc var processId: Int { Int(session.pid) }
         @objc var terminalProgram: String { session.termProgram }
-        
+
         /// Returns the session status as an AppleScript enumeration descriptor.
         @objc var scriptingStatus: NSAppleEventDescriptor {
             let code: FourCharCode
@@ -38,9 +38,9 @@ extension SessionWatcher {
             }
             return NSAppleEventDescriptor(enumCode: code)
         }
-        
+
         // MARK: - Object Specifier
-        
+
         public override nonisolated var objectSpecifier: NSScriptObjectSpecifier? {
             // NSScriptObjectSpecifier isn't Sendable; ferry through a Box.
             // `sessionId` captured locally to avoid sending non-Sendable `self`.
@@ -60,7 +60,7 @@ extension SessionWatcher {
             }
             return box.value
         }
-    
+
         /// Converts a 4-character string to a FourCharCode (OSType).
         private static func fourCC(_ string: String) -> FourCharCode {
             var result: FourCharCode = 0
@@ -70,5 +70,5 @@ extension SessionWatcher {
             return result
         }
     }
-    
+
 }

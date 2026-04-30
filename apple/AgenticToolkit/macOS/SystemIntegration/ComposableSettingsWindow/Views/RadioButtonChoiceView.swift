@@ -8,7 +8,7 @@ extension ComposableSettings {
         public private(set) var radioButtons: [NSButton] = []
 
         private let viewModel: ChoiceViewModel<Value>
-        
+
         private var buttonValues: [(button: NSButton, value: Value)] = []
 
         public init(

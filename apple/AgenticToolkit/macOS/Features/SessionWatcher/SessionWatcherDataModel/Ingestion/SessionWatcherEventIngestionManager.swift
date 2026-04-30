@@ -5,69 +5,69 @@ import AgenticToolkitCoreMacOS
 import os
 
 extension SessionWatcher {
-    
+
     /// Watches the drop directory for new JSON event files, parses them, inserts events
     /// into the database, creates/updates session records, and deletes consumed files.
     /// Malformed files are moved to an `errors/` subdirectory.
     public class SessionWatcherEventIngestionManager: @unchecked Sendable {
-        
+
         // MARK: - Properties
-        
+
         /// The directory where hook events are dropped as JSON files.
         public let dropDirectoryURL: URL
-        
+
         /// The subdirectory where malformed JSON files are moved.
         public let errorsDirectoryURL: URL
-        
+
         /// The database manager used to persist events and sessions.
         private let SessionWatcherDatabaseManager: SessionWatcherDatabaseManager
-        
+
         /// File system event stream for watching the drop directory.
         private var eventStream: FSEventStreamRef?
-        
+
         /// DispatchSource for file-system monitoring (used as primary mechanism).
         private var directorySource: DispatchSourceFileSystemObject?
-        
+
         /// File descriptor for the monitored directory.
         private var directoryFileDescriptor: Int32 = -1
-        
+
         /// Queue for processing ingestion work off the main thread.
         private let processingQueue = DispatchQueue(
             label: "com.mikefullerton.whippet.ingestion",
             qos: .userInitiated
         )
-        
+
         /// Whether the manager is currently running.
         private(set) var isRunning = false
-        
+
         /// Callback invoked when events are ingested (useful for UI updates).
         public var onEventsIngested: (() -> Void)?
-        
+
         /// Callback invoked for each individual event after ingestion, providing the event type,
         /// session ID, and project name. Used by NotificationManager to fire per-event notifications.
         public var onEventIngested: ((_ eventType: String, _ sessionId: String, _ projectName: String) -> Void)?
-        
+
         /// The session summarizer for generating AI summaries when sessions end.
         public var sessionSummarizer: SessionWatcherSummarizer?
-        
+
         /// Called on the main thread when a fatal summarizer error occurs (API error, bad key, etc.).
         public var onSummarizerError: ((String) -> Void)?
-        
+
         /// Tracks pending summarization work items per session to debounce rapid events.
         private var summarizeWorkItems: [String: DispatchWorkItem] = [:]
-        
+
         /// Delay before triggering summarization after the last event for a session.
         public static let summarizeDebounceInterval: TimeInterval = 5.0
-        
+
         /// Minimum file age (in seconds) before attempting to read it.
         /// This handles the case where a file is still being written.
         public static let minimumFileAge: TimeInterval = 0.1
-        
+
         /// Maximum number of retry attempts for a file that appears to still be written.
         public static let maxRetryAttempts = 3
-        
+
         // MARK: - Initialization
-        
+
         /// Creates an SessionWatcherEventIngestionManager with the given drop directory and database manager.
         /// - Parameters:
         ///   - dropDirectoryURL: The directory to watch for event files. Defaults to `~/.claude/session-events/`.
@@ -83,13 +83,13 @@ extension SessionWatcher {
             self.errorsDirectoryURL = self.dropDirectoryURL.appendingPathComponent("errors")
             self.SessionWatcherDatabaseManager = SessionWatcherDatabaseManager
         }
-        
+
         deinit {
             stop()
         }
-        
+
         // MARK: - Directory Setup
-        
+
         /// Creates the drop directory and errors subdirectory if they don't exist.
         public func ensureDirectoriesExist() throws {
             let fm = FileManager.default
@@ -100,36 +100,36 @@ extension SessionWatcher {
                 try fm.createDirectory(at: errorsDirectoryURL, withIntermediateDirectories: true)
             }
         }
-        
+
         // MARK: - Start / Stop
-        
+
         /// Starts watching the drop directory for new event files.
         /// Creates the directory if it doesn't exist, processes any existing files,
         /// then begins monitoring for new arrivals.
         public func start() throws {
             guard !isRunning else { return }
-            
+
             try ensureDirectoriesExist()
-            
+
             // Process any files that already exist
             processExistingFiles()
-            
+
             // Start watching for new files using DispatchSource
             startWatching()
-            
+
             isRunning = true
             logger.info("Started watching \(self.dropDirectoryURL.path, privacy: .public)")
         }
-        
+
         /// Stops watching the drop directory.
         public func stop() {
             stopWatching()
             isRunning = false
             logger.info("Stopped")
         }
-        
+
         // MARK: - File System Watching
-        
+
         private func startWatching() {
             let fd = open(dropDirectoryURL.path, O_EVTONLY)
             guard fd >= 0 else {
@@ -137,13 +137,13 @@ extension SessionWatcher {
                 return
             }
             directoryFileDescriptor = fd
-            
+
             let source = DispatchSource.makeFileSystemObjectSource(
                 fileDescriptor: fd,
                 eventMask: .write,
                 queue: processingQueue
             )
-            
+
             source.setEventHandler { [weak self] in
                 // Coalesce: delay to let files finish writing, then process the whole batch.
                 // Our own deletes may re-trigger .write, but by the time the next
@@ -152,29 +152,29 @@ extension SessionWatcher {
                     self?.processExistingFiles()
                 }
             }
-            
+
             source.setCancelHandler { [weak self] in
                 if let fd = self?.directoryFileDescriptor, fd >= 0 {
                     close(fd)
                     self?.directoryFileDescriptor = -1
                 }
             }
-            
+
             directorySource = source
             source.resume()
         }
-        
+
         private func stopWatching() {
             directorySource?.cancel()
             directorySource = nil
         }
-        
+
         // MARK: - File Processing
-        
+
         /// Scans the drop directory for JSON files and processes each one.
         public func processExistingFiles() {
             let fm = FileManager.default
-            
+
             guard let contents = try? fm.contentsOfDirectory(
                 at: dropDirectoryURL,
                 includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
@@ -182,29 +182,29 @@ extension SessionWatcher {
             ) else {
                 return
             }
-            
+
             let jsonFiles = contents.filter { $0.pathExtension == "json" }
                 .sorted { $0.lastPathComponent < $1.lastPathComponent }
-            
+
             if !jsonFiles.isEmpty {
                 logger.debug("Found \(jsonFiles.count) JSON file(s) to process")
             }
-            
+
             for fileURL in jsonFiles {
                 processFile(at: fileURL)
             }
-            
+
             if !jsonFiles.isEmpty {
                 onEventsIngested?()
                 SessionListViewModel.notifySessionsChanged()
             }
         }
-        
+
         /// Processes a single event JSON file.
         /// - Parameter fileURL: The URL of the JSON file to process.
         public func processFile(at fileURL: URL) {
             let fm = FileManager.default
-            
+
             // Check file age to handle concurrent writes
             if let attributes = try? fm.attributesOfItem(atPath: fileURL.path),
                let modDate = attributes[.modificationDate] as? Date {
@@ -214,14 +214,14 @@ extension SessionWatcher {
                     return
                 }
             }
-            
+
             // Read the file contents
             guard let data = try? Data(contentsOf: fileURL) else {
                 logger.warning("Failed to read file: \(fileURL.lastPathComponent, privacy: .public)")
                 moveToErrors(fileURL)
                 return
             }
-            
+
             // Empty files: if old enough, delete them (failed hook writes).
             // If very recent, skip — the hook may still be writing.
             if data.isEmpty {
@@ -233,14 +233,14 @@ extension SessionWatcher {
                 }
                 return
             }
-            
+
             // Parse JSON
             guard let eventFile = parseEventFile(data: data, fileName: fileURL.lastPathComponent) else {
                 logger.warning("Malformed JSON in file: \(fileURL.lastPathComponent, privacy: .public)")
                 moveToErrors(fileURL)
                 return
             }
-            
+
             // Ingest into database
             do {
                 try ingestEvent(eventFile, rawData: data)
@@ -252,24 +252,24 @@ extension SessionWatcher {
                 moveToErrors(fileURL)
             }
         }
-        
+
         // MARK: - JSON Parsing
-        
+
         /// Parses an event file's JSON data into an SessionWatcherEventFile struct.
         /// Returns nil if the JSON is malformed or missing required fields.
         public func parseEventFile(data: Data, fileName: String) -> SessionWatcherEventFile? {
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 return nil
             }
-            
+
             guard let event = json["event"] as? String,
                   let sessionId = json["session_id"] as? String else {
                 return nil
             }
-            
+
             let timestamp = json["timestamp"] as? String ?? ISO8601DateFormatter().string(from: Date())
             let eventData = json["data"] as? [String: Any] ?? [:]
-            
+
             return SessionWatcherEventFile(
                 event: event,
                 sessionId: sessionId,
@@ -278,17 +278,17 @@ extension SessionWatcher {
                 rawJson: String(data: data, encoding: .utf8) ?? "{}"
             )
         }
-        
+
         // MARK: - Event Ingestion
-        
+
         /// Inserts the event into the database and creates/updates the session record.
         public func ingestEvent(_ eventFile: SessionWatcherEventFile, rawData: Data) throws {
             let rawJson = String(data: rawData, encoding: .utf8) ?? "{}"
-            
+
             // Create or update the session record
             let session = sessionFromEvent(eventFile)
             try SessionWatcherDatabaseManager.upsertSession(session)
-            
+
             // Insert the event record
             let event = SessionWatcherEvent(
                 sessionId: eventFile.sessionId,
@@ -297,7 +297,7 @@ extension SessionWatcher {
                 rawJson: rawJson
             )
             try SessionWatcherDatabaseManager.insertEvent(event)
-            
+
             // If this is a SessionEnd event, mark the session as ended
             if eventFile.event == "SessionEnd" {
                 try SessionWatcherDatabaseManager.updateSessionStatus(
@@ -305,29 +305,29 @@ extension SessionWatcher {
                     status: .ended
                 )
             }
-            
+
             // Trigger AI summarization on every event (debounced).
             // SessionEnd fires immediately; other events wait for the debounce interval.
             scheduleSummarization(sessionId: eventFile.sessionId, immediate: eventFile.event == "SessionEnd")
-            
+
             // Notify per-event callback (used for notifications)
             let projectName = session.projectName
             onEventIngested?(eventFile.event, eventFile.sessionId, projectName)
         }
-        
+
         /// Creates a SessionWatcherSession model from an event file's data.
         private func sessionFromEvent(_ eventFile: SessionWatcherEventFile) -> SessionWatcherSession {
             let cwd = eventFile.data["cwd"] as? String ?? ""
             let model = eventFile.data["model"] as? String ?? ""
             let lastTool = eventFile.data["tool"] as? String ?? ""
             let gitBranch = cwd.isEmpty ? "" : SessionWatcherGitMetadataResolver.shared.resolveBranch(cwd: cwd)
-            
+
             let status: SessionWatcherStatus = eventFile.event == "SessionEnd" ? .ended : .active
-            
+
             // Extract process info from SessionStart events (captured by hook script)
             let pid = (eventFile.data["pid"] as? NSNumber)?.int32Value ?? 0
             let termProgram = eventFile.data["term_program"] as? String ?? ""
-            
+
             return SessionWatcherSession(
                 sessionId: eventFile.sessionId,
                 cwd: cwd,
@@ -341,18 +341,18 @@ extension SessionWatcher {
                 termProgram: termProgram
             )
         }
-        
+
         // MARK: - Summarization Scheduling
-        
+
         /// Debounced trigger for AI summarization. Cancels any pending work for the same session.
         /// `immediate` skips the debounce (used for SessionEnd).
         private func scheduleSummarization(sessionId: String, immediate: Bool) {
             guard let summarizer = sessionSummarizer else { return }
-            
+
             // Cancel any pending debounced work for this session
             summarizeWorkItems[sessionId]?.cancel()
             summarizeWorkItems[sessionId] = nil
-            
+
             let work = { [weak self] in
                 SessionWatcher.SummarizerDebugLog.shared.append("Debounce fired — summarizing \(sessionId)")
                 Task.detached(priority: .utility) { [summarizer, sessionId, weak self] in
@@ -367,7 +367,7 @@ extension SessionWatcher {
                     }
                 }
             }
-            
+
             if immediate {
                 SessionWatcher.SummarizerDebugLog.shared.append("Immediate summarize for \(sessionId) (SessionEnd)")
                 work()
@@ -380,7 +380,7 @@ extension SessionWatcher {
                 )
             }
         }
-        
+
         /// Summarizes all sessions that have events. Call once on app launch.
         /// Processes sessions sequentially to avoid concurrent SQLite access.
         public func summarizeExistingSessions() {
@@ -388,14 +388,14 @@ extension SessionWatcher {
                 SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: summarizer is nil")
                 return
             }
-            
+
             Task.detached(priority: .utility) { [weak self] in
                 guard let sessions = try? self?.SessionWatcherDatabaseManager.fetchAllSessions() else {
                     SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: failed to fetch sessions")
                     return
                 }
                 SessionWatcher.SummarizerDebugLog.shared.append("summarizeExistingSessions: \(sessions.count) session(s) total")
-                
+
                 for session in sessions {
                     SessionWatcher.SummarizerDebugLog.shared.append("  summarizing: \(session.sessionId) (\(session.status.rawValue))")
                     do {
@@ -412,14 +412,14 @@ extension SessionWatcher {
                 }
             }
         }
-        
+
         // MARK: - Error Handling
-        
+
         /// Moves a file to the errors subdirectory.
         private func moveToErrors(_ fileURL: URL) {
             let fm = FileManager.default
             let destination = errorsDirectoryURL.appendingPathComponent(fileURL.lastPathComponent)
-            
+
             do {
                 try ensureDirectoriesExist()
                 // If a file with the same name already exists in errors, remove it first

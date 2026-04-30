@@ -144,7 +144,7 @@ final class HookInstallerTests: XCTestCase {
         // Write settings with other config besides hooks
         let existingSettings: [String: Any] = [
             "permissions": ["allow": ["Bash"]],
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-4-6"
         ]
         let data = try JSONSerialization.data(withJSONObject: existingSettings, options: .prettyPrinted)
         try data.write(to: settingsURL)

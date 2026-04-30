@@ -13,13 +13,13 @@ public final class AIChatWindowController: WindowController<WindowContentViewCon
     public static let windowID = "aiChat"
 
     public init(viewModel: ChatViewModel) {
-        
+
         self.viewModel = viewModel
         super.init(
             windowID: Self.windowID,
             contentViewController: WindowContentViewController<ChatView>(contentView: ChatView(viewModel: viewModel))
         )
-            
+
         self.windowSpec = WindowSpec(
             defaultSize: NSSize(width: 420, height: 520),
             minSize: NSSize(width: 320, height: 400),
@@ -30,4 +30,3 @@ public final class AIChatWindowController: WindowController<WindowContentViewCon
         self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
     }
 }
-

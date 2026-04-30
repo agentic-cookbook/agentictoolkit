@@ -6,8 +6,6 @@ extension ComposableSettings {
     public class HeaderView: NSView, SettingsViewProtocol {
         public let titleLabel: NSTextField
 
-        
-
         public init(title: String) {
             self.titleLabel = Self.createHeaderLabel(title: title)
             super.init(frame: .zero)
@@ -20,7 +18,7 @@ extension ComposableSettings {
                 self.titleLabel.topAnchor.constraint(equalTo: self.topAnchor),
                 self.titleLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor),
                 self.titleLabel.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-                self.titleLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+                self.titleLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor)
             ])
         }
 

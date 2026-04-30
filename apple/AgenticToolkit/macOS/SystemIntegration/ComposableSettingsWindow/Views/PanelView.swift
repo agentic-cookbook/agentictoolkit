@@ -12,7 +12,7 @@ extension ComposableSettings {
         public convenience init() {
             self.init(frame: .zero)
         }
-        
+
         public override init(frame frameRect: NSRect) {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
@@ -28,7 +28,7 @@ extension ComposableSettings {
                 self.stackView.topAnchor.constraint(equalTo: self.topAnchor, constant: inset),
                 self.stackView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: inset),
                 self.stackView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -inset),
-                self.stackView.bottomAnchor.constraint(lessThanOrEqualTo: self.bottomAnchor, constant: -inset),
+                self.stackView.bottomAnchor.constraint(lessThanOrEqualTo: self.bottomAnchor, constant: -inset)
             ])
         }
 
