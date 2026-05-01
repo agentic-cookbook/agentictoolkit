@@ -2,19 +2,72 @@ import Foundation
 
 /// A message in a chat conversation passed between the chat UI and a backend.
 /// Plain value type — backends translate this into their own wire format.
+///
+/// Tool turns ride on the `.toolUse` / `.toolResult` roles, which carry their
+/// associated data via the optional payload fields below.
 public struct ChatBackendMessage: Sendable, Equatable {
     public enum Role: Sendable, Equatable {
         case user
         case assistant
         case system
+        case toolUse
+        case toolResult
     }
 
     public let role: Role
     public let content: String
+    public let toolUseId: String?
+    public let toolName: String?
+    public let toolArgumentsJSON: Data?
+    public let toolIsError: Bool?
 
     public init(role: Role, content: String) {
+        self.init(
+            role: role,
+            content: content,
+            toolUseId: nil,
+            toolName: nil,
+            toolArgumentsJSON: nil,
+            toolIsError: nil
+        )
+    }
+
+    private init(
+        role: Role,
+        content: String,
+        toolUseId: String?,
+        toolName: String?,
+        toolArgumentsJSON: Data?,
+        toolIsError: Bool?
+    ) {
         self.role = role
         self.content = content
+        self.toolUseId = toolUseId
+        self.toolName = toolName
+        self.toolArgumentsJSON = toolArgumentsJSON
+        self.toolIsError = toolIsError
+    }
+
+    public static func toolUse(id: String, name: String, argumentsJSON: Data) -> ChatBackendMessage {
+        ChatBackendMessage(
+            role: .toolUse,
+            content: "",
+            toolUseId: id,
+            toolName: name,
+            toolArgumentsJSON: argumentsJSON,
+            toolIsError: nil
+        )
+    }
+
+    public static func toolResult(id: String, content: String, isError: Bool) -> ChatBackendMessage {
+        ChatBackendMessage(
+            role: .toolResult,
+            content: content,
+            toolUseId: id,
+            toolName: nil,
+            toolArgumentsJSON: nil,
+            toolIsError: isError
+        )
     }
 }
 
@@ -51,4 +104,39 @@ public protocol ChatBackend: AnyObject, Sendable {
     ///   assistant reply. The stream finishes when the response is complete, or
     ///   throws if the backend fails.
     func sendMessages(_ messages: [ChatBackendMessage]) async -> AsyncThrowingStream<String, Error>
+
+    /// Streams an assistant response for a tool-aware request.
+    ///
+    /// Backends that support function calling override this to translate
+    /// `tools` into the provider's tool format and emit `.toolUse` events when
+    /// the model requests a call. The default implementation delegates to the
+    /// text-only `sendMessages` and surfaces every chunk as `.textDelta`,
+    /// followed by a single `.end(stopReason: nil)`.
+    func sendMessages(
+        _ messages: [ChatBackendMessage],
+        tools: [ToolDefinition]
+    ) async -> AsyncThrowingStream<ChatStreamEvent, Error>
+}
+
+extension ChatBackend {
+    public func sendMessages(
+        _ messages: [ChatBackendMessage],
+        tools: [ToolDefinition]
+    ) async -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        let textStream = await sendMessages(messages)
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await chunk in textStream {
+                        continuation.yield(.textDelta(chunk))
+                    }
+                    continuation.yield(.end(stopReason: nil))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
 }

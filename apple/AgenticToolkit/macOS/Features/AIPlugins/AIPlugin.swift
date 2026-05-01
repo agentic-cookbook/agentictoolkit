@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 /// Protocol that all LLM provider plugins must conform to.
 ///
@@ -42,6 +43,21 @@ public protocol AIPlugin: AnyObject, Sendable {
         credentials: AIPluginCredentials
     ) -> AsyncThrowingStream<String, Error>
 
+    /// Tool-aware streaming variant. Plugins that advertise the
+    /// `.functionCalling` capability override this to translate `tools` into
+    /// the provider's tool format and emit `.toolUse` events when the model
+    /// asks to call one. The default implementation delegates to the text-only
+    /// `sendMessages` and yields every chunk as `.textDelta`, followed by a
+    /// single `.end(stopReason: nil)`.
+    func sendMessages(
+        _ messages: [AIPluginMessage],
+        tools: [ToolDefinition],
+        model: String,
+        systemPrompt: String?,
+        maxTokens: Int,
+        credentials: AIPluginCredentials
+    ) -> AsyncThrowingStream<ChatStreamEvent, Error>
+
     /// Optional: provide a settings panel view controller for this plugin.
     /// The returned controller is hosted in the app's `SettingsViewController`
     /// sidebar; return nil for plugins that have no per-plugin settings UI.
@@ -53,10 +69,35 @@ public protocol AIPlugin: AnyObject, Sendable {
     func validateCredentials(_ credentials: AIPluginCredentials) async -> String?
 }
 
-//// MARK: - Default Implementations
-//
-// extension AIPlugin {
-//    @MainActor
-//    func settingsPanelViewController() -> OldSettingsPanelViewController? { nil }
-//    func validateCredentials(_ credentials: AIPluginCredentials) async -> String? { nil }
-// }
+extension AIPlugin {
+    public func sendMessages(
+        _ messages: [AIPluginMessage],
+        tools: [ToolDefinition],
+        model: String,
+        systemPrompt: String?,
+        maxTokens: Int,
+        credentials: AIPluginCredentials
+    ) -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        let textStream = sendMessages(
+            messages,
+            model: model,
+            systemPrompt: systemPrompt,
+            maxTokens: maxTokens,
+            credentials: credentials
+        )
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await chunk in textStream {
+                        continuation.yield(.textDelta(chunk))
+                    }
+                    continuation.yield(.end(stopReason: nil))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}

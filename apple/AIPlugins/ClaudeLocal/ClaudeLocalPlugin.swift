@@ -83,10 +83,11 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
         // Multi-turn: format as conversation so Claude understands the history
         return nonSystem.map { msg in
             switch msg.role {
-            case .user:      return "Human: \(msg.content)"
-            case .assistant: return "Assistant: \(msg.content)"
-            case .system:    return msg.content
-            @unknown default: return msg.content
+            case .user:        return "Human: \(msg.content)"
+            case .assistant:   return "Assistant: \(msg.content)"
+            case .system:      return msg.content
+            case .toolUse:     return "Assistant tool call: \(msg.toolName ?? "")"
+            case .toolResult:  return "Tool result: \(msg.content)"
             }
         }.joined(separator: "\n\n")
     }

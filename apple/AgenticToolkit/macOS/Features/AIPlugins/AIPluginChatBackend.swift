@@ -162,7 +162,8 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         case .user: return .user
         case .assistant: return .assistant
         case .system: return .system
-        @unknown default: return .user
+        case .toolUse: return .toolUse
+        case .toolResult: return .toolResult
         }
     }
 }

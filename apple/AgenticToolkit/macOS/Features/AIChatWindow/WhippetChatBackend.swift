@@ -73,12 +73,13 @@ public class WhippetChatBackend: ChatBackend {
         baseURL: String,
         messages: [ChatBackendMessage]
     ) async throws -> String {
-        let apiMessages = messages.map { msg -> [String: String] in
+        let apiMessages = messages.compactMap { msg -> [String: String]? in
             let role: String
             switch msg.role {
             case .user: role = "user"
             case .assistant: role = "assistant"
             case .system: role = "system"
+            case .toolUse, .toolResult: return nil
             }
             return ["role": role, "content": msg.content]
         }
