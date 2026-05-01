@@ -151,6 +151,47 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         }
     }
 
+    public func sendMessages(
+        _ messages: [ChatBackendMessage],
+        tools: [ToolDefinition]
+    ) async -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        let snapshot: (model: String, creds: AIPluginCredentials, plugin: AIPlugin?) = await MainActor.run {
+            let pluginId = configProvider?.selectedPluginIdentifier ?? ""
+            let model = configProvider?.selectedModel ?? ""
+            let creds = configProvider?.pluginCredentials ?? AIPluginCredentials(apiKey: "", baseURL: nil)
+            let plugin = try? pluginManager.loadPlugin(identifier: pluginId)
+            return (model, creds, plugin)
+        }
+
+        let history: [AIPluginMessage] = messages.map { Self.toPluginMessage($0) }
+
+        return AsyncThrowingStream { continuation in
+            guard let plugin = snapshot.plugin else {
+                continuation.finish(throwing: AIPluginChatError.pluginNotAvailable)
+                return
+            }
+            let task = Task {
+                do {
+                    let stream = plugin.sendMessages(
+                        history,
+                        tools: tools,
+                        model: snapshot.model,
+                        systemPrompt: nil,
+                        maxTokens: 2048,
+                        credentials: snapshot.creds
+                    )
+                    for try await event in stream {
+                        continuation.yield(event)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Errors specific to the plugin-backed chat path.
     public enum AIPluginChatError: Error {
         /// No plugin available for the currently selected identifier.
@@ -164,6 +205,25 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         case .system: return .system
         case .toolUse: return .toolUse
         case .toolResult: return .toolResult
+        }
+    }
+
+    private static func toPluginMessage(_ msg: ChatBackendMessage) -> AIPluginMessage {
+        switch msg.role {
+        case .toolUse:
+            return AIPluginMessage.toolUse(
+                id: msg.toolUseId ?? "",
+                name: msg.toolName ?? "",
+                argumentsJSON: msg.toolArgumentsJSON ?? Data()
+            )
+        case .toolResult:
+            return AIPluginMessage.toolResult(
+                id: msg.toolUseId ?? "",
+                content: msg.content,
+                isError: msg.toolIsError ?? false
+            )
+        case .user, .assistant, .system:
+            return AIPluginMessage(role: llmRole(for: msg.role), content: msg.content)
         }
     }
 }
