@@ -74,8 +74,8 @@ targets:
         INSTALL_PATH: $(LOCAL_LIBRARY_DIR)/Frameworks
         VERSIONING_SYSTEM: apple-generic
         SWIFT_INSTALL_MODULE: YES
-        SWIFT_INSTALL_OBJC_HEADER: NO
         SWIFT_EMIT_LOC_STRINGS: YES
+        DEFINES_MODULE: NO
         LD_RUNPATH_SEARCH_PATHS:
           - $(inherited)
           - "@executable_path/../Frameworks"
@@ -139,6 +139,7 @@ targets:
         embed: false
     postBuildScripts:
       - name: Install to ~/.agenticplugins
+        basedOnDependencyAnalysis: false
         script: |
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
@@ -174,6 +175,7 @@ targets:
         embed: false
     postBuildScripts:
       - name: Install to ~/.agenticplugins
+        basedOnDependencyAnalysis: false
         script: |
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
@@ -209,6 +211,7 @@ targets:
         embed: false
     postBuildScripts:
       - name: Install to ~/.agenticplugins
+        basedOnDependencyAnalysis: false
         script: |
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
@@ -244,6 +247,7 @@ targets:
         embed: false
     postBuildScripts:
       - name: Install to ~/.agenticplugins
+        basedOnDependencyAnalysis: false
         script: |
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
@@ -279,6 +283,7 @@ targets:
         embed: false
     postBuildScripts:
       - name: Install to ~/.agenticplugins
+        basedOnDependencyAnalysis: false
         script: |
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
