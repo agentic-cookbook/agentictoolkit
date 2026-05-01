@@ -69,12 +69,41 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         inputRow.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
         inputRow.translatesAutoresizingMaskIntoConstraints = false
 
+        let topAnchorView: NSView
+        let topDivider = NSBox()
+        topDivider.boxType = .separator
+        topDivider.translatesAutoresizingMaskIntoConstraints = false
+
+        if let registry = viewModel.registry {
+            let chipsBar = MCPChipsBarView(viewModel: viewModel, registry: registry)
+            addSubview(chipsBar)
+            addSubview(topDivider)
+            NSLayoutConstraint.activate([
+                chipsBar.topAnchor.constraint(equalTo: topAnchor),
+                chipsBar.leadingAnchor.constraint(equalTo: leadingAnchor),
+                chipsBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+                topDivider.topAnchor.constraint(equalTo: chipsBar.bottomAnchor),
+                topDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
+                topDivider.trailingAnchor.constraint(equalTo: trailingAnchor)
+            ])
+            topAnchorView = topDivider
+        } else {
+            topAnchorView = self
+        }
+
         addSubview(transcriptScroll)
         addSubview(divider)
         addSubview(inputRow)
 
+        let transcriptTop: NSLayoutConstraint
+        if topAnchorView === self {
+            transcriptTop = transcriptScroll.topAnchor.constraint(equalTo: topAnchor)
+        } else {
+            transcriptTop = transcriptScroll.topAnchor.constraint(equalTo: topAnchorView.bottomAnchor)
+        }
+
         NSLayoutConstraint.activate([
-            transcriptScroll.topAnchor.constraint(equalTo: topAnchor),
+            transcriptTop,
             transcriptScroll.leadingAnchor.constraint(equalTo: leadingAnchor),
             transcriptScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
             transcriptScroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),

@@ -21,7 +21,7 @@ public final class ChatViewModel: ObservableObject {
     @Published public var activeServerIds: Set<UUID> = []
 
     private let backend: ChatBackend
-    private let registry: MCPServerRegistry?
+    public let registry: MCPServerRegistry?
 
     private var queue: [String] = []
     private var isProcessing = false

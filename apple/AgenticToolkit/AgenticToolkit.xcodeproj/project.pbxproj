@@ -214,6 +214,7 @@
 		8E0117AC5CA0DC3EF4279011 /* ComposableSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B4163D316F49BFD85860157 /* ComposableSettingsPanel.swift */; };
 		8FC6058DE13D71FBE42DCF61 /* LogViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07014813B693D6B7CA357C8C /* LogViewTests.swift */; };
 		90F9F4DE37B2BD2D06BFE024 /* KeychainHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9640D313E020C0A0C615326E /* KeychainHelperTests.swift */; };
+		917169E897A3FAD6DA99028A /* MCPChipsBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74925FD9DA16DA1C1650F4CE /* MCPChipsBarView.swift */; };
 		91910DAD180C2CA4394D497F /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A6A6F1AF7704D404EE128D5 /* AgenticToolkitCoreUI.framework */; };
 		922D960398677342DCD44C4F /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; };
 		92E87614166B5D8131A29749 /* NotesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BEECDBE30F93A0D0C750E3B /* NotesManager.swift */; };
@@ -737,6 +738,7 @@
 		71116A9F950E75D198E453E1 /* WindowPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPosition.swift; sourceTree = "<group>"; };
 		7384AD8B1E1C9D20C362EFAA /* SettingsWindowCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowCommands.swift; sourceTree = "<group>"; };
 		74058B27121A2773814462AA /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
+		74925FD9DA16DA1C1650F4CE /* MCPChipsBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPChipsBarView.swift; sourceTree = "<group>"; };
 		75CA772A1D37DA43E38524AA /* NoteEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorViewController.swift; sourceTree = "<group>"; };
 		768F7C74EBACCA21B475C0B6 /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		783F11D016705C92E0829D05 /* LogColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogColumn.swift; sourceTree = "<group>"; };
@@ -1659,6 +1661,7 @@
 				AB4EC455A374D3C4CC3860A1 /* ChatMessage.swift */,
 				3F025F4833518303ADE9E6D8 /* ChatView.swift */,
 				C9EE844AF7F05EB6F294676F /* ChatViewModel.swift */,
+				74925FD9DA16DA1C1650F4CE /* MCPChipsBarView.swift */,
 				E92A5A02FCFF90771C98ED89 /* MessageBubbleView.swift */,
 				8B07B6ADDBA75DF064352068 /* TypingIndicatorView.swift */,
 				4CBDEAC1120C78D1B2462109 /* WhippetChatBackend.swift */,
@@ -1897,7 +1900,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_ADE07325-8450-4106-ABD9-3A4E50CDCF54" /* Settings */ = {
+		"TEMP_4D8C3F8A-AA1E-47BB-9013-0E09B12D6BDA" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2386,6 +2389,7 @@
 				851EEE48DC44D5E9A1DBA20A /* LogView.swift in Sources */,
 				CD8831E05BCAC39D2EABB4DB /* LogViewController.swift in Sources */,
 				380D840AFE226F80DEE42982 /* LogWindowController.swift in Sources */,
+				917169E897A3FAD6DA99028A /* MCPChipsBarView.swift in Sources */,
 				00D18DF46FCAF355B0DEB859 /* MCPServersPanelViewController.swift in Sources */,
 				D5D46A51F6A59D4F968051F2 /* MainActorScriptCommand.swift in Sources */,
 				B59602DDBDB81AC8822E9707 /* MenuContribution.swift in Sources */,
