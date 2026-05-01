@@ -88,7 +88,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     }
 
     private func refreshFocusedLeaf() {
-        guard let activeTabID = tabbed.selectedTabID,
+        guard let activeTabID = tabbed.selectedTabID(on: .top),
               let activeSplit = splitControllersByTabID[activeTabID] else { return }
         let newLeaf = activeSplit.focusedLeafNodeID
         let prior = focusedLeafByTabID[activeTabID]
@@ -111,7 +111,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     }
 
     private func restoreFocusedLeafForActiveTab() {
-        guard let activeTabID = tabbed.selectedTabID,
+        guard let activeTabID = tabbed.selectedTabID(on: .top),
               let activeSplit = splitControllersByTabID[activeTabID],
               let focusedNodeID = focusedLeafByTabID[activeTabID] else { return }
         // Defer one runloop tick so the tab's view hierarchy is fully
@@ -136,9 +136,9 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
             if let focusedNodeID = record.focusedNodeID {
                 focusedLeafByTabID[record.id] = focusedNodeID
             }
-            tabbed.addTab(.init(id: record.id, title: record.title, viewController: split))
+            tabbed.addTab(.init(id: record.id, title: record.title, viewController: split), on: .top)
         }
-        tabbed.selectedTabID = initial.activeTabID
+        tabbed.selectTab(id: initial.activeTabID, on: .top)
     }
 
     private func wireLayoutCallback(on split: NestingSplitViewController, tabID: UUID) {
@@ -152,7 +152,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     /// close, tab add/remove/reorder/select).
     private func persistAllTabs() {
         var records: [TabRecord] = []
-        for tab in tabbed.tabs {
+        for tab in tabbed.tabs(on: .top) {
             guard let split = splitControllersByTabID[tab.id] else { continue }
             records.append(TabRecord(
                 id: tab.id,
@@ -161,7 +161,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
                 focusedNodeID: focusedLeafByTabID[tab.id]
             ))
         }
-        splitDocument.persistTabs(records, activeTabID: tabbed.selectedTabID)
+        splitDocument.persistTabs(records, activeTabID: tabbed.selectedTabID(on: .top))
     }
 
     private static func defaultTabLayout() -> LayoutNode {
@@ -177,7 +177,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
 extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
 
-    public func tabbedViewControllerNeedsNewTab(_ controller: TabbedViewController) {
+    public func tabbedViewControllerNeedsNewTab(_ controller: TabbedViewController, on edge: Edge) {
         let id = UUID()
         let split = NestingSplitViewController.make(
             from: Self.defaultTabLayout(),
@@ -186,27 +186,32 @@ extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
         )
         wireLayoutCallback(on: split, tabID: id)
         splitControllersByTabID[id] = split
-        let title = "Tab \(controller.tabs.count + 1)"
-        controller.addTab(.init(id: id, title: title, viewController: split))
-        controller.selectedTabID = id
+        let title = "Tab \(controller.tabs(on: .top).count + 1)"
+        controller.addTab(.init(id: id, title: title, viewController: split), on: .top)
+        controller.selectTab(id: id, on: .top)
         persistAllTabs()
     }
 
-    public func tabbedViewController(_ controller: TabbedViewController, didSelectTab id: UUID) {
+    public func tabbedViewController(_ controller: TabbedViewController, didSelectTab id: UUID, on edge: Edge) {
         restoreFocusedLeafForActiveTab()
         persistAllTabs()
     }
 
-    public func tabbedViewController(_ controller: TabbedViewController, didRequestCloseTab id: UUID) {
+    public func tabbedViewController(_ controller: TabbedViewController, didRequestCloseTab id: UUID, on edge: Edge) {
         // Refuse to close the last tab in a window — mirrors Safari/Terminal.
-        guard controller.tabs.count > 1 else { return }
+        guard controller.tabs(on: .top).count > 1 else { return }
         controller.removeTab(id: id)
         splitControllersByTabID.removeValue(forKey: id)
         focusedLeafByTabID.removeValue(forKey: id)
         persistAllTabs()
     }
 
-    public func tabbedViewController(_ controller: TabbedViewController, didReorderTab id: UUID, to index: Int) {
+    public func tabbedViewController(
+        _ controller: TabbedViewController,
+        didReorderTab id: UUID,
+        to index: Int,
+        on edge: Edge
+    ) {
         persistAllTabs()
     }
 }

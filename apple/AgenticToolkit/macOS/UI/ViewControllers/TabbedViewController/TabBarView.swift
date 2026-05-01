@@ -1,13 +1,21 @@
 import AppKit
 
-/// Top-aligned tab bar header for `TabbedViewController`. Renders one
-/// pill-style button per tab inside a horizontal `NSStackView`. Calls back
-/// to its owner via closures so it stays decoupled from the controller's
-/// public API.
+/// Edge-aligned tab bar header for `TabbedViewController`. Renders one
+/// pill-style button per tab inside an `NSStackView` whose orientation
+/// follows the bar's `Edge`. Calls back to its owner via closures so it
+/// stays decoupled from the controller's public API.
 @MainActor
 final class TabBarView: NSView {
 
-    static let preferredHeight: CGFloat = 28
+    /// The bar's narrow dimension — height for top/bottom, width for left/right.
+    static func preferredThickness(for edge: Edge) -> CGFloat {
+        switch edge {
+        case .top, .bottom: return 28
+        case .left, .right: return 140
+        }
+    }
+
+    let edge: Edge
 
     // MARK: - Tab metadata
 
@@ -33,13 +41,14 @@ final class TabBarView: NSView {
     // MARK: - Subviews
 
     private let stack = NSStackView()
-    private let bottomDivider = NSView()
+    private let edgeDivider = NSView()
     private var buttons: [UUID: TabButton] = [:]
 
     // MARK: - Init
 
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
+    init(edge: Edge) {
+        self.edge = edge
+        super.init(frame: .zero)
         setUp()
     }
 
@@ -48,32 +57,82 @@ final class TabBarView: NSView {
     private func setUp() {
         translatesAutoresizingMaskIntoConstraints = false
 
-        stack.orientation = .horizontal
-        stack.alignment = .centerY
+        switch edge {
+        case .top, .bottom:
+            stack.orientation = .horizontal
+            stack.alignment = .centerY
+            stack.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
+        case .left, .right:
+            stack.orientation = .vertical
+            stack.alignment = .leading
+            stack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        }
         stack.spacing = 4
-        stack.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        bottomDivider.wantsLayer = true
-        bottomDivider.layer?.backgroundColor = NSColor.separatorColor.cgColor
-        bottomDivider.translatesAutoresizingMaskIntoConstraints = false
+        edgeDivider.wantsLayer = true
+        edgeDivider.layer?.backgroundColor = NSColor.separatorColor.cgColor
+        edgeDivider.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(stack)
-        addSubview(bottomDivider)
+        addSubview(edgeDivider)
 
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomDivider.topAnchor),
+        let thickness = Self.preferredThickness(for: edge)
 
-            bottomDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
-            bottomDivider.trailingAnchor.constraint(equalTo: trailingAnchor),
-            bottomDivider.bottomAnchor.constraint(equalTo: bottomAnchor),
-            bottomDivider.heightAnchor.constraint(equalToConstant: 1),
+        switch edge {
+        case .top:
+            NSLayoutConstraint.activate([
+                heightAnchor.constraint(equalToConstant: thickness),
+                stack.topAnchor.constraint(equalTo: topAnchor),
+                stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+                stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+                stack.bottomAnchor.constraint(equalTo: edgeDivider.topAnchor),
 
-            heightAnchor.constraint(equalToConstant: Self.preferredHeight)
-        ])
+                edgeDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
+                edgeDivider.trailingAnchor.constraint(equalTo: trailingAnchor),
+                edgeDivider.bottomAnchor.constraint(equalTo: bottomAnchor),
+                edgeDivider.heightAnchor.constraint(equalToConstant: 1)
+            ])
+        case .bottom:
+            NSLayoutConstraint.activate([
+                heightAnchor.constraint(equalToConstant: thickness),
+                edgeDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
+                edgeDivider.trailingAnchor.constraint(equalTo: trailingAnchor),
+                edgeDivider.topAnchor.constraint(equalTo: topAnchor),
+                edgeDivider.heightAnchor.constraint(equalToConstant: 1),
+
+                stack.topAnchor.constraint(equalTo: edgeDivider.bottomAnchor),
+                stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+                stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+                stack.bottomAnchor.constraint(equalTo: bottomAnchor)
+            ])
+        case .left:
+            NSLayoutConstraint.activate([
+                widthAnchor.constraint(equalToConstant: thickness),
+                stack.topAnchor.constraint(equalTo: topAnchor),
+                stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+                stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+                stack.trailingAnchor.constraint(equalTo: edgeDivider.leadingAnchor),
+
+                edgeDivider.topAnchor.constraint(equalTo: topAnchor),
+                edgeDivider.bottomAnchor.constraint(equalTo: bottomAnchor),
+                edgeDivider.trailingAnchor.constraint(equalTo: trailingAnchor),
+                edgeDivider.widthAnchor.constraint(equalToConstant: 1)
+            ])
+        case .right:
+            NSLayoutConstraint.activate([
+                widthAnchor.constraint(equalToConstant: thickness),
+                edgeDivider.topAnchor.constraint(equalTo: topAnchor),
+                edgeDivider.bottomAnchor.constraint(equalTo: bottomAnchor),
+                edgeDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
+                edgeDivider.widthAnchor.constraint(equalToConstant: 1),
+
+                stack.topAnchor.constraint(equalTo: topAnchor),
+                stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+                stack.leadingAnchor.constraint(equalTo: edgeDivider.trailingAnchor),
+                stack.trailingAnchor.constraint(equalTo: trailingAnchor)
+            ])
+        }
     }
 
     // MARK: - Public mutation
@@ -110,6 +169,13 @@ final class TabBarView: NSView {
             button.onClose = { [weak self] id in self?.onClose?(id) }
             stack.addArrangedSubview(button)
             buttons[item.id] = button
+
+            // Vertical bars: each button fills the bar's interior width so
+            // labels and close buttons line up flush.
+            if stack.orientation == .vertical {
+                button.leadingAnchor.constraint(equalTo: stack.leadingAnchor, constant: 8).isActive = true
+                button.trailingAnchor.constraint(equalTo: stack.trailingAnchor, constant: -8).isActive = true
+            }
         }
     }
 }
