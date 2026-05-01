@@ -13,7 +13,7 @@ final class SessionsDatabaseManager {
     private let queue = DispatchQueue(label: "com.mikefullerton.agentic-plugin-tester.database", qos: .userInitiated)
 
     /// SQLITE_TRANSIENT destructor sentinel — instructs SQLite to copy the bound value.
-    private let sqliteTransient = sqliteTransient
+    private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     /// Common SELECT column list for the `sessions` table.
     private static let sessionColumns =
@@ -282,17 +282,11 @@ final class SessionsDatabaseManager {
         sqlite3_bind_text(stmt, 11, (session.termProgram as NSString).utf8String, -1, nil)
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
-            logger.error(
-                "Upsert session failed for \(session.sessionId, privacy: .public): " +
-                "\(self.lastErrorMessage, privacy: .public)"
-            )
+            logger.error("Upsert session failed for \(session.sessionId, privacy: .public): \(self.lastErrorMessage, privacy: .public)")
             throw DatabaseError.executionFailed(lastErrorMessage)
         }
 
-        logger.debug(
-            "Upserted session \(session.sessionId, privacy: .public) " +
-            "status=\(session.status.rawValue, privacy: .public)"
-        )
+        logger.debug("Upserted session \(session.sessionId, privacy: .public) status=\(session.status.rawValue, privacy: .public)")
 
         // Return the session with its database ID
         if let fetched = try _fetchSession(bySessionId: session.sessionId) {

@@ -108,7 +108,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // No plugins registered for now — per-plugin registration is pending.
         pluginManager.discoverPlugins()
         self.pluginManager = pluginManager
-        logger.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
+        logger.info("Plugin system initialized — \(pluginManager.availablePlugins.count) plugins available")
 
         // Configure the standalone settings window
         settingsWindowController.configure(

@@ -237,16 +237,9 @@ final class EventIngestionManager: @unchecked Sendable {
             try ingestEvent(eventFile, rawData: data)
             // Delete the consumed file
             try fileManager.removeItem(at: fileURL)
-            logger.debug(
-                "Ingested \(eventFile.event, privacy: .public) for session " +
-                "\(eventFile.sessionId, privacy: .public) " +
-                "from \(fileURL.lastPathComponent, privacy: .public)"
-            )
+            logger.debug("Ingested \(eventFile.event, privacy: .public) for session \(eventFile.sessionId, privacy: .public) from \(fileURL.lastPathComponent, privacy: .public)")
         } catch {
-            logger.error(
-                "Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): " +
-                "\(error.localizedDescription, privacy: .public)"
-            )
+            logger.error("Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
             moveToErrors(fileURL)
         }
     }
