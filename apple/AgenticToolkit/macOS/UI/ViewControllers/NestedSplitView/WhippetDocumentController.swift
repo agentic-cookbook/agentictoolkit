@@ -71,8 +71,8 @@ public final class WhippetDocumentController: NSDocumentController {
         do {
             finalURL = try Self.writeEmptyPackage(at: url)
         } catch {
-            logger.error("Failed to create Whippet project at \(url.path, privacy: .public): "
-                         + "\(error.localizedDescription, privacy: .public)")
+            // swiftlint:disable:next line_length
+            logger.error("Failed to create Whippet project at \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             presentError(error)
             return
         }
@@ -100,16 +100,15 @@ public final class WhippetDocumentController: NSDocumentController {
             typeName = try typeForContents(of: url)
             doc = try makeDocument(withContentsOf: url, ofType: typeName)
         } catch {
-            logger.error("openProject: load failed for \(url.path, privacy: .public): "
-                         + "\(error.localizedDescription, privacy: .public)")
+            // swiftlint:disable:next line_length
+            logger.error("openProject: load failed for \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             didFinishOpeningDocument?(nil, error)
             return nil
         }
 
         addDocument(doc)
-        logger.info("openProject: registered "
-                    + "\(String(describing: Swift.type(of: doc)), privacy: .public) "
-                    + "for \(url.path, privacy: .public)")
+        // swiftlint:disable:next line_length
+        logger.info("openProject: registered \(String(describing: Swift.type(of: doc)), privacy: .public) for \(url.path, privacy: .public)")
 
         if shouldDisplayOpenedDocuments {
             if doc.windowControllers.isEmpty {
@@ -117,8 +116,8 @@ public final class WhippetDocumentController: NSDocumentController {
             }
             doc.showWindows()
             if let window = doc.windowControllers.first?.window {
-                logger.info("openProject: window visible=\(window.isVisible) "
-                            + "frame=\(NSStringFromRect(window.frame), privacy: .public)")
+                // swiftlint:disable:next line_length
+                logger.info("openProject: window visible=\(window.isVisible) frame=\(NSStringFromRect(window.frame), privacy: .public)")
                 window.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
             } else {
@@ -171,8 +170,8 @@ public final class DefaultProjectURLPrompter: ProjectURLPrompting {
         panel.isExtensionHidden = false
 
         let response = panel.runModal()
-        logger.info("save panel closed with response=\(response.rawValue) "
-                    + "url=\(panel.url?.path ?? "<nil>", privacy: .public)")
+        // swiftlint:disable:next line_length
+        logger.info("save panel closed with response=\(response.rawValue) url=\(panel.url?.path ?? "<nil>", privacy: .public)")
         guard response == .OK else { return nil }
         return panel.url
     }
@@ -187,8 +186,8 @@ public final class DefaultProjectURLPrompter: ProjectURLPrompting {
         panel.allowedContentTypes = [UTType(projectUTI)].compactMap { $0 }
 
         let response = panel.runModal()
-        logger.info("open panel closed with response=\(response.rawValue) "
-                    + "urls=\(panel.urls.map(\.path).joined(separator: ","), privacy: .public)")
+        // swiftlint:disable:next line_length
+        logger.info("open panel closed with response=\(response.rawValue) urls=\(panel.urls.map(\.path).joined(separator: ","), privacy: .public)")
         guard response == .OK else { return [] }
         return panel.urls
     }

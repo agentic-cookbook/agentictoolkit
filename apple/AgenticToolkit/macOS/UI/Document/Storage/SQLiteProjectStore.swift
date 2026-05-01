@@ -116,8 +116,7 @@ public enum SQLiteProjectStore {
             }
         }
 
-        logger.info("Deserialized project '\(name)' from SQLite "
-                    + "(v\(version), \(sessionRecords.count) sessions)")
+        logger.info("Deserialized project '\(name)' from SQLite (v\(version), \(sessionRecords.count) sessions)")
         var project = Project(name: name, version: version, createdDate: createdDate, settings: settings)
         project.sessionRecords = sessionRecords
         return project

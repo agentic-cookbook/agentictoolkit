@@ -343,8 +343,8 @@ public final class SessionSummarizer: @unchecked Sendable {
         do {
             summary = try await summarize(sessionId: sessionId)
         } catch let error as SummarizerError where !error.isFatal {
-            logger.debug("Skipping summarization for \(sessionId, privacy: .public): "
-                         + "\(error.localizedDescription, privacy: .public)")
+            // swiftlint:disable:next line_length
+            logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return
         }
 
@@ -360,8 +360,8 @@ public final class SessionSummarizer: @unchecked Sendable {
                 SessionWatcher.SessionListViewModel.notifySessionsChanged()
             }
         } catch {
-            logger.error("Failed to store summary for \(sessionId, privacy: .public): "
-                         + "\(error.localizedDescription, privacy: .public)")
+            // swiftlint:disable:next line_length
+            logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 

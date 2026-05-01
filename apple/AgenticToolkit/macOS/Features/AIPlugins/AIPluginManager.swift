@@ -118,19 +118,14 @@ public final class AIPluginManager {
                 }
 
                 if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
-                    logger.warning(
-                        "Skipping incompatible plugin '\(record.displayName, privacy: .public)': "
-                        + "SDK \(record.sdkVersion, privacy: .public) "
-                        + "!= \(AIPluginInfoRegistry.currentSDKVersion, privacy: .public)"
-                    )
+                    // swiftlint:disable:next line_length
+                    logger.warning("Skipping incompatible plugin '\(record.displayName, privacy: .public)': SDK \(record.sdkVersion, privacy: .public) != \(AIPluginInfoRegistry.currentSDKVersion, privacy: .public)")
                     continue
                 }
 
                 discovered.append(record)
-                logger.info(
-                    "Discovered plugin: \(record.displayName, privacy: .public) "
-                    + "(\(record.identifier, privacy: .public))"
-                )
+                // swiftlint:disable:next line_length
+                logger.info("Discovered plugin: \(record.displayName, privacy: .public) (\(record.identifier, privacy: .public))")
             }
         }
 
@@ -253,10 +248,8 @@ public final class AIPluginManager {
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             baseDir = appSupport
         } else {
-            logger.warning(
-                "Application Support directory unavailable; falling back to temporary "
-                + "directory for plugin \(identifier, privacy: .public)"
-            )
+            // swiftlint:disable:next line_length
+            logger.warning("Application Support directory unavailable; falling back to temporary directory for plugin \(identifier, privacy: .public)")
             baseDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         }
 

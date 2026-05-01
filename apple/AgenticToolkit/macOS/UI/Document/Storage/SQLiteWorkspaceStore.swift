@@ -160,8 +160,7 @@ public enum SQLiteWorkspaceStore {
             settings.sidebarProportion = sidebar
         }
 
-        logger.info("Deserialized workspace '\(name)' from SQLite (v\(version)), "
-                    + "\(entries.count) entries")
+        logger.info("Deserialized workspace '\(name)' from SQLite (v\(version)), \(entries.count) entries")
         return Workspace(
             name: name,
             version: version,

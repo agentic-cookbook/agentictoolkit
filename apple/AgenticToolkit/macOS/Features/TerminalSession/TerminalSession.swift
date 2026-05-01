@@ -93,10 +93,8 @@ public final class TerminalSession: ObservableObject, Identifiable {
     private func startShellProcess(in view: LocalProcessTerminalView) {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let startDir = workingDirectory ?? FileManager.default.homeDirectoryForCurrentUser.path
-        logger.info(
-            "Starting shell '\(shell, privacy: .public)' for session "
-            + "'\(self.name)' in \(startDir, privacy: .public)"
-        )
+        // swiftlint:disable:next line_length
+        logger.info("Starting shell '\(shell, privacy: .public)' for session '\(self.name)' in \(startDir, privacy: .public)")
 
         var env = Terminal.getEnvironmentVariables(termName: "xterm-256color")
         let processEnv = ProcessInfo.processInfo.environment

@@ -68,10 +68,8 @@ public final class TerminalCoordinator: AppFeature, TerminalSessionWindowLifecyc
 
     public func terminalWindowWillClose(_ controller: TerminalSessionWindowController) {
         windowControllers.removeAll { $0 === controller }
-        Self.logger.info(
-            "Removed terminal window controller, "
-            + "remaining: \(self.windowControllers.count, privacy: .public)"
-        )
+        // swiftlint:disable:next line_length
+        Self.logger.info("Removed terminal window controller, remaining: \(self.windowControllers.count, privacy: .public)")
     }
 
     public override func value(forScriptingKey key: String) -> Any? {
