@@ -46,6 +46,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		00D18DF46FCAF355B0DEB859 /* MCPServersPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF39C026522BC346B944957 /* MCPServersPanelViewController.swift */; };
 		018BAA3BEC7E81B1EC6A6B06 /* NotesListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B79F54E44FA17A32F10648 /* NotesListViewController.swift */; };
 		0278D7F4A7E60DF7788A2F43 /* AIChatCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4D7CD70F49720EA92F1B42 /* AIChatCommands.swift */; };
 		02CE8B8B3EF061F8561BD836 /* AppleScriptRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06981BE7678C13904564EBF0 /* AppleScriptRunnerTests.swift */; };
@@ -863,6 +864,7 @@
 		E92A5A02FCFF90771C98ED89 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		E9A1E913777AA53295489FAA /* SettingsPanelListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelListViewController.swift; sourceTree = "<group>"; };
 		EA46CC60E98301AA82013F9D /* UserDefaultsWindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsWindowStateStorage.swift; sourceTree = "<group>"; };
+		EBF39C026522BC346B944957 /* MCPServersPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServersPanelViewController.swift; sourceTree = "<group>"; };
 		EC220478903118D361CF5A97 /* HorizontalStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalStackView.swift; sourceTree = "<group>"; };
 		EC7181F57AD1A664A8DA86E0 /* NestedSplitViewWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedSplitViewWindowController.swift; sourceTree = "<group>"; };
 		ED4D63AE8BFB6DB277DD4091 /* ProjectHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectHost.swift; sourceTree = "<group>"; };
@@ -1235,6 +1237,14 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
+		4426837B134439537EC603DC /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				EBF39C026522BC346B944957 /* MCPServersPanelViewController.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
 		490BC2335317A3FE213428D0 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -1375,6 +1385,14 @@
 				2C0881BC97904A9D6EF4A7B6 /* WindowActivationTester.swift */,
 			);
 			path = WindowActivation;
+			sourceTree = "<group>";
+		};
+		6F0239A154D32D243B431452 /* MCP */ = {
+			isa = PBXGroup;
+			children = (
+				4426837B134439537EC603DC /* Settings */,
+			);
+			path = MCP;
 			sourceTree = "<group>";
 		};
 		733D20409A1039EF07E644D3 /* AIPlugins */ = {
@@ -1792,6 +1810,7 @@
 				B9A533F31AF543304B6BF725 /* AIChatWindow */,
 				D3C9139ADE6E7860D5B91112 /* AIPlugins */,
 				63C6F72404A00C10D293AAD8 /* LoggingWindow */,
+				6F0239A154D32D243B431452 /* MCP */,
 				777E96F21F511241590C71E3 /* NotesWindow */,
 				03E323FC5901E1BFA17E267E /* SessionWatcher */,
 				2CEA5673884627D156E35AB0 /* TerminalSession */,
@@ -1878,7 +1897,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_D2F88401-B4FD-4605-B104-B7304BD9C2E5" /* Settings */ = {
+		"TEMP_ADE07325-8450-4106-ABD9-3A4E50CDCF54" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2367,6 +2386,7 @@
 				851EEE48DC44D5E9A1DBA20A /* LogView.swift in Sources */,
 				CD8831E05BCAC39D2EABB4DB /* LogViewController.swift in Sources */,
 				380D840AFE226F80DEE42982 /* LogWindowController.swift in Sources */,
+				00D18DF46FCAF355B0DEB859 /* MCPServersPanelViewController.swift in Sources */,
 				D5D46A51F6A59D4F968051F2 /* MainActorScriptCommand.swift in Sources */,
 				B59602DDBDB81AC8822E9707 /* MenuContribution.swift in Sources */,
 				4004C018806AB8BAB1BFB855 /* MessageBubbleView.swift in Sources */,
