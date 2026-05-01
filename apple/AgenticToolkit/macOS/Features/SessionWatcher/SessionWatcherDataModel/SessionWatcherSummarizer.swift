@@ -366,8 +366,8 @@ extension SessionWatcher {
             do {
                 summary = try await summarize(sessionId: sessionId)
             } catch let error as SummarizerError where !error.isFatal {
-                logger.debug("Skipping summarization for \(sessionId, privacy: .public): "
-                             + "\(error.localizedDescription, privacy: .public)")
+                // swiftlint:disable:next line_length
+                logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 return
             }
 
@@ -382,8 +382,8 @@ extension SessionWatcher {
                     SessionListViewModel.notifySessionsChanged()
                 }
             } catch {
-                logger.error("Failed to store summary for \(sessionId, privacy: .public): "
-                             + "\(error.localizedDescription, privacy: .public)")
+                // swiftlint:disable:next line_length
+                logger.error("Failed to store summary for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
 

@@ -298,10 +298,8 @@ extension SessionWatcher {
             case .failure(let error):
                 lastActionError = error.localizedDescription
                 lastPermissionPane = error.permissionPane
-                logger.warning(
-                    "Click action failed for session \(session.sessionId, privacy: .public): "
-                    + "\(error.localizedDescription, privacy: .public)"
-                )
+                // swiftlint:disable:next line_length
+                logger.warning("Click action failed for session \(session.sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
 
                 let delay: TimeInterval = error.permissionPane != nil ? 10 : 4
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in

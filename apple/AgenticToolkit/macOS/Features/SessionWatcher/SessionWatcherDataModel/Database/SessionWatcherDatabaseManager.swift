@@ -300,17 +300,13 @@ extension SessionWatcher {
             sqlite3_bind_text(stmt, 11, (session.termProgram as NSString).utf8String, -1, nil)
 
             guard sqlite3_step(stmt) == SQLITE_DONE else {
-                logger.error(
-                    "Upsert session failed for \(session.sessionId, privacy: .public): " +
-                    "\(self.lastErrorMessage, privacy: .public)"
-                )
+                // swiftlint:disable:next line_length
+                logger.error("Upsert session failed for \(session.sessionId, privacy: .public): \(self.lastErrorMessage, privacy: .public)")
                 throw SessionWatcherDatabaseError.executionFailed(lastErrorMessage)
             }
 
-            logger.debug(
-                "Upserted session \(session.sessionId, privacy: .public) " +
-                "status=\(session.status.rawValue, privacy: .public)"
-            )
+            // swiftlint:disable:next line_length
+            logger.debug("Upserted session \(session.sessionId, privacy: .public) status=\(session.status.rawValue, privacy: .public)")
 
             // Return the session with its database ID
             if let fetched = try _fetchSession(bySessionId: session.sessionId) {
@@ -389,10 +385,7 @@ extension SessionWatcher {
 
         /// Updates the status of a session.
         public func updateSessionStatus(sessionId: String, status: SessionWatcherStatus) throws {
-            logger.debug(
-                "Updating session \(sessionId, privacy: .public) → " +
-                "\(status.rawValue, privacy: .public)"
-            )
+            logger.debug("Updating session \(sessionId, privacy: .public) → \(status.rawValue, privacy: .public)")
             let sql = """
                 UPDATE sessions SET status = ?, last_activity_at = datetime('now')
                 WHERE session_id = ?

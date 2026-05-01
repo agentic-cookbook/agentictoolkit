@@ -225,10 +225,8 @@ extension SessionWatcher {
 
             notificationCenter.add(request, withCompletionHandler: { error in
                 if let error = error {
-                    Self.logger.error(
-                        "Failed to post notification '\(identifier, privacy: .public)': "
-                        + "\(error.localizedDescription, privacy: .public)"
-                    )
+                    // swiftlint:disable:next line_length
+                    Self.logger.error("Failed to post notification '\(identifier, privacy: .public)': \(error.localizedDescription, privacy: .public)")
                 }
             })
         }

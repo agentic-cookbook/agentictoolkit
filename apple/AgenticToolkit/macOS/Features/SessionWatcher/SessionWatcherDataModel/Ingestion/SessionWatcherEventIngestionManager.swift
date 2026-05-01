@@ -136,10 +136,7 @@ extension SessionWatcher {
         private func startWatching() {
             let fileDescriptor = open(dropDirectoryURL.path, O_EVTONLY)
             guard fileDescriptor >= 0 else {
-                logger.error(
-                    "Failed to open directory for monitoring:"
-                    + " \(self.dropDirectoryURL.path, privacy: .public)"
-                )
+                logger.error("Failed to open directory for monitoring: \(self.dropDirectoryURL.path, privacy: .public)")
                 return
             }
             directoryFileDescriptor = fileDescriptor
@@ -252,16 +249,11 @@ extension SessionWatcher {
                 try ingestEvent(eventFile, rawData: data)
                 // Delete the consumed file
                 try fileManager.removeItem(at: fileURL)
-                logger.debug(
-                    "Ingested \(eventFile.event, privacy: .public)"
-                    + " for session \(eventFile.sessionId, privacy: .public)"
-                    + " from \(fileURL.lastPathComponent, privacy: .public)"
-                )
+                // swiftlint:disable:next line_length
+                logger.debug("Ingested \(eventFile.event, privacy: .public) for session \(eventFile.sessionId, privacy: .public) from \(fileURL.lastPathComponent, privacy: .public)")
             } catch {
-                logger.error(
-                    "Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public):"
-                    + " \(error.localizedDescription, privacy: .public)"
-                )
+                // swiftlint:disable:next line_length
+                logger.error("Failed to ingest event from \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 moveToErrors(fileURL)
             }
         }
@@ -373,10 +365,8 @@ extension SessionWatcher {
                         try await summarizer.summarizeAndStore(sessionId: sessionId)
                     } catch {
                         SessionWatcher.SummarizerDebugLog.shared.append("ERROR: \(error.localizedDescription)")
-                        Self.logger.error(
-                            "Summarization error for \(sessionId, privacy: .public):"
-                            + " \(error.localizedDescription, privacy: .public)"
-                        )
+                        // swiftlint:disable:next line_length
+                        Self.logger.error("Summarization error for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
                         await MainActor.run {
                             self?.onSummarizerError?(error.localizedDescription)
                         }
@@ -426,10 +416,7 @@ extension SessionWatcher {
                         SessionWatcher.SummarizerDebugLog.shared.append(
                             "ERROR: \(error.localizedDescription) — stopping summarization loop"
                         )
-                        Self.logger.error(
-                            "Summarization loop stopped:"
-                            + " \(error.localizedDescription, privacy: .public)"
-                        )
+                        Self.logger.error("Summarization loop stopped: \(error.localizedDescription, privacy: .public)")
                         await MainActor.run {
                             self?.onSummarizerError?(error.localizedDescription)
                         }
@@ -456,10 +443,7 @@ extension SessionWatcher {
                 try fileManager.moveItem(at: fileURL, to: destination)
                 logger.info("Moved malformed file to errors/: \(fileURL.lastPathComponent, privacy: .public)")
             } catch {
-                logger.error(
-                    "Failed to move file to errors directory:"
-                    + " \(error.localizedDescription, privacy: .public)"
-                )
+                logger.error("Failed to move file to errors directory: \(error.localizedDescription, privacy: .public)")
                 // Last resort: try to delete the problematic file
                 try? fileManager.removeItem(at: fileURL)
             }

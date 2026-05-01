@@ -138,12 +138,8 @@ extension SessionWatcher {
         @discardableResult
         public func execute(for session: SessionWatcherSession) -> SessionWatcherActionResult {
             let action = currentAction
-            logger.info(
-                "SessionWatcherSession clicked: \(session.sessionId, privacy: .public)"
-                + " project=\(session.projectName, privacy: .public)"
-                + " cwd=\(session.cwd, privacy: .public)"
-                + " action=\(action.rawValue, privacy: .public)"
-            )
+            // swiftlint:disable:next line_length
+            logger.info("SessionWatcherSession clicked: \(session.sessionId, privacy: .public) project=\(session.projectName, privacy: .public) cwd=\(session.cwd, privacy: .public) action=\(action.rawValue, privacy: .public)")
             return execute(action: action, for: session)
         }
 
@@ -152,10 +148,8 @@ extension SessionWatcher {
             action: SessionWatcherClickAction,
             for session: SessionWatcherSession
         ) -> SessionWatcherActionResult {
-            logger.info(
-                "Executing action '\(action.rawValue, privacy: .public)'"
-                + " for session \(session.sessionId, privacy: .public)"
-            )
+            // swiftlint:disable:next line_length
+            logger.info("Executing action '\(action.rawValue, privacy: .public)' for session \(session.sessionId, privacy: .public)")
             let result: SessionWatcherActionResult
             switch action {
             case .openTerminal:
@@ -178,10 +172,8 @@ extension SessionWatcher {
             case .success:
                 logger.info("Action '\(action.rawValue, privacy: .public)' succeeded")
             case .failure(let error):
-                logger.error(
-                    "Action '\(action.rawValue, privacy: .public)' failed:"
-                    + " \(error.localizedDescription, privacy: .public)"
-                )
+                // swiftlint:disable:next line_length
+                logger.error("Action '\(action.rawValue, privacy: .public)' failed: \(error.localizedDescription, privacy: .public)")
             }
             return result
         }
@@ -253,10 +245,8 @@ extension SessionWatcher {
         // MARK: - Activate Warp SessionWatcherSession
 
         private func activateWarpSession(for session: SessionWatcherSession) -> SessionWatcherActionResult {
-            logger.info(
-                "activateWarp: cwd='\(session.cwd, privacy: .public)'"
-                + " project='\(session.projectName, privacy: .public)'"
-            )
+            // swiftlint:disable:next line_length
+            logger.info("activateWarp: cwd='\(session.cwd, privacy: .public)' project='\(session.projectName, privacy: .public)'")
 
             guard !session.cwd.isEmpty else {
                 logger.warning("activateWarp: empty cwd")
@@ -276,11 +266,8 @@ extension SessionWatcher {
 
             let expandedCwd = (session.cwd as NSString).expandingTildeInPath
             let projectName = session.projectName
-            logger.debug(
-                "activateWarp: looking for window matching"
-                + " project='\(projectName, privacy: .public)'"
-                + " or cwd='\(expandedCwd, privacy: .public)'"
-            )
+            // swiftlint:disable:next line_length
+            logger.debug("activateWarp: looking for window matching project='\(projectName, privacy: .public)' or cwd='\(expandedCwd, privacy: .public)'")
 
             // Strategy 1: Use CGWindowList to find Warp windows and match by title
             let windowListOptions: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
@@ -321,11 +308,8 @@ extension SessionWatcher {
                 guard !candidate.isEmpty else { continue }
                 for entry in warpWindows where entry.layer == 0 { // layer 0 = normal windows
                     if entry.name.localizedCaseInsensitiveContains(candidate) {
-                        logger.info(
-                            "activateWarp: matched window #\(entry.number)"
-                            + " title='\(entry.name, privacy: .public)'"
-                            + " via candidate='\(candidate, privacy: .public)'"
-                        )
+                        // swiftlint:disable:next line_length
+                        logger.info("activateWarp: matched window #\(entry.number) title='\(entry.name, privacy: .public)' via candidate='\(candidate, privacy: .public)'")
                         bestMatch = (name: entry.name, number: entry.number)
                         break
                     }
@@ -385,10 +369,8 @@ extension SessionWatcher {
 
             // No title match — fall back to raising the first normal-layer window
             if let firstNormal = warpWindows.first(where: { $0.layer == 0 }) {
-                logger.info(
-                    "activateWarp: no title match,"
-                    + " raising first window '\(firstNormal.name, privacy: .public)'"
-                )
+                // swiftlint:disable:next line_length
+                logger.info("activateWarp: no title match, raising first window '\(firstNormal.name, privacy: .public)'")
                 for window in axWindows {
                     var titleRef: CFTypeRef?
                     AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
@@ -538,7 +520,7 @@ extension SessionWatcher {
                 let axFrontApp = AXUIElementCreateApplication(frontApp.processIdentifier)
                 var mainRef: CFTypeRef?
                 AXUIElementCopyAttributeValue(axFrontApp, kAXMainWindowAttribute as CFString, &mainRef)
-                let currentMain: AXUIElement? = mainRef.map { unsafeBitCast($0, to: AXUIElement.self) }
+                let currentMain: AXUIElement? = mainRef.map { unsafeDowncast($0, to: AXUIElement.self) }
                 var currentTitle = ""
                 if let main = currentMain {
                     var titleRef: CFTypeRef?
@@ -649,10 +631,8 @@ extension SessionWatcher {
         private func runCustomCommand(for session: SessionWatcherSession) -> SessionWatcherActionResult {
             let template = customCommandTemplate
             let command = substituteVariables(in: template, session: session)
-            logger.info(
-                "runCustomCommand: template='\(template, privacy: .public)'"
-                + " expanded='\(command, privacy: .public)'"
-            )
+            // swiftlint:disable:next line_length
+            logger.info("runCustomCommand: template='\(template, privacy: .public)' expanded='\(command, privacy: .public)'")
 
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -669,10 +649,8 @@ extension SessionWatcher {
                     if process.terminationStatus != 0 {
                         let data = pipe.fileHandleForReading.readDataToEndOfFile()
                         let output = String(data: data, encoding: .utf8) ?? "Unknown error"
-                        Self.logger.error(
-                            "Custom command failed (exit \(process.terminationStatus)):"
-                            + " \(output, privacy: .public)"
-                        )
+                        // swiftlint:disable:next line_length
+                        Self.logger.error("Custom command failed (exit \(process.terminationStatus)): \(output, privacy: .public)")
                     } else {
                         Self.logger.debug("Custom command completed successfully")
                     }
@@ -790,10 +768,8 @@ extension SessionWatcher {
             if errorNumber == -1743 || errorNumber == -1744
                 || errorMessage.localizedCaseInsensitiveContains("not authorized")
                 || errorMessage.localizedCaseInsensitiveContains("privilege violation") {
-                logger.error(
-                    "AppleScript permission denied for \(appName, privacy: .public):"
-                    + " \(errorMessage, privacy: .public)"
-                )
+                // swiftlint:disable:next line_length
+                logger.error("AppleScript permission denied for \(appName, privacy: .public): \(errorMessage, privacy: .public)")
                 return .permissionDenied(
                     "Whippet needs permission to control \(appName)."
                     + " Grant access in System Settings > Privacy & Security > Automation.",

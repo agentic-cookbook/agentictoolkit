@@ -157,8 +157,8 @@ extension SessionWatcher {
                     )
                     onSessionProcessDied?(session.sessionId, session.projectName)
                     endedCount += 1
-                    logger.info("Process \(session.pid) dead — "
-                                + "ended session '\(session.projectName, privacy: .public)'")
+                    // swiftlint:disable:next line_length
+                    logger.info("Process \(session.pid) dead — ended session '\(session.projectName, privacy: .public)'")
                 }
 
                 // End stale sessions with no PID — their liveness cannot be verified
