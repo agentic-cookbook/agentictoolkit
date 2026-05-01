@@ -13,11 +13,20 @@ final class AppSettingsWindowController: ComposableSettings.SettingsWindow {
 
     private var sessionsDatabaseManager: SessionsDatabaseManager?
     private var pluginManager: AIPluginManager?
+    private var mcpRegistry: MCPServerRegistry?
+    private var settingsStore: SettingsStore?
     private(set) var viewModel: SettingsViewModel?
 
-    func configure(sessionsDatabaseManager: SessionsDatabaseManager, pluginManager: AIPluginManager) {
+    func configure(
+        sessionsDatabaseManager: SessionsDatabaseManager,
+        pluginManager: AIPluginManager,
+        mcpRegistry: MCPServerRegistry,
+        settingsStore: SettingsStore
+    ) {
         self.sessionsDatabaseManager = sessionsDatabaseManager
         self.pluginManager = pluginManager
+        self.mcpRegistry = mcpRegistry
+        self.settingsStore = settingsStore
         self.windowTitle = "AgenticPluginTester Settings"
         self.settingPanels = makeSettingsPanels()
     }
@@ -36,6 +45,9 @@ final class AppSettingsWindowController: ComposableSettings.SettingsWindow {
             panels.append(SystemSettingsPanelViewController(viewModel: viewModel))
         }
         panels.append(AIPanelViewController(pluginManager: pluginManager))
+        if let mcpRegistry = mcpRegistry, let settingsStore = settingsStore {
+            panels.append(MCPServersPanelViewController(registry: mcpRegistry, store: settingsStore))
+        }
         return panels
     }
 

@@ -17,8 +17,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var livenessMonitor: SessionLivenessMonitor?
     private var notificationManager: NotificationManager?
     private var settingsWindowController = AppSettingsWindowController()
+    private let settingsStore = SettingsStore()
+    private lazy var mcpRegistry = MCPServerRegistry(store: settingsStore)
+    private var hostMCPServer: HostMCPServer?
     private lazy var aiChatWindowController: AIChatWindowController = {
-        AIChatWindowController(viewModel: ChatViewModel(backend: StubChatBackend()))
+        AIChatWindowController(viewModel: ChatViewModel(backend: StubChatBackend(), registry: mcpRegistry))
     }()
     private var permissionWalkthrough = PermissionWalkthrough()
 
@@ -108,11 +111,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         logger.info("Plugin system initialized — \(pm.availablePlugins.count) plugins available")
 
         // Configure the standalone settings window
-        settingsWindowController.configure(sessionsDatabaseManager: database, pluginManager: pluginManager)
+        settingsWindowController.configure(
+            sessionsDatabaseManager: database,
+            pluginManager: pluginManager,
+            mcpRegistry: mcpRegistry,
+            settingsStore: settingsStore
+        )
 
         // Apply saved appearance mode
         if let mode = try? database.getSetting(key: SettingsViewModel.appearanceModeKey) {
             applyAppearanceMode(mode)
+        }
+
+        // Boot the in-process host MCP server so the chat window can be wired
+        // up to expose host-defined tools (sample plumbing, see HostMCPServer).
+        Task { [weak self] in
+            guard let self else { return }
+            let host = await HostMCPServer(
+                appName: "AgenticPluginTester",
+                appVersion: "1.0.0",
+                pluginNames: pluginManager.availablePlugins.map(\.displayName),
+                openChatWindow: { [weak self] in
+                    Task { @MainActor [weak self] in self?.aiChatWindowController.showWindow() }
+                }
+            )
+            do {
+                try await host.start()
+                self.hostMCPServer = host
+                Self.logger.info("HostMCPServer started")
+            } catch {
+                Self.logger.error("Failed to start HostMCPServer: \(error.localizedDescription, privacy: .public)")
+            }
         }
 
         // Show the AI chat window on launch
