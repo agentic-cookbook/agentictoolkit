@@ -7,6 +7,12 @@ import Foundation
 /// A `ChatBackend` that dispatches to the provider configured in `WhippetSettingsViewModel`.
 /// Routes to the Claude CLI when `aiProvider.usesCLI`, otherwise uses `AIRequestBuilder`
 /// to build a provider-specific HTTP request.
+///
+/// Tool calling is not wired up: `AIRequestBuilder` produces a flat
+/// chat-completion request and the Claude CLI path doesn't take a tool list.
+/// The class therefore inherits `ChatBackend`'s default tool-aware
+/// `sendMessages`, which delegates to the text-only path and emits every
+/// chunk as a `.textDelta`.
 @MainActor
 public class WhippetChatBackend: ChatBackend {
 
