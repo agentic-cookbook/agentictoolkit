@@ -93,10 +93,7 @@ final class HookInstaller {
             // Write the updated settings back
             try saveSettings(settings)
 
-            logger.info(
-                "Hooks installed for \(Self.hookedEventTypes.count) event types in " +
-                "\(self.settingsURL.path, privacy: .public)"
-            )
+            logger.info("Hooks installed for \(Self.hookedEventTypes.count) event types in \(self.settingsURL.path, privacy: .public)")
             return .installed
         } catch {
             logger.error("Failed to install hooks: \(error.localizedDescription, privacy: .public)")

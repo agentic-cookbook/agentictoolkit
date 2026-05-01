@@ -66,10 +66,7 @@ final class LaunchAtLoginManager {
                 return value == "true"
             }
         } catch {
-            logger.warning(
-                "Failed to read launch-at-login prompt state: " +
-                "\(error.localizedDescription, privacy: .public)"
-            )
+            logger.warning("Failed to read launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
         }
         return false
     }
@@ -100,10 +97,7 @@ final class LaunchAtLoginManager {
         do {
             try sessionsDatabaseManager.setSetting(key: Self.launchAtLoginPromptShownKey, value: "true")
         } catch {
-            logger.warning(
-                "Failed to persist launch-at-login prompt state: " +
-                "\(error.localizedDescription, privacy: .public)"
-            )
+            logger.warning("Failed to persist launch-at-login prompt state: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

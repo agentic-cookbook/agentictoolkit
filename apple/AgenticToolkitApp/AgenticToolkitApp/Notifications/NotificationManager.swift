@@ -213,10 +213,7 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
                 return value == "true"
             }
         } catch {
-            logger.warning(
-                "Failed to read setting '\(key, privacy: .public)': " +
-                "\(error.localizedDescription, privacy: .public)"
-            )
+            logger.warning("Failed to read setting '\(key, privacy: .public)': \(error.localizedDescription, privacy: .public)")
         }
         return false
     }
@@ -232,10 +229,7 @@ final class NotificationManager: NSObject, @preconcurrency UNUserNotificationCen
 
         notificationCenter.add(request, withCompletionHandler: { error in
             if let error = error {
-                Self.logger.error(
-                    "Failed to post notification '\(identifier, privacy: .public)': " +
-                    "\(error.localizedDescription, privacy: .public)"
-                )
+                Self.logger.error("Failed to post notification '\(identifier, privacy: .public)': \(error.localizedDescription, privacy: .public)")
             }
         })
     }

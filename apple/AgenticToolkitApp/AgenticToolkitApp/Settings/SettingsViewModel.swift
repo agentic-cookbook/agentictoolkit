@@ -107,10 +107,8 @@ final class SettingsViewModel: ObservableObject {
             do {
                 try manager.setEnabled(launchAtLogin)
             } catch {
-                logger.error(
-                    "Failed to \(self.launchAtLogin ? "enable" : "disable") " +
-                    "launch at login: \(error.localizedDescription)"
-                )
+                let action = self.launchAtLogin ? "enable" : "disable"
+                logger.error("Failed to \(action, privacy: .public) launch at login: \(error.localizedDescription, privacy: .public)")
                 // Revert to actual state on failure (suppress re-trigger of didSet)
                 let actual = manager.isEnabled
                 if actual != launchAtLogin {
