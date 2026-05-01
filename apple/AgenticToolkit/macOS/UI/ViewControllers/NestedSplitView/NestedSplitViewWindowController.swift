@@ -33,6 +33,8 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     private var pendingFocusPersist: DispatchWorkItem?
     private static let focusPersistDelay: DispatchTimeInterval = .milliseconds(250)
 
+    private var edgesAccessory: NSTitlebarAccessoryViewController?
+
     public init(document: NestedSplitViewDocument) {
         self.splitDocument = document
         self.tabbed = TabbedViewController()
@@ -66,7 +68,79 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         if window == nil { loadWindow() }
         super.showWindow(sender)
         installFirstResponderObserverIfNeeded()
+        installEdgesAccessoryIfNeeded()
         restoreFocusedLeafForActiveTab()
+    }
+
+    // MARK: - Tab-edge toggle (titlebar accessory)
+
+    private func installEdgesAccessoryIfNeeded() {
+        guard edgesAccessory == nil, let window else { return }
+
+        let button = NSButton()
+        button.bezelStyle = .texturedRounded
+        button.image = NSImage(
+            systemSymbolName: "rectangle.3.group",
+            accessibilityDescription: "Tab Edges"
+        )
+        button.imagePosition = .imageOnly
+        button.target = self
+        button.action = #selector(showEdgesMenu(_:))
+        button.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(button)
+        NSLayoutConstraint.activate([
+            container.heightAnchor.constraint(equalToConstant: 28),
+            button.topAnchor.constraint(equalTo: container.topAnchor, constant: 2),
+            button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -2),
+            button.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
+            button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -4),
+            button.widthAnchor.constraint(equalToConstant: 32)
+        ])
+
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = container
+        accessory.layoutAttribute = .right
+        window.addTitlebarAccessoryViewController(accessory)
+        edgesAccessory = accessory
+    }
+
+    @objc
+    private func showEdgesMenu(_ sender: NSButton) {
+        let menu = NSMenu()
+        for edge in [Edge.top, .right, .bottom, .left] {
+            let item = NSMenuItem(
+                title: Self.title(for: edge),
+                action: #selector(toggleEdgeAction(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = edge
+            item.state = tabbed.isEdgeEnabled(edge) ? .on : .off
+            menu.addItem(item)
+        }
+        menu.popUp(
+            positioning: nil,
+            at: NSPoint(x: 0, y: sender.bounds.maxY + 4),
+            in: sender
+        )
+    }
+
+    @objc
+    private func toggleEdgeAction(_ sender: NSMenuItem) {
+        guard let edge = sender.representedObject as? Edge else { return }
+        tabbed.setEdgeEnabled(edge, !tabbed.isEdgeEnabled(edge))
+    }
+
+    private static func title(for edge: Edge) -> String {
+        switch edge {
+        case .top: return "Top"
+        case .right: return "Right"
+        case .bottom: return "Bottom"
+        case .left: return "Left"
+        }
     }
 
     // MARK: - Focused-leaf tracking
