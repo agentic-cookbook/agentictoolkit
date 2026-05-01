@@ -82,29 +82,14 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
             accessibilityDescription: "Tab Edges"
         )?.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
 
-        let button = NSButton()
+        let button = NSButton(image: symbol ?? NSImage(), target: self, action: #selector(showEdgesMenu(_:)))
         button.bezelStyle = .texturedRounded
-        button.image = symbol
         button.imagePosition = .imageOnly
-        button.target = self
-        button.action = #selector(showEdgesMenu(_:))
         button.toolTip = "Show / hide tab bars"
-        button.translatesAutoresizingMaskIntoConstraints = false
-
-        let container = NSView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(button)
-        NSLayoutConstraint.activate([
-            container.heightAnchor.constraint(equalToConstant: 28),
-            button.topAnchor.constraint(equalTo: container.topAnchor, constant: 2),
-            button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -2),
-            button.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
-            button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -4),
-            button.widthAnchor.constraint(equalToConstant: 32)
-        ])
+        button.frame = NSRect(x: 0, y: 0, width: 36, height: 24)
 
         let accessory = NSTitlebarAccessoryViewController()
-        accessory.view = container
+        accessory.view = button
         accessory.layoutAttribute = .right
         window.addTitlebarAccessoryViewController(accessory)
         edgesAccessory = accessory
