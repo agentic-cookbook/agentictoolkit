@@ -77,15 +77,18 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     private func installEdgesAccessoryIfNeeded() {
         guard edgesAccessory == nil, let window else { return }
 
-        let button = NSButton()
-        button.bezelStyle = .texturedRounded
-        button.image = NSImage(
+        let symbol = NSImage(
             systemSymbolName: "rectangle.3.group",
             accessibilityDescription: "Tab Edges"
-        )
+        )?.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
+
+        let button = NSButton()
+        button.bezelStyle = .texturedRounded
+        button.image = symbol
         button.imagePosition = .imageOnly
         button.target = self
         button.action = #selector(showEdgesMenu(_:))
+        button.toolTip = "Show / hide tab bars"
         button.translatesAutoresizingMaskIntoConstraints = false
 
         let container = NSView()
