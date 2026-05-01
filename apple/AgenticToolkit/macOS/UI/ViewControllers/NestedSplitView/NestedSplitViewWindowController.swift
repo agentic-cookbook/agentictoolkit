@@ -119,7 +119,30 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     @objc
     private func toggleEdgeAction(_ sender: NSMenuItem) {
         guard let edge = sender.representedObject as? Edge else { return }
-        tabbed.setEdgeEnabled(edge, !tabbed.isEdgeEnabled(edge))
+        let nowEnabled = !tabbed.isEdgeEnabled(edge)
+        tabbed.setEdgeEnabled(edge, nowEnabled)
+        // A freshly-enabled edge with no tabs renders as an empty 28pt
+        // tab strip + blank content area — visually indistinguishable from
+        // "nothing happened". Seed it with one tab so the toggle has an
+        // obvious effect.
+        if nowEnabled && tabbed.tabs(on: edge).isEmpty {
+            addDefaultTab(on: edge)
+        }
+    }
+
+    private func addDefaultTab(on edge: Edge) {
+        let id = UUID()
+        let split = NestingSplitViewController.make(
+            from: Self.defaultTabLayout(),
+            document: splitDocument,
+            isRoot: true
+        )
+        wireLayoutCallback(on: split, tabID: id)
+        splitControllersByTabID[id] = split
+        let title = "Tab \(tabbed.tabs(on: edge).count + 1)"
+        tabbed.addTab(.init(id: id, title: title, viewController: split), on: edge)
+        tabbed.selectTab(id: id, on: edge)
+        persistAllTabs()
     }
 
     private static func title(for edge: Edge) -> String {
@@ -264,18 +287,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
 
     public func tabbedViewControllerNeedsNewTab(_ controller: TabbedViewController, on edge: Edge) {
-        let id = UUID()
-        let split = NestingSplitViewController.make(
-            from: Self.defaultTabLayout(),
-            document: splitDocument,
-            isRoot: true
-        )
-        wireLayoutCallback(on: split, tabID: id)
-        splitControllersByTabID[id] = split
-        let title = "Tab \(controller.tabs(on: .top).count + 1)"
-        controller.addTab(.init(id: id, title: title, viewController: split), on: .top)
-        controller.selectTab(id: id, on: .top)
-        persistAllTabs()
+        addDefaultTab(on: edge)
     }
 
     public func tabbedViewController(_ controller: TabbedViewController, didSelectTab id: UUID, on edge: Edge) {
@@ -284,8 +296,10 @@ extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
     }
 
     public func tabbedViewController(_ controller: TabbedViewController, didRequestCloseTab id: UUID, on edge: Edge) {
-        // Refuse to close the last tab in a window — mirrors Safari/Terminal.
-        guard controller.tabs(on: .top).count > 1 else { return }
+        // Refuse to close the last tab on the top edge (mirrors
+        // Safari/Terminal). Other edges are toggleable, so closing their
+        // last tab is fine.
+        if edge == .top, controller.tabs(on: edge).count <= 1 { return }
         controller.removeTab(id: id)
         splitControllersByTabID.removeValue(forKey: id)
         focusedLeafByTabID.removeValue(forKey: id)
