@@ -131,6 +131,30 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         }
     }
 
+    // MARK: - Tab-edge accessors (used by Cocoa Scripting bridges)
+
+    /// Names of the tab edges currently enabled in this window. Names are
+    /// lowercase: `"top"`, `"right"`, `"bottom"`, `"left"`. Order matches
+    /// `Edge.allCases`.
+    public var enabledTabEdgeNames: [String] {
+        get { Edge.allCases.filter { tabbed.isEdgeEnabled($0) }.map(Self.scriptingName(for:)) }
+        set {
+            let normalized = Set(newValue.map { $0.lowercased() })
+            for edge in Edge.allCases {
+                tabbed.setEdgeEnabled(edge, normalized.contains(Self.scriptingName(for: edge)))
+            }
+        }
+    }
+
+    private static func scriptingName(for edge: Edge) -> String {
+        switch edge {
+        case .top: return "top"
+        case .right: return "right"
+        case .bottom: return "bottom"
+        case .left: return "left"
+        }
+    }
+
     // MARK: - Focused-leaf tracking
 
     private func installFirstResponderObserverIfNeeded() {
