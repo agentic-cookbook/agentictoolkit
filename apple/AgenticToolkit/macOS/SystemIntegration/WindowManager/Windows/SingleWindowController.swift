@@ -97,6 +97,10 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         )
         newWindow.title = windowTitle
         newWindow.isReleasedWhenClosed = false
+        // Default accessibility id derived from the windowID. Subclasses
+        // can overwrite this in `configureWindow(_:)` if a different
+        // namespace is preferred.
+        newWindow.accessibilityID("\(AccessibilityID.slug(windowID)).window")
         if let minSize = minSize {
             newWindow.minSize = minSize
         }

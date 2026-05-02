@@ -64,7 +64,6 @@ extension SessionWatcher {
         }
 
         public override func configureWindow(_ window: NSWindow) {
-            window.accessibilityID("session-panel.window")
             window.hidesOnDeactivate = false
             window.level = pendingIsFloating ? .floating : .normal
             window.isMovableByWindowBackground = true
