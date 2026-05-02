@@ -37,13 +37,22 @@ open class MainActorScriptCommand: NSScriptCommand, @unchecked Sendable {
 
     public override func performDefaultImplementation() -> Any? {
         // Cocoa Scripting invokes this on the main thread, so hopping onto
-        // the main actor here is a no-op at runtime. The indirect via
-        // `nonisolated(unsafe)` is needed because `Any?` is not Sendable
-        // and Swift 6 otherwise rejects the return.
-        nonisolated(unsafe) var result: Any?
-        MainActor.assumeIsolated {
-            result = self.performMain()
+        // the main actor here is a no-op at runtime. The Box pattern is
+        // the codebase's standard escape hatch for `MainActor.assumeIsolated`
+        // bridging — its `sending` closure rejects captures of a non-final
+        // `@unchecked Sendable` self under Swift 6 region analysis, but
+        // capturing a `final class @unchecked Sendable` Box that holds self
+        // is fine. The Box also carries the result back, since `Any?`
+        // doesn't satisfy `assumeIsolated`'s `T: Sendable` requirement.
+        final class Box: @unchecked Sendable {
+            let cmd: MainActorScriptCommand
+            var result: Any?
+            init(_ cmd: MainActorScriptCommand) { self.cmd = cmd }
         }
-        return result
+        let box = Box(self)
+        MainActor.assumeIsolated {
+            box.result = box.cmd.performMain()
+        }
+        return box.result
     }
 }
