@@ -52,6 +52,7 @@ public final class NotesListViewController: NSViewController {
         btn.target = self
         btn.action = #selector(newNoteTapped)
         btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.accessibilityID("notes.new-note-button")
         return btn
     }()
 
