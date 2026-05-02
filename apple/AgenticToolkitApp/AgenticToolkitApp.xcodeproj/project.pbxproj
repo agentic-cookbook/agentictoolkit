@@ -7,51 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */; };
-		0775BDA92190F652F49C96D4 /* AppSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8928F67D5B434995A11F9F57 /* AppSettingsWindowController.swift */; };
-		0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */; };
-		0CCB5C7ECDBE39F799A34CB2 /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967CBBCF946D872893CF7AB3 /* SettingsViewModelTests.swift */; };
-		0DC7F7FD363ABE567B1E1360 /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */; };
+		0A1672A29384E138CC1DCC19 /* MenuManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB609791064AAA4A3FD0EF08 /* MenuManager.swift */; };
 		12998863DC6494428076CA90 /* AgenticToolkitCoreMacOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9C7EEE9956F5E3C56D8BEDFD /* AgenticToolkitCoreMacOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		1393FDCF04CECF541CA66569 /* GitMetadataResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */; };
-		13C95AB4373CF504402F2E4C /* EventIngestionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB93182F125477FDEC658631 /* EventIngestionManager.swift */; };
 		155FF4285569D33357942205 /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A03A4C321C9351071CD224A5 /* AgenticToolkitMacOS.framework */; };
 		180B2F8075B16C6451EB18F0 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9D90A308FFB1350944749C5 /* AgenticToolkitCoreUI.framework */; };
-		1FC41AEBD1DC178C5E72667D /* EventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8A55879A8C839347DC495 /* EventFile.swift */; };
-		222BA6C1367EF2A572416AA6 /* ProfilesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */; };
-		23CFED5FB251948368948DB1 /* SessionRowViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10383D7D9993E40BCB9E50AF /* SessionRowViewTests.swift */; };
 		24ED1EE749ABB6DFD85D9181 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3E5EDF5F3976D706679DA4 /* main.swift */; };
 		26392B5AED821C98FA3A411B /* AgenticToolkitCoreUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A9D90A308FFB1350944749C5 /* AgenticToolkitCoreUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		2A45B55B84C262AD02853890 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */; };
-		319AF16A3DD48803293B31FB /* DatabaseManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */; };
-		33F0A3F6A865939447A091B4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8283AC5130D2A9E9DDBF1A8F /* Models.swift */; };
-		3808248E4CF7E8E5FEB0A166 /* MiniChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4150633B91521DF51AB75FB4 /* MiniChatViewModelTests.swift */; };
-		3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */; };
-		499F8B9FCE527F30A6B5365D /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */; };
+		4CFBFCE2E7C6DBA28FA44569 /* Features.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B67010DACFE78CA174F35BE /* Features.swift */; };
 		4D7B99804AF287C2B8300715 /* AgenticToolkitCoreUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A9D90A308FFB1350944749C5 /* AgenticToolkitCoreUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4F3348C3E5A46438E9EEC534 /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C7EEE9956F5E3C56D8BEDFD /* AgenticToolkitCoreMacOS.framework */; };
-		5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512312A712C04F53A999F7C0 /* DatabaseManager.swift */; };
-		5AD18A78E7D0520AED9D6FF3 /* LaunchAtLoginManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */; };
-		5C93B57CC3AA17DC451C7755 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */; };
-		64A41F0EB817449E6CAC40A7 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6840232F51664749DA0337AE /* NotificationManagerTests.swift */; };
 		688CE2C9476EB3DDC4AFC936 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8DE707FA2CA51A09E03A8483 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		6A46586C789FDE350E9C87EC /* TerminalProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */; };
-		7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */; };
-		81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */; };
 		95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711244F8F5F5CCE26995F087 /* AppDelegate.swift */; };
-		A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */; };
+		9B5494D34EB48994198F502A /* AppFeaturesSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA340F4FF6EF77C7FECDC7E0 /* AppFeaturesSmokeTests.swift */; };
 		A860815445888B1ECA5B2927 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8DE707FA2CA51A09E03A8483 /* AgenticToolkitCore.framework */; };
-		A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */; };
-		AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */; };
-		B244E6B2269EDB8926DAC32C /* IngestionIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120C2AC2F0A9618EB42E8D6F /* IngestionIntegrationTests.swift */; };
-		C65FA5BC8D8371F9D29D3DEB /* AgenticToolkitAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */; };
-		C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */; };
-		D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */; };
 		DCC31AB0A13DD3C339AA79C3 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9D90A308FFB1350944749C5 /* AgenticToolkitCoreUI.framework */; };
-		DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */; };
 		E5D36452A8A159B11DD7B04F /* AgenticToolkitMacOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A03A4C321C9351071CD224A5 /* AgenticToolkitMacOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		F3AA21376FE50406F5D3819A /* SessionLivenessMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */; };
-		F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = A778DFB22825D8D9E9729472 /* AppPermission.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -156,44 +126,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		10383D7D9993E40BCB9E50AF /* SessionRowViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowViewTests.swift; sourceTree = "<group>"; };
-		120C2AC2F0A9618EB42E8D6F /* IngestionIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngestionIntegrationTests.swift; sourceTree = "<group>"; };
 		197AE256063908DE304C069C /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AgenticToolkit; path = ../AgenticToolkit/AgenticToolkit.xcodeproj; sourceTree = "<group>"; };
-		240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManagerTests.swift; sourceTree = "<group>"; };
-		258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgenticToolkitAppTests.swift; sourceTree = "<group>"; };
-		2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
-		4150633B91521DF51AB75FB4 /* MiniChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniChatViewModelTests.swift; sourceTree = "<group>"; };
-		4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManagerTests.swift; sourceTree = "<group>"; };
-		4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMetadataResolver.swift; sourceTree = "<group>"; };
-		50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerTests.swift; sourceTree = "<group>"; };
-		512312A712C04F53A999F7C0 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
-		5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPane.swift; sourceTree = "<group>"; };
-		6840232F51664749DA0337AE /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
+		1B67010DACFE78CA174F35BE /* Features.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features.swift; sourceTree = "<group>"; };
 		68C69C566432A6C267AE692E /* AgenticToolkitApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgenticToolkitApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitorTests.swift; sourceTree = "<group>"; };
 		711244F8F5F5CCE26995F087 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesSettingsView.swift; sourceTree = "<group>"; };
-		7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		8283AC5130D2A9E9DDBF1A8F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		8928F67D5B434995A11F9F57 /* AppSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsWindowController.swift; sourceTree = "<group>"; };
 		8B3E5EDF5F3976D706679DA4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		967CBBCF946D872893CF7AB3 /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
-		983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPane.swift; sourceTree = "<group>"; };
-		9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstallerTests.swift; sourceTree = "<group>"; };
 		A20BEEA83D3D826F4BC4DADC /* AgenticToolkitAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A778DFB22825D8D9E9729472 /* AppPermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPermission.swift; sourceTree = "<group>"; };
-		AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManagerTests.swift; sourceTree = "<group>"; };
-		ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubChatBackend.swift; sourceTree = "<group>"; };
-		AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProfile.swift; sourceTree = "<group>"; };
-		B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
-		B3B8A55879A8C839347DC495 /* EventFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventFile.swift; sourceTree = "<group>"; };
-		B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstaller.swift; sourceTree = "<group>"; };
-		D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsPanelViewController.swift; sourceTree = "<group>"; };
-		E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
-		EB93182F125477FDEC658631 /* EventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventIngestionManager.swift; sourceTree = "<group>"; };
-		EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionWalkthrough.swift; sourceTree = "<group>"; };
-		F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLivenessMonitor.swift; sourceTree = "<group>"; };
+		BA340F4FF6EF77C7FECDC7E0 /* AppFeaturesSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeaturesSmokeTests.swift; sourceTree = "<group>"; };
+		FB609791064AAA4A3FD0EF08 /* MenuManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -219,75 +159,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		04932E3F0A0C7E427D201620 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				983F77E1BF3B96EF018CE80F /* AppearanceSettingsPane.swift */,
-				7F45EFE69364134DD421703E /* AppearanceSettingsPanelViewController.swift */,
-				A778DFB22825D8D9E9729472 /* AppPermission.swift */,
-				8928F67D5B434995A11F9F57 /* AppSettingsWindowController.swift */,
-				E6516F56B8751BBA8BB1F2FF /* LaunchAtLoginManager.swift */,
-				EED8A5F9142878CB83650D8C /* PermissionWalkthrough.swift */,
-				4269637AD206972F15866B3A /* ProfilesSettingsPanelViewController.swift */,
-				79864A5A92F0CB102C0EF45B /* ProfilesSettingsView.swift */,
-				2805D5F23FAB523F7B4ADA70 /* SettingsViewModel.swift */,
-				ACDD27836DE07BA4AE05ED8F /* StubChatBackend.swift */,
-				5764C75E779A2FFB256656A4 /* SystemSettingsPane.swift */,
-				D515AD85729CD6DC77B4D52C /* SystemSettingsPanelViewController.swift */,
-			);
-			path = Settings;
-			sourceTree = "<group>";
-		};
-		0E80E86E8F5A65A989CD7E46 /* Notifications */ = {
-			isa = PBXGroup;
-			children = (
-				B0FB6906BF425E1689A5C8D7 /* NotificationManager.swift */,
-			);
-			path = Notifications;
-			sourceTree = "<group>";
-		};
 		244EA2B2C56B314F80F02F80 /* AgenticToolkitAppTests */ = {
 			isa = PBXGroup;
 			children = (
-				258DA6CCAEAAAEF7170F69E3 /* AgenticToolkitAppTests.swift */,
-				46962E37A0E2030ED98D2159 /* DatabaseManagerTests.swift */,
-				AA69EB9F6B0A04C310F9777D /* EventIngestionManagerTests.swift */,
-				9E2C57526C58D7BA9754E646 /* HookInstallerTests.swift */,
-				120C2AC2F0A9618EB42E8D6F /* IngestionIntegrationTests.swift */,
-				240FA7AC4B3BF842909DA3C3 /* LaunchAtLoginManagerTests.swift */,
-				4150633B91521DF51AB75FB4 /* MiniChatViewModelTests.swift */,
-				6840232F51664749DA0337AE /* NotificationManagerTests.swift */,
-				6D996116725565C2F42001B3 /* SessionLivenessMonitorTests.swift */,
-				10383D7D9993E40BCB9E50AF /* SessionRowViewTests.swift */,
-				967CBBCF946D872893CF7AB3 /* SettingsViewModelTests.swift */,
-				50BC82030A50EE1BAEB4448E /* WindowManagerTests.swift */,
+				BA340F4FF6EF77C7FECDC7E0 /* AppFeaturesSmokeTests.swift */,
 			);
 			path = AgenticToolkitAppTests;
-			sourceTree = "<group>";
-		};
-		298A6FA3C06CDB6DA4A9CE8F /* Terminal */ = {
-			isa = PBXGroup;
-			children = (
-				AEE7CDE2422E0D6D0A149457 /* TerminalProfile.swift */,
-			);
-			path = Terminal;
-			sourceTree = "<group>";
-		};
-		584B3DED23A04B1041292AAB /* Database */ = {
-			isa = PBXGroup;
-			children = (
-				512312A712C04F53A999F7C0 /* DatabaseManager.swift */,
-				8283AC5130D2A9E9DDBF1A8F /* Models.swift */,
-			);
-			path = Database;
-			sourceTree = "<group>";
-		};
-		6E485070C3A9DFE3E6E8E4C4 /* Hooks */ = {
-			isa = PBXGroup;
-			children = (
-				B91FFC2FE3A11996D4D057FD /* HookInstaller.swift */,
-			);
-			path = Hooks;
 			sourceTree = "<group>";
 		};
 		9F34FF9C21DDE9B101A095DC /* Products */ = {
@@ -302,14 +179,10 @@
 		D48921ADD798648282D09DA5 /* AgenticToolkitApp */ = {
 			isa = PBXGroup;
 			children = (
-				584B3DED23A04B1041292AAB /* Database */,
-				6E485070C3A9DFE3E6E8E4C4 /* Hooks */,
-				FB1D44D42FF9974AA70E104B /* Ingestion */,
-				0E80E86E8F5A65A989CD7E46 /* Notifications */,
-				04932E3F0A0C7E427D201620 /* Settings */,
-				298A6FA3C06CDB6DA4A9CE8F /* Terminal */,
 				711244F8F5F5CCE26995F087 /* AppDelegate.swift */,
+				1B67010DACFE78CA174F35BE /* Features.swift */,
 				8B3E5EDF5F3976D706679DA4 /* main.swift */,
+				FB609791064AAA4A3FD0EF08 /* MenuManager.swift */,
 			);
 			path = AgenticToolkitApp;
 			sourceTree = "<group>";
@@ -331,17 +204,6 @@
 				A03A4C321C9351071CD224A5 /* AgenticToolkitMacOS.framework */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		FB1D44D42FF9974AA70E104B /* Ingestion */ = {
-			isa = PBXGroup;
-			children = (
-				B3B8A55879A8C839347DC495 /* EventFile.swift */,
-				EB93182F125477FDEC658631 /* EventIngestionManager.swift */,
-				4B4A1C02024AB06A94676044 /* GitMetadataResolver.swift */,
-				F8E809C9B45ADF973DFF7A05 /* SessionLivenessMonitor.swift */,
-			);
-			path = Ingestion;
 			sourceTree = "<group>";
 		};
 		FE3DE8096C026B9CCC1C918F = {
@@ -496,7 +358,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [[ \"$(uname -m)\" == \"arm64\" ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+			shellScript = "if [[ \"$(uname -m)\" == \"arm64\" ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet --strict\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
 		};
 		F819B20B143DE0405E72ABDB /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -515,7 +377,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [[ \"$(uname -m)\" == \"arm64\" ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+			shellScript = "if [[ \"$(uname -m)\" == \"arm64\" ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet --strict\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -525,27 +387,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */,
-				F9FAD847FA6ABDE21E3F6E91 /* AppPermission.swift in Sources */,
-				0775BDA92190F652F49C96D4 /* AppSettingsWindowController.swift in Sources */,
-				81AC1C5EC67697473B5E3AF7 /* AppearanceSettingsPane.swift in Sources */,
-				7A88A729498C8A5534FC0159 /* AppearanceSettingsPanelViewController.swift in Sources */,
-				5430E869187D3BB22CEA75BC /* DatabaseManager.swift in Sources */,
-				1FC41AEBD1DC178C5E72667D /* EventFile.swift in Sources */,
-				13C95AB4373CF504402F2E4C /* EventIngestionManager.swift in Sources */,
-				1393FDCF04CECF541CA66569 /* GitMetadataResolver.swift in Sources */,
-				0DC7F7FD363ABE567B1E1360 /* HookInstaller.swift in Sources */,
-				5C93B57CC3AA17DC451C7755 /* LaunchAtLoginManager.swift in Sources */,
-				33F0A3F6A865939447A091B4 /* Models.swift in Sources */,
-				2A45B55B84C262AD02853890 /* NotificationManager.swift in Sources */,
-				499F8B9FCE527F30A6B5365D /* PermissionWalkthrough.swift in Sources */,
-				0C613EFD4D259F8A6829FC5A /* ProfilesSettingsPanelViewController.swift in Sources */,
-				222BA6C1367EF2A572416AA6 /* ProfilesSettingsView.swift in Sources */,
-				DCCC3C7DDEADF9FCC3CC7BB6 /* SessionLivenessMonitor.swift in Sources */,
-				A889D4634F2CC1A1F79D334A /* SettingsViewModel.swift in Sources */,
-				D54FD9E4670EA194AAE48464 /* StubChatBackend.swift in Sources */,
-				3DBFA4225C37CEACE3C30773 /* SystemSettingsPane.swift in Sources */,
-				C7AAF0BBB0D43983C7425D15 /* SystemSettingsPanelViewController.swift in Sources */,
-				6A46586C789FDE350E9C87EC /* TerminalProfile.swift in Sources */,
+				4CFBFCE2E7C6DBA28FA44569 /* Features.swift in Sources */,
+				0A1672A29384E138CC1DCC19 /* MenuManager.swift in Sources */,
 				24ED1EE749ABB6DFD85D9181 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -554,18 +397,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C65FA5BC8D8371F9D29D3DEB /* AgenticToolkitAppTests.swift in Sources */,
-				319AF16A3DD48803293B31FB /* DatabaseManagerTests.swift in Sources */,
-				AE2FB1BBBF0AE4528802DBEE /* EventIngestionManagerTests.swift in Sources */,
-				A7899343557C8ECF5A6B9E17 /* HookInstallerTests.swift in Sources */,
-				B244E6B2269EDB8926DAC32C /* IngestionIntegrationTests.swift in Sources */,
-				5AD18A78E7D0520AED9D6FF3 /* LaunchAtLoginManagerTests.swift in Sources */,
-				3808248E4CF7E8E5FEB0A166 /* MiniChatViewModelTests.swift in Sources */,
-				64A41F0EB817449E6CAC40A7 /* NotificationManagerTests.swift in Sources */,
-				F3AA21376FE50406F5D3819A /* SessionLivenessMonitorTests.swift in Sources */,
-				23CFED5FB251948368948DB1 /* SessionRowViewTests.swift in Sources */,
-				0CCB5C7ECDBE39F799A34CB2 /* SettingsViewModelTests.swift in Sources */,
-				0465FD16F0EDAFE013C2BA4D /* WindowManagerTests.swift in Sources */,
+				9B5494D34EB48994198F502A /* AppFeaturesSmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -640,8 +472,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = K2NA732JAX;
+				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -665,11 +499,13 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -714,8 +550,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = K2NA732JAX;
+				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -734,10 +572,12 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";

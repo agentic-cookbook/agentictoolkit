@@ -60,7 +60,6 @@ targets:
         excludes:
           - "Info.plist"
           - "AgenticToolkitApp.entitlements"
-          - "Settings/DatabaseManagerPersistence.swift"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.agentic-toolkit.app
