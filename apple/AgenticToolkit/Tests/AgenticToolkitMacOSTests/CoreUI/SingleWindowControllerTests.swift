@@ -8,21 +8,21 @@ final class SingleWindowControllerTests: XCTestCase {
     // MARK: - Subclasses under test
 
     private final class ViewControllerBasedWC: SingleWindowController {
-        let viewController = FakeVC()
+        let viewController: FakeVC
 
-        override var windowTitle: String { "VC-Based" }
-        override var defaultContentRect: NSRect { NSRect(x: 0, y: 0, width: 321, height: 234) }
-        override var windowStyleMask: NSWindow.StyleMask {
-            [.titled, .closable, .miniaturizable, .resizable]
+        init(windowID: String) {
+            let viewController = FakeVC()
+            self.viewController = viewController
+            super.init(windowID: windowID, contentViewController: viewController)
+            self.windowTitle = "VC-Based"
+            self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
+            self.minSize = NSSize(width: 100, height: 100)
         }
-        override var minSize: NSSize? { NSSize(width: 100, height: 100) }
-        override func makeContentViewController() -> NSViewController? { viewController }
-    }
 
-    private final class ViewBasedWC: SingleWindowController {
-        let customView = NSView(frame: NSRect(x: 0, y: 0, width: 10, height: 10))
-        override var windowTitle: String { "View-Based" }
-        override func makeContentView() -> NSView? { customView }
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+
+        override var defaultContentRect: NSRect { NSRect(x: 0, y: 0, width: 321, height: 234) }
     }
 
     private final class FakeVC: NSViewController {
@@ -51,15 +51,6 @@ final class SingleWindowControllerTests: XCTestCase {
         windowController.showWindow()
         XCTAssertGreaterThan(windowController.viewController.loadViewCallCount, 0,
             "loadView should fire when contentViewController is set")
-    }
-
-    func testViewBasedSubclassInstallsContentView() {
-        let windowController = ViewBasedWC(windowID: "test.view")
-        windowController.showWindow()
-        XCTAssertNil(windowController.window?.contentViewController,
-            "view-based path should NOT set contentViewController")
-        XCTAssertTrue(windowController.customView.isDescendant(of: windowController.window?.contentView ?? NSView()),
-            "custom view should be a subview of the window's contentView")
     }
 
     func testReshowReusesSameWindow() {

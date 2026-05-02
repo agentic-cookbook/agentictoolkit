@@ -153,6 +153,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         // forward without touching NSApp activation (which is app-scoped and
         // the wrong tool here, and nil in headless `swift test`).
         window?.orderFrontRegardless()
+        WindowManager.shared.windowDidInteract(self, kind: .show)
     }
 
     /// Hides the window without destroying it.
@@ -177,7 +178,9 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         WindowManager.shared.frames.saveFrame(for: window, id: windowID)
     }
 
-    open func windowWillClose(_ notification: Notification) {}
+    open func windowWillClose(_ notification: Notification) {
+        WindowManager.shared.windowDidInteract(self, kind: .close)
+    }
 
     // MARK: - Helpers
 

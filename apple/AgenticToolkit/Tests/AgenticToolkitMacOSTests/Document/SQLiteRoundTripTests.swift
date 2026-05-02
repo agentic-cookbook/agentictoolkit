@@ -34,10 +34,10 @@ final class SQLiteRoundTripTests: XCTestCase {
 
     func testProjectRoundTripPreservesSessionRecords() throws {
         var project = Project.newProject(name: "With Sessions")
-        let layout = SessionLayoutState()
+        let layout = TerminalSessionLayoutState()
         project.sessionRecords = [
-            SessionRecord(id: UUID(), name: "session-1", sortOrder: 0, layoutState: layout),
-            SessionRecord(id: UUID(), name: "session-2", sortOrder: 1, layoutState: layout)
+            TerminalSessionSessionRecord(id: UUID(), name: "session-1", sortOrder: 0, layoutState: layout),
+            TerminalSessionSessionRecord(id: UUID(), name: "session-2", sortOrder: 1, layoutState: layout)
         ]
 
         let data = try SQLiteProjectStore.serialize(project)
