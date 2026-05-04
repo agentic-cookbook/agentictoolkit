@@ -16,7 +16,7 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
 
         let provider = MockScreenProvider(screens: [screen])
         let windowManager = WindowManager(screenProvider: provider, storage: storage)
-        windowManager.register(id: "test", spec: WindowSpec(
+        windowManager.frames.register(id: "test", spec: WindowSpec(
             defaultSize: NSSize(width: 600, height: 480),
             minSize: NSSize(width: 200, height: 200),
             defaultPosition: .center,
@@ -256,6 +256,7 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
 
 // MARK: - Mock Storage Tests
 
+@MainActor
 final class MockStorageTests: XCTestCase {
 
     func testSaveAndLoad() {

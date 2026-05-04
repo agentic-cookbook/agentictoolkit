@@ -15,6 +15,7 @@ extension SessionWatcher {
         public init(viewModel: SessionListViewModel) {
             self.viewModel = viewModel
             super.init(frame: .zero)
+            accessibilityID("session-panel.list")
             setupViews()
             bindViewModel()
         }
@@ -151,6 +152,7 @@ extension SessionWatcher {
     public final class SessionWatcherEmptyStateView: NSView {
         public override init(frame: NSRect) {
             super.init(frame: frame)
+            accessibilityID("session-panel.empty-state")
             setupViews()
         }
 
@@ -206,6 +208,7 @@ extension SessionWatcher {
             self.onSummarize = onSummarize
             self.frontmostSessionId = frontmostSessionId
             super.init(frame: .zero)
+            accessibilityID("session-panel.group.\(AccessibilityID.slug(group.termProgram))")
             wantsLayer = true
             layer?.cornerRadius = 8
             layer?.backgroundColor = NSColor.white.withAlphaComponent(0.05).cgColor
@@ -359,6 +362,7 @@ extension SessionWatcher {
             self.onSummarize = onSummarize
             self.isFrontmost = isFrontmost
             super.init(frame: .zero)
+            accessibilityID("session-panel.row.\(session.sessionId)")
             wantsLayer = true
             layer?.cornerRadius = 6
             layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
@@ -613,6 +617,7 @@ extension SessionWatcher {
         public init(message: String, isPermissionError: Bool, onOpenSettings: (() -> Void)?) {
             self.onOpenSettingsAction = onOpenSettings
             super.init(frame: .zero)
+            accessibilityID("session-panel.error-banner")
             wantsLayer = true
             layer?.backgroundColor = (isPermissionError
                                       ? NSColor.systemOrange.withAlphaComponent(0.15)
@@ -656,6 +661,7 @@ extension SessionWatcher {
                 )
                 button.font = .systemFont(ofSize: 11, weight: .medium)
                 button.bezelStyle = .recessed
+                button.accessibilityID("session-panel.error-banner.open-settings")
                 stack.addArrangedSubview(button)
             }
 

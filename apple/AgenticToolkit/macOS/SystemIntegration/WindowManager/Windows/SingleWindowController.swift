@@ -97,6 +97,10 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         )
         newWindow.title = windowTitle
         newWindow.isReleasedWhenClosed = false
+        // Default accessibility id derived from the windowID. Subclasses
+        // can overwrite this in `configureWindow(_:)` if a different
+        // namespace is preferred.
+        newWindow.accessibilityID("\(AccessibilityID.slug(windowID)).window")
         if let minSize = minSize {
             newWindow.minSize = minSize
         }
@@ -153,6 +157,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         // forward without touching NSApp activation (which is app-scoped and
         // the wrong tool here, and nil in headless `swift test`).
         window?.orderFrontRegardless()
+        WindowManager.shared.windowDidInteract(self, kind: .show)
     }
 
     /// Hides the window without destroying it.
@@ -177,7 +182,9 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         WindowManager.shared.frames.saveFrame(for: window, id: windowID)
     }
 
-    open func windowWillClose(_ notification: Notification) {}
+    open func windowWillClose(_ notification: Notification) {
+        WindowManager.shared.windowDidInteract(self, kind: .close)
+    }
 
     // MARK: - Helpers
 

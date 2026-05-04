@@ -20,6 +20,7 @@ public final class GeneralSettingsPanelViewController: ComposableSettings.Settin
     public override func viewDidLoad() {
         super.viewDidLoad()
         self.settingsView.addGroup(createStartupGroup())
+        self.settingsView.addGroup(createWindowBehaviorGroup())
     }
 
     private func createStartupGroup() -> ComposableSettings.GroupView {
@@ -36,6 +37,35 @@ public final class GeneralSettingsPanelViewController: ComposableSettings.Settin
             text: "Whippet works best when it starts automatically with your Mac. "
                 + "Enable launch at login so you never miss a Claude Code session.",
             dismissedSetting: UserSettings.launchAtLoginHintDismissed
+        ))
+
+        return group
+    }
+
+    private func createWindowBehaviorGroup() -> ComposableSettings.GroupView {
+        let group = ComposableSettings.GroupView(withTitle: "Window Behavior")
+
+        let policyChoices = ReopenOnLaunchPolicy.allCases.map {
+            ComposableSettings.ChoiceViewModel<ReopenOnLaunchPolicy>.Choice(
+                label: $0.displayName,
+                value: $0
+            )
+        }
+        group.addSettingSubview(ComposableSettings.PopupMenuChoiceView<ReopenOnLaunchPolicy>(
+            viewModel: ComposableSettings.ChoiceViewModel<ReopenOnLaunchPolicy>(
+                title: "Restore windows on launch:",
+                setting: UserSettings.reopenOnLaunchPolicy,
+                choices: policyChoices
+            )
+        ))
+
+        group.addSettingSubview(ComposableSettings.StepperView(
+            viewModel: ComposableSettings.RangeViewModel<Int>(
+                title: "Number of recent documents:",
+                setting: UserSettings.recentWindowsCount,
+                minValue: 0,
+                maxValue: 50
+            )
         ))
 
         return group

@@ -5,7 +5,7 @@ import Testing
 struct AgenticToolkitCoreMacOSPlaceholderTests {
     @Test("module compiles")
     func moduleCompiles() {
-        // Reference any public type to confirm the module links.
-        _ = SingleWindowController.self
+        // Reference any internal type to confirm the module links.
+        _ = AgenticToolkitCoreMacOSPlaceholder.self
     }
 }

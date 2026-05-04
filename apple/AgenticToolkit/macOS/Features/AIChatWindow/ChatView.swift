@@ -55,6 +55,7 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         inputField.drawsBackground = false
         inputField.delegate = self
         inputField.translatesAutoresizingMaskIntoConstraints = false
+        inputField.accessibilityID("ai-chat.input")
 
         sendButton.image = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "Send")
         sendButton.symbolConfiguration = .init(pointSize: 18, weight: .regular)
@@ -62,6 +63,7 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         sendButton.target = self
         sendButton.action = #selector(sendTapped)
         sendButton.translatesAutoresizingMaskIntoConstraints = false
+        sendButton.accessibilityID("ai-chat.send-button")
 
         let inputRow = NSStackView(views: [inputField, sendButton])
         inputRow.orientation = .horizontal

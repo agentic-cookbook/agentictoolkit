@@ -87,6 +87,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         button.imagePosition = .imageOnly
         button.toolTip = "Show / hide tab bars"
         button.frame = NSRect(x: 0, y: 0, width: 36, height: 24)
+        button.accessibilityID("document-window.tab-edges-button")
 
         let accessory = NSTitlebarAccessoryViewController()
         accessory.view = button
@@ -107,6 +108,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
             item.target = self
             item.representedObject = edge
             item.state = tabbed.isEdgeEnabled(edge) ? .on : .off
+            item.accessibilityID("document-window.tab-edges.\(AccessibilityID.slug(Self.title(for: edge)))")
             menu.addItem(item)
         }
         menu.popUp(
