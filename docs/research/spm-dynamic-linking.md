@@ -1,6 +1,6 @@
 # SPM dynamic linking for host + NSBundle plugins
 
-Reference note on why `apple/AgenticToolkit/Package.swift` ships an
+Reference note on why `packages/apple/AgenticToolkit/Package.swift` ships an
 asymmetric product list — 13 per-target automatic `.library` products plus
 one `.dynamic` umbrella named `AgenticToolkitPluginHost`. The shape is a
 deliberate workaround for a known SPM limitation; this note captures the
@@ -113,10 +113,10 @@ actually have), we add **one** dynamic umbrella:
 Wiring:
 
 - `AgenticToolkitApp` **embeds** `AgenticToolkitPluginHost` (`embed: true,
-  link: true` in `apple/AgenticToolkitApp/project.yml`). The framework
+  link: true` in `packages/packages/apple/AgenticToolkitApp/project.yml`). The framework
   lands in `AgenticToolkitApp.app/Contents/Frameworks/`.
 - Plugin bundles **link without embedding** (`embed: false, link: true`
-  in `apple/AIPlugins/project.yml`). At load time, the plugin's `@rpath`
+  in `packages/apple/AIPlugins/project.yml`). At load time, the plugin's `@rpath`
   (configured via `LD_RUNPATH_SEARCH_PATHS = @loader_path/../../../../Frameworks`)
   resolves `AgenticToolkitPluginHost.framework` to the copy in the host's
   `Contents/Frameworks/`.

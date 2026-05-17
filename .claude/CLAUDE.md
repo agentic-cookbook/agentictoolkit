@@ -9,46 +9,52 @@ A cross-platform toolkit for agentic development workflows.
 
 ## Build
 
-`apple/` contains three XcodeGen-backed Xcode projects wired together by
-`apple/AgenticToolkit.xcworkspace`: the `AgenticToolkit` framework
-project, the `AgenticToolkitApp` app project, and the `AIPlugins`
-plugin-bundle project. Each has its own `project.yml`.
+Each platform lives under `packages/<platform>/` and is the root of its
+native build system. `packages/apple/` contains three XcodeGen-backed
+Xcode projects wired together by
+`packages/apple/AgenticToolkit.xcworkspace`: the `AgenticToolkit`
+framework project, the `AgenticToolkitApp` app project, and the
+`AIPlugins` plugin-bundle project. Each has its own `project.yml`.
 
 **`project.yml` is the source of truth.** Edit those files (not the
 generated `.xcodeproj`) and regenerate with `cc-xcgen` before building.
 Hand-editing `project.pbxproj` will be lost on the next regeneration.
 
+`./install.sh` at the repo root regenerates all three projects in one
+shot (it's the bootstrap entry point for new clones); the consumer-side
+equivalent is `./install-for-submodule-use.sh`.
+
 Always pass `-derivedDataPath` so artifacts go to `~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed/` instead of polluting the working tree with `./build/`. Do not set `SYMROOT`/`OBJROOT` in `project.yml` — that triggers Xcode's "legacy build locations" mode and breaks the external SPM packages this project consumes (SwiftTerm, CodeEditSourceEditor, CodeEditLanguages).
 
 ```bash
 # Regenerate every xcodeproj from its project.yml:
-cc-xcgen apple/AgenticToolkit apple/AIPlugins apple/AgenticToolkitApp
+cc-xcgen packages/apple/AgenticToolkit packages/apple/AIPlugins packages/apple/AgenticToolkitApp
 
 # Build the framework via the workspace:
 DD=~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed
-xcodebuild -workspace apple/AgenticToolkit.xcworkspace \
+xcodebuild -workspace packages/apple/AgenticToolkit.xcworkspace \
            -scheme AgenticToolkitMacOS \
            -destination 'platform=macOS,arch=arm64' \
            -derivedDataPath "$DD" build
 
 # Full app (embeds all four toolkit frameworks):
-xcodebuild -workspace apple/AgenticToolkit.xcworkspace -scheme AgenticToolkitApp ... build
+xcodebuild -workspace packages/apple/AgenticToolkit.xcworkspace -scheme AgenticToolkitApp ... build
 
 # All plugins:
-xcodebuild -workspace apple/AgenticToolkit.xcworkspace -scheme AIPluginsMacOSAll ... build
+xcodebuild -workspace packages/apple/AgenticToolkit.xcworkspace -scheme AIPluginsMacOSAll ... build
 
 # Or open the workspace in Xcode:
-open apple/AgenticToolkit.xcworkspace
+open packages/apple/AgenticToolkit.xcworkspace
 ```
 
 ## Architecture
 
-Cross-platform repo with per-platform directories:
-- `apple/AgenticToolkit/` — four framework targets (`AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitCoreMacOS`, `AgenticToolkitMacOS`) + matching test bundles. SPM packages: `SwiftTerm`, `CodeEditSourceEditor`, `CodeEditLanguages`. macOS 14+.
-- `apple/AgenticToolkitApp/` — host app (`AgenticToolkitApp.app`). Cross-project links + embeds all four toolkit frameworks. macOS 26+.
-- `apple/AIPlugins/` — `AIPluginsShared.framework` + five `.aiplugin` bundles (`ClaudeAPI`, `ClaudeLocal`, `Google`, `OpenAI`, `OpenAICompatible`). Each plugin links (without embedding) the four toolkit frameworks so it shares one loaded image with the host at runtime. Each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`. macOS 26+.
-- `windows/` — TBD
-- `android/` — TBD
+Cross-platform repo with per-platform directories under `packages/`:
+- `packages/apple/AgenticToolkit/` — four framework targets (`AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitCoreMacOS`, `AgenticToolkitMacOS`) + matching test bundles. SPM packages: `SwiftTerm`, `CodeEditSourceEditor`, `CodeEditLanguages`. macOS 14+.
+- `packages/apple/AgenticToolkitApp/` — host app (`AgenticToolkitApp.app`). Cross-project links + embeds all four toolkit frameworks. macOS 26+.
+- `packages/apple/AIPlugins/` — `AIPluginsShared.framework` + five `.aiplugin` bundles (`ClaudeAPI`, `ClaudeLocal`, `Google`, `OpenAI`, `OpenAICompatible`). Each plugin links (without embedding) the four toolkit frameworks so it shares one loaded image with the host at runtime. Each plugin's post-build script installs its `.bundle` into `~/.agenticplugins/`. macOS 26+.
+- `packages/windows/` — TBD
+- `packages/android/` — TBD
 
 ### Apple framework layout
 
@@ -61,7 +67,7 @@ Cross-platform repo with per-platform directories:
 
 `AgenticToolkitCore` is Foundation-only; `AgenticToolkitCoreUI` holds cross-cutting AppKit utilities; `AgenticToolkitCoreMacOS` adds macOS-only foundations; `AgenticToolkitMacOS` is the feature-rich macOS framework consumed by the host app, plugins, Whippet, and Stenographer.
 
-Aggregate targets defined in `apple/AgenticToolkit/project.yml`:
+Aggregate targets defined in `packages/apple/AgenticToolkit/project.yml`:
 - `AgenticToolkitMacOSAll` — builds the four frameworks
 - `AgenticToolkitMacOSTestsAll` — builds the four frameworks plus all four test bundles
 
@@ -69,7 +75,7 @@ Aggregate targets defined in `apple/AgenticToolkit/project.yml`:
 
 The host app embeds all four toolkit frameworks. Each `.aiplugin` bundle links those frameworks **without embedding** so they resolve to the host's loaded image at `dlopen` time, preventing duplicate class registrations and type-identity mismatches.
 
-`AIPluginsShared.framework` is the cross-plugin common code; it lives in `apple/AIPlugins/` (not in the toolkit) because it's only consumed by the plugin bundles.
+`AIPluginsShared.framework` is the cross-plugin common code; it lives in `packages/apple/AIPlugins/` (not in the toolkit) because it's only consumed by the plugin bundles.
 
 ## Conventions
 

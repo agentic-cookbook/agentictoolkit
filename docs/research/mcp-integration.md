@@ -30,7 +30,7 @@ subprocess hop.
 We use the official Swift SDK:
 
 ```yaml
-# apple/AgenticToolkit/project.yml
+# packages/apple/AgenticToolkit/project.yml
 packages:
   ModelContextProtocol:
     url: https://github.com/modelcontextprotocol/swift-sdk
@@ -80,7 +80,7 @@ The integration has four layers:
      `(client, tool)` pairs for the dispatch loop. Tests inject a
      `clientFactory` to avoid spawning real subprocesses.
 3. **Plugin / backend surface**
-   (`AgenticToolkitCore/AIPlugins/` + `apple/AgenticToolkit/macOS/`).
+   (`AgenticToolkitCore/AIPlugins/` + `packages/apple/AgenticToolkit/macOS/`).
    - New DTOs in `Core`: `ToolDefinition`, `ChatStreamEvent`
      (`.textDelta` / `.toolUse` / `.end`), `ToolResult`. Lives in `Core`
      so MCP code can produce them directly.
@@ -97,7 +97,7 @@ The integration has four layers:
      method, translate `[ToolDefinition]` into the provider's tool
      format (Anthropic `tools` array, OpenAI `functions`, etc.), and
      emit `.toolUse` events from provider responses.
-4. **Dispatch loop and UI** (`apple/AgenticToolkit/macOS/`).
+4. **Dispatch loop and UI** (`packages/apple/AgenticToolkit/macOS/`).
    - `ChatViewModel` accepts an `MCPServerRegistry?` and a
      `Set<UUID>` of `activeServerIds`. The drain loop is now an
      event loop: collect text deltas, collect pending tool uses, run
@@ -185,7 +185,7 @@ overkill for tools that *only* exist to expose host-app behavior:
 Those tools have no meaning outside the running host process — there's
 nothing to spawn.
 
-`HostMCPServer` (`apple/AgenticToolkit/macOS/Features/MCP/HostMCPServer.swift`)
+`HostMCPServer` (`packages/apple/AgenticToolkit/macOS/Features/MCP/HostMCPServer.swift`)
 is the in-process answer. It wraps the SDK's `MCP.Server` actor with
 an in-memory transport pair so the same process can act as both the
 MCP server (publishing tools) and an MCP client (consuming them via
@@ -334,7 +334,7 @@ End-to-end smoke-tested by running the sample `AgenticToolkitApp`:
 - A `github` server with a token round-trips through Keychain (visible
   in Keychain Access, not in UserDefaults plist).
 
-Unit tests in `apple/AgenticToolkit/Tests/AgenticToolkitCoreTests/MCP/`
+Unit tests in `packages/apple/AgenticToolkit/Tests/AgenticToolkitCoreTests/MCP/`
 cover the Codable round-trip for `MCPServerConfiguration`, the
 secrets-routing in `MCPSettings`, and the registry's reconciliation
 behavior using an injected fake `MCPClient` factory.
@@ -343,29 +343,29 @@ behavior using an injected fake `MCPClient` factory.
 
 Added:
 
-- `apple/AgenticToolkit/Core/MCP/MCPServerConfiguration.swift`
-- `apple/AgenticToolkit/Core/MCP/MCPSettings.swift`
-- `apple/AgenticToolkit/Core/MCP/MCPClient.swift`
-- `apple/AgenticToolkit/Core/MCP/MCPServerRegistry.swift`
-- `apple/AgenticToolkit/Core/AIPlugins/ToolDefinition.swift`
-- `apple/AgenticToolkit/Core/AIPlugins/ChatStreamEvent.swift`
-- `apple/AgenticToolkit/Core/AIPlugins/ToolResult.swift`
-- `apple/AgenticToolkit/macOS/Features/MCP/Settings/MCPServersPanelViewController.swift`
-- `apple/AgenticToolkit/macOS/Features/MCP/HostMCPServer.swift`
-- `apple/AgenticToolkit/macOS/Features/AIChatWindow/MCPChipsBarView.swift`
+- `packages/apple/AgenticToolkit/Core/MCP/MCPServerConfiguration.swift`
+- `packages/apple/AgenticToolkit/Core/MCP/MCPSettings.swift`
+- `packages/apple/AgenticToolkit/Core/MCP/MCPClient.swift`
+- `packages/apple/AgenticToolkit/Core/MCP/MCPServerRegistry.swift`
+- `packages/apple/AgenticToolkit/Core/AIPlugins/ToolDefinition.swift`
+- `packages/apple/AgenticToolkit/Core/AIPlugins/ChatStreamEvent.swift`
+- `packages/apple/AgenticToolkit/Core/AIPlugins/ToolResult.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/MCP/Settings/MCPServersPanelViewController.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/MCP/HostMCPServer.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIChatWindow/MCPChipsBarView.swift`
 
 Modified:
 
-- `apple/AgenticToolkit/project.yml` — added the SDK package.
-- `apple/AgenticToolkit/macOS/Features/AIPlugins/AIPlugin.swift`
-- `apple/AgenticToolkit/macOS/Features/AIPlugins/AIPluginMessage.swift`
-- `apple/AgenticToolkit/macOS/Features/AIPlugins/AIPluginChatBackend.swift`
-- `apple/AgenticToolkit/macOS/Features/AIChatWindow/ChatBackend.swift`
-- `apple/AgenticToolkit/macOS/Features/AIChatWindow/ChatView.swift`
-- `apple/AgenticToolkit/macOS/Features/AIChatWindow/ChatViewModel.swift`
-- `apple/AgenticToolkit/macOS/Features/AIChatWindow/WhippetChatBackend.swift`
-- `apple/AgenticToolkitApp/AgenticToolkitApp/AppDelegate.swift`
-- `apple/AgenticToolkitApp/AgenticToolkitApp/Settings/AppSettingsWindowController.swift`
+- `packages/apple/AgenticToolkit/project.yml` — added the SDK package.
+- `packages/apple/AgenticToolkit/macOS/Features/AIPlugins/AIPlugin.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIPlugins/AIPluginMessage.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIPlugins/AIPluginChatBackend.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIChatWindow/ChatBackend.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIChatWindow/ChatView.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIChatWindow/ChatViewModel.swift`
+- `packages/apple/AgenticToolkit/macOS/Features/AIChatWindow/WhippetChatBackend.swift`
+- `packages/packages/apple/AgenticToolkitApp/AgenticToolkitApp/AppDelegate.swift`
+- `packages/packages/apple/AgenticToolkitApp/AgenticToolkitApp/Settings/AppSettingsWindowController.swift`
 
 `StubChatBackend` did not need changes — it inherits the default
 delegating implementation of the new tool-aware method.

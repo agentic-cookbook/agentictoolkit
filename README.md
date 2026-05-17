@@ -2,34 +2,45 @@
 
 A cross-platform toolkit for agentic development workflows.
 
-## Structure
+## Layout
 
-| Directory | Platform | Language |
-|-----------|----------|----------|
-| `apple/`  | macOS, iOS, tvOS, watchOS | Swift |
-| `windows/`| Windows  | TBD |
-| `android/`| Android  | TBD |
+Each platform folder under `packages/` is the **root of its native build
+system** — its conventional manifest file lives there.
 
-## Apple Platforms (Swift Package)
+| Platform | Folder | Manifest | Status |
+|---|---|---|---|
+| Apple | `packages/apple/` | `project.yml` (XcodeGen) + `AgenticToolkit.xcworkspace` | active |
+| Android | `packages/android/` | (TBD) | placeholder |
+| Windows | `packages/windows/` | (TBD) | placeholder |
 
-The `apple/` directory contains a Swift package (`AgenticToolkit`).
+The Apple platform is a workspace of three XcodeGen-backed Xcode projects:
+`AgenticToolkit` (four toolkit frameworks), `AgenticToolkitApp` (host app),
+and `AIPlugins` (`AIPluginsShared.framework` plus five `.aiplugin` bundles).
 
-### As a local dependency (submodule)
+## Build
 
-Add this repo as a git submodule, then in Xcode: **File > Add Package Dependencies > Add Local** and select the `apple/` directory.
-
-### As a remote dependency
-
-```swift
-.package(url: "https://github.com/agentic-cookbook/agentictoolkit.git", from: "0.1.0")
-```
-
-A root-level `Package.swift` symlink enables SPM resolution from the repo URL.
-
-### Build & Test
+One-shot bootstrap (regenerates Apple Xcode projects from `project.yml`):
 
 ```bash
-cd apple
-swift build
-swift test
+./install.sh
 ```
+
+Open the workspace:
+
+```bash
+open packages/apple/AgenticToolkit.xcworkspace
+```
+
+Full `xcodebuild` invocations (including the `-derivedDataPath` flag this
+repo requires) live in [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
+
+## Design
+
+How this repo is laid out and how it's consumed:
+[`docs/repo-pattern.md`](docs/repo-pattern.md).
+
+Consumer setup walkthrough (git submodule path):
+[`docs/consuming-as-submodule.md`](docs/consuming-as-submodule.md).
+
+Agent-oriented orientation: [`AGENTS.md`](AGENTS.md).
+Repo conventions and build rules: [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
