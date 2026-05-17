@@ -1,0 +1,32 @@
+.awt-dev-banner {
+  background: rgba(12, 12, 15, 0.4);
+  color: #c4a35a;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  padding: 0.5rem 1rem;
+  text-transform: uppercase;
+  border: 2px solid #c4a35a;
+  border-radius: 6px;
+  box-shadow:
+    0 0 14px rgba(196, 163, 90, 0.55),
+    0 0 40px rgba(196, 163, 90, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.awt-dev-banner--fixed {
+  position: fixed;
+  top: 3.25rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  transform-origin: center;
+  z-index: 100;
+}
+
+.awt-dev-banner--static {
+  display: inline-block;
+  transform: rotate(-8deg);
+  transform-origin: center;
+}

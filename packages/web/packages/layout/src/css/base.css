@@ -1,0 +1,15 @@
+.awt-layout {
+  --awt-gutter: 16px;
+  --awt-radius-sm: 4px;
+  --awt-radius-md: 6px;
+  --awt-transition: 150ms ease;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+}
+
+.awt-layout *,
+.awt-layout *::before,
+.awt-layout *::after {
+  box-sizing: border-box;
+}

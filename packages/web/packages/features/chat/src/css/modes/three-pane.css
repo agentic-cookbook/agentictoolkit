@@ -1,0 +1,220 @@
+/*
+ * PersonaChat — Three-Pane Mode Layout
+ *
+ * Chat pane + detail pane + topics sidebar.
+ * Import after base.css.
+ */
+
+.pc-three-pane-frame {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  height: auto;
+  max-width: 100%;
+  overflow: visible;
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pc-chat-pane {
+  flex: 0 0 300px;
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pc-chat-pane .persona-chat {
+  width: 100%;
+  height: 100%;
+}
+
+/* Side panes */
+.pc-detail-pane { flex: 0 0 440px; }
+.pc-topics-pane { flex: 0 0 300px; }
+
+/* Stack of detail panels: newest at bottom, older shift up */
+.pc-panel-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  align-self: flex-end;
+  flex: 0 0 440px;
+  min-width: 0;
+}
+.pc-panel-stack .pc-detail-pane { flex: 0 0 auto; }
+
+.pc-detail-pane,
+.pc-topics-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              backdrop-filter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pc-pane-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pc-pane-visible {
+  opacity: 1;
+  background: var(--pc-surface);
+  border-color: var(--pc-input-border, transparent);
+  color: var(--pc-persona-text, inherit);
+}
+
+/* Connector SVG overlay */
+.pc-connector-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  overflow: visible;
+}
+
+/* Connector anchors — themes can override position */
+.pc-connector-anchor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  right: 0;
+  top: 50%;
+  pointer-events: none;
+}
+.pc-connector-anchor.pc-connector-anchor-in {
+  left: 0;
+  right: auto;
+}
+
+/* Panel header */
+.pc-panel-header {
+  padding: 10px 10px 6px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.5rem;
+  font-weight: 500;
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+/* Topic list */
+.pc-topic-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 4px 8px;
+  margin: 0;
+}
+
+.pc-topic-list li { margin-bottom: 1px; }
+
+.pc-topic-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  opacity: 0.5;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.pc-topic-item:hover {
+  background: color-mix(in srgb, var(--pc-persona-name, #ffffff) 10%, transparent);
+  opacity: 0.8;
+}
+.pc-topic-item.active {
+  background: color-mix(in srgb, var(--pc-persona-name, #ffffff) 18%, transparent);
+  opacity: 1;
+}
+
+/* Detail pane content */
+.pc-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px 16px;
+}
+
+.pc-detail-title {
+  position: relative;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 12px;
+  color: var(--pc-persona-name, var(--accent, #c4a35a));
+  margin-bottom: 8px;
+}
+
+.pc-detail-desc {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 11px;
+  opacity: 0.55;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.pc-detail-links-label {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.5rem;
+  font-weight: 500;
+  opacity: 0.35;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.pc-detail-links {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pc-detail-links a {
+  display: inline;
+  width: fit-content;
+  text-decoration: underline;
+  text-decoration-color: var(--pc-persona-name, var(--accent, #c4a35a));
+  text-underline-offset: 2px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 11px;
+  color: var(--pc-user-name, var(--text-muted, #8a8a9a));
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.pc-detail-links a:hover {
+  opacity: 1;
+  color: var(--pc-persona-name, var(--accent, #c4a35a));
+}
+
+.pc-detail-images {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pc-detail-image {
+  max-width: 100%;
+  border-radius: 3px;
+  display: block;
+  border: 1px solid var(--pc-input-border, var(--border, #2a2a36));
+}

@@ -1,0 +1,9 @@
+packages:
+  - './packages/ui'
+  - './packages/themes'
+  - './packages/model'
+  - './packages/layout'
+  - './packages/content'
+  - './packages/controls'
+  - './packages/features/*'
+  - './packages/site-templates/reference-web-site'

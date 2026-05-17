@@ -1,0 +1,29 @@
+.awt-toc {
+  font-size: 0.82rem;
+  font-family: var(--font-sans, inherit);
+  color: var(--color-text-secondary);
+}
+.awt-toc__title {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  margin-bottom: 0.6rem;
+  color: var(--color-text-dim);
+}
+.awt-toc__list { list-style: none; margin: 0; padding: 0; }
+.awt-toc__item { padding: 0.2rem 0; }
+.awt-toc__item--depth-3 { padding-left: 0.9rem; }
+.awt-toc__item--depth-4 { padding-left: 1.8rem; }
+.awt-toc__item a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  display: block;
+  border-left: 2px solid transparent;
+  padding-left: 0.6rem;
+  transition: color var(--awt-transition, 150ms ease), border-color var(--awt-transition, 150ms ease);
+}
+.awt-toc__item a:hover { color: var(--color-text-primary); }
+.awt-toc__item--active a {
+  color: var(--color-accent);
+  border-left-color: var(--color-accent);
+}

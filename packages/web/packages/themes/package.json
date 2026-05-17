@@ -1,0 +1,53 @@
+{
+  "name": "@agentic-web-toolkit/themes",
+  "version": "0.1.0",
+  "description": "Theme manifest, ThemeStyle component, and ColorModeProvider for agentic-web-toolkit.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./colorMode": {
+      "types": "./dist/colorMode.d.ts",
+      "import": "./dist/colorMode.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "import": "./dist/manifest.js"
+    },
+    "./styles/*.css": "./dist/styles/*.css"
+  },
+  "scripts": {
+    "build:data": "node scripts/build-theme-data.mjs",
+    "build": "pnpm run build:data && tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "node ../../packaging/copy-css.mjs",
+    "dev": "pnpm run build:data && tsup --watch",
+    "clean": "rm -rf dist .turbo src/theme-data.ts",
+    "lint": "pnpm run build:data && tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentic-web-toolkit/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
+}

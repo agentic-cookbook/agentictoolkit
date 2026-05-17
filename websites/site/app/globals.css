@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+@source "../../packages/*/dist/**/*.{js,d.ts}";
+@source "../examples/**/*.{ts,tsx}";
+@source "../src/**/*.{ts,tsx}";
+
+@import '@agentic-web-toolkit/layout/css/base.css';
+@import '@agentic-web-toolkit/layout/css/header.css';
+@import '@agentic-web-toolkit/layout/css/sidebar.css';
+@import '@agentic-web-toolkit/layout/css/breadcrumbs.css';
+@import '@agentic-web-toolkit/layout/css/toc.css';
+@import '@agentic-web-toolkit/layout/css/app-shell.css';
+
+@import '@agentic-web-toolkit/content/css/cards.css';
+@import '@agentic-web-toolkit/content/css/home-page.css';
+@import '@agentic-web-toolkit/content/css/section-index.css';
+@import '@agentic-web-toolkit/content/css/markdown-view.css';
+
+@import '@agentic-web-toolkit/chat/css/base.css';
+@import '@agentic-web-toolkit/chat/css/modes/inline.css';
+@import '@agentic-web-toolkit/chat/css/modes/three-pane.css';
+@import '@agentic-web-toolkit/chat/css/modes/mobile.css';
+@import '@agentic-web-toolkit/chat/css/components/content-overlay.css';
+
+@import '@agentic-web-toolkit/controls/appearance-mode-toggle/styles.css';
+@import '@agentic-web-toolkit/controls/dev-banner/styles.css';
+@import '@agentic-web-toolkit/controls/filtered-list/styles.css';
+@import '@agentic-web-toolkit/controls/logging-panel/styles.css';
+@import '@agentic-web-toolkit/controls/orb-row/styles.css';
+@import '@agentic-web-toolkit/controls/search-dialog/styles.css';
+@import '@agentic-web-toolkit/controls/source-code-panel/styles.css';
+@import '@agentic-web-toolkit/controls/user-settings/styles.css';

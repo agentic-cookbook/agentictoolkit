@@ -1,0 +1,83 @@
+{
+  "name": "@agentic-web-toolkit/model",
+  "version": "0.1.0",
+  "description": "Site configuration, content providers, routing, and search hooks for agentic-web-toolkit.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./providers/SiteConfigProvider": {
+      "types": "./dist/providers/SiteConfigProvider.d.ts",
+      "import": "./dist/providers/SiteConfigProvider.js"
+    },
+    "./providers/ContentProvider": {
+      "types": "./dist/providers/ContentProvider.d.ts",
+      "import": "./dist/providers/ContentProvider.js"
+    },
+    "./providers/LinkProvider": {
+      "types": "./dist/providers/LinkProvider.d.ts",
+      "import": "./dist/providers/LinkProvider.js"
+    },
+    "./providers/RouteProvider": {
+      "types": "./dist/providers/RouteProvider.d.ts",
+      "import": "./dist/providers/RouteProvider.js"
+    },
+    "./hooks/useSearchState": {
+      "types": "./dist/hooks/useSearchState.d.ts",
+      "import": "./dist/hooks/useSearchState.js"
+    },
+    "./lib/nav": {
+      "types": "./dist/lib/nav.d.ts",
+      "import": "./dist/lib/nav.js"
+    },
+    "./lib/breadcrumbs": {
+      "types": "./dist/lib/breadcrumbs.d.ts",
+      "import": "./dist/lib/breadcrumbs.js"
+    },
+    "./lib/lookup": {
+      "types": "./dist/lib/lookup.d.ts",
+      "import": "./dist/lib/lookup.js"
+    },
+    "./lib/search": {
+      "types": "./dist/lib/search.d.ts",
+      "import": "./dist/lib/search.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fuse.js": "^7.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

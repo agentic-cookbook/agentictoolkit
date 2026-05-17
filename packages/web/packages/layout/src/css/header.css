@@ -1,0 +1,40 @@
+.awt-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans, inherit);
+}
+.awt-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+.awt-header__brand-emphasis {
+  color: var(--color-accent);
+  font-style: italic;
+  font-weight: 400;
+}
+.awt-header__spacer { flex: 1; }
+.awt-header__action {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--awt-radius-sm, 4px);
+  color: var(--color-text-secondary);
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+  cursor: pointer;
+  transition: color var(--awt-transition, 150ms ease), border-color var(--awt-transition, 150ms ease);
+}
+.awt-header__action:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.awt-header__action--icon { padding: 0.35rem 0.5rem; }

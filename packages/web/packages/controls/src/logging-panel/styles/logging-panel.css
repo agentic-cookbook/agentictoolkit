@@ -1,0 +1,94 @@
+/*
+ * LogPanel styles. Token-driven so the panel restyles with the
+ * surrounding theme. The component owns column layout (a CSS grid built
+ * from the configured tracks) but not the panel's outer width / height —
+ * wrap it in your own container.
+ */
+
+.lp-root {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  background: var(--color-surface-raised, #fff);
+  overflow: hidden;
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  color: var(--color-text-primary, #1a1a24);
+  font-size: 0.8rem;
+}
+
+.lp-header {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-surface, rgba(0, 0, 0, 0.03));
+  border-bottom: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, rgba(0, 0, 0, 0.55));
+}
+
+.lp-header-cell {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lp-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.lp-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-top: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.06));
+}
+
+.lp-row:first-child {
+  border-top: none;
+}
+
+.lp-row:hover {
+  background: var(--color-surface-hover, var(--color-accent-dim, rgba(0, 0, 0, 0.03)));
+}
+
+.lp-cell {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.lp-cell--interactive {
+  cursor: pointer;
+}
+
+.lp-cell--link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--lp-color-accent, var(--color-accent, #1e3a5f));
+}
+
+.lp-cell--link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.lp-empty {
+  padding: 1rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--color-text-dim, rgba(0, 0, 0, 0.45));
+}

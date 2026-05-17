@@ -5,6 +5,16 @@
 .superpowers/
 .worktrees/
 
+# Node / web build outputs
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+.next/
+out/
+next-env.d.ts
+.pnpm-store/
+
 # Swift / Xcode build outputs
 **/.build/**
 .build/

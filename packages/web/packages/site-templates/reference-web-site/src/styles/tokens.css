@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/typography';
+
+@source '../*.tsx';
+@source '../components/**/*.tsx';
+@source '../contexts/**/*.tsx';
+
+@custom-variant dark (&:where(.dark, .dark *));

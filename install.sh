@@ -2,28 +2,39 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-command -v xcodegen >/dev/null || {
-  echo "error: xcodegen is required (brew install xcodegen)"
-  exit 1
-}
+# Apple platform: regenerate XcodeGen-backed Xcode projects from project.yml
+if command -v xcodegen >/dev/null; then
+  echo "==> Regenerating Apple Xcode projects from project.yml"
+  for proj in packages/apple/AgenticToolkit packages/apple/AIPlugins packages/apple/AgenticToolkitApp; do
+    echo "    $proj"
+    ( cd "$proj" && xcodegen generate )
+  done
+else
+  echo "warn: xcodegen not installed — skipping Apple project regeneration."
+  echo "      Install it with: brew install xcodegen"
+fi
 
-echo "==> Regenerating Apple Xcode projects from project.yml"
-for proj in packages/apple/AgenticToolkit packages/apple/AIPlugins packages/apple/AgenticToolkitApp; do
-  echo "    $proj"
-  ( cd "$proj" && xcodegen generate )
-done
+# Web platform: pnpm workspace
+if command -v pnpm >/dev/null && command -v node >/dev/null; then
+  echo "==> Installing web workspace deps in packages/web/"
+  ( cd packages/web && pnpm install )
+else
+  echo "warn: node and pnpm are required for the web workspace — skipping."
+  echo "      Install them and re-run ./install.sh to bootstrap packages/web/."
+fi
 
 cat <<'EOF'
 
 Workspace ready.
 
-Open in Xcode:
+Apple:
     open packages/apple/AgenticToolkit.xcworkspace
+    # full xcodebuild commands: see .claude/CLAUDE.md
 
-Build from the command line (see .claude/CLAUDE.md for full commands):
-    DD=~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed
-    xcodebuild -workspace packages/apple/AgenticToolkit.xcworkspace \
-               -scheme AgenticToolkitMacOS \
-               -destination 'platform=macOS,arch=arm64' \
-               -derivedDataPath "$DD" build
+Web:
+    cd packages/web && pnpm test
+    cd packages/web && pnpm build         # populates dist/ for npm publish
+
+Demo site (websites/site/):
+    cd websites/site && npm install && npm run dev
 EOF

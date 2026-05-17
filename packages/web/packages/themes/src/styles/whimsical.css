@@ -1,0 +1,319 @@
+/* Whimsical — converged site + chat theme.
+ * Warm, playful, pastel pink/purple gradients. Nunito.
+ * Light = pastel paper, dark = deep neon-pop violet.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* === Tokens (light = default, dark = override) === */
+
+:root {
+  /* Site color tokens — light */
+  --color-surface: #fff5fb;
+  --color-surface-raised: #ffe8f3;
+  --color-surface-hover: #ffd9eb;
+  --color-border: #f1c2dd;
+  --color-border-subtle: #fadcec;
+
+  --color-text-primary: #4a2040;
+  --color-text-secondary: #7b5ea7;
+  --color-text-dim: #b18ad1;
+
+  --color-accent: #c0547a;
+  --color-accent-dim: rgba(192, 84, 122, 0.12);
+  --color-success: #6db26b;
+  --color-error: #d54a4a;
+  --color-info: #7b9fd9;
+
+  /* Chat color tokens — light */
+  --pc-surface: rgba(255, 255, 255, 0.7);
+  --pc-persona-bg: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+  --pc-persona-text: #4a2040;
+  --pc-persona-name: #c0547a;
+  --pc-user-bg: linear-gradient(135deg, #a18cd1 0%, #c4b0e8 100%);
+  --pc-user-text: #2d1b4e;
+  --pc-user-name: #7b5ea7;
+  --pc-input-bg: #ffffff;
+  --pc-input-border: #e8d5f0;
+  --pc-input-focus: #d4a0d0;
+  --pc-send-bg: linear-gradient(135deg, #ff9a9e, #c4a0e8);
+  --pc-send-text: #ffffff;
+  --pc-time-color: rgba(0, 0, 0, 0.35);
+  --pc-avatar-persona-bg: #ffecd2;
+  --pc-avatar-user-bg: #e0d4f5;
+  --pc-shadow-tint: rgba(200, 140, 180, 0.2);
+  --pc-input-bg-area: rgba(255, 255, 255, 0.5);
+  --pc-input-border-area: rgba(200, 140, 180, 0.15);
+  --pc-popover-bg: rgba(255, 255, 255, 0.9);
+
+  /* Code highlighting (Shiki) — light */
+  --scp-shiki-theme: 'github-light';
+
+  /* Shared (non-color) tokens */
+  --font-display: 'Nunito', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Nunito', system-ui, sans-serif;
+  --pc-font: 'Nunito', sans-serif;
+  --pc-radius: 20px;
+}
+
+:root.dark {
+  /* Site color overrides — dark */
+  --color-surface: #1a1024;
+  --color-surface-raised: #2a1a3a;
+  --color-surface-hover: #3a2848;
+  --color-border: #4a3858;
+  --color-border-subtle: #322244;
+
+  --color-text-primary: #f5e8f5;
+  --color-text-secondary: #c0a8d8;
+  --color-text-dim: #8a72a8;
+
+  --color-accent: #f08aa8;
+  --color-accent-dim: rgba(240, 138, 168, 0.15);
+  --color-success: #7fc97a;
+  --color-error: #e87878;
+  --color-info: #a8b0e0;
+
+  /* Chat color overrides — dark */
+  --pc-surface: rgba(26, 16, 36, 0.7);
+  --pc-persona-bg: linear-gradient(135deg, #c8506a 0%, #d878a0 100%);
+  --pc-persona-text: #ffffff;
+  --pc-persona-name: #f8c0d0;
+  --pc-user-bg: linear-gradient(135deg, #5a4a98 0%, #7868b8 100%);
+  --pc-user-text: #ffffff;
+  --pc-user-name: #c8b0e0;
+  --pc-input-bg: rgba(26, 16, 36, 0.5);
+  --pc-input-border: #4a3858;
+  --pc-input-focus: #a878c8;
+  --pc-send-bg: linear-gradient(135deg, #c8506a, #7868b8);
+  --pc-send-text: #ffffff;
+  --pc-time-color: rgba(255, 255, 255, 0.4);
+  --pc-avatar-persona-bg: #3a1a2e;
+  --pc-avatar-user-bg: #2a1f48;
+  --pc-shadow-tint: rgba(240, 138, 168, 0.15);
+  --pc-input-bg-area: rgba(26, 16, 36, 0.5);
+  --pc-input-border-area: rgba(240, 138, 168, 0.10);
+  --pc-popover-bg: rgba(42, 26, 58, 0.92);
+
+  --scp-shiki-theme: 'github-dark';
+}
+
+/* === Site surface === */
+
+body {
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface-raised) 100%);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--color-accent); color: #ffffff; }
+
+.prose {
+  --tw-prose-body: var(--color-text-primary);
+  --tw-prose-headings: var(--color-accent);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-text-primary);
+  --tw-prose-code: var(--color-accent);
+  --tw-prose-pre-bg: var(--color-surface-raised);
+  --tw-prose-pre-code: var(--color-text-primary);
+  --tw-prose-counters: var(--color-text-secondary);
+  --tw-prose-bullets: var(--color-text-dim);
+  --tw-prose-hr: var(--color-border);
+  --tw-prose-quotes: var(--color-text-secondary);
+  --tw-prose-quote-borders: var(--color-accent);
+  --tw-prose-th-borders: var(--color-border);
+  --tw-prose-td-borders: var(--color-border-subtle);
+  --tw-prose-captions: var(--color-text-dim);
+}
+
+.prose :where(h1, h2, h3, h4):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  text-decoration: none;
+  color: var(--color-accent);
+  border-bottom: 2px solid var(--color-accent-dim);
+}
+.prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)):hover {
+  border-bottom-color: var(--color-accent);
+}
+.prose :where(code):not(:where(pre *, [class~='not-prose'], [class~='not-prose'] *)) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-surface-raised);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+}
+.prose :where(pre):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+}
+
+/* === Chat surface === */
+
+.persona-chat {
+  font-family: var(--pc-font);
+  background: var(--pc-surface);
+  backdrop-filter: blur(10px);
+  border-radius: 28px;
+  box-shadow:
+    0 8px 32px var(--pc-shadow-tint),
+    0 2px 8px var(--pc-shadow-tint);
+}
+
+.persona-chat .pc-transcript::-webkit-scrollbar { width: 6px; }
+.persona-chat .pc-transcript::-webkit-scrollbar-track { background: transparent; }
+.persona-chat .pc-transcript::-webkit-scrollbar-thumb {
+  background: var(--pc-shadow-tint);
+  border-radius: 3px;
+}
+
+.persona-chat .pc-message {
+  animation: pc-pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pc-pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.persona-chat .pc-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+.persona-chat .pc-persona .pc-avatar { background: var(--pc-avatar-persona-bg); }
+.persona-chat .pc-user .pc-avatar { background: var(--pc-avatar-user-bg); }
+
+.persona-chat .pc-bubble {
+  padding: 12px 16px;
+  border-radius: var(--pc-radius);
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+.persona-chat .pc-persona .pc-bubble {
+  background: var(--pc-persona-bg);
+  color: var(--pc-persona-text);
+  border-bottom-left-radius: 6px;
+}
+
+.persona-chat .pc-user .pc-bubble {
+  background: var(--pc-user-bg);
+  color: var(--pc-user-text);
+  border-bottom-right-radius: 6px;
+}
+
+.persona-chat .pc-sender {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.persona-chat .pc-persona .pc-sender { color: var(--pc-persona-name); }
+.persona-chat .pc-user .pc-sender { color: var(--pc-user-name); }
+
+.persona-chat .pc-time {
+  font-size: 10px;
+  color: var(--pc-time-color);
+  margin-top: 4px;
+}
+
+.persona-chat .pc-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pc-persona-name);
+  opacity: 0.4;
+  animation: pc-bounce 1.4s ease-in-out infinite;
+}
+
+.persona-chat .pc-dots span:nth-child(2) { animation-delay: 0.2s; }
+.persona-chat .pc-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pc-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-8px); opacity: 1; }
+}
+
+.persona-chat .pc-input-area {
+  background: var(--pc-input-bg-area);
+  border-top: 1px solid var(--pc-input-border-area);
+}
+
+.persona-chat .pc-input {
+  padding: 12px 18px;
+  border: 2px solid var(--pc-input-border);
+  border-radius: 24px;
+  font-family: var(--pc-font);
+  font-size: 15px;
+  background: var(--pc-input-bg);
+  color: var(--color-text-primary);
+}
+
+.persona-chat .pc-input:focus { border-color: var(--pc-input-focus); }
+.persona-chat .pc-input::placeholder { color: var(--color-text-dim); }
+
+.persona-chat .pc-send-btn {
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pc-send-bg);
+  color: var(--pc-send-text);
+}
+
+.persona-chat .pc-send-btn:hover { transform: scale(1.08); }
+.persona-chat .pc-send-btn:active { transform: scale(0.95); }
+.persona-chat .pc-send-btn:disabled { opacity: 0.5; transform: none; }
+
+/* Rich content */
+.persona-chat .pc-content-link {
+  color: var(--pc-persona-name);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 14px;
+}
+.persona-chat .pc-content-link:hover { opacity: 0.7; }
+.persona-chat .pc-content-image {
+  border-radius: 12px;
+}
+
+/* Popover */
+.persona-chat .pc-popover {
+  background: var(--pc-popover-bg);
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--pc-input-border);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 8px 24px var(--pc-shadow-tint);
+}
+.persona-chat .pc-popover-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pc-persona-name);
+}
+.persona-chat .pc-popover-desc {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+.persona-chat .pc-popover-link {
+  color: var(--pc-persona-name);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 0;
+  display: block;
+}
+.persona-chat .pc-popover-link:hover { text-decoration: underline; }
+.persona-chat .pc-popover-toggle { color: var(--pc-persona-name); }
+.persona-chat .pc-popover-toggle:hover { opacity: 0.8; }
+.persona-chat .pc-popover-arrow { border-top-color: var(--pc-persona-name); }

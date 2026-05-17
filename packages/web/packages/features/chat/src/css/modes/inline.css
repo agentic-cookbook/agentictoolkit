@@ -1,0 +1,40 @@
+/*
+ * PersonaChat — Inline Mode Layout
+ *
+ * Simple centered chat widget. Import after base.css.
+ * Site can override positioning via its own CSS.
+ */
+
+.pc-inline {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 360px;
+  height: 50vh;
+  max-height: 600px;
+}
+
+.pc-inline .persona-chat {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Content-hugging modifier — applied by `useContentHuggingSize`.
+ *
+ * The hook tags both the chat element (`.persona-chat`) and its positioning
+ * wrapper (commonly `.pc-inline`) with `.pc-hugging`. These rules release the
+ * fixed-mode height so the chat box hugs its content; max-height comes from
+ * an inline style the hook updates as content / viewport / anchor change.
+ */
+.pc-inline.pc-hugging {
+  height: auto;
+  max-height: none;
+}
+
+.pc-inline.pc-hugging .persona-chat,
+.persona-chat.pc-hugging {
+  height: auto;
+}

@@ -1,0 +1,121 @@
+/*
+ * FilteredList styles. Token-driven so the component restyles when the
+ * surrounding theme (`@agentic-cookbook/agentic-web-toolkit/themes`) changes.
+ *
+ * Override any class to customize. The component does not own layout
+ * (width / max-height / position) — wrap it in your own container.
+ */
+
+.fl-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  color: var(--color-text-primary, #1a1a24);
+}
+
+.fl-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+  background: var(--color-surface-raised, #fff);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.fl-input::placeholder {
+  color: var(--color-text-dim, rgba(0, 0, 0, 0.45));
+}
+
+.fl-input:focus {
+  border-color: var(--color-accent, #1e3a5f);
+  box-shadow: 0 0 0 2px var(--color-accent-dim, rgba(30, 58, 95, 0.15));
+}
+
+.fl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-item {
+  border-top: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+  padding: 0.5rem 0;
+}
+
+.fl-item:first-child {
+  border-top: none;
+}
+
+.fl-item--clickable {
+  padding: 0;
+}
+
+.fl-item-button {
+  width: 100%;
+  display: block;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 0.5rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 100ms ease;
+}
+
+.fl-item-button:hover,
+.fl-item-button:focus-visible {
+  background: var(--color-surface-hover, var(--color-accent-dim, rgba(0, 0, 0, 0.04)));
+  outline: none;
+}
+
+.fl-item--active {
+  background: var(--color-accent-dim, rgba(0, 0, 0, 0.06));
+}
+
+.fl-item--active .fl-item-button {
+  background: transparent;
+}
+
+.fl-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #1a1a24);
+}
+
+.fl-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, rgba(0, 0, 0, 0.55));
+  margin-top: 0.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fl-details {
+  font-size: 0.75rem;
+  color: var(--color-text-dim, rgba(0, 0, 0, 0.45));
+  margin-top: 0.15rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  word-break: break-all;
+}
+
+.fl-empty {
+  padding: 0.75rem 0.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text-dim, rgba(0, 0, 0, 0.5));
+}
+
+.fl-footer {
+  border-top: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+  padding: 0.5rem 0 0;
+  margin-top: 0.25rem;
+}

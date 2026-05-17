@@ -1,0 +1,75 @@
+/*
+ * Generic full-screen slide-in overlay. Wraps arbitrary content
+ * (most often a chat) in a translucent panel that slides in from
+ * the right. Import after base.css.
+ */
+
+.pc-content-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 14, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+}
+
+.pc-content-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pc-content-overlay-header {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(42, 42, 54, 0.4);
+}
+
+.pc-content-overlay-close {
+  background: none;
+  border: none;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #8a8a9a);
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 0.15s;
+}
+
+.pc-content-overlay-close:active { color: var(--accent, #c4a35a); }
+
+.pc-content-overlay-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Mobile-viewport overrides for embedded chats */
+@media (max-width: 768px) {
+  .persona-chat {
+    height: 100dvh !important;
+  }
+
+  .pc-input {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  .pc-input-area {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+}

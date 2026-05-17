@@ -1,0 +1,116 @@
+.awt-search-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.awt-search-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+.awt-search-dialog__panel-wrap {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  top: 5rem;
+  margin-inline: auto;
+  max-width: 36rem;
+}
+.awt-search-dialog__panel {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.awt-search-dialog__input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-inline: 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.awt-search-dialog__input {
+  flex: 1;
+  padding-block: 0.75rem;
+  font-size: 0.875rem;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-text-primary);
+}
+.awt-search-dialog__input::placeholder {
+  color: var(--color-text-dim);
+}
+.awt-search-dialog__icon {
+  height: 1.25rem;
+  width: 1.25rem;
+  flex-shrink: 0;
+  color: var(--color-text-dim);
+}
+.awt-search-dialog__kbd {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 10px;
+  color: var(--color-text-dim);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+}
+.awt-search-dialog__results {
+  max-height: 20rem;
+  overflow-y: auto;
+  padding-block: 0.5rem;
+}
+.awt-search-dialog__empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-dim);
+}
+.awt-search-dialog__section-label {
+  padding: 0.25rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-dim);
+}
+.awt-search-dialog__result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+}
+.awt-search-dialog__result:hover {
+  background: var(--color-surface-hover);
+}
+.awt-search-dialog__result--selected {
+  background: var(--color-accent-dim);
+}
+.awt-search-dialog__result-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.awt-search-dialog__result-summary {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.awt-search-dialog__result-body {
+  flex: 1;
+  min-width: 0;
+}

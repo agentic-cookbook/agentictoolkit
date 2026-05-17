@@ -1,0 +1,91 @@
+/*
+ * PersonaChat — Mobile Mode Layout
+ *
+ * Full-screen slide-in overlay. Import after base.css.
+ */
+
+.pc-mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 14, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+}
+
+.pc-mobile-overlay.open {
+  transform: translateX(0);
+}
+
+.pc-mobile-header {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(42, 42, 54, 0.4);
+}
+
+.pc-mobile-close {
+  background: none;
+  border: none;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #8a8a9a);
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 0.15s;
+}
+
+.pc-mobile-close:active { color: var(--accent, #c4a35a); }
+
+.pc-mobile-widget {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Override widget styles inside mobile overlay */
+.pc-mobile-overlay .persona-chat {
+  flex: 1;
+  height: auto !important;
+  overflow: hidden;
+  background: transparent;
+  backdrop-filter: none;
+  border: none;
+}
+
+.pc-mobile-overlay .pc-input-area {
+  background: transparent !important;
+}
+
+.pc-mobile-overlay .pc-input {
+  background: rgba(12, 12, 15, 0.4) !important;
+}
+
+/* Mobile-specific base overrides */
+@media (max-width: 768px) {
+  .persona-chat {
+    height: 100dvh !important;
+  }
+
+  .pc-input {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  .pc-input-area {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+}

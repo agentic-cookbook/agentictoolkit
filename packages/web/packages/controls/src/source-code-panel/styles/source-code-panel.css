@@ -1,0 +1,88 @@
+/*
+ * SourceCodePanel styles. Shiki emits inline styles on tokens, so the
+ * package mostly themes the chrome around the code (header, copy button,
+ * scroll container). The Shiki-generated `<pre>` keeps its own colours
+ * intact, but we let the surrounding tokens supply the background and
+ * border so it looks like part of the page.
+ */
+
+.scp-root {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  background: var(--color-surface-raised, #fff);
+  overflow: hidden;
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  color: var(--color-text-primary, #1a1a24);
+}
+
+.scp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-surface, rgba(0, 0, 0, 0.03));
+  border-bottom: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, rgba(0, 0, 0, 0.6));
+}
+
+.scp-filename {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  letter-spacing: 0.02em;
+}
+
+.scp-copy {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font: inherit;
+  font-size: 0.7rem;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.scp-copy:hover,
+.scp-copy:focus-visible {
+  background: var(--color-accent-dim, rgba(0, 0, 0, 0.05));
+  border-color: var(--color-accent, currentColor);
+  outline: none;
+}
+
+.scp-body {
+  overflow: auto;
+}
+
+.scp-shiki pre,
+.scp-fallback {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.scp-shiki pre {
+  /*
+   * Shiki sets `background-color` inline. That wins by specificity but
+   * the consumer can still override via `.scp-shiki pre { background: … }`.
+   */
+  background: transparent !important;
+}
+
+.scp-fallback {
+  background: transparent;
+  color: inherit;
+}
+
+.scp-fallback code {
+  font: inherit;
+  color: inherit;
+}

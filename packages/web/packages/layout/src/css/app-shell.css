@@ -1,0 +1,26 @@
+.awt-app-shell {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) 1fr minmax(200px, 240px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "header  header  header"
+    "sidebar main    toc";
+  min-height: 100vh;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+.awt-app-shell--no-toc { grid-template-columns: minmax(200px, 240px) 1fr; grid-template-areas: "header header" "sidebar main"; }
+.awt-app-shell--no-sidebar { grid-template-columns: 1fr minmax(200px, 240px); grid-template-areas: "header header" "main toc"; }
+.awt-app-shell--no-sidebar.awt-app-shell--no-toc { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
+.awt-app-shell__header  { grid-area: header; position: sticky; top: 0; z-index: 5; }
+.awt-app-shell__sidebar { grid-area: sidebar; }
+.awt-app-shell__main    { grid-area: main; padding: 1.5rem 2rem; overflow: auto; }
+.awt-app-shell__toc     { grid-area: toc; padding: 1.5rem 1rem; }
+
+@media (max-width: 900px) {
+  .awt-app-shell, .awt-app-shell--no-toc, .awt-app-shell--no-sidebar {
+    grid-template-columns: 1fr;
+    grid-template-areas: "header" "main";
+  }
+  .awt-app-shell__sidebar, .awt-app-shell__toc { display: none; }
+}

@@ -1,0 +1,341 @@
+/* Terminal — converged site + chat theme.
+ * IRC/BBS aesthetic: just names and text, no bubbles.
+ * Light = paper tape (ink on cream). Dark = phosphor green on near-black.
+ * IBM Plex Mono.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+
+/* === Tokens (light = default, dark = override) === */
+
+:root {
+  /* Site color tokens — light (paper tape) */
+  --color-surface: #f4ebd3;
+  --color-surface-raised: #ede1c0;
+  --color-surface-hover: #e6d8b0;
+  --color-border: #8a7a4a;
+  --color-border-subtle: #b8a878;
+
+  --color-text-primary: #1f1a0e;
+  --color-text-secondary: #3a3322;
+  --color-text-dim: #6b5d3a;
+
+  --color-accent: #1f1a0e;
+  --color-accent-dim: rgba(31, 26, 14, 0.10);
+  --color-success: #5a6b1f;
+  --color-error: #a8362a;
+  --color-info: #3f5a78;
+
+  /* Chat color tokens — light */
+  --pc-persona-name: #1f1a0e;
+  --pc-persona-text: #1f1a0e;
+  --pc-user-name: #a8362a;
+  --pc-user-text: #1f1a0e;
+  --pc-surface: #f4ebd3;
+  --pc-input-bg: #f4ebd3;
+  --pc-input-border: #8a7a4a;
+  --pc-input-focus: #1f1a0e;
+  --pc-time-color: #6b5d3a;
+
+  /* Code highlighting (Shiki) — light */
+  --scp-shiki-theme: 'github-light';
+
+  /* Shared (non-color) tokens */
+  --font-display: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-sans: 'IBM Plex Mono', 'Courier New', monospace;
+  --pc-font: 'IBM Plex Mono', 'Courier New', monospace;
+  --pc-gutter: 8px;
+}
+
+:root.dark {
+  /* Site color overrides — dark (phosphor) */
+  --color-surface: #0a0a0a;
+  --color-surface-raised: #111111;
+  --color-surface-hover: #1a1a1a;
+  --color-border: #333333;
+  --color-border-subtle: #222222;
+
+  --color-text-primary: #b0b0b0;
+  --color-text-secondary: #888888;
+  --color-text-dim: #555555;
+
+  --color-accent: #33ff33;
+  --color-accent-dim: rgba(51, 255, 51, 0.12);
+  --color-success: #33ff33;
+  --color-error: #ff5555;
+  --color-info: #66ddff;
+
+  /* Chat color overrides — dark */
+  --pc-persona-name: #33ff33;
+  --pc-persona-text: #b0b0b0;
+  --pc-user-name: #ffcc00;
+  --pc-user-text: #d0d0d0;
+  --pc-surface: #0a0a0a;
+  --pc-input-bg: #0a0a0a;
+  --pc-input-border: #333333;
+  --pc-input-focus: #33ff33;
+  --pc-time-color: #444444;
+
+  --scp-shiki-theme: 'github-dark';
+}
+
+/* === Site surface === */
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+::selection { background: var(--color-accent); color: var(--color-surface); }
+
+.prose {
+  --tw-prose-body: var(--color-text-primary);
+  --tw-prose-headings: var(--color-accent);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-text-primary);
+  --tw-prose-code: var(--color-accent);
+  --tw-prose-pre-bg: var(--color-surface-raised);
+  --tw-prose-pre-code: var(--color-text-primary);
+  --tw-prose-counters: var(--color-text-secondary);
+  --tw-prose-bullets: var(--color-text-dim);
+  --tw-prose-hr: var(--color-border);
+  --tw-prose-quotes: var(--color-text-secondary);
+  --tw-prose-quote-borders: var(--color-accent);
+  --tw-prose-th-borders: var(--color-border);
+  --tw-prose-td-borders: var(--color-border-subtle);
+  --tw-prose-captions: var(--color-text-dim);
+}
+
+.prose :where(h1, h2, h3, h4):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.prose :where(h1):not(:where([class~='not-prose'], [class~='not-prose'] *))::before { content: '# '; color: var(--color-text-dim); }
+.prose :where(h2):not(:where([class~='not-prose'], [class~='not-prose'] *))::before { content: '## '; color: var(--color-text-dim); }
+.prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.prose :where(code):not(:where(pre *, [class~='not-prose'], [class~='not-prose'] *)) {
+  font-family: var(--font-mono);
+  background: var(--color-surface-raised);
+  padding: 0.1em 0.3em;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+}
+.prose :where(pre):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+}
+
+/* === Chat surface === */
+
+.persona-chat {
+  font-family: var(--pc-font);
+  background: var(--pc-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+}
+
+/* Strip bubble styling — plain text */
+.persona-chat .pc-message {
+  animation: none;
+}
+
+.persona-chat .pc-message.pc-persona,
+.persona-chat .pc-message.pc-user {
+  justify-content: flex-start;
+}
+
+.persona-chat .pc-transcript {
+  gap: 2px;
+  padding: 12px 16px;
+}
+
+.persona-chat .pc-transcript::-webkit-scrollbar { width: 0; }
+
+.persona-chat .pc-bubble {
+  padding: 0;
+  border-radius: 0;
+  background: none !important;
+  border: none !important;
+  font-family: var(--pc-font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.persona-chat .pc-persona .pc-bubble { color: var(--pc-persona-text); }
+.persona-chat .pc-user .pc-bubble { color: var(--pc-user-text); }
+
+/* Sender name inline with text */
+.persona-chat .pc-sender {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--pc-font);
+  margin-bottom: 0;
+  display: inline;
+}
+
+.persona-chat .pc-sender::after { content: ': '; }
+
+.persona-chat .pc-persona .pc-sender { color: var(--pc-persona-name); }
+.persona-chat .pc-user .pc-sender { color: var(--pc-user-name); }
+
+/* Text flows inline after name */
+.persona-chat .pc-text {
+  display: inline;
+}
+
+/* Hide timestamps */
+.persona-chat .pc-time { display: none; }
+
+/* Typing indicator — "thinking..." with blinking cursor */
+.persona-chat .pc-typing .pc-bubble::before {
+  content: 'thinking';
+  color: var(--color-accent);
+  font-family: var(--pc-font);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.persona-chat .pc-dots {
+  gap: 0;
+  padding: 0;
+  display: inline;
+}
+
+.persona-chat .pc-dots span { display: none; }
+.persona-chat .pc-dots span:first-child {
+  display: inline;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  color: var(--color-accent);
+  font-family: var(--pc-font);
+  font-size: 14px;
+  animation: pc-term-dots 2s steps(4) infinite;
+}
+
+.persona-chat .pc-dots span:first-child::before {
+  content: '...';
+}
+
+@keyframes pc-term-dots {
+  0% { clip-path: inset(0 100% 0 0); }
+  25% { clip-path: inset(0 66% 0 0); }
+  50% { clip-path: inset(0 33% 0 0); }
+  75%, 100% { clip-path: inset(0 0 0 0); }
+}
+
+/* Input — just a prompt line */
+.persona-chat .pc-input-area {
+  background: var(--pc-surface);
+  border-top: 1px solid var(--color-border-subtle);
+  padding: 8px 16px;
+  gap: 0;
+}
+
+.persona-chat .pc-input {
+  padding: 4px 0;
+  border: none;
+  border-radius: 0;
+  font-family: var(--pc-font);
+  font-size: 14px;
+  background: var(--pc-input-bg);
+  color: var(--pc-user-text);
+  caret-color: var(--color-accent);
+}
+
+.persona-chat .pc-input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.persona-chat .pc-input::placeholder { color: var(--color-text-dim); }
+
+/* Terminal-style send button */
+.persona-chat .pc-send-btn {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  margin-left: 4px;
+  color: var(--color-accent);
+  opacity: 0.5;
+  width: auto;
+  height: auto;
+}
+
+.persona-chat .pc-send-btn svg { display: none; }
+
+.persona-chat .pc-send-btn::before {
+  content: '[send]';
+  font-family: var(--pc-font);
+  font-size: 14px;
+}
+
+.persona-chat .pc-send-btn:hover { opacity: 1; }
+.persona-chat .pc-send-btn:disabled { opacity: 0.15; }
+
+/* Rich content */
+.persona-chat .pc-content {
+  display: block;
+  margin-top: 4px;
+}
+.persona-chat .pc-content-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  font-family: var(--pc-font);
+  font-size: 14px;
+  display: block;
+}
+.persona-chat .pc-content-link::before { content: '-> '; text-decoration: none; display: inline; }
+.persona-chat .pc-content-link:hover { color: var(--color-info); }
+.persona-chat .pc-content-image {
+  max-width: 200px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  margin-top: 4px;
+}
+
+/* Popover */
+.persona-chat .pc-popover {
+  background: var(--pc-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 12px;
+  box-shadow: none;
+  font-family: var(--pc-font);
+}
+.persona-chat .pc-popover-title {
+  font-family: var(--pc-font);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+.persona-chat .pc-popover-title::before { content: '[ '; }
+.persona-chat .pc-popover-title::after { content: ' ]'; }
+.persona-chat .pc-popover-desc {
+  font-family: var(--pc-font);
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+.persona-chat .pc-popover-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  font-family: var(--pc-font);
+  font-size: 14px;
+  padding: 2px 0;
+  display: block;
+}
+.persona-chat .pc-popover-link::before { content: '-> '; text-decoration: none; }
+.persona-chat .pc-popover-link:hover { color: var(--color-info); }
+.persona-chat .pc-popover-toggle { color: var(--color-accent); font-family: var(--pc-font); font-size: 14px; }
+.persona-chat .pc-popover-toggle:hover { color: var(--color-info); }
+.persona-chat .pc-popover-arrow { border-top-color: var(--color-accent); }

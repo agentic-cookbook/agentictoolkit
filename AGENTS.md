@@ -13,10 +13,15 @@ conventional manifest file lives there.
 | Platform | Folder | Manifest | Status |
 |---|---|---|---|
 | Apple | `packages/apple/` | `project.yml` (XcodeGen) + `AgenticToolkit.xcworkspace` | active |
+| Web | `packages/web/` | `package.json` + `pnpm-workspace.yaml` | active |
 | Android | `packages/android/` | (TBD) | placeholder |
 | Windows | `packages/windows/` | (TBD) | placeholder |
+| Demo site | `websites/site/` | `package.json` (Next.js) | active |
 
-The Apple platform is a workspace of three XcodeGen-backed Xcode projects:
+### Apple
+
+Three XcodeGen-backed Xcode projects wired together by
+`packages/apple/AgenticToolkit.xcworkspace`:
 
 - `packages/apple/AgenticToolkit/` — four framework targets
   (`AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitCoreMacOS`,
@@ -27,21 +32,33 @@ The Apple platform is a workspace of three XcodeGen-backed Xcode projects:
   `.aiplugin` bundles (`ClaudeAPI`, `ClaudeLocal`, `Google`, `OpenAI`,
   `OpenAICompatible`).
 
+### Web
+
+`packages/web/` is the pnpm workspace root. Libraries live under
+`packages/web/packages/` and ship as `@agentic-web-toolkit/*` packages
+with prebuilt `dist/` output (no `transpilePackages` required for
+Next.js consumers).
+
+`websites/site/` is the in-repo demo consumer. It sits **outside** the
+pnpm workspace and uses `file:` refs into `packages/web/packages/<name>`
+so its wiring matches what external apps will use.
+
 ## Where to look first
 
 - Repo conventions, build commands, ground rules →
   [`.claude/CLAUDE.md`](.claude/CLAUDE.md)
-- Toolkit code review checklist → [`docs/toolkit-checklist.md`](docs/toolkit-checklist.md)
+- Apple toolkit code review checklist → [`docs/toolkit-checklist.md`](docs/toolkit-checklist.md)
 - Repo layout pattern (this design) → [`docs/repo-pattern.md`](docs/repo-pattern.md)
 - Consumer flow (git submodule path) → [`docs/consuming-as-submodule.md`](docs/consuming-as-submodule.md)
+- Web platform docs (adoption, migration, Next.js consumer) → [`docs/web/`](docs/web/)
 
 ## Build entry points
 
-- One-shot bootstrap (regenerate Xcode projects): `./install.sh`
-- Open the workspace:
-  `open packages/apple/AgenticToolkit.xcworkspace`
-- Build everything from the command line (see `.claude/CLAUDE.md` for the
-  `-derivedDataPath` flags this repo requires).
+- One-shot bootstrap (Apple xcodegen + web pnpm install): `./install.sh`
+- Apple workspace: `open packages/apple/AgenticToolkit.xcworkspace`
+- Web tests: `cd packages/web && pnpm test`
+- Web build: `cd packages/web && pnpm build`
+- Demo site: `cd websites/site && npm run dev`
 
 ## Conventions you should know
 
@@ -52,3 +69,5 @@ The Apple platform is a workspace of three XcodeGen-backed Xcode projects:
   `xcodegen` (or `cc-xcgen`) after editing `project.yml`.
 - Libraries may only depend on other targets within the same platform —
   never on ad-hoc paths outside their workspace.
+- Web packages keep their `@agentic-web-toolkit/*` scope (preserved from
+  the prior repo) so published consumers don't break.

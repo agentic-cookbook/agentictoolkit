@@ -1,0 +1,184 @@
+/*
+ * @deprecated Use chat/css/base.css instead. This file is kept for backward compatibility.
+ *
+ * PersonaChat Base Styles
+ *
+ * Required structural styles for the PersonaChat widget.
+ * Include this BEFORE any theme CSS file. Themes override
+ * visual properties; this file handles layout and structure.
+ */
+
+.persona-chat {
+  --pc-gutter: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  position: relative;
+}
+
+.pc-transcript {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px var(--pc-gutter);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+
+.pc-message {
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+.pc-message.pc-persona { justify-content: flex-start; }
+.pc-message.pc-user { justify-content: flex-end; }
+
+.pc-avatar { display: none; }
+
+.pc-bubble {
+  width: fit-content;
+  max-width: calc(100% - var(--pc-gutter));
+  min-width: 0;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.pc-text {
+  display: inline;
+}
+
+.pc-time {
+  float: right;
+  margin-left: 10px;
+  position: relative;
+  top: 2px;
+}
+
+.pc-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.pc-input-area {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.pc-input {
+  flex: 1;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pc-send-btn {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.pc-send-btn:disabled { cursor: default; }
+
+/* Rich content */
+.pc-content {
+  margin-top: 8px;
+}
+
+.pc-content-image {
+  max-width: 100%;
+  border-radius: 4px;
+  display: block;
+  margin-top: 6px;
+}
+
+.pc-content-link {
+  display: block;
+  text-decoration: none;
+  word-break: break-all;
+  margin-top: 6px;
+}
+
+/* Popover panel — inline transcript element with toggle */
+.pc-popover {
+  width: 100%;
+  max-width: 85%;
+  align-self: flex-start;
+  position: relative;
+}
+
+.pc-popover-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: left;
+}
+
+.pc-popover-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.pc-popover:not(.pc-popover-open) .pc-popover-arrow {
+  transform: rotate(-90deg);
+}
+
+.pc-popover-body {
+  overflow: hidden;
+  max-height: 500px;
+  opacity: 1;
+  transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pc-popover:not(.pc-popover-open) .pc-popover-body {
+  max-height: 0;
+  opacity: 0;
+}
+
+.pc-popover-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Responsive: narrower popover on small viewports */
+@media (max-width: 480px) {
+  .pc-popover { max-width: 100%; }
+}
+
+/* Mobile: use dvh for proper keyboard handling */
+@media (max-width: 768px) {
+  .persona-chat {
+    height: 100dvh !important;
+  }
+
+  .pc-input {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  .pc-input-area {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+}

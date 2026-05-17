@@ -1,0 +1,36 @@
+.awt-theme-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.awt-theme-picker__btn {
+  appearance: none;
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.awt-theme-picker__btn:hover {
+  background: var(--color-surface-hover, rgba(127, 127, 127, 0.1));
+}
+
+.awt-theme-picker__btn:focus-visible {
+  border-color: var(--color-accent, #888);
+}
+
+.awt-theme-picker__btn[aria-pressed='true'] {
+  background: var(--color-accent, #555);
+  color: var(--color-surface, #fff);
+  border-color: var(--color-accent, #555);
+}
+
+.awt-theme-picker__btn[aria-pressed='true']:hover {
+  background: var(--color-accent, #555);
+}

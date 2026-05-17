@@ -1,0 +1,83 @@
+{
+  "name": "@agentic-web-toolkit/controls",
+  "version": "0.1.0",
+  "description": "Reusable controls for agentic-web-toolkit (filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./appearance-mode-toggle": {
+      "types": "./dist/appearance-mode-toggle/index.d.ts",
+      "import": "./dist/appearance-mode-toggle/index.js"
+    },
+    "./dev-banner": {
+      "types": "./dist/dev-banner/index.d.ts",
+      "import": "./dist/dev-banner/index.js"
+    },
+    "./filtered-list": {
+      "types": "./dist/filtered-list/index.d.ts",
+      "import": "./dist/filtered-list/index.js"
+    },
+    "./logging-panel": {
+      "types": "./dist/logging-panel/index.d.ts",
+      "import": "./dist/logging-panel/index.js"
+    },
+    "./orb-row": {
+      "types": "./dist/orb-row/index.d.ts",
+      "import": "./dist/orb-row/index.js"
+    },
+    "./search-dialog": {
+      "types": "./dist/search-dialog/index.d.ts",
+      "import": "./dist/search-dialog/index.js"
+    },
+    "./source-code-panel": {
+      "types": "./dist/source-code-panel/index.d.ts",
+      "import": "./dist/source-code-panel/index.js"
+    },
+    "./user-settings": {
+      "types": "./dist/user-settings/index.d.ts",
+      "import": "./dist/user-settings/index.js"
+    },
+    "./*/styles/*.css": "./dist/*/styles/*.css",
+    "./appearance-mode-toggle/styles.css": "./dist/appearance-mode-toggle/styles/appearance-mode-toggle.css",
+    "./dev-banner/styles.css": "./dist/dev-banner/styles/dev-banner.css",
+    "./filtered-list/styles.css": "./dist/filtered-list/styles/filtered-list.css",
+    "./logging-panel/styles.css": "./dist/logging-panel/styles/logging-panel.css",
+    "./orb-row/styles.css": "./dist/orb-row/styles/orb-row.css",
+    "./search-dialog/styles.css": "./dist/search-dialog/styles/search-dialog.css",
+    "./source-code-panel/styles.css": "./dist/source-code-panel/styles/source-code-panel.css",
+    "./user-settings/styles.css": "./dist/user-settings/styles.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "node ../../packaging/copy-css.mjs",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentic-web-toolkit/model": "workspace:*",
+    "shiki": "^1.24.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

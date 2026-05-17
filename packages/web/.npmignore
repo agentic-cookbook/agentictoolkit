@@ -1,0 +1,27 @@
+# Tests
+**/__tests__/
+*.test.ts
+*.test.tsx
+
+# Vanilla-JS PersonaChat path — TS module is the supported entry
+packages/chat/persona-chat.js
+packages/chat/persona-chat.d.ts
+packages/chat/base.css
+
+# Local tooling, never useful to consumers
+.claude/
+.github/
+docs/
+examples/
+vitest.config.ts
+vitest.setup.ts
+tsconfig.json
+
+# Generated / dev
+node_modules/
+.git/
+.gitignore
+.DS_Store
+package-lock.json
+graphify-out/
+.superpowers/
