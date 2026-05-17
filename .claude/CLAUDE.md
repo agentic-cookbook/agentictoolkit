@@ -22,8 +22,8 @@ generated `.xcodeproj`) and regenerate with `cc-xcgen` before building.
 Hand-editing `project.pbxproj` will be lost on the next regeneration.
 
 `./install.sh` at the repo root regenerates all three projects in one
-shot (it's the bootstrap entry point for new clones); the consumer-side
-equivalent is `./install-for-submodule-use.sh`.
+shot (it's the bootstrap entry point for new clones, and works equally
+well for submodule consumers after pulling a new revision).
 
 Always pass `-derivedDataPath` so artifacts go to `~/Library/Developer/Xcode/DerivedData/AgenticToolkit-managed/` instead of polluting the working tree with `./build/`. Do not set `SYMROOT`/`OBJROOT` in `project.yml` — that triggers Xcode's "legacy build locations" mode and breaks the external SPM packages this project consumes (SwiftTerm, CodeEditSourceEditor, CodeEditLanguages).
 

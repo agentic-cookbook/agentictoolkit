@@ -18,7 +18,7 @@ committed, but it's good practice to run this once to confirm
 `project.yml` and `.xcodeproj` are in sync):
 
 ```bash
-./vendor/agentictoolkit/install-for-submodule-use.sh
+./vendor/agentictoolkit/install.sh
 ```
 
 In Xcode, add the toolkit workspace (or one of its sub-projects) to your
@@ -48,10 +48,10 @@ Content** section, add the toolkit framework(s) you want to link against
 - **Bump in other repos.** In any other consumer:
   `git submodule update --remote vendor/agentictoolkit`. If
   `project.yml` changed, re-run
-  `./vendor/agentictoolkit/install-for-submodule-use.sh`.
+  `./vendor/agentictoolkit/install.sh`.
 - **After editing `project.yml`.** Re-run
-  `./vendor/agentictoolkit/install-for-submodule-use.sh` so the
-  `.xcodeproj` matches the new `project.yml`.
+  `./vendor/agentictoolkit/install.sh` so the `.xcodeproj` matches the
+  new `project.yml`.
 
 ## CI / deployment
 

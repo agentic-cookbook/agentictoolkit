@@ -27,8 +27,7 @@ platform's native build system.
 <repo>/
 ├── README.md
 ├── AGENTS.md
-├── install.sh                       # bootstrap (regenerate Xcode projects)
-├── install-for-submodule-use.sh     # consumer-side convenience
+├── install.sh                       # bootstrap (regenerate Xcode projects, install web deps)
 ├── .claude/CLAUDE.md                # agent-facing repo conventions
 ├── docs/
 └── packages/
@@ -66,9 +65,8 @@ walkthrough. In short:
 1. `git submodule add <toolkit-url> vendor/agentictoolkit`
 2. Add `packages/apple/AgenticToolkit.xcworkspace` (or one of its
    sub-projects) to the consumer's own Xcode workspace.
-3. Run `./vendor/agentictoolkit/install-for-submodule-use.sh` after
-   fetching a new revision (regenerates xcodeproj files from
-   `project.yml`).
+3. Run `./vendor/agentictoolkit/install.sh` after fetching a new
+   revision (regenerates xcodeproj files from `project.yml`).
 
 Live edits in `vendor/agentictoolkit/packages/apple/.../Sources/` are
 picked up by the consumer's next Xcode build.
@@ -80,16 +78,15 @@ framework distribution, or both), external consumers reference the
 toolkit by version instead of by submodule path. The source-tree layout
 does not change; only the consumer's package reference does.
 
-## The two install scripts at the repo root
+## The install script at the repo root
 
-| Script | Audience | What it does |
-|---|---|---|
-| `install.sh` | Toolkit developers | Regenerates every Apple Xcode project from `project.yml`; prints pointers to the build/open commands. |
-| `install-for-submodule-use.sh` | Consumers | Consumer-side convenience: re-runs `xcodegen` so the generated `.xcodeproj` files match the `project.yml` in the freshly-pulled submodule revision. |
-
-Both live at the repo root because the consumer invokes the second one
-through the submodule path
-(`./vendor/agentictoolkit/install-for-submodule-use.sh`).
+`install.sh` is the single bootstrap entry point for both toolkit
+developers and submodule consumers. It regenerates every Apple Xcode
+project from `project.yml` and installs the web workspace dependencies,
+then prints pointers to the build/open commands. Consumers invoke it
+through the submodule path (`./vendor/agentictoolkit/install.sh`) after
+pulling a new revision so the generated `.xcodeproj` files match the
+freshly-pulled `project.yml`.
 
 ## Adapting for other ecosystems
 
