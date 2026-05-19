@@ -9,4 +9,11 @@ public protocol WindowStateStorage {
     func loadState(for id: String) -> PersistedWindowState?
     func saveState(_ state: PersistedWindowState, for id: String)
     func removeState(for id: String)
+
+    /// Visibility persistence lives on a separate key so it's independent of
+    /// frame persistence — a window may opt in to one and not the other.
+    /// Returns nil when nothing has been saved yet.
+    func loadVisibility(for id: String) -> Bool?
+    func saveVisibility(_ visible: Bool, for id: String)
+    func removeVisibility(for id: String)
 }
