@@ -30,6 +30,11 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
 
     public var windowID: String = ""
 
+    /// Set by `configureAsHUD()`. Tells `loadWindow()` to apply the HUD
+    /// chrome (borderless, no shadow chrome, floating, transparent backing)
+    /// after the NSWindow is created.
+    private var hudConfiguration: HUDConfiguration?
+
     /// Initializes the controller. If a `spec` is provided it's registered
     /// with `WindowManager.shared` for `windowID` before the window is built —
     /// subclasses that own their spec (typical pattern: a `static let
@@ -69,18 +74,6 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     /// creation.
     open var minSize: NSSize?
 
-//    /// Content factory — override one of these. If both return nil the
-//    /// controller traps on first `showWindow()`.
-//    ///
-//    /// Prefer `makeContentViewController()` — setting
-//    /// `window.contentViewController` is the canonical AppKit pattern and
-//    /// drives the NSViewController view lifecycle
-//    /// (`viewDidLoad` / `viewWillAppear` / `viewDidDisappear` / …).
-//    open func makeContentViewController() -> NSViewController? { nil }
-//
-//    /// NSView variant for controllers that don't need a view controller.
-//    open func makeContentView() -> NSView? { nil }
-
     /// Called after the window has been fully constructed and its frame
     /// restored. Override for post-creation mutation (e.g. wiring extra
     /// observers). Runs *before* the window is ordered in.
@@ -105,13 +98,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
             newWindow.minSize = minSize
         }
 
-//        if let viewController = makeContentViewController() {
         newWindow.contentViewController = contentViewController
-//        } else if let contentView = makeContentView() {
-//            installContentView(contentView, in: newWindow)
-//        } else {
-//            fatalError("\(type(of: self)) must override makeContentViewController() or makeContentView()")
-//        }
 
         self.window = newWindow
         // WindowManager.restoreFrame handles positioning in every path:
@@ -121,6 +108,10 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         // here would override that with AppKit's upper-center (y ≈ 1/3
         // from top), which is what it does despite the misleading name.
         WindowManager.shared.frames.restoreFrame(for: newWindow, id: windowID)
+        applyToolbarButtonMask(to: newWindow)
+        if let hudConfiguration {
+            applyHUDChrome(hudConfiguration, to: newWindow)
+        }
         configureWindow(newWindow)
         // Wire the delegate last — setting `contentViewController` above
         // resizes the window to the view's size and posts
@@ -157,17 +148,78 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         // forward without touching NSApp activation (which is app-scoped and
         // the wrong tool here, and nil in headless `swift test`).
         window?.orderFrontRegardless()
+        WindowManager.shared.frames.saveVisibility(true, for: windowID)
         WindowManager.shared.windowDidInteract(self, kind: .show)
     }
 
-    /// Hides the window without destroying it.
+    /// Hides the window without destroying it. Visibility is persisted as
+    /// hidden so `restoreVisibilityIfNeeded()` won't reopen it next launch.
     open func dismiss() {
+        WindowManager.shared.frames.saveVisibility(false, for: windowID)
         window?.orderOut(nil)
     }
 
     /// Whether the window is currently visible.
     public var isVisible: Bool {
         window?.isVisible ?? false
+    }
+
+    /// If the spec opts in to visibility persistence and the last saved
+    /// state was `true`, show the window. Hosts call this at launch (after
+    /// all controllers have been registered) to restore the user's last
+    /// session.
+    public func restoreVisibilityIfNeeded() {
+        guard let spec = windowSpec, spec.persistsVisibility else { return }
+        if WindowManager.shared.frames.loadVisibility(for: windowID) == true {
+            showWindow()
+        }
+    }
+
+    // MARK: - HUD configuration
+
+    /// Configuration captured by `configureAsHUD(...)` and replayed in
+    /// `loadWindow()` after the NSWindow exists. Keeps the API ergonomic
+    /// (subclasses can call `configureAsHUD()` in init, before the window
+    /// is built) while keeping the mutation site in one place.
+    public struct HUDConfiguration: Sendable {
+        public var floating: Bool
+        public var transparency: Double
+
+        public init(floating: Bool = true, transparency: Double = 1.0) {
+            self.floating = floating
+            self.transparency = transparency
+        }
+    }
+
+    /// Marks the window as a HUD: borderless chrome, floating level, and a
+    /// transparent backing layer that respects `transparency`. Subclasses
+    /// call this from `init` (before the window is built); `loadWindow()`
+    /// applies the chrome after creation. Subsequent live updates flow
+    /// through `setFloating(_:)` and `setTransparency(_:)`.
+    open func configureAsHUD(floating: Bool = true, transparency: Double = 1.0) {
+        windowStyleMask = [.borderless]
+        hudConfiguration = HUDConfiguration(floating: floating, transparency: transparency)
+    }
+
+    /// Toggles the window between `.floating` and `.normal` levels. Safe to
+    /// call before the window has been built — the update will be picked
+    /// up on first `loadWindow()` via the stored `hudConfiguration`.
+    public func setFloating(_ floating: Bool) {
+        hudConfiguration?.floating = floating
+        if let window = window {
+            window.level = floating ? .floating : .normal
+        }
+    }
+
+    /// Sets the window's alpha (clamped 0.3...1.0 to avoid an
+    /// invisible-but-clickable HUD).
+    public func setTransparency(_ alpha: Double) {
+        hudConfiguration?.transparency = alpha
+        if let window = window {
+            let clamped = CGFloat(min(max(alpha, 0.3), 1.0))
+            guard window.alphaValue != clamped else { return }
+            window.alphaValue = clamped
+        }
     }
 
     // MARK: - NSWindowDelegate
@@ -183,28 +235,30 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     open func windowWillClose(_ notification: Notification) {
+        WindowManager.shared.frames.saveVisibility(false, for: windowID)
         WindowManager.shared.windowDidInteract(self, kind: .close)
     }
 
     // MARK: - Helpers
 
-//    private func installContentView(_ contentView: NSView, in window: NSWindow) {
-//        contentView.translatesAutoresizingMaskIntoConstraints = false
-//
-//        let container: NSView
-//        if let existing = window.contentView {
-//            container = existing
-//        } else {
-//            let fresh = NSView()
-//            window.contentView = fresh
-//            container = fresh
-//        }
-//        container.addSubview(contentView)
-//        NSLayoutConstraint.activate([
-//            contentView.topAnchor.constraint(equalTo: container.topAnchor),
-//            contentView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-//            contentView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-//            contentView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-//        ])
-//    }
+    private func applyToolbarButtonMask(to window: NSWindow) {
+        guard let buttons = windowSpec?.toolbarButtons else { return }
+        // `standardWindowButton` is nil when the style mask doesn't include
+        // the corresponding trait — setting hidden on nil is fine and lets
+        // us mask buttons regardless of which traits the window declares.
+        window.standardWindowButton(.closeButton)?.isHidden = !buttons.contains(.close)
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = !buttons.contains(.miniaturize)
+        window.standardWindowButton(.zoomButton)?.isHidden = !buttons.contains(.zoom)
+    }
+
+    private func applyHUDChrome(_ config: HUDConfiguration, to window: NSWindow) {
+        window.isMovableByWindowBackground = true
+        window.hasShadow = true
+        window.backgroundColor = .windowBackgroundColor
+        window.isOpaque = false
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        window.level = config.floating ? .floating : .normal
+        let clamped = CGFloat(min(max(config.transparency, 0.3), 1.0))
+        window.alphaValue = clamped
+    }
 }

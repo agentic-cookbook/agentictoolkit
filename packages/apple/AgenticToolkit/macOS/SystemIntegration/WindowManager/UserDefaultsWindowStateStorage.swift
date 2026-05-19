@@ -3,9 +3,14 @@ import Foundation
 /// Stores window state in UserDefaults as JSON.
 public struct UserDefaultsWindowStateStorage: WindowStateStorage {
     public let keyPrefix: String
+    public let visibilityKeyPrefix: String
 
-    public init(keyPrefix: String = "WindowState_") {
+    public init(
+        keyPrefix: String = "WindowState_",
+        visibilityKeyPrefix: String = "WindowVisible_"
+    ) {
         self.keyPrefix = keyPrefix
+        self.visibilityKeyPrefix = visibilityKeyPrefix
     }
 
     public func loadState(for id: String) -> PersistedWindowState? {
@@ -20,5 +25,20 @@ public struct UserDefaultsWindowStateStorage: WindowStateStorage {
 
     public func removeState(for id: String) {
         UserDefaults.standard.removeObject(forKey: keyPrefix + id)
+    }
+
+    public func loadVisibility(for id: String) -> Bool? {
+        // `object(forKey:)` distinguishes absent (nil) from explicit false,
+        // so a window that's never been shown stays nil rather than
+        // misreporting "saved hidden."
+        UserDefaults.standard.object(forKey: visibilityKeyPrefix + id) as? Bool
+    }
+
+    public func saveVisibility(_ visible: Bool, for id: String) {
+        UserDefaults.standard.set(visible, forKey: visibilityKeyPrefix + id)
+    }
+
+    public func removeVisibility(for id: String) {
+        UserDefaults.standard.removeObject(forKey: visibilityKeyPrefix + id)
     }
 }

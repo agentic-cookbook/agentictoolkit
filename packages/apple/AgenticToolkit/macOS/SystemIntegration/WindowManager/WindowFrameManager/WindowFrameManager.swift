@@ -153,6 +153,28 @@ public final class WindowFrameManager {
         storage.removeState(for: id)
     }
 
+    // MARK: - Visibility persistence
+
+    /// Returns the last persisted visibility (nil if never saved). Returns
+    /// nil when the window's spec doesn't opt in to visibility persistence,
+    /// so callers can short-circuit without consulting the spec themselves.
+    public func loadVisibility(for id: String) -> Bool? {
+        guard let spec = windowSpecs[id], spec.persistsVisibility else { return nil }
+        return storage.loadVisibility(for: id)
+    }
+
+    /// Persists the window's current visible/hidden state. No-op when the
+    /// window's spec doesn't opt in.
+    public func saveVisibility(_ visible: Bool, for id: String) {
+        guard let spec = windowSpecs[id], spec.persistsVisibility else { return }
+        storage.saveVisibility(visible, for: id)
+    }
+
+    /// Clears persisted visibility for a single window.
+    public func clearVisibility(for id: String) {
+        storage.removeVisibility(for: id)
+    }
+
     // MARK: - Default Position
 
     private func applyDefaultPosition(to window: NSWindow, spec: WindowSpec) {
