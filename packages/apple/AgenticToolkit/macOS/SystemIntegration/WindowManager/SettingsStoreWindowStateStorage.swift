@@ -41,7 +41,13 @@ public struct SettingsStoreWindowStateStorage: WindowStateStorage {
     }
 
     public func loadVisibility(for id: String) -> Bool? {
-        settings.get(visibilitySetting(for: id))
+        let setting = visibilitySetting(for: id)
+        // `contains` distinguishes "never set" (nil) from "explicitly false",
+        // matching `UserDefaultsWindowStateStorage`'s contract. We store the
+        // raw `Bool` natively (not wrapped in `Optional`) so an existing
+        // UserDefaults boolean written by either backing reads back here.
+        guard settings.contains(setting) else { return nil }
+        return settings.get(setting)
     }
 
     public func saveVisibility(_ visible: Bool, for id: String) {
@@ -72,11 +78,13 @@ private struct WindowStateSetting: StorableSetting {
 }
 
 /// Visibility lives on a separate key so frame + visibility opt-ins are
-/// independent. The default value is `nil` (rather than `false`) so we
-/// can distinguish "never been shown" from "explicitly hidden."
+/// independent. Stored as a native `Bool` so the on-disk representation
+/// matches `UserDefaultsWindowStateStorage` (no JSON wrapping). The
+/// caller uses `SettingsStore.contains` to distinguish "never been
+/// shown" from "explicitly hidden."
 @MainActor
 private struct WindowVisibilitySetting: StorableSetting {
     let name: String
     let isSecure: Bool = false
-    let defaultValue: Bool? = nil
+    let defaultValue: Bool = false
 }

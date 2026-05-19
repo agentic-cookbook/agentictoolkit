@@ -38,7 +38,7 @@ public final class WindowManager {
 
     public init(
         screenProvider: ScreenProvider = RealScreenProvider(),
-        storage: WindowStateStorage = UserDefaultsWindowStateStorage()
+        storage: WindowStateStorage = SettingsStoreWindowStateStorage(settings: UserSettings.shared)
     ) {
         self.frames = WindowFrameManager(screenProvider: screenProvider, storage: storage)
         applyRecentDocumentCountFromSettings()

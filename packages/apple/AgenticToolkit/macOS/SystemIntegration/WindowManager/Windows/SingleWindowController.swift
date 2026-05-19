@@ -45,6 +45,13 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         super.init(window: nil)
         self.contentViewController = contentViewController
         WindowManager.shared.registry.register(self)
+        // Defer to next runloop tick so subclass init can finish setting
+        // `windowSpec` (and any HUD chrome) before we read the visibility
+        // opt-in. Hosts don't need to call any per-window restore method —
+        // creating the controller is enough.
+        Task { @MainActor [weak self] in
+            self?.restoreVisibilityIfNeeded()
+        }
     }
 
     @available(*, unavailable)
