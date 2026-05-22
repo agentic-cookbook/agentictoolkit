@@ -96,14 +96,13 @@
   --color-apt-red: var(--color-error);
 }
 
-html { font-size: 14px; }
-
 body {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  font-size: 15px;
 }
 
 ::selection {
