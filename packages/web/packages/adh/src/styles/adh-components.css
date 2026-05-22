@@ -1,0 +1,52 @@
+/* Component styles for @agentic-web-toolkit/adh.
+ * Consumes the --adh-* tokens defined by the active theme
+ * (see @agentic-web-toolkit/themes/styles/adh*.css). Import this once
+ * globally in the consumer app (e.g. app/globals.css).
+ */
+
+.adh-header__container {
+  max-width: var(--adh-container-max-width, 72rem);
+}
+
+.adh-header__title {
+  font-family: var(--adh-header-title-font, var(--font-serif));
+  font-style: var(--adh-header-title-style, italic);
+  font-size: var(--adh-header-title-size, 1.15rem);
+  font-weight: var(--adh-header-title-weight, 400);
+  color: var(--adh-header-title-color, var(--color-accent));
+  text-decoration: none;
+}
+
+.adh-header__title:hover {
+  color: var(--adh-header-title-color-hover, var(--color-accent-bright));
+}
+
+.adh-header__nav {
+  font-family: var(--adh-header-nav-font, var(--font-mono));
+  font-size: var(--adh-header-nav-size, 1rem);
+  letter-spacing: var(--adh-header-nav-letter-spacing, 0.04em);
+}
+
+.adh-footer {
+  font-family: var(--adh-footer-font, var(--font-mono));
+  font-size: var(--adh-footer-size, 0.85rem);
+  color: var(--adh-footer-color, var(--color-text-dim));
+}
+
+.adh-footer__link {
+  color: var(--adh-footer-link-color, var(--color-text-dim));
+  text-decoration: none;
+}
+
+.adh-footer__link:hover {
+  color: var(--adh-footer-link-color-hover, var(--color-accent));
+}
+
+.adh-footer__sep {
+  display: inline-block;
+}
+
+.adh-footer__sep::before {
+  content: var(--adh-footer-separator, '·');
+  padding: 0 0.5em;
+}

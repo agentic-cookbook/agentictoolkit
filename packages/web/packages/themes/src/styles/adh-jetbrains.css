@@ -49,6 +49,29 @@
 
   --adh-card-radius: 12px;
 
+  /* Header / footer identity — referenced by @agentic-web-toolkit/adh
+   * components. Variants override the underlying --font-* and the
+   * header/footer typography follows automatically. */
+  --adh-container-max-width: 72rem;
+
+  --adh-header-title-font: var(--font-serif);
+  --adh-header-title-style: italic;
+  --adh-header-title-color: var(--color-accent);
+  --adh-header-title-color-hover: var(--color-accent-bright);
+  --adh-header-title-size: 1.15rem;
+  --adh-header-title-weight: 400;
+
+  --adh-header-nav-font: var(--font-mono);
+  --adh-header-nav-size: 1rem;
+  --adh-header-nav-letter-spacing: 0.04em;
+
+  --adh-footer-font: var(--font-mono);
+  --adh-footer-size: 0.85rem;
+  --adh-footer-color: var(--color-text-dim);
+  --adh-footer-link-color: var(--color-text-dim);
+  --adh-footer-link-color-hover: var(--color-accent);
+  --adh-footer-separator: '·';
+
   /* Mirror canonical tokens onto --color-apt-* so consumers using
    * the legacy Tailwind v4 @theme apt-* palette (e.g. websites/app)
    * stay themed when an ADH theme is active. */

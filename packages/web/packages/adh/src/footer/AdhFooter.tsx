@@ -1,5 +1,7 @@
 'use client'
 
+import { Fragment } from 'react'
+
 export type FooterLink = {
   label: string
   href: string
@@ -19,20 +21,18 @@ const DEFAULT_LINKS: FooterLink[] = [
 export function AdhFooter({ links = DEFAULT_LINKS, copyright }: AdhFooterProps) {
   return (
     <footer
-      className="flex h-14 items-center gap-4 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm text-[var(--color-text-secondary)]"
+      className="adh-footer border-t border-[var(--color-border)] py-4 text-center"
       role="contentinfo"
     >
-      {copyright && <span>{copyright}</span>}
-      <div className="flex-1" />
-      <nav className="flex items-center gap-4" aria-label="Footer">
-        {links.map((link) => (
-          <a
-            key={link.href + link.label}
-            href={link.href}
-            className="hover:text-[var(--color-accent)]"
-          >
-            {link.label}
-          </a>
+      <nav className="inline-flex flex-wrap items-center justify-center" aria-label="Footer">
+        {copyright && <span>{copyright}</span>}
+        {links.map((link, i) => (
+          <Fragment key={link.href + link.label}>
+            {(copyright || i > 0) && <span className="adh-footer__sep" aria-hidden="true" />}
+            <a href={link.href} className="adh-footer__link">
+              {link.label}
+            </a>
+          </Fragment>
         ))}
       </nav>
     </footer>

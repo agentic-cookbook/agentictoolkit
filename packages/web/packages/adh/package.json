@@ -32,7 +32,8 @@
     "./themes": {
       "types": "./dist/themes/index.d.ts",
       "import": "./dist/themes/index.js"
-    }
+    },
+    "./styles.css": "./dist/styles/adh-components.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",
