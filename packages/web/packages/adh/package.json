@@ -17,6 +17,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
     "./header": {
       "types": "./dist/header/index.d.ts",
       "import": "./dist/header/index.js"
@@ -33,7 +37,7 @@
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
-    "build:css": "node ../../packaging/copy-css.mjs",
+    "build:css": "node ../../copy-css.mjs",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo",
     "lint": "tsc --noEmit"
@@ -51,13 +55,20 @@
     "tailwind-merge": "^2.6.0"
   },
   "peerDependencies": {
+    "next": ">=15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
+    "next": "^15.1.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
   }

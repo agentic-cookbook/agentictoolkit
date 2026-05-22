@@ -18,3 +18,5 @@ export const ADH_THEMES: AdhThemeOption[] = [
   { key: 'adh-jetbrains', label: 'JetBrains' },
   { key: 'adh-fira', label: 'Fira' },
 ]
+
+export const DEFAULT_ADH_THEME: AdhThemeKey = 'adh'

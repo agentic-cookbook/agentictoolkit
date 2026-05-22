@@ -53,6 +53,24 @@
   --pc-radius: 6px;
 
   --adh-card-radius: 12px;
+
+  /* Mirror canonical tokens onto --color-apt-* so consumers using
+   * the legacy Tailwind v4 @theme apt-* palette (e.g. websites/app)
+   * stay themed when an ADH theme is active. */
+  --color-apt-bg: var(--color-surface);
+  --color-apt-surface: var(--color-surface-raised);
+  --color-apt-surface-2: var(--color-surface-hover);
+  --color-apt-input: var(--color-surface-hover);
+  --color-apt-border: var(--color-border);
+  --color-apt-border-strong: var(--color-border-strong);
+  --color-apt-text: var(--color-text-primary);
+  --color-apt-text-muted: var(--color-text-secondary);
+  --color-apt-text-dim: var(--color-text-dim);
+  --color-apt-gold: var(--color-accent);
+  --color-apt-gold-bright: var(--color-accent-bright);
+  --color-apt-blue: var(--color-info);
+  --color-apt-green: var(--color-success);
+  --color-apt-red: var(--color-error);
 }
 
 html {
