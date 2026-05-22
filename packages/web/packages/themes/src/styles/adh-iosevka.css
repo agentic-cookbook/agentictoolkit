@@ -73,7 +73,7 @@
 
 
   --adh-footer-font: var(--font-mono);
-  --adh-footer-size: 0.85rem;
+  --adh-footer-size: 0.7rem;
   --adh-footer-color: var(--color-text-dim);
   --adh-footer-link-color: var(--color-text-dim);
   --adh-footer-link-color-hover: var(--color-accent);

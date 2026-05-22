@@ -1,7 +1,5 @@
 'use client'
 
-import { Fragment } from 'react'
-
 export type FooterLink = {
   label: string
   href: string
@@ -21,17 +19,16 @@ const DEFAULT_LINKS: FooterLink[] = [
 export function AdhFooter({ links = DEFAULT_LINKS, copyright }: AdhFooterProps) {
   return (
     <footer className="adh-footer" role="contentinfo">
-      <nav aria-label="Footer">
-        {copyright && <span>{copyright}</span>}
-        {links.map((link, i) => (
-          <Fragment key={link.href + link.label}>
-            {(copyright || i > 0) && <span className="adh-footer__sep" aria-hidden="true" />}
-            <a href={link.href} className="adh-footer__link">
+      <div className="adh-footer__container">
+        {copyright && <span className="adh-footer__copyright">{copyright}</span>}
+        <nav className="adh-footer__links" aria-label="Footer">
+          {links.map((link) => (
+            <a key={link.href + link.label} href={link.href} className="adh-footer__link">
               {link.label}
             </a>
-          </Fragment>
-        ))}
-      </nav>
+          ))}
+        </nav>
+      </div>
     </footer>
   )
 }
