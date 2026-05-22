@@ -48,33 +48,30 @@ export function AvatarMenu({
 }: AvatarMenuProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className="rounded-full outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)]"
-        aria-label={`Open ${user.name} menu`}
-      >
-        <Avatar className="h-9 w-9">
+      <DropdownMenuTrigger className="adh-avatar-trigger" aria-label={`Open ${user.name} menu`}>
+        <Avatar>
           {user.imageUrl && <AvatarImage src={user.imageUrl} alt={user.name} />}
-          <AvatarFallback>{initialsOf(user.name) || <UserIcon className="h-4 w-4" />}</AvatarFallback>
+          <AvatarFallback>
+            {initialsOf(user.name) || <UserIcon className="adh-menu__item-icon" />}
+          </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[12rem]">
-        <DropdownMenuLabel className="flex flex-col">
-          <span className="text-[var(--color-text-primary)]">{user.name}</span>
-          {user.email && (
-            <span className="text-xs font-normal text-[var(--color-text-dim)]">{user.email}</span>
-          )}
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>
+          <span className="adh-menu__label-name">{user.name}</span>
+          {user.email && <span className="adh-menu__label-email">{user.email}</span>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {(onProfile || profileHref) &&
           (onProfile ? (
             <DropdownMenuItem onSelect={onProfile}>
-              <UserIcon className="h-4 w-4" />
+              <UserIcon className="adh-menu__item-icon" />
               <span>Profile</span>
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem asChild>
               <a href={profileHref}>
-                <UserIcon className="h-4 w-4" />
+                <UserIcon className="adh-menu__item-icon" />
                 <span>Profile</span>
               </a>
             </DropdownMenuItem>
@@ -82,13 +79,13 @@ export function AvatarMenu({
         {(onSettings || settingsHref) &&
           (onSettings ? (
             <DropdownMenuItem onSelect={onSettings}>
-              <Settings className="h-4 w-4" />
+              <Settings className="adh-menu__item-icon" />
               <span>Settings</span>
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem asChild>
               <a href={settingsHref}>
-                <Settings className="h-4 w-4" />
+                <Settings className="adh-menu__item-icon" />
                 <span>Settings</span>
               </a>
             </DropdownMenuItem>
@@ -98,7 +95,7 @@ export function AvatarMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onLogout}>
-              <LogOut className="h-4 w-4" />
+              <LogOut className="adh-menu__item-icon" />
               <span>Log out</span>
             </DropdownMenuItem>
           </>

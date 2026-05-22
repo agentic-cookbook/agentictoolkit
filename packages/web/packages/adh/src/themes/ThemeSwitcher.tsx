@@ -25,7 +25,7 @@ export function ThemeSwitcher({ current, label = 'Theme' }: ThemeSwitcherProps) 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <Palette className="h-4 w-4" />
+        <Palette className="adh-menu__item-icon" />
         <span>{label}</span>
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
