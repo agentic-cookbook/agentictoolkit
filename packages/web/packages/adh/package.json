@@ -1,6 +1,6 @@
 {
   "name": "@agentic-web-toolkit/adh",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Agentic Developer Hub shared components — header, footer, theme switcher composed on shadcn + @agentic-web-toolkit primitives.",
   "license": "UNLICENSED",
   "type": "module",
