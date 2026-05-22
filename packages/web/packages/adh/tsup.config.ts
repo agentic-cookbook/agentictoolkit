@@ -1,0 +1,53 @@
+import { defineConfig } from 'tsup'
+import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
+
+export default defineConfig({
+  entry: {
+    index: 'src/index.ts',
+    'header/index': 'src/header/index.ts',
+    'header/AdhHeader': 'src/header/AdhHeader.tsx',
+    'header/AvatarMenu': 'src/header/AvatarMenu.tsx',
+    'header/SiteOptionsMenu': 'src/header/SiteOptionsMenu.tsx',
+    'header/AuthButtons': 'src/header/AuthButtons.tsx',
+    'footer/index': 'src/footer/index.ts',
+    'footer/AdhFooter': 'src/footer/AdhFooter.tsx',
+    'themes/index': 'src/themes/index.ts',
+    'themes/ThemeSwitcher': 'src/themes/ThemeSwitcher.tsx',
+    'themes/adh-themes': 'src/themes/adh-themes.ts',
+    'components/ui/avatar': 'src/components/ui/avatar.tsx',
+    'components/ui/button': 'src/components/ui/button.tsx',
+    'components/ui/dropdown-menu': 'src/components/ui/dropdown-menu.tsx',
+  },
+  outDir: 'dist',
+  format: ['esm'],
+  target: 'es2022',
+  platform: 'browser',
+  sourcemap: true,
+  clean: true,
+  dts: false,
+  bundle: true,
+  splitting: true,
+  outExtension: () => ({ js: '.js' }),
+  external: [
+    'react',
+    'react-dom',
+    'react/jsx-runtime',
+    '@agentic-web-toolkit/layout',
+    '@agentic-web-toolkit/themes',
+    '@agentic-web-toolkit/ui',
+    '@radix-ui/react-avatar',
+    '@radix-ui/react-dropdown-menu',
+    '@radix-ui/react-slot',
+    'class-variance-authority',
+    'clsx',
+    'lucide-react',
+    'tailwind-merge',
+  ],
+  esbuildPlugins: [
+    preserveDirectivesPlugin({
+      directives: ['use client', 'use server'],
+      include: /\.(js|ts|jsx|tsx)$/,
+      exclude: /node_modules/,
+    }),
+  ],
+})

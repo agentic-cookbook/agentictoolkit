@@ -1,0 +1,66 @@
+/* ADH · JetBrains — ADH palette with JetBrains Mono for sans/serif/mono. */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
+
+:root {
+  --color-surface: #0c0c0f;
+  --color-surface-raised: #14141a;
+  --color-surface-hover: #1c1c24;
+  --color-border: #2a2a35;
+  --color-border-subtle: #1e1e28;
+  --color-border-strong: #3d3d50;
+
+  --color-text-primary: #e8e6e3;
+  --color-text-secondary: #8a8a9a;
+  --color-text-dim: #5a5a6a;
+
+  --color-accent: #c4a35a;
+  --color-accent-bright: #d9bb74;
+  --color-accent-dim: rgba(196, 163, 90, 0.15);
+  --color-success: #5cb270;
+  --color-error: #d45454;
+  --color-info: #6b8afd;
+
+  --pc-surface: rgba(20, 20, 26, 0.94);
+  --pc-persona-bg: rgba(196, 163, 90, 0.12);
+  --pc-persona-border: rgba(196, 163, 90, 0.25);
+  --pc-persona-text: #e8e6e3;
+  --pc-persona-name: #c4a35a;
+  --pc-user-bg: rgba(255, 255, 255, 0.06);
+  --pc-user-border: #2a2a36;
+  --pc-user-text: #e8e6e3;
+  --pc-user-name: #8a8a9a;
+  --pc-input-bg: #0c0c0f;
+  --pc-input-border: #2a2a36;
+  --pc-input-focus: #c4a35a;
+  --pc-send-bg: #c4a35a;
+  --pc-send-text: #0c0c0f;
+  --pc-send-bg-hover: #d9bb74;
+  --pc-time-color: #5a5a6a;
+
+  --scp-shiki-theme: 'github-dark';
+
+  --font-sans: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'JetBrains Mono', ui-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: var(--font-serif);
+  --pc-font: var(--font-sans);
+  --pc-radius: 6px;
+
+  --adh-card-radius: 12px;
+}
+
+html { font-size: 14px; }
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+}
