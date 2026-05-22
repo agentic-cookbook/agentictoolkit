@@ -43,15 +43,12 @@ export function AdhHeader({
   onSettings,
 }: AdhHeaderProps) {
   return (
-    <header
-      className="adh-header border-b border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]"
-      role="banner"
-    >
-      <div className="adh-header__container mx-auto flex h-14 items-center justify-between gap-6 px-4">
+    <header className="adh-header" role="banner">
+      <div className="adh-header__container">
         <a href={siteNameHref} className="adh-header__title">
           {siteName}
         </a>
-        <nav className="adh-header__nav flex items-center gap-5" aria-label="Primary">
+        <nav className="adh-header__nav" aria-label="Primary">
           {navLinks.map((link) => (
             <NavLinkItem key={link.href + link.label} link={link} />
           ))}

@@ -1,7 +1,5 @@
 'use client'
 
-import { Button } from '../components/ui/button'
-
 export type AuthButtonsProps = {
   onSignup?: () => void
   onLogin?: () => void
@@ -16,29 +14,32 @@ export function AuthButtons({
   onLogin,
   signupHref,
   loginHref,
-  signupLabel = 'Sign up',
-  loginLabel = 'Log in',
+  signupLabel = 'signup',
+  loginLabel = 'login',
 }: AuthButtonsProps) {
+  // Render as nav-link-styled anchors/buttons so they sit visually inline
+  // with the primary nav links. Visual identity comes from
+  // `.adh-header__nav-link` in the theme.
+  const loginNode = onLogin ? (
+    <button type="button" onClick={onLogin} className="adh-header__nav-link adh-header__nav-link--button">
+      {loginLabel}
+    </button>
+  ) : loginHref ? (
+    <a href={loginHref} className="adh-header__nav-link">{loginLabel}</a>
+  ) : null
+
+  const signupNode = onSignup ? (
+    <button type="button" onClick={onSignup} className="adh-header__nav-link adh-header__nav-link--button">
+      {signupLabel}
+    </button>
+  ) : signupHref ? (
+    <a href={signupHref} className="adh-header__nav-link">{signupLabel}</a>
+  ) : null
+
   return (
-    <div className="flex items-center gap-2">
-      {onLogin ? (
-        <Button variant="ghost" size="sm" onClick={onLogin}>
-          {loginLabel}
-        </Button>
-      ) : loginHref ? (
-        <Button variant="ghost" size="sm" asChild>
-          <a href={loginHref}>{loginLabel}</a>
-        </Button>
-      ) : null}
-      {onSignup ? (
-        <Button size="sm" onClick={onSignup}>
-          {signupLabel}
-        </Button>
-      ) : signupHref ? (
-        <Button size="sm" asChild>
-          <a href={signupHref}>{signupLabel}</a>
-        </Button>
-      ) : null}
-    </div>
+    <>
+      {loginNode}
+      {signupNode}
+    </>
   )
 }

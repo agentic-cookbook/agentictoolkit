@@ -64,8 +64,13 @@
   --adh-header-title-weight: 400;
 
   --adh-header-nav-font: var(--font-mono);
-  --adh-header-nav-size: 1rem;
+  --adh-header-nav-size: 0.75rem;
   --adh-header-nav-letter-spacing: 0.04em;
+  --adh-header-nav-gap: 1.25rem;
+  --adh-header-nav-link-color: var(--color-text-secondary);
+  --adh-header-nav-link-hover-color: var(--color-accent);
+  --adh-header-nav-link-active-color: var(--color-accent);
+
 
   --adh-footer-font: var(--font-mono);
   --adh-footer-size: 0.85rem;

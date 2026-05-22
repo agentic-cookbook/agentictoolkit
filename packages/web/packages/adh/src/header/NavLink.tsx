@@ -1,7 +1,6 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { cn } from '@agentic-web-toolkit/ui'
 
 export type NavLink = {
   label: string
@@ -30,10 +29,8 @@ export function NavLinkItem({ link }: NavLinkItemProps) {
     <a
       href={link.href}
       aria-current={active ? 'page' : undefined}
-      className={cn(
-        'text-sm transition-colors hover:text-[var(--color-accent)]',
-        active ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]',
-      )}
+      className="adh-header__nav-link"
+      data-active={active ? '' : undefined}
     >
       {link.label}
     </a>

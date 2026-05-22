@@ -2,10 +2,28 @@
  * Consumes the --adh-* tokens defined by the active theme
  * (see @agentic-web-toolkit/themes/styles/adh*.css). Import this once
  * globally in the consumer app (e.g. app/globals.css).
+ *
+ * No Tailwind utilities are used inside the component package, because
+ * Tailwind v4 in a consumer app does not scan node_modules by default,
+ * so utility classes used here would not be generated.
  */
+
+.adh-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
 
 .adh-header__container {
   max-width: var(--adh-container-max-width, 72rem);
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
 }
 
 .adh-header__title {
@@ -22,15 +40,48 @@
 }
 
 .adh-header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--adh-header-nav-gap, 1.25rem);
   font-family: var(--adh-header-nav-font, var(--font-mono));
-  font-size: var(--adh-header-nav-size, 1rem);
+  font-size: var(--adh-header-nav-size, 0.75rem);
   letter-spacing: var(--adh-header-nav-letter-spacing, 0.04em);
 }
 
+.adh-header__nav-link {
+  color: var(--adh-header-nav-link-color, var(--color-text-secondary));
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.adh-header__nav-link:hover {
+  color: var(--adh-header-nav-link-hover-color, var(--color-accent));
+}
+
+.adh-header__nav-link[data-active] {
+  color: var(--adh-header-nav-link-active-color, var(--color-accent));
+}
+
 .adh-footer {
+  border-top: 1px solid var(--color-border);
+  padding: 1rem 0;
+  text-align: center;
   font-family: var(--adh-footer-font, var(--font-mono));
   font-size: var(--adh-footer-size, 0.85rem);
   color: var(--adh-footer-color, var(--color-text-dim));
+}
+
+.adh-footer nav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
 }
 
 .adh-footer__link {

@@ -20,11 +20,8 @@ const DEFAULT_LINKS: FooterLink[] = [
 
 export function AdhFooter({ links = DEFAULT_LINKS, copyright }: AdhFooterProps) {
   return (
-    <footer
-      className="adh-footer border-t border-[var(--color-border)] py-4 text-center"
-      role="contentinfo"
-    >
-      <nav className="inline-flex flex-wrap items-center justify-center" aria-label="Footer">
+    <footer className="adh-footer" role="contentinfo">
+      <nav aria-label="Footer">
         {copyright && <span>{copyright}</span>}
         {links.map((link, i) => (
           <Fragment key={link.href + link.label}>
