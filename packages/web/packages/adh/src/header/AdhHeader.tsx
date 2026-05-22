@@ -11,6 +11,7 @@ export type AdhHeaderProps = {
   siteName: string
   siteNameHref?: string
   navLinks?: NavLink[]
+  trailingNavLinks?: NavLink[]
   sites?: SiteLink[]
   user?: AvatarMenuUser | null
   themeKey?: AdhThemeKey
@@ -29,6 +30,7 @@ export function AdhHeader({
   siteName,
   siteNameHref = '/',
   navLinks = [],
+  trailingNavLinks = [],
   sites,
   user,
   themeKey,
@@ -72,6 +74,9 @@ export function AdhHeader({
               onSignup={onSignup}
             />
           )}
+          {trailingNavLinks.map((link) => (
+            <NavLinkItem key={link.href + link.label} link={link} />
+          ))}
         </nav>
       </div>
     </header>
