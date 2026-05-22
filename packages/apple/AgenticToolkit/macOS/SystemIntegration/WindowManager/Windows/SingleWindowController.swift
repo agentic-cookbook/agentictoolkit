@@ -35,23 +35,16 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     /// after the NSWindow is created.
     private var hudConfiguration: HUDConfiguration?
 
-    /// Initializes the controller. If a `spec` is provided it's registered
-    /// with `WindowManager.shared` for `windowID` before the window is built —
-    /// subclasses that own their spec (typical pattern: a `static let
-    /// windowSpec`) should pass it here so registration is local to the
-    /// controller and AppDelegate doesn't need a global setup pass.
+    /// Initializes the controller and registers it with
+    /// `WindowManager.shared.registry` under `windowID`. The host's launch
+    /// path then calls `WindowManager.shared.restoreOnLaunch()` once to
+    /// re-show every registered window whose spec opts in to visibility
+    /// persistence — no per-controller restore call is needed.
     public init(windowID: String, contentViewController: NSViewController) {
         self.windowID = windowID
         super.init(window: nil)
         self.contentViewController = contentViewController
         WindowManager.shared.registry.register(self)
-        // Defer to next runloop tick so subclass init can finish setting
-        // `windowSpec` (and any HUD chrome) before we read the visibility
-        // opt-in. Hosts don't need to call any per-window restore method —
-        // creating the controller is enough.
-        Task { @MainActor [weak self] in
-            self?.restoreVisibilityIfNeeded()
-        }
     }
 
     @available(*, unavailable)
@@ -172,9 +165,9 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     /// If the spec opts in to visibility persistence and the last saved
-    /// state was `true`, show the window. Hosts call this at launch (after
-    /// all controllers have been registered) to restore the user's last
-    /// session.
+    /// state was `true`, show the window. Invoked for every registered
+    /// controller by `WindowManager.shared.restoreOnLaunch()`; hosts should
+    /// call that single entry point rather than this per-controller method.
     public func restoreVisibilityIfNeeded() {
         guard let spec = windowSpec, spec.persistsVisibility else { return }
         if WindowManager.shared.frames.loadVisibility(for: windowID) == true {

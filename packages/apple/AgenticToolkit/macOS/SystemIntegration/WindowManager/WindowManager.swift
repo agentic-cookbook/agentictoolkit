@@ -78,12 +78,32 @@ public final class WindowManager {
         UserDefaults.standard.set(count, forKey: Self.recentDocumentsLimitKey)
     }
 
+    // MARK: - Launch restore
+
+    /// One-shot restore for everything window-related. Hosts call this once
+    /// from `applicationDidFinishLaunching` after their restorable
+    /// `SingleWindowController`s have been constructed (construction
+    /// registers them with `registry`). For each live controller, re-shows
+    /// the window if its spec opts in and the last saved visibility was
+    /// `true`; then routes through `reopenRecentsOnLaunch()` to repopulate
+    /// document windows per the user's policy.
+    ///
+    /// Re-invoke on reactivation (e.g. a second-launch
+    /// `DistributedNotification`) so persisted-visible windows reappear
+    /// when an LSUIElement app is re-frontmost.
+    public func restoreOnLaunch() {
+        for id in registry.registeredIDs {
+            registry.controller(forID: id)?.restoreVisibilityIfNeeded()
+        }
+        reopenRecentsOnLaunch()
+    }
+
     // MARK: - Reopen on launch
 
     /// Decides whether to re-show document windows from
     /// `NSDocumentController.recentDocumentURLs` based on the user's
-    /// `reopenOnLaunchPolicy`. Hosts call this from
-    /// `applicationDidFinishLaunching`.
+    /// `reopenOnLaunchPolicy`. Called by `restoreOnLaunch()`; hosts should
+    /// not normally invoke this directly.
     public func reopenRecentsOnLaunch() {
         let policy = UserSettings.reopenOnLaunchPolicy.currentValue
         let shouldReopen = policy.shouldReopen(systemDefault: ReopenOnLaunchPolicy.systemDefault)
