@@ -19,4 +19,4 @@ export const ADH_THEMES: AdhThemeOption[] = [
   { key: 'adh-fira', label: 'Fira' },
 ]
 
-export const DEFAULT_ADH_THEME: AdhThemeKey = 'adh'
+export const DEFAULT_ADH_THEME: AdhThemeKey = 'adh-manrope'
