@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import {
@@ -54,10 +55,10 @@ export function AvatarMenu({
 
   const settingsItem = settingsHref ? (
     <DropdownMenuItem asChild>
-      <a href={settingsHref} className="adh-avatar-menu__item">
+      <Link href={settingsHref} className="adh-avatar-menu__item">
         <span className="adh-avatar-menu__item-label">Settings</span>
         <Settings className="adh-avatar-menu__item-icon" />
-      </a>
+      </Link>
     </DropdownMenuItem>
   ) : onSettings ? (
     <DropdownMenuItem onSelect={onSettings} className="adh-avatar-menu__item">
@@ -68,16 +69,16 @@ export function AvatarMenu({
 
   return (
     <DropdownMenu>
-      <div className="adh-avatar-menu-trigger">
+      <DropdownMenuTrigger
+        className="adh-avatar-menu-trigger"
+        aria-label={`Open ${user.name} menu`}
+      >
         <span className="adh-avatar-menu-trigger__name">{user.name}</span>
         <span className="adh-avatar-menu-trigger__avatar-wrap">{avatarInner}</span>
-        <DropdownMenuTrigger
-          className="adh-avatar-menu-trigger__chevron"
-          aria-label={`Open ${user.name} menu`}
-        >
+        <span className="adh-avatar-menu-trigger__chevron" aria-hidden="true">
           <ChevronDown className="h-4 w-4" />
-        </DropdownMenuTrigger>
-      </div>
+        </span>
+      </DropdownMenuTrigger>
       <DropdownMenuContent className="adh-avatar-menu" align="end" sideOffset={8}>
         <div className="adh-avatar-menu__header">
           <div className="adh-avatar-menu__identity">
@@ -94,10 +95,10 @@ export function AvatarMenu({
               const Icon = link.icon
               return (
                 <DropdownMenuItem asChild key={link.href + link.label}>
-                  <a href={link.href} className="adh-avatar-menu__item">
+                  <Link href={link.href} className="adh-avatar-menu__item">
                     <span className="adh-avatar-menu__item-label">{link.label}</span>
                     {Icon ? <Icon className="adh-avatar-menu__item-icon" /> : null}
-                  </a>
+                  </Link>
                 </DropdownMenuItem>
               )
             })}

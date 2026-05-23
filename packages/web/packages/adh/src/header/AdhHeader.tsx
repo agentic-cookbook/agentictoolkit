@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { AvatarMenu, type AvatarMenuUser } from './AvatarMenu'
 import { AuthButtons } from './AuthButtons'
 import { SiteOptionsMenu, type SiteLink } from './SiteOptionsMenu'
@@ -49,9 +50,9 @@ export function AdhHeader({
   return (
     <header className="adh-header" role="banner">
       <div className="adh-header__container">
-        <a href={siteNameHref} className="adh-header__title">
+        <Link href={siteNameHref} className="adh-header__title">
           {siteName}
-        </a>
+        </Link>
         <nav className="adh-header__nav" aria-label="Primary">
           {barLinks.map((link) => (
             <NavLinkItem key={link.href + link.label} link={link} />

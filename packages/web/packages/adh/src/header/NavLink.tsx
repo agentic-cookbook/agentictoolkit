@@ -1,10 +1,14 @@
 'use client'
 
-import type { ComponentType, SVGProps } from 'react'
+import type { ComponentType } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// Accepts any component that takes className — Lucide icons are
-// ForwardRefExoticComponent, not ComponentType, so we widen to ComponentType<any>.
+// Consumers receive Lucide icons through a different @types/react realm
+// (workspace pnpm store vs. app's node_modules), so a tight SVGProps type
+// triggers "Two different types with this name exist, but they are
+// unrelated." Accept any className-bearing component instead.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type NavLinkIcon = ComponentType<any>
 
 export type NavLink = {
@@ -32,13 +36,13 @@ export function NavLinkItem({ link }: NavLinkItemProps) {
   const matchers = link.matchPaths ?? [link.href]
   const active = matchers.some((m) => pathMatches(pathname, m))
   return (
-    <a
+    <Link
       href={link.href}
       aria-current={active ? 'page' : undefined}
       className="adh-header__nav-link"
       data-active={active ? '' : undefined}
     >
       {link.label}
-    </a>
+    </Link>
   )
 }

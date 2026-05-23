@@ -1,6 +1,6 @@
 {
   "name": "@agentic-web-toolkit/adh",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Agentic Developer Hub shared components — header, footer, theme switcher composed on shadcn + @agentic-web-toolkit primitives.",
   "license": "UNLICENSED",
   "type": "module",
@@ -52,7 +52,7 @@
     "@radix-ui/react-slot": "^1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.469.0",
+    "lucide-react": "^1.16.0",
     "tailwind-merge": "^2.6.0"
   },
   "peerDependencies": {
