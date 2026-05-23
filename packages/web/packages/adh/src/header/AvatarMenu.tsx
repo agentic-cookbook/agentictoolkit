@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { LogOut, Settings, User as UserIcon } from 'lucide-react'
+import { ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import {
   DropdownMenu,
@@ -46,17 +46,44 @@ export function AvatarMenu({
   settingsHref,
   children,
 }: AvatarMenuProps) {
+  const avatarInner = (
+    <Avatar className="h-9 w-9">
+      {user.imageUrl && <AvatarImage src={user.imageUrl} alt={user.name} />}
+      <AvatarFallback>{initialsOf(user.name) || <UserIcon className="h-4 w-4" />}</AvatarFallback>
+    </Avatar>
+  )
+
+  const avatarLinkClass =
+    'rounded-full outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)]'
+
+  const avatarLink = settingsHref ? (
+    <a href={settingsHref} className={avatarLinkClass} aria-label={`${user.name} settings`}>
+      {avatarInner}
+    </a>
+  ) : onSettings ? (
+    <button
+      type="button"
+      onClick={onSettings}
+      className={`${avatarLinkClass} border-0 bg-transparent p-0`}
+      aria-label={`${user.name} settings`}
+    >
+      {avatarInner}
+    </button>
+  ) : (
+    <span className={avatarLinkClass}>{avatarInner}</span>
+  )
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className="rounded-full outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)]"
-        aria-label={`Open ${user.name} menu`}
-      >
-        <Avatar className="h-9 w-9">
-          {user.imageUrl && <AvatarImage src={user.imageUrl} alt={user.name} />}
-          <AvatarFallback>{initialsOf(user.name) || <UserIcon className="h-4 w-4" />}</AvatarFallback>
-        </Avatar>
-      </DropdownMenuTrigger>
+      <div className="flex items-center gap-1">
+        {avatarLink}
+        <DropdownMenuTrigger
+          className="flex h-7 w-5 items-center justify-center rounded-md text-[var(--color-text-secondary)] outline-none transition-colors hover:text-[var(--color-accent)] focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] data-[state=open]:text-[var(--color-accent)]"
+          aria-label={`Open ${user.name} menu`}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </DropdownMenuTrigger>
+      </div>
       <DropdownMenuContent align="end" className="min-w-[12rem]">
         <DropdownMenuLabel className="flex flex-col">
           <span className="text-[var(--color-text-primary)]">{user.name}</span>
