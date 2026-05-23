@@ -20,9 +20,7 @@ export type AdhHeaderProps = {
   onLogin?: () => void
   onSignup?: () => void
   onLogout?: () => void
-  profileHref?: string
   settingsHref?: string
-  onProfile?: () => void
   onSettings?: () => void
 }
 
@@ -39,11 +37,15 @@ export function AdhHeader({
   onLogin,
   onSignup,
   onLogout,
-  profileHref,
   settingsHref,
-  onProfile,
   onSettings,
 }: AdhHeaderProps) {
+  // When logged in, primary nav lives inside the avatar dropdown — the bar
+  // only carries the avatar trigger. When logged out, show the nav in the
+  // bar but drop any link that just points at the site title (the title is
+  // already the home link).
+  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref)
+
   return (
     <header className="adh-header" role="banner">
       <div className="adh-header__container">
@@ -51,18 +53,17 @@ export function AdhHeader({
           {siteName}
         </a>
         <nav className="adh-header__nav" aria-label="Primary">
-          {navLinks.map((link) => (
+          {barLinks.map((link) => (
             <NavLinkItem key={link.href + link.label} link={link} />
           ))}
           {sites && sites.length > 0 && <SiteOptionsMenu sites={sites} />}
           {user ? (
             <AvatarMenu
               user={user}
+              navLinks={navLinks}
               onLogout={onLogout}
-              onProfile={onProfile}
-              onSettings={onSettings}
-              profileHref={profileHref}
               settingsHref={settingsHref}
+              onSettings={onSettings}
             >
               <ThemeSwitcher current={themeKey} />
             </AvatarMenu>

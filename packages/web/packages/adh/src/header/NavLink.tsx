@@ -1,11 +1,15 @@
 'use client'
 
+import type { ComponentType, SVGProps } from 'react'
 import { usePathname } from 'next/navigation'
+
+export type NavLinkIcon = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>
 
 export type NavLink = {
   label: string
   href: string
   matchPaths?: string[]
+  icon?: NavLinkIcon
 }
 
 export type NavLinkItemProps = {

@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '../components/ui/dropdown-menu'
+import type { NavLink } from './NavLink'
 
 export type AvatarMenuUser = {
   name: string
@@ -20,11 +20,10 @@ export type AvatarMenuUser = {
 
 export type AvatarMenuProps = {
   user: AvatarMenuUser
-  onProfile?: () => void
-  onSettings?: () => void
+  navLinks?: NavLink[]
   onLogout?: () => void
-  profileHref?: string
   settingsHref?: string
+  onSettings?: () => void
   children?: ReactNode
 }
 
@@ -39,94 +38,91 @@ function initialsOf(name: string): string {
 
 export function AvatarMenu({
   user,
-  onProfile,
-  onSettings,
+  navLinks = [],
   onLogout,
-  profileHref,
   settingsHref,
+  onSettings,
   children,
 }: AvatarMenuProps) {
   const avatarInner = (
-    <Avatar className="h-9 w-9">
+    <Avatar className="adh-avatar-menu-trigger__avatar">
       {user.imageUrl && <AvatarImage src={user.imageUrl} alt={user.name} />}
       <AvatarFallback>{initialsOf(user.name) || <UserIcon className="h-4 w-4" />}</AvatarFallback>
     </Avatar>
   )
 
-  const avatarLinkClass =
-    'rounded-full outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)]'
-
-  const avatarLink = settingsHref ? (
-    <a href={settingsHref} className={avatarLinkClass} aria-label={`${user.name} settings`}>
-      {avatarInner}
+  const settingsButton = settingsHref ? (
+    <a
+      href={settingsHref}
+      className="adh-avatar-menu__settings"
+      aria-label="Settings"
+    >
+      <Settings className="adh-avatar-menu__settings-icon" />
     </a>
   ) : onSettings ? (
     <button
       type="button"
       onClick={onSettings}
-      className={`${avatarLinkClass} border-0 bg-transparent p-0`}
-      aria-label={`${user.name} settings`}
+      className="adh-avatar-menu__settings"
+      aria-label="Settings"
     >
-      {avatarInner}
+      <Settings className="adh-avatar-menu__settings-icon" />
     </button>
-  ) : (
-    <span className={avatarLinkClass}>{avatarInner}</span>
-  )
+  ) : null
 
   return (
     <DropdownMenu>
-      <div className="flex items-center gap-1">
-        {avatarLink}
+      <div className="adh-avatar-menu-trigger">
+        <span className="adh-avatar-menu-trigger__name">{user.name}</span>
+        <span className="adh-avatar-menu-trigger__avatar-wrap">{avatarInner}</span>
         <DropdownMenuTrigger
-          className="flex h-7 w-5 items-center justify-center rounded-md text-[var(--color-text-secondary)] outline-none transition-colors hover:text-[var(--color-accent)] focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] data-[state=open]:text-[var(--color-accent)]"
+          className="adh-avatar-menu-trigger__chevron"
           aria-label={`Open ${user.name} menu`}
         >
           <ChevronDown className="h-4 w-4" />
         </DropdownMenuTrigger>
       </div>
-      <DropdownMenuContent align="end" className="min-w-[12rem]">
-        <DropdownMenuLabel className="flex flex-col">
-          <span className="text-[var(--color-text-primary)]">{user.name}</span>
-          {user.email && (
-            <span className="text-xs font-normal text-[var(--color-text-dim)]">{user.email}</span>
-          )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {(onProfile || profileHref) &&
-          (onProfile ? (
-            <DropdownMenuItem onSelect={onProfile}>
-              <UserIcon className="h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem asChild>
-              <a href={profileHref}>
-                <UserIcon className="h-4 w-4" />
-                <span>Profile</span>
-              </a>
-            </DropdownMenuItem>
-          ))}
-        {(onSettings || settingsHref) &&
-          (onSettings ? (
-            <DropdownMenuItem onSelect={onSettings}>
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem asChild>
-              <a href={settingsHref}>
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </a>
-            </DropdownMenuItem>
-          ))}
-        {children}
+      <DropdownMenuContent className="adh-avatar-menu" align="end" sideOffset={8}>
+        <div className="adh-avatar-menu__header">
+          <div className="adh-avatar-menu__identity">
+            <span className="adh-avatar-menu__name">{user.name}</span>
+            {user.email && (
+              <span className="adh-avatar-menu__email">{user.email}</span>
+            )}
+          </div>
+          {settingsButton}
+        </div>
+        {navLinks.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            {navLinks.map((link) => {
+              const Icon = link.icon
+              return (
+                <DropdownMenuItem asChild key={link.href + link.label}>
+                  <a href={link.href} className="adh-avatar-menu__item">
+                    <span className="adh-avatar-menu__item-label">{link.label}</span>
+                    {Icon ? <Icon className="adh-avatar-menu__item-icon" /> : null}
+                  </a>
+                </DropdownMenuItem>
+              )
+            })}
+          </>
+        )}
+        {children && (
+          <>
+            <DropdownMenuSeparator />
+            {children}
+          </>
+        )}
         {onLogout && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={onLogout}>
-              <LogOut className="h-4 w-4" />
-              <span>Log out</span>
+            <DropdownMenuItem
+              onSelect={onLogout}
+              className="adh-avatar-menu__item"
+            >
+              <span className="adh-avatar-menu__item-label">Log out</span>
+              <LogOut className="adh-avatar-menu__item-icon" />
             </DropdownMenuItem>
           </>
         )}
