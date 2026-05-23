@@ -3,7 +3,9 @@
 import type { ComponentType, SVGProps } from 'react'
 import { usePathname } from 'next/navigation'
 
-export type NavLinkIcon = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>
+// Accepts any component that takes className — Lucide icons are
+// ForwardRefExoticComponent, not ComponentType, so we widen to ComponentType<any>.
+export type NavLinkIcon = ComponentType<any>
 
 export type NavLink = {
   label: string
