@@ -15,10 +15,8 @@
 }
 
 .adh-header__container {
-  max-width: var(--adh-container-max-width, 72rem);
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0 1rem;
+  width: 100%;
+  padding: 0 1.5rem;
   height: 3.5rem;
   display: flex;
   align-items: center;
@@ -77,10 +75,8 @@
 }
 
 .adh-footer__container {
-  max-width: var(--adh-container-max-width, 72rem);
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0.75rem 1rem;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

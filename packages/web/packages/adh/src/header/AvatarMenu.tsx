@@ -51,23 +51,18 @@ export function AvatarMenu({
     </Avatar>
   )
 
-  const settingsButton = settingsHref ? (
-    <a
-      href={settingsHref}
-      className="adh-avatar-menu__settings"
-      aria-label="Settings"
-    >
-      <Settings className="adh-avatar-menu__settings-icon" />
-    </a>
+  const settingsItem = settingsHref ? (
+    <DropdownMenuItem asChild>
+      <a href={settingsHref} className="adh-avatar-menu__item">
+        <span className="adh-avatar-menu__item-label">Settings</span>
+        <Settings className="adh-avatar-menu__item-icon" />
+      </a>
+    </DropdownMenuItem>
   ) : onSettings ? (
-    <button
-      type="button"
-      onClick={onSettings}
-      className="adh-avatar-menu__settings"
-      aria-label="Settings"
-    >
-      <Settings className="adh-avatar-menu__settings-icon" />
-    </button>
+    <DropdownMenuItem onSelect={onSettings} className="adh-avatar-menu__item">
+      <span className="adh-avatar-menu__item-label">Settings</span>
+      <Settings className="adh-avatar-menu__item-icon" />
+    </DropdownMenuItem>
   ) : null
 
   return (
@@ -90,7 +85,6 @@ export function AvatarMenu({
               <span className="adh-avatar-menu__email">{user.email}</span>
             )}
           </div>
-          {settingsButton}
         </div>
         {navLinks.length > 0 && (
           <>
@@ -106,6 +100,12 @@ export function AvatarMenu({
                 </DropdownMenuItem>
               )
             })}
+          </>
+        )}
+        {settingsItem && (
+          <>
+            <DropdownMenuSeparator />
+            {settingsItem}
           </>
         )}
         {children && (
