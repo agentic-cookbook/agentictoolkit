@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "2640"
-   version = "1.3">
+   version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES">
+      buildImplicitDependencies = "YES"
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -15,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-               BuildableName = "ClaudeAPI.aiplugin"
+               BuildableName = "ClaudeAPI.bundle"
                BlueprintName = "ClaudeAPI"
                ReferencedContainer = "container:AIPlugins.xcodeproj">
             </BuildableReference>
@@ -29,7 +30,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "69B12492E5D241F6EF3DAC75"
-               BuildableName = "ClaudeLocal.aiplugin"
+               BuildableName = "ClaudeLocal.bundle"
                BlueprintName = "ClaudeLocal"
                ReferencedContainer = "container:AIPlugins.xcodeproj">
             </BuildableReference>
@@ -43,7 +44,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BA37AF4B2F16BE7AB23931CA"
-               BuildableName = "Google.aiplugin"
+               BuildableName = "Google.bundle"
                BlueprintName = "Google"
                ReferencedContainer = "container:AIPlugins.xcodeproj">
             </BuildableReference>
@@ -57,7 +58,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "40E8B4B9D4D13B107306FAD1"
-               BuildableName = "OpenAI.aiplugin"
+               BuildableName = "OpenAI.bundle"
                BlueprintName = "OpenAI"
                ReferencedContainer = "container:AIPlugins.xcodeproj">
             </BuildableReference>
@@ -71,7 +72,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4902207C4C9CDF009D44C9FA"
-               BuildableName = "OpenAICompatible.aiplugin"
+               BuildableName = "OpenAICompatible.bundle"
                BlueprintName = "OpenAICompatible"
                ReferencedContainer = "container:AIPlugins.xcodeproj">
             </BuildableReference>
@@ -82,12 +83,13 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-            BuildableName = "ClaudeAPI.aiplugin"
+            BuildableName = "ClaudeAPI.bundle"
             BlueprintName = "ClaudeAPI"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
@@ -105,6 +107,8 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -120,11 +124,13 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-            BuildableName = "ClaudeAPI.aiplugin"
+            BuildableName = "ClaudeAPI.bundle"
             BlueprintName = "ClaudeAPI"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -132,11 +138,13 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
+      <CommandLineArguments>
+      </CommandLineArguments>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-            BuildableName = "ClaudeAPI.aiplugin"
+            BuildableName = "ClaudeAPI.bundle"
             BlueprintName = "ClaudeAPI"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>

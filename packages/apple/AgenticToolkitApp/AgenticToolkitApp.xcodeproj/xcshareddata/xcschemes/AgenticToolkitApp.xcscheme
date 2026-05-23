@@ -21,20 +21,6 @@
                ReferencedContainer = "container:AgenticToolkitApp.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0B633CF7EA0D73DBF4070B3D"
-               BuildableName = "AIPluginsMacOSAll"
-               BlueprintName = "AIPluginsMacOSAll"
-               ReferencedContainer = "container:../AIPlugins/AIPlugins.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

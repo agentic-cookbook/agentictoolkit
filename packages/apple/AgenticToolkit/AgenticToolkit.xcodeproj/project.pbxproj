@@ -1937,7 +1937,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_E266E048-7C4B-4099-B114-3E1F323CE65A" /* Settings */ = {
+		"TEMP_DD701E47-2D55-40D3-8A9E-BFE28D4C9A8E" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
