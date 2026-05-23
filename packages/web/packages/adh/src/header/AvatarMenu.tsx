@@ -27,7 +27,8 @@ export type AvatarMenuProps = {
   children?: ReactNode
 }
 
-function initialsOf(name: string): string {
+function initialsOf(name: string | undefined | null): string {
+  if (!name) return ''
   return name
     .split(/\s+/)
     .filter(Boolean)
