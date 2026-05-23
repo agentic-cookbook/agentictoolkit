@@ -44,7 +44,6 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-toolkit/layout": "workspace:*",
     "@agentic-toolkit/themes": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.2",

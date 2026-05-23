@@ -26,9 +26,6 @@ importers:
 
   packages/adh:
     dependencies:
-      '@agentic-toolkit/layout':
-        specifier: workspace:*
-        version: link:../layout
       '@agentic-toolkit/themes':
         specifier: workspace:*
         version: link:../themes
