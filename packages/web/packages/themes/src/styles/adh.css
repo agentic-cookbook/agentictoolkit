@@ -101,7 +101,7 @@
   --color-apt-red: var(--color-error);
 }
 
-body {
+:where(body) {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-family: var(--font-sans);

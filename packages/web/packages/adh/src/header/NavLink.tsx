@@ -22,7 +22,7 @@ export type NavLinkItemProps = {
   link: NavLink
 }
 
-function pathMatches(pathname: string, pattern: string): boolean {
+export function pathMatches(pathname: string, pattern: string): boolean {
   if (pattern === pathname) return true
   if (pattern.endsWith('/*')) {
     const prefix = pattern.slice(0, -2)

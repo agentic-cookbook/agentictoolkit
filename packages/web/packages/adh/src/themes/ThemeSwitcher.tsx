@@ -10,7 +10,12 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '../components/ui/dropdown-menu'
-import { ADH_THEME_COOKIE, ADH_THEMES, type AdhThemeKey } from './adh-themes'
+import {
+  ADH_THEME_COOKIE,
+  ADH_THEMES,
+  DEFAULT_ADH_THEME,
+  type AdhThemeKey,
+} from './adh-themes'
 
 export type ThemeSwitcherProps = {
   current?: AdhThemeKey
@@ -28,7 +33,11 @@ export function ThemeSwitcher({
   const router = useRouter()
 
   const selectTheme = (key: AdhThemeKey): void => {
-    document.cookie = `${ADH_THEME_COOKIE}=${key}; path=/; max-age=31536000; samesite=lax`
+    const secureFlag =
+      typeof window !== 'undefined' && window.location.protocol === 'https:'
+        ? '; secure'
+        : ''
+    document.cookie = `${ADH_THEME_COOKIE}=${key}; path=/; max-age=31536000; samesite=lax${secureFlag}`
     if (onThemeChange) {
       onThemeChange(key)
     } else {
@@ -39,13 +48,13 @@ export function ThemeSwitcher({
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <Palette className="h-4 w-4" />
+        <Palette className="adh-dropdown-menu__item-icon" />
         <span>{label}</span>
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
         <DropdownMenuSubContent>
           <DropdownMenuRadioGroup
-            value={current}
+            value={current ?? DEFAULT_ADH_THEME}
             onValueChange={(value) => selectTheme(value as AdhThemeKey)}
           >
             {ADH_THEMES.map((theme) => (

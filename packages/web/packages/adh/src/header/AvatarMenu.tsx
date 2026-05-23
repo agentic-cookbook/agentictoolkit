@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import {
@@ -11,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '../components/ui/dropdown-menu'
-import type { NavLink } from './NavLink'
+import { pathMatches, type NavLink } from './NavLink'
 
 export type AvatarMenuUser = {
   name: string
@@ -46,10 +47,11 @@ export function AvatarMenu({
   onSettings,
   children,
 }: AvatarMenuProps) {
+  const pathname = usePathname() ?? ''
   const avatarInner = (
     <Avatar className="adh-avatar-menu-trigger__avatar">
       {user.imageUrl && <AvatarImage src={user.imageUrl} alt={user.name} />}
-      <AvatarFallback>{initialsOf(user.name) || <UserIcon className="h-4 w-4" />}</AvatarFallback>
+      <AvatarFallback>{initialsOf(user.name) || <UserIcon className="adh-avatar-menu-trigger__fallback-icon" />}</AvatarFallback>
     </Avatar>
   )
 
@@ -76,7 +78,7 @@ export function AvatarMenu({
         <span className="adh-avatar-menu-trigger__name">{user.name}</span>
         <span className="adh-avatar-menu-trigger__avatar-wrap">{avatarInner}</span>
         <span className="adh-avatar-menu-trigger__chevron" aria-hidden="true">
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="adh-avatar-menu-trigger__chevron-icon" />
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="adh-avatar-menu" align="end" sideOffset={8}>
@@ -93,9 +95,16 @@ export function AvatarMenu({
             <DropdownMenuSeparator />
             {navLinks.map((link) => {
               const Icon = link.icon
+              const matchers = link.matchPaths ?? [link.href]
+              const active = matchers.some((m) => pathMatches(pathname, m))
               return (
                 <DropdownMenuItem asChild key={link.href + link.label}>
-                  <Link href={link.href} className="adh-avatar-menu__item">
+                  <Link
+                    href={link.href}
+                    className="adh-avatar-menu__item"
+                    aria-current={active ? 'page' : undefined}
+                    data-active={active ? '' : undefined}
+                  >
                     <span className="adh-avatar-menu__item-label">{link.label}</span>
                     {Icon ? <Icon className="adh-avatar-menu__item-icon" /> : null}
                   </Link>

@@ -33,11 +33,11 @@ export function SiteOptionsMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" aria-label={triggerLabel}>
-          <Grid3x3 className="h-4 w-4" />
+          <Grid3x3 className="adh-button__icon" />
           <span>{triggerLabel}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[14rem]">
+      <DropdownMenuContent align="end">
         <DropdownMenuLabel>{groupLabel}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {sites.map((site) => (
@@ -45,7 +45,7 @@ export function SiteOptionsMenu({
             <a href={site.href}>
               <span>{site.label}</span>
               {site.description && (
-                <span className="ml-auto text-xs text-[var(--color-text-dim)]">
+                <span className="adh-dropdown-menu__shortcut">
                   {site.description}
                 </span>
               )}

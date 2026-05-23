@@ -1,3 +1,5 @@
+'use client'
+
 export { AdhHeader } from './AdhHeader'
 export type { AdhHeaderProps } from './AdhHeader'
 export { AvatarMenu } from './AvatarMenu'
