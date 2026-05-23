@@ -54,7 +54,7 @@
 
   --adh-card-radius: 12px;
 
-  /* Header / footer identity — referenced by @agentic-web-toolkit/adh
+  /* Header / footer identity — referenced by @agentic-toolkit/adh
    * components. Variants override the underlying --font-* and the
    * header/footer typography follows automatically. */
   --adh-container-max-width: 72rem;

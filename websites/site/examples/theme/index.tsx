@@ -6,16 +6,16 @@ import {
   InlineChatView,
   MockBackend,
   useChatSession,
-} from '@agentic-web-toolkit/chat'
-import '@agentic-web-toolkit/chat/css/base.css'
-import '@agentic-web-toolkit/chat/css/modes/inline.css'
-import { SourceCodePanel } from '@agentic-web-toolkit/controls/source-code-panel'
-import '@agentic-web-toolkit/controls/source-code-panel/styles.css'
+} from '@agentic-toolkit/chat'
+import '@agentic-toolkit/chat/css/base.css'
+import '@agentic-toolkit/chat/css/modes/inline.css'
+import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
+import '@agentic-toolkit/controls/source-code-panel/styles.css'
 import {
   themes,
   themeIds,
   type ThemeKey,
-} from '@agentic-web-toolkit/themes'
+} from '@agentic-toolkit/themes'
 import './index.css'
 
 export const meta = { id: 'theme', label: 'Theme' }

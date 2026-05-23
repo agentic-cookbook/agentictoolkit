@@ -8,13 +8,13 @@ import {
   RouteProvider,
   type SiteConfig,
   type SiteEntry,
-} from '@agentic-web-toolkit/model'
-import { SearchDialogConnected } from '@agentic-web-toolkit/controls/search-dialog'
-import { AppearanceModeToggle } from '@agentic-web-toolkit/controls/appearance-mode-toggle'
-import { ColorModeProvider } from '@agentic-web-toolkit/themes'
+} from '@agentic-toolkit/model'
+import { SearchDialogConnected } from '@agentic-toolkit/controls/search-dialog'
+import { AppearanceModeToggle } from '@agentic-toolkit/controls/appearance-mode-toggle'
+import { ColorModeProvider } from '@agentic-toolkit/themes'
 
-import '@agentic-web-toolkit/controls/search-dialog/styles.css'
-import '@agentic-web-toolkit/controls/appearance-mode-toggle/styles.css'
+import '@agentic-toolkit/controls/search-dialog/styles.css'
+import '@agentic-toolkit/controls/appearance-mode-toggle/styles.css'
 
 export const meta = { id: 'controls', label: 'Controls' }
 

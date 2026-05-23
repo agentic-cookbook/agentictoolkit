@@ -10,12 +10,12 @@ import {
   MockBackend,
   useChatSession,
   type InlineChatSizing,
-} from '@agentic-web-toolkit/chat'
-import '@agentic-web-toolkit/chat/css/base.css'
-import '@agentic-web-toolkit/chat/css/modes/inline.css'
-import '@agentic-web-toolkit/chat/css/modes/three-pane.css'
-import '@agentic-web-toolkit/chat/css/modes/mobile.css'
-import '@agentic-web-toolkit/chat/css/components/content-overlay.css'
+} from '@agentic-toolkit/chat'
+import '@agentic-toolkit/chat/css/base.css'
+import '@agentic-toolkit/chat/css/modes/inline.css'
+import '@agentic-toolkit/chat/css/modes/three-pane.css'
+import '@agentic-toolkit/chat/css/modes/mobile.css'
+import '@agentic-toolkit/chat/css/components/content-overlay.css'
 
 import backgroundImage from './shih_tzu.webp'
 

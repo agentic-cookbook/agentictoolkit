@@ -1,8 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useLink, type LinkComponent } from '@agentic-web-toolkit/model'
-import type { NavNode } from '@agentic-web-toolkit/model'
+import { useLink, type LinkComponent } from '@agentic-toolkit/model'
+import type { NavNode } from '@agentic-toolkit/model'
 
 export type SidebarProps = {
   nodes: NavNode[]

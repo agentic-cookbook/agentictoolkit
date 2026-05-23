@@ -1,6 +1,6 @@
 'use client'
 
-import { useSiteConfig } from '@agentic-web-toolkit/model'
+import { useSiteConfig } from '@agentic-toolkit/model'
 import { Header, type HeaderProps } from './Header'
 
 export type HeaderConnectedProps = Omit<HeaderProps, 'title' | 'titleEmphasis'>

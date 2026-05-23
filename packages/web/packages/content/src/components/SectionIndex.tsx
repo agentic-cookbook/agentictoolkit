@@ -1,4 +1,4 @@
-import type { SiteEntry } from '@agentic-web-toolkit/model'
+import type { SiteEntry } from '@agentic-toolkit/model'
 import { EntryCard } from './EntryCard'
 
 export type SubsectionGroup = {

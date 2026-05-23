@@ -1,6 +1,6 @@
 # Chat
 
-`@agentic-web-toolkit/chat` is a React 19 + TypeScript chat library with four
+`@agentic-toolkit/chat` is a React 19 + TypeScript chat library with four
 display modes, a typed backend contract, and CSS-only theming.
 
 This doc covers usage, the message-layout spec, and chat-specific theming.
@@ -38,10 +38,10 @@ Shared internals:
 
 ```tsx
 'use client'
-import { InlineChat, MockBackend } from '@agentic-web-toolkit/chat'
-import '@agentic-web-toolkit/chat/css/base.css'
-import '@agentic-web-toolkit/chat/css/modes/inline.css'
-import '@agentic-web-toolkit/themes/styles/professional.css'
+import { InlineChat, MockBackend } from '@agentic-toolkit/chat'
+import '@agentic-toolkit/chat/css/base.css'
+import '@agentic-toolkit/chat/css/modes/inline.css'
+import '@agentic-toolkit/themes/styles/professional.css'
 
 const backend = new MockBackend()
 
@@ -60,9 +60,9 @@ export function ChatExample() {
 
 Three CSS layers, imported in order:
 
-1. `@agentic-web-toolkit/chat/css/base.css` — structural layout, required.
-2. `@agentic-web-toolkit/chat/css/modes/<mode>.css` — positioning per mode.
-3. `@agentic-web-toolkit/themes/styles/<theme>.css` — visual theme (defines
+1. `@agentic-toolkit/chat/css/base.css` — structural layout, required.
+2. `@agentic-toolkit/chat/css/modes/<mode>.css` — positioning per mode.
+3. `@agentic-toolkit/themes/styles/<theme>.css` — visual theme (defines
    both site-wide `--color-*` and chat-specific `--pc-*` tokens).
 
 In a Next.js consumer with `ColorModeProvider` + `ThemeStyle` wired
@@ -92,8 +92,8 @@ Simple centered chat. Popovers render inline with toggle arrows.
 Chat pane + detail pane + topics sidebar with SVG connector lines.
 
 ```tsx
-import { ThreePaneChat } from '@agentic-web-toolkit/chat'
-import '@agentic-web-toolkit/chat/css/modes/three-pane.css'
+import { ThreePaneChat } from '@agentic-toolkit/chat'
+import '@agentic-toolkit/chat/css/modes/three-pane.css'
 
 <ThreePaneChat
   backend={backend}
@@ -112,8 +112,8 @@ Full-screen slide-in overlay for mobile layouts. Auto-focuses the input
 ~350ms after opening (triggers the iOS keyboard).
 
 ```tsx
-import { MobileChat } from '@agentic-web-toolkit/chat'
-import '@agentic-web-toolkit/chat/css/modes/mobile.css'
+import { MobileChat } from '@agentic-toolkit/chat'
+import '@agentic-toolkit/chat/css/modes/mobile.css'
 
 <MobileChat
   backend={backend}
@@ -132,8 +132,8 @@ slide-in shell. Use it when you want the mobile-overlay treatment without
 forcing the content to be a chat.
 
 ```tsx
-import { ContentOverlay } from '@agentic-web-toolkit/chat'
-import '@agentic-web-toolkit/chat/css/components/content-overlay.css'
+import { ContentOverlay } from '@agentic-toolkit/chat'
+import '@agentic-toolkit/chat/css/components/content-overlay.css'
 
 <ContentOverlay open={open} onClose={close}>{anyReactNode}</ContentOverlay>
 ```
@@ -217,7 +217,7 @@ Core state-management hook used internally by every mode component.
 Available for custom layouts.
 
 ```tsx
-import { useChatSession } from '@agentic-web-toolkit/chat'
+import { useChatSession } from '@agentic-toolkit/chat'
 
 const {
   messages,
@@ -322,7 +322,7 @@ User message (right-aligned):
 
 Chat components have no knowledge of themes — all visual styling comes
 from CSS. The chat package ships `base.css` (structural) and per-mode CSS;
-themes live in [`@agentic-web-toolkit/themes`](next-js-consumer.md) and
+themes live in [`@agentic-toolkit/themes`](next-js-consumer.md) and
 define both site-wide and chat tokens in a single file.
 
 ### CSS variables (chat tokens)
@@ -365,7 +365,7 @@ after the theme import:
 
 ### Built-in themes
 
-Ten themes ship in `@agentic-web-toolkit/themes/styles/`:
+Ten themes ship in `@agentic-toolkit/themes/styles/`:
 
 | Theme | Style |
 |-------|-------|
@@ -420,7 +420,7 @@ Define `@keyframes` and apply to `.persona-chat .pc-message`.
 ## Tests
 
 ```bash
-pnpm --filter @agentic-web-toolkit/chat test
+pnpm --filter @agentic-toolkit/chat test
 ```
 
 Tests live in `packages/features/chat/src/__tests__/` and cover MockBackend,

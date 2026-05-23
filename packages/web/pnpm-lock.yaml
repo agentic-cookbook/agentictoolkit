@@ -26,13 +26,13 @@ importers:
 
   packages/adh:
     dependencies:
-      '@agentic-web-toolkit/layout':
+      '@agentic-toolkit/layout':
         specifier: workspace:*
         version: link:../layout
-      '@agentic-web-toolkit/themes':
+      '@agentic-toolkit/themes':
         specifier: workspace:*
         version: link:../themes
-      '@agentic-web-toolkit/ui':
+      '@agentic-toolkit/ui':
         specifier: workspace:*
         version: link:../ui
       '@radix-ui/react-avatar':
@@ -84,7 +84,7 @@ importers:
 
   packages/content:
     dependencies:
-      '@agentic-web-toolkit/model':
+      '@agentic-toolkit/model':
         specifier: workspace:*
         version: link:../model
       react:
@@ -124,7 +124,7 @@ importers:
 
   packages/controls:
     dependencies:
-      '@agentic-web-toolkit/model':
+      '@agentic-toolkit/model':
         specifier: workspace:*
         version: link:../model
       react:
@@ -204,7 +204,7 @@ importers:
 
   packages/layout:
     dependencies:
-      '@agentic-web-toolkit/model':
+      '@agentic-toolkit/model':
         specifier: workspace:*
         version: link:../model
       react:
@@ -284,13 +284,13 @@ importers:
 
   packages/site-templates/reference-web-site:
     dependencies:
-      '@agentic-web-toolkit/controls':
+      '@agentic-toolkit/controls':
         specifier: workspace:*
         version: link:../../controls
-      '@agentic-web-toolkit/model':
+      '@agentic-toolkit/model':
         specifier: workspace:*
         version: link:../../model
-      '@agentic-web-toolkit/themes':
+      '@agentic-toolkit/themes':
         specifier: workspace:*
         version: link:../../themes
       fuse.js:
@@ -375,7 +375,7 @@ importers:
 
   packages/themes:
     dependencies:
-      '@agentic-web-toolkit/ui':
+      '@agentic-toolkit/ui':
         specifier: workspace:*
         version: link:../ui
       react:

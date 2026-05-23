@@ -1,5 +1,5 @@
 {
-  "name": "@agentic-web-toolkit/themes",
+  "name": "@agentic-toolkit/themes",
   "version": "0.1.4",
   "description": "Theme manifest, ThemeStyle component, and ColorModeProvider for agentic-web-toolkit.",
   "license": "UNLICENSED",
@@ -37,7 +37,7 @@
     "lint": "pnpm run build:data && tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-web-toolkit/ui": "workspace:*"
+    "@agentic-toolkit/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0",

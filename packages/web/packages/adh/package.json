@@ -1,7 +1,7 @@
 {
-  "name": "@agentic-web-toolkit/adh",
+  "name": "@agentic-toolkit/adh",
   "version": "0.2.0",
-  "description": "Agentic Developer Hub shared components — header, footer, theme switcher composed on shadcn + @agentic-web-toolkit primitives.",
+  "description": "Agentic Developer Hub shared components — header, footer, theme switcher composed on shadcn + @agentic-toolkit primitives.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -44,9 +44,9 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-web-toolkit/layout": "workspace:*",
-    "@agentic-web-toolkit/themes": "workspace:*",
-    "@agentic-web-toolkit/ui": "workspace:*",
+    "@agentic-toolkit/layout": "workspace:*",
+    "@agentic-toolkit/themes": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-slot": "^1.1.1",

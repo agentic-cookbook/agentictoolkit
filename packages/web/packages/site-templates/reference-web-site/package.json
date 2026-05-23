@@ -1,5 +1,5 @@
 {
-  "name": "@agentic-web-toolkit/reference-web-site",
+  "name": "@agentic-toolkit/reference-web-site",
   "version": "0.1.0",
   "description": "Vite-based reference site template for agentic-web-toolkit (includes Vite plugin for markdown ingestion).",
   "license": "UNLICENSED",
@@ -32,9 +32,9 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-web-toolkit/controls": "workspace:*",
-    "@agentic-web-toolkit/model": "workspace:*",
-    "@agentic-web-toolkit/themes": "workspace:*",
+    "@agentic-toolkit/controls": "workspace:*",
+    "@agentic-toolkit/model": "workspace:*",
+    "@agentic-toolkit/themes": "workspace:*",
     "fuse.js": "^7.0.0",
     "gray-matter": "^4.0.3",
     "rehype-autolink-headings": "^7.1.0",

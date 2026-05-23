@@ -13,8 +13,8 @@ Old pattern (going away):
 New pattern (this doc):
 
 ```json
-"@agentic-web-toolkit/chat": "workspace:*",
-"@agentic-web-toolkit/themes": "workspace:*"
+"@agentic-toolkit/chat": "workspace:*",
+"@agentic-toolkit/themes": "workspace:*"
 ```
 
 The submodule itself stays. Only how you reference packages inside it
@@ -62,13 +62,13 @@ subset of:
 ```json
 {
   "dependencies": {
-    "@agentic-web-toolkit/chat": "workspace:*",
-    "@agentic-web-toolkit/content": "workspace:*",
-    "@agentic-web-toolkit/controls": "workspace:*",
-    "@agentic-web-toolkit/layout": "workspace:*",
-    "@agentic-web-toolkit/model": "workspace:*",
-    "@agentic-web-toolkit/themes": "workspace:*",
-    "@agentic-web-toolkit/ui": "workspace:*"
+    "@agentic-toolkit/chat": "workspace:*",
+    "@agentic-toolkit/content": "workspace:*",
+    "@agentic-toolkit/controls": "workspace:*",
+    "@agentic-toolkit/layout": "workspace:*",
+    "@agentic-toolkit/model": "workspace:*",
+    "@agentic-toolkit/themes": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*"
   }
 }
 ```
@@ -83,13 +83,13 @@ roots:
 
 | Old import path                                           | New import path                                         |
 | --------------------------------------------------------- | ------------------------------------------------------- |
-| `@agentic-cookbook/agentic-web-toolkit/themes/...`        | `@agentic-web-toolkit/themes/...`                       |
-| `@agentic-cookbook/agentic-web-toolkit/model/...`         | `@agentic-web-toolkit/model/...`                        |
-| `@agentic-cookbook/agentic-web-toolkit/layout/...`        | `@agentic-web-toolkit/layout/...`                       |
-| `@agentic-cookbook/agentic-web-toolkit/content/...`       | `@agentic-web-toolkit/content/...`                      |
-| `@agentic-cookbook/agentic-web-toolkit/controls/<ctrl>`   | `@agentic-web-toolkit/controls/<ctrl>`                  |
-| `@agentic-cookbook/agentic-web-toolkit/features/chat/...` | `@agentic-web-toolkit/chat/...`                         |
-| `@agentic-cookbook/agentic-web-toolkit/site-templates/reference-web-site/...` | `@agentic-web-toolkit/reference-web-site/...` |
+| `@agentic-cookbook/agentic-web-toolkit/themes/...`        | `@agentic-toolkit/themes/...`                       |
+| `@agentic-cookbook/agentic-web-toolkit/model/...`         | `@agentic-toolkit/model/...`                        |
+| `@agentic-cookbook/agentic-web-toolkit/layout/...`        | `@agentic-toolkit/layout/...`                       |
+| `@agentic-cookbook/agentic-web-toolkit/content/...`       | `@agentic-toolkit/content/...`                      |
+| `@agentic-cookbook/agentic-web-toolkit/controls/<ctrl>`   | `@agentic-toolkit/controls/<ctrl>`                  |
+| `@agentic-cookbook/agentic-web-toolkit/features/chat/...` | `@agentic-toolkit/chat/...`                         |
+| `@agentic-cookbook/agentic-web-toolkit/site-templates/reference-web-site/...` | `@agentic-toolkit/reference-web-site/...` |
 
 A codemod-grade `sed` per row (one rule per package) handles most repos.
 For a one-shot transform, the row mapping above is enough to drive a

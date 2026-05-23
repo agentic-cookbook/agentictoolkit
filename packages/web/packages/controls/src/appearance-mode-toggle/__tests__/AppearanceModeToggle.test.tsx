@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import { AppearanceModeToggle } from '../AppearanceModeToggle'
-import { ColorModeProvider } from '@agentic-web-toolkit/themes/colorMode'
+import { ColorModeProvider } from '@agentic-toolkit/themes/colorMode'
 
 describe('AppearanceModeToggle', () => {
   it('renders a button with the awt-appearance-mode-toggle class', () => {

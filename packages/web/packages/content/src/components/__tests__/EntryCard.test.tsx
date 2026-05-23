@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { EntryCard } from '../EntryCard'
-import type { SiteEntry } from '@agentic-web-toolkit/model'
+import type { SiteEntry } from '@agentic-toolkit/model'
 
 const entry: SiteEntry = {
   slug: '/guides/install',

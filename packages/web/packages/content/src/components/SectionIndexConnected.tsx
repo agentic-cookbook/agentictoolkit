@@ -1,7 +1,7 @@
 'use client'
 
-import { useContent } from '@agentic-web-toolkit/model'
-import type { NavNode, SiteEntry } from '@agentic-web-toolkit/model'
+import { useContent } from '@agentic-toolkit/model'
+import type { NavNode, SiteEntry } from '@agentic-toolkit/model'
 import { SectionIndex, type SubsectionGroup } from './SectionIndex'
 
 function findNode(nodes: NavNode[], path: string): NavNode | undefined {

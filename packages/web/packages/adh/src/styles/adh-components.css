@@ -1,6 +1,6 @@
-/* Component styles for @agentic-web-toolkit/adh.
+/* Component styles for @agentic-toolkit/adh.
  * Consumes the --adh-* tokens defined by the active theme
- * (see @agentic-web-toolkit/themes/styles/adh*.css). Import this once
+ * (see @agentic-toolkit/themes/styles/adh*.css). Import this once
  * globally in the consumer app (e.g. app/globals.css).
  *
  * No Tailwind utilities are used inside the component package, because

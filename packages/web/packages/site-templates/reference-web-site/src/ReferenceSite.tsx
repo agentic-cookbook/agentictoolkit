@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router'
-import { ColorModeProvider } from '@agentic-web-toolkit/themes/colorMode'
+import { ColorModeProvider } from '@agentic-toolkit/themes/colorMode'
 import { ContentProvider } from './contexts/ContentContext'
 import { SiteConfigProvider } from './contexts/SiteConfigContext'
 import Header from './components/layout/Header'

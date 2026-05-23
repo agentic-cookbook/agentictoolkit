@@ -1,7 +1,7 @@
 'use client'
 
-import { useLink } from '@agentic-web-toolkit/model'
-import type { SiteEntry } from '@agentic-web-toolkit/model'
+import { useLink } from '@agentic-toolkit/model'
+import type { SiteEntry } from '@agentic-toolkit/model'
 
 export type EntryCardProps = {
   entry: SiteEntry

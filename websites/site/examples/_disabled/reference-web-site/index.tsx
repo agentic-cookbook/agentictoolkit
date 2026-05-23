@@ -3,9 +3,9 @@ import { ExamplePanel } from '../../ExamplePanel'
 import {
   ReferenceSiteApp,
   type SiteConfig,
-} from '@agentic-web-toolkit/reference-web-site'
-import '@agentic-web-toolkit/reference-web-site/styles/tokens.css'
-import '@agentic-web-toolkit/controls/appearance-mode-toggle/styles.css'
+} from '@agentic-toolkit/reference-web-site'
+import '@agentic-toolkit/reference-web-site/styles/tokens.css'
+import '@agentic-toolkit/controls/appearance-mode-toggle/styles.css'
 
 export const meta = { id: 'reference-web-site', label: 'Reference Site' }
 

@@ -1,7 +1,7 @@
 'use client'
 
-import { useLink } from '@agentic-web-toolkit/model'
-import type { NavSectionConfig } from '@agentic-web-toolkit/model'
+import { useLink } from '@agentic-toolkit/model'
+import type { NavSectionConfig } from '@agentic-toolkit/model'
 
 export type SectionCardProps = {
   section: NavSectionConfig

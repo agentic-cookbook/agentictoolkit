@@ -1,6 +1,6 @@
 'use client'
 
-import { useIsomorphicLayoutEffect } from '@agentic-web-toolkit/ui'
+import { useIsomorphicLayoutEffect } from '@agentic-toolkit/ui'
 import { themes, type ThemeKey } from './manifest'
 
 const GLOBAL_ID = 'agentic-toolkit-theme'

@@ -1,7 +1,7 @@
-# Consuming `@agentic-web-toolkit/*` from a Next.js App
+# Consuming `@agentic-toolkit/*` from a Next.js App
 
 The toolkit ships as a set of pre-built ESM packages under the
-`@agentic-web-toolkit/*` scope. Two integration patterns are supported:
+`@agentic-toolkit/*` scope. Two integration patterns are supported:
 
 1. **Submodule + pnpm workspace federation** (primary, used by Mike's own
    consumer repos).
@@ -46,11 +46,11 @@ In `app/package.json`:
 ```json
 {
   "dependencies": {
-    "@agentic-web-toolkit/chat": "workspace:*",
-    "@agentic-web-toolkit/controls": "workspace:*",
-    "@agentic-web-toolkit/model": "workspace:*",
-    "@agentic-web-toolkit/themes": "workspace:*",
-    "@agentic-web-toolkit/ui": "workspace:*"
+    "@agentic-toolkit/chat": "workspace:*",
+    "@agentic-toolkit/controls": "workspace:*",
+    "@agentic-toolkit/model": "workspace:*",
+    "@agentic-toolkit/themes": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*"
   }
 }
 ```
@@ -100,10 +100,10 @@ Commit the submodule SHA bump and `pnpm-lock.yaml` together.
 Once Phase 6 publishing is live:
 
 ```bash
-npm install @agentic-web-toolkit/chat @agentic-web-toolkit/themes ...
+npm install @agentic-toolkit/chat @agentic-toolkit/themes ...
 ```
 
-Configure `.npmrc` to point the `@agentic-web-toolkit` scope at GitHub
+Configure `.npmrc` to point the `@agentic-toolkit` scope at GitHub
 Packages with a token that has `read:packages` (and `write:packages` for
 publishing).
 
@@ -119,8 +119,8 @@ identical to Pattern A from `app/layout.tsx` down.
 ```tsx
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { ColorModeProvider } from '@agentic-web-toolkit/themes'
-import { ThemeStyle } from '@agentic-web-toolkit/themes'
+import { ColorModeProvider } from '@agentic-toolkit/themes'
+import { ThemeStyle } from '@agentic-toolkit/themes'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -150,14 +150,14 @@ mismatch.
 
 ```css
 @import 'tailwindcss';
-@import '@agentic-web-toolkit/ui/styles/globals.css';
-@import '@agentic-web-toolkit/themes/styles/agentic-cookbook.css';
+@import '@agentic-toolkit/ui/styles/globals.css';
+@import '@agentic-toolkit/themes/styles/agentic-cookbook.css';
 
 /* Pattern A (submodule) — scan toolkit's built dist for utility classes */
 @source "../../external/agentic-web-toolkit/packages/*/dist/**/*.{js,d.ts}";
 
 /* Pattern B (published) — scan node_modules instead */
-/* @source "../node_modules/@agentic-web-toolkit/*/dist/**/*.{js,d.ts}"; */
+/* @source "../node_modules/@agentic-toolkit/*/dist/**/*.{js,d.ts}"; */
 ```
 
 Pick one `@source` directive depending on which integration pattern you're
@@ -200,10 +200,10 @@ entries:
 
 ```tsx
 'use client'
-import { InlineChat, FetchBackend } from '@agentic-web-toolkit/chat'
-import { FilteredList } from '@agentic-web-toolkit/controls/filtered-list'
-import { useColorMode } from '@agentic-web-toolkit/themes'
-import { ContentProvider } from '@agentic-web-toolkit/model'
+import { InlineChat, FetchBackend } from '@agentic-toolkit/chat'
+import { FilteredList } from '@agentic-toolkit/controls/filtered-list'
+import { useColorMode } from '@agentic-toolkit/themes'
+import { ContentProvider } from '@agentic-toolkit/model'
 ```
 
 Most toolkit components carry their own `"use client"` directive — you don't
@@ -219,7 +219,7 @@ hooks or browser-only APIs.
   `cd … && npm install && cd … && npm run build` will leak orphan node
   processes if the build is killed mid-flight. Install once at the
   workspace root; let `pnpm -r` orchestrate the rest.
-- **Don't set `transpilePackages`** for `@agentic-web-toolkit/*`. The
+- **Don't set `transpilePackages`** for `@agentic-toolkit/*`. The
   packages already ship as Next-compatible ESM with directives preserved;
   re-transpiling them strips those directives and breaks SSR.
 - **CSS imports must hit the package's exported `styles/*.css` paths**, not

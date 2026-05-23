@@ -35,7 +35,7 @@ Three XcodeGen-backed Xcode projects wired together by
 ### Web
 
 `packages/web/` is the pnpm workspace root. Libraries live under
-`packages/web/packages/` and ship as `@agentic-web-toolkit/*` packages
+`packages/web/packages/` and ship as `@agentic-toolkit/*` packages
 with prebuilt `dist/` output (no `transpilePackages` required for
 Next.js consumers).
 
@@ -69,5 +69,5 @@ so its wiring matches what external apps will use.
   `xcodegen` (or `cc-xcgen`) after editing `project.yml`.
 - Libraries may only depend on other targets within the same platform —
   never on ad-hoc paths outside their workspace.
-- Web packages keep their `@agentic-web-toolkit/*` scope (preserved from
+- Web packages keep their `@agentic-toolkit/*` scope (preserved from
   the prior repo) so published consumers don't break.

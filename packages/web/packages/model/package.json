@@ -1,5 +1,5 @@
 {
-  "name": "@agentic-web-toolkit/model",
+  "name": "@agentic-toolkit/model",
   "version": "0.1.0",
   "description": "Site configuration, content providers, routing, and search hooks for agentic-web-toolkit.",
   "license": "UNLICENSED",

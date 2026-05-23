@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExamplePanel } from '../../ExamplePanel'
-import { LogPanel } from '@agentic-web-toolkit/controls/logging-panel'
-import type { LogColumn, LogLevel, LogLine } from '@agentic-web-toolkit/controls/logging-panel'
-import '@agentic-web-toolkit/controls/logging-panel/styles.css'
-import { SourceCodePanel } from '@agentic-web-toolkit/controls/source-code-panel'
-import '@agentic-web-toolkit/controls/source-code-panel/styles.css'
+import { LogPanel } from '@agentic-toolkit/controls/logging-panel'
+import type { LogColumn, LogLevel, LogLine } from '@agentic-toolkit/controls/logging-panel'
+import '@agentic-toolkit/controls/logging-panel/styles.css'
+import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
+import '@agentic-toolkit/controls/source-code-panel/styles.css'
 
 export const meta = { id: 'logging-panel', label: 'Logging Panel' }
 
@@ -234,9 +234,9 @@ function controlButtonStyle(active: boolean): React.CSSProperties {
   }
 }
 
-const CONSUMER_SOURCE = `import { LogPanel } from '@agentic-web-toolkit/controls/logging-panel'
-import type { LogColumn, LogLine } from '@agentic-web-toolkit/controls/logging-panel'
-import '@agentic-web-toolkit/controls/logging-panel/styles.css'
+const CONSUMER_SOURCE = `import { LogPanel } from '@agentic-toolkit/controls/logging-panel'
+import type { LogColumn, LogLine } from '@agentic-toolkit/controls/logging-panel'
+import '@agentic-toolkit/controls/logging-panel/styles.css'
 
 type Ctx = { sessionId: string }
 

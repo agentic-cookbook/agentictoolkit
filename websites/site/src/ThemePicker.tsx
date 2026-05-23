@@ -1,6 +1,6 @@
 'use client'
 
-import { themeIds, themes, type ThemeKey } from '@agentic-web-toolkit/themes'
+import { themeIds, themes, type ThemeKey } from '@agentic-toolkit/themes'
 
 export interface ThemePickerProps {
   value: ThemeKey

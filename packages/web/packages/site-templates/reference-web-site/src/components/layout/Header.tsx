@@ -1,7 +1,7 @@
 'use client'
 
 import { Link } from 'react-router'
-import { AppearanceModeToggle } from '@agentic-web-toolkit/controls/appearance-mode-toggle'
+import { AppearanceModeToggle } from '@agentic-toolkit/controls/appearance-mode-toggle'
 import { useSiteConfig } from '../../contexts/SiteConfigContext'
 
 interface HeaderProps {

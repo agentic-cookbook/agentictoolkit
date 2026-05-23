@@ -1,5 +1,5 @@
 {
-  "name": "@agentic-web-toolkit/controls",
+  "name": "@agentic-toolkit/controls",
   "version": "0.1.0",
   "description": "Reusable controls for agentic-web-toolkit (filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner).",
   "license": "UNLICENSED",
@@ -62,7 +62,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-web-toolkit/model": "workspace:*",
+    "@agentic-toolkit/model": "workspace:*",
     "shiki": "^1.24.0"
   },
   "peerDependencies": {

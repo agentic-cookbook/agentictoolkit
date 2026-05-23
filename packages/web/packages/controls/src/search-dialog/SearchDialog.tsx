@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, type KeyboardEvent } from 'react'
-import type { SearchState } from '@agentic-web-toolkit/model'
-import type { SiteEntry } from '@agentic-web-toolkit/model'
+import type { SearchState } from '@agentic-toolkit/model'
+import type { SiteEntry } from '@agentic-toolkit/model'
 
 export type SearchDialogProps = {
   open: boolean

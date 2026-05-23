@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { HeadingEntry } from '@agentic-web-toolkit/model'
+import type { HeadingEntry } from '@agentic-toolkit/model'
 
 export type TableOfContentsProps = {
   headings: HeadingEntry[]

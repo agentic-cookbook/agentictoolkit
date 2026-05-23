@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useLink } from '@agentic-web-toolkit/model'
+import { useLink } from '@agentic-toolkit/model'
 
 export type HeaderProps = {
   title: string

@@ -13,7 +13,7 @@
     "components": "@/components",
     "ui": "@/components/ui",
     "lib": "@/lib",
-    "utils": "@agentic-web-toolkit/ui",
+    "utils": "@agentic-toolkit/ui",
     "hooks": "@/hooks"
   }
 }

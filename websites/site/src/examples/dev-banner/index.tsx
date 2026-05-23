@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { ExamplePanel } from '../../ExamplePanel'
-import { DevBanner } from '@agentic-web-toolkit/controls/dev-banner'
-import '@agentic-web-toolkit/controls/dev-banner/styles.css'
-import { SourceCodePanel } from '@agentic-web-toolkit/controls/source-code-panel'
-import '@agentic-web-toolkit/controls/source-code-panel/styles.css'
+import { DevBanner } from '@agentic-toolkit/controls/dev-banner'
+import '@agentic-toolkit/controls/dev-banner/styles.css'
+import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
+import '@agentic-toolkit/controls/source-code-panel/styles.css'
 
 export const meta = { id: 'dev-banner', label: 'Dev Banner' }
 
@@ -112,8 +112,8 @@ const inputStyle: React.CSSProperties = {
   fontFamily: 'inherit',
 }
 
-const CONSUMER_SOURCE = `import { DevBanner } from '@agentic-web-toolkit/controls/dev-banner'
-import '@agentic-web-toolkit/controls/dev-banner/styles.css'
+const CONSUMER_SOURCE = `import { DevBanner } from '@agentic-toolkit/controls/dev-banner'
+import '@agentic-toolkit/controls/dev-banner/styles.css'
 
 // Pinned to the top of the viewport on every page (default):
 <DevBanner />

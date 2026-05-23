@@ -23,14 +23,14 @@ and `AIPlugins` (`AIPluginsShared.framework` plus five `.aiplugin` bundles).
 The Web platform is a pnpm monorepo. Libraries live under
 `packages/web/packages/`:
 
-- `@agentic-web-toolkit/ui` — shadcn slot, `cn` helper, globals.
-- `@agentic-web-toolkit/themes` — `ColorModeProvider`, `ThemeStyle`, themes.
-- `@agentic-web-toolkit/model` — providers, hooks, lib helpers.
-- `@agentic-web-toolkit/layout` — header, sidebar, breadcrumbs, app-shell CSS.
-- `@agentic-web-toolkit/content` — markdown view, cards, section index.
-- `@agentic-web-toolkit/controls` — settings, search, dev banner, etc.
-- `@agentic-web-toolkit/chat` (under `features/chat`) — chat surfaces + backends.
-- `@agentic-web-toolkit/reference-web-site` — Vite-only reference site template.
+- `@agentic-toolkit/ui` — shadcn slot, `cn` helper, globals.
+- `@agentic-toolkit/themes` — `ColorModeProvider`, `ThemeStyle`, themes.
+- `@agentic-toolkit/model` — providers, hooks, lib helpers.
+- `@agentic-toolkit/layout` — header, sidebar, breadcrumbs, app-shell CSS.
+- `@agentic-toolkit/content` — markdown view, cards, section index.
+- `@agentic-toolkit/controls` — settings, search, dev banner, etc.
+- `@agentic-toolkit/chat` (under `features/chat`) — chat surfaces + backends.
+- `@agentic-toolkit/reference-web-site` — Vite-only reference site template.
 
 The reference demo site sits at `websites/site/` and consumes the packages
 via `file:` refs (it deliberately lives **outside** the pnpm workspace so

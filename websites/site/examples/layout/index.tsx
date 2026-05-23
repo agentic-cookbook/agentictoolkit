@@ -8,21 +8,21 @@ import {
   RouteProvider,
   type SiteConfig,
   type SiteEntry,
-} from '@agentic-web-toolkit/model'
+} from '@agentic-toolkit/model'
 import {
   AppShell,
   HeaderConnected,
   SidebarConnected,
   BreadcrumbsConnected,
   TableOfContents,
-} from '@agentic-web-toolkit/layout'
+} from '@agentic-toolkit/layout'
 
-import '@agentic-web-toolkit/layout/css/base.css'
-import '@agentic-web-toolkit/layout/css/header.css'
-import '@agentic-web-toolkit/layout/css/sidebar.css'
-import '@agentic-web-toolkit/layout/css/breadcrumbs.css'
-import '@agentic-web-toolkit/layout/css/toc.css'
-import '@agentic-web-toolkit/layout/css/app-shell.css'
+import '@agentic-toolkit/layout/css/base.css'
+import '@agentic-toolkit/layout/css/header.css'
+import '@agentic-toolkit/layout/css/sidebar.css'
+import '@agentic-toolkit/layout/css/breadcrumbs.css'
+import '@agentic-toolkit/layout/css/toc.css'
+import '@agentic-toolkit/layout/css/app-shell.css'
 
 export const meta = { id: 'layout', label: 'Layout' }
 

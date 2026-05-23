@@ -42,7 +42,7 @@ Don't adopt when:
    - **Published packages from GitHub Packages**: external consumer or
      you can't restructure as a workspace. Requires Phase 6 to have
      shipped first; the toolkit isn't on a registry by default.
-2. **Pick the surface area.** Don't add every `@agentic-web-toolkit/*`
+2. **Pick the surface area.** Don't add every `@agentic-toolkit/*`
    package to `dependencies`. Add only what you actually import. The
    typical consumer needs `themes`, `ui`, and one or two of
    `chat`/`controls`/`content`.
@@ -122,7 +122,7 @@ responsible for not re-introducing enabler #1.
    kills the children.
 3. **Don't `&` background long-running build steps from scripts.**
    Detached subprocesses are the same orphan trap by a different name.
-4. **No `transpilePackages: ['@agentic-web-toolkit/*']`** in
+4. **No `transpilePackages: ['@agentic-toolkit/*']`** in
    `next.config.ts`. The packages now ship pre-built ESM with
    directives intact; re-transpiling them not only strips the
    directives but also adds the per-build work that made the orphan

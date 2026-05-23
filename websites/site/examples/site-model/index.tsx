@@ -9,7 +9,7 @@ import {
   useSiteConfig,
   type SiteConfig,
   type SiteEntry,
-} from '@agentic-web-toolkit/model'
+} from '@agentic-toolkit/model'
 
 export const meta = { id: 'site-model', label: 'Site Model' }
 

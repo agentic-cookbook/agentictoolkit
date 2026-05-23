@@ -1,7 +1,7 @@
 'use client'
 
-import { useContent } from '@agentic-web-toolkit/model'
-import { useSiteConfig } from '@agentic-web-toolkit/model'
+import { useContent } from '@agentic-toolkit/model'
+import { useSiteConfig } from '@agentic-toolkit/model'
 import { HomePage } from './HomePage'
 
 export function HomePageConnected() {

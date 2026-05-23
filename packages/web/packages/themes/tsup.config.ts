@@ -18,7 +18,7 @@ export default defineConfig({
   bundle: true,
   splitting: true,
   outExtension: () => ({ js: '.js' }),
-  external: ['react', 'react-dom', 'react/jsx-runtime', '@agentic-web-toolkit/ui'],
+  external: ['react', 'react-dom', 'react/jsx-runtime', '@agentic-toolkit/ui'],
   esbuildPlugins: [
     preserveDirectivesPlugin({
       directives: ['use client', 'use server'],

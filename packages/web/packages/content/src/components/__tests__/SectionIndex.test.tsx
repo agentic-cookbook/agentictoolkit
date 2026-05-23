@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { SectionIndex } from '../SectionIndex'
-import type { SiteEntry } from '@agentic-web-toolkit/model'
+import type { SiteEntry } from '@agentic-toolkit/model'
 
 const mk = (slug: string, title: string): SiteEntry => ({
   slug,

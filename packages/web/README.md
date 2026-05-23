@@ -2,20 +2,20 @@
 
 Shared React + TypeScript component library for Agentic Cookbook family
 sites. Ships as a pnpm monorepo with eight pre-built ESM packages under
-the `@agentic-web-toolkit/*` scope.
+the `@agentic-toolkit/*` scope.
 
 ## Packages
 
 | Package | Description | Depends on |
 |---|---|---|
-| `@agentic-web-toolkit/ui` | shadcn slot; `cn` helper, `useIsomorphicLayoutEffect`, `styles/globals.css` | — |
-| `@agentic-web-toolkit/themes` | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS | `ui` |
-| `@agentic-web-toolkit/model` | Providers, hooks, lib (search, breadcrumbs, nav, lookup) | — |
-| `@agentic-web-toolkit/layout` | CSS bundles (header, sidebar, breadcrumbs, toc, app-shell) | — |
-| `@agentic-web-toolkit/content` | Markdown view, cards, home page, section index | `model` |
-| `@agentic-web-toolkit/controls` | filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner | `model`, `themes` |
-| `@agentic-web-toolkit/chat` | InlineChat, ThreePaneChat, MobileChat, PersonaChat, backends, hooks | — |
-| `@agentic-web-toolkit/reference-web-site` | Vite-only reference site template with its own plugin | `controls`, `model`, `themes` |
+| `@agentic-toolkit/ui` | shadcn slot; `cn` helper, `useIsomorphicLayoutEffect`, `styles/globals.css` | — |
+| `@agentic-toolkit/themes` | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS | `ui` |
+| `@agentic-toolkit/model` | Providers, hooks, lib (search, breadcrumbs, nav, lookup) | — |
+| `@agentic-toolkit/layout` | CSS bundles (header, sidebar, breadcrumbs, toc, app-shell) | — |
+| `@agentic-toolkit/content` | Markdown view, cards, home page, section index | `model` |
+| `@agentic-toolkit/controls` | filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner | `model`, `themes` |
+| `@agentic-toolkit/chat` | InlineChat, ThreePaneChat, MobileChat, PersonaChat, backends, hooks | — |
+| `@agentic-toolkit/reference-web-site` | Vite-only reference site template with its own plugin | `controls`, `model`, `themes` |
 
 Each package ships its own `dist/` with `"use client"` directives preserved,
 type declarations, sourcemaps, and mirrored CSS files. Consumers do **not**
@@ -89,7 +89,7 @@ While iterating on a package and the site together:
 
 ```bash
 # In one shell — package(s) in watch mode
-pnpm --filter '@agentic-web-toolkit/chat...' run dev
+pnpm --filter '@agentic-toolkit/chat...' run dev
 # In another shell — site dev server
 pnpm --filter agentic-web-toolkit-site dev
 ```

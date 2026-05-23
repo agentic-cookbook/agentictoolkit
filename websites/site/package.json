@@ -9,13 +9,13 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-web-toolkit/chat": "file:../../packages/web/packages/features/chat",
-    "@agentic-web-toolkit/content": "file:../../packages/web/packages/content",
-    "@agentic-web-toolkit/controls": "file:../../packages/web/packages/controls",
-    "@agentic-web-toolkit/layout": "file:../../packages/web/packages/layout",
-    "@agentic-web-toolkit/model": "file:../../packages/web/packages/model",
-    "@agentic-web-toolkit/themes": "file:../../packages/web/packages/themes",
-    "@agentic-web-toolkit/ui": "file:../../packages/web/packages/ui",
+    "@agentic-toolkit/chat": "file:../../packages/web/packages/features/chat",
+    "@agentic-toolkit/content": "file:../../packages/web/packages/content",
+    "@agentic-toolkit/controls": "file:../../packages/web/packages/controls",
+    "@agentic-toolkit/layout": "file:../../packages/web/packages/layout",
+    "@agentic-toolkit/model": "file:../../packages/web/packages/model",
+    "@agentic-toolkit/themes": "file:../../packages/web/packages/themes",
+    "@agentic-toolkit/ui": "file:../../packages/web/packages/ui",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

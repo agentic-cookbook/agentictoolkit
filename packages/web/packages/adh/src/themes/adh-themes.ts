@@ -1,4 +1,4 @@
-import type { ThemeKey } from '@agentic-web-toolkit/themes/manifest'
+import type { ThemeKey } from '@agentic-toolkit/themes/manifest'
 
 export const ADH_THEME_COOKIE = 'adh-theme'
 

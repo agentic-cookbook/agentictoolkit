@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { HeroConfig, NavSectionConfig, ExternalLink } from '@agentic-web-toolkit/model'
+import type { HeroConfig, NavSectionConfig, ExternalLink } from '@agentic-toolkit/model'
 import { SectionCard } from './SectionCard'
 
 export type HomePageSectionEntry = {

@@ -24,19 +24,19 @@ This doc is the *historical* and *architectural* record.
 
 ## What the toolkit ships now
 
-Eight packages under the `@agentic-web-toolkit/*` scope, each built to
+Eight packages under the `@agentic-toolkit/*` scope, each built to
 its own `dist/` and published-or-federated via pnpm workspaces:
 
 | Package                                  | Depends on                | Notes                                            |
 | ---------------------------------------- | ------------------------- | ------------------------------------------------ |
-| `@agentic-web-toolkit/ui`                | —                         | shadcn slot; `cn`, `useIsomorphicLayoutEffect`, `styles/globals.css` |
-| `@agentic-web-toolkit/themes`            | `ui`                      | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS |
-| `@agentic-web-toolkit/model`             | —                         | Providers, hooks, search/breadcrumbs/nav/lookup  |
-| `@agentic-web-toolkit/layout`            | —                         | Layout CSS bundles                               |
-| `@agentic-web-toolkit/content`           | `model`                   | Markdown view, cards, home, section index        |
-| `@agentic-web-toolkit/controls`          | `model`, `themes`         | One package, per-control sub-exports             |
-| `@agentic-web-toolkit/chat`              | —                         | InlineChat / ThreePaneChat / MobileChat / PersonaChat |
-| `@agentic-web-toolkit/reference-web-site`| `controls`, `model`, `themes` | Vite-only template + plugin                  |
+| `@agentic-toolkit/ui`                | —                         | shadcn slot; `cn`, `useIsomorphicLayoutEffect`, `styles/globals.css` |
+| `@agentic-toolkit/themes`            | `ui`                      | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS |
+| `@agentic-toolkit/model`             | —                         | Providers, hooks, search/breadcrumbs/nav/lookup  |
+| `@agentic-toolkit/layout`            | —                         | Layout CSS bundles                               |
+| `@agentic-toolkit/content`           | `model`                   | Markdown view, cards, home, section index        |
+| `@agentic-toolkit/controls`          | `model`, `themes`         | One package, per-control sub-exports             |
+| `@agentic-toolkit/chat`              | —                         | InlineChat / ThreePaneChat / MobileChat / PersonaChat |
+| `@agentic-toolkit/reference-web-site`| `controls`, `model`, `themes` | Vite-only template + plugin                  |
 
 Plus the examples site at `site/` — **Next.js 15 App Router**, static
 export, deployed to GitHub Pages.
@@ -64,7 +64,7 @@ Two problems forced the same conversion:
 
 Consumers still git-submodule the toolkit. The *only* consumer-side
 change is adding `external/agentic-web-toolkit/packages/**` to
-`pnpm-workspace.yaml` and switching deps to `"@agentic-web-toolkit/<pkg>": "workspace:*"`.
+`pnpm-workspace.yaml` and switching deps to `"@agentic-toolkit/<pkg>": "workspace:*"`.
 Version lock is still the submodule SHA. The `**` glob covers the
 nested groups (`packages/features/*`,
 `packages/site-templates/*`); pnpm filters by `package.json` presence
@@ -75,7 +75,7 @@ so it's safe.
 Splitting controls per-package would have added ceremony without
 buying anything. Cross-control sharing (the appearance-mode-toggle ↔
 theme bus) is non-trivial. Each control gets a barrel sub-export
-(`@agentic-web-toolkit/controls/filtered-list`) so consumers still
+(`@agentic-toolkit/controls/filtered-list`) so consumers still
 only pay for what they import.
 
 ### `"use client"` directive preservation
@@ -101,7 +101,7 @@ enforcing this: see `feedback_packages_dependency_boundary`.
 
 Consumers point Tailwind v4's `@source` directive at
 `external/agentic-web-toolkit/packages/*/dist/**/*.{js,d.ts}` (or
-`node_modules/@agentic-web-toolkit/*/dist/**` for published consumers).
+`node_modules/@agentic-toolkit/*/dist/**` for published consumers).
 The JIT sees what the library's *compiled* JSX actually renders.
 
 ### No `transpilePackages` in Next.js

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import { Sidebar } from '../Sidebar'
-import type { NavNode } from '@agentic-web-toolkit/model'
+import type { NavNode } from '@agentic-toolkit/model'
 
 const tree: NavNode[] = [
   {

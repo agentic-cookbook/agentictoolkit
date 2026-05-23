@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Header from '../components/layout/Header'
 import { SiteConfigProvider } from '../contexts/SiteConfigContext'
-import { ColorModeProvider } from '@agentic-web-toolkit/themes/colorMode'
+import { ColorModeProvider } from '@agentic-toolkit/themes/colorMode'
 import type { SiteConfig } from '../types'
 
 function makeConfig(overrides: Partial<SiteConfig> = {}): SiteConfig {

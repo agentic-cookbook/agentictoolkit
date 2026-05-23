@@ -1,10 +1,10 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useContent } from '@agentic-web-toolkit/model'
-import { useSiteConfig } from '@agentic-web-toolkit/model'
-import { useCurrentRoute } from '@agentic-web-toolkit/model'
-import { useSearchState } from '@agentic-web-toolkit/model'
+import { useContent } from '@agentic-toolkit/model'
+import { useSiteConfig } from '@agentic-toolkit/model'
+import { useCurrentRoute } from '@agentic-toolkit/model'
+import { useSearchState } from '@agentic-toolkit/model'
 import { SearchDialog, type SearchDialogProps } from './SearchDialog'
 
 export type SearchDialogConnectedProps = Omit<

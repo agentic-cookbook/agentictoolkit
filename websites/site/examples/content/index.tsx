@@ -8,17 +8,17 @@ import {
   RouteProvider,
   type SiteConfig,
   type SiteEntry,
-} from '@agentic-web-toolkit/model'
+} from '@agentic-toolkit/model'
 import {
   HomePageConnected,
   SectionIndexConnected,
   MarkdownView,
-} from '@agentic-web-toolkit/content'
+} from '@agentic-toolkit/content'
 
-import '@agentic-web-toolkit/content/css/cards.css'
-import '@agentic-web-toolkit/content/css/home-page.css'
-import '@agentic-web-toolkit/content/css/section-index.css'
-import '@agentic-web-toolkit/content/css/markdown-view.css'
+import '@agentic-toolkit/content/css/cards.css'
+import '@agentic-toolkit/content/css/home-page.css'
+import '@agentic-toolkit/content/css/section-index.css'
+import '@agentic-toolkit/content/css/markdown-view.css'
 
 export const meta = { id: 'content', label: 'Content' }
 

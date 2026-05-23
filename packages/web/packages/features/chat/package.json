@@ -1,5 +1,5 @@
 {
-  "name": "@agentic-web-toolkit/chat",
+  "name": "@agentic-toolkit/chat",
   "version": "0.1.0",
   "description": "React chat component library \u2014 InlineChat, ThreePaneChat, MobileChat, PersonaChat with pluggable backends.",
   "license": "UNLICENSED",

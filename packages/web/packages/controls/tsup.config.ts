@@ -56,7 +56,7 @@ export default defineConfig({
     'react',
     'react-dom',
     'react/jsx-runtime',
-    '@agentic-web-toolkit/model',
+    '@agentic-toolkit/model',
     'shiki',
   ],
   esbuildPlugins: [

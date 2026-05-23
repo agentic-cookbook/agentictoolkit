@@ -1,5 +1,5 @@
 {
-  "name": "@agentic-web-toolkit/content",
+  "name": "@agentic-toolkit/content",
   "version": "0.1.0",
   "description": "Markdown view, home page, section index, and entry/section cards for agentic-web-toolkit.",
   "license": "UNLICENSED",
@@ -32,7 +32,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-web-toolkit/model": "workspace:*"
+    "@agentic-toolkit/model": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0",

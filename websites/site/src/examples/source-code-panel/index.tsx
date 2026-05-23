@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { ExamplePanel } from '../../ExamplePanel'
-import { SourceCodePanel } from '@agentic-web-toolkit/controls/source-code-panel'
-import '@agentic-web-toolkit/controls/source-code-panel/styles.css'
+import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
+import '@agentic-toolkit/controls/source-code-panel/styles.css'
 
 export const meta = { id: 'source-code-panel', label: 'Source Code Panel' }
 
@@ -143,8 +143,8 @@ export default function SourceCodePanelExample() {
           <SourceCodePanel
             filename="usage.tsx"
             lang="tsx"
-            code={`import { SourceCodePanel } from '@agentic-web-toolkit/controls/source-code-panel'
-import '@agentic-web-toolkit/controls/source-code-panel/styles.css'
+            code={`import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
+import '@agentic-toolkit/controls/source-code-panel/styles.css'
 
 <SourceCodePanel
   filename="example.tsx"
