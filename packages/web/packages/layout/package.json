@@ -26,7 +26,7 @@
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
-    "build:css": "node ../../packaging/copy-css.mjs",
+    "build:css": "node ../../copy-css.mjs",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo",
     "lint": "tsc --noEmit"

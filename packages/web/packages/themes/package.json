@@ -1,6 +1,6 @@
 {
   "name": "@agentic-web-toolkit/themes",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "Theme manifest, ThemeStyle component, and ColorModeProvider for agentic-web-toolkit.",
   "license": "UNLICENSED",
   "type": "module",
@@ -31,7 +31,7 @@
     "build:data": "node scripts/build-theme-data.mjs",
     "build": "pnpm run build:data && tsup && pnpm run build:types && pnpm run build:css",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
-    "build:css": "node ../../packaging/copy-css.mjs",
+    "build:css": "node ../../copy-css.mjs",
     "dev": "pnpm run build:data && tsup --watch",
     "clean": "rm -rf dist .turbo src/theme-data.ts",
     "lint": "pnpm run build:data && tsc --noEmit"

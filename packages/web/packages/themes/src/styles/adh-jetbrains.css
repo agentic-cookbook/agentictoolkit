@@ -1,0 +1,111 @@
+/* ADH · JetBrains — ADH palette with JetBrains Mono for sans/serif/mono. */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
+
+:root {
+  --color-surface: #0c0c0f;
+  --color-surface-raised: #14141a;
+  --color-surface-hover: #1c1c24;
+  --color-border: #2a2a35;
+  --color-border-subtle: #1e1e28;
+  --color-border-strong: #3d3d50;
+
+  --color-text-primary: #e8e6e3;
+  --color-text-secondary: #8a8a9a;
+  --color-text-dim: #5a5a6a;
+
+  --color-accent: #c4a35a;
+  --color-accent-bright: #d9bb74;
+  --color-accent-dim: rgba(196, 163, 90, 0.15);
+  --color-success: #5cb270;
+  --color-error: #d45454;
+  --color-info: #6b8afd;
+
+  --pc-surface: rgba(20, 20, 26, 0.94);
+  --pc-persona-bg: rgba(196, 163, 90, 0.12);
+  --pc-persona-border: rgba(196, 163, 90, 0.25);
+  --pc-persona-text: #e8e6e3;
+  --pc-persona-name: #c4a35a;
+  --pc-user-bg: rgba(255, 255, 255, 0.06);
+  --pc-user-border: #2a2a36;
+  --pc-user-text: #e8e6e3;
+  --pc-user-name: #8a8a9a;
+  --pc-input-bg: #0c0c0f;
+  --pc-input-border: #2a2a36;
+  --pc-input-focus: #c4a35a;
+  --pc-send-bg: #c4a35a;
+  --pc-send-text: #0c0c0f;
+  --pc-send-bg-hover: #d9bb74;
+  --pc-time-color: #5a5a6a;
+
+  --scp-shiki-theme: 'github-dark';
+
+  --font-sans: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'JetBrains Mono', ui-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: var(--font-serif);
+  --pc-font: var(--font-sans);
+  --pc-radius: 6px;
+
+  --adh-card-radius: 12px;
+
+  /* Header / footer identity — referenced by @agentic-web-toolkit/adh
+   * components. Variants override the underlying --font-* and the
+   * header/footer typography follows automatically. */
+  --adh-container-max-width: 72rem;
+
+  --adh-header-title-font: var(--font-serif);
+  --adh-header-title-style: italic;
+  --adh-header-title-color: var(--color-accent);
+  --adh-header-title-color-hover: var(--color-accent-bright);
+  --adh-header-title-size: 1.15rem;
+  --adh-header-title-weight: 400;
+
+  --adh-header-nav-font: var(--font-mono);
+  --adh-header-nav-size: 0.875rem;
+  --adh-header-nav-letter-spacing: 0.04em;
+  --adh-header-nav-gap: 1.25rem;
+  --adh-header-nav-link-color: var(--color-text-secondary);
+  --adh-header-nav-link-hover-color: var(--color-accent);
+  --adh-header-nav-link-active-color: var(--color-accent);
+
+
+  --adh-footer-font: var(--font-mono);
+  --adh-footer-size: 0.7rem;
+  --adh-footer-color: #ffffff;
+  --adh-footer-link-color: #ffffff;
+  --adh-footer-link-color-hover: var(--color-accent);
+  --adh-footer-separator: '·';
+
+  /* Mirror canonical tokens onto --color-apt-* so consumers using
+   * the legacy Tailwind v4 @theme apt-* palette (e.g. websites/app)
+   * stay themed when an ADH theme is active. */
+  --color-apt-bg: var(--color-surface);
+  --color-apt-surface: var(--color-surface-raised);
+  --color-apt-surface-2: var(--color-surface-hover);
+  --color-apt-input: var(--color-surface-hover);
+  --color-apt-border: var(--color-border);
+  --color-apt-border-strong: var(--color-border-strong);
+  --color-apt-text: var(--color-text-primary);
+  --color-apt-text-muted: var(--color-text-secondary);
+  --color-apt-text-dim: var(--color-text-dim);
+  --color-apt-gold: var(--color-accent);
+  --color-apt-gold-bright: var(--color-accent-bright);
+  --color-apt-blue: var(--color-info);
+  --color-apt-green: var(--color-success);
+  --color-apt-red: var(--color-error);
+}
+
+:where(body) {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+}
+
+::selection {
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+}
