@@ -1,6 +1,6 @@
 {
   "name": "@agentic-web-toolkit/themes",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Theme manifest, ThemeStyle component, and ColorModeProvider for agentic-web-toolkit.",
   "license": "UNLICENSED",
   "type": "module",

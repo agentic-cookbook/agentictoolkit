@@ -62,7 +62,7 @@
   --adh-header-title-weight: 400;
 
   --adh-header-nav-font: var(--font-mono);
-  --adh-header-nav-size: 0.75rem;
+  --adh-header-nav-size: 0.875rem;
   --adh-header-nav-letter-spacing: 0.04em;
   --adh-header-nav-gap: 1.25rem;
   --adh-header-nav-link-color: var(--color-text-secondary);
@@ -72,8 +72,8 @@
 
   --adh-footer-font: var(--font-mono);
   --adh-footer-size: 0.7rem;
-  --adh-footer-color: var(--color-text-dim);
-  --adh-footer-link-color: var(--color-text-dim);
+  --adh-footer-color: #ffffff;
+  --adh-footer-link-color: #ffffff;
   --adh-footer-link-color-hover: var(--color-accent);
   --adh-footer-separator: '·';
 
