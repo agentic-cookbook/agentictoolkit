@@ -5,6 +5,7 @@ packages:
   - './packages/layout'
   - './packages/content'
   - './packages/controls'
+  - './packages/auth'
   - './packages/adh'
   - './packages/features/*'
   - './packages/site-templates/reference-web-site'

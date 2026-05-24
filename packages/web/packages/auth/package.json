@@ -1,0 +1,56 @@
+{
+  "name": "@agentic-toolkit/auth",
+  "version": "0.1.0",
+  "description": "Shared authentication for Agentic Developer Hub sites — capabilities-based AuthProvider, Bearer HTTP client with refresh, and a shared LoginCard.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./styles.css": "./dist/styles/auth.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "node ../../copy-css.mjs",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "next": ">=15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

@@ -16,8 +16,6 @@
 
 .adh-header__container {
   width: 100%;
-  max-width: var(--adh-container-max-width, 72rem);
-  margin: 0 auto;
   padding: 0 1.5rem;
   height: 3.5rem;
   display: flex;
@@ -82,8 +80,6 @@
 
 .adh-footer__container {
   width: 100%;
-  max-width: var(--adh-container-max-width, 72rem);
-  margin: 0 auto;
   padding: 0.75rem 1.5rem;
   display: flex;
   flex-wrap: wrap;
