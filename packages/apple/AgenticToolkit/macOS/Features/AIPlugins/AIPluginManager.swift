@@ -134,13 +134,24 @@ public final class AIPluginManager {
 
     // MARK: - Loading
 
-    public func loadAllPlugins() throws -> [any AIPlugin] {
-        var plugins: [any AIPlugin] = []
-        for availablePlugin in availablePlugins {
-            let plugin = try loadPlugin(identifier: availablePlugin.identifier)
-            plugins.append(plugin)
+    /// Loads every discovered plugin. Resilient: a failure loading one plugin is
+    /// logged and recorded in `failures` without aborting the others.
+    public func loadAllPlugins() -> PluginLoadResult {
+        var loaded: [any AIPlugin] = []
+        var failures: [PluginLoadFailure] = []
+        for info in availablePlugins {
+            do {
+                loaded.append(try loadPlugin(identifier: info.identifier))
+            } catch {
+                let message = error.localizedDescription
+                // swiftlint:disable:next line_length
+                logger.error("Failed to load plugin '\(info.displayName, privacy: .public)' (\(info.identifier, privacy: .public)): \(message, privacy: .public)")
+                failures.append(
+                    PluginLoadFailure(identifier: info.identifier, displayName: info.displayName, message: message)
+                )
+            }
         }
-        return plugins
+        return PluginLoadResult(loaded: loaded, failures: failures)
     }
 
     /// Loads a plugin's binary and instantiates it. Returns a cached instance if already loaded.
@@ -262,6 +273,21 @@ public final class AIPluginManager {
 
         return AIPluginContext(logger: pluginLogger, dataDirectory: dataDir)
     }
+}
+
+// MARK: - Load result
+
+/// One plugin's load failure: identity + a human-readable reason.
+public struct PluginLoadFailure: Sendable {
+    public let identifier: String
+    public let displayName: String
+    public let message: String
+}
+
+/// Outcome of loading every discovered plugin: what loaded, and what didn't.
+public struct PluginLoadResult {
+    public let loaded: [any AIPlugin]
+    public let failures: [PluginLoadFailure]
 }
 
 // MARK: - Internal record
