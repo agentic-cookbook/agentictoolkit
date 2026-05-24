@@ -1,0 +1,144 @@
+/* Shared login card. Themed via CSS custom properties; defaults match the
+ * gold-on-dark palette both ADH sites use today. Consumers override any
+ * --auth-* variable (e.g. --auth-heading-font) in their globals. */
+.auth-card {
+  --auth-card-bg: #14141a;
+  --auth-card-border: #2a2a36;
+  --auth-text: #e8e6e3;
+  --auth-text-muted: #8a8a9a;
+  --auth-text-dim: #5a5a6a;
+  --auth-accent: #c4a35a;
+  --auth-accent-contrast: #0c0c0f;
+  --auth-input-bg: #1c1c24;
+  --auth-input-border: #2a2a36;
+  --auth-error: #d45454;
+  --auth-radius: 1rem;
+  --auth-heading-font: inherit;
+
+  width: 100%;
+  max-width: 28rem;
+  padding: 2rem;
+  border-radius: var(--auth-radius);
+  background: var(--auth-card-bg);
+  border: 1px solid var(--auth-card-border);
+  color: var(--auth-text);
+  box-sizing: border-box;
+}
+
+.auth-card__heading {
+  margin: 0 0 0.5rem;
+  text-align: center;
+  font-family: var(--auth-heading-font);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--auth-text);
+}
+
+.auth-card__subhead {
+  margin: 0 0 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--auth-text-muted);
+}
+
+.auth-card__providers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-card__provider-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: var(--auth-accent);
+  color: var(--auth-accent-contrast);
+  transition: opacity 0.15s ease;
+}
+.auth-card__provider-btn:hover { opacity: 0.9; }
+
+.auth-card__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+.auth-card__divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--auth-card-border);
+}
+.auth-card__divider-text {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--auth-text-dim);
+}
+
+.auth-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-card__error {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  background: rgba(212, 84, 84, 0.1);
+  border: 1px solid rgba(212, 84, 84, 0.3);
+  color: var(--auth-error);
+}
+
+.auth-card__field { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.auth-card__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--auth-text-muted);
+}
+
+.auth-card__input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  outline: none;
+  background: var(--auth-input-bg);
+  border: 1px solid var(--auth-input-border);
+  color: var(--auth-text);
+  box-sizing: border-box;
+}
+.auth-card__input:focus { border-color: var(--auth-accent); }
+
+.auth-card__submit {
+  width: 100%;
+  padding: 0.625rem 0;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--auth-accent);
+  border: 1px solid var(--auth-accent);
+  transition: opacity 0.15s ease;
+}
+.auth-card__submit:hover { opacity: 0.9; }
+.auth-card__submit:disabled { opacity: 0.5; cursor: default; }
+
+.auth-card__signup {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--auth-text-dim);
+}
+.auth-card__signup-link { color: var(--auth-accent); text-decoration: none; }
+.auth-card__signup-link:hover { opacity: 0.8; }
