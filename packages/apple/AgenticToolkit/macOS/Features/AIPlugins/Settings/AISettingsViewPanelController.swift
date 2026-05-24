@@ -22,16 +22,18 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        do {
-            for plugin in try pluginManager.loadAllPlugins() {
-                guard let settingsPanel = plugin.settingsPanelViewController() else {
-                    continue
-                }
+        let result = pluginManager.loadAllPlugins()
 
-                addPanel(settingsPanel)
+        for plugin in result.loaded {
+            guard let settingsPanel = plugin.settingsPanelViewController() else {
+                continue
             }
-        } catch {
-            // todo log error
+
+            addPanel(settingsPanel)
+        }
+
+        if !result.failures.isEmpty {
+            addPanel(PluginLoadFailuresPanel(failures: result.failures))
         }
     }
 }

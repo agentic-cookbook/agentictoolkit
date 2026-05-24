@@ -137,4 +137,75 @@ struct AIPluginManagerTests {
 
         #expect(manager.availablePlugins.isEmpty)
     }
+
+    // MARK: - Resilient loading
+
+    /// Writes a `.aiplugin` bundle with a valid Info.plist but no executable —
+    /// it passes discovery yet fails to load (no binary / principal class),
+    /// which is exactly the failure path `loadAllPlugins` must tolerate.
+    private func makeUnloadableBundle(in dir: URL, id: String, name: String) throws {
+        let contentsDir = dir
+            .appendingPathComponent("\(name).aiplugin")
+            .appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contentsDir, withIntermediateDirectories: true)
+
+        let plist: [String: Any] = [
+            "AgenticPluginIdentifier": id,
+            "AgenticPluginDisplayName": name,
+            "AgenticPluginVersion": "1.0.0",
+            "AgenticSDKVersion": AIPluginInfoRegistry.currentSDKVersion,
+            "NSPrincipalClass": "Nonexistent"
+        ]
+        let plistData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try plistData.write(to: contentsDir.appendingPathComponent("Info.plist"))
+    }
+
+    @Test("loadAllPlugins reports a failure without throwing")
+    func loadAllReportsFailure() throws {
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("agentic-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmpDir) }
+
+        try makeUnloadableBundle(in: tmpDir, id: "com.test.broken", name: "Broken")
+
+        let manager = AIPluginManager(searchPaths: [tmpDir])
+        manager.discoverPlugins()
+        #expect(manager.availablePlugins.count == 1)
+
+        let result = manager.loadAllPlugins()
+        #expect(result.loaded.isEmpty)
+        #expect(result.failures.count == 1)
+        #expect(result.failures.first?.identifier == "com.test.broken")
+    }
+
+    @Test("loadAllPlugins continues past a failing plugin")
+    func loadAllContinuesPastFailure() throws {
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("agentic-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmpDir) }
+
+        try makeUnloadableBundle(in: tmpDir, id: "com.test.broken1", name: "BrokenOne")
+        try makeUnloadableBundle(in: tmpDir, id: "com.test.broken2", name: "BrokenTwo")
+
+        let manager = AIPluginManager(searchPaths: [tmpDir])
+        manager.discoverPlugins()
+        #expect(manager.availablePlugins.count == 2)
+
+        let result = manager.loadAllPlugins()
+        #expect(result.loaded.isEmpty)
+        // Both failures present proves the loop did not abort after the first.
+        #expect(result.failures.count == 2)
+    }
+
+    @Test("loadAllPlugins returns an empty result when nothing is discovered")
+    func loadAllEmpty() {
+        let manager = AIPluginManager(searchPaths: [])
+        manager.discoverPlugins()
+
+        let result = manager.loadAllPlugins()
+        #expect(result.loaded.isEmpty)
+        #expect(result.failures.isEmpty)
+    }
 }
