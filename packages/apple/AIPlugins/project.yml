@@ -190,6 +190,28 @@ targets:
           mkdir -p "$HOME/.agenticplugins"
           /usr/bin/rsync -a --delete "$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/" "$HOME/.agenticplugins/$FULL_PRODUCT_NAME/"
 
+  # Unit tests for the plugins' request-building and stream-decoding logic.
+  # The plugin sources are compiled directly into this bundle (rather than
+  # loading the built .aiplugin bundles) so the tests exercise the real types
+  # deterministically; the load/cast path is verified separately by the host
+  # app's --verify-plugins run.
+  AIPluginsTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - path: ClaudeAPI/ClaudeAPIPlugin.swift
+      - path: ClaudeLocal/ClaudeLocalPlugin.swift
+      - path: Google/GooglePlugin.swift
+      - path: OpenAI/OpenAIPlugin.swift
+      - path: OpenAICompatible/OpenAICompatiblePlugin.swift
+      - path: Tests
+    dependencies:
+      - target: AgenticToolkit/AIPluginKit
+        embed: true
+        codeSign: true
+
 aggregateTargets:
   AIPluginsMacOSAll:
     targets:
@@ -208,8 +230,13 @@ schemes:
         Google: all
         OpenAI: all
         OpenAICompatible: all
+        AIPluginsTests: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - AIPluginsTests
     profile:
       config: Release
     analyze:

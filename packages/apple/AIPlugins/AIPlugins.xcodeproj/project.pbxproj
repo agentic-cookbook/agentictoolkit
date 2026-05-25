@@ -28,18 +28,27 @@
 
 /* Begin PBXBuildFile section */
 		1339A42FE1E9DEC27CC621A4 /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
+		27C753F2AC1AE55808FCA62E /* OpenAICompatiblePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */; };
 		2C143887F7DCC6DF93CB7954 /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
 		2FCD35BD2AF65928D2853B08 /* descriptor.json in Resources */ = {isa = PBXBuildFile; fileRef = 01AFC2D039B840CE140AF9AB /* descriptor.json */; };
+		38272E4A8383A25809FCAA2F /* GooglePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E7F00486CCEB3CFB46EB96 /* GooglePlugin.swift */; };
 		3DBAA19627ACFD5165E1AADD /* descriptor.json in Resources */ = {isa = PBXBuildFile; fileRef = D8FDDE4F8160D84E641D3F01 /* descriptor.json */; };
+		4032C08C69EF2791523A7154 /* ClaudeAPIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF0E2C70955B3DCFD52F42E /* ClaudeAPIPlugin.swift */; };
 		4055E75B95ABB98D4EBDA069 /* OpenAICompatiblePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */; };
+		511A9EC6FA1F2EC6B97A1DB1 /* OpenAIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE5EC26A0AB7F543D9FE01E /* OpenAIPlugin.swift */; };
 		66FA220B50D2F7703ED1706C /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
 		6CECE5D45CEA51315CE3980C /* GooglePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E7F00486CCEB3CFB46EB96 /* GooglePlugin.swift */; };
 		893C303BE350EA5A2F1BE0EE /* ClaudeLocalPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE3B7CA4B2495D6C42AF319 /* ClaudeLocalPlugin.swift */; };
+		8DB12AE86FD10EFFF02AFE9E /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
+		8EF26FE8DB45DCBDA8542325 /* ClaudeLocalPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE3B7CA4B2495D6C42AF319 /* ClaudeLocalPlugin.swift */; };
 		9099943A0E91DF336EF78D5B /* descriptor.json in Resources */ = {isa = PBXBuildFile; fileRef = 58CF6810B000D92EDF5D3A84 /* descriptor.json */; };
 		9BA2C6A8DA5B0B8B9E097FAE /* descriptor.json in Resources */ = {isa = PBXBuildFile; fileRef = 00B4FC78444596592AD95074 /* descriptor.json */; };
 		A4C79FED4C5E26CE247C2305 /* ClaudeAPIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF0E2C70955B3DCFD52F42E /* ClaudeAPIPlugin.swift */; };
 		A9FC14B3250E4A7510095AE9 /* OpenAIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE5EC26A0AB7F543D9FE01E /* OpenAIPlugin.swift */; };
 		ACAF73FF162386FE0466A7CA /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
+		C337ABC8390ED4F4784946AC /* PluginDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9885A563B070C0B3B9723366 /* PluginDecoderTests.swift */; };
+		CD23C78DE42F30E9CD22067E /* AIPluginKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D846F9071F9339135BBBCE9E /* PluginRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0B2564A8AAEE7E7080F2FC /* PluginRequestTests.swift */; };
 		DE29B3565BABDE764F8BAE93 /* descriptor.json in Resources */ = {isa = PBXBuildFile; fileRef = 915248E9589DCCCD38E05A42 /* descriptor.json */; };
 		F97159B952D401A44C25B4D3 /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
 /* End PBXBuildFile section */
@@ -115,6 +124,13 @@
 			remoteGlobalIDString = 4902207C4C9CDF009D44C9FA;
 			remoteInfo = OpenAICompatible;
 		};
+		EF313B1E0F9EC0DC2BB3EAED /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB6EE58E62C50776B8A0372B /* AgenticToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = 75B33B7BC0E7B443EFB94243;
+			remoteInfo = AIPluginKit;
+		};
 		F91AAC41B8E56FF85764CCD9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DD383D4A13970DC0F38EC011 /* Project object */;
@@ -124,9 +140,25 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		7B194D32894074886A8D9506 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				CD23C78DE42F30E9CD22067E /* AIPluginKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		00B4FC78444596592AD95074 /* descriptor.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = descriptor.json; sourceTree = "<group>"; };
 		01AFC2D039B840CE140AF9AB /* descriptor.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = descriptor.json; sourceTree = "<group>"; };
+		128DE2EF37380B2620427ABB /* AIPluginsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPluginsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1C0B2564A8AAEE7E7080F2FC /* PluginRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginRequestTests.swift; sourceTree = "<group>"; };
 		58CF6810B000D92EDF5D3A84 /* descriptor.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = descriptor.json; sourceTree = "<group>"; };
 		79563BD36327321665696A42 /* ClaudeLocal.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeLocal.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F7CEFDBC7B0E9FF507E8015 /* OpenAI.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAI.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -134,6 +166,7 @@
 		8CE3B7CA4B2495D6C42AF319 /* ClaudeLocalPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLocalPlugin.swift; sourceTree = "<group>"; };
 		8CE5EC26A0AB7F543D9FE01E /* OpenAIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIPlugin.swift; sourceTree = "<group>"; };
 		915248E9589DCCCD38E05A42 /* descriptor.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = descriptor.json; sourceTree = "<group>"; };
+		9885A563B070C0B3B9723366 /* PluginDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginDecoderTests.swift; sourceTree = "<group>"; };
 		AB6EE58E62C50776B8A0372B /* AgenticToolkit */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AgenticToolkit; path = ../AgenticToolkit/AgenticToolkit.xcodeproj; sourceTree = "<group>"; };
 		AE0AF1BEA1B1871B876D693A /* Google.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Google.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatiblePlugin.swift; sourceTree = "<group>"; };
@@ -144,6 +177,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7627131224B7D26F8D1B9710 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8DB12AE86FD10EFFF02AFE9E /* AIPluginKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A485582FFBCEF05D094E364A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -187,6 +228,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		079A00D2A2D0F1E3A0AC19E2 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				9885A563B070C0B3B9723366 /* PluginDecoderTests.swift */,
+				1C0B2564A8AAEE7E7080F2FC /* PluginRequestTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		3013958099BFCD9E9487936E = {
 			isa = PBXGroup;
 			children = (
@@ -195,6 +245,7 @@
 				9E67D7008AE28148248B689F /* Google */,
 				D2138CB62BB44E61B98DD24C /* OpenAI */,
 				FE96172D919F63BB17190BCD /* OpenAICompatible */,
+				079A00D2A2D0F1E3A0AC19E2 /* Tests */,
 				512156939C8E6A387DA6BA98 /* Products */,
 				8F29C301737460E330F4AAEA /* Projects */,
 			);
@@ -203,6 +254,7 @@
 		512156939C8E6A387DA6BA98 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				128DE2EF37380B2620427ABB /* AIPluginsTests.xctest */,
 				8A6A612856009C2E5E21A3C2 /* ClaudeAPI.bundle */,
 				79563BD36327321665696A42 /* ClaudeLocal.bundle */,
 				AE0AF1BEA1B1871B876D693A /* Google.bundle */,
@@ -276,6 +328,27 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		3B530741512CAB2E3611F8BD /* AIPluginsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9DB6D316E4D618A31FDDD67D /* Build configuration list for PBXNativeTarget "AIPluginsTests" */;
+			buildPhases = (
+				8FC659D576D8E2680576DC21 /* SwiftLint */,
+				4DEDB0550F83D701B08B0B12 /* Sources */,
+				7627131224B7D26F8D1B9710 /* Frameworks */,
+				7B194D32894074886A8D9506 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A28ADE575824CB6189BBC6F6 /* PBXTargetDependency */,
+			);
+			name = AIPluginsTests;
+			packageProductDependencies = (
+			);
+			productName = AIPluginsTests;
+			productReference = 128DE2EF37380B2620427ABB /* AIPluginsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		40E8B4B9D4D13B107306FAD1 /* OpenAI */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D87F537587DE84EC313B093E /* Build configuration list for PBXNativeTarget "OpenAI" */;
@@ -418,6 +491,7 @@
 			projectRoot = "";
 			targets = (
 				0B633CF7EA0D73DBF4070B3D /* AIPluginsMacOSAll */,
+				3B530741512CAB2E3611F8BD /* AIPluginsTests */,
 				78D0E6AA9542822FD01209E4 /* ClaudeAPI */,
 				69B12492E5D241F6EF3DAC75 /* ClaudeLocal */,
 				BA37AF4B2F16BE7AB23931CA /* Google */,
@@ -576,6 +650,25 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ \"$(uname -m)\" == \"arm64\" ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet --strict\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
 		};
+		8FC659D576D8E2680576DC21 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [[ \"$(uname -m)\" == \"arm64\" ]]; then\n  export PATH=\"/opt/homebrew/bin:$PATH\"\nfi\nif which swiftlint >/dev/null; then\n  swiftlint lint --quiet --strict\nelse\n  echo \"warning: SwiftLint not installed; brew install swiftlint to enable\"\nfi\n";
+		};
 		B7811E083E81C37EE2134CFF /* Install to ~/.agenticplugins */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -682,6 +775,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4DEDB0550F83D701B08B0B12 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4032C08C69EF2791523A7154 /* ClaudeAPIPlugin.swift in Sources */,
+				8EF26FE8DB45DCBDA8542325 /* ClaudeLocalPlugin.swift in Sources */,
+				38272E4A8383A25809FCAA2F /* GooglePlugin.swift in Sources */,
+				27C753F2AC1AE55808FCA62E /* OpenAICompatiblePlugin.swift in Sources */,
+				511A9EC6FA1F2EC6B97A1DB1 /* OpenAIPlugin.swift in Sources */,
+				C337ABC8390ED4F4784946AC /* PluginDecoderTests.swift in Sources */,
+				D846F9071F9339135BBBCE9E /* PluginRequestTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		500D95DB61344EC1088DBD06 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -741,6 +848,11 @@
 			isa = PBXTargetDependency;
 			name = AIPluginKit;
 			targetProxy = 5AB27CE80D96D1260DE773B1 /* PBXContainerItemProxy */;
+		};
+		A28ADE575824CB6189BBC6F6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AIPluginKit;
+			targetProxy = EF313B1E0F9EC0DC2BB3EAED /* PBXContainerItemProxy */;
 		};
 		BC846C53425711A4BF06F2AF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -862,6 +974,21 @@
 			};
 			name = Debug;
 		};
+		55D9ADCC0D1B8EE6A69B5080 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsTests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 		58D1F671C260CC023813E445 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -972,6 +1099,21 @@
 				WRAPPER_EXTENSION = aiplugin;
 			};
 			name = Debug;
+		};
+		8D6036CF3D137C24FBBD5393 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agentictoolkit.AIPluginsTests;
+				SDKROOT = macosx;
+			};
+			name = Release;
 		};
 		9087C22063BE0139341CA300 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1133,6 +1275,15 @@
 			buildConfigurations = (
 				6199CAE8F37AEEB1BDEF0C27 /* Debug */,
 				6EEB80107F4CD7C85E5F96DA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9DB6D316E4D618A31FDDD67D /* Build configuration list for PBXNativeTarget "AIPluginsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				55D9ADCC0D1B8EE6A69B5080 /* Debug */,
+				8D6036CF3D137C24FBBD5393 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

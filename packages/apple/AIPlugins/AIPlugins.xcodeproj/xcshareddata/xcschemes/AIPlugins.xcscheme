@@ -15,6 +15,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "3B530741512CAB2E3611F8BD"
+               BuildableName = "AIPluginsTests.xctest"
+               BlueprintName = "AIPluginsTests"
+               ReferencedContainer = "container:AIPlugins.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
                BuildableName = "ClaudeAPI.bundle"
                BlueprintName = "ClaudeAPI"
@@ -88,14 +102,27 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-            BuildableName = "ClaudeAPI.bundle"
-            BlueprintName = "ClaudeAPI"
+            BlueprintIdentifier = "3B530741512CAB2E3611F8BD"
+            BuildableName = "AIPluginsTests.xctest"
+            BlueprintName = "AIPluginsTests"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "3B530741512CAB2E3611F8BD"
+               BuildableName = "AIPluginsTests.xctest"
+               BlueprintName = "AIPluginsTests"
+               ReferencedContainer = "container:AIPlugins.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -110,9 +137,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-            BuildableName = "ClaudeAPI.bundle"
-            BlueprintName = "ClaudeAPI"
+            BlueprintIdentifier = "3B530741512CAB2E3611F8BD"
+            BuildableName = "AIPluginsTests.xctest"
+            BlueprintName = "AIPluginsTests"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -130,9 +157,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "78D0E6AA9542822FD01209E4"
-            BuildableName = "ClaudeAPI.bundle"
-            BlueprintName = "ClaudeAPI"
+            BlueprintIdentifier = "3B530741512CAB2E3611F8BD"
+            BuildableName = "AIPluginsTests.xctest"
+            BlueprintName = "AIPluginsTests"
             ReferencedContainer = "container:AIPlugins.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
