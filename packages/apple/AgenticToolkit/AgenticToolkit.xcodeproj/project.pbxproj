@@ -249,6 +249,7 @@
 		A14295124F9E66E8A5533E6A /* ScriptingRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C71C9CB4C83289BC8FB988 /* ScriptingRouter.swift */; };
 		A222622FEA398F5ED0CDDB37 /* ContentViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA65482B1211A93412EC507 /* ContentViewerView.swift */; };
 		A2248B641042A09BBE6A55C8 /* SettingsPanelDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA98FE84B8447FA9DB6F211 /* SettingsPanelDescriptor.swift */; };
+		A3806439651B46D066ABA298 /* PluginChatConfigProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17696A083620396EC1073E8C /* PluginChatConfigProvider.swift */; };
 		A39BB9F6BAA6D4F2515CAB77 /* NSView+AccessibilityID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35983E82FAC7CC66ABF0C928 /* NSView+AccessibilityID.swift */; };
 		A3F8A793B41EEBD2B6E05192 /* LogController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8161173B0DFA8098C50CFCD /* LogController.swift */; };
 		A40602C3E4F3794E607D81EC /* WindowManagerSimulatedRelaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E574D92FE93D15A12138FEB /* WindowManagerSimulatedRelaunchTests.swift */; };
@@ -688,6 +689,7 @@
 		140B7E5133EF9E3212A9A543 /* TerminalSessionRowCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionRowCellView.swift; sourceTree = "<group>"; };
 		14CA1670EBFA9E13E74A71B7 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		162B10FD3D11B001EFBD490C /* PluginConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginConfigStore.swift; sourceTree = "<group>"; };
+		17696A083620396EC1073E8C /* PluginChatConfigProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginChatConfigProvider.swift; sourceTree = "<group>"; };
 		18E18E17D93786ECFA044C6D /* AIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProvider.swift; sourceTree = "<group>"; };
 		19EA98060EA6B2608283BFF8 /* ChatBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChatBackend.swift; path = ../macOS/Features/AIChatWindow/ChatBackend.swift; sourceTree = "<group>"; };
 		1A8DC5C317EE06271F8942F6 /* NestedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedViewController.swift; sourceTree = "<group>"; };
@@ -1877,6 +1879,7 @@
 				35D6F61EC0DBE3C8E7420B8B /* AIPluginDescriptor.swift */,
 				62FC283C9CE017F9D6FC099E /* AIPluginManager.swift */,
 				4D406955FF116011F2F41462 /* AIPluginsCoordinator.swift */,
+				17696A083620396EC1073E8C /* PluginChatConfigProvider.swift */,
 				162B10FD3D11B001EFBD490C /* PluginConfigStore.swift */,
 				55CBAA2BE5F29B0C7AF9A3A3 /* PluginTransport.swift */,
 			);
@@ -2028,7 +2031,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_0F55F06F-6D48-4D49-81E5-B2E2298E4752" /* Settings */ = {
+		"TEMP_4240C463-6BE3-4AB2-BB48-B07C73117FC8" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2619,6 +2622,7 @@
 				2E090ACB0081583A1FD67DB8 /* PermissionWalkthroughWindowController.swift in Sources */,
 				A45DA85AFB35BAC1E1B72BE4 /* PermissionsSettingsPanelViewController.swift in Sources */,
 				3A9F7E9837216316A434A162 /* PersistedWindowState.swift in Sources */,
+				A3806439651B46D066ABA298 /* PluginChatConfigProvider.swift in Sources */,
 				5804BEA9A91819A298337E9C /* PluginConfigPanel.swift in Sources */,
 				CF5F8B36BB5A87FDC65EFD88 /* PluginConfigStore.swift in Sources */,
 				8F411DCA533FDCFB8B6D0AB7 /* PluginLoadFailuresPanel.swift in Sources */,
