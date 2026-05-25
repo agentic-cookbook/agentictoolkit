@@ -119,9 +119,6 @@ targets:
       - path: macOS
         excludes:
           - "Features/AIChatWindow/ChatBackend.swift"
-          - "Features/AIPlugins/Settings/OldAIPanelViewController.swift"
-          - "Features/AIPlugins/Settings/OldAISettingsPane.swift"
-          - "Features/AIPlugins/Settings/OldPluginsSettingsPanelViewController.swift"
           - "Features/SessionWatcher/Old/OldSessionWindowPanelViewController.swift"
           - "Features/SessionWatcher/Old/OldSessionWindowSettingsPane.swift"
           - "Features/TerminalSession/Settings/OldNotificationsPanelViewController.swift"

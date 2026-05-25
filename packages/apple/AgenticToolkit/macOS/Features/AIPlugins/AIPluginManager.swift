@@ -1,25 +1,26 @@
 import Foundation
 import os
 import AgenticToolkitCore
+import AIPluginKit
 import OSLog
 
 /// Discovers, loads, and manages LLM plugin bundles.
 ///
-/// Plugins are macOS `.aiplugin` bundles containing a principal class that
-/// conforms to `AIPlugin`. The manager reads `Info.plist` metadata at
-/// discovery time (cheap) and only loads the binary on demand (lazy). All
-/// public accessors return protocol types; the concrete storage is internal.
+/// Plugins are macOS `.aiplugin` bundles whose `NSPrincipalClass` conforms to
+/// `AIPluginKit.AIPlugin`. The manager reads each bundle's `descriptor.json` at
+/// discovery time (cheap, no binary load) and only `dlopen`s the binary on
+/// demand. Discovery never loads code, so the settings UI can list and configure
+/// a plugin from its descriptor alone.
 @MainActor
 public final class AIPluginManager {
 
     // MARK: - Properties
 
-    /// Info records for every discovered plugin. Binaries are not yet loaded.
-    public var availablePlugins: [any AIPluginInfo] { records }
+    /// Descriptors for every discovered plugin. Binaries are not yet loaded.
+    public var descriptors: [AIPluginDescriptor] { records.map(\.descriptor) }
 
-    /// Internal storage. Kept as the concrete type so the manager can read
-    /// per-record fields (e.g. `bundlePath`) without downcasting.
-    private var records: [AIPluginRecord] = []
+    /// Internal storage pairing each descriptor with the bundle it came from.
+    private var records: [Record] = []
 
     /// Loaded plugin instances, keyed by identifier.
     private var loadedPlugins: [String: any AIPlugin] = [:]
@@ -30,14 +31,13 @@ public final class AIPluginManager {
     /// Directories to scan for `.aiplugin` bundles.
     private let searchPaths: [URL]
 
-    /// App name used for the per-plugin data directory.
+    /// App name used for the user plugins directory under Application Support.
     private let appName: String
 
     // MARK: - Errors
 
     public enum AIPluginError: Error, LocalizedError {
         case notFound(String)
-        case incompatibleSDK(plugin: String, required: String, found: String)
         case loadFailed(String)
         case noPrincipalClass(String)
         case principalClassNotPlugin(String)
@@ -46,8 +46,6 @@ public final class AIPluginManager {
             switch self {
             case .notFound(let id):
                 return "Plugin not found: \(id)"
-            case .incompatibleSDK(let plugin, let required, let found):
-                return "Plugin '\(plugin)' requires SDK \(found), but current SDK is \(required)"
             case .loadFailed(let id):
                 return "Failed to load plugin bundle: \(id)"
             case .noPrincipalClass(let id):
@@ -95,10 +93,11 @@ public final class AIPluginManager {
 
     // MARK: - Discovery
 
-    /// Scans all search paths for `.aiplugin` bundles and reads their metadata.
-    /// Does not load any plugin binaries.
+    /// Scans all search paths for `.aiplugin` bundles and reads their
+    /// `descriptor.json`. Does not load any plugin binaries. Bundles without a
+    /// descriptor, or whose `schemaVersion` the host does not understand, are
+    /// skipped (this is how old v1 plugins are ignored).
     public func discoverPlugins() {
-        var discovered: [AIPluginRecord] = []
         let fileManager = FileManager.default
 
         for searchPath in searchPaths {
@@ -112,24 +111,34 @@ public final class AIPluginManager {
 
             for url in contents where url.pathExtension == "aiplugin" {
                 guard let bundle = Bundle(url: url),
-                      let record = AIPluginRecord.fromBundle(bundle) else {
-                    logger.warning("Skipping invalid plugin bundle: \(url.lastPathComponent, privacy: .public)")
-                    continue
-                }
-
-                if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
+                      let descriptor = Self.readDescriptor(from: bundle) else {
                     // swiftlint:disable:next line_length
-                    logger.warning("Skipping incompatible plugin '\(record.displayName, privacy: .public)': SDK \(record.sdkVersion, privacy: .public) != \(AIPluginInfoRegistry.currentSDKVersion, privacy: .public)")
+                    logger.warning("Skipping plugin without a readable descriptor: \(url.lastPathComponent, privacy: .public)")
                     continue
                 }
 
-                discovered.append(record)
+                guard descriptor.schemaVersion == AIPluginDescriptor.currentSchemaVersion else {
+                    // swiftlint:disable:next line_length
+                    logger.warning("Skipping incompatible plugin '\(descriptor.displayName, privacy: .public)': schema \(descriptor.schemaVersion) != \(AIPluginDescriptor.currentSchemaVersion)")
+                    continue
+                }
+
+                guard !records.contains(where: { $0.descriptor.identifier == descriptor.identifier }) else { continue }
+
+                records.append(Record(descriptor: descriptor, bundleURL: url))
                 // swiftlint:disable:next line_length
-                logger.info("Discovered plugin: \(record.displayName, privacy: .public) (\(record.identifier, privacy: .public))")
+                logger.info("Discovered plugin: \(descriptor.displayName, privacy: .public) (\(descriptor.identifier, privacy: .public))")
             }
         }
+    }
 
-        records.append(contentsOf: discovered)
+    /// Reads and decodes `descriptor.json` from a bundle's resources.
+    private static func readDescriptor(from bundle: Bundle) -> AIPluginDescriptor? {
+        guard let url = bundle.url(forResource: "descriptor", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(AIPluginDescriptor.self, from: data)
     }
 
     // MARK: - Loading
@@ -139,40 +148,37 @@ public final class AIPluginManager {
     public func loadAllPlugins() -> PluginLoadResult {
         var loaded: [any AIPlugin] = []
         var failures: [PluginLoadFailure] = []
-        for info in availablePlugins {
+        for descriptor in descriptors {
             do {
-                loaded.append(try loadPlugin(identifier: info.identifier))
+                loaded.append(try loadPlugin(identifier: descriptor.identifier))
             } catch {
                 let message = error.localizedDescription
                 // swiftlint:disable:next line_length
-                logger.error("Failed to load plugin '\(info.displayName, privacy: .public)' (\(info.identifier, privacy: .public)): \(message, privacy: .public)")
+                logger.error("Failed to load plugin '\(descriptor.displayName, privacy: .public)' (\(descriptor.identifier, privacy: .public)): \(message, privacy: .public)")
                 failures.append(
-                    PluginLoadFailure(identifier: info.identifier, displayName: info.displayName, message: message)
+                    PluginLoadFailure(
+                        identifier: descriptor.identifier,
+                        displayName: descriptor.displayName,
+                        message: message
+                    )
                 )
             }
         }
         return PluginLoadResult(loaded: loaded, failures: failures)
     }
 
-    /// Loads a plugin's binary and instantiates it. Returns a cached instance if already loaded.
+    /// Loads a plugin's binary and instantiates it. Returns a cached instance if
+    /// already loaded.
     public func loadPlugin(identifier: String) throws -> any AIPlugin {
         if let existing = loadedPlugins[identifier] {
             return existing
         }
 
-        guard let record = records.first(where: { $0.identifier == identifier }) else {
+        guard let record = records.first(where: { $0.descriptor.identifier == identifier }) else {
             throw AIPluginError.notFound(identifier)
         }
 
-        if record.sdkVersion != AIPluginInfoRegistry.currentSDKVersion {
-            throw AIPluginError.incompatibleSDK(
-                plugin: identifier,
-                required: AIPluginInfoRegistry.currentSDKVersion,
-                found: record.sdkVersion
-            )
-        }
-
-        guard let bundle = Bundle(url: record.bundlePath) else {
+        guard let bundle = Bundle(url: record.bundleURL) else {
             throw AIPluginError.loadFailed(identifier)
         }
 
@@ -190,12 +196,11 @@ public final class AIPluginManager {
             throw AIPluginError.principalClassNotPlugin(identifier)
         }
 
-        let context = makeContext(for: identifier)
-        let instance = pluginClass.init(context: context)
+        let instance = pluginClass.init()
 
         loadedPlugins[identifier] = instance
         loadedBundles[identifier] = bundle
-        logger.info("Loaded plugin: \(record.displayName, privacy: .public)")
+        logger.info("Loaded plugin: \(record.descriptor.displayName, privacy: .public)")
 
         return instance
     }
@@ -207,42 +212,11 @@ public final class AIPluginManager {
         logger.info("Unloaded plugin: \(identifier, privacy: .public)")
     }
 
-    // MARK: - Built-in Plugin Registration
-
-    /// Registers a built-in plugin type (compiled into the app, not loaded from a bundle).
-    public func registerBuiltIn(_ pluginType: any AIPlugin.Type) {
-        let identifier = pluginType.identifier
-
-        guard !records.contains(where: { $0.identifier == identifier }) else { return }
-
-        let context = makeContext(for: identifier)
-        let instance = pluginType.init(context: context)
-
-        let record = AIPluginRecord(
-            identifier: identifier,
-            displayName: instance.displayName,
-            version: "built-in",
-            sdkVersion: AIPluginInfoRegistry.currentSDKVersion,
-            bundlePath: Bundle.main.bundleURL
-        )
-
-        records.append(record)
-        loadedPlugins[identifier] = instance
-        logger.info("Registered built-in plugin: \(instance.displayName, privacy: .public)")
-    }
-
-    /// Registers multiple built-in plugin types.
-    public func registerBuiltIns(_ pluginTypes: [any AIPlugin.Type]) {
-        for pluginType in pluginTypes {
-            registerBuiltIn(pluginType)
-        }
-    }
-
     // MARK: - Query
 
-    /// Returns info for a plugin without loading it.
-    public func info(for identifier: String) -> (any AIPluginInfo)? {
-        records.first { $0.identifier == identifier }
+    /// Returns the descriptor for a plugin without loading it.
+    public func descriptor(for identifier: String) -> AIPluginDescriptor? {
+        records.first { $0.descriptor.identifier == identifier }?.descriptor
     }
 
     /// Returns a loaded plugin instance, or nil if not loaded.
@@ -250,28 +224,13 @@ public final class AIPluginManager {
         loadedPlugins[identifier]
     }
 
-    // MARK: - Private
+    // MARK: - Internal record
 
-    private func makeContext(for identifier: String) -> AIPluginContext {
-        let pluginLogger = Logger(subsystem: "com.agentictoolkit.plugin", category: identifier)
-
-        let baseDir: URL
-        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            baseDir = appSupport
-        } else {
-            // swiftlint:disable:next line_length
-            logger.warning("Application Support directory unavailable; falling back to temporary directory for plugin \(identifier, privacy: .public)")
-            baseDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        }
-
-        let dataDir = baseDir
-            .appendingPathComponent(appName)
-            .appendingPathComponent("Plugins")
-            .appendingPathComponent(identifier)
-
-        try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
-
-        return AIPluginContext(logger: pluginLogger, dataDirectory: dataDir)
+    /// Pairs a discovered descriptor with the bundle URL the manager needs for
+    /// lazy loading.
+    private struct Record {
+        let descriptor: AIPluginDescriptor
+        let bundleURL: URL
     }
 }
 
@@ -288,35 +247,6 @@ public struct PluginLoadFailure: Sendable {
 public struct PluginLoadResult {
     public let loaded: [any AIPlugin]
     public let failures: [PluginLoadFailure]
-}
-
-// MARK: - Internal record
-
-/// Internal record backing `AIPluginInfo`. Holds the bundle path the
-/// manager needs for lazy loading; callers see only the protocol.
-private struct AIPluginRecord: AIPluginInfo, Sendable {
-    let identifier: String
-    let displayName: String
-    let version: String
-    let sdkVersion: String
-    let bundlePath: URL
-
-    static func fromBundle(_ bundle: Bundle) -> AIPluginRecord? {
-        guard let info = bundle.infoDictionary,
-              let identifier = info["AgenticPluginIdentifier"] as? String,
-              let displayName = info["AgenticPluginDisplayName"] as? String,
-              let version = info["AgenticPluginVersion"] as? String,
-              let sdkVersion = info["AgenticSDKVersion"] as? String else {
-            return nil
-        }
-        return AIPluginRecord(
-            identifier: identifier,
-            displayName: displayName,
-            version: version,
-            sdkVersion: sdkVersion,
-            bundlePath: bundle.bundleURL
-        )
-    }
 }
 
 extension AIPluginManager: Loggable {

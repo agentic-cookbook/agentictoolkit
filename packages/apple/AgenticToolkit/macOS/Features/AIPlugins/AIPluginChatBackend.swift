@@ -1,34 +1,38 @@
 import Foundation
-import os
 import AgenticToolkitCore
-import AgenticToolkitCoreUI
+import AIPluginKit
 
-/// Supplies the currently-selected plugin identifier, model, and credentials
-/// to a `AIPluginChatBackend`. Apps typically conform their settings view model
-/// to this protocol so backend selection tracks the UI live.
+/// Supplies the currently-selected plugin identifier, model, and resolved config
+/// values to an `AIPluginChatBackend`. Apps typically conform their settings view
+/// model to this protocol so backend selection tracks the UI live.
+///
+/// `pluginConfigValues` is the already-resolved `[key: value]` map the plugin
+/// reads through `AIPluginConfig` — secrets included. Hosts build it from the
+/// plugin's descriptor (see `PluginConfigStore.configValues(for:)`), so the
+/// backend never touches storage or the Keychain itself.
 @MainActor
 public protocol ChatConfigProvider: AnyObject {
     var selectedPluginIdentifier: String { get }
     var selectedModel: String { get }
-    var pluginCredentials: AIPluginCredentials { get }
+    var pluginConfigValues: [String: String] { get }
 }
 
-/// A `ChatBackend` that routes messages through an `AgenticPluginSDK.AIPluginManager`,
-/// using the currently selected plugin, model, and credentials from a `ChatConfigProvider`.
+/// A `ChatBackend` that routes messages through an `AIPluginManager`: it loads
+/// the currently selected plugin, asks it to *describe* the request, then drives
+/// that request with `PluginTransport` and maps the decoded `AIStreamEvent`s onto
+/// the chat UI's `ChatStreamEvent`s.
 ///
 /// Not main-actor isolated itself — the per-call work (resolving the plugin and
-/// reading config) is done inside `MainActor.run` blocks. This lets the chat UI
-/// keep the network/streaming work off the main actor while still safely
-/// reading configuration that lives on it.
+/// reading config) is done inside a `MainActor.run` block, leaving the transport
+/// and decoding off the main actor.
 ///
 /// ### Readiness signalling
-/// Hosts that drive plugin/credential changes (e.g. settings UI) call
-/// `notifyReadyChanged()` when readiness might have flipped. All subscribers
-/// of `isReadyChanges()` are notified; a backend with no subscribers is a
-/// no-op cost.
+/// Hosts that drive plugin/config changes (e.g. settings UI) call
+/// `notifyReadyChanged()` when readiness might have flipped. All subscribers of
+/// `isReadyChanges()` are notified; a backend with no subscribers is a no-op cost.
 ///
 /// ### Why `@unchecked Sendable` is safe
-/// - `pluginManager` is `@MainActor`-isolated; its state is only read inside `MainActor.run`.
+/// - `pluginManager` is `@MainActor`-isolated; its state is read only inside `MainActor.run`.
 /// - `subscribers` is mutated only while holding `lock` (`NSLock`).
 /// - `configProvider` is `weak` and dereferenced only inside `MainActor.run`.
 /// No mutable state escapes these barriers.
@@ -90,18 +94,16 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         return stream
     }
 
-    /// Hosts call this after a change that might have flipped readiness
-    /// (plugin selection, API key changes). Recomputes and multicasts to all
-    /// active subscribers.
+    /// Hosts call this after a change that might have flipped readiness (plugin
+    /// selection, credential changes). Recomputes and multicasts to all active
+    /// subscribers.
     @MainActor
     public func notifyReadyChanged() {
         let value = Self.isReady(for: configProvider)
         lock.lock()
         let snapshot = subscribers.values
         lock.unlock()
-        for cont in snapshot {
-            cont.yield(value)
-        }
+        for cont in snapshot { cont.yield(value) }
     }
 
     @MainActor
@@ -112,40 +114,12 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
     // MARK: - sendMessages
 
     public func sendMessages(_ messages: [ChatBackendMessage]) async -> AsyncThrowingStream<String, Error> {
-        // Snapshot config and resolve the plugin on the main actor.
-        let snapshot: (model: String, creds: AIPluginCredentials, plugin: AIPlugin?) = await MainActor.run {
-            let pluginId = configProvider?.selectedPluginIdentifier ?? ""
-            let model = configProvider?.selectedModel ?? ""
-            let creds = configProvider?.pluginCredentials ?? AIPluginCredentials(apiKey: "", baseURL: nil)
-            let plugin = try? pluginManager.loadPlugin(identifier: pluginId)
-            return (model, creds, plugin)
-        }
-
-        let history: [AIPluginMessage] = messages.map { msg in
-            AIPluginMessage(role: Self.llmRole(for: msg.role), content: msg.content)
-        }
-
+        let inputs = await makeInputs(messages: messages, tools: [])
         return AsyncThrowingStream { continuation in
-            guard let plugin = snapshot.plugin else {
-                continuation.finish(throwing: AIPluginChatError.pluginNotAvailable)
-                return
-            }
-            let task = Task {
-                do {
-                    let stream = plugin.sendMessages(
-                        history,
-                        model: snapshot.model,
-                        systemPrompt: nil,
-                        maxTokens: 2048,
-                        credentials: snapshot.creds
-                    )
-                    for try await chunk in stream {
-                        continuation.yield(chunk)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+            let task = Self.drive(inputs: inputs) { event in
+                if case .textDelta(let text) = event { continuation.yield(text) }
+            } onFinish: { error in
+                continuation.finish(throwing: error)
             }
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -155,38 +129,12 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         _ messages: [ChatBackendMessage],
         tools: [ToolDefinition]
     ) async -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        let snapshot: (model: String, creds: AIPluginCredentials, plugin: AIPlugin?) = await MainActor.run {
-            let pluginId = configProvider?.selectedPluginIdentifier ?? ""
-            let model = configProvider?.selectedModel ?? ""
-            let creds = configProvider?.pluginCredentials ?? AIPluginCredentials(apiKey: "", baseURL: nil)
-            let plugin = try? pluginManager.loadPlugin(identifier: pluginId)
-            return (model, creds, plugin)
-        }
-
-        let history: [AIPluginMessage] = messages.map { Self.toPluginMessage($0) }
-
+        let inputs = await makeInputs(messages: messages, tools: tools)
         return AsyncThrowingStream { continuation in
-            guard let plugin = snapshot.plugin else {
-                continuation.finish(throwing: AIPluginChatError.pluginNotAvailable)
-                return
-            }
-            let task = Task {
-                do {
-                    let stream = plugin.sendMessages(
-                        history,
-                        tools: tools,
-                        model: snapshot.model,
-                        systemPrompt: nil,
-                        maxTokens: 2048,
-                        credentials: snapshot.creds
-                    )
-                    for try await event in stream {
-                        continuation.yield(event)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+            let task = Self.drive(inputs: inputs) { event in
+                continuation.yield(Self.chatEvent(for: event))
+            } onFinish: { error in
+                continuation.finish(throwing: error)
             }
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -198,7 +146,75 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         case pluginNotAvailable
     }
 
-    private static func llmRole(for role: ChatBackendMessage.Role) -> AIPluginMessage.Role {
+    // MARK: - Request assembly
+
+    /// The plugin instance plus the fully-built context for one request,
+    /// snapshotted from the config provider on the main actor.
+    private struct RequestInputs: Sendable {
+        let plugin: (any AIPlugin)?
+        let context: AIChatContext
+    }
+
+    private func makeInputs(messages: [ChatBackendMessage], tools: [ToolDefinition]) async -> RequestInputs {
+        await MainActor.run {
+            let pluginId = configProvider?.selectedPluginIdentifier ?? ""
+            let model = configProvider?.selectedModel ?? ""
+            let values = configProvider?.pluginConfigValues ?? [:]
+            let plugin = try? pluginManager.loadPlugin(identifier: pluginId)
+            let context = AIChatContext(
+                messages: messages.map(Self.aiMessage(for:)),
+                model: model,
+                systemPrompt: nil,
+                tools: tools.map(Self.aiToolSpec(for:)),
+                config: AIPluginConfig(values)
+            )
+            return RequestInputs(plugin: plugin, context: context)
+        }
+    }
+
+    /// Builds the request, drives the transport, and forwards each decoded event
+    /// to `onEvent` until the stream finishes or fails. Returns the backing task
+    /// so the caller can cancel it.
+    private static func drive(
+        inputs: RequestInputs,
+        onEvent: @escaping @Sendable (AIStreamEvent) -> Void,
+        onFinish: @escaping @Sendable (Error?) -> Void
+    ) -> Task<Void, Never> {
+        Task {
+            guard let plugin = inputs.plugin else {
+                onFinish(AIPluginChatError.pluginNotAvailable)
+                return
+            }
+            do {
+                let spec = try plugin.buildRequest(inputs.context)
+                for try await event in PluginTransport.run(spec: spec, plugin: plugin) {
+                    onEvent(event)
+                }
+                onFinish(nil)
+            } catch {
+                onFinish(error)
+            }
+        }
+    }
+
+    // MARK: - Mapping
+
+    private static func aiMessage(for msg: ChatBackendMessage) -> AIChatMessage {
+        AIChatMessage(
+            role: aiRole(for: msg.role),
+            content: msg.content,
+            toolUseId: msg.toolUseId,
+            toolName: msg.toolName,
+            toolArgumentsJSON: msg.toolArgumentsJSON,
+            toolIsError: msg.toolIsError
+        )
+    }
+
+    private static func aiToolSpec(for tool: ToolDefinition) -> AIToolSpec {
+        AIToolSpec(name: tool.name, description: tool.description, parametersJSONSchema: tool.parametersJSONSchema)
+    }
+
+    private static func aiRole(for role: ChatBackendMessage.Role) -> AIChatMessage.Role {
         switch role {
         case .user: return .user
         case .assistant: return .assistant
@@ -208,22 +224,12 @@ public final class AIPluginChatBackend: ChatBackend, @unchecked Sendable {
         }
     }
 
-    private static func toPluginMessage(_ msg: ChatBackendMessage) -> AIPluginMessage {
-        switch msg.role {
-        case .toolUse:
-            return AIPluginMessage.toolUse(
-                id: msg.toolUseId ?? "",
-                name: msg.toolName ?? "",
-                argumentsJSON: msg.toolArgumentsJSON ?? Data()
-            )
-        case .toolResult:
-            return AIPluginMessage.toolResult(
-                id: msg.toolUseId ?? "",
-                content: msg.content,
-                isError: msg.toolIsError ?? false
-            )
-        case .user, .assistant, .system:
-            return AIPluginMessage(role: llmRole(for: msg.role), content: msg.content)
+    private static func chatEvent(for event: AIStreamEvent) -> ChatStreamEvent {
+        switch event {
+        case .textDelta(let text): return .textDelta(text)
+        case .toolUse(let id, let name, let argumentsJSON):
+            return .toolUse(id: id, name: name, argumentsJSON: argumentsJSON)
+        case .end(let stopReason): return .end(stopReason: stopReason)
         }
     }
 }
