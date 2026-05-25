@@ -27,7 +27,7 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
 
         // Configuration UI comes from descriptors alone — no plugin code runs.
         for descriptor in pluginManager.descriptors {
-            addPanel(PluginConfigPanel(descriptor: descriptor))
+            addPanel(PluginConfigPanel(descriptor: descriptor, pluginManager: pluginManager))
         }
 
         // Loading binaries is where things can fail; surface any failures.

@@ -12,9 +12,18 @@ import AppKit
 final class PluginConfigPanel: ComposableSettings.SettingsPanelViewController {
 
     private let pluginDescriptor: AIPluginDescriptor
+    private let pluginManager: AIPluginManager
 
-    init(descriptor: AIPluginDescriptor) {
+    /// Retained for the panel's lifetime so the chat backend — which holds the
+    /// provider *weakly* — keeps a live source. Pinned to this panel's descriptor,
+    /// so the embedded chat always talks to *this* plugin regardless of the
+    /// app-wide selection.
+    private let chatConfigProvider: SinglePluginChatConfigProvider
+
+    init(descriptor: AIPluginDescriptor, pluginManager: AIPluginManager) {
         self.pluginDescriptor = descriptor
+        self.pluginManager = pluginManager
+        self.chatConfigProvider = SinglePluginChatConfigProvider(descriptor: descriptor)
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: descriptor.displayName,
             icon: NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
@@ -39,6 +48,25 @@ final class PluginConfigPanel: ComposableSettings.SettingsPanelViewController {
         }
 
         addGroup(group)
+        addChatView(below: group)
+    }
+
+    /// Embeds a live chat with this plugin beneath the config controls. Its top is
+    /// pinned a padding below the last config group; its bottom is pinned to the
+    /// panel's bottom — which the split controller pins to the window — so the chat
+    /// fills the remaining height and grows with the window.
+    private func addChatView(below group: NSView) {
+        let backend = AIPluginChatBackend(pluginManager: pluginManager, configProvider: chatConfigProvider)
+        let chatView = ChatView(viewModel: ChatViewModel(backend: backend))
+        chatView.translatesAutoresizingMaskIntoConstraints = false
+        settingsView.addSubview(chatView)
+
+        NSLayoutConstraint.activate([
+            chatView.topAnchor.constraint(equalTo: group.bottomAnchor, constant: 16),
+            chatView.leadingAnchor.constraint(equalTo: settingsView.leadingAnchor),
+            chatView.trailingAnchor.constraint(equalTo: settingsView.trailingAnchor),
+            chatView.bottomAnchor.constraint(equalTo: settingsView.bottomAnchor)
+        ])
     }
 
     private func makeModelPopup() -> NSView {
