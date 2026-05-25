@@ -82,6 +82,11 @@ targets:
       - target: AgenticToolkit/AgenticToolkitMacOS
         embed: true
         codeSign: true
+      # Embedded so the framework loads into the host process; each .aiplugin
+      # links it without embedding and resolves to this one loaded image at dlopen.
+      - target: AgenticToolkit/AIPluginKit
+        embed: true
+        codeSign: true
 
   AgenticToolkitAppTests:
     type: bundle.unit-test

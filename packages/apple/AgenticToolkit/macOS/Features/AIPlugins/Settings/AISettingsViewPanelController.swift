@@ -1,6 +1,9 @@
 import AgenticToolkitCoreMacOS
 import AppKit
 
+/// The "AI" settings split view. One config panel per *discovered* plugin —
+/// built from its descriptor without loading any binary — plus a single failures
+/// panel if any plugin's binary could not be loaded.
 @MainActor
 open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewController {
 
@@ -22,16 +25,15 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        do {
-            for plugin in try pluginManager.loadAllPlugins() {
-                guard let settingsPanel = plugin.settingsPanelViewController() else {
-                    continue
-                }
+        // Configuration UI comes from descriptors alone — no plugin code runs.
+        for descriptor in pluginManager.descriptors {
+            addPanel(PluginConfigPanel(descriptor: descriptor, pluginManager: pluginManager))
+        }
 
-                addPanel(settingsPanel)
-            }
-        } catch {
-            // todo log error
+        // Loading binaries is where things can fail; surface any failures.
+        let failures = pluginManager.loadAllPlugins().failures
+        if !failures.isEmpty {
+            addPanel(PluginLoadFailuresPanel(failures: failures))
         }
     }
 }

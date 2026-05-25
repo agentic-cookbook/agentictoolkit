@@ -66,6 +66,14 @@ packages:
     maxVersion: "1.0.0"
 
 targets:
+  AIPluginKit:
+    type: framework
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - AIPluginKit
+
   AgenticToolkitCore:
     type: framework
     platform: macOS
@@ -111,9 +119,6 @@ targets:
       - path: macOS
         excludes:
           - "Features/AIChatWindow/ChatBackend.swift"
-          - "Features/AIPlugins/Settings/OldAIPanelViewController.swift"
-          - "Features/AIPlugins/Settings/OldAISettingsPane.swift"
-          - "Features/AIPlugins/Settings/OldPluginsSettingsPanelViewController.swift"
           - "Features/SessionWatcher/Old/OldSessionWindowPanelViewController.swift"
           - "Features/SessionWatcher/Old/OldSessionWindowSettingsPane.swift"
           - "Features/TerminalSession/Settings/OldNotificationsPanelViewController.swift"
@@ -132,6 +137,7 @@ targets:
       - target: AgenticToolkitCore
       - target: AgenticToolkitCoreUI
       - target: AgenticToolkitCoreMacOS
+      - target: AIPluginKit
       - package: SwiftTerm
       - package: CodeEditSourceEditor
       - package: CodeEditLanguages
@@ -178,6 +184,18 @@ targets:
         embed: true
         codeSign: true
 
+  AIPluginKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AIPluginKitTests
+    dependencies:
+      - target: AIPluginKit
+        embed: true
+        codeSign: true
+
   AgenticToolkitMacOSTests:
     type: bundle.unit-test
     platform: macOS
@@ -202,6 +220,7 @@ targets:
 aggregateTargets:
   AgenticToolkitMacOSAll:
     targets:
+      - AIPluginKit
       - AgenticToolkitCore
       - AgenticToolkitCoreUI
       - AgenticToolkitCoreMacOS
@@ -209,16 +228,35 @@ aggregateTargets:
 
   AgenticToolkitMacOSTestsAll:
     targets:
+      - AIPluginKit
       - AgenticToolkitCore
       - AgenticToolkitCoreMacOS
       - AgenticToolkitCoreUI
       - AgenticToolkitMacOS
+      - AIPluginKitTests
       - AgenticToolkitCoreMacOSTests
       - AgenticToolkitCoreTests
       - AgenticToolkitCoreUITests
       - AgenticToolkitMacOSTests
 
 schemes:
+  AIPluginKit:
+    build:
+      targets:
+        AIPluginKit: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AIPluginKitTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
   AgenticToolkitMacOS:
     build:
       targets:
@@ -228,6 +266,7 @@ schemes:
     test:
       config: Debug
       targets:
+        - AIPluginKitTests
         - AgenticToolkitMacOSTests
     profile:
       config: Release

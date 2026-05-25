@@ -1,133 +1,132 @@
-import AppKit
 import Foundation
-import os
-import AgenticToolkitCore
-import AgenticToolkitCoreUI
-import AgenticToolkitCoreMacOS
-import AgenticToolkitMacOS
-import AIPluginsShared
+import AIPluginKit
 
 /// LLM plugin for the OpenAI Chat Completions API.
+///
+/// Foundation-only: it describes the HTTP request and decodes the JSON reply.
+/// The host owns transport, settings UI, and the API key.
 public final class OpenAIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agentictoolkit.plugin.openai"
+    public override init() { super.init() }
 
-    public let displayName = "OpenAI (ChatGPT)"
-
-    public let capabilities: AIPluginCapability = [.textCompletion]
-
-    public let availableModels = [
-        "gpt-4.1-nano",
-        "gpt-4.1-mini",
-        "gpt-4o-mini",
-        "gpt-4o"
-    ]
-
-    public let recommendedModel = "gpt-4.1-nano"
-
-    public let requiresAPIKey = true
-
-    private let context: AIPluginContext
-
-    public required init(context: AIPluginContext) {
-        self.context = context
+    public func buildRequest(_ context: AIChatContext) throws -> AIRequestSpec {
+        guard let apiKey = context.config.apiKey, !apiKey.isEmpty else {
+            throw PluginError.missingAPIKey
+        }
+        let model = context.model.isEmpty ? "gpt-4.1-nano" : context.model
+        return try OpenAIChatRequest.make(
+            baseURL: "https://api.openai.com",
+            apiKey: apiKey,
+            model: model,
+            context: context
+        )
     }
 
-    public func sendMessages(
-        _ messages: [AIPluginMessage],
-        model: String,
-        systemPrompt: String?,
-        maxTokens: Int,
-        credentials: AIPluginCredentials
-    ) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    let request = try self.buildRequest(
-                        messages: messages, model: model, systemPrompt: systemPrompt,
-                        maxTokens: maxTokens, credentials: credentials,
-                        baseURL: "https://api.openai.com"
-                    )
-                    let (data, response) = try await URLSession.shared.data(for: request)
+    public func makeDecoder() -> any AIStreamDecoder { OpenAIReplyDecoder() }
 
-                    guard let http = response as? HTTPURLResponse else {
-                        throw AIPluginRequestError.invalidResponse
-                    }
-                    guard http.statusCode == 200 || http.statusCode == 201 else {
-                        let body = String(data: data, encoding: .utf8) ?? ""
-                        throw AIPluginRequestError.httpError(
-                            http.statusCode,
-                            OpenAIResponseParser.parseErrorMessage(from: body)
-                        )
-                    }
+    public func describeError(status: Int, body: Data) -> String? {
+        OpenAIReplyDecoder.parseErrorMessage(from: body)
+    }
 
-                    let reply = OpenAIResponseParser.parseReply(from: data)
-                    continuation.yield(reply)
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+    enum PluginError: Error, LocalizedError {
+        case missingAPIKey
+
+        var errorDescription: String? {
+            switch self {
+            case .missingAPIKey: return "An OpenAI API key is required."
             }
         }
     }
+}
 
-    @MainActor
-    public func settingsPanelViewController() -> ComposableSettings.SettingsPanelViewController? {
-        OpenAISettingsPanelViewController(plugin: self)
-    }
+/// Builds an OpenAI Chat Completions request body shared by the OpenAI and
+/// OpenAI-compatible plugins' request shapes.
+enum OpenAIChatRequest {
 
-    public func validateCredentials(_ credentials: AIPluginCredentials) async -> String? {
-        do {
-            let messages = [AIPluginMessage(role: .user, content: "Hi")]
-            let request = try buildRequest(
-                messages: messages, model: recommendedModel, systemPrompt: nil,
-                maxTokens: 1, credentials: credentials,
-                baseURL: "https://api.openai.com"
-            )
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return "Invalid response" }
-            if http.statusCode == 200 || http.statusCode == 201 { return nil }
-            let body = String(data: data, encoding: .utf8) ?? ""
-            return OpenAIResponseParser.parseErrorMessage(from: body) ?? "HTTP \(http.statusCode)"
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
-    // MARK: - Internal (shared with OpenAICompatiblePlugin)
-
-    func buildRequest(
-        messages: [AIPluginMessage],
+    static func make(
+        baseURL: String,
+        apiKey: String,
         model: String,
-        systemPrompt: String?,
-        maxTokens: Int,
-        credentials: AIPluginCredentials,
-        baseURL: String
-    ) throws -> URLRequest {
+        context: AIChatContext
+    ) throws -> AIRequestSpec {
         guard let url = URL(string: baseURL)?.appendingPathComponent("v1/chat/completions") else {
-            throw AIPluginRequestError.invalidURL
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(credentials.apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.timeoutInterval = 60
-
-        var allMessages: [[String: String]] = []
-        if let systemPrompt, !systemPrompt.isEmpty {
-            allMessages.append(["role": "system", "content": systemPrompt])
-        }
-        for msg in messages where msg.role != .system {
-            allMessages.append(["role": msg.role.rawValue, "content": msg.content])
+            throw RequestError.invalidURL
         }
 
-        let body: [String: Any] = [
-            "model": model.isEmpty ? recommendedModel : model,
-            "max_tokens": maxTokens,
-            "messages": allMessages
+        var messages: [[String: String]] = []
+        if let systemPrompt = context.systemPrompt, !systemPrompt.isEmpty {
+            messages.append(["role": "system", "content": systemPrompt])
+        }
+        for message in context.messages where message.role != .system {
+            messages.append([
+                "role": message.role == .assistant ? "assistant" : "user",
+                "content": message.content
+            ])
+        }
+
+        var body: [String: Any] = [
+            "max_tokens": context.maxTokens,
+            "messages": messages
         ]
+        if !model.isEmpty { body["model"] = model }
 
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        return request
+        return .http(
+            method: .post,
+            url: url,
+            headers: [
+                "Authorization": "Bearer \(apiKey)",
+                "content-type": "application/json"
+            ],
+            body: try JSONSerialization.data(withJSONObject: body)
+        )
+    }
+
+    enum RequestError: Error, LocalizedError {
+        case invalidURL
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidURL: return "The endpoint URL is invalid."
+            }
+        }
+    }
+}
+
+/// Buffers a full OpenAI Chat Completions JSON response, then emits the assistant
+/// reply as a single text event. OpenAI's non-streaming responses arrive as one
+/// JSON object, so the decoder accumulates everything and parses on `finish()`.
+final class OpenAIReplyDecoder: AIStreamDecoder {
+
+    private var buffer = Data()
+
+    func consume(_ data: Data) -> [AIStreamEvent] {
+        buffer.append(data)
+        return []
+    }
+
+    func finish() -> [AIStreamEvent] {
+        let reply = Self.parseReply(from: buffer)
+        return [.textDelta(reply), .end(stopReason: nil)]
+    }
+
+    static func parseReply(from data: Data) -> String {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]],
+              let first = choices.first,
+              let message = first["message"] as? [String: Any],
+              let content = message["content"] as? String else {
+            return "(Unable to parse response)"
+        }
+        return content
+    }
+
+    static func parseErrorMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+            return message
+        }
+        return json["message"] as? String
     }
 }

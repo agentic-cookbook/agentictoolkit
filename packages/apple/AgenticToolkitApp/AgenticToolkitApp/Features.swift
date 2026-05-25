@@ -10,6 +10,7 @@ class Features {
     let permissionWalkthrough: PermissionWalkthrough
     let terminalCoordinator: TerminalCoordinator
     let aiPluginsCoordinator: AIPluginsCoordinator
+    let chatConfigProvider: PluginChatConfigProvider
     let aiChatCoordinator: AIChatCoordinator
     let summarizerDebug: SessionWatcher.SummarizerDebugCoordinator
     let sessionWatcherCoordinator: SessionWatcher.SessionWatcherCoordinator
@@ -20,20 +21,22 @@ class Features {
     init() {
         self.appearanceManager = AppearanceManager()
         self.permissionWalkthrough = PermissionWalkthrough()
-        self.aiPluginsCoordinator = AIPluginsCoordinator(appName: "AgenticPluginTester")
+        let aiPluginsCoordinator = AIPluginsCoordinator(appName: "AgenticPluginTester")
+        self.aiPluginsCoordinator = aiPluginsCoordinator
         self.terminalCoordinator = TerminalCoordinator()
         self.summarizerDebug = SessionWatcher.SummarizerDebugCoordinator()
         self.sessionWatcherCoordinator = SessionWatcher.SessionWatcherCoordinator()
 
+        // Chat runs through the loaded plugins: the config provider reports the
+        // user's selection (from the AI settings panel) and the backend asks the
+        // selected plugin to describe each request.
+        let chatConfigProvider = PluginChatConfigProvider(pluginManager: aiPluginsCoordinator.pluginManager)
+        self.chatConfigProvider = chatConfigProvider
         self.aiChatCoordinator = AIChatCoordinator(makeBackend: {
-            let config = AIModelChatConfig(
-                aiProvider: AIProvider(rawValue: UserSettings.aiProvider.currentValue) ?? .anthropic,
-                aiModel: UserSettings.aiModel.currentValue,
-                aiBaseURL: UserSettings.aiBaseURL.currentValue,
-                apiKey: UserSettings.aiAPIKey.currentValue,
-                aiSummariesEnabled: UserSettings.aiSummariesEnabled.currentValue
+            AIPluginChatBackend(
+                pluginManager: aiPluginsCoordinator.pluginManager,
+                configProvider: chatConfigProvider
             )
-            return WhippetChatBackend(aiInfo: config)
         })
 
         self.settingsCoordinator = ComposableSettings.AppCoordinator(

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 2,
+  "identifier": "com.agentictoolkit.plugin.claude-local",
+  "displayName": "Claude (Local)",
+  "version": "1.0",
+  "models": ["haiku", "sonnet", "opus"],
+  "defaultModel": "haiku",
+  "fields": []
+}

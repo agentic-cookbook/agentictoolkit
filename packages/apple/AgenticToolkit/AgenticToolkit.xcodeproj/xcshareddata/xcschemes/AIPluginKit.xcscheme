@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-               BuildableName = "AgenticToolkitMacOS.framework"
-               BlueprintName = "AgenticToolkitMacOS"
+               BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
+               BuildableName = "AIPluginKit.framework"
+               BlueprintName = "AIPluginKit"
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-            BuildableName = "AgenticToolkitMacOS.framework"
-            BlueprintName = "AgenticToolkitMacOS"
+            BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
+            BuildableName = "AIPluginKit.framework"
+            BlueprintName = "AIPluginKit"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -47,17 +47,6 @@
                BlueprintIdentifier = "CA91BF5C6678A6A1DB58725C"
                BuildableName = "AIPluginKitTests.xctest"
                BlueprintName = "AIPluginKitTests"
-               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FB6FD55DBA606361A9BEEB56"
-               BuildableName = "AgenticToolkitMacOSTests.xctest"
-               BlueprintName = "AgenticToolkitMacOSTests"
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -78,9 +67,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-            BuildableName = "AgenticToolkitMacOS.framework"
-            BlueprintName = "AgenticToolkitMacOS"
+            BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
+            BuildableName = "AIPluginKit.framework"
+            BlueprintName = "AIPluginKit"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -98,9 +87,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-            BuildableName = "AgenticToolkitMacOS.framework"
-            BlueprintName = "AgenticToolkitMacOS"
+            BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
+            BuildableName = "AIPluginKit.framework"
+            BlueprintName = "AIPluginKit"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
