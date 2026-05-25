@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0C3AD186C6CF8C956C91A2B7"
+               BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
                BuildableName = "AIPluginKit.framework"
                BlueprintName = "AIPluginKit"
-               ReferencedContainer = "container:AIPlugins.xcodeproj">
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0C3AD186C6CF8C956C91A2B7"
+            BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
             BuildableName = "AIPluginKit.framework"
             BlueprintName = "AIPluginKit"
-            ReferencedContainer = "container:AIPlugins.xcodeproj">
+            ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -44,10 +44,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C2123C1D24F825C1BDF0A32D"
+               BlueprintIdentifier = "CA91BF5C6678A6A1DB58725C"
                BuildableName = "AIPluginKitTests.xctest"
                BlueprintName = "AIPluginKitTests"
-               ReferencedContainer = "container:AIPlugins.xcodeproj">
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -67,10 +67,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0C3AD186C6CF8C956C91A2B7"
+            BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
             BuildableName = "AIPluginKit.framework"
             BlueprintName = "AIPluginKit"
-            ReferencedContainer = "container:AIPlugins.xcodeproj">
+            ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <CommandLineArguments>
@@ -87,10 +87,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0C3AD186C6CF8C956C91A2B7"
+            BlueprintIdentifier = "75B33B7BC0E7B443EFB94243"
             BuildableName = "AIPluginKit.framework"
             BlueprintName = "AIPluginKit"
-            ReferencedContainer = "container:AIPlugins.xcodeproj">
+            ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>
