@@ -235,7 +235,14 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     }
 
     open func windowWillClose(_ notification: Notification) {
-        WindowManager.shared.frames.saveVisibility(false, for: windowID)
+        // Only a close while the app is *running* means the user dismissed
+        // the window — persist hidden so it stays closed next launch. During
+        // termination AppKit also sends `windowWillClose:` to still-visible
+        // windows; persisting false there would stop a window the user left
+        // open from reopening. See `WindowManagerTerminationTests`.
+        if !WindowManager.shared.isTerminating {
+            WindowManager.shared.frames.saveVisibility(false, for: windowID)
+        }
         WindowManager.shared.windowDidInteract(self, kind: .close)
     }
 
