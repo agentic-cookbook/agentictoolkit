@@ -24,6 +24,13 @@ public final class WindowManager {
     /// Live `SingleWindowController` lookup by `windowID`.
     public let registry = WindowRegistry()
 
+    /// `true` once `NSApplication.willTerminateNotification` has fired. Read
+    /// by `SingleWindowController.windowWillClose(_:)`: AppKit sends
+    /// `windowWillClose:` to still-visible windows while the app is quitting,
+    /// and persisting `visible = false` there would stop a window the user
+    /// left open from reopening next launch. See `WindowManagerTerminationTests`.
+    public internal(set) var isTerminating = false
+
     public enum InteractionKind: Sendable {
         case show
         case close
@@ -46,6 +53,19 @@ public final class WindowManager {
         recentCountCancellable = UserSettings.recentWindowsCount.$currentValue
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.applyRecentDocumentCountFromSettings() }
+        // Latch app termination so window teardown can tell a user-initiated
+        // close (persist hidden) apart from windows closing only because the
+        // app is quitting (must not clobber persisted visibility).
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppWillTerminate),
+            name: NSApplication.willTerminateNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAppWillTerminate() {
+        isTerminating = true
     }
 
     // MARK: - Recents recording
