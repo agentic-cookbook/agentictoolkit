@@ -1,134 +1,87 @@
-import AppKit
 import Foundation
-import os
-import AgenticToolkitCore
-import AgenticToolkitCoreUI
-import AgenticToolkitCoreMacOS
-import AgenticToolkitMacOS
-import AIPluginsShared
+import AIPluginKit
 
 /// LLM plugin for the Google Gemini `generateContent` API.
+///
+/// Foundation-only: describes the HTTP request and decodes the JSON reply. The
+/// host owns transport, settings UI, and the API key.
 public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agentictoolkit.plugin.google"
+    public override init() { super.init() }
 
-    public let displayName = "Google (Gemini)"
-
-    public let capabilities: AIPluginCapability = [.textCompletion]
-
-    public let availableModels = [
-        "gemini-2.0-flash",
-        "gemini-2.5-flash-preview-05-20",
-        "gemini-2.5-pro-preview-05-06"
-    ]
-
-    public let recommendedModel = "gemini-2.0-flash"
-
-    public let requiresAPIKey = true
-
-    private let context: AIPluginContext
-
-    public required init(context: AIPluginContext) {
-        self.context = context
-    }
-
-    public func sendMessages(
-        _ messages: [AIPluginMessage],
-        model: String,
-        systemPrompt: String?,
-        maxTokens: Int,
-        credentials: AIPluginCredentials
-    ) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    let request = try self.buildRequest(
-                        messages: messages, model: model, systemPrompt: systemPrompt,
-                        maxTokens: maxTokens, credentials: credentials
-                    )
-                    let (data, response) = try await URLSession.shared.data(for: request)
-
-                    guard let http = response as? HTTPURLResponse else {
-                        throw AIPluginRequestError.invalidResponse
-                    }
-                    guard http.statusCode == 200 || http.statusCode == 201 else {
-                        let body = String(data: data, encoding: .utf8) ?? ""
-                        throw AIPluginRequestError.httpError(http.statusCode, Self.parseErrorMessage(from: body))
-                    }
-
-                    let reply = Self.parseReply(from: data)
-                    continuation.yield(reply)
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
+    public func buildRequest(_ context: AIChatContext) throws -> AIRequestSpec {
+        guard let apiKey = context.config.apiKey, !apiKey.isEmpty else {
+            throw PluginError.missingAPIKey
         }
-    }
+        let model = context.model.isEmpty ? "gemini-2.0-flash" : context.model
 
-    @MainActor
-    public func settingsPanelViewController() -> ComposableSettings.SettingsPanelViewController? {
-        GoogleSettingsPanelViewController(plugin: self)
-    }
-
-    public func validateCredentials(_ credentials: AIPluginCredentials) async -> String? {
-        do {
-            let messages = [AIPluginMessage(role: .user, content: "Hi")]
-            let request = try buildRequest(
-                messages: messages, model: recommendedModel, systemPrompt: nil,
-                maxTokens: 1, credentials: credentials
-            )
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return "Invalid response" }
-            if http.statusCode == 200 || http.statusCode == 201 { return nil }
-            let body = String(data: data, encoding: .utf8) ?? ""
-            return Self.parseErrorMessage(from: body) ?? "HTTP \(http.statusCode)"
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
-    // MARK: - Private
-
-    private func buildRequest(
-        messages: [AIPluginMessage],
-        model: String,
-        systemPrompt: String?,
-        maxTokens: Int,
-        credentials: AIPluginCredentials
-    ) throws -> URLRequest {
-        let effectiveModel = model.isEmpty ? recommendedModel : model
         var components = URLComponents()
         components.scheme = "https"
         components.host = "generativelanguage.googleapis.com"
-        components.path = "/v1beta/models/\(effectiveModel):generateContent"
-        components.queryItems = [URLQueryItem(name: "key", value: credentials.apiKey)]
-        guard let url = components.url else {
-            throw AIPluginRequestError.invalidResponse
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.timeoutInterval = 60
+        components.path = "/v1beta/models/\(model):generateContent"
+        components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
+        guard let url = components.url else { throw PluginError.invalidURL }
 
-        let contents = messages.filter { $0.role != .system }.map { msg -> [String: Any] in
-            let role = msg.role == .assistant ? "model" : "user"
-            return ["role": role, "parts": [["text": msg.content]]]
-        }
+        let contents = context.messages
+            .filter { $0.role != .system }
+            .map { message -> [String: Any] in
+                [
+                    "role": message.role == .assistant ? "model" : "user",
+                    "parts": [["text": message.content]]
+                ]
+            }
 
         var body: [String: Any] = [
             "contents": contents,
-            "generationConfig": ["maxOutputTokens": maxTokens]
+            "generationConfig": ["maxOutputTokens": context.maxTokens]
         ]
-        if let systemPrompt, !systemPrompt.isEmpty {
+        if let systemPrompt = context.systemPrompt, !systemPrompt.isEmpty {
             body["systemInstruction"] = ["parts": [["text": systemPrompt]]]
         }
 
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        return request
+        return .http(
+            method: .post,
+            url: url,
+            headers: ["content-type": "application/json"],
+            body: try JSONSerialization.data(withJSONObject: body)
+        )
     }
 
-    private static func parseReply(from data: Data) -> String {
+    public func makeDecoder() -> any AIStreamDecoder { GeminiReplyDecoder() }
+
+    public func describeError(status: Int, body: Data) -> String? {
+        GeminiReplyDecoder.parseErrorMessage(from: body)
+    }
+
+    enum PluginError: Error, LocalizedError {
+        case missingAPIKey
+        case invalidURL
+
+        var errorDescription: String? {
+            switch self {
+            case .missingAPIKey: return "A Google API key is required."
+            case .invalidURL: return "The Gemini API URL is invalid."
+            }
+        }
+    }
+}
+
+/// Buffers a full Gemini `generateContent` JSON response and emits the reply on
+/// `finish()`.
+final class GeminiReplyDecoder: AIStreamDecoder {
+
+    private var buffer = Data()
+
+    func consume(_ data: Data) -> [AIStreamEvent] {
+        buffer.append(data)
+        return []
+    }
+
+    func finish() -> [AIStreamEvent] {
+        [.textDelta(Self.parseReply(from: buffer)), .end(stopReason: nil)]
+    }
+
+    static func parseReply(from data: Data) -> String {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let candidates = json["candidates"] as? [[String: Any]],
               let first = candidates.first,
@@ -141,14 +94,12 @@ public final class GooglePlugin: NSObject, AIPlugin, @unchecked Sendable {
         return text
     }
 
-    private static func parseErrorMessage(from body: String) -> String? {
-        guard let data = body.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+    static func parseErrorMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = json["error"] as? [String: Any],
+              let message = error["message"] as? String else {
             return nil
         }
-        if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
-            return message
-        }
-        return nil
+        return message
     }
 }

@@ -1,185 +1,128 @@
-import AppKit
 import Foundation
-import os
-import AgenticToolkitCore
-import AgenticToolkitCoreUI
-import AgenticToolkitCoreMacOS
-import AgenticToolkitMacOS
-import AIPluginsShared
+import AIPluginKit
 
 /// LLM plugin for the Anthropic Messages API with SSE streaming.
-/// Requires an API key from console.anthropic.com.
+///
+/// Foundation-only: it *describes* the HTTP request and *decodes* the SSE
+/// response. The host owns the transport, the settings UI (generated from
+/// `descriptor.json`), and the API key (injected through `AIChatContext.config`).
 public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
-    public static let identifier = "com.agentictoolkit.plugin.claude-api"
+    public override init() { super.init() }
 
-    public let displayName = "Claude (API)"
-
-    public let capabilities: AIPluginCapability = [.textCompletion, .streaming]
-
-    public let availableModels = [
-        "claude-haiku-4-5-20251001",
-        "claude-sonnet-4-6",
-        "claude-opus-4-6"
-    ]
-
-    public let recommendedModel = "claude-haiku-4-5-20251001"
-
-    public let requiresAPIKey = true
-
-    private let context: AIPluginContext
-
-    public required init(context: AIPluginContext) {
-        self.context = context
-    }
-
-    public func sendMessages(
-        _ messages: [AIPluginMessage],
-        model: String,
-        systemPrompt: String?,
-        maxTokens: Int,
-        credentials: AIPluginCredentials
-    ) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    let request = try self.buildRequest(
-                        messages: messages, model: model, systemPrompt: systemPrompt,
-                        maxTokens: maxTokens, credentials: credentials, stream: true
-                    )
-                    try await Self.streamSSE(request: request, continuation: continuation)
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
+    public func buildRequest(_ context: AIChatContext) throws -> AIRequestSpec {
+        guard let apiKey = context.config.apiKey, !apiKey.isEmpty else {
+            throw PluginError.missingAPIKey
         }
-    }
-
-    @MainActor
-    public func settingsPanelViewController() -> ComposableSettings.SettingsPanelViewController? {
-        ClaudeAPISettingsPanelViewController(plugin: self)
-    }
-
-    public func validateCredentials(_ credentials: AIPluginCredentials) async -> String? {
-        do {
-            let messages = [AIPluginMessage(role: .user, content: "Hi")]
-            let request = try buildRequest(
-                messages: messages, model: recommendedModel, systemPrompt: nil,
-                maxTokens: 1, credentials: credentials, stream: false
-            )
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return "Invalid response" }
-            if http.statusCode == 200 || http.statusCode == 201 { return nil }
-            let body = String(data: data, encoding: .utf8) ?? ""
-            return Self.parseErrorMessage(from: body) ?? "HTTP \(http.statusCode)"
-        } catch {
-            return error.localizedDescription
-        }
-    }
-
-    // MARK: - Request Building
-
-    private func buildRequest(
-        messages: [AIPluginMessage],
-        model: String,
-        systemPrompt: String?,
-        maxTokens: Int,
-        credentials: AIPluginCredentials,
-        stream: Bool
-    ) throws -> URLRequest {
         guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
-            preconditionFailure("Anthropic messages URL literal is invalid")
+            throw PluginError.invalidURL
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(credentials.apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.timeoutInterval = 120
 
-        let apiMessages = messages.filter { $0.role != .system }.map { msg -> [String: String] in
-            ["role": msg.role.rawValue, "content": msg.content]
-        }
+        let model = context.model.isEmpty ? "claude-haiku-4-5-20251001" : context.model
+        let apiMessages = context.messages
+            .filter { $0.role != .system }
+            .map { message -> [String: String] in
+                ["role": message.role == .assistant ? "assistant" : "user", "content": message.content]
+            }
 
         var body: [String: Any] = [
-            "model": model.isEmpty ? recommendedModel : model,
-            "max_tokens": maxTokens > 0 ? maxTokens : 4096,
+            "model": model,
+            "max_tokens": context.maxTokens,
             "messages": apiMessages,
-            "stream": stream
+            "stream": true
         ]
-        if let systemPrompt, !systemPrompt.isEmpty {
+        if let systemPrompt = context.systemPrompt, !systemPrompt.isEmpty {
             body["system"] = systemPrompt
         }
 
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        return request
+        return .http(
+            method: .post,
+            url: url,
+            headers: [
+                "x-api-key": apiKey,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            ],
+            body: try JSONSerialization.data(withJSONObject: body)
+        )
     }
 
-    // MARK: - SSE Streaming
+    public func makeDecoder() -> any AIStreamDecoder { ClaudeSSEDecoder() }
 
-    /// Streams the Anthropic Messages API response using Server-Sent Events.
-    /// Parses `content_block_delta` events and yields `delta.text` chunks.
-    private static func streamSSE(
-        request: URLRequest,
-        continuation: AsyncThrowingStream<String, Error>.Continuation
-    ) async throws {
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
-
-        guard let http = response as? HTTPURLResponse else {
-            throw AIPluginRequestError.invalidResponse
-        }
-
-        // Non-2xx: read the full body for the error message
-        guard (200...299).contains(http.statusCode) else {
-            var errorBody = ""
-            for try await line in bytes.lines {
-                errorBody += line
-            }
-            let message = parseErrorMessage(from: errorBody)
-            throw AIPluginRequestError.httpError(http.statusCode, message)
-        }
-
-        // Parse SSE: each event is prefixed with "data: "
-        for try await line in bytes.lines {
-            guard line.hasPrefix("data: ") else { continue }
-            let payload = String(line.dropFirst(6))
-
-            if payload == "[DONE]" { break }
-
-            guard let data = payload.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let eventType = json["type"] as? String else {
-                continue
-            }
-
-            switch eventType {
-            case "content_block_delta":
-                if let delta = json["delta"] as? [String: Any],
-                   let text = delta["text"] as? String {
-                    continuation.yield(text)
-                }
-            case "error":
-                if let error = json["error"] as? [String: Any],
-                   let message = error["message"] as? String {
-                    throw AIPluginRequestError.httpError(0, message)
-                }
-            default:
-                break
-            }
-        }
-    }
-
-    // MARK: - Error Parsing
-
-    private static func parseErrorMessage(from body: String) -> String? {
-        guard let data = body.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    public func describeError(status: Int, body: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               let error = json["error"] as? [String: Any],
               let message = error["message"] as? String else {
             return nil
         }
         return message
+    }
+
+    enum PluginError: Error, LocalizedError {
+        case missingAPIKey
+        case invalidURL
+
+        var errorDescription: String? {
+            switch self {
+            case .missingAPIKey: return "An Anthropic API key is required."
+            case .invalidURL: return "The Anthropic API URL is invalid."
+            }
+        }
+    }
+}
+
+/// Decodes the Anthropic Messages API server-sent-event stream. Each `data:`
+/// line carries a JSON event; `content_block_delta` events contribute text.
+final class ClaudeSSEDecoder: AIStreamDecoder {
+
+    private var buffer = Data()
+
+    func consume(_ data: Data) -> [AIStreamEvent] {
+        buffer.append(data)
+        return drainLines(flushRemainder: false)
+    }
+
+    func finish() -> [AIStreamEvent] {
+        drainLines(flushRemainder: true)
+    }
+
+    private func drainLines(flushRemainder: Bool) -> [AIStreamEvent] {
+        var events: [AIStreamEvent] = []
+        while let newline = buffer.firstIndex(of: 0x0A) {
+            let lineData = Data(buffer[buffer.startIndex..<newline])
+            buffer.removeSubrange(buffer.startIndex...newline)
+            if let event = parse(lineData) { events.append(event) }
+        }
+        if flushRemainder, !buffer.isEmpty {
+            if let event = parse(buffer) { events.append(event) }
+            buffer.removeAll()
+        }
+        return events
+    }
+
+    private func parse(_ lineData: Data) -> AIStreamEvent? {
+        guard let line = String(data: lineData, encoding: .utf8) else { return nil }
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("data: ") else { return nil }
+
+        let payload = String(trimmed.dropFirst(6))
+        if payload == "[DONE]" { return .end(stopReason: nil) }
+
+        guard let json = try? JSONSerialization.jsonObject(with: Data(payload.utf8)) as? [String: Any],
+              let eventType = json["type"] as? String else {
+            return nil
+        }
+
+        switch eventType {
+        case "content_block_delta":
+            if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String {
+                return .textDelta(text)
+            }
+        case "message_stop":
+            return .end(stopReason: nil)
+        default:
+            break
+        }
+        return nil
     }
 }

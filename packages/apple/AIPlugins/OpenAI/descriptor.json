@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "identifier": "com.agentictoolkit.plugin.openai",
+  "displayName": "OpenAI (ChatGPT)",
+  "version": "1.0",
+  "models": [
+    "gpt-4.1-nano",
+    "gpt-4.1-mini",
+    "gpt-4o-mini",
+    "gpt-4o"
+  ],
+  "defaultModel": "gpt-4.1-nano",
+  "fields": [
+    { "key": "apiKey", "label": "API Key", "kind": "secret" }
+  ]
+}

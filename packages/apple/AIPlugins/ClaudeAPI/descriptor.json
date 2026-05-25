@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "identifier": "com.agentictoolkit.plugin.claude-api",
+  "displayName": "Claude (API)",
+  "version": "1.0",
+  "models": [
+    "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-6",
+    "claude-opus-4-6"
+  ],
+  "defaultModel": "claude-haiku-4-5-20251001",
+  "fields": [
+    { "key": "apiKey", "label": "API Key", "kind": "secret" }
+  ]
+}

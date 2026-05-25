@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "identifier": "com.agentictoolkit.plugin.openai-compatible",
+  "displayName": "Custom (OpenAI-compatible)",
+  "version": "1.0",
+  "models": [],
+  "defaultModel": null,
+  "fields": [
+    { "key": "baseURL", "label": "Base URL", "kind": "text", "placeholder": "https://localhost:1234" },
+    { "key": "apiKey", "label": "API Key", "kind": "secret" }
+  ]
+}
