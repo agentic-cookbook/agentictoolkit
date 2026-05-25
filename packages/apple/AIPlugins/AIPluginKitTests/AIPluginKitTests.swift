@@ -5,14 +5,33 @@ import Foundation
 @Suite("AIPluginKit")
 struct AIPluginKitTests {
 
-    @Test("AIRequestSpec applies sensible defaults")
+    @Test("AIRequestSpec.http applies sensible defaults")
     func requestSpecDefaults() throws {
         let url = try #require(URL(string: "https://example.com/v1"))
-        let spec = AIRequestSpec(url: url)
-        #expect(spec.method == .post)
-        #expect(spec.headers.isEmpty)
-        #expect(spec.body == nil)
+        let spec = AIRequestSpec.http(url: url)
         #expect(spec.timeout == 120)
+        guard case let .http(method, specURL, headers, body) = spec.transport else {
+            Issue.record("expected an http transport")
+            return
+        }
+        #expect(method == .post)
+        #expect(specURL == url)
+        #expect(headers.isEmpty)
+        #expect(body == nil)
+    }
+
+    @Test("AIRequestSpec.command carries the subprocess description")
+    func commandSpec() {
+        let exe = URL(fileURLWithPath: "/usr/bin/env")
+        let spec = AIRequestSpec.command(executableURL: exe, arguments: ["echo", "hi"], stdin: Data("in".utf8))
+        guard case let .command(executableURL, arguments, stdin, environment) = spec.transport else {
+            Issue.record("expected a command transport")
+            return
+        }
+        #expect(executableURL == exe)
+        #expect(arguments == ["echo", "hi"])
+        #expect(stdin == Data("in".utf8))
+        #expect(environment.isEmpty)
     }
 
     @Test("AIPluginConfig exposes conventional accessors")
@@ -25,7 +44,7 @@ struct AIPluginKitTests {
         #expect(config["missing"] == nil)
     }
 
-    @Test("a plugin builds a request from its context")
+    @Test("a plugin builds an http request from its context")
     func pluginBuildsRequest() throws {
         let plugin = EchoPlugin()
         let expected = try #require(URL(string: "https://api.example.com/chat"))
@@ -35,10 +54,14 @@ struct AIPluginKitTests {
             config: AIPluginConfig(["apiKey": "secret"])
         )
         let spec = try plugin.buildRequest(context)
-        #expect(spec.url == expected)
-        #expect(spec.headers["x-api-key"] == "secret")
-        #expect(spec.method == .post)
-        #expect(spec.body == Data("test-model".utf8))
+        guard case let .http(method, url, headers, body) = spec.transport else {
+            Issue.record("expected an http transport")
+            return
+        }
+        #expect(url == expected)
+        #expect(headers["x-api-key"] == "secret")
+        #expect(method == .post)
+        #expect(body == Data("test-model".utf8))
     }
 
     @Test("a decoder buffers partial frames across consume calls")
@@ -73,7 +96,7 @@ private final class EchoPlugin: AIPlugin {
         if let key = context.config.apiKey {
             headers["x-api-key"] = key
         }
-        return AIRequestSpec(url: url, headers: headers, body: Data(context.model.utf8))
+        return .http(url: url, headers: headers, body: Data(context.model.utf8))
     }
 
     func makeDecoder() -> any AIStreamDecoder {
