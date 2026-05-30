@@ -143,7 +143,14 @@ export function AuthProvider<U extends AuthUser = AuthUser>({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error(await readErrorMessage(res, failMsg))
+      if (!res.ok) {
+        // Surface server (5xx) failures as such instead of the generic
+        // credential message — a 500 means the server is broken, not that the
+        // password is wrong. readErrorMessage still prefers a JSON
+        // error/message/title from the body when one is present.
+        const fallback = res.status >= 500 ? `Server error (${res.status})` : failMsg
+        throw new Error(await readErrorMessage(res, fallback))
+      }
       const data = (await res.json()) as BackendAuthResponse
       // Gate on capability BEFORE persisting tokens, so a rejected user never
       // leaves an access token in localStorage. ensureAllowed revokes the
