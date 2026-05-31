@@ -21,6 +21,26 @@ const EASE = "power3.out";
 const clamp = (n: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, n));
 
+// Vector eyebrow glyphs — wide and flat (short height) so ia/ai read as brows.
+const BROW_STROKE = 4;
+function browI(x: number): ReactElement {
+  return (
+    <g>
+      <circle cx={x} cy={-12} r={2.4} fill={GREEN} />
+      <line x1={x} y1={-8} x2={x} y2={-1} stroke={GREEN} strokeWidth={BROW_STROKE} strokeLinecap="round" />
+    </g>
+  );
+}
+function browA(x: number): ReactElement {
+  // single-story 'a': a flat bowl + a short right stem
+  return (
+    <g>
+      <ellipse cx={x} cy={-5} rx={7} ry={4.5} fill="none" stroke={GREEN} strokeWidth={BROW_STROKE} />
+      <line x1={x + 7} y1={-9.5} x2={x + 7} y2={-1} stroke={GREEN} strokeWidth={BROW_STROKE} strokeLinecap="round" />
+    </g>
+  );
+}
+
 export interface OlyloProps {
   /** Deliberate mood from a driver (chat today, persona later). */
   expression?: OlyloExpression;
@@ -226,33 +246,15 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       )}
 
       <g ref={faceRef}>
-        {/* ia / ai eyebrows (above each eye) */}
-        <text
-          ref={browLeftRef}
-          x={50}
-          y={-2}
-          textAnchor="middle"
-          fontFamily="monospace"
-          fontWeight={700}
-          fontSize={26}
-          fill={GREEN}
-          opacity={0.75}
-        >
-          ia
-        </text>
-        <text
-          ref={browRightRef}
-          x={270}
-          y={-2}
-          textAnchor="middle"
-          fontFamily="monospace"
-          fontWeight={700}
-          fontSize={26}
-          fill={GREEN}
-          opacity={0.75}
-        >
-          ai
-        </text>
+        {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
+        <g ref={browLeftRef} opacity={0.8}>
+          {browI(38)}
+          {browA(60)}
+        </g>
+        <g ref={browRightRef} opacity={0.8}>
+          {browA(263)}
+          {browI(282)}
+        </g>
 
         {/* left o (eye) */}
         <g ref={leftEyeRef}>
@@ -264,7 +266,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         </g>
 
         {/* l */}
-        <rect ref={lLeftRef} x={100} y={-20} width={10} height={105} fill={GREEN} />
+        <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill={GREEN} />
 
         {/* y (resting wordmark) */}
         <g ref={yGroupRef}>
@@ -284,7 +286,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         />
 
         {/* l */}
-        <rect ref={lRightRef} x={210} y={-20} width={10} height={105} fill={GREEN} />
+        <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill={GREEN} />
 
         {/* right o (eye) */}
         <g ref={rightEyeRef}>
