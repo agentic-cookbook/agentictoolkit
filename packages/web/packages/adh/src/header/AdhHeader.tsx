@@ -11,6 +11,8 @@ import type { AdhThemeKey } from '../themes/adh-themes'
 export type AdhHeaderProps = {
   siteName: string
   siteNameHref?: string
+  /** Optional page/section title, shown centered in the bar. */
+  pageTitle?: string
   navLinks?: NavLink[]
   trailingNavLinks?: NavLink[]
   sites?: SiteLink[]
@@ -28,6 +30,7 @@ export type AdhHeaderProps = {
 export function AdhHeader({
   siteName,
   siteNameHref = '/',
+  pageTitle,
   navLinks = [],
   trailingNavLinks = [],
   sites,
@@ -53,6 +56,9 @@ export function AdhHeader({
         <Link href={siteNameHref} className="adh-header__title">
           {siteName}
         </Link>
+        {pageTitle && (
+          <span className="adh-header__page-title">{pageTitle}</span>
+        )}
         <nav className="adh-header__nav" aria-label="Primary">
           {barLinks.map((link) => (
             <NavLinkItem key={link.href + link.label} link={link} />
