@@ -103,14 +103,14 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     gsap.to(browLeftRef.current, {
       rotation: p.browLeft.rotation,
       y: p.browLeft.y,
-      transformOrigin: "50% 50%",
+      svgOrigin: "50 4", // pivot over the left eye centre, so tilts read expressively
       duration: TWEEN,
       ease: EASE,
     });
     gsap.to(browRightRef.current, {
       rotation: p.browRight.rotation,
       y: p.browRight.y,
-      transformOrigin: "50% 50%",
+      svgOrigin: "270 4", // pivot over the right eye centre
       duration: TWEEN,
       ease: EASE,
     });
@@ -246,8 +246,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     >
       {/* arcs the eyebrows ride on (peak up, centred over each eye) */}
       <defs>
-        <path id="browArcLeft" d="M24,17 A42,42 0 0 1 76,17" />
-        <path id="browArcRight" d="M244,17 A42,42 0 0 1 296,17" />
+        <path id="browArcLeft" d="M21,12 A48,48 0 0 1 79,12" />
+        <path id="browArcRight" d="M241,12 A48,48 0 0 1 299,12" />
       </defs>
 
       {/* full-bleed hit area so a click anywhere on him giggles (svg `auto` only
@@ -283,13 +283,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* eyebrows: the literal ia / ai with a single curved stroke trailing
             toward the centre — ia⌒ on the left, ⌒ai on the right */}
         <g ref={browLeftRef} opacity={0.8}>
-          <path d="M63,10 A42,42 0 0 1 83,24" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M62,4 A48,48 0 0 1 84,16" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
             <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
           </text>
         </g>
         <g ref={browRightRef} opacity={0.8}>
-          <path d="M237,24 A42,42 0 0 1 257,10" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M236,16 A48,48 0 0 1 258,4" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
             <textPath href="#browArcRight" startOffset="50%">ai</textPath>
           </text>
