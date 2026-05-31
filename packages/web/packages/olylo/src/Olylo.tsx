@@ -37,8 +37,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
   const rightIrisRef = useRef<SVGCircleElement>(null);
   const lLeftRef = useRef<SVGRectElement>(null);
   const lRightRef = useRef<SVGRectElement>(null);
-  const earLeftRef = useRef<SVGTextElement>(null);
-  const earRightRef = useRef<SVGTextElement>(null);
+  const browLeftRef = useRef<SVGTextElement>(null);
+  const browRightRef = useRef<SVGTextElement>(null);
   const yGroupRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
   const speechRef = useRef<SVGTextElement>(null);
@@ -82,17 +82,18 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       duration: TWEEN,
       ease: EASE,
     });
-    gsap.to(earLeftRef.current, {
-      rotation: p.earLeft.rotation,
-      y: p.earLeft.y,
-      transformOrigin: "50% 100%",
+    // ia / ai eyebrows
+    gsap.to(browLeftRef.current, {
+      rotation: p.browLeft.rotation,
+      y: p.browLeft.y,
+      transformOrigin: "50% 50%",
       duration: TWEEN,
       ease: EASE,
     });
-    gsap.to(earRightRef.current, {
-      rotation: p.earRight.rotation,
-      y: p.earRight.y,
-      transformOrigin: "50% 100%",
+    gsap.to(browRightRef.current, {
+      rotation: p.browRight.rotation,
+      y: p.browRight.y,
+      transformOrigin: "50% 50%",
       duration: TWEEN,
       ease: EASE,
     });
@@ -199,7 +200,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
   return (
     <svg
       ref={svgRef}
-      viewBox="-70 -75 460 200"
+      viewBox="-15 -72 350 195"
       aria-label="ia.olylo.ai"
       className="block h-auto w-full"
       style={{
@@ -207,34 +208,6 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           "drop-shadow(0 0 6px var(--green)) drop-shadow(0 0 18px var(--green-soft)) drop-shadow(0 0 36px rgba(0, 255, 65, 0.25))",
       }}
     >
-      {/* ia / ai marks */}
-      <text
-        ref={earLeftRef}
-        x={-35}
-        y={-40}
-        textAnchor="middle"
-        fontFamily="monospace"
-        fontWeight={700}
-        fontSize={30}
-        fill={GREEN}
-        opacity={0.6}
-      >
-        ia
-      </text>
-      <text
-        ref={earRightRef}
-        x={355}
-        y={-40}
-        textAnchor="middle"
-        fontFamily="monospace"
-        fontWeight={700}
-        fontSize={30}
-        fill={GREEN}
-        opacity={0.6}
-      >
-        ai
-      </text>
-
       {/* speech */}
       {speech && (
         <text
@@ -253,6 +226,34 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       )}
 
       <g ref={faceRef}>
+        {/* ia / ai eyebrows (above each eye) */}
+        <text
+          ref={browLeftRef}
+          x={50}
+          y={-2}
+          textAnchor="middle"
+          fontFamily="monospace"
+          fontWeight={700}
+          fontSize={26}
+          fill={GREEN}
+          opacity={0.75}
+        >
+          ia
+        </text>
+        <text
+          ref={browRightRef}
+          x={270}
+          y={-2}
+          textAnchor="middle"
+          fontFamily="monospace"
+          fontWeight={700}
+          fontSize={26}
+          fill={GREEN}
+          opacity={0.75}
+        >
+          ai
+        </text>
+
         {/* left o (eye) */}
         <g ref={leftEyeRef}>
           <g ref={leftBlinkRef}>

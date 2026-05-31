@@ -30,9 +30,9 @@ export interface Pose {
   /** `l` strokes pivot at their base (body language). */
   lLeft: { rotation: number; y: number };
   lRight: { rotation: number; y: number };
-  /** `ia` / `ai` marks (ears for now → eyebrows later). */
-  earLeft: { y: number; rotation: number };
-  earRight: { y: number; rotation: number };
+  /** `ia` / `ai` eyebrows above each eye: y raises(-)/lowers(+); rotation furrows/arches. */
+  browLeft: { y: number; rotation: number };
+  browRight: { y: number; rotation: number };
   /** Mouth path `d` — MorphSVG morphs between these. All single-quadratic so morphs stay clean. */
   mouth: string;
   /** When true, show the literal `y` letter (resting wordmark); otherwise show the mouth. */
@@ -59,8 +59,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1, scaleY: 1 },
     lLeft: { rotation: 0, y: 0 },
     lRight: { rotation: 0, y: 0 },
-    earLeft: { y: 0, rotation: -6 },
-    earRight: { y: 0, rotation: 6 },
+    browLeft: { y: 0, rotation: 0 },
+    browRight: { y: 0, rotation: 0 },
     mouth: MOUTH.flat,
     showY: true,
     bob: 0,
@@ -70,8 +70,9 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1, scaleY: 0.5 },
     lLeft: { rotation: -8, y: -2 },
     lRight: { rotation: 12, y: -4 },
-    earLeft: { y: -3, rotation: -11 },
-    earRight: { y: -3, rotation: 11 },
+    // furrow: inner ends pulled down
+    browLeft: { y: 2, rotation: 9 },
+    browRight: { y: 2, rotation: -9 },
     mouth: MOUTH.pursed,
     showY: false,
     bob: 0,
@@ -81,8 +82,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1.12, scaleY: 1.12 },
     lLeft: { rotation: 0, y: -4 },
     lRight: { rotation: 0, y: -4 },
-    earLeft: { y: -6, rotation: -12 },
-    earRight: { y: -6, rotation: 12 },
+    browLeft: { y: -6, rotation: 0 },
+    browRight: { y: -6, rotation: 0 },
     mouth: MOUTH.smile,
     showY: false,
     bob: 2,
@@ -92,8 +93,9 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1.28, scaleY: 1.3 },
     lLeft: { rotation: -4, y: -7 },
     lRight: { rotation: 4, y: -7 },
-    earLeft: { y: -10, rotation: -18 },
-    earRight: { y: -10, rotation: 18 },
+    // shot up + slight arch
+    browLeft: { y: -13, rotation: -5 },
+    browRight: { y: -13, rotation: 5 },
     mouth: MOUTH.open,
     showY: false,
     bob: 0,
@@ -103,8 +105,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1, scaleY: 0.14 },
     lLeft: { rotation: -3, y: 0 },
     lRight: { rotation: 3, y: 0 },
-    earLeft: { y: -2, rotation: -10 },
-    earRight: { y: -2, rotation: 10 },
+    browLeft: { y: -4, rotation: 0 },
+    browRight: { y: -4, rotation: 0 },
     mouth: MOUTH.bigSmile,
     showY: false,
     bob: 3,
@@ -114,8 +116,9 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 0.97, scaleY: 0.4 },
     lLeft: { rotation: 6, y: 2 },
     lRight: { rotation: -6, y: 2 },
-    earLeft: { y: 6, rotation: 12 },
-    earRight: { y: 6, rotation: -12 },
+    // heavy, outer ends drooping
+    browLeft: { y: 4, rotation: -6 },
+    browRight: { y: 4, rotation: 6 },
     mouth: MOUTH.frown,
     showY: false,
     bob: 0,
@@ -125,8 +128,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 0.95, scaleY: 0.07 },
     lLeft: { rotation: 10, y: 3 },
     lRight: { rotation: -10, y: 3 },
-    earLeft: { y: 9, rotation: 18 },
-    earRight: { y: 9, rotation: -18 },
+    browLeft: { y: 6, rotation: -8 },
+    browRight: { y: 6, rotation: 8 },
     mouth: MOUTH.flat,
     showY: false,
     bob: 0,
