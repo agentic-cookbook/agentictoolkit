@@ -21,24 +21,14 @@ const EASE = "power3.out";
 const clamp = (n: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, n));
 
-// Eyebrow glyphs — `i` (dot + stem) and a single-story `a` (flat bowl + stem),
-// placed on a shallow arc (peak toward the outer end) and tapered (the inner
-// `a` is heavier than the outer `i`) so ia/ai read as arched, tapered brows.
-function browI(cx: number, topY: number, stroke: number): ReactElement {
-  return (
-    <g>
-      <circle cx={cx} cy={topY} r={stroke - 0.2} fill={GREEN} />
-      <line x1={cx} y1={topY + 4} x2={cx} y2={topY + 11} stroke={GREEN} strokeWidth={stroke} strokeLinecap="round" />
-    </g>
-  );
-}
-function browA(cx: number, topY: number, stroke: number): ReactElement {
-  return (
-    <g>
-      <ellipse cx={cx} cy={topY + 5} rx={7} ry={4.5} fill="none" stroke={GREEN} strokeWidth={stroke} />
-      <line x1={cx + 7} y1={topY} x2={cx + 7} y2={topY + 10} stroke={GREEN} strokeWidth={stroke} strokeLinecap="round" />
-    </g>
-  );
+// A tapered, arched eyebrow as a filled crescent: thick at the inner end,
+// tapering to a point at the outer end, arcing up over the eye. `cxInner` is
+// the inner (face-side) x; `dir` is +1 for a right brow (tip points right) and
+// -1 for a left brow (tip points left).
+function browShape(cxInner: number, dir: 1 | -1): string {
+  const tip = cxInner + dir * 42; // outer point
+  const peak = cxInner + dir * 22; // arch peak x
+  return `M${cxInner},2 Q${peak},-8 ${tip},2 Q${peak + dir},6 ${cxInner},8 Z`;
 }
 
 export interface OlyloProps {
@@ -294,14 +284,18 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
 
       <g ref={faceRef}>
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
-        {/* eyebrows: arched (peak outward), tapered (inner `a` heavier), hugging the eye */}
-        <g ref={browLeftRef} opacity={0.55}>
-          {browI(36, -8, 2)}
-          {browA(58, -2, 3)}
+        {/* eyebrows: a tapered, arched brow shape with ia/ai tucked in as a nod */}
+        <g ref={browLeftRef} opacity={0.6}>
+          <path d={browShape(68, -1)} fill={GREEN} />
+          <text x={47} y={4} textAnchor="middle" fontFamily="monospace" fontWeight={700} fontSize={6} fill="#000" opacity={0.85}>
+            ia
+          </text>
         </g>
-        <g ref={browRightRef} opacity={0.55}>
-          {browA(262, -2, 3)}
-          {browI(284, -8, 2)}
+        <g ref={browRightRef} opacity={0.6}>
+          <path d={browShape(272, 1)} fill={GREEN} />
+          <text x={293} y={4} textAnchor="middle" fontFamily="monospace" fontWeight={700} fontSize={6} fill="#000" opacity={0.85}>
+            ai
+          </text>
         </g>
 
         {/* left o (eye) */}
