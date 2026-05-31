@@ -78,52 +78,58 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     loopRef.current.forEach((t) => t.kill());
     loopRef.current = [];
 
+    // Eyes lead (no delay); brows, antennae and mouth follow a beat later.
     gsap.to([leftEyeRef.current, rightEyeRef.current], {
       scaleX: p.eye.scaleX,
       scaleY: p.eye.scaleY,
       transformOrigin: "50% 50%",
-      duration: TWEEN,
-      ease: EASE,
+      duration: p.dur,
+      ease: p.ease,
     });
     gsap.to(lLeftRef.current, {
       rotation: p.lLeft.rotation,
       y: p.lLeft.y,
       transformOrigin: "50% 0%", // antennae: anchored at the top of the head
-      duration: TWEEN,
-      ease: EASE,
+      duration: p.dur,
+      ease: p.ease,
+      delay: 0.04,
     });
     gsap.to(lRightRef.current, {
       rotation: p.lRight.rotation,
       y: p.lRight.y,
       transformOrigin: "50% 0%", // antennae: anchored at the top of the head
-      duration: TWEEN,
-      ease: EASE,
+      duration: p.dur,
+      ease: p.ease,
+      delay: 0.04,
     });
     // ia / ai eyebrows
     gsap.to(browLeftRef.current, {
       rotation: p.browLeft.rotation,
       y: p.browLeft.y,
       svgOrigin: "50 50", // pivot at the left eye centre, so rotating swings the brow out/in
-      duration: TWEEN,
-      ease: EASE,
+      duration: p.dur,
+      ease: p.ease,
+      delay: 0.06,
     });
     gsap.to(browRightRef.current, {
       rotation: p.browRight.rotation,
       y: p.browRight.y,
       svgOrigin: "270 50", // pivot at the right eye centre
-      duration: TWEEN,
-      ease: EASE,
+      duration: p.dur,
+      ease: p.ease,
+      delay: 0.06,
     });
 
     // Mouth morphs (idle = the Y arms). The descender is thick in "Y mode" and
     // thin elsewhere, and wiggles from the junction like a little tail when lively.
-    gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: TWEEN, ease: EASE });
+    gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: p.dur, ease: p.ease, delay: 0.08 });
     gsap.to(descenderRef.current, {
       // Y mode: the angled logo tail (down-left). Otherwise: a straight-down tail.
       // Same stroke weight as the Y arms (8) in every mode.
       morphSVG: p.showY ? "M160,85 L142,115" : "M160,85 L160,115",
-      duration: TWEEN,
-      ease: EASE,
+      duration: p.dur,
+      ease: p.ease,
+      delay: 0.08,
     });
     if (p.wiggle > 0) {
       gsap.set(descenderRef.current, { rotation: -9, svgOrigin: "160 85" });
@@ -141,8 +147,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       gsap.to(descenderRef.current, {
         rotation: 0,
         svgOrigin: "160 85",
-        duration: TWEEN,
-        ease: EASE,
+        duration: p.dur,
+        ease: p.ease,
       });
     }
 

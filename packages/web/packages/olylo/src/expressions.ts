@@ -10,6 +10,7 @@ export type OlyloExpression =
   | "excited"
   | "surprised"
   | "laughing"
+  | "sad"
   | "bored"
   | "asleep";
 
@@ -19,6 +20,7 @@ export const EXPRESSIONS: OlyloExpression[] = [
   "excited",
   "surprised",
   "laughing",
+  "sad",
   "bored",
   "asleep",
 ];
@@ -30,19 +32,22 @@ export interface Pose {
   /** `l` strokes pivot at their base (body language). */
   lLeft: { rotation: number; y: number };
   lRight: { rotation: number; y: number };
-  /** `ia` / `ai` eyebrows above each eye: y raises(-)/lowers(+); rotation furrows/arches. */
+  /** `ia` / `ai` eyebrows above each eye: y raises(-)/lowers(+); rotation swings out(-)/in(+). */
   browLeft: { y: number; rotation: number };
   browRight: { y: number; rotation: number };
-  /** Mouth path `d` — MorphSVG morphs between these. All single-quadratic so morphs stay clean. */
+  /** Mouth path `d` — MorphSVG morphs between these. All 3-point so morphs stay clean. */
   mouth: string;
-  /** "Y mode": when true, the mouth is the literal Y arms and the descender is thick
-   * (so olylo reads as the logo). Otherwise the mouth is a facial expression and the
-   * descender thins to a little tail. */
+  /** "Y mode": when true, the mouth is the literal Y arms and the descender is the
+   * angled logo tail (so olylo reads as the logo). Otherwise a facial expression. */
   showY: boolean;
   /** Face bob amplitude in viewBox units (0 = still); loops while in this mood. */
   bob: number;
   /** Face wiggle (rotation degrees, 0 = none); loops while in this mood — e.g. giggling. */
   wiggle: number;
+  /** Transition duration (s) — fast for surprise/anger, slow for sad/sleepy. */
+  dur: number;
+  /** Transition ease (gsap string) — e.g. back.out for an overshoot/pop. */
+  ease: string;
   /** What olylo blurts when entering this mood (one picked at random). */
   sayings: string[];
 }
@@ -71,18 +76,23 @@ export const POSES: Record<OlyloExpression, Pose> = {
     showY: true,
     bob: 0,
     wiggle: 0,
+    dur: 0.45,
+    ease: "power3.out",
     sayings: [],
   },
   thinking: {
     eye: { scaleX: 1, scaleY: 0.5 },
-    lLeft: { rotation: -8, y: -2 },
-    lRight: { rotation: 12, y: -4 },
-    browLeft: { y: 3, rotation: 14 },
-    browRight: { y: 3, rotation: -14 },
+    lLeft: { rotation: -10, y: -3 },
+    lRight: { rotation: 6, y: -1 },
+    // asymmetric "cocked brow" — one up/out, one slightly down/in (quizzical)
+    browLeft: { y: -5, rotation: -12 },
+    browRight: { y: 2, rotation: 5 },
     mouth: MOUTH.pursed,
     showY: false,
     bob: 0,
     wiggle: 0,
+    dur: 0.4,
+    ease: "power2.out",
     sayings: ["hmmm", "hmm...", "let me think"],
   },
   excited: {
@@ -95,6 +105,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     showY: false,
     bob: 2,
     wiggle: 0,
+    dur: 0.28,
+    ease: "back.out(1.7)",
     sayings: ["ooh!", "yes!", "nice"],
   },
   surprised: {
@@ -107,6 +119,9 @@ export const POSES: Record<OlyloExpression, Pose> = {
     showY: false,
     bob: 0,
     wiggle: 0,
+    // fast snap + overshoot for the "pop"
+    dur: 0.16,
+    ease: "back.out(2.4)",
     sayings: ["whoa!", "!?", "huh?!"],
   },
   laughing: {
@@ -119,7 +134,24 @@ export const POSES: Record<OlyloExpression, Pose> = {
     showY: false,
     bob: 3,
     wiggle: 4,
+    dur: 0.3,
+    ease: "back.out(1.6)",
     sayings: ["lol", "haha", "lmao"],
+  },
+  sad: {
+    eye: { scaleX: 1, scaleY: 0.62 }, // droopy / half-closed
+    lLeft: { rotation: 8, y: 3 }, // antennae droop inward
+    lRight: { rotation: -8, y: 3 },
+    // inner corners up (the "sadness triangle"), gently raised
+    browLeft: { y: -3, rotation: -8 },
+    browRight: { y: -3, rotation: 8 },
+    mouth: MOUTH.frown,
+    showY: false,
+    bob: 0,
+    wiggle: 0,
+    dur: 0.7,
+    ease: "sine.out",
+    sayings: ["...", "aw", "oh"],
   },
   bored: {
     eye: { scaleX: 0.97, scaleY: 0.4 },
@@ -131,6 +163,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     showY: false,
     bob: 0,
     wiggle: 0,
+    dur: 0.6,
+    ease: "power2.out",
     sayings: ["boring!", "yawn...", "meh"],
   },
   asleep: {
@@ -143,6 +177,8 @@ export const POSES: Record<OlyloExpression, Pose> = {
     showY: false,
     bob: 0,
     wiggle: 0,
+    dur: 0.75,
+    ease: "sine.out",
     sayings: ["zzzz...", "zzz"],
   },
 };

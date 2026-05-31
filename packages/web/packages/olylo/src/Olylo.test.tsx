@@ -6,12 +6,12 @@ import { EXPRESSIONS } from "./expressions";
 // Smoke tests only: static render guards the SVG structure + public API.
 // GSAP/MorphSVG motion is verified in-app (it can't be asserted headless).
 describe("Olylo", () => {
-  it("renders the ia.olylo.ai mark with eyes, vector eyebrows, and a mouth path", () => {
+  it("renders the ia.olylo.ai mark with eyes, eyebrows, and a mouth path", () => {
     const html = renderToStaticMarkup(<Olylo />);
     expect(html).toContain('aria-label="ia.olylo.ai"');
-    expect(html).toContain("<path"); // the morphing mouth
-    expect(html).toContain("<circle"); // the eyes (and eyebrow i-dots)
-    expect(html).toContain("<ellipse"); // the eyebrow 'a' bowls
+    expect(html).toContain("<path"); // mouth + descender + brow arcs
+    expect(html).toContain("<circle"); // the eyes
+    expect(html).toContain("browArcLeft"); // the arc the ia eyebrow text rides
   });
 
   it("renders for every expression without throwing", () => {
