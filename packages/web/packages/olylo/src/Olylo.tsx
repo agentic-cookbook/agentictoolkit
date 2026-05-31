@@ -39,8 +39,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
   const lRightRef = useRef<SVGRectElement>(null);
   const browLeftRef = useRef<SVGGElement>(null);
   const browRightRef = useRef<SVGGElement>(null);
-  const yGroupRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
+  const descenderRef = useRef<SVGGElement>(null);
   const speechRef = useRef<SVGTextElement>(null);
   const loopRef = useRef<gsap.core.Tween[]>([]);
 
@@ -88,14 +88,14 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     gsap.to(lLeftRef.current, {
       rotation: p.lLeft.rotation,
       y: p.lLeft.y,
-      transformOrigin: "50% 100%",
+      transformOrigin: "50% 0%", // antennae: anchored at the top of the head
       duration: TWEEN,
       ease: EASE,
     });
     gsap.to(lRightRef.current, {
       rotation: p.lRight.rotation,
       y: p.lRight.y,
-      transformOrigin: "50% 100%",
+      transformOrigin: "50% 0%", // antennae: anchored at the top of the head
       duration: TWEEN,
       ease: EASE,
     });
@@ -115,10 +115,29 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       ease: EASE,
     });
 
-    // Mouth: crossfade between the literal `y` (idle) and the morphing mouth.
-    gsap.to(yGroupRef.current, { autoAlpha: p.showY ? 1 : 0, duration: 0.25 });
-    gsap.to(mouthRef.current, { autoAlpha: p.showY ? 0 : 1, duration: 0.25 });
+    // Mouth morphs; the y-descender tail is always present, and wiggles like a
+    // little tail for lively moods.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: TWEEN, ease: EASE });
+    if (p.wiggle > 0) {
+      gsap.set(descenderRef.current, { rotation: -9, transformOrigin: "50% 0%" });
+      loopRef.current.push(
+        gsap.to(descenderRef.current, {
+          rotation: 9,
+          duration: 0.22,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          transformOrigin: "50% 0%",
+        }),
+      );
+    } else {
+      gsap.to(descenderRef.current, {
+        rotation: 0,
+        transformOrigin: "50% 0%",
+        duration: TWEEN,
+        ease: EASE,
+      });
+    }
 
     // Face bob loop for lively moods.
     if (p.bob > 0) {
@@ -282,13 +301,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
         {/* eyebrows: the literal ia / ai with a single curved stroke trailing
             toward the centre — ia⌒ on the left, ⌒ai on the right */}
-        <g ref={browLeftRef} opacity={0.8}>
+        <g ref={browLeftRef} opacity={0.55}>
           <path d="M50,2 A48,48 0 0 1 79,12" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
             <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
           </text>
         </g>
-        <g ref={browRightRef} opacity={0.8}>
+        <g ref={browRightRef} opacity={0.55}>
           <path d="M241,12 A48,48 0 0 1 270,2" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
             <textPath href="#browArcRight" startOffset="50%">ai</textPath>
@@ -307,13 +326,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* l */}
         <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill={GREEN} />
 
-        {/* y (resting wordmark) */}
-        <g ref={yGroupRef}>
-          <line x1={130} y1={40} x2={160} y2={85} stroke={GREEN} strokeWidth={8} />
-          <line x1={190} y1={40} x2={140} y2={115} stroke={GREEN} strokeWidth={8} />
-        </g>
-
-        {/* mouth (morph target) */}
+        {/* mouth — morphing curve, always visible */}
         <path
           ref={mouthRef}
           d="M134,93 Q160,93 186,93"
@@ -321,8 +334,12 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           strokeWidth={8}
           fill="none"
           strokeLinecap="round"
-          style={{ opacity: 0 }}
         />
+
+        {/* y descender — always present; wiggles like a little tail when lively */}
+        <g ref={descenderRef}>
+          <path d="M159,94 Q151,106 143,117" stroke={GREEN} strokeWidth={7} fill="none" strokeLinecap="round" />
+        </g>
 
         {/* l */}
         <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill={GREEN} />
