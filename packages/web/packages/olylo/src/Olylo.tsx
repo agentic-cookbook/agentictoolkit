@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import gsap from "gsap";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
 import { useGSAP } from "@gsap/react";
@@ -65,9 +65,26 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
   const loopRef = useRef<gsap.core.Tween[]>([]);
 
   const ladder = useIdleLadder(expression != null);
-  // Arbitration: a deliberate expression wins; otherwise the inactivity ladder.
+
+  // Click-to-giggle: a transient reaction that briefly outranks everything.
+  const [reaction, setReaction] = useState<OlyloExpression | null>(null);
+  const reactionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const giggle = (): void => {
+    setReaction("laughing");
+    if (reactionTimer.current) clearTimeout(reactionTimer.current);
+    reactionTimer.current = setTimeout(() => setReaction(null), 1400);
+  };
+  useEffect(() => {
+    return () => {
+      if (reactionTimer.current) clearTimeout(reactionTimer.current);
+    };
+  }, []);
+
+  // Arbitration: a click giggle wins, then a deliberate expression, then the ladder.
   const effective: OlyloExpression =
-    expression ?? (ladder === "asleep" ? "asleep" : ladder === "bored" ? "bored" : "idle");
+    reaction ??
+    expression ??
+    (ladder === "asleep" ? "asleep" : ladder === "bored" ? "bored" : "idle");
 
   const eyesShut = effective === "asleep";
   const blinkEnabled = !eyesShut && effective !== "laughing";
@@ -223,7 +240,10 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       viewBox="-15 -72 350 195"
       aria-label="ia.olylo.ai"
       className="block h-auto w-full"
+      onClick={giggle}
       style={{
+        cursor: "pointer",
+        pointerEvents: "auto",
         filter:
           "drop-shadow(0 0 6px var(--green)) drop-shadow(0 0 18px var(--green-soft)) drop-shadow(0 0 36px rgba(0, 255, 65, 0.25))",
       }}
