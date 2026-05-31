@@ -22,11 +22,11 @@ const clamp = (n: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, n));
 
 // Vector eyebrow glyphs — wide and flat (short height) so ia/ai read as brows.
-const BROW_STROKE = 4;
+const BROW_STROKE = 2.5;
 function browI(x: number): ReactElement {
   return (
     <g>
-      <circle cx={x} cy={-12} r={2.4} fill={GREEN} />
+      <circle cx={x} cy={-12} r={2} fill={GREEN} />
       <line x1={x} y1={-8} x2={x} y2={-1} stroke={GREEN} strokeWidth={BROW_STROKE} strokeLinecap="round" />
     </g>
   );
@@ -247,11 +247,11 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
 
       <g ref={faceRef}>
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
-        <g ref={browLeftRef} opacity={0.8}>
+        <g ref={browLeftRef} opacity={0.5}>
           {browI(38)}
           {browA(60)}
         </g>
-        <g ref={browRightRef} opacity={0.8}>
+        <g ref={browRightRef} opacity={0.5}>
           {browA(263)}
           {browI(282)}
         </g>
