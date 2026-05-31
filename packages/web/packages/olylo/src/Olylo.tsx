@@ -248,6 +248,17 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           "drop-shadow(0 0 6px var(--green)) drop-shadow(0 0 18px var(--green-soft)) drop-shadow(0 0 36px rgba(0, 255, 65, 0.25))",
       }}
     >
+      {/* full-bleed hit area so a click anywhere on him giggles (svg `auto` only
+          hits painted pixels; his centre is transparent). `all` ignores fill. */}
+      <rect
+        x={-15}
+        y={-72}
+        width={350}
+        height={195}
+        fill="transparent"
+        style={{ pointerEvents: "all" }}
+      />
+
       {/* speech */}
       {speech && (
         <text
