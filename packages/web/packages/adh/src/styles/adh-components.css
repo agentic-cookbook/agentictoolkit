@@ -15,6 +15,7 @@
 }
 
 .adh-header__container {
+  position: relative;
   width: 100%;
   padding: 0 1.5rem;
   height: 3.5rem;
@@ -22,6 +23,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
+}
+
+.adh-header__page-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 50%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  font-family: var(--adh-header-page-title-font, var(--font-mono));
+  font-size: var(--adh-header-page-title-size, 0.8rem);
+  letter-spacing: var(--adh-header-page-title-letter-spacing, 0.08em);
+  text-transform: var(--adh-header-page-title-transform, uppercase);
+  color: var(--adh-header-page-title-color, var(--color-text-primary));
+}
+
+@media (max-width: 640px) {
+  .adh-header__page-title {
+    display: none;
+  }
 }
 
 .adh-header__title {
