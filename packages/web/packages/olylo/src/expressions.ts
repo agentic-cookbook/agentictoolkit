@@ -52,12 +52,12 @@ export interface Pose {
 // are facial mouths. The descender tail attaches at the junction (160,85).
 const MOUTH = {
   y: "M130,40 L160,85 L190,40",
-  flat: "M134,88 L160,88 L186,88",
-  pursed: "M142,86 L160,93 L180,86",
-  smile: "M132,80 L160,100 L188,80",
-  open: "M146,82 L160,104 L174,82",
-  bigSmile: "M128,76 L160,108 L192,76",
-  frown: "M132,96 L160,78 L188,96",
+  flat: "M134,85 L160,85 L186,85",
+  pursed: "M144,80 L160,85 L176,80",
+  smile: "M132,71 L160,85 L188,71",
+  open: "M148,73 L160,85 L172,73",
+  bigSmile: "M128,66 L160,85 L192,66",
+  frown: "M132,99 L160,85 L188,99",
 } as const;
 
 export const POSES: Record<OlyloExpression, Pose> = {
