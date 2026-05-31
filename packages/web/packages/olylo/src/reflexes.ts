@@ -9,7 +9,7 @@ const MIN_BLINK_MS = 2800;
 const MAX_BLINK_MS = 7000;
 const BORED_AFTER_MS = 6000;
 const ASLEEP_AFTER_MS = 14000;
-const SLEEP_MUTTER_MS = 2600;
+const SLEEP_MUTTER_MS = 5500;
 
 export type Ladder = "active" | "bored" | "asleep";
 

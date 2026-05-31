@@ -154,6 +154,22 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     } else {
       gsap.to(faceRef.current, { y: 0, duration: TWEEN, ease: EASE });
     }
+
+    // Face wiggle loop — a giggle shimmy.
+    if (p.wiggle > 0) {
+      gsap.set(faceRef.current, { rotation: -p.wiggle, transformOrigin: "50% 60%" });
+      loopRef.current.push(
+        gsap.to(faceRef.current, {
+          rotation: p.wiggle,
+          duration: 0.16,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        }),
+      );
+    } else {
+      gsap.to(faceRef.current, { rotation: 0, duration: TWEEN, ease: EASE });
+    }
   }, [effective]);
 
   // Blink: collapse the dedicated blink group (independent of the pose scale).
@@ -227,7 +243,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     tl.fromTo(
       el,
       { opacity: 0, scale: 0.7, y: 6, transformOrigin: "50% 100%" },
-      { opacity: 1, scale: 1, y: -4, duration: 0.22, ease: "back.out(2)" },
+      { opacity: 0.7, scale: 1, y: -4, duration: 0.22, ease: "back.out(2)" },
     ).to(el, { opacity: 0, duration: 0.4, delay: 1 });
     return () => {
       tl.kill();
@@ -267,7 +283,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           y={-46}
           textAnchor="middle"
           fontFamily="monospace"
-          fontWeight={700}
+          fontWeight={400}
           fontSize={26}
           fill={GREEN}
           style={{ opacity: 0 }}
