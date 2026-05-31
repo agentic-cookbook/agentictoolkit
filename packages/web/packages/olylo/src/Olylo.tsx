@@ -119,9 +119,9 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     // thin elsewhere, and wiggles from the junction like a little tail when lively.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: TWEEN, ease: EASE });
     gsap.to(descenderRef.current, {
-      // Y mode: the angled logo tail (down-left). Otherwise: a straight-down little tail.
+      // Y mode: the angled logo tail (down-left). Otherwise: a straight-down tail.
+      // Same stroke weight as the Y arms (8) in every mode.
       morphSVG: p.showY ? "M160,85 L142,115" : "M160,85 L160,115",
-      strokeWidth: p.showY ? 8 : 4,
       duration: TWEEN,
       ease: EASE,
     });
