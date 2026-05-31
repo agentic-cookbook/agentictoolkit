@@ -40,7 +40,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
   const browLeftRef = useRef<SVGGElement>(null);
   const browRightRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
-  const descenderRef = useRef<SVGGElement>(null);
+  const descenderRef = useRef<SVGPathElement>(null);
   const speechRef = useRef<SVGTextElement>(null);
   const loopRef = useRef<gsap.core.Tween[]>([]);
 
@@ -115,11 +115,12 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       ease: EASE,
     });
 
-    // Mouth morphs; the y-descender tail is always present, and wiggles like a
-    // little tail for lively moods.
+    // Mouth morphs (idle = the Y arms). The descender is thick in "Y mode" and
+    // thin elsewhere, and wiggles from the junction like a little tail when lively.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: TWEEN, ease: EASE });
+    gsap.to(descenderRef.current, { strokeWidth: p.showY ? 8 : 4, duration: TWEEN, ease: EASE });
     if (p.wiggle > 0) {
-      gsap.set(descenderRef.current, { rotation: -9, transformOrigin: "50% 0%" });
+      gsap.set(descenderRef.current, { rotation: -9, svgOrigin: "160 85" });
       loopRef.current.push(
         gsap.to(descenderRef.current, {
           rotation: 9,
@@ -127,13 +128,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut",
-          transformOrigin: "50% 0%",
+          svgOrigin: "160 85",
         }),
       );
     } else {
       gsap.to(descenderRef.current, {
         rotation: 0,
-        transformOrigin: "50% 0%",
+        svgOrigin: "160 85",
         duration: TWEEN,
         ease: EASE,
       });
@@ -326,20 +327,25 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* l */}
         <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill={GREEN} />
 
-        {/* mouth — morphing curve, always visible */}
+        {/* mouth — morphing; idle = the Y arms */}
         <path
           ref={mouthRef}
-          d="M134,93 Q160,93 186,93"
+          d="M130,40 L160,85 L190,40"
           stroke={GREEN}
           strokeWidth={8}
           fill="none"
           strokeLinecap="round"
         />
 
-        {/* y descender — always present; wiggles like a little tail when lively */}
-        <g ref={descenderRef}>
-          <path d="M159,94 Q151,106 143,117" stroke={GREEN} strokeWidth={7} fill="none" strokeLinecap="round" />
-        </g>
+        {/* y descender — always present; thick in Y mode, thin (a little tail) otherwise */}
+        <path
+          ref={descenderRef}
+          d="M160,85 L142,115"
+          stroke={GREEN}
+          strokeWidth={8}
+          fill="none"
+          strokeLinecap="round"
+        />
 
         {/* l */}
         <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill={GREEN} />

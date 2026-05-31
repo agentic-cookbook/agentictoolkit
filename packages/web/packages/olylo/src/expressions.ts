@@ -35,7 +35,9 @@ export interface Pose {
   browRight: { y: number; rotation: number };
   /** Mouth path `d` — MorphSVG morphs between these. All single-quadratic so morphs stay clean. */
   mouth: string;
-  /** When true, show the literal `y` letter (resting wordmark); otherwise show the mouth. */
+  /** "Y mode": when true, the mouth is the literal Y arms and the descender is thick
+   * (so olylo reads as the logo). Otherwise the mouth is a facial expression and the
+   * descender thins to a little tail. */
   showY: boolean;
   /** Face bob amplitude in viewBox units (0 = still); loops while in this mood. */
   bob: number;
@@ -45,15 +47,17 @@ export interface Pose {
   sayings: string[];
 }
 
-// Mouth shapes — every one is a single quadratic (M + Q) so point counts match
-// and MorphSVG produces clean morphs. Centred around (160, ~92).
+// Mouth shapes — all 3-point polylines (M + L + L) so point counts match and
+// MorphSVG morphs cleanly. `y` is the literal Y arms ("Y mode", idle); the rest
+// are facial mouths. The descender tail attaches at the junction (160,85).
 const MOUTH = {
-  flat: "M134,93 Q160,93 186,93",
-  pursed: "M138,92 Q160,97 182,92",
-  smile: "M134,90 Q160,113 186,90",
-  open: "M144,88 Q160,116 176,88",
-  bigSmile: "M128,86 Q160,124 192,86",
-  frown: "M134,98 Q160,84 186,98",
+  y: "M130,40 L160,85 L190,40",
+  flat: "M134,88 L160,88 L186,88",
+  pursed: "M142,86 L160,93 L180,86",
+  smile: "M132,80 L160,100 L188,80",
+  open: "M146,82 L160,104 L174,82",
+  bigSmile: "M128,76 L160,108 L192,76",
+  frown: "M132,96 L160,78 L188,96",
 } as const;
 
 export const POSES: Record<OlyloExpression, Pose> = {
@@ -63,7 +67,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
     lRight: { rotation: 0, y: 0 },
     browLeft: { y: 0, rotation: 0 },
     browRight: { y: 0, rotation: 0 },
-    mouth: MOUTH.flat,
+    mouth: MOUTH.y,
     showY: true,
     bob: 0,
     wiggle: 0,
