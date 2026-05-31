@@ -280,19 +280,20 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
 
       <g ref={faceRef}>
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
-        {/* eyebrows: the literal ia / ai, curved on an arc over each eye */}
+        {/* eyebrows: curved leading/trailing strokes flanking the literal ia / ai
+            (the brow line breaks for the letters, so it reads ⌒ia⌒) */}
         <g ref={browLeftRef} opacity={0.8}>
+          <path d="M18,16 Q26,6 34,2" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M66,2 Q74,6 82,16" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
-            <textPath href="#browArcLeft" startOffset="50%">
-              ia
-            </textPath>
+            <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
           </text>
         </g>
         <g ref={browRightRef} opacity={0.8}>
+          <path d="M238,16 Q246,6 254,2" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M286,2 Q294,6 302,16" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
-            <textPath href="#browArcRight" startOffset="50%">
-              ai
-            </textPath>
+            <textPath href="#browArcRight" startOffset="50%">ai</textPath>
           </text>
         </g>
 
