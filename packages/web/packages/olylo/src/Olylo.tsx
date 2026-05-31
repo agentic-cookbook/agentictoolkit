@@ -1,0 +1,299 @@
+"use client";
+
+import { useEffect, useRef, type ReactElement } from "react";
+import gsap from "gsap";
+import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+import { useGSAP } from "@gsap/react";
+import { POSES } from "./expressions";
+import type { OlyloExpression } from "./expressions";
+import { useBlink, useIdleLadder, useSpeech } from "./reflexes";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(MorphSVGPlugin);
+}
+
+const GREEN = "#00ff41";
+const IRIS = "#aaffaa";
+const GAZE_MAX = 7; // max iris travel in viewBox units
+const TWEEN = 0.45;
+const EASE = "power3.out";
+
+const clamp = (n: number, lo: number, hi: number): number =>
+  Math.max(lo, Math.min(hi, n));
+
+export interface OlyloProps {
+  /** Deliberate mood from a driver (chat today, persona later). */
+  expression?: OlyloExpression;
+}
+
+export function Olylo({ expression }: OlyloProps): ReactElement {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const faceRef = useRef<SVGGElement>(null);
+  const leftEyeRef = useRef<SVGGElement>(null);
+  const rightEyeRef = useRef<SVGGElement>(null);
+  const leftBlinkRef = useRef<SVGGElement>(null);
+  const rightBlinkRef = useRef<SVGGElement>(null);
+  const leftIrisRef = useRef<SVGCircleElement>(null);
+  const rightIrisRef = useRef<SVGCircleElement>(null);
+  const lLeftRef = useRef<SVGRectElement>(null);
+  const lRightRef = useRef<SVGRectElement>(null);
+  const earLeftRef = useRef<SVGTextElement>(null);
+  const earRightRef = useRef<SVGTextElement>(null);
+  const yGroupRef = useRef<SVGGElement>(null);
+  const mouthRef = useRef<SVGPathElement>(null);
+  const speechRef = useRef<SVGTextElement>(null);
+  const loopRef = useRef<gsap.core.Tween[]>([]);
+
+  const ladder = useIdleLadder(expression != null);
+  // Arbitration: a deliberate expression wins; otherwise the inactivity ladder.
+  const effective: OlyloExpression =
+    expression ?? (ladder === "asleep" ? "asleep" : ladder === "bored" ? "bored" : "idle");
+
+  const eyesShut = effective === "asleep";
+  const blinkEnabled = !eyesShut && effective !== "laughing";
+  const leftBlinking = useBlink(blinkEnabled);
+  const rightBlinking = useBlink(blinkEnabled);
+  const speech = useSpeech(effective);
+
+  // Pose: tween every part toward the target pose; morph the mouth.
+  useEffect(() => {
+    const p = POSES[effective];
+    loopRef.current.forEach((t) => t.kill());
+    loopRef.current = [];
+
+    gsap.to([leftEyeRef.current, rightEyeRef.current], {
+      scaleX: p.eye.scaleX,
+      scaleY: p.eye.scaleY,
+      transformOrigin: "50% 50%",
+      duration: TWEEN,
+      ease: EASE,
+    });
+    gsap.to(lLeftRef.current, {
+      rotation: p.lLeft.rotation,
+      y: p.lLeft.y,
+      transformOrigin: "50% 100%",
+      duration: TWEEN,
+      ease: EASE,
+    });
+    gsap.to(lRightRef.current, {
+      rotation: p.lRight.rotation,
+      y: p.lRight.y,
+      transformOrigin: "50% 100%",
+      duration: TWEEN,
+      ease: EASE,
+    });
+    gsap.to(earLeftRef.current, {
+      rotation: p.earLeft.rotation,
+      y: p.earLeft.y,
+      transformOrigin: "50% 100%",
+      duration: TWEEN,
+      ease: EASE,
+    });
+    gsap.to(earRightRef.current, {
+      rotation: p.earRight.rotation,
+      y: p.earRight.y,
+      transformOrigin: "50% 100%",
+      duration: TWEEN,
+      ease: EASE,
+    });
+
+    // Mouth: crossfade between the literal `y` (idle) and the morphing mouth.
+    gsap.to(yGroupRef.current, { autoAlpha: p.showY ? 1 : 0, duration: 0.25 });
+    gsap.to(mouthRef.current, { autoAlpha: p.showY ? 0 : 1, duration: 0.25 });
+    gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: TWEEN, ease: EASE });
+
+    // Face bob loop for lively moods.
+    if (p.bob > 0) {
+      loopRef.current.push(
+        gsap.to(faceRef.current, {
+          y: -p.bob,
+          duration: 0.5,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        }),
+      );
+    } else {
+      gsap.to(faceRef.current, { y: 0, duration: TWEEN, ease: EASE });
+    }
+  }, [effective]);
+
+  // Blink: collapse the dedicated blink group (independent of the pose scale).
+  useEffect(() => {
+    gsap.to(leftBlinkRef.current, {
+      scaleY: leftBlinking ? 0.06 : 1,
+      transformOrigin: "50% 50%",
+      duration: 0.09,
+      ease: "power1.inOut",
+    });
+  }, [leftBlinking]);
+  useEffect(() => {
+    gsap.to(rightBlinkRef.current, {
+      scaleY: rightBlinking ? 0.06 : 1,
+      transformOrigin: "50% 50%",
+      duration: 0.09,
+      ease: "power1.inOut",
+    });
+  }, [rightBlinking]);
+
+  // Gaze: irises follow the cursor (spring-damped via quickTo). Set up once.
+  useGSAP(
+    () => {
+      const opts = { duration: 0.5, ease: "power3" };
+      const qxL = gsap.quickTo(leftIrisRef.current, "x", opts);
+      const qyL = gsap.quickTo(leftIrisRef.current, "y", opts);
+      const qxR = gsap.quickTo(rightIrisRef.current, "x", opts);
+      const qyR = gsap.quickTo(rightIrisRef.current, "y", opts);
+      let raf = 0;
+      const onMove = (e: PointerEvent) => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          const el = svgRef.current;
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          const dx = e.clientX - (r.left + r.width / 2);
+          const dy = e.clientY - (r.top + r.height / 2);
+          const len = Math.hypot(dx, dy) || 1;
+          const gx = clamp((dx / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX);
+          const gy = clamp((dy / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX);
+          qxL(gx);
+          qyL(gy);
+          qxR(gx);
+          qyR(gy);
+        });
+      };
+      const onLeave = () => {
+        qxL(0);
+        qyL(0);
+        qxR(0);
+        qyR(0);
+      };
+      window.addEventListener("pointermove", onMove);
+      document.addEventListener("mouseleave", onLeave);
+      return () => {
+        if (raf) cancelAnimationFrame(raf);
+        window.removeEventListener("pointermove", onMove);
+        document.removeEventListener("mouseleave", onLeave);
+      };
+    },
+    { scope: svgRef },
+  );
+
+  // Speech: pop the utterance above the head, then fade.
+  useEffect(() => {
+    const el = speechRef.current;
+    if (!speech || !el) return;
+    gsap.killTweensOf(el);
+    const tl = gsap.timeline();
+    tl.fromTo(
+      el,
+      { opacity: 0, scale: 0.7, y: 6, transformOrigin: "50% 100%" },
+      { opacity: 1, scale: 1, y: -4, duration: 0.22, ease: "back.out(2)" },
+    ).to(el, { opacity: 0, duration: 0.4, delay: 1 });
+    return () => {
+      tl.kill();
+    };
+  }, [speech?.id]);
+
+  return (
+    <svg
+      ref={svgRef}
+      viewBox="-70 -75 460 200"
+      aria-label="ia.olylo.ai"
+      className="block h-auto w-full"
+      style={{
+        filter:
+          "drop-shadow(0 0 6px var(--green)) drop-shadow(0 0 18px var(--green-soft)) drop-shadow(0 0 36px rgba(0, 255, 65, 0.25))",
+      }}
+    >
+      {/* ia / ai marks */}
+      <text
+        ref={earLeftRef}
+        x={-35}
+        y={-40}
+        textAnchor="middle"
+        fontFamily="monospace"
+        fontWeight={700}
+        fontSize={30}
+        fill={GREEN}
+        opacity={0.6}
+      >
+        ia
+      </text>
+      <text
+        ref={earRightRef}
+        x={355}
+        y={-40}
+        textAnchor="middle"
+        fontFamily="monospace"
+        fontWeight={700}
+        fontSize={30}
+        fill={GREEN}
+        opacity={0.6}
+      >
+        ai
+      </text>
+
+      {/* speech */}
+      {speech && (
+        <text
+          ref={speechRef}
+          x={160}
+          y={-46}
+          textAnchor="middle"
+          fontFamily="monospace"
+          fontWeight={700}
+          fontSize={26}
+          fill={GREEN}
+          style={{ opacity: 0 }}
+        >
+          {speech.text}
+        </text>
+      )}
+
+      <g ref={faceRef}>
+        {/* left o (eye) */}
+        <g ref={leftEyeRef}>
+          <g ref={leftBlinkRef}>
+            <circle cx={50} cy={50} r={35} fill={GREEN} />
+            <circle cx={50} cy={50} r={27} fill="#000" />
+            <circle ref={leftIrisRef} cx={50} cy={50} r={9} fill={IRIS} />
+          </g>
+        </g>
+
+        {/* l */}
+        <rect ref={lLeftRef} x={100} y={-20} width={10} height={105} fill={GREEN} />
+
+        {/* y (resting wordmark) */}
+        <g ref={yGroupRef}>
+          <line x1={130} y1={40} x2={160} y2={85} stroke={GREEN} strokeWidth={8} />
+          <line x1={190} y1={40} x2={140} y2={115} stroke={GREEN} strokeWidth={8} />
+        </g>
+
+        {/* mouth (morph target) */}
+        <path
+          ref={mouthRef}
+          d="M134,93 Q160,93 186,93"
+          stroke={GREEN}
+          strokeWidth={8}
+          fill="none"
+          strokeLinecap="round"
+          style={{ opacity: 0 }}
+        />
+
+        {/* l */}
+        <rect ref={lRightRef} x={210} y={-20} width={10} height={105} fill={GREEN} />
+
+        {/* right o (eye) */}
+        <g ref={rightEyeRef}>
+          <g ref={rightBlinkRef}>
+            <circle cx={270} cy={50} r={35} fill={GREEN} />
+            <circle cx={270} cy={50} r={27} fill="#000" />
+            <circle ref={rightIrisRef} cx={270} cy={50} r={9} fill={IRIS} />
+          </g>
+        </g>
+      </g>
+    </svg>
+  );
+}
