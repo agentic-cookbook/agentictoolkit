@@ -118,7 +118,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     // Mouth morphs (idle = the Y arms). The descender is thick in "Y mode" and
     // thin elsewhere, and wiggles from the junction like a little tail when lively.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: TWEEN, ease: EASE });
-    gsap.to(descenderRef.current, { strokeWidth: p.showY ? 8 : 4, duration: TWEEN, ease: EASE });
+    gsap.to(descenderRef.current, {
+      // Y mode: the angled logo tail (down-left). Otherwise: a straight-down little tail.
+      morphSVG: p.showY ? "M160,85 L142,115" : "M160,85 L160,115",
+      strokeWidth: p.showY ? 8 : 4,
+      duration: TWEEN,
+      ease: EASE,
+    });
     if (p.wiggle > 0) {
       gsap.set(descenderRef.current, { rotation: -9, svgOrigin: "160 85" });
       loopRef.current.push(
