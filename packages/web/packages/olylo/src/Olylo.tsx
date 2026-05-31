@@ -21,22 +21,22 @@ const EASE = "power3.out";
 const clamp = (n: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, n));
 
-// Vector eyebrow glyphs — wide and flat (short height) so ia/ai read as brows.
-const BROW_STROKE = 2.5;
-function browI(x: number): ReactElement {
+// Eyebrow glyphs — `i` (dot + stem) and a single-story `a` (flat bowl + stem),
+// placed on a shallow arc (peak toward the outer end) and tapered (the inner
+// `a` is heavier than the outer `i`) so ia/ai read as arched, tapered brows.
+function browI(cx: number, topY: number, stroke: number): ReactElement {
   return (
     <g>
-      <circle cx={x} cy={-12} r={2} fill={GREEN} />
-      <line x1={x} y1={-8} x2={x} y2={-1} stroke={GREEN} strokeWidth={BROW_STROKE} strokeLinecap="round" />
+      <circle cx={cx} cy={topY} r={stroke - 0.2} fill={GREEN} />
+      <line x1={cx} y1={topY + 4} x2={cx} y2={topY + 11} stroke={GREEN} strokeWidth={stroke} strokeLinecap="round" />
     </g>
   );
 }
-function browA(x: number): ReactElement {
-  // single-story 'a': a flat bowl + a short right stem
+function browA(cx: number, topY: number, stroke: number): ReactElement {
   return (
     <g>
-      <ellipse cx={x} cy={-5} rx={7} ry={4.5} fill="none" stroke={GREEN} strokeWidth={BROW_STROKE} />
-      <line x1={x + 7} y1={-9.5} x2={x + 7} y2={-1} stroke={GREEN} strokeWidth={BROW_STROKE} strokeLinecap="round" />
+      <ellipse cx={cx} cy={topY + 5} rx={7} ry={4.5} fill="none" stroke={GREEN} strokeWidth={stroke} />
+      <line x1={cx + 7} y1={topY} x2={cx + 7} y2={topY + 10} stroke={GREEN} strokeWidth={stroke} strokeLinecap="round" />
     </g>
   );
 }
@@ -57,8 +57,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
   const rightIrisRef = useRef<SVGCircleElement>(null);
   const lLeftRef = useRef<SVGRectElement>(null);
   const lRightRef = useRef<SVGRectElement>(null);
-  const browLeftRef = useRef<SVGTextElement>(null);
-  const browRightRef = useRef<SVGTextElement>(null);
+  const browLeftRef = useRef<SVGGElement>(null);
+  const browRightRef = useRef<SVGGElement>(null);
   const yGroupRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
   const speechRef = useRef<SVGTextElement>(null);
@@ -294,13 +294,14 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
 
       <g ref={faceRef}>
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
-        <g ref={browLeftRef} opacity={0.5}>
-          {browI(38)}
-          {browA(60)}
+        {/* eyebrows: arched (peak outward), tapered (inner `a` heavier), hugging the eye */}
+        <g ref={browLeftRef} opacity={0.55}>
+          {browI(36, -8, 2)}
+          {browA(58, -2, 3)}
         </g>
-        <g ref={browRightRef} opacity={0.5}>
-          {browA(263)}
-          {browI(282)}
+        <g ref={browRightRef} opacity={0.55}>
+          {browA(262, -2, 3)}
+          {browI(284, -8, 2)}
         </g>
 
         {/* left o (eye) */}
