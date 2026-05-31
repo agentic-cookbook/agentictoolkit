@@ -246,8 +246,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     >
       {/* arcs the eyebrows ride on (peak up, centred over each eye) */}
       <defs>
-        <path id="browArcLeft" d="M18,16 Q50,-22 82,16" />
-        <path id="browArcRight" d="M238,16 Q270,-22 302,16" />
+        <path id="browArcLeft" d="M22,16 Q50,-4 78,16" />
+        <path id="browArcRight" d="M242,16 Q270,-4 298,16" />
       </defs>
 
       {/* full-bleed hit area so a click anywhere on him giggles (svg `auto` only
@@ -283,13 +283,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* eyebrows: the literal ia / ai with a single curved stroke trailing
             toward the centre — ia⌒ on the left, ⌒ai on the right */}
         <g ref={browLeftRef} opacity={0.8}>
-          <path d="M66,2 Q74,6 82,16" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M62,8 Q72,11 78,16" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
             <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
           </text>
         </g>
         <g ref={browRightRef} opacity={0.8}>
-          <path d="M238,16 Q246,6 254,2" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
+          <path d="M242,16 Q248,11 258,8" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
             <textPath href="#browArcRight" startOffset="50%">ai</textPath>
           </text>
