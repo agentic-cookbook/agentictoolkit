@@ -32,6 +32,10 @@ export interface Pose {
   /** Pupil (iris) dilation — multiplier on the base iris radius. <1 constricts
    * (focused/sleepy), >1 dilates (aroused/excited). 1 = neutral. */
   pupil: number;
+  /** Body color (antennae, mouth/Y, eyebrows) — the chameleon channel. Engaged
+   * moods stay bright green; withdrawn moods fade toward the page's black so he
+   * camouflages. The EYES never use this — they always stay lit. */
+  body: string;
   /** `l` strokes pivot at their base (body language). */
   lLeft: { rotation: number; y: number };
   lRight: { rotation: number; y: number };
@@ -55,6 +59,15 @@ export interface Pose {
   sayings: string[];
 }
 
+// Body (chameleon) palette. Engaged = bright phosphor green; withdrawn moods
+// fade toward the black page so olylo camouflages, leaving only his lit eyes.
+const BODY = {
+  green: "#00ff41",
+  dim: "#4a4a4a", // sad — dark gray, withdrawn
+  dimmer: "#2a2a2a", // bored — half-faded into the page
+  hidden: "#0d0f0d", // asleep — near-black, just eyes floating in the rain
+} as const;
+
 // Mouth shapes — all 3-point polylines (M + L + L) so point counts match and
 // MorphSVG morphs cleanly. `y` is the literal Y arms ("Y mode", idle); the rest
 // are facial mouths. The descender tail attaches at the junction (160,85).
@@ -72,6 +85,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   idle: {
     eye: { scaleX: 1, scaleY: 1 },
     pupil: 1,
+    body: BODY.green,
     lLeft: { rotation: 0, y: 0 },
     lRight: { rotation: 0, y: 0 },
     browLeft: { y: 0, rotation: -7 },
@@ -87,6 +101,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   thinking: {
     eye: { scaleX: 1, scaleY: 0.5 },
     pupil: 0.6, // constricted — focused/concentrating
+    body: BODY.green,
     lLeft: { rotation: -10, y: -3 },
     lRight: { rotation: 6, y: -1 },
     // asymmetric "cocked brow" — one up/out, one slightly down/in (quizzical)
@@ -103,6 +118,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   excited: {
     eye: { scaleX: 1.12, scaleY: 1.12 },
     pupil: 1.4, // dilated — aroused/delighted
+    body: BODY.green,
     lLeft: { rotation: 0, y: -4 },
     lRight: { rotation: 0, y: -4 },
     browLeft: { y: -5, rotation: -17 },
@@ -118,6 +134,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   surprised: {
     eye: { scaleX: 1.28, scaleY: 1.3 },
     pupil: 1.6, // blown wide — surprise
+    body: BODY.green,
     lLeft: { rotation: -4, y: -7 },
     lRight: { rotation: 4, y: -7 },
     browLeft: { y: -17, rotation: -12 },
@@ -134,6 +151,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   laughing: {
     eye: { scaleX: 1, scaleY: 0.14 },
     pupil: 1.3, // lively
+    body: BODY.green,
     lLeft: { rotation: -3, y: 0 },
     lRight: { rotation: 3, y: 0 },
     browLeft: { y: -4, rotation: -15 },
@@ -149,6 +167,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   sad: {
     eye: { scaleX: 1, scaleY: 0.62 }, // droopy / half-closed
     pupil: 0.8, // slightly small — withdrawn
+    body: BODY.dim, // fades to dark gray — pulling away
     lLeft: { rotation: 8, y: 3 }, // antennae droop inward
     lRight: { rotation: -8, y: 3 },
     // inner corners up (the "sadness triangle"), gently raised
@@ -165,6 +184,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   bored: {
     eye: { scaleX: 0.97, scaleY: 0.4 },
     pupil: 0.7, // glazed / unfocused
+    body: BODY.dimmer, // half-faded into the page
     lLeft: { rotation: 6, y: 2 },
     lRight: { rotation: -6, y: 2 },
     browLeft: { y: 6, rotation: -10 },
@@ -180,6 +200,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   asleep: {
     eye: { scaleX: 0.95, scaleY: 0.07 },
     pupil: 0.6, // shut — barely there
+    body: BODY.hidden, // near-black — fully camouflaged, just eyes in the rain
     lLeft: { rotation: 10, y: 3 },
     lRight: { rotation: -10, y: 3 },
     browLeft: { y: 9, rotation: -12 },

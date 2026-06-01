@@ -128,6 +128,11 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       delay: 0.06,
     });
 
+    // Chameleon: tween the body color (antennae, mouth, eyebrows all paint with
+    // currentColor). Tweening `color` on the face group leaves the eyes — which
+    // use explicit fills — fully lit. Follows the mouth's beat.
+    gsap.to(faceRef.current, { color: p.body, duration: p.dur, ease: p.ease, delay: 0.08 });
+
     // Mouth morphs (idle = the Y arms). The descender is thick in "Y mode" and
     // thin elsewhere, and wiggles from the junction like a little tail when lively.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: p.dur, ease: p.ease, delay: 0.08 });
@@ -319,19 +324,22 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         </text>
       )}
 
-      <g ref={faceRef}>
+      <g ref={faceRef} style={{ color: GREEN }}>
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
         {/* eyebrows: the literal ia / ai with a single curved stroke trailing
             toward the centre — ia⌒ on the left, ⌒ai on the right */}
+        {/* Body elements (eyebrows, l antennae, mouth, descender) paint with
+            `currentColor` so the per-pose `body` color tween (the chameleon
+            channel) recolors them together. The EYES below keep explicit fills. */}
         <g ref={browLeftRef} opacity={0.8}>
-          <path d="M50,5 A45,45 0 0 1 77,14" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
-          <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
+          <path d="M50,5 A45,45 0 0 1 77,14" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
+          <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
             <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
           </text>
         </g>
         <g ref={browRightRef} opacity={0.8}>
-          <path d="M243,14 A45,45 0 0 1 270,5" fill="none" stroke={GREEN} strokeWidth={3.5} strokeLinecap="round" />
-          <text fontFamily="monospace" fontWeight={700} fontSize={19} fill={GREEN} textAnchor="middle">
+          <path d="M243,14 A45,45 0 0 1 270,5" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
+          <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
             <textPath href="#browArcRight" startOffset="50%">ai</textPath>
           </text>
         </g>
@@ -346,13 +354,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         </g>
 
         {/* l */}
-        <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill={GREEN} />
+        <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill="currentColor" />
 
         {/* mouth — morphing; idle = the Y arms */}
         <path
           ref={mouthRef}
           d="M130,40 L160,85 L190,40"
-          stroke={GREEN}
+          stroke="currentColor"
           strokeWidth={8}
           fill="none"
           strokeLinecap="round"
@@ -362,14 +370,14 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         <path
           ref={descenderRef}
           d="M160,85 L142,115"
-          stroke={GREEN}
+          stroke="currentColor"
           strokeWidth={8}
           fill="none"
           strokeLinecap="round"
         />
 
         {/* l */}
-        <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill={GREEN} />
+        <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill="currentColor" />
 
         {/* right o (eye) */}
         <g ref={rightEyeRef}>
