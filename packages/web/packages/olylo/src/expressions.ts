@@ -9,6 +9,8 @@ export type OlyloExpression =
   | "thinking"
   | "excited"
   | "surprised"
+  | "startled"
+  | "mad"
   | "laughing"
   | "sad"
   | "bored"
@@ -19,6 +21,8 @@ export const EXPRESSIONS: OlyloExpression[] = [
   "thinking",
   "excited",
   "surprised",
+  "startled",
+  "mad",
   "laughing",
   "sad",
   "bored",
@@ -32,9 +36,10 @@ export interface Pose {
   /** Pupil (iris) dilation — multiplier on the base iris radius. <1 constricts
    * (focused/sleepy), >1 dilates (aroused/excited). 1 = neutral. */
   pupil: number;
-  /** Body color (antennae, mouth/Y, eyebrows) — the chameleon channel. Engaged
-   * moods stay bright green; withdrawn moods fade toward the page's black so he
-   * camouflages. The EYES never use this — they always stay lit. */
+  /** Body color (antennae, mouth/Y, eyebrows) — the emotional/chameleon channel.
+   * Moods have a color (mad=red, excited=orange, sad=blue…); withdrawn moods
+   * fade toward the page's black so he camouflages. The EYES never use this —
+   * they always stay lit. */
   body: string;
   /** `l` strokes pivot at their base (body language). */
   lLeft: { rotation: number; y: number };
@@ -59,11 +64,17 @@ export interface Pose {
   sayings: string[];
 }
 
-// Body (chameleon) palette. Engaged = bright phosphor green; withdrawn moods
-// fade toward the black page so olylo camouflages, leaving only his lit eyes.
+// Body palette — olylo's emotional color (the EYES always stay lit; this only
+// colors the antennae, mouth/Y and eyebrows). Bright phosphor green is his
+// resting/calm color; emotions take a hue; withdrawn moods fade toward the
+// black page so he camouflages, leaving only his eyes.
 const BODY = {
-  green: "#00ff41",
-  dim: "#4a4a4a", // sad — dark gray, withdrawn
+  green: "#00ff41", // idle / thinking — calm, blends into the matrix site
+  orange: "#ff9500", // excited / laughing — warm, energized
+  yellow: "#ffd400", // surprised — bright pop
+  flash: "#fffce0", // startled — near-white jolt
+  red: "#ff2d2d", // mad — anger
+  blue: "#4f7cff", // sad — melancholy
   dimmer: "#2a2a2a", // bored — half-faded into the page
   hidden: "#0d0f0d", // asleep — near-black, just eyes floating in the rain
 } as const;
@@ -118,7 +129,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   excited: {
     eye: { scaleX: 1.12, scaleY: 1.12 },
     pupil: 1.4, // dilated — aroused/delighted
-    body: BODY.green,
+    body: BODY.orange,
     lLeft: { rotation: 0, y: -4 },
     lRight: { rotation: 0, y: -4 },
     browLeft: { y: -5, rotation: -17 },
@@ -134,7 +145,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   surprised: {
     eye: { scaleX: 1.28, scaleY: 1.3 },
     pupil: 1.6, // blown wide — surprise
-    body: BODY.green,
+    body: BODY.yellow,
     lLeft: { rotation: -4, y: -7 },
     lRight: { rotation: 4, y: -7 },
     browLeft: { y: -17, rotation: -12 },
@@ -148,10 +159,47 @@ export const POSES: Record<OlyloExpression, Pose> = {
     ease: "back.out(2.4)",
     sayings: ["whoa!", "!?", "huh?!"],
   },
+  startled: {
+    // jolted awake: eyes snap wide, pupils blow open, antennae shoot upright and
+    // wave (wiggle drives the oscillation), body flashes near-white.
+    eye: { scaleX: 1.35, scaleY: 1.4 },
+    pupil: 1.7,
+    body: BODY.flash,
+    lLeft: { rotation: -2, y: -16 }, // antennae stand straight up
+    lRight: { rotation: 2, y: -16 },
+    browLeft: { y: -20, rotation: -14 },
+    browRight: { y: -20, rotation: 14 },
+    mouth: MOUTH.open,
+    showY: false,
+    bob: 0,
+    wiggle: 7, // strong shimmy — the antennae/tail wave about
+    dur: 0.12, // snappiest of all — a jolt
+    ease: "back.out(3)",
+    sayings: ["gah!", "wha—!", "!!"],
+  },
+  mad: {
+    // anger: narrowed hard eyes, brows down + together (the "V"), antennae
+    // bristled forward, body red.
+    eye: { scaleX: 1.04, scaleY: 0.7 },
+    pupil: 0.7, // tight glare
+    body: BODY.red,
+    lLeft: { rotation: 14, y: -2 }, // bristling inward/forward
+    lRight: { rotation: -14, y: -2 },
+    // inner corners DOWN + together — the anger "V"
+    browLeft: { y: 4, rotation: 16 },
+    browRight: { y: 4, rotation: -16 },
+    mouth: MOUTH.flat,
+    showY: false,
+    bob: 0,
+    wiggle: 0,
+    dur: 0.18, // fast, hard — no anticipation
+    ease: "power3.out",
+    sayings: ["grr", "hmph", ">:("],
+  },
   laughing: {
     eye: { scaleX: 1, scaleY: 0.14 },
     pupil: 1.3, // lively
-    body: BODY.green,
+    body: BODY.orange,
     lLeft: { rotation: -3, y: 0 },
     lRight: { rotation: 3, y: 0 },
     browLeft: { y: -4, rotation: -15 },
@@ -167,7 +215,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   sad: {
     eye: { scaleX: 1, scaleY: 0.62 }, // droopy / half-closed
     pupil: 0.8, // slightly small — withdrawn
-    body: BODY.dim, // fades to dark gray — pulling away
+    body: BODY.blue, // melancholy blue
     lLeft: { rotation: 8, y: 3 }, // antennae droop inward
     lRight: { rotation: -8, y: 3 },
     // inner corners up (the "sadness triangle"), gently raised

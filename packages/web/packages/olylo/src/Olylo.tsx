@@ -47,13 +47,22 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
 
   const ladder = useIdleLadder(expression != null);
 
-  // Click-to-giggle: a transient reaction that briefly outranks everything.
+  // The resting mood (no transient click reaction): a driver-set expression, else
+  // the idle ladder. Used both for display and to decide how a click lands.
+  const resting: OlyloExpression =
+    expression ??
+    (ladder === "asleep" ? "asleep" : ladder === "bored" ? "bored" : "idle");
+
+  // Click reaction: a transient mood that briefly outranks everything. Clicking
+  // a sleeping olylo STARTLES him (antennae shoot up and wave); otherwise he
+  // giggles. The startle lingers a touch longer so the wave reads.
   const [reaction, setReaction] = useState<OlyloExpression | null>(null);
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const giggle = (): void => {
-    setReaction("laughing");
+  const poke = (): void => {
+    const startled = resting === "asleep";
+    setReaction(startled ? "startled" : "laughing");
     if (reactionTimer.current) clearTimeout(reactionTimer.current);
-    reactionTimer.current = setTimeout(() => setReaction(null), 1400);
+    reactionTimer.current = setTimeout(() => setReaction(null), startled ? 1700 : 1400);
   };
   useEffect(() => {
     return () => {
@@ -61,11 +70,8 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     };
   }, []);
 
-  // Arbitration: a click giggle wins, then a deliberate expression, then the ladder.
-  const effective: OlyloExpression =
-    reaction ??
-    expression ??
-    (ladder === "asleep" ? "asleep" : ladder === "bored" ? "bored" : "idle");
+  // Arbitration: a click reaction wins, then the resting mood.
+  const effective: OlyloExpression = reaction ?? resting;
 
   const eyesShut = effective === "asleep";
   const blinkEnabled = !eyesShut && effective !== "laughing";
@@ -127,6 +133,33 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       ease: p.ease,
       delay: 0.06,
     });
+
+    // Antennae wave — when lively (wiggle > 0), the l's oscillate about their
+    // pose rotation, out of phase, like waving feelers (e.g. startled). The base
+    // tween above lands them first; this loop then rocks them.
+    if (p.wiggle > 0) {
+      const sway = p.wiggle * 1.6;
+      loopRef.current.push(
+        gsap.to(lLeftRef.current, {
+          rotation: p.lLeft.rotation - sway,
+          transformOrigin: "50% 0%",
+          duration: 0.2,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.12,
+        }),
+        gsap.to(lRightRef.current, {
+          rotation: p.lRight.rotation + sway,
+          transformOrigin: "50% 0%",
+          duration: 0.24, // slightly different period → out of phase
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.12,
+        }),
+      );
+    }
 
     // Chameleon: tween the body color (antennae, mouth, eyebrows all paint with
     // currentColor). Tweening `color` on the face group leaves the eyes — which
@@ -298,7 +331,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       viewBox="-15 -72 350 195"
       aria-label="ia.olylo.ai"
       className="block h-auto w-full"
-      onClick={giggle}
+      onClick={poke}
       style={{
         cursor: "pointer",
         pointerEvents: "auto",
