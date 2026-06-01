@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
 }
 
 const GREEN = "#00ff41";
-const IRIS = "#aaffee"; // pale phosphor green with a cool blue tinge
+const IRIS = "#33ccff"; // piercing icy-blue pupils (fixed — never change with mood)
 const IRIS_BASE_R = 9; // base iris radius (viewBox units); poses scale it via `pupil`
 const GAZE_MAX = 7; // max iris travel in viewBox units
 const TWEEN = 0.45;
