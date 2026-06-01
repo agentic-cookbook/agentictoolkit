@@ -283,35 +283,12 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       }}
     >
       {/* arcs the eyebrows ride on (peak up, centred over each eye) */}
+      {/* NOTE: a phosphor glow filter once lived here but was imperceptible over
+          the matrix-rain background, so it was removed. Revisit later — see
+          docs/olylo-backlog.md ("phosphor glow"). */}
       <defs>
         <path id="browArcLeft" d="M23,14 A45,45 0 0 1 50,5" />
         <path id="browArcRight" d="M270,5 A45,45 0 0 1 297,14" />
-        {/* Neon-green glow. An SVG filter (not a CSS drop-shadow on the <svg>)
-            because CSS filters on an ancestor make GSAP-transformed children
-            (the scaling/blinking eyes) composite into their own rectangular
-            layers on iOS Safari — which then render as visible boxes. An SVG
-            filter flattens the subtree into one pass, so the glow hugs the
-            actual shapes. Region is enlarged so the soft aura isn't clipped. */}
-        <filter
-          id="olyloGlow"
-          x="-60%"
-          y="-60%"
-          width="220%"
-          height="220%"
-          colorInterpolationFilters="sRGB"
-        >
-          <feGaussianBlur in="SourceAlpha" stdDeviation="12" result="wide" />
-          <feFlood floodColor={GREEN} floodOpacity="0.35" result="auraColor" />
-          <feComposite in="auraColor" in2="wide" operator="in" result="aura" />
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="tight" />
-          <feFlood floodColor={GREEN} floodOpacity="0.9" result="coreColor" />
-          <feComposite in="coreColor" in2="tight" operator="in" result="core" />
-          <feMerge>
-            <feMergeNode in="aura" />
-            <feMergeNode in="core" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
       {/* full-bleed hit area so a click anywhere on him giggles (svg `auto` only
@@ -336,14 +313,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           fontWeight={400}
           fontSize={26}
           fill={GREEN}
-          filter="url(#olyloGlow)"
           style={{ opacity: 0 }}
         >
           {speech.text}
         </text>
       )}
 
-      <g ref={faceRef} filter="url(#olyloGlow)">
+      <g ref={faceRef}>
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
         {/* eyebrows: the literal ia / ai with a single curved stroke trailing
             toward the centre — ia⌒ on the left, ⌒ai on the right */}
