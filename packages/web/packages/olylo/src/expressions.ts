@@ -36,10 +36,11 @@ export interface Pose {
   /** Pupil (iris) dilation — multiplier on the base iris radius. <1 constricts
    * (focused/sleepy), >1 dilates (aroused/excited). 1 = neutral. */
   pupil: number;
-  /** Body color (antennae, mouth/Y, eyebrows) — the emotional/chameleon channel.
-   * Moods have a color (mad=red, excited=orange, sad=blue…); withdrawn moods
-   * fade toward the page's black so he camouflages. The EYES never use this —
-   * they always stay lit. */
+  /** Body color — the emotional/chameleon channel: antennae, mouth/Y, eyebrows,
+   * and the eye RINGS all take it. Moods have a color (mad=red, excited=orange,
+   * sad=blue…); withdrawn moods fade toward the page's black so he camouflages.
+   * The PUPILS (iris) never use this — they stay a fixed lit blue-green, so even
+   * fully camouflaged his pupils float in the dark. */
   body: string;
   /** `l` strokes pivot at their base (body language). */
   lLeft: { rotation: number; y: number };

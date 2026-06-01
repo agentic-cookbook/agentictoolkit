@@ -378,9 +378,10 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
         {/* eyebrows: the literal ia / ai with a single curved stroke trailing
             toward the centre — ia⌒ on the left, ⌒ai on the right */}
-        {/* Body elements (eyebrows, l antennae, mouth, descender) paint with
-            `currentColor` so the per-pose `body` color tween (the chameleon
-            channel) recolors them together. The EYES below keep explicit fills. */}
+        {/* Everything that paints with `currentColor` (eyebrows, l antennae,
+            mouth, descender, and the eye RINGS below) recolors together via the
+            per-pose `body` tween. Only the pupils (iris) keep an explicit fixed
+            fill, so they stay lit at every mood. */}
         <g ref={browLeftRef} opacity={0.8}>
           <path d="M50,5 A45,45 0 0 1 77,14" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
           <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
@@ -394,10 +395,11 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           </text>
         </g>
 
-        {/* left o (eye) */}
+        {/* left o (eye) — the RING recolors with mood (currentColor); the black
+            middle and the iris/pupil stay fixed, so the pupil color never changes. */}
         <g ref={leftEyeRef}>
           <g ref={leftBlinkRef}>
-            <circle cx={50} cy={50} r={35} fill={GREEN} />
+            <circle cx={50} cy={50} r={35} fill="currentColor" />
             <circle cx={50} cy={50} r={27} fill="#000" />
             <circle ref={leftIrisRef} cx={50} cy={50} r={IRIS_BASE_R} fill={IRIS} />
           </g>
@@ -429,10 +431,10 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         {/* l */}
         <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill="currentColor" />
 
-        {/* right o (eye) */}
+        {/* right o (eye) — ring recolors with mood; black middle + iris stay fixed. */}
         <g ref={rightEyeRef}>
           <g ref={rightBlinkRef}>
-            <circle cx={270} cy={50} r={35} fill={GREEN} />
+            <circle cx={270} cy={50} r={35} fill="currentColor" />
             <circle cx={270} cy={50} r={27} fill="#000" />
             <circle ref={rightIrisRef} cx={270} cy={50} r={IRIS_BASE_R} fill={IRIS} />
           </g>
