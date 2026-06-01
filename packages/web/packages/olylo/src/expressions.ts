@@ -29,6 +29,9 @@ export const EXPRESSIONS: OlyloExpression[] = [
 export interface Pose {
   /** Eye (the `o`s) scale about their own centre — openness + size. */
   eye: { scaleX: number; scaleY: number };
+  /** Pupil (iris) dilation — multiplier on the base iris radius. <1 constricts
+   * (focused/sleepy), >1 dilates (aroused/excited). 1 = neutral. */
+  pupil: number;
   /** `l` strokes pivot at their base (body language). */
   lLeft: { rotation: number; y: number };
   lRight: { rotation: number; y: number };
@@ -68,6 +71,7 @@ const MOUTH = {
 export const POSES: Record<OlyloExpression, Pose> = {
   idle: {
     eye: { scaleX: 1, scaleY: 1 },
+    pupil: 1,
     lLeft: { rotation: 0, y: 0 },
     lRight: { rotation: 0, y: 0 },
     browLeft: { y: 0, rotation: -7 },
@@ -82,6 +86,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   thinking: {
     eye: { scaleX: 1, scaleY: 0.5 },
+    pupil: 0.6, // constricted — focused/concentrating
     lLeft: { rotation: -10, y: -3 },
     lRight: { rotation: 6, y: -1 },
     // asymmetric "cocked brow" — one up/out, one slightly down/in (quizzical)
@@ -97,6 +102,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   excited: {
     eye: { scaleX: 1.12, scaleY: 1.12 },
+    pupil: 1.4, // dilated — aroused/delighted
     lLeft: { rotation: 0, y: -4 },
     lRight: { rotation: 0, y: -4 },
     browLeft: { y: -5, rotation: -17 },
@@ -111,6 +117,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   surprised: {
     eye: { scaleX: 1.28, scaleY: 1.3 },
+    pupil: 1.6, // blown wide — surprise
     lLeft: { rotation: -4, y: -7 },
     lRight: { rotation: 4, y: -7 },
     browLeft: { y: -17, rotation: -12 },
@@ -126,6 +133,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   laughing: {
     eye: { scaleX: 1, scaleY: 0.14 },
+    pupil: 1.3, // lively
     lLeft: { rotation: -3, y: 0 },
     lRight: { rotation: 3, y: 0 },
     browLeft: { y: -4, rotation: -15 },
@@ -140,6 +148,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   sad: {
     eye: { scaleX: 1, scaleY: 0.62 }, // droopy / half-closed
+    pupil: 0.8, // slightly small — withdrawn
     lLeft: { rotation: 8, y: 3 }, // antennae droop inward
     lRight: { rotation: -8, y: 3 },
     // inner corners up (the "sadness triangle"), gently raised
@@ -155,6 +164,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   bored: {
     eye: { scaleX: 0.97, scaleY: 0.4 },
+    pupil: 0.7, // glazed / unfocused
     lLeft: { rotation: 6, y: 2 },
     lRight: { rotation: -6, y: 2 },
     browLeft: { y: 6, rotation: -10 },
@@ -169,6 +179,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
   },
   asleep: {
     eye: { scaleX: 0.95, scaleY: 0.07 },
+    pupil: 0.6, // shut — barely there
     lLeft: { rotation: 10, y: 3 },
     lRight: { rotation: -10, y: 3 },
     browLeft: { y: 9, rotation: -12 },

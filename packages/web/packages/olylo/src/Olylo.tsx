@@ -13,7 +13,8 @@ if (typeof window !== "undefined") {
 }
 
 const GREEN = "#00ff41";
-const IRIS = "#aaffaa";
+const IRIS = "#aaffee"; // pale phosphor green with a cool blue tinge
+const IRIS_BASE_R = 9; // base iris radius (viewBox units); poses scale it via `pupil`
 const GAZE_MAX = 7; // max iris travel in viewBox units
 const TWEEN = 0.45;
 const EASE = "power3.out";
@@ -83,6 +84,13 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       scaleX: p.eye.scaleX,
       scaleY: p.eye.scaleY,
       transformOrigin: "50% 50%",
+      duration: p.dur,
+      ease: p.ease,
+    });
+    // Pupils dilate/constrict with mood. Animating the `r` attribute keeps this
+    // independent of the iris gaze translate (x/y), so they never fight.
+    gsap.to([leftIrisRef.current, rightIrisRef.current], {
+      attr: { r: IRIS_BASE_R * p.pupil },
       duration: p.dur,
       ease: p.ease,
     });
@@ -357,7 +365,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           <g ref={leftBlinkRef}>
             <circle cx={50} cy={50} r={35} fill={GREEN} />
             <circle cx={50} cy={50} r={27} fill="#000" />
-            <circle ref={leftIrisRef} cx={50} cy={50} r={9} fill={IRIS} />
+            <circle ref={leftIrisRef} cx={50} cy={50} r={IRIS_BASE_R} fill={IRIS} />
           </g>
         </g>
 
@@ -392,7 +400,7 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
           <g ref={rightBlinkRef}>
             <circle cx={270} cy={50} r={35} fill={GREEN} />
             <circle cx={270} cy={50} r={27} fill="#000" />
-            <circle ref={rightIrisRef} cx={270} cy={50} r={9} fill={IRIS} />
+            <circle ref={rightIrisRef} cx={270} cy={50} r={IRIS_BASE_R} fill={IRIS} />
           </g>
         </g>
       </g>
