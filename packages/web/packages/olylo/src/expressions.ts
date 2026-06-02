@@ -16,6 +16,7 @@ export type OlyloExpression =
   | "sad"
   | "bored"
   | "silly"
+  | "smug"
   | "asleep";
 
 export const EXPRESSIONS: OlyloExpression[] = [
@@ -30,6 +31,7 @@ export const EXPRESSIONS: OlyloExpression[] = [
   "sad",
   "bored",
   "silly",
+  "smug",
   "asleep",
 ];
 
@@ -111,6 +113,7 @@ const MOUTH = {
   open: "M148,73 L160,85 L172,73",
   bigSmile: "M128,66 L160,85 L192,66",
   frown: "M132,99 L160,85 L188,99",
+  smirk: "M132,86 L160,85 L188,73", // one-sided grin: left flat, right corner pulled up
 } as const;
 
 export const POSES: Record<OlyloExpression, Pose> = {
@@ -316,6 +319,30 @@ export const POSES: Record<OlyloExpression, Pose> = {
     dur: 0.4,
     ease: "back.out(1.6)",
     sayings: ["wheee", "boing", "hehe"],
+  },
+  smug: {
+    // the cat-that-got-the-cream look after landing a reply: relaxed half-lidded
+    // eyes (one a touch more than the other — sly), one knowing brow arched, an
+    // asymmetric smirk, a cocky head-tilt and a light tail-flick. Warm, pleased,
+    // a touch mischievous.
+    eye: { scaleX: 1, scaleY: 0.72 }, // lidded — cool, not wide
+    eyeLeft: { scaleX: 1, scaleY: 0.62 }, // one eye a touch more lidded — the sly side
+    eyeRight: { scaleX: 1, scaleY: 0.8 },
+    pupil: 0.95, // calm, slightly constricted — confident
+    scale: 1.04, // a small self-satisfied puff
+    rotation: 4, // cocks his head, pleased with himself
+    body: BODY.orange, // warm, pleased
+    lLeft: { rotation: -10, y: -3 }, // one antenna perks up jauntily
+    lRight: { rotation: 3, y: 0 },
+    browLeft: { y: 3, rotation: -4 }, // settled
+    browRight: { y: -11, rotation: 11 }, // the knowing arch
+    mouth: MOUTH.smirk,
+    showY: false,
+    bob: 0,
+    wiggle: 2, // a light cheeky shimmy + tail-flick
+    dur: 0.34,
+    ease: "back.out(1.5)",
+    sayings: ["heh", "nailed it", "obviously", "you're welcome", "*smirk*"],
   },
   asleep: {
     eye: { scaleX: 0.95, scaleY: 0.07 },
