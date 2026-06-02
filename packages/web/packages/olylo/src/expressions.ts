@@ -17,6 +17,7 @@ export type OlyloExpression =
   | "bored"
   | "silly"
   | "smug"
+  | "yawning"
   | "asleep";
 
 export const EXPRESSIONS: OlyloExpression[] = [
@@ -32,6 +33,7 @@ export const EXPRESSIONS: OlyloExpression[] = [
   "bored",
   "silly",
   "smug",
+  "yawning",
   "asleep",
 ];
 
@@ -114,6 +116,7 @@ const MOUTH = {
   bigSmile: "M128,66 L160,85 L192,66",
   frown: "M132,99 L160,85 L188,99",
   smirk: "M132,86 L160,85 L188,73", // one-sided grin: left flat, right corner pulled up
+  yawn: "M147,85 a13,16 0 1,0 26,0 a13,16 0 1,0 -26,0", // a tall "O" — the wide yawn
 } as const;
 
 export const POSES: Record<OlyloExpression, Pose> = {
@@ -343,6 +346,26 @@ export const POSES: Record<OlyloExpression, Pose> = {
     dur: 0.34,
     ease: "back.out(1.5)",
     sayings: ["heh", "nailed it", "obviously", "you're welcome", "*smirk*"],
+  },
+  yawning: {
+    // the groggy wake: a slow stretch and a big "O" yawn, eyes heavy and half-
+    // shut, held a couple of seconds before he's properly awake. The "O" mouth
+    // over the straight descender reads as an O with a little tail.
+    eye: { scaleX: 0.97, scaleY: 0.32 }, // heavy, half-shut
+    pupil: 0.7, // sleepy, small
+    scale: 1.04, // a little stretch
+    body: BODY.green, // lighting back up out of camouflage
+    lLeft: { rotation: -7, y: -6 }, // antennae stretch up and out
+    lRight: { rotation: 7, y: -6 },
+    browLeft: { y: 3, rotation: -6 }, // drowsy
+    browRight: { y: 3, rotation: 6 },
+    mouth: MOUTH.yawn,
+    showY: false,
+    bob: 0,
+    wiggle: 0,
+    dur: 0.6, // slow — a long yawn
+    ease: "sine.out",
+    sayings: ["*yawn*", "mmf...", "huh—", "*stretch*"],
   },
   asleep: {
     eye: { scaleX: 0.95, scaleY: 0.07 },
