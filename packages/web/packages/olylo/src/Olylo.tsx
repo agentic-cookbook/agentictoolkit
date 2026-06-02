@@ -13,6 +13,8 @@ if (typeof window !== "undefined") {
 
 const GREEN = "#00ff41";
 const IRIS = "#33ccff"; // piercing icy-blue pupils (fixed — never change with mood)
+const SHADOW = "#26ff5e"; // glowing-shadow color (fixed — shows even when camouflaged)
+const EYE_BG = "#06140d"; // eye interior — dark but opaque, so it's not a see-through hole
 const IRIS_BASE_R = 9; // base iris radius (viewBox units); poses scale it via `pupil`
 const GAZE_MAX = 7; // max iris travel in viewBox units
 const TWEEN = 0.45;
@@ -39,16 +41,16 @@ export interface OlyloProps {
    */
   gaze?: { x: number; y: number } | null;
   /**
-   * Reports his current effective mood whenever it changes, so a driver can
-   * mirror his reflex state — e.g. show "zzz…" in a status line when he drifts
-   * off to sleep on his own.
+   * Fires with each short utterance he blurts (his speech-bubble text, e.g.
+   * "zzz", "well?", "yes!"), so a driver can echo it transiently in a status
+   * line. Only fires for moods that have sayings.
    */
-  onState?: (state: OlyloExpression) => void;
+  onSpeak?: (text: string) => void;
 }
 
-export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactElement {
+export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
-  const glowFloodRef = useRef<SVGFEFloodElement>(null); // the glow's flood, for a slow pulse
+  const shadowRef = useRef<SVGGElement>(null); // the glowing-shadow shapes, for a slow pulse
   // Last time the cursor drove the gaze — shared so the idle fidget knows to hold
   // still (no random sway) while he's intentionally watching the mouse.
   const watchingRef = useRef(0);
@@ -73,8 +75,8 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
   // eye-scale group so the closing eyelid never squishes them flat.
   const leftDotRef = useRef<SVGCircleElement>(null);
   const rightDotRef = useRef<SVGCircleElement>(null);
-  const lLeftRef = useRef<SVGRectElement>(null);
-  const lRightRef = useRef<SVGRectElement>(null);
+  const lLeftRef = useRef<SVGPathElement>(null);
+  const lRightRef = useRef<SVGPathElement>(null);
   const browLeftRef = useRef<SVGGElement>(null);
   const browRightRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
@@ -130,16 +132,17 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
   // he's bored/asleep or has a deliberate mood, the look-around stops.
   const curious = effective === "idle";
 
-  // Surface his current mood so a driver can mirror it (e.g. "zzz…" when asleep).
-  useEffect(() => {
-    onState?.(effective);
-  }, [effective, onState]);
 
   const eyesShut = effective === "asleep";
   const blinkEnabled = !eyesShut && effective !== "laughing";
   const leftBlinking = useBlink(blinkEnabled);
   const rightBlinking = useBlink(blinkEnabled);
   const speech = useSpeech(effective);
+
+  // Echo each utterance out to a driver (so the chat status can mirror it).
+  useEffect(() => {
+    if (speech) onSpeak?.(speech.text);
+  }, [speech?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pose: tween every part toward the target pose; morph the mouth.
   useEffect(() => {
@@ -233,32 +236,40 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
       delay: 0.06,
     });
 
-    // Antennae are always a little restless so he never reads as frozen — a
-    // gentle slow sway about their pose rotation in calm moods, a faster bigger
-    // wave when lively (wiggle > 0, e.g. startled). The base tween above lands
-    // them first; this loop then rocks them, out of phase between the two.
-    const lively = p.wiggle > 0;
-    const sway = lively ? p.wiggle * 1.6 : 2.5;
-    loopRef.current.push(
-      gsap.to(lLeftRef.current, {
-        rotation: p.lLeft.rotation - sway,
-        transformOrigin: "50% 0%",
-        duration: lively ? 0.2 : 1.3,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-        delay: 0.12,
-      }),
-      gsap.to(lRightRef.current, {
-        rotation: p.lRight.rotation + sway,
-        transformOrigin: "50% 0%",
-        duration: lively ? 0.24 : 1.6, // different period → out of phase
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-        delay: 0.12,
-      }),
-    );
+    // Antennae are bendy feelers: anchored at the base (the head) they curve and
+    // whip side to side continuously so he never reads as a frozen logo — a small
+    // wiggle in calm moods, a big fast one when lively (wiggle > 0). The base
+    // tween above still rotates/positions them per pose; this bends the curve on
+    // top. Held straight & still while asleep.
+    const bend = (x: number, a: number): string =>
+      `M${x},85 C${x + a * 0.4},50 ${x + a},12 ${x + a * 0.7},-20`;
+    if (eyesShut) {
+      gsap.to(lLeftRef.current, { morphSVG: bend(105, 0), duration: 0.5, ease: "sine.out" });
+      gsap.to(lRightRef.current, { morphSVG: bend(215, 0), duration: 0.5, ease: "sine.out" });
+    } else {
+      const lively = p.wiggle > 0;
+      const amp = lively ? 18 : 8;
+      gsap.set(lLeftRef.current, { attr: { d: bend(105, -amp) } });
+      gsap.set(lRightRef.current, { attr: { d: bend(215, amp) } });
+      loopRef.current.push(
+        gsap.to(lLeftRef.current, {
+          morphSVG: bend(105, amp),
+          duration: lively ? 0.3 : 0.85,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.12,
+        }),
+        gsap.to(lRightRef.current, {
+          morphSVG: bend(215, -amp),
+          duration: lively ? 0.36 : 1.05, // out of phase
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 0.12,
+        }),
+      );
+    }
 
     // Chameleon: tween the body color (antennae, mouth, eyebrows all paint with
     // currentColor). Tweening `color` on the face group leaves the eyes — which
@@ -348,11 +359,11 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
     });
   }, [rightBlinking]);
 
-  // Glow: a slow breath on the aura's opacity so it reads as alive, not a decal.
+  // Glowing shadow: a slow breath on its opacity so the aura feels alive.
   useEffect(() => {
-    if (!glowFloodRef.current) return;
-    const pulse = gsap.to(glowFloodRef.current, {
-      attr: { "flood-opacity": 0.85 },
+    if (!shadowRef.current) return;
+    const pulse = gsap.to(shadowRef.current, {
+      opacity: 0.82,
       duration: 3.4,
       repeat: -1,
       yoyo: true,
@@ -618,29 +629,10 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
       <defs>
         <path id="browArcLeft" d="M23,14 A45,45 0 0 1 50,5" />
         <path id="browArcRight" d="M270,5 A45,45 0 0 1 297,14" />
-        {/* Per-component phosphor glow: blur each shape's ALPHA and flood it green
-            so every part (eyes, l's, mouth, brows) casts its own shaped halo —
-            not one blob behind him. Driven by alpha, not the fill, so it never
-            fades with his mood: when he camouflages himself (asleep, near-black)
-            the glow still marks where he is. */}
-        <filter
-          id="olyloGlow"
-          x="-70%"
-          y="-70%"
-          width="240%"
-          height="240%"
-          colorInterpolationFilters="sRGB"
-        >
-          {/* ONE soft, diffuse aura behind him — moderate spread so it's clearly
-              visible but no tight ring that would fuzz his crisp lines. The flood
-              opacity is animated for a slow pulse; the graphic paints sharp on top. */}
-          <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="wide" />
-          <feFlood ref={glowFloodRef} floodColor={GREEN} floodOpacity={0.55} result="col" />
-          <feComposite in="col" in2="wide" operator="in" result="halo" />
-          <feMerge>
-            <feMergeNode in="halo" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
+        {/* Soft blur for the glowing-shadow shapes (below), so the overlapping
+            ovals melt into one soft aura instead of reading as hard blobs. */}
+        <filter id="olyloShadow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="8" />
         </filter>
       </defs>
 
@@ -676,7 +668,24 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
        <g ref={tiltRef}>
         <g ref={leanRef}>
       <g ref={bodyRef}>
-        <g ref={faceRef} filter="url(#olyloGlow)" style={{ color: GREEN }}>
+        {/* Glowing shadow: large soft ovals/circles ~25% bigger than each part,
+            overlapping into one aura behind him. A fixed green (never recolors),
+            so it still marks where he is when his body camouflages (asleep).
+            Slow-pulsed. */}
+        <g
+          ref={shadowRef}
+          fill={SHADOW}
+          filter="url(#olyloShadow)"
+          opacity={0.55}
+          style={{ pointerEvents: "none" }}
+        >
+          <circle cx={50} cy={50} r={44} />
+          <circle cx={270} cy={50} r={44} />
+          <ellipse cx={160} cy={86} rx={48} ry={40} />
+          <ellipse cx={105} cy={32} rx={13} ry={72} />
+          <ellipse cx={215} cy={32} rx={13} ry={72} />
+        </g>
+        <g ref={faceRef} style={{ color: GREEN }}>
           {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
           {/* eyebrows: the literal ia / ai with a single curved stroke trailing
               toward the centre — ia⌒ on the left, ⌒ai on the right */}
@@ -702,13 +711,13 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
           <g ref={leftEyeRef}>
             <g ref={leftBlinkRef}>
               <circle cx={50} cy={50} r={35} fill="currentColor" />
-              <circle cx={50} cy={50} r={27} fill="#000" />
+              <circle cx={50} cy={50} r={27} fill={EYE_BG} />
               <circle ref={leftIrisRef} cx={50} cy={50} r={IRIS_BASE_R} fill={IRIS} />
             </g>
           </g>
 
           {/* l */}
-          <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill="currentColor" />
+          <path ref={lLeftRef} d="M105,85 C105,50 105,15 105,-20" stroke="currentColor" strokeWidth={5} fill="none" strokeLinecap="round" />
 
           {/* mouth — morphing; idle = the Y arms */}
           <path
@@ -731,13 +740,13 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
           />
 
           {/* l */}
-          <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill="currentColor" />
+          <path ref={lRightRef} d="M215,85 C215,50 215,15 215,-20" stroke="currentColor" strokeWidth={5} fill="none" strokeLinecap="round" />
 
           {/* right o (eye) — ring recolors with mood; black middle + iris stay fixed. */}
           <g ref={rightEyeRef}>
             <g ref={rightBlinkRef}>
               <circle cx={270} cy={50} r={35} fill="currentColor" />
-              <circle cx={270} cy={50} r={27} fill="#000" />
+              <circle cx={270} cy={50} r={27} fill={EYE_BG} />
               <circle ref={rightIrisRef} cx={270} cy={50} r={IRIS_BASE_R} fill={IRIS} />
             </g>
           </g>

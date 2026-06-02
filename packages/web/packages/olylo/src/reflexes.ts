@@ -58,6 +58,9 @@ export function useIdleLadder(expressionActive: boolean): Ladder {
     const move = () => {
       if (ladderRef.current === "asleep") return;
       lastActivity.current = Date.now();
+      // Don't sit dim/bored (camouflaged) while he's actively tracking the
+      // cursor — brighten back to active immediately, not on the next poll.
+      if (ladderRef.current === "bored") setLadder("active");
     };
     const wake = () => {
       lastActivity.current = Date.now();
