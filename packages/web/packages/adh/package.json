@@ -29,11 +29,16 @@
       "types": "./dist/footer/index.d.ts",
       "import": "./dist/footer/index.js"
     },
+    "./legal": {
+      "types": "./dist/legal/index.d.ts",
+      "import": "./dist/legal/index.js"
+    },
     "./themes": {
       "types": "./dist/themes/index.d.ts",
       "import": "./dist/themes/index.js"
     },
-    "./styles.css": "./dist/styles/adh-components.css"
+    "./styles.css": "./dist/styles/adh-components.css",
+    "./legal.css": "./dist/styles/adh-legal.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",

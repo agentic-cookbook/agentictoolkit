@@ -7,6 +7,7 @@ export default defineConfig({
     server: 'src/server.ts',
     'header/index': 'src/header/index.ts',
     'footer/index': 'src/footer/index.ts',
+    'legal/index': 'src/legal/index.ts',
     'themes/index': 'src/themes/index.ts',
   },
   outDir: 'dist',

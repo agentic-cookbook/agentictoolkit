@@ -13,9 +13,9 @@ export type AdhFooterProps = {
 }
 
 const DEFAULT_LINKS: FooterLink[] = [
-  { label: 'Terms', href: '/legal/terms' },
+  { label: 'Terms', href: '/terms' },
   { label: 'Contact', href: '/contact' },
-  { label: 'Privacy', href: '/legal/privacy' },
+  { label: 'Privacy', href: '/privacy' },
 ]
 
 export function AdhFooter({ links = DEFAULT_LINKS, copyright }: AdhFooterProps) {
