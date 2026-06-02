@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
 
 const GREEN = "#00ff41";
 const IRIS = "#33ccff"; // piercing icy-blue pupils (fixed — never change with mood)
-const SHADOW = "#26ff5e"; // glowing-shadow color (fixed — shows even when camouflaged)
+const SHADOW = "#3a3a3a"; // shadow color — dark gray (fixed — shows even when camouflaged)
 const EYE_BG = "#06140d"; // eye interior — dark but opaque, so it's not a see-through hole
 const IRIS_BASE_R = 9; // base iris radius (viewBox units); poses scale it via `pupil`
 const GAZE_MAX = 7; // max iris travel in viewBox units
@@ -679,11 +679,11 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
           opacity={0.55}
           style={{ pointerEvents: "none" }}
         >
-          <circle cx={50} cy={50} r={44} />
-          <circle cx={270} cy={50} r={44} />
-          <ellipse cx={160} cy={86} rx={48} ry={40} />
-          <ellipse cx={105} cy={32} rx={13} ry={72} />
-          <ellipse cx={215} cy={32} rx={13} ry={72} />
+          <circle cx={50} cy={50} r={62} />
+          <circle cx={270} cy={50} r={62} />
+          <ellipse cx={160} cy={86} rx={58} ry={48} />
+          <ellipse cx={105} cy={32} rx={16} ry={80} />
+          <ellipse cx={215} cy={32} rx={16} ry={80} />
         </g>
         <g ref={faceRef} style={{ color: GREEN }}>
           {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
