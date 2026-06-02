@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import gsap from "gsap";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
-import { useGSAP } from "@gsap/react";
 import { POSES } from "./expressions";
 import type { OlyloExpression } from "./expressions";
 import { useBlink, useIdleLadder, useSpeech } from "./reflexes";
@@ -18,6 +17,11 @@ const IRIS_BASE_R = 9; // base iris radius (viewBox units); poses scale it via `
 const GAZE_MAX = 7; // max iris travel in viewBox units
 const TWEEN = 0.45;
 const EASE = "power3.out";
+// Curious idle look-around: once the cursor's been still this long, he starts
+// glancing about on his own, a new glance every WANDER_MIN..MAX ms.
+const WANDER_AFTER_MS = 1200;
+const WANDER_MIN_MS = 1400;
+const WANDER_MAX_MS = 3200;
 
 const clamp = (n: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, n));
@@ -25,9 +29,16 @@ const clamp = (n: number, lo: number, hi: number): number =>
 export interface OlyloProps {
   /** Deliberate mood from a driver (chat today, persona later). */
   expression?: OlyloExpression;
+  /**
+   * A deliberate gaze direction, normalized: x ∈ [-1,1] (right is +), y ∈ [-1,1]
+   * (down is +). e.g. `{ x: 0, y: 1 }` makes him look straight down — at an input
+   * sitting below him. While set, it overrides his cursor-follow and his idle
+   * look-around. Omit or pass null to hand his eyes back to those reflexes.
+   */
+  gaze?: { x: number; y: number } | null;
 }
 
-export function Olylo({ expression }: OlyloProps): ReactElement {
+export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
   // Outer group carrying the whole-glyph emotional scale + rotation (+ spin),
   // kept separate from faceRef so those never fight its bob/wiggle.
@@ -75,6 +86,10 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
 
   // Arbitration: a click reaction wins, then the resting mood.
   const effective: OlyloExpression = reaction ?? resting;
+
+  // Awake and unoccupied (the plain idle mood) → his eyes wander curiously. Once
+  // he's bored/asleep or has a deliberate mood, the look-around stops.
+  const curious = effective === "idle";
 
   const eyesShut = effective === "asleep";
   const blinkEnabled = !eyesShut && effective !== "laughing";
@@ -285,49 +300,87 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     });
   }, [rightBlinking]);
 
-  // Gaze: irises follow the cursor (spring-damped via quickTo). Set up once.
-  useGSAP(
-    () => {
-      const opts = { duration: 0.5, ease: "power3" };
-      const qxL = gsap.quickTo(leftIrisRef.current, "x", opts);
-      const qyL = gsap.quickTo(leftIrisRef.current, "y", opts);
-      const qxR = gsap.quickTo(rightIrisRef.current, "x", opts);
-      const qyR = gsap.quickTo(rightIrisRef.current, "y", opts);
-      let raf = 0;
-      const onMove = (e: PointerEvent) => {
-        if (raf) return;
-        raf = requestAnimationFrame(() => {
-          raf = 0;
-          const el = svgRef.current;
-          if (!el) return;
-          const r = el.getBoundingClientRect();
-          const dx = e.clientX - (r.left + r.width / 2);
-          const dy = e.clientY - (r.top + r.height / 2);
-          const len = Math.hypot(dx, dy) || 1;
-          const gx = clamp((dx / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX);
-          const gy = clamp((dy / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX);
-          qxL(gx);
-          qyL(gy);
-          qxR(gx);
-          qyR(gy);
-        });
-      };
-      const onLeave = () => {
-        qxL(0);
-        qyL(0);
-        qxR(0);
-        qyR(0);
-      };
-      window.addEventListener("pointermove", onMove);
-      document.addEventListener("mouseleave", onLeave);
-      return () => {
-        if (raf) cancelAnimationFrame(raf);
-        window.removeEventListener("pointermove", onMove);
-        document.removeEventListener("mouseleave", onLeave);
-      };
-    },
-    { scope: svgRef },
-  );
+  // Gaze: where the irises point, spring-damped via quickTo. Priority:
+  //   1. a deliberate `gaze` (e.g. eyes down at the input while you type),
+  //   2. the cursor while it's moving,
+  //   3. his own curious look-around when he's awake and the cursor's gone still.
+  // Rebuilt when the gaze source changes. (Plain effect — like the pose/blink
+  // effects above — so cleanup runs predictably between renders.)
+  const forcedX = gaze ? clamp(gaze.x, -1, 1) : null;
+  const forcedY = gaze ? clamp(gaze.y, -1, 1) : null;
+  useEffect(() => {
+    const opts = { duration: 0.5, ease: "power3" };
+    const qxL = gsap.quickTo(leftIrisRef.current, "x", opts);
+    const qyL = gsap.quickTo(leftIrisRef.current, "y", opts);
+    const qxR = gsap.quickTo(rightIrisRef.current, "x", opts);
+    const qyR = gsap.quickTo(rightIrisRef.current, "y", opts);
+    const look = (gx: number, gy: number): void => {
+      qxL(gx);
+      qyL(gy);
+      qxR(gx);
+      qyR(gy);
+    };
+
+    // 1. Deliberate gaze: lock the eyes there, ignore cursor + look-around.
+    if (forcedX !== null && forcedY !== null) {
+      look(forcedX * GAZE_MAX, forcedY * GAZE_MAX);
+      return;
+    }
+
+    // 2. Cursor-follow.
+    let lastMove = 0; // when the cursor last drove the gaze; wander waits for a lull
+    let raf = 0;
+    const onMove = (e: PointerEvent): void => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const el = svgRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2);
+        const dy = e.clientY - (r.top + r.height / 2);
+        const len = Math.hypot(dx, dy) || 1;
+        look(
+          clamp((dx / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX),
+          clamp((dy / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX),
+        );
+        lastMove = Date.now();
+      });
+    };
+    const onLeave = (): void => look(0, 0);
+    window.addEventListener("pointermove", onMove);
+    document.addEventListener("mouseleave", onLeave);
+
+    // 3. Curious look-around: while awake + unoccupied and the cursor's been
+    // still, glance to random points (and now and then back to centre). It skips
+    // its turn whenever the cursor's moving, so the two never fight.
+    let wander: ReturnType<typeof setTimeout> | undefined;
+    const scheduleWander = (): void => {
+      wander = setTimeout(
+        () => {
+          if (Date.now() - lastMove > WANDER_AFTER_MS) {
+            if (Math.random() < 0.25) {
+              look(0, 0);
+            } else {
+              const angle = Math.random() * Math.PI * 2;
+              const radius = GAZE_MAX * (0.45 + Math.random() * 0.45);
+              look(Math.cos(angle) * radius, Math.sin(angle) * radius);
+            }
+          }
+          scheduleWander();
+        },
+        WANDER_MIN_MS + Math.random() * (WANDER_MAX_MS - WANDER_MIN_MS),
+      );
+    };
+    if (curious) scheduleWander();
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      if (wander) clearTimeout(wander);
+      window.removeEventListener("pointermove", onMove);
+      document.removeEventListener("mouseleave", onLeave);
+    };
+  }, [forcedX, forcedY, curious]);
 
   // Speech: pop the utterance above the head, then let it drift off at a random
   // angle (biased upward) while fading — like a thought floating away.

@@ -10,6 +10,9 @@ const MAX_BLINK_MS = 7000;
 const BORED_AFTER_MS = 6000;
 const ASLEEP_AFTER_MS = 14000;
 const SLEEP_MUTTER_MS = 5500;
+// Typing is a stronger signal than a stray pointer twitch: after the user types,
+// olylo stays awake and curious this long before he's allowed to drift off again.
+const ALERT_AFTER_TYPING_MS = 30000;
 
 export type Ladder = "active" | "bored" | "asleep";
 
@@ -45,16 +48,26 @@ export function useBlink(enabled: boolean): boolean {
 export function useIdleLadder(expressionActive: boolean): Ladder {
   const [ladder, setLadder] = useState<Ladder>("active");
   const lastActivity = useRef(0);
+  const alertUntil = useRef(0); // typing pins him awake until this time
   useEffect(() => {
     lastActivity.current = Date.now();
     const bump = () => {
       lastActivity.current = Date.now();
     };
+    // Typing also opens a grace window so he doesn't get bored/sleepy right after.
+    const typed = () => {
+      lastActivity.current = Date.now();
+      alertUntil.current = Date.now() + ALERT_AFTER_TYPING_MS;
+    };
     window.addEventListener("pointermove", bump);
-    window.addEventListener("keydown", bump);
+    window.addEventListener("keydown", typed);
     window.addEventListener("pointerdown", bump);
     const poll = setInterval(() => {
-      const idle = Date.now() - lastActivity.current;
+      const now = Date.now();
+      // During the post-typing grace, hold him alert and keep resetting the idle
+      // clock, so when it lapses he resumes looking-around (not straight to sleep).
+      if (now < alertUntil.current) lastActivity.current = now;
+      const idle = now - lastActivity.current;
       const next: Ladder =
         idle > ASLEEP_AFTER_MS ? "asleep" : idle > BORED_AFTER_MS ? "bored" : "active";
       setLadder((prev) => (prev === next ? prev : next));
@@ -62,7 +75,7 @@ export function useIdleLadder(expressionActive: boolean): Ladder {
     return () => {
       clearInterval(poll);
       window.removeEventListener("pointermove", bump);
-      window.removeEventListener("keydown", bump);
+      window.removeEventListener("keydown", typed);
       window.removeEventListener("pointerdown", bump);
     };
   }, []);

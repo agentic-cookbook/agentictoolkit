@@ -20,6 +20,11 @@ describe("Olylo", () => {
       expect(html).toContain("ia.olylo.ai");
     }
   });
+
+  it("accepts a deliberate gaze direction (eyes-down at an input)", () => {
+    const html = renderToStaticMarkup(<Olylo gaze={{ x: 0, y: 1 }} />);
+    expect(html).toContain("ia.olylo.ai");
+  });
 });
 
 // Guards the expression-channel contract (sizes/rotations are applied in-app by
