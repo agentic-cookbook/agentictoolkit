@@ -53,14 +53,14 @@ export function useIdleLadder(expressionActive: boolean): Ladder {
   const alertUntil = useRef(0); // typing pins him awake until this time
   useEffect(() => {
     lastActivity.current = Date.now();
-    // Mouse movement rouses him — UNLESS he's fully asleep, in which case a stray
-    // hover shouldn't wake him; only a click or a keystroke does.
+    // Mouse movement wakes/keeps him active — but only when the window is
+    // actually focused, so a stray move over a background window won't rouse him.
+    // Brightening to active immediately (not on the next poll) also means he's
+    // never left dim/bored or asleep while you're moving the cursor over him.
     const move = () => {
-      if (ladderRef.current === "asleep") return;
+      if (!document.hasFocus()) return;
       lastActivity.current = Date.now();
-      // Don't sit dim/bored (camouflaged) while he's actively tracking the
-      // cursor — brighten back to active immediately, not on the next poll.
-      if (ladderRef.current === "bored") setLadder("active");
+      if (ladderRef.current !== "active") setLadder("active");
     };
     const wake = () => {
       lastActivity.current = Date.now();

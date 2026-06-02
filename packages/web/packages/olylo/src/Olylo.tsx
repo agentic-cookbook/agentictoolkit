@@ -46,9 +46,15 @@ export interface OlyloProps {
    * line. Only fires for moods that have sayings.
    */
   onSpeak?: (text: string) => void;
+  /**
+   * When true, he keeps his expressions but stays silent — no speech bubbles and
+   * no `onSpeak`. Used while a command is processing so the status holds the
+   * thinking spinner rather than his chatter.
+   */
+  mute?: boolean;
 }
 
-export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactElement {
+export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
   const shadowRef = useRef<SVGGElement>(null); // the glowing-shadow shapes, for a slow pulse
   // Last time the cursor drove the gaze — shared so the idle fidget knows to hold
@@ -137,7 +143,9 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
   const blinkEnabled = !eyesShut && effective !== "laughing";
   const leftBlinking = useBlink(blinkEnabled);
   const rightBlinking = useBlink(blinkEnabled);
-  const speech = useSpeech(effective);
+  // Muted while a command processes: he keeps his face but says nothing.
+  const rawSpeech = useSpeech(effective);
+  const speech = mute ? null : rawSpeech;
 
   // Echo each utterance out to a driver (so the chat status can mirror it).
   useEffect(() => {
