@@ -48,6 +48,7 @@ export interface OlyloProps {
 
 export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
+  const glowFloodRef = useRef<SVGFEFloodElement>(null); // the glow's flood, for a slow pulse
   // Last time the cursor drove the gaze — shared so the idle fidget knows to hold
   // still (no random sway) while he's intentionally watching the mouse.
   const watchingRef = useRef(0);
@@ -347,6 +348,21 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
     });
   }, [rightBlinking]);
 
+  // Glow: a slow breath on the aura's opacity so it reads as alive, not a decal.
+  useEffect(() => {
+    if (!glowFloodRef.current) return;
+    const pulse = gsap.to(glowFloodRef.current, {
+      attr: { "flood-opacity": 0.85 },
+      duration: 3.4,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+    });
+    return () => {
+      pulse.kill();
+    };
+  }, []);
+
   // Pinprick pupils: fade the tiny lit dots in when his eyes shut (asleep), so
   // there's always a spark in the dark; hidden when awake (the real irises show).
   useEffect(() => {
@@ -391,6 +407,14 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
       leanXTo(nx * LEAN_MAX);
       leanYTo(ny * LEAN_MAX);
     };
+
+    // Dead still while he sleeps: no cursor tracking, tilt, lean, or saccade.
+    if (eyesShut) {
+      look(0, 0);
+      tiltTo(0);
+      lean(0, 0);
+      return;
+    }
 
     // 1. Deliberate gaze (typing): lock eyes + head toward it, ignore the rest.
     // (Tilt sign is negated so he leans INTO what he's watching, not away.)
@@ -601,16 +625,17 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
             the glow still marks where he is. */}
         <filter
           id="olyloGlow"
-          x="-90%"
-          y="-90%"
-          width="280%"
-          height="280%"
+          x="-70%"
+          y="-70%"
+          width="240%"
+          height="240%"
           colorInterpolationFilters="sRGB"
         >
-          {/* ONE big, dim, very diffuse aura far behind him — no tight glow that
-              would fuzz his crisp lines. The graphic paints sharp on top. */}
-          <feGaussianBlur in="SourceAlpha" stdDeviation="24" result="wide" />
-          <feFlood floodColor={GREEN} floodOpacity={0.3} result="col" />
+          {/* ONE soft, diffuse aura behind him — moderate spread so it's clearly
+              visible but no tight ring that would fuzz his crisp lines. The flood
+              opacity is animated for a slow pulse; the graphic paints sharp on top. */}
+          <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="wide" />
+          <feFlood ref={glowFloodRef} floodColor={GREEN} floodOpacity={0.55} result="col" />
           <feComposite in="col" in2="wide" operator="in" result="halo" />
           <feMerge>
             <feMergeNode in="halo" />
@@ -717,12 +742,29 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
             </g>
           </g>
 
-          {/* tiny pinprick pupils — OUTSIDE the eye-scale groups so the closing
-              eyelid never squishes them. Faded in only when his eyes shut
-              (asleep), so there's always a spark of him in the dark. */}
-          <circle ref={leftDotRef} cx={50} cy={50} r={2.4} fill={IRIS} opacity={0} />
-          <circle ref={rightDotRef} cx={270} cy={50} r={2.4} fill={IRIS} opacity={0} />
         </g>
+        {/* tiny pinprick pupils — OUTSIDE the face group (so the green aura filter
+            can't tint them) and the eye-scale group (so the closing eyelid can't
+            squish them). Faded in only when his eyes shut (asleep), glowing blue,
+            so there's always a spark of him in the dark. */}
+        <circle
+          ref={leftDotRef}
+          cx={50}
+          cy={50}
+          r={2.6}
+          fill={IRIS}
+          opacity={0}
+          style={{ filter: "drop-shadow(0 0 3px #33ccff) drop-shadow(0 0 1.5px #33ccff)" }}
+        />
+        <circle
+          ref={rightDotRef}
+          cx={270}
+          cy={50}
+          r={2.6}
+          fill={IRIS}
+          opacity={0}
+          style={{ filter: "drop-shadow(0 0 3px #33ccff) drop-shadow(0 0 1.5px #33ccff)" }}
+        />
       </g>
         </g>
        </g>
