@@ -601,25 +601,19 @@ export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactEl
             the glow still marks where he is. */}
         <filter
           id="olyloGlow"
-          x="-70%"
-          y="-70%"
-          width="240%"
-          height="240%"
+          x="-90%"
+          y="-90%"
+          width="280%"
+          height="280%"
           colorInterpolationFilters="sRGB"
         >
-          <feFlood floodColor={GREEN} floodOpacity={1} result="col" />
-          {/* a wide, soft halo that bleeds well past his edges into the dark */}
-          <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="wide" />
-          <feComposite in="col" in2="wide" operator="in" result="haloWide" />
-          {/* a tighter, brighter inner glow hugging each shape */}
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="tight" />
-          <feComposite in="col" in2="tight" operator="in" result="haloTight" />
-          {/* stack the halos for intensity, then the crisp glyph on top */}
+          {/* ONE big, dim, very diffuse aura far behind him — no tight glow that
+              would fuzz his crisp lines. The graphic paints sharp on top. */}
+          <feGaussianBlur in="SourceAlpha" stdDeviation="24" result="wide" />
+          <feFlood floodColor={GREEN} floodOpacity={0.3} result="col" />
+          <feComposite in="col" in2="wide" operator="in" result="halo" />
           <feMerge>
-            <feMergeNode in="haloWide" />
-            <feMergeNode in="haloWide" />
-            <feMergeNode in="haloTight" />
-            <feMergeNode in="haloTight" />
+            <feMergeNode in="halo" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
