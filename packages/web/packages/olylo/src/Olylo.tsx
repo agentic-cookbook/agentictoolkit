@@ -372,6 +372,11 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
       style={{
         cursor: "pointer",
         pointerEvents: "auto",
+        // Don't clip the glyph to the viewBox: the emotional `scale`/`rotation`
+        // (and the silly spin) push his extremities past the box, and the
+        // default SVG overflow:hidden would shear them off. Layout box is
+        // unchanged, so the chat's anchor to his frame is undisturbed.
+        overflow: "visible",
       }}
     >
       {/* arcs the eyebrows ride on (peak up, centred over each eye) */}
