@@ -38,9 +38,15 @@ export interface OlyloProps {
    * look-around. Omit or pass null to hand his eyes back to those reflexes.
    */
   gaze?: { x: number; y: number } | null;
+  /**
+   * Reports his current effective mood whenever it changes, so a driver can
+   * mirror his reflex state — e.g. show "zzz…" in a status line when he drifts
+   * off to sleep on his own.
+   */
+  onState?: (state: OlyloExpression) => void;
 }
 
-export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
+export function Olylo({ expression, gaze = null, onState }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
   // Last time the cursor drove the gaze — shared so the idle fidget knows to hold
   // still (no random sway) while he's intentionally watching the mouse.
@@ -122,6 +128,11 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
   // Awake and unoccupied (the plain idle mood) → his eyes wander curiously. Once
   // he's bored/asleep or has a deliberate mood, the look-around stops.
   const curious = effective === "idle";
+
+  // Surface his current mood so a driver can mirror it (e.g. "zzz…" when asleep).
+  useEffect(() => {
+    onState?.(effective);
+  }, [effective, onState]);
 
   const eyesShut = effective === "asleep";
   const blinkEnabled = !eyesShut && effective !== "laughing";
@@ -590,18 +601,25 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
             the glow still marks where he is. */}
         <filter
           id="olyloGlow"
-          x="-40%"
-          y="-40%"
-          width="180%"
-          height="180%"
+          x="-70%"
+          y="-70%"
+          width="240%"
+          height="240%"
           colorInterpolationFilters="sRGB"
         >
-          <feGaussianBlur in="SourceAlpha" stdDeviation="4.5" result="b" />
-          <feFlood floodColor={GREEN} floodOpacity={0.85} result="c" />
-          <feComposite in="c" in2="b" operator="in" result="g" />
+          <feFlood floodColor={GREEN} floodOpacity={1} result="col" />
+          {/* a wide, soft halo that bleeds well past his edges into the dark */}
+          <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="wide" />
+          <feComposite in="col" in2="wide" operator="in" result="haloWide" />
+          {/* a tighter, brighter inner glow hugging each shape */}
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="tight" />
+          <feComposite in="col" in2="tight" operator="in" result="haloTight" />
+          {/* stack the halos for intensity, then the crisp glyph on top */}
           <feMerge>
-            <feMergeNode in="g" />
-            <feMergeNode in="g" />
+            <feMergeNode in="haloWide" />
+            <feMergeNode in="haloWide" />
+            <feMergeNode in="haloTight" />
+            <feMergeNode in="haloTight" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
