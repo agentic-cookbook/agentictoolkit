@@ -108,7 +108,7 @@ const BODY = {
   red: "#ff2d2d", // mad — anger
   blue: "#4f7cff", // sad — melancholy
   dimmer: "#2a2a2a", // bored — half-faded into the page
-  hidden: "#0d0f0d", // asleep — near-black, just eyes floating in the rain
+  hidden: "#2f3a2f", // asleep — ~80% black, a dark green-gray; faintly visible (not fully blended)
 } as const;
 
 // Mouth shapes — all 3-point polylines (M + L + L) so point counts match and

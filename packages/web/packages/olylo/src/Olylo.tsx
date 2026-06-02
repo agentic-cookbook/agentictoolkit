@@ -236,13 +236,14 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
       delay: 0.06,
     });
 
-    // Antennae are bendy feelers: anchored at the base (the head) they curve and
-    // whip side to side continuously so he never reads as a frozen logo — a small
-    // wiggle in calm moods, a big fast one when lively (wiggle > 0). The base
-    // tween above still rotates/positions them per pose; this bends the curve on
-    // top. Held straight & still while asleep.
+    // Antennae are bendy feelers: anchored at the TOP of his head, they curve and
+    // whip side to side from there — stiff at the top, the free lower end swinging
+    // more — so they never read as a frozen logo. A small wiggle in calm moods, a
+    // big fast one when lively (wiggle > 0). The base tween above still
+    // rotates/positions them per pose; this bends the curve on top. Held straight
+    // & still while asleep.
     const bend = (x: number, a: number): string =>
-      `M${x},85 C${x + a * 0.4},50 ${x + a},12 ${x + a * 0.7},-20`;
+      `M${x},-20 C${x + a * 0.3},25 ${x + a * 0.8},55 ${x + a},85`;
     if (eyesShut) {
       gsap.to(lLeftRef.current, { morphSVG: bend(105, 0), duration: 0.5, ease: "sine.out" });
       gsap.to(lRightRef.current, { morphSVG: bend(215, 0), duration: 0.5, ease: "sine.out" });
@@ -668,23 +669,24 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
        <g ref={tiltRef}>
         <g ref={leanRef}>
       <g ref={bodyRef}>
-        {/* Glowing shadow: large soft ovals/circles ~25% bigger than each part,
-            overlapping into one aura behind him. A fixed green (never recolors),
-            so it still marks where he is when his body camouflages (asleep).
-            Slow-pulsed. */}
-        <g
-          ref={shadowRef}
-          fill={SHADOW}
-          filter="url(#olyloShadow)"
-          opacity={0.55}
-          style={{ pointerEvents: "none" }}
-        >
-          <circle cx={50} cy={50} r={62} />
-          <circle cx={270} cy={50} r={62} />
-          <ellipse cx={160} cy={86} rx={58} ry={48} />
-          <ellipse cx={105} cy={32} rx={16} ry={80} />
-          <ellipse cx={215} cy={32} rx={16} ry={80} />
-        </g>
+        {/* Glowing shadow — DISABLED for now (didn't look good; revisit). Flip
+            `false` to restore. Was: soft ovals/circles ~25% bigger than each
+            part, overlapping into one aura behind him, slow-pulsed. */}
+        {false && (
+          <g
+            ref={shadowRef}
+            fill={SHADOW}
+            filter="url(#olyloShadow)"
+            opacity={0.55}
+            style={{ pointerEvents: "none" }}
+          >
+            <circle cx={50} cy={50} r={62} />
+            <circle cx={270} cy={50} r={62} />
+            <ellipse cx={160} cy={86} rx={58} ry={48} />
+            <ellipse cx={105} cy={32} rx={16} ry={80} />
+            <ellipse cx={215} cy={32} rx={16} ry={80} />
+          </g>
+        )}
         <g ref={faceRef} style={{ color: GREEN }}>
           {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
           {/* eyebrows: the literal ia / ai with a single curved stroke trailing
@@ -717,7 +719,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
           </g>
 
           {/* l */}
-          <path ref={lLeftRef} d="M105,85 C105,50 105,15 105,-20" stroke="currentColor" strokeWidth={5} fill="none" strokeLinecap="round" />
+          <path ref={lLeftRef} d="M105,-20 C105,15 105,50 105,85" stroke="currentColor" strokeWidth={5} fill="none" strokeLinecap="round" />
 
           {/* mouth — morphing; idle = the Y arms */}
           <path
@@ -740,7 +742,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
           />
 
           {/* l */}
-          <path ref={lRightRef} d="M215,85 C215,50 215,15 215,-20" stroke="currentColor" strokeWidth={5} fill="none" strokeLinecap="round" />
+          <path ref={lRightRef} d="M215,-20 C215,15 215,50 215,85" stroke="currentColor" strokeWidth={5} fill="none" strokeLinecap="round" />
 
           {/* right o (eye) — ring recolors with mood; black middle + iris stay fixed. */}
           <g ref={rightEyeRef}>
