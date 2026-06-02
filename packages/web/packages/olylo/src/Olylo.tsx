@@ -29,6 +29,9 @@ export interface OlyloProps {
 
 export function Olylo({ expression }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
+  // Outer group carrying the whole-glyph emotional scale + rotation (+ spin),
+  // kept separate from faceRef so those never fight its bob/wiggle.
+  const bodyRef = useRef<SVGGElement>(null);
   const faceRef = useRef<SVGGElement>(null);
   const leftEyeRef = useRef<SVGGElement>(null);
   const rightEyeRef = useRef<SVGGElement>(null);
@@ -85,10 +88,44 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
     loopRef.current.forEach((t) => t.kill());
     loopRef.current = [];
 
+    // Whole-glyph emotional size + rotation. Size is its own amplitude channel
+    // (swells when excited, shrinks when withdrawn). Rotation settles anywhere
+    // (silly hangs upside-down); spinTurns adds full whirls on entry, eased with
+    // a non-uniform curve (accelerates, then settles) — never a constant spin.
+    // Both pivot between the eyes so he scales/flips about his own face.
+    const scale = p.scale ?? 1;
+    const rotation = p.rotation ?? 0;
+    const spinTurns = p.spinTurns ?? 0;
+    // Size + rotation in ONE tween so they share one transform matrix (separate
+    // concurrent tweens with svgOrigin fight over it). When spinning, the longer
+    // duration + power3.inOut gives the non-uniform whirl-then-settle.
+    // `overwrite: "auto"` is essential: React re-runs this effect (incl. Strict
+    // Mode's double-invoke) and without it the duplicate transform tweens fight
+    // and cancel to identity — olylo never scales or flips.
+    gsap.to(bodyRef.current, {
+      scale,
+      rotation: rotation + 360 * spinTurns, // land at `rotation` after N whirls
+      svgOrigin: "160 50", // pivot between the eyes so he scales/flips about his face
+      duration: spinTurns ? 0.9 : p.dur,
+      ease: spinTurns ? "power3.inOut" : p.ease,
+      overwrite: "auto",
+    });
+
     // Eyes lead (no delay); brows, antennae and mouth follow a beat later.
-    gsap.to([leftEyeRef.current, rightEyeRef.current], {
-      scaleX: p.eye.scaleX,
-      scaleY: p.eye.scaleY,
+    // Each eye can be driven independently (eyeLeft/eyeRight) for asymmetric
+    // looks like the inquisitive one-eye squint; both fall back to `eye`.
+    const eyeL = p.eyeLeft ?? p.eye;
+    const eyeR = p.eyeRight ?? p.eye;
+    gsap.to(leftEyeRef.current, {
+      scaleX: eyeL.scaleX,
+      scaleY: eyeL.scaleY,
+      transformOrigin: "50% 50%",
+      duration: p.dur,
+      ease: p.ease,
+    });
+    gsap.to(rightEyeRef.current, {
+      scaleX: eyeR.scaleX,
+      scaleY: eyeR.scaleY,
       transformOrigin: "50% 50%",
       duration: p.dur,
       ease: p.ease,
@@ -374,69 +411,71 @@ export function Olylo({ expression }: OlyloProps): ReactElement {
         </text>
       )}
 
-      <g ref={faceRef} style={{ color: GREEN }}>
-        {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
-        {/* eyebrows: the literal ia / ai with a single curved stroke trailing
-            toward the centre — ia⌒ on the left, ⌒ai on the right */}
-        {/* Everything that paints with `currentColor` (eyebrows, l antennae,
-            mouth, descender, and the eye RINGS below) recolors together via the
-            per-pose `body` tween. Only the pupils (iris) keep an explicit fixed
-            fill, so they stay lit at every mood. */}
-        <g ref={browLeftRef} opacity={0.8}>
-          <path d="M50,5 A45,45 0 0 1 77,14" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
-          <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
-            <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
-          </text>
-        </g>
-        <g ref={browRightRef} opacity={0.8}>
-          <path d="M243,14 A45,45 0 0 1 270,5" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
-          <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
-            <textPath href="#browArcRight" startOffset="50%">ai</textPath>
-          </text>
-        </g>
-
-        {/* left o (eye) — the RING recolors with mood (currentColor); the black
-            middle and the iris/pupil stay fixed, so the pupil color never changes. */}
-        <g ref={leftEyeRef}>
-          <g ref={leftBlinkRef}>
-            <circle cx={50} cy={50} r={35} fill="currentColor" />
-            <circle cx={50} cy={50} r={27} fill="#000" />
-            <circle ref={leftIrisRef} cx={50} cy={50} r={IRIS_BASE_R} fill={IRIS} />
+      <g ref={bodyRef}>
+        <g ref={faceRef} style={{ color: GREEN }}>
+          {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
+          {/* eyebrows: the literal ia / ai with a single curved stroke trailing
+              toward the centre — ia⌒ on the left, ⌒ai on the right */}
+          {/* Everything that paints with `currentColor` (eyebrows, l antennae,
+              mouth, descender, and the eye RINGS below) recolors together via the
+              per-pose `body` tween. Only the pupils (iris) keep an explicit fixed
+              fill, so they stay lit at every mood. */}
+          <g ref={browLeftRef} opacity={0.8}>
+            <path d="M50,5 A45,45 0 0 1 77,14" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
+            <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
+              <textPath href="#browArcLeft" startOffset="50%">ia</textPath>
+            </text>
           </g>
-        </g>
+          <g ref={browRightRef} opacity={0.8}>
+            <path d="M243,14 A45,45 0 0 1 270,5" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" />
+            <text fontFamily="monospace" fontWeight={700} fontSize={19} fill="currentColor" textAnchor="middle">
+              <textPath href="#browArcRight" startOffset="50%">ai</textPath>
+            </text>
+          </g>
 
-        {/* l */}
-        <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill="currentColor" />
+          {/* left o (eye) — the RING recolors with mood (currentColor); the black
+              middle and the iris/pupil stay fixed, so the pupil color never changes. */}
+          <g ref={leftEyeRef}>
+            <g ref={leftBlinkRef}>
+              <circle cx={50} cy={50} r={35} fill="currentColor" />
+              <circle cx={50} cy={50} r={27} fill="#000" />
+              <circle ref={leftIrisRef} cx={50} cy={50} r={IRIS_BASE_R} fill={IRIS} />
+            </g>
+          </g>
 
-        {/* mouth — morphing; idle = the Y arms */}
-        <path
-          ref={mouthRef}
-          d="M130,40 L160,85 L190,40"
-          stroke="currentColor"
-          strokeWidth={8}
-          fill="none"
-          strokeLinecap="round"
-        />
+          {/* l */}
+          <rect ref={lLeftRef} x={102.5} y={-20} width={5} height={105} fill="currentColor" />
 
-        {/* y descender — always present; thick in Y mode, thin (a little tail) otherwise */}
-        <path
-          ref={descenderRef}
-          d="M160,85 L142,115"
-          stroke="currentColor"
-          strokeWidth={8}
-          fill="none"
-          strokeLinecap="round"
-        />
+          {/* mouth — morphing; idle = the Y arms */}
+          <path
+            ref={mouthRef}
+            d="M130,40 L160,85 L190,40"
+            stroke="currentColor"
+            strokeWidth={8}
+            fill="none"
+            strokeLinecap="round"
+          />
 
-        {/* l */}
-        <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill="currentColor" />
+          {/* y descender — always present; thick in Y mode, thin (a little tail) otherwise */}
+          <path
+            ref={descenderRef}
+            d="M160,85 L142,115"
+            stroke="currentColor"
+            strokeWidth={8}
+            fill="none"
+            strokeLinecap="round"
+          />
 
-        {/* right o (eye) — ring recolors with mood; black middle + iris stay fixed. */}
-        <g ref={rightEyeRef}>
-          <g ref={rightBlinkRef}>
-            <circle cx={270} cy={50} r={35} fill="currentColor" />
-            <circle cx={270} cy={50} r={27} fill="#000" />
-            <circle ref={rightIrisRef} cx={270} cy={50} r={IRIS_BASE_R} fill={IRIS} />
+          {/* l */}
+          <rect ref={lRightRef} x={212.5} y={-20} width={5} height={105} fill="currentColor" />
+
+          {/* right o (eye) — ring recolors with mood; black middle + iris stay fixed. */}
+          <g ref={rightEyeRef}>
+            <g ref={rightBlinkRef}>
+              <circle cx={270} cy={50} r={35} fill="currentColor" />
+              <circle cx={270} cy={50} r={27} fill="#000" />
+              <circle ref={rightIrisRef} cx={270} cy={50} r={IRIS_BASE_R} fill={IRIS} />
+            </g>
           </g>
         </g>
       </g>
