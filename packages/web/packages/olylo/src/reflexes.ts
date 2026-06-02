@@ -147,35 +147,33 @@ export function useSpeech(effective: OlyloExpression): { text: string; id: numbe
       setSpeech({ text, id: nextId.current });
     };
 
-    // Idle: ambient snarky chatter on a slow, randomized loop — he mutters one
-    // now and then while he sits (not the instant he goes idle).
-    if (effective === "idle") {
-      setSpeech(null);
-      let timer: ReturnType<typeof setTimeout>;
-      const schedule = () => {
-        timer = setTimeout(
-          () => {
-            emit(IDLE_CHATTER);
-            schedule();
-          },
-          IDLE_CHATTER_MIN_MS + Math.random() * (IDLE_CHATTER_MAX_MS - IDLE_CHATTER_MIN_MS),
-        );
-      };
-      schedule();
-      return () => clearTimeout(timer);
-    }
-
-    const lines = POSES[effective].sayings;
-    if (lines.length === 0) {
-      setSpeech(null);
-      return;
-    }
-    emit(lines);
+    // Asleep: just the looping "zzz" mutter.
     if (effective === "asleep") {
+      const lines = POSES.asleep.sayings;
+      emit(lines);
       const loop = setInterval(() => emit(lines), SLEEP_MUTTER_MS);
       return () => clearInterval(loop);
     }
-    return undefined;
+
+    // Any awake mood: fire the mood's own reaction once (if it has one — e.g.
+    // "yes!" when excited), AND keep up ambient snarky chatter on a slow random
+    // loop. His voice isn't tied to a single mood; the chatter rides on top of
+    // whatever he's feeling (and is silenced by `mute` while a command runs).
+    const lines = POSES[effective].sayings;
+    if (lines.length > 0) emit(lines);
+    else setSpeech(null);
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(
+        () => {
+          emit(IDLE_CHATTER);
+          schedule();
+        },
+        IDLE_CHATTER_MIN_MS + Math.random() * (IDLE_CHATTER_MAX_MS - IDLE_CHATTER_MIN_MS),
+      );
+    };
+    schedule();
+    return () => clearTimeout(timer);
   }, [effective]);
   return speech;
 }
