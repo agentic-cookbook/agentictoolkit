@@ -41,7 +41,9 @@ export interface OlyloProps {
 
 export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
-  const glowRef = useRef<SVGEllipseElement>(null);
+  // Last time the cursor drove the gaze — shared so the idle fidget knows to hold
+  // still (no random sway) while he's intentionally watching the mouse.
+  const watchingRef = useRef(0);
   // Transform layers, outermost first, each with a single owner so they never
   // fight: idleRef = idle fidget (sway + breath), tiltRef = head-tilt toward a
   // deliberate gaze, bodyRef = emotional scale/rotation/spin, faceRef = bob/wiggle.
@@ -57,6 +59,10 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
   const rightBlinkRef = useRef<SVGGElement>(null);
   const leftIrisRef = useRef<SVGCircleElement>(null);
   const rightIrisRef = useRef<SVGCircleElement>(null);
+  // Tiny lit pupils that persist when his eyes are shut (asleep) — outside the
+  // eye-scale group so the closing eyelid never squishes them flat.
+  const leftDotRef = useRef<SVGCircleElement>(null);
+  const rightDotRef = useRef<SVGCircleElement>(null);
   const lLeftRef = useRef<SVGRectElement>(null);
   const lRightRef = useRef<SVGRectElement>(null);
   const browLeftRef = useRef<SVGGElement>(null);
@@ -154,9 +160,11 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     // looks like the inquisitive one-eye squint; both fall back to `eye`.
     const eyeL = p.eyeLeft ?? p.eye;
     const eyeR = p.eyeRight ?? p.eye;
+    const eyeY = p.eyeY ?? 0;
     gsap.to(leftEyeRef.current, {
       scaleX: eyeL.scaleX,
       scaleY: eyeL.scaleY,
+      y: eyeY,
       transformOrigin: "50% 50%",
       duration: p.dur,
       ease: p.ease,
@@ -164,6 +172,7 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     gsap.to(rightEyeRef.current, {
       scaleX: eyeR.scaleX,
       scaleY: eyeR.scaleY,
+      y: eyeY,
       transformOrigin: "50% 50%",
       duration: p.dur,
       ease: p.ease,
@@ -245,9 +254,10 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     // thin elsewhere, and wiggles from the junction like a little tail when lively.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: p.dur, ease: p.ease, delay: 0.08 });
     gsap.to(descenderRef.current, {
-      // Y mode: the angled logo tail (down-left). Otherwise: a straight-down tail.
-      // Same stroke weight as the Y arms (8) in every mode.
-      morphSVG: p.showY ? "M160,85 L142,115" : "M160,85 L160,115",
+      // Y mode: the angled logo tail (down-left). A pose can override the path
+      // (`tail`) when its mouth moves the attach point — e.g. the yawn's big "O".
+      // Otherwise: a straight-down tail. Same stroke weight as the Y arms (8).
+      morphSVG: p.tail ?? (p.showY ? "M160,85 L142,115" : "M160,85 L160,115"),
       duration: p.dur,
       ease: p.ease,
       delay: 0.08,
@@ -323,22 +333,15 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     });
   }, [rightBlinking]);
 
-  // Glow: a slow breath on the aura so it reads as alive, not a flat decal.
+  // Pinprick pupils: fade the tiny lit dots in when his eyes shut (asleep), so
+  // there's always a spark in the dark; hidden when awake (the real irises show).
   useEffect(() => {
-    if (!glowRef.current) return;
-    const pulse = gsap.to(glowRef.current, {
-      scale: 1.1,
-      opacity: 0.7,
-      svgOrigin: "160 50",
-      duration: 2.4,
-      repeat: -1,
-      yoyo: true,
-      ease: "sine.inOut",
+    gsap.to([leftDotRef.current, rightDotRef.current], {
+      opacity: eyesShut ? 1 : 0,
+      duration: eyesShut ? 0.6 : 0.2,
+      ease: "power2.out",
     });
-    return () => {
-      pulse.kill();
-    };
-  }, []);
+  }, [eyesShut]);
 
   // Gaze: where the irises point, spring-damped via quickTo. Priority:
   //   1. a deliberate `gaze` (e.g. eyes down at the input while you type),
@@ -361,21 +364,19 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
       qyR(gy);
     };
 
-    // Head leans toward a deliberate gaze (e.g. toward the caret as you type);
-    // level otherwise. Its own layer (tiltRef) so it composes with the pose.
-    gsap.to(tiltRef.current, {
-      rotation: forcedX !== null ? forcedX * TILT_MAX : 0,
-      svgOrigin: "160 50",
-      duration: 0.4,
-      ease: "power3.out",
-      overwrite: "auto",
-    });
+    // Head-tilt lives on its own layer (tiltRef) so it composes with the pose. He
+    // leans toward whatever he's deliberately watching — the caret while you type,
+    // the cursor while he tracks it — and levels off when nothing's moving.
+    gsap.set(tiltRef.current, { svgOrigin: "160 50" });
+    const tiltTo = gsap.quickTo(tiltRef.current, "rotation", { duration: 0.4, ease: "power3" });
 
-    // 1. Deliberate gaze: lock the eyes there, ignore cursor + look-around.
+    // 1. Deliberate gaze (typing): lock eyes + head toward it, ignore the rest.
     if (forcedX !== null && forcedY !== null) {
       look(forcedX * GAZE_MAX, forcedY * GAZE_MAX);
+      tiltTo(forcedX * TILT_MAX);
       return;
     }
+    tiltTo(0); // level until the cursor takes over
 
     // 2. Cursor-follow.
     let lastMove = 0; // when the cursor last drove the gaze; wander waits for a lull
@@ -394,7 +395,11 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
           clamp((dx / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX),
           clamp((dy / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX),
         );
+        // turn his head to watch the cursor (its horizontal direction), and mark
+        // that he's actively watching so the idle fidget holds its random sway.
+        tiltTo(clamp(dx / len, -1, 1) * TILT_MAX);
         lastMove = Date.now();
+        watchingRef.current = lastMove;
       });
     };
     const onLeave = (): void => look(0, 0);
@@ -409,6 +414,7 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
       wander = setTimeout(
         () => {
           if (Date.now() - lastMove > WANDER_AFTER_MS) {
+            tiltTo(0); // cursor's gone still — level his head; idle sway takes over
             if (Math.random() < (curious ? 0.25 : 0.35)) {
               look(0, 0);
             } else {
@@ -448,8 +454,11 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
       // move is ~0.5–0.9s and the next starts before this one settles, so he's
       // always drifting toward a fresh target rather than posing and pausing.
       const dur = 0.5 + Math.random() * 0.4;
+      // While he's actively watching the cursor his head is purposefully aimed
+      // (tiltRef), so hold the random sway at 0 — only the breath keeps going.
+      const watching = Date.now() - watchingRef.current < WANDER_AFTER_MS;
       gsap.to(idleRef.current, {
-        rotation: rnd(3.5), // small head sway
+        rotation: watching ? 0 : rnd(3.5), // small head sway (paused while watching)
         scale: 1 + rnd(0.035), // gentle breathing
         svgOrigin: "160 50",
         duration: dur,
@@ -546,26 +555,29 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
       <defs>
         <path id="browArcLeft" d="M23,14 A45,45 0 0 1 50,5" />
         <path id="browArcRight" d="M270,5 A45,45 0 0 1 297,14" />
-        {/* Soft phosphor glow — his ever-present aura. Unlike the body it never
-            recolors or fades, so when he camouflages himself (asleep, near-black)
-            this halo still marks where he is. */}
-        <radialGradient id="olyloGlow">
-          <stop offset="0%" stopColor={GREEN} stopOpacity={0.42} />
-          <stop offset="55%" stopColor={GREEN} stopOpacity={0.15} />
-          <stop offset="100%" stopColor={GREEN} stopOpacity={0} />
-        </radialGradient>
+        {/* Per-component phosphor glow: blur each shape's ALPHA and flood it green
+            so every part (eyes, l's, mouth, brows) casts its own shaped halo —
+            not one blob behind him. Driven by alpha, not the fill, so it never
+            fades with his mood: when he camouflages himself (asleep, near-black)
+            the glow still marks where he is. */}
+        <filter
+          id="olyloGlow"
+          x="-40%"
+          y="-40%"
+          width="180%"
+          height="180%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feGaussianBlur in="SourceAlpha" stdDeviation="4.5" result="b" />
+          <feFlood floodColor={GREEN} floodOpacity={0.85} result="c" />
+          <feComposite in="c" in2="b" operator="in" result="g" />
+          <feMerge>
+            <feMergeNode in="g" />
+            <feMergeNode in="g" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
-
-      {/* the glow, behind everything; its own gentle pulse (never recolors). */}
-      <ellipse
-        ref={glowRef}
-        cx={160}
-        cy={50}
-        rx={150}
-        ry={115}
-        fill="url(#olyloGlow)"
-        style={{ pointerEvents: "none" }}
-      />
 
       {/* full-bleed hit area so a click anywhere on him giggles (svg `auto` only
           hits painted pixels; his centre is transparent). `all` ignores fill. */}
@@ -598,7 +610,7 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
       <g ref={idleRef}>
        <g ref={tiltRef}>
       <g ref={bodyRef}>
-        <g ref={faceRef} style={{ color: GREEN }}>
+        <g ref={faceRef} filter="url(#olyloGlow)" style={{ color: GREEN }}>
           {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
           {/* eyebrows: the literal ia / ai with a single curved stroke trailing
               toward the centre — ia⌒ on the left, ⌒ai on the right */}
@@ -663,6 +675,12 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
               <circle ref={rightIrisRef} cx={270} cy={50} r={IRIS_BASE_R} fill={IRIS} />
             </g>
           </g>
+
+          {/* tiny pinprick pupils — OUTSIDE the eye-scale groups so the closing
+              eyelid never squishes them. Faded in only when his eyes shut
+              (asleep), so there's always a spark of him in the dark. */}
+          <circle ref={leftDotRef} cx={50} cy={50} r={2.4} fill={IRIS} opacity={0} />
+          <circle ref={rightDotRef} cx={270} cy={50} r={2.4} fill={IRIS} opacity={0} />
         </g>
       </g>
        </g>

@@ -46,6 +46,9 @@ export interface Pose {
    * narrows one eye while the other stays open. Fall back to `eye` when omitted. */
   eyeLeft?: { scaleX: number; scaleY: number };
   eyeRight?: { scaleX: number; scaleY: number };
+  /** Optional vertical shift of BOTH eyes (viewBox units, negative = up). The
+   * eyes lift away from the mouth during a big yawn. Omit for 0. */
+  eyeY?: number;
   /** Pupil (iris) dilation — multiplier on the base iris radius. <1 constricts
    * (focused/sleepy), >1 dilates (aroused/excited). 1 = neutral. */
   pupil: number;
@@ -77,6 +80,10 @@ export interface Pose {
   /** "Y mode": when true, the mouth is the literal Y arms and the descender is the
    * angled logo tail (so olylo reads as the logo). Otherwise a facial expression. */
   showY: boolean;
+  /** Optional descender ("tail") path. Defaults to the angled logo tail in Y mode,
+   * else a straight tail from the junction. Override when the mouth shape moves the
+   * attach point — e.g. the yawn's big "O" attaches lower so the tail stays joined. */
+  tail?: string;
   /** Face bob amplitude in viewBox units (0 = still); loops while in this mood. */
   bob: number;
   /** Face wiggle (rotation degrees, 0 = none); loops while in this mood — e.g. giggling. */
@@ -116,7 +123,7 @@ const MOUTH = {
   bigSmile: "M128,66 L160,85 L192,66",
   frown: "M132,99 L160,85 L188,99",
   smirk: "M132,86 L160,85 L188,73", // one-sided grin: left flat, right corner pulled up
-  yawn: "M147,85 a13,16 0 1,0 26,0 a13,16 0 1,0 -26,0", // a tall "O" — the wide yawn
+  yawn: "M143,73 a17,22 0 1,0 34,0 a17,22 0 1,0 -34,0", // a big tall "O" — the wide yawn
 } as const;
 
 export const POSES: Record<OlyloExpression, Pose> = {
@@ -352,15 +359,17 @@ export const POSES: Record<OlyloExpression, Pose> = {
     // shut, held a couple of seconds before he's properly awake. The "O" mouth
     // over the straight descender reads as an O with a little tail.
     eye: { scaleX: 0.97, scaleY: 0.32 }, // heavy, half-shut
+    eyeY: -8, // eyes lift away from the wide-open mouth
     pupil: 0.7, // sleepy, small
-    scale: 1.04, // a little stretch
+    scale: 1.05, // a little stretch
     body: BODY.green, // lighting back up out of camouflage
-    lLeft: { rotation: -7, y: -6 }, // antennae stretch up and out
-    lRight: { rotation: 7, y: -6 },
-    browLeft: { y: 3, rotation: -6 }, // drowsy
-    browRight: { y: 3, rotation: 6 },
+    lLeft: { rotation: -8, y: -14 }, // antennae stretch up and away from the mouth
+    lRight: { rotation: 8, y: -14 },
+    browLeft: { y: -2, rotation: -6 }, // raised with the stretch
+    browRight: { y: -2, rotation: 6 },
     mouth: MOUTH.yawn,
     showY: false,
+    tail: "M160,95 L160,116", // hangs from the bottom of the "O" so it stays attached
     bob: 0,
     wiggle: 0,
     dur: 0.6, // slow — a long yawn
