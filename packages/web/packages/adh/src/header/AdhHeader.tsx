@@ -5,7 +5,6 @@ import { AvatarMenu, type AvatarMenuUser } from './AvatarMenu'
 import { AuthButtons } from './AuthButtons'
 import { SiteOptionsMenu, type SiteLink } from './SiteOptionsMenu'
 import { NavLinkItem, type NavLink } from './NavLink'
-import { ThemeSwitcher } from '../themes/ThemeSwitcher'
 import type { AdhThemeKey } from '../themes/adh-themes'
 
 export type AdhHeaderProps = {
@@ -35,7 +34,6 @@ export function AdhHeader({
   trailingNavLinks = [],
   sites,
   user,
-  themeKey,
   loginHref,
   signupHref,
   onLogin,
@@ -71,9 +69,7 @@ export function AdhHeader({
               onLogout={onLogout}
               settingsHref={settingsHref}
               onSettings={onSettings}
-            >
-              <ThemeSwitcher current={themeKey} />
-            </AvatarMenu>
+            />
           ) : (
             <AuthButtons
               loginHref={loginHref}

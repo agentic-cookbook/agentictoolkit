@@ -1,0 +1,11 @@
+/*
+ * Debug menu — a fixed trigger pinned to the upper-left of the viewport.
+ * The dropdown content itself is portaled and styled by adh-components.css
+ * (.adh-dropdown-menu__*); this only positions the trigger.
+ */
+.adh-debug-menu {
+  position: fixed;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 60;
+}

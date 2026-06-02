@@ -9,6 +9,7 @@ export default defineConfig({
     'footer/index': 'src/footer/index.ts',
     'legal/index': 'src/legal/index.ts',
     'themes/index': 'src/themes/index.ts',
+    'debug/index': 'src/debug/index.ts',
   },
   outDir: 'dist',
   format: ['esm'],

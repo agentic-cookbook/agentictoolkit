@@ -37,8 +37,13 @@
       "types": "./dist/themes/index.d.ts",
       "import": "./dist/themes/index.js"
     },
+    "./debug": {
+      "types": "./dist/debug/index.d.ts",
+      "import": "./dist/debug/index.js"
+    },
     "./styles.css": "./dist/styles/adh-components.css",
-    "./legal.css": "./dist/styles/adh-legal.css"
+    "./legal.css": "./dist/styles/adh-legal.css",
+    "./debug.css": "./dist/styles/adh-debug.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",
