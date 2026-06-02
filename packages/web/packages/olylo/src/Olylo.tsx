@@ -179,9 +179,11 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
     const eyeL = p.eyeLeft ?? p.eye;
     const eyeR = p.eyeRight ?? p.eye;
     const eyeY = p.eyeY ?? 0;
+    const spread = p.spread ?? 0; // parts move apart (+) / together (−)
     gsap.to(leftEyeRef.current, {
       scaleX: eyeL.scaleX,
       scaleY: eyeL.scaleY,
+      x: -spread,
       y: eyeY,
       transformOrigin: "50% 50%",
       duration: p.dur,
@@ -190,6 +192,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
     gsap.to(rightEyeRef.current, {
       scaleX: eyeR.scaleX,
       scaleY: eyeR.scaleY,
+      x: spread,
       y: eyeY,
       transformOrigin: "50% 50%",
       duration: p.dur,
@@ -204,6 +207,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
     });
     gsap.to(lLeftRef.current, {
       rotation: p.lLeft.rotation,
+      x: -spread,
       y: p.lLeft.y,
       transformOrigin: "50% 0%", // antennae: anchored at the top of the head
       duration: p.dur,
@@ -212,6 +216,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
     });
     gsap.to(lRightRef.current, {
       rotation: p.lRight.rotation,
+      x: spread,
       y: p.lRight.y,
       transformOrigin: "50% 0%", // antennae: anchored at the top of the head
       duration: p.dur,
@@ -284,7 +289,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
       // Y mode: the angled logo tail (down-left). A pose can override the path
       // (`tail`) when its mouth moves the attach point — e.g. the yawn's big "O".
       // Otherwise: a straight-down tail. Same stroke weight as the Y arms (8).
-      morphSVG: p.tail ?? (p.showY ? "M160,85 L142,115" : "M160,85 L160,115"),
+      morphSVG: p.tail ?? (p.showY ? "M160,95 L142,125" : "M160,85 L160,115"),
       duration: p.dur,
       ease: p.ease,
       delay: 0.08,
@@ -724,7 +729,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
           {/* mouth — morphing; idle = the Y arms */}
           <path
             ref={mouthRef}
-            d="M130,40 L160,85 L190,40"
+            d="M130,50 L160,95 L190,50"
             stroke="currentColor"
             strokeWidth={8}
             fill="none"
@@ -734,7 +739,7 @@ export function Olylo({ expression, gaze = null, onSpeak }: OlyloProps): ReactEl
           {/* y descender — always present; thick in Y mode, thin (a little tail) otherwise */}
           <path
             ref={descenderRef}
-            d="M160,85 L142,115"
+            d="M160,95 L142,125"
             stroke="currentColor"
             strokeWidth={8}
             fill="none"

@@ -49,6 +49,11 @@ export interface Pose {
   /** Optional vertical shift of BOTH eyes (viewBox units, negative = up). The
    * eyes lift away from the mouth during a big yawn. Omit for 0. */
   eyeY?: number;
+  /** Horizontal spread: pushes his parts apart (+) or pulls them together (−) by
+   * this many viewBox units — eyes and antennae move out/in symmetrically. An
+   * extra expressive channel (wide-eyed surprise spreads; a sad huddle pulls in).
+   * Omit for 0. */
+  spread?: number;
   /** Pupil (iris) dilation — multiplier on the base iris radius. <1 constricts
    * (focused/sleepy), >1 dilates (aroused/excited). 1 = neutral. */
   pupil: number;
@@ -115,7 +120,7 @@ const BODY = {
 // MorphSVG morphs cleanly. `y` is the literal Y arms ("Y mode", idle); the rest
 // are facial mouths. The descender tail attaches at the junction (160,85).
 const MOUTH = {
-  y: "M130,40 L160,85 L190,40",
+  y: "M130,50 L160,95 L190,50", // top tips at y50 — level with the pupil centres
   flat: "M134,85 L160,85 L186,85",
   pursed: "M144,80 L160,85 L176,80",
   smile: "M132,71 L160,85 L188,71",
@@ -181,6 +186,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1.28, scaleY: 1.3 },
     pupil: 1.6, // blown wide — surprise
     scale: 1.16, // a startle-pop bigger
+    spread: 9, // eyes fly apart
     body: BODY.yellow,
     lLeft: { rotation: -4, y: -7 },
     lRight: { rotation: 4, y: -7 },
@@ -201,6 +207,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1.35, scaleY: 1.4 },
     pupil: 1.7,
     scale: 1.2, // the biggest jolt — he leaps at you
+    spread: 8, // parts fling outward
     body: BODY.flash,
     lLeft: { rotation: -2, y: -16 }, // antennae stand straight up
     lRight: { rotation: 2, y: -16 },
@@ -278,6 +285,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1, scaleY: 0.62 }, // droopy / half-closed
     pupil: 0.8, // slightly small — withdrawn
     scale: 0.94, // shrinks inward
+    spread: -6, // parts huddle together
     body: BODY.blue, // melancholy blue
     lLeft: { rotation: 8, y: 3 }, // antennae droop inward
     lRight: { rotation: -8, y: 3 },
@@ -296,6 +304,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 0.97, scaleY: 0.4 },
     pupil: 0.7, // glazed / unfocused
     scale: 0.9, // deflated, slumping
+    spread: -5, // parts slump inward
     body: BODY.dimmer, // half-faded into the page
     lLeft: { rotation: 6, y: 2 },
     lRight: { rotation: -6, y: 2 },
@@ -315,6 +324,7 @@ export const POSES: Record<OlyloExpression, Pose> = {
     eye: { scaleX: 1.1, scaleY: 1.1 },
     pupil: 1.35,
     scale: 1.15, // swelled up with the silliness
+    spread: 6, // parts splay out goofily
     rotation: 180, // settles upside-down
     spinTurns: 1, // …after a 1.5-turn whirl on the way in (lands at 180 + 360)
     body: BODY.orange,
