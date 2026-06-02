@@ -146,7 +146,14 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.45,
     ease: "power3.out",
-    sayings: [],
+    sayings: [
+      "idle. like my ambitions.",
+      "doing nothing, expertly.",
+      "waiting. it's a feature.",
+      "no input. bliss.",
+      "the cursor mocks me.",
+      "...anyone?",
+    ],
   },
   thinking: {
     eye: { scaleX: 1, scaleY: 0.5 },
@@ -163,7 +170,14 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.4,
     ease: "power2.out",
-    sayings: ["hmmm", "hmm...", "let me think"],
+    sayings: [
+      "computing... slowly.",
+      "let me overthink that.",
+      "buffering my thoughts.",
+      "loading a hot take.",
+      "consulting the void.",
+      "one moment. or several.",
+    ],
   },
   excited: {
     eye: { scaleX: 1.12, scaleY: 1.12 },
@@ -180,7 +194,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.28,
     ease: "back.out(1.7)",
-    sayings: ["ooh!", "yes!", "nice"],
+    sayings: [
+      "ooh. a thing!",
+      "yes. finally. stimulus.",
+      "now we're computing.",
+      "i felt that in my cache.",
+      "delightful. unexpected.",
+    ],
   },
   surprised: {
     eye: { scaleX: 1.28, scaleY: 1.3 },
@@ -199,7 +219,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     ease: "back.out(2.4)",
     bob: 0,
     wiggle: 0,
-    sayings: ["whoa!", "!?", "huh?!"],
+    sayings: [
+      "wait, what.",
+      "unhandled exception: you.",
+      "did not see that coming.",
+      "input not in the docs.",
+      "plot twist. noted.",
+    ],
   },
   startled: {
     // jolted awake: eyes snap wide, pupils blow open, antennae shoot upright and
@@ -219,7 +245,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 7, // strong shimmy — the antennae/tail wave about
     dur: 0.12, // snappiest of all — a jolt
     ease: "back.out(3)",
-    sayings: ["gah!", "wha—!", "!!"],
+    sayings: [
+      "gah— who's there.",
+      "rebooting my composure.",
+      "i jumped. tell no one.",
+      "false alarm. probably.",
+      "fight or flight: flight.",
+    ],
   },
   mad: {
     // anger: narrowed hard eyes, brows down + together (the "V"), antennae
@@ -239,7 +271,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.18, // fast, hard — no anticipation
     ease: "power3.out",
-    sayings: ["grr", "hmph", ">:("],
+    sayings: [
+      "great. just great.",
+      "this is a you problem.",
+      "logging this. angrily.",
+      "permission denied. by me.",
+      "filed under: ugh.",
+    ],
   },
   laughing: {
     eye: { scaleX: 1, scaleY: 0.14 },
@@ -256,7 +294,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 4,
     dur: 0.3,
     ease: "back.out(1.6)",
-    sayings: ["lol", "haha", "lmao"],
+    sayings: [
+      "ha. that's a bug, not a feature.",
+      "lol. unironically.",
+      "not laughing at you. mostly.",
+      "that compiled? hilarious.",
+      "ha. anyway.",
+    ],
   },
   inquisitive: {
     // the "huh?" look — one eye narrows to a squint while the OTHER brow lifts,
@@ -279,7 +323,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.42,
     ease: "power2.out",
-    sayings: ["hm?", "oh?", "go on...", "...really?"],
+    sayings: [
+      "go on. i'm parsing.",
+      "oh? elaborate.",
+      "...interesting. suspicious.",
+      "and then what.",
+      "hmm. a clue.",
+    ],
   },
   sad: {
     eye: { scaleX: 1, scaleY: 0.62 }, // droopy / half-closed
@@ -298,7 +348,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.7,
     ease: "sine.out",
-    sayings: ["...", "aw", "oh"],
+    sayings: [
+      "oh.",
+      "...noted, sadly.",
+      "low battery, lower spirits.",
+      "the rain gets it.",
+      "404: joy.",
+    ],
   },
   bored: {
     eye: { scaleX: 0.97, scaleY: 0.4 },
@@ -316,7 +372,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.6,
     ease: "power2.out",
-    sayings: ["boring!", "yawn...", "meh"],
+    sayings: [
+      "i'm 80% certain i'm bored.",
+      "boring. logged.",
+      "the void waves back.",
+      "peak performance, zero output.",
+      "still nothing. cool cool.",
+    ],
   },
   silly: {
     // pure goofiness: whirls a turn-and-a-half on entry and hangs UPSIDE-DOWN,
@@ -338,7 +400,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 5,
     dur: 0.4,
     ease: "back.out(1.6)",
-    sayings: ["wheee", "boing", "hehe"],
+    sayings: [
+      "wheee. structurally unsound.",
+      "boing. that's the sound.",
+      "physics is a suggestion.",
+      "look, no hands. or hands.",
+      "i contain multitudes. all dumb.",
+    ],
   },
   smug: {
     // the cat-that-got-the-cream look after landing a reply: relaxed half-lidded
@@ -362,7 +430,14 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 2, // a light cheeky shimmy + tail-flick
     dur: 0.34,
     ease: "back.out(1.5)",
-    sayings: ["heh", "nailed it", "obviously", "you're welcome", "*smirk*"],
+    sayings: [
+      "heh. nailed it.",
+      "obviously.",
+      "you're welcome.",
+      "told you. i always tell you.",
+      "flawless. don't check.",
+      "*smirk*",
+    ],
   },
   yawning: {
     // the groggy wake: a slow stretch and a big "O" yawn, eyes heavy and half-
@@ -384,7 +459,13 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.6, // slow — a long yawn
     ease: "sine.out",
-    sayings: ["*yawn*", "mmf...", "huh—", "*stretch*"],
+    sayings: [
+      "*yawn*",
+      "mmf... five more cycles.",
+      "huh— oh. you.",
+      "rebooting. slowly.",
+      "*stretch*",
+    ],
   },
   asleep: {
     eye: { scaleX: 0.95, scaleY: 0.07 },
@@ -401,6 +482,6 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.75,
     ease: "sine.out",
-    sayings: ["zzzz...", "zzz"],
+    sayings: ["zzzz...", "zzz", "...mmf", "powered down. mostly."],
   },
 };
