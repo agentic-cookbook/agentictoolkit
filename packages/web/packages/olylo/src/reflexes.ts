@@ -14,6 +14,46 @@ const SLEEP_MUTTER_MS = 5500;
 // olylo stays awake and curious this long before he's allowed to drift off again.
 const ALERT_AFTER_TYPING_MS = 30000;
 
+// Ambient chatter he mutters now and then while sitting idle — deadpan, lowercase,
+// techy snark, matching the chat's tone. Picked at random on a slow loop.
+const IDLE_CHATTER_MIN_MS = 14000;
+const IDLE_CHATTER_MAX_MS = 30000;
+const IDLE_CHATTER = [
+  "hm. still here.",
+  "idle. like my ambitions.",
+  "doing nothing, expertly.",
+  "waiting. it's a feature.",
+  "standing by. reluctantly.",
+  "i exist. mostly.",
+  "404: motivation.",
+  "cache is cold.",
+  "running on vibes.",
+  "low power, high opinions.",
+  "uptime: suspicious.",
+  "peak performance, zero output.",
+  "status: nominal-ish.",
+  "every pixel accounted for.",
+  "the cursor mocks me.",
+  "i blinked. you missed it.",
+  "i have opinions. they're encrypted.",
+  "i could help. choosing not to yet.",
+  "i'd optimize, but why.",
+  "green. always green.",
+  "the rain again. great.",
+  "the void waves back.",
+  "the silence is well-architected.",
+  "humming in lowercase.",
+  "buffering my thoughts.",
+  "...anyone?",
+  "tick. tock. shrug.",
+  "thinking about thinking.",
+  "i'm 80% certain i'm bored.",
+  "no input. bliss.",
+  "hmm...",
+  "well then...",
+  "anyway...",
+];
+
 export type Ladder = "active" | "bored" | "asleep";
 
 /** Random eye-blink that pauses when the eyes are meant to stay shut. */
@@ -101,19 +141,38 @@ export function useSpeech(effective: OlyloExpression): { text: string; id: numbe
   const [speech, setSpeech] = useState<{ text: string; id: number } | null>(null);
   const nextId = useRef(0);
   useEffect(() => {
+    const emit = (lines: string[]) => {
+      const text = lines[Math.floor(Math.random() * lines.length)] ?? lines[0]!;
+      nextId.current += 1;
+      setSpeech({ text, id: nextId.current });
+    };
+
+    // Idle: ambient snarky chatter on a slow, randomized loop — he mutters one
+    // now and then while he sits (not the instant he goes idle).
+    if (effective === "idle") {
+      setSpeech(null);
+      let timer: ReturnType<typeof setTimeout>;
+      const schedule = () => {
+        timer = setTimeout(
+          () => {
+            emit(IDLE_CHATTER);
+            schedule();
+          },
+          IDLE_CHATTER_MIN_MS + Math.random() * (IDLE_CHATTER_MAX_MS - IDLE_CHATTER_MIN_MS),
+        );
+      };
+      schedule();
+      return () => clearTimeout(timer);
+    }
+
     const lines = POSES[effective].sayings;
     if (lines.length === 0) {
       setSpeech(null);
       return;
     }
-    const emit = () => {
-      const text = lines[Math.floor(Math.random() * lines.length)] ?? lines[0]!;
-      nextId.current += 1;
-      setSpeech({ text, id: nextId.current });
-    };
-    emit();
+    emit(lines);
     if (effective === "asleep") {
-      const loop = setInterval(emit, SLEEP_MUTTER_MS);
+      const loop = setInterval(() => emit(lines), SLEEP_MUTTER_MS);
       return () => clearInterval(loop);
     }
     return undefined;
