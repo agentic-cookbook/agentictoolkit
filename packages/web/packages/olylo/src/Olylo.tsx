@@ -23,6 +23,7 @@ const WANDER_AFTER_MS = 1200;
 const WANDER_MIN_MS = 1400;
 const WANDER_MAX_MS = 3200;
 const TILT_MAX = 9; // head leans up to this many degrees toward a deliberate gaze
+const LEAN_MAX = 6; // …and the whole glyph drifts up to this many units toward it
 
 const clamp = (n: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, n));
@@ -49,6 +50,8 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
   // deliberate gaze, bodyRef = emotional scale/rotation/spin, faceRef = bob/wiggle.
   const idleRef = useRef<SVGGElement>(null);
   const tiltRef = useRef<SVGGElement>(null);
+  // Pure-translate layer: the glyph drifts a touch toward whatever he's watching.
+  const leanRef = useRef<SVGGElement>(null);
   // Outer group carrying the whole-glyph emotional scale + rotation (+ spin),
   // kept separate from faceRef so those never fight its bob/wiggle.
   const bodyRef = useRef<SVGGElement>(null);
@@ -369,14 +372,25 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     // the cursor while he tracks it — and levels off when nothing's moving.
     gsap.set(tiltRef.current, { svgOrigin: "160 50" });
     const tiltTo = gsap.quickTo(tiltRef.current, "rotation", { duration: 0.4, ease: "power3" });
+    // The whole glyph drifts a touch toward what he watches (its own translate
+    // layer, so no transform-origin tangle with the tilt/sway).
+    const leanXTo = gsap.quickTo(leanRef.current, "x", { duration: 0.5, ease: "power3" });
+    const leanYTo = gsap.quickTo(leanRef.current, "y", { duration: 0.5, ease: "power3" });
+    const lean = (nx: number, ny: number): void => {
+      leanXTo(nx * LEAN_MAX);
+      leanYTo(ny * LEAN_MAX);
+    };
 
     // 1. Deliberate gaze (typing): lock eyes + head toward it, ignore the rest.
+    // (Tilt sign is negated so he leans INTO what he's watching, not away.)
     if (forcedX !== null && forcedY !== null) {
       look(forcedX * GAZE_MAX, forcedY * GAZE_MAX);
-      tiltTo(forcedX * TILT_MAX);
+      tiltTo(-forcedX * TILT_MAX);
+      lean(forcedX, forcedY);
       return;
     }
-    tiltTo(0); // level until the cursor takes over
+    tiltTo(0); // level + centred until the cursor takes over
+    lean(0, 0);
 
     // 2. Cursor-follow.
     let lastMove = 0; // when the cursor last drove the gaze; wander waits for a lull
@@ -395,9 +409,11 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
           clamp((dx / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX),
           clamp((dy / len) * GAZE_MAX, -GAZE_MAX, GAZE_MAX),
         );
-        // turn his head to watch the cursor (its horizontal direction), and mark
-        // that he's actively watching so the idle fidget holds its random sway.
-        tiltTo(clamp(dx / len, -1, 1) * TILT_MAX);
+        // turn his head to watch the cursor (its horizontal direction; negated so
+        // he leans into it) and drift a touch toward it; mark that he's watching
+        // so the idle sway holds.
+        tiltTo(-clamp(dx / len, -1, 1) * TILT_MAX);
+        lean(clamp(dx / len, -1, 1), clamp(dy / len, -1, 1));
         lastMove = Date.now();
         watchingRef.current = lastMove;
       });
@@ -415,6 +431,7 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
         () => {
           if (Date.now() - lastMove > WANDER_AFTER_MS) {
             tiltTo(0); // cursor's gone still — level his head; idle sway takes over
+            lean(0, 0); // …and drift back to centre
             if (Math.random() < (curious ? 0.25 : 0.35)) {
               look(0, 0);
             } else {
@@ -448,6 +465,17 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     if (!curious) return;
     const base = POSES.idle;
     const rnd = (m: number): number => (Math.random() * 2 - 1) * m;
+    // Breathing (zoom) is its OWN slow, continuous loop — much less frequent than
+    // the head sway, so he swells and shrinks gently rather than constantly. Its
+    // `scale` never conflicts with the sway's `rotation` on the same element.
+    const breath = gsap.to(idleRef.current, {
+      scale: 1.035,
+      svgOrigin: "160 50",
+      duration: 2.6,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+    });
     let timer: ReturnType<typeof setTimeout> | undefined;
     const fidget = (): void => {
       // Quick, varied, near-continuous — live people are never quite still. Each
@@ -459,7 +487,6 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
       const watching = Date.now() - watchingRef.current < WANDER_AFTER_MS;
       gsap.to(idleRef.current, {
         rotation: watching ? 0 : rnd(3.5), // small head sway (paused while watching)
-        scale: 1 + rnd(0.035), // gentle breathing
         svgOrigin: "160 50",
         duration: dur,
         ease: "sine.inOut",
@@ -486,7 +513,8 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
     fidget();
     return () => {
       if (timer) clearTimeout(timer);
-      // settle the fidget layer back to neutral; the pose resets brows/antennae.
+      breath.kill();
+      // settle the fidget layer back to neutral; the pose resets the brows.
       gsap.to(idleRef.current, {
         rotation: 0,
         scale: 1,
@@ -609,6 +637,7 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
 
       <g ref={idleRef}>
        <g ref={tiltRef}>
+        <g ref={leanRef}>
       <g ref={bodyRef}>
         <g ref={faceRef} filter="url(#olyloGlow)" style={{ color: GREEN }}>
           {/* ia / ai eyebrows — drawn as flat vector glyphs above each eye */}
@@ -683,6 +712,7 @@ export function Olylo({ expression, gaze = null }: OlyloProps): ReactElement {
           <circle ref={rightDotRef} cx={270} cy={50} r={2.4} fill={IRIS} opacity={0} />
         </g>
       </g>
+        </g>
        </g>
       </g>
     </svg>

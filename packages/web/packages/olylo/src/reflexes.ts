@@ -47,11 +47,19 @@ export function useBlink(enabled: boolean): boolean {
  */
 export function useIdleLadder(expressionActive: boolean): Ladder {
   const [ladder, setLadder] = useState<Ladder>("active");
+  const ladderRef = useRef<Ladder>("active");
+  ladderRef.current = ladder; // current state for the move handler to read
   const lastActivity = useRef(0);
   const alertUntil = useRef(0); // typing pins him awake until this time
   useEffect(() => {
     lastActivity.current = Date.now();
-    const bump = () => {
+    // Mouse movement rouses him — UNLESS he's fully asleep, in which case a stray
+    // hover shouldn't wake him; only a click or a keystroke does.
+    const move = () => {
+      if (ladderRef.current === "asleep") return;
+      lastActivity.current = Date.now();
+    };
+    const wake = () => {
       lastActivity.current = Date.now();
     };
     // Typing also opens a grace window so he doesn't get bored/sleepy right after.
@@ -59,9 +67,9 @@ export function useIdleLadder(expressionActive: boolean): Ladder {
       lastActivity.current = Date.now();
       alertUntil.current = Date.now() + ALERT_AFTER_TYPING_MS;
     };
-    window.addEventListener("pointermove", bump);
+    window.addEventListener("pointermove", move);
     window.addEventListener("keydown", typed);
-    window.addEventListener("pointerdown", bump);
+    window.addEventListener("pointerdown", wake);
     const poll = setInterval(() => {
       const now = Date.now();
       // During the post-typing grace, hold him alert and keep resetting the idle
@@ -74,9 +82,9 @@ export function useIdleLadder(expressionActive: boolean): Ladder {
     }, 400);
     return () => {
       clearInterval(poll);
-      window.removeEventListener("pointermove", bump);
+      window.removeEventListener("pointermove", move);
       window.removeEventListener("keydown", typed);
-      window.removeEventListener("pointerdown", bump);
+      window.removeEventListener("pointerdown", wake);
     };
   }, []);
   useEffect(() => {
