@@ -586,6 +586,45 @@ export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloP
     };
   }, [curious]);
 
+  // Asleep micro-stirs: he's mostly dead still, but every few seconds gives a
+  // tiny involuntary twitch and, now and then, drifts a hair in how he's slumped —
+  // so he reads as sleeping, not frozen. Runs on idleRef (free while asleep — the
+  // idle fidget only owns it when curious); cleanup settles it back to neutral.
+  useEffect(() => {
+    if (!eyesShut) return;
+    const el = idleRef.current;
+    const rnd = (m: number): number => (Math.random() * 2 - 1) * m;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stir = (): void => {
+      if (Math.random() < 0.6) {
+        // a quick, very slight twitch that springs back
+        gsap
+          .timeline()
+          .to(el, { rotation: rnd(1.6), x: rnd(1.5), svgOrigin: "160 50", duration: 0.12, ease: "power2.out" })
+          .to(el, { rotation: 0, x: 0, svgOrigin: "160 50", duration: 0.55, ease: "sine.out" });
+      } else {
+        // a slow, slight shift in how he's curled up
+        gsap.to(el, {
+          x: rnd(4),
+          y: rnd(3),
+          rotation: rnd(1),
+          svgOrigin: "160 50",
+          duration: 2.6 + Math.random() * 1.6,
+          ease: "sine.inOut",
+          overwrite: "auto",
+        });
+      }
+      timer = setTimeout(stir, 4000 + Math.random() * 4000);
+    };
+    // first stir only after he's settled into sleep for a little while
+    timer = setTimeout(stir, 4000 + Math.random() * 3000);
+    return () => {
+      if (timer) clearTimeout(timer);
+      gsap.killTweensOf(el);
+      gsap.to(el, { x: 0, y: 0, rotation: 0, svgOrigin: "160 50", duration: 0.5, ease: "power2.out" });
+    };
+  }, [eyesShut]);
+
   // Speech: pop the utterance above the head, then let it drift off at a random
   // angle (biased upward) while fading — like a thought floating away.
   useEffect(() => {

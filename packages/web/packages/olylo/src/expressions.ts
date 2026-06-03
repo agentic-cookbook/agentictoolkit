@@ -482,6 +482,6 @@ export const POSES: Record<OlyloExpression, Pose> = {
     wiggle: 0,
     dur: 0.75,
     ease: "sine.out",
-    sayings: ["zzzz...", "zzz", "...mmf", "powered down. mostly."],
+    sayings: ["zzz", "zzz...", "zzzz", "z z z", "zzzZ", "...zzz", "zzzzz"],
   },
 };

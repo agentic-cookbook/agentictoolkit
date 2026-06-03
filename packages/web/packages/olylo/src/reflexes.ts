@@ -9,7 +9,7 @@ const MIN_BLINK_MS = 2800;
 const MAX_BLINK_MS = 7000;
 const BORED_AFTER_MS = 6000;
 const ASLEEP_AFTER_MS = 14000;
-const SLEEP_MUTTER_MS = 5500;
+const SLEEP_MUTTER_MS = 11000; // ~2x less frequent than his other chatter — deep sleep
 // Typing is a stronger signal than a stray pointer twitch: after the user types,
 // olylo stays awake and curious this long before he's allowed to drift off again.
 const ALERT_AFTER_TYPING_MS = 30000;
