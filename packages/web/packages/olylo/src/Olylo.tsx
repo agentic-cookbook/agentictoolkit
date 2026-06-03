@@ -6,6 +6,7 @@ import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
 import { POSES } from "./expressions";
 import type { OlyloExpression } from "./expressions";
 import { useBlink, useIdleLadder, useSpeech } from "./reflexes";
+import { playYawn } from "./yawn";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(MorphSVGPlugin);
@@ -88,7 +89,9 @@ export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloP
   const mouthRef = useRef<SVGPathElement>(null);
   const descenderRef = useRef<SVGPathElement>(null);
   const speechRef = useRef<SVGTextElement>(null);
-  const loopRef = useRef<gsap.core.Tween[]>([]);
+  // Looping tweens AND the yawn timeline — killed/reset whenever the pose changes.
+  // (Animation is the base of both Tween and Timeline, so one kill-list covers both.)
+  const loopRef = useRef<gsap.core.Animation[]>([]);
 
   const ladder = useIdleLadder(expression != null);
 
@@ -140,7 +143,10 @@ export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloP
 
 
   const eyesShut = effective === "asleep";
-  const blinkEnabled = !eyesShut && effective !== "laughing";
+  // Blinks are suppressed while the eyes are under deliberate control: shut when
+  // asleep, squeezed by the laugh, and clamped by the yawn timeline's apex — a
+  // stray blink there would fight the choreographed squeeze.
+  const blinkEnabled = !eyesShut && effective !== "laughing" && effective !== "yawning";
   const leftBlinking = useBlink(blinkEnabled);
   const rightBlinking = useBlink(blinkEnabled);
   // Muted while a command processes: he keeps his face but says nothing.
@@ -157,6 +163,36 @@ export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloP
     const p = POSES[effective];
     loopRef.current.forEach((t) => t.kill());
     loopRef.current = [];
+
+    // The yawn is a choreographed event, not a held pose: hand it to its own
+    // timeline (inhale → squeeze-shut apex → exhale → settle) instead of the
+    // single-pose tweens below. It's registered in loopRef so any transition out
+    // of the yawn (a click, the wake timer, a new mood) kills it like every other
+    // loop. The release lands every channel on the idle pose, so when the wake
+    // window clears and this effect re-runs for "idle" the handoff is invisible.
+    if (effective === "yawning") {
+      loopRef.current.push(
+        playYawn(
+          {
+            body: bodyRef.current,
+            face: faceRef.current,
+            leftEye: leftEyeRef.current,
+            rightEye: rightEyeRef.current,
+            leftIris: leftIrisRef.current,
+            rightIris: rightIrisRef.current,
+            lLeft: lLeftRef.current,
+            lRight: lRightRef.current,
+            browLeft: browLeftRef.current,
+            browRight: browRightRef.current,
+            mouth: mouthRef.current,
+            descender: descenderRef.current,
+          },
+          POSES.idle,
+          IRIS_BASE_R,
+        ),
+      );
+      return;
+    }
 
     // Whole-glyph emotional size + rotation. Size is its own amplitude channel
     // (swells when excited, shrinks when withdrawn). Rotation settles anywhere
@@ -294,10 +330,10 @@ export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloP
     // thin elsewhere, and wiggles from the junction like a little tail when lively.
     gsap.to(mouthRef.current, { morphSVG: p.mouth, duration: p.dur, ease: p.ease, delay: 0.08 });
     gsap.to(descenderRef.current, {
-      // Y mode: the angled logo tail (down-left). A pose can override the path
-      // (`tail`) when its mouth moves the attach point — e.g. the yawn's big "O".
-      // Otherwise: a straight-down tail. Same stroke weight as the Y arms (8).
-      morphSVG: p.tail ?? (p.showY ? "M160,95 L142,125" : "M160,85 L160,115"),
+      // Y mode: the angled logo tail (down-left). Otherwise a straight-down tail.
+      // Same stroke weight as the Y arms (8). (The yawn's tail is owned by its
+      // timeline in yawn.ts, so no per-pose override is needed here.)
+      morphSVG: p.showY ? "M160,95 L142,125" : "M160,85 L160,115",
       duration: p.dur,
       ease: p.ease,
       delay: 0.08,
@@ -624,6 +660,51 @@ export function Olylo({ expression, gaze = null, onSpeak, mute = false }: OlyloP
       gsap.to(el, { x: 0, y: 0, rotation: 0, svgOrigin: "160 50", duration: 0.5, ease: "power2.out" });
     };
   }, [eyesShut]);
+
+  // Bored micro-life: bored has no motion loop, so it can read as a frozen frame.
+  // A slow, heavy sag on the face (a tired settle, ~3.5s) keeps him listless but
+  // alive. Rides faceRef.y; `overwrite:"auto"` claims it from the pose's y:0 tween.
+  useEffect(() => {
+    if (effective !== "bored") return;
+    const sag = gsap.to(faceRef.current, {
+      y: 2.5,
+      duration: 3.5,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+      overwrite: "auto",
+    });
+    return () => {
+      sag.kill();
+      gsap.to(faceRef.current, { y: 0, duration: 0.4, ease: "power2.out", overwrite: "auto" });
+    };
+  }, [effective]);
+
+  // Sad body language: a slow forward/downward head droop so he looks dejected,
+  // not just blue and frowning. Rides faceRef (free in this mood — sad has no
+  // bob/wiggle); pivots at the base of the face so it tips forward like a hung head.
+  useEffect(() => {
+    if (effective !== "sad") return;
+    const droop = gsap.to(faceRef.current, {
+      rotation: 4,
+      y: 3,
+      transformOrigin: "50% 100%",
+      duration: 0.9,
+      ease: "power2.out",
+      overwrite: "auto",
+    });
+    return () => {
+      droop.kill();
+      gsap.to(faceRef.current, {
+        rotation: 0,
+        y: 0,
+        transformOrigin: "50% 60%",
+        duration: 0.5,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+    };
+  }, [effective]);
 
   // Speech: pop the utterance above the head, then let it drift off at a random
   // angle (biased upward) while fading — like a thought floating away.
