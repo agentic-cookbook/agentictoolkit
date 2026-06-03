@@ -1,0 +1,113 @@
+/* Legal pages (Terms, Privacy) shared across every site that renders the
+   ADH footer. Self-contained: reads theme vars where present, falls back to
+   the on-brand dark/gold palette so the pages render correctly on any host
+   (app, admin, docs) without depending on the full component stylesheet. */
+
+.adh-legal {
+  flex: 1;
+  padding: 2rem;
+  background: var(--color-surface, #0c0c0f);
+  color: var(--color-text-primary, #e8e6e3);
+}
+
+/* Title block */
+.adh-legal__hero {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.adh-legal__prefix {
+  font-family: var(--font-serif, ui-serif, Georgia, serif);
+  font-size: 1.4rem;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim, #5a5a6a);
+  margin-bottom: 0.4rem;
+}
+
+.adh-legal__title {
+  font-family: var(--font-serif, ui-serif, Georgia, serif);
+  font-size: 4rem;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 12px;
+  color: var(--color-accent, #c4a35a);
+  font-style: italic;
+}
+
+.adh-legal__rule {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-accent, #c4a35a), transparent);
+  margin: 0 auto 2rem;
+}
+
+/* Prose */
+.adh-legal-doc {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem 0 4rem;
+  font-family: var(--font-serif, ui-serif, Georgia, serif);
+  color: #c8c6c0;
+  line-height: 1.65;
+  font-size: 1.05rem;
+}
+
+.adh-legal-doc__meta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #8a8a9a);
+  text-align: center;
+  margin: 0 0 2.5rem;
+}
+
+.adh-legal-doc h2 {
+  font-family: var(--font-serif, ui-serif, Georgia, serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--color-accent, #c4a35a);
+  margin: 2.25rem 0 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+.adh-legal-doc h3 {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e8e6e3;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.adh-legal-doc p {
+  margin: 0 0 1rem;
+}
+
+.adh-legal-doc ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.adh-legal-doc li {
+  margin: 0.25rem 0;
+}
+
+.adh-legal-doc a {
+  color: var(--color-accent, #c4a35a);
+  text-decoration: underline;
+  text-decoration-color: rgba(196, 163, 90, 0.4);
+  text-underline-offset: 3px;
+}
+.adh-legal-doc a:hover {
+  text-decoration-color: var(--color-accent, #c4a35a);
+}
+
+.adh-legal-doc strong {
+  color: #e8e6e3;
+  font-weight: 600;
+}

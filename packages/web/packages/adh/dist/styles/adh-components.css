@@ -1,0 +1,515 @@
+/* Component styles for @agentic-toolkit/adh.
+ * Consumes the --adh-* tokens defined by the active theme
+ * (see @agentic-toolkit/themes/styles/adh*.css). Import this once
+ * globally in the consumer app (e.g. app/globals.css).
+ *
+ * No Tailwind utilities are used inside the component package, because
+ * Tailwind v4 in a consumer app does not scan node_modules by default,
+ * so utility classes used here would not be generated.
+ */
+
+.adh-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.adh-header__container {
+  position: relative;
+  width: 100%;
+  padding: 0 1.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.adh-header__page-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 50%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  font-family: var(--adh-header-page-title-font, var(--font-mono));
+  font-size: var(--adh-header-page-title-size, 0.8rem);
+  letter-spacing: var(--adh-header-page-title-letter-spacing, 0.08em);
+  text-transform: var(--adh-header-page-title-transform, uppercase);
+  color: var(--adh-header-page-title-color, var(--color-text-primary));
+}
+
+@media (max-width: 640px) {
+  .adh-header__page-title {
+    display: none;
+  }
+}
+
+.adh-header__title {
+  font-family: var(--adh-header-title-font, var(--font-serif));
+  font-style: var(--adh-header-title-style, italic);
+  font-size: var(--adh-header-title-size, 1.15rem);
+  font-weight: var(--adh-header-title-weight, 400);
+  color: var(--adh-header-title-color, var(--color-accent));
+  text-decoration: none;
+}
+
+.adh-header__title:hover {
+  color: var(--adh-header-title-color-hover, var(--color-accent-bright));
+}
+
+.adh-header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--adh-header-nav-gap, 1.25rem);
+  font-family: var(--adh-header-nav-font, var(--font-mono));
+  font-size: var(--adh-header-nav-size, 0.75rem);
+  letter-spacing: var(--adh-header-nav-letter-spacing, 0.04em);
+}
+
+.adh-header__nav-link {
+  color: var(--adh-header-nav-link-color, var(--color-text-secondary));
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.adh-header__nav-link:hover {
+  color: var(--adh-header-nav-link-hover-color, var(--color-accent));
+}
+
+.adh-header__nav-link[data-active] {
+  color: var(--adh-header-nav-link-active-color, var(--color-accent));
+}
+
+.adh-header__nav-link--button {
+  cursor: pointer;
+}
+
+.adh-footer {
+  border-top: 1px solid var(--color-border);
+  font-family: var(--adh-footer-font, var(--font-mono));
+  font-size: var(--adh-footer-size, 0.7rem);
+  letter-spacing: var(--adh-footer-letter-spacing, 0.04em);
+  color: var(--adh-footer-color, var(--color-text-dim));
+}
+
+.adh-footer__container {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.adh-footer__links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.adh-footer__link {
+  color: var(--adh-footer-link-color, var(--color-text-secondary));
+  text-decoration: none;
+}
+
+.adh-footer__link:hover {
+  color: var(--adh-footer-link-color-hover, var(--color-accent));
+}
+
+/* Avatar menu — trigger sitting inside the header bar. The whole chip is
+   the dropdown trigger (a <button>), so clicks anywhere on name/avatar/
+   chevron open the menu. */
+.adh-avatar-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.adh-avatar-menu-trigger:hover,
+.adh-avatar-menu-trigger[data-state='open'] {
+  color: var(--color-accent);
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.04));
+}
+
+.adh-avatar-menu-trigger:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.adh-avatar-menu-trigger__name {
+  font-family: var(--adh-header-nav-font, var(--font-mono));
+  font-size: var(--adh-header-nav-size, 0.875rem);
+  letter-spacing: var(--adh-header-nav-letter-spacing, 0.04em);
+  color: inherit;
+  white-space: nowrap;
+}
+
+.adh-avatar-menu-trigger__avatar-wrap {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+}
+
+.adh-avatar-menu-trigger__avatar {
+  height: 2rem;
+  width: 2rem;
+}
+
+.adh-avatar-menu-trigger__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  width: 1.25rem;
+  color: inherit;
+}
+
+.adh-avatar-menu-trigger__chevron-icon,
+.adh-avatar-menu-trigger__fallback-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+/* Avatar menu — dropdown popup */
+.adh-avatar-menu {
+  min-width: 17rem;
+  border-radius: 0.875rem;
+  background: var(--color-surface-raised, #14141a);
+  border: 1px solid var(--color-border, #2a2a35);
+  padding: 0.5rem;
+  color: var(--color-text-primary, #e8e6e3);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+}
+
+.adh-avatar-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem 0.75rem;
+}
+
+.adh-avatar-menu__identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.adh-avatar-menu__name {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.adh-avatar-menu__email {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  margin-top: 0.15rem;
+}
+
+.adh-avatar-menu__settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 2rem;
+  border-radius: 9999px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.adh-avatar-menu__settings:hover {
+  color: var(--color-accent);
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.adh-avatar-menu__settings-icon {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.adh-avatar-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.93rem;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.adh-avatar-menu__item:hover,
+.adh-avatar-menu__item:focus,
+.adh-avatar-menu__item[data-highlighted] {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
+  color: var(--color-text-primary);
+}
+
+.adh-avatar-menu__item[data-active] {
+  color: var(--color-accent);
+}
+
+.adh-avatar-menu__item-label {
+  flex: 1;
+  text-transform: capitalize;
+}
+
+.adh-avatar-menu__item-icon {
+  height: 1rem;
+  width: 1rem;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+/* Avatar primitive */
+.adh-avatar {
+  position: relative;
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 9999px;
+}
+
+.adh-avatar__image {
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  width: 100%;
+}
+
+.adh-avatar__fallback {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+/* Button primitive */
+.adh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  border-radius: var(--pc-radius, 0.375rem);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.adh-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.adh-button:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.adh-button--default {
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.adh-button--default:hover {
+  background: var(--color-accent-bright);
+}
+
+.adh-button--outline {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.adh-button--outline:hover {
+  background: var(--color-surface-hover);
+}
+
+.adh-button--ghost {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.adh-button--ghost:hover {
+  background: var(--color-surface-hover);
+}
+
+.adh-button--link {
+  background: transparent;
+  color: var(--color-accent);
+  text-underline-offset: 4px;
+}
+
+.adh-button--link:hover {
+  text-decoration: underline;
+}
+
+.adh-button--size-default {
+  height: 2.25rem;
+  padding: 0.5rem 1rem;
+}
+
+.adh-button--size-sm {
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+}
+
+.adh-button--size-lg {
+  height: 2.5rem;
+  padding: 0 1.5rem;
+}
+
+.adh-button--size-icon {
+  height: 2.25rem;
+  width: 2.25rem;
+  padding: 0;
+}
+
+.adh-button__icon {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+/* Dropdown menu primitive */
+.adh-dropdown-menu__content {
+  z-index: 50;
+  min-width: 14rem;
+  overflow: hidden;
+  border-radius: var(--pc-radius, 0.375rem);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  padding: 0.25rem;
+  color: var(--color-text-primary);
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.5);
+}
+
+.adh-dropdown-menu__item {
+  position: relative;
+  display: flex;
+  cursor: default;
+  user-select: none;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  outline: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.adh-dropdown-menu__item[data-highlighted],
+.adh-dropdown-menu__item:focus {
+  background: var(--color-surface-hover);
+}
+
+.adh-dropdown-menu__item[data-disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.adh-dropdown-menu__item--inset {
+  padding-left: 2rem;
+}
+
+.adh-dropdown-menu__item--indicator-left {
+  padding-left: 2rem;
+  padding-right: 0.5rem;
+}
+
+.adh-dropdown-menu__item-icon {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+.adh-dropdown-menu__sub-trigger[data-state='open'] {
+  background: var(--color-surface-hover);
+}
+
+.adh-dropdown-menu__sub-trigger-chevron {
+  margin-left: auto;
+  height: 1rem;
+  width: 1rem;
+}
+
+.adh-dropdown-menu__indicator-slot {
+  position: absolute;
+  left: 0.5rem;
+  display: flex;
+  height: 0.875rem;
+  width: 0.875rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.adh-dropdown-menu__indicator-check {
+  height: 1rem;
+  width: 1rem;
+}
+
+.adh-dropdown-menu__indicator-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  fill: currentColor;
+}
+
+.adh-dropdown-menu__label {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.adh-dropdown-menu__separator {
+  margin: 0.25rem -0.25rem;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.adh-dropdown-menu__shortcut {
+  margin-left: auto;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-dim);
+}
