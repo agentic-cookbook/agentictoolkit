@@ -50,7 +50,7 @@ extension SessionWatcher {
 
         // MARK: - Properties
 
-        private let databaseManager: SessionWatcherDatabaseManager
+        private let source: SessionListSource
         private var refreshTimer: Timer?
         private var accessibilityTimer: Timer?
 
@@ -77,14 +77,11 @@ extension SessionWatcher {
 
         private var frontmostTimer: Timer?
 
-        /// Notification name posted when new events are ingested.
-        public static let sessionsDidChangeNotification = Notification.Name("WhippetSessionsDidChange")
-
         // MARK: - Initialization
 
         @MainActor
-        public init(databaseManager: SessionWatcherDatabaseManager, settingsStore: SettingsStore) {
-            self.databaseManager = databaseManager
+        public init(source: SessionListSource, settingsStore: SettingsStore) {
+            self.source = source
             self.actionHandler = SessionWatcherActionHandler(settingsStore: settingsStore)
             loadSessions()
             startListening()
@@ -100,7 +97,7 @@ extension SessionWatcher {
         /// Ended sessions are excluded. Known projects are kept even if they have no sessions.
         public func loadSessions() {
             do {
-                let allSessions = try databaseManager.fetchAllSessions()
+                let allSessions = try source.fetchSessions()
                 let liveSessions = allSessions.filter { $0.status != .ended && !$0.cwd.isEmpty && $0.cwd != "/" }
 
                 // Group live sessions by terminal app
@@ -151,12 +148,10 @@ extension SessionWatcher {
         // MARK: - Real-time Updates
 
         private func startListening() {
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(handleSessionsDidChange),
-                name: Self.sessionsDidChangeNotification,
-                object: nil
-            )
+            // Reload whenever the source signals its session set may have changed.
+            source.startObserving { [weak self] in
+                self?.loadSessions()
+            }
 
             // Re-check accessibility when the app comes to the foreground
             NotificationCenter.default.addObserver(
@@ -181,8 +176,8 @@ extension SessionWatcher {
         }
 
         public func stopListening() {
+            source.stopObserving()
             let center = NotificationCenter.default
-            center.removeObserver(self, name: Self.sessionsDidChangeNotification, object: nil)
             center.removeObserver(self, name: NSApplication.didBecomeActiveNotification, object: nil)
             refreshTimer?.invalidate()
             refreshTimer = nil
@@ -190,10 +185,6 @@ extension SessionWatcher {
             accessibilityTimer = nil
             frontmostTimer?.invalidate()
             frontmostTimer = nil
-        }
-
-        @objc private func handleSessionsDidChange() {
-            loadSessions()
         }
 
         @objc private func checkAccessibility() {
@@ -208,13 +199,6 @@ extension SessionWatcher {
                     }
                 }
             }
-        }
-
-        public static func notifySessionsChanged() {
-            NotificationCenter.default.post(
-                name: sessionsDidChangeNotification,
-                object: nil
-            )
         }
 
         // MARK: - Click Actions

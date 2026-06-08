@@ -69,6 +69,7 @@
 		11C2D48BB03FB19855294E5B /* SingleWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D0314BEF2FB056EE285DB7 /* SingleWindowController.swift */; };
 		13187CF946C3B16D8F0F5D51 /* SinglePluginChatConfigProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4438A6477A2B6AA1E10061D4 /* SinglePluginChatConfigProvider.swift */; };
 		134188935861B12D56F8C477 /* AIPluginsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D406955FF116011F2F41462 /* AIPluginsCoordinator.swift */; };
+		13CBEE54D88F01BBEABE34BC /* SessionSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63891B9A5DC2B1BE484BB0A /* SessionSources.swift */; };
 		14434EB3E3BAA6042D9B3B52 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; };
 		145D9A43D78CF7CF3A0A6E59 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100B07B85D9C237535E20F8C /* PlaceholderTests.swift */; };
 		159987FF6536AA9ACFA29FA0 /* PermissionWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3479F947731ED8E46F346060 /* PermissionWalkthrough.swift */; };
@@ -155,6 +156,7 @@
 		5E64CEBE5E66B5047D420EC5 /* AIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EF995FC0CC791F38212BEE6 /* AIPlugin.swift */; };
 		5ED85BD4612BBC9077BB4605 /* AIPluginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62FC283C9CE017F9D6FC099E /* AIPluginManager.swift */; };
 		60DACCD0B6C4BD8D65E0F9E5 /* SessionLayoutStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA4DB58F341D40ECD870600 /* SessionLayoutStateTests.swift */; };
+		60DCC4F9B650C466CE68B9B3 /* WhippetSessionListSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75AEED1D4F6F2ADA98DA7A0D /* WhippetSessionListSource.swift */; };
 		60F1C3AA0131480450C02442 /* UserSettings+Recents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4213086A8F37452116EC183A /* UserSettings+Recents.swift */; };
 		61A374E12E3597603FF24D90 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF8FD8C2E5D494F6A2E0A36 /* TestSupport.swift */; };
 		61DCAA409469ACEF24D1F3AA /* SecureTextEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F055899B54CE2F0A16060100 /* SecureTextEditView.swift */; };
@@ -193,6 +195,7 @@
 		7A96F608B5B7388B9ECA7660 /* SessionWatcherCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63A78509493AEC5F2C291ED9 /* SessionWatcherCoordinator.swift */; };
 		7AA7DD4D1A43A9B02FDE0EB8 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 17D55EB771817306B99DA341 /* SwiftTerm */; };
 		7CB3DB6B65E9305CAA792C9F /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2951B18E81A33463286D9EE4 /* FileSystemWatcher.swift */; };
+		7CFFEA150BB6C132E93BA1A7 /* SessionListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC98A9EAFD2AEA6EFC2F2DE2 /* SessionListViewModelTests.swift */; };
 		7E06A61532A711063DA6EC4D /* SessionListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32DB64D049628A66B23446A /* SessionListViewController.swift */; };
 		7EBEEE27BF502BC3814BEFCD /* GeneralSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C03A7CF1937C3EC7B28B05 /* GeneralSettingsPanelViewController.swift */; };
 		7F607722ACC112ADC99CA537 /* InMemorySettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC30CF35DB65AE35FCEE6758 /* InMemorySettingsStorageProvider.swift */; };
@@ -815,6 +818,7 @@
 		7384AD8B1E1C9D20C362EFAA /* SettingsWindowCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowCommands.swift; sourceTree = "<group>"; };
 		74058B27121A2773814462AA /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		74925FD9DA16DA1C1650F4CE /* MCPChipsBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPChipsBarView.swift; sourceTree = "<group>"; };
+		75AEED1D4F6F2ADA98DA7A0D /* WhippetSessionListSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhippetSessionListSource.swift; sourceTree = "<group>"; };
 		75CA772A1D37DA43E38524AA /* NoteEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorViewController.swift; sourceTree = "<group>"; };
 		768F7C74EBACCA21B475C0B6 /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		780DC98D6CEA2306564CC337 /* HostMCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostMCPServer.swift; sourceTree = "<group>"; };
@@ -883,6 +887,7 @@
 		AB4EC455A374D3C4CC3860A1 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		AB98434EF421DF7AD41BB449 /* WindowDiscoveryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowDiscoveryWindowController.swift; sourceTree = "<group>"; };
 		AC2CA3B46968DDD93A7FAA92 /* StorableSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorableSetting.swift; sourceTree = "<group>"; };
+		AC98A9EAFD2AEA6EFC2F2DE2 /* SessionListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListViewModelTests.swift; sourceTree = "<group>"; };
 		ACBB18975E24B8D883375313 /* PerIDWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerIDWindowControllerTests.swift; sourceTree = "<group>"; };
 		ACC2F1884991EE22995244BD /* LogBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBuffer.swift; sourceTree = "<group>"; };
 		ACF39A5EE490267175AD2F89 /* TerminalCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalCommands.swift; sourceTree = "<group>"; };
@@ -927,6 +932,7 @@
 		D41A6C44F445E6C29D2525E2 /* MCPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPClient.swift; sourceTree = "<group>"; };
 		D5E123CA751C4118132849A9 /* AgenticToolkitCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5E260E0021A2D5567FD1BAF /* AppleScriptRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptRunner.swift; sourceTree = "<group>"; };
+		D63891B9A5DC2B1BE484BB0A /* SessionSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSources.swift; sourceTree = "<group>"; };
 		D8697EFC81F78668184B857C /* EventFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventFile.swift; sourceTree = "<group>"; };
 		D8F3EAE6ED87E957C4150D19 /* FrameCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameCalculatorTests.swift; sourceTree = "<group>"; };
 		D90BBB73E4DEC61E16E9F16C /* PermissionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionRowView.swift; sourceTree = "<group>"; };
@@ -1588,6 +1594,7 @@
 				89BE5B52366DF1C8D145ECA4 /* FileBrowser */,
 				FD3D968AB7FF19CDBFE71E8E /* LoggingWindow */,
 				C56A24054E3CA526924EE765 /* Scripting */,
+				F605B14439735F2BD0831A37 /* SessionWatcher */,
 				DE243850ABB4FE09B75D4B7C /* TerminalWindow */,
 			);
 			name = AgenticToolkitMacOSTests;
@@ -1678,7 +1685,9 @@
 				CDB355FB468E6D0C9C241EA9 /* Database */,
 				F21EFA94B0AC86295E1F9DF8 /* Hooks */,
 				F4DEB162BFCF47BE5C764FD2 /* Ingestion */,
+				D63891B9A5DC2B1BE484BB0A /* SessionSources.swift */,
 				1F10F200FE8B226C3D092BBE /* SessionWatcherSummarizer.swift */,
+				75AEED1D4F6F2ADA98DA7A0D /* WhippetSessionListSource.swift */,
 			);
 			path = SessionWatcherDataModel;
 			sourceTree = "<group>";
@@ -2000,6 +2009,14 @@
 			path = Ingestion;
 			sourceTree = "<group>";
 		};
+		F605B14439735F2BD0831A37 /* SessionWatcher */ = {
+			isa = PBXGroup;
+			children = (
+				AC98A9EAFD2AEA6EFC2F2DE2 /* SessionListViewModelTests.swift */,
+			);
+			path = SessionWatcher;
+			sourceTree = "<group>";
+		};
 		F6CF39B8CFB222F99D7742E7 /* TabbedViewController */ = {
 			isa = PBXGroup;
 			children = (
@@ -2040,7 +2057,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_434721EE-30A2-4544-81C5-EC87227905DB" /* Settings */ = {
+		"TEMP_3D5A0769-64C4-4245-96F4-3ED8FBB72C9B" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2661,6 +2678,7 @@
 				61DCAA409469ACEF24D1F3AA /* SecureTextEditView.swift in Sources */,
 				5A22847B30E2E77B45DE6793 /* SessionListView.swift in Sources */,
 				7E06A61532A711063DA6EC4D /* SessionListViewController.swift in Sources */,
+				13CBEE54D88F01BBEABE34BC /* SessionSources.swift in Sources */,
 				309BEC486DC9F859C83CE984 /* SessionSummarizer.swift in Sources */,
 				725C6F9A3A38FFADCF8B52AC /* SessionWatcher.swift in Sources */,
 				F0FE665C2F8F54A8CF20F11A /* SessionWatcherActionHandler.swift in Sources */,
@@ -2729,6 +2747,7 @@
 				063C07FB68027C7B91836EA9 /* WhippetChatBackend.swift in Sources */,
 				BC155BFEFEF6968069AC2389 /* WhippetDocumentController.swift in Sources */,
 				E0B07B7313D6FEA0C237DD2C /* WhippetProject.swift in Sources */,
+				60DCC4F9B650C466CE68B9B3 /* WhippetSessionListSource.swift in Sources */,
 				A7CB53AD9111F5F7F7884E40 /* WindowActivationStrategy.swift in Sources */,
 				E79A585CE11E7583105060F3 /* WindowActivationTarget.swift in Sources */,
 				353E0DB26D7C74F4E6830A16 /* WindowActivationTester.swift in Sources */,
@@ -2844,6 +2863,7 @@
 				F4B28DCFB9093D15FD35E1DD /* SQLiteRoundTripTests.swift in Sources */,
 				29C34DE7636859C833F72C67 /* ScreenMatcherTests.swift in Sources */,
 				60DACCD0B6C4BD8D65E0F9E5 /* SessionLayoutStateTests.swift in Sources */,
+				7CFFEA150BB6C132E93BA1A7 /* SessionListViewModelTests.swift in Sources */,
 				73D7328531404898528CBC59 /* SinglePluginChatConfigProviderTests.swift in Sources */,
 				697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */,
 				D151BBED553E914325BF6AD7 /* WindowManagerRecentsTests.swift in Sources */,

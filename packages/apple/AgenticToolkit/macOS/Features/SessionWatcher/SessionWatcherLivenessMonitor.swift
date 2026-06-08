@@ -132,7 +132,7 @@ extension SessionWatcher {
 
                 if count > 0 || pidDeathCount > 0 {
                     DispatchQueue.main.async {
-                        SessionListViewModel.notifySessionsChanged()
+                        SessionWatcher.notifySessionsChanged()
                     }
                 }
             } catch {

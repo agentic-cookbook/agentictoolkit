@@ -196,7 +196,7 @@ public class EventIngestionManager: @unchecked Sendable {
             onEventsIngested?()
 
             // Notification fan-out — coupling that ought to live elsewhere.
-            SessionWatcher.SessionListViewModel.notifySessionsChanged()
+            SessionWatcher.notifySessionsChanged()
         }
     }
 

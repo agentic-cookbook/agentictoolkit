@@ -14,9 +14,9 @@ extension SessionWatcher {
 
         public let viewModel: SessionListViewModel
 
-        public init(databaseMananger: SessionWatcherDatabaseManager) {
+        public init(source: SessionListSource) {
             let viewModel = SessionListViewModel(
-                databaseManager: databaseMananger,
+                source: source,
                 settingsStore: UserSettings.shared
             )
 

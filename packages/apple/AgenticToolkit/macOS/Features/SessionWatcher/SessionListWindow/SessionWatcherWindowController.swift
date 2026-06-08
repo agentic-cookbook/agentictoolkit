@@ -41,11 +41,11 @@ extension SessionWatcher {
 
         public static let windowID = "sessionPanel"
 
-        public init(databaseManager: SessionWatcherDatabaseManager) {
+        public init(source: SessionListSource) {
 
             super.init(
                 windowID: Self.windowID,
-                contentViewController: SessionListViewController(databaseMananger: databaseManager)
+                contentViewController: SessionListViewController(source: source)
             )
 
             self.windowSpec = WindowSpec(

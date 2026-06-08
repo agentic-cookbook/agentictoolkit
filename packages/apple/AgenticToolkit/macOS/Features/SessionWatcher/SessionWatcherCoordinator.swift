@@ -31,7 +31,9 @@ extension SessionWatcher {
         ) {
             let databaseManager = SessionWatcherDatabaseManager()
             self.databaseManager     = databaseManager
-            self.windowController    = SessionWatcherWindowController(databaseManager: databaseManager)
+            self.windowController    = SessionWatcherWindowController(
+                source: WhippetSessionListSource(databaseManager: databaseManager)
+            )
             self.ingestionManager    = SessionWatcherEventIngestionManager(
                 sessionWatcherDatabaseManager: databaseManager
             )

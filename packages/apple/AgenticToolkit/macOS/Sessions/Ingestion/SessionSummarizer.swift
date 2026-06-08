@@ -357,7 +357,7 @@ public final class SessionSummarizer: @unchecked Sendable {
 
             await MainActor.run {
                 // Notification fan-out — coupling that ought to live elsewhere.
-                SessionWatcher.SessionListViewModel.notifySessionsChanged()
+                SessionWatcher.notifySessionsChanged()
             }
         } catch {
             // swiftlint:disable:next line_length

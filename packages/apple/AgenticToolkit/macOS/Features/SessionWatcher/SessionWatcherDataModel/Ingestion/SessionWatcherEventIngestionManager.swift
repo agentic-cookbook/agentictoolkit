@@ -199,7 +199,7 @@ extension SessionWatcher {
 
             if !jsonFiles.isEmpty {
                 onEventsIngested?()
-                SessionListViewModel.notifySessionsChanged()
+                SessionWatcher.notifySessionsChanged()
             }
         }
 

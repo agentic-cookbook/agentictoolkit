@@ -379,7 +379,7 @@ extension SessionWatcher {
                 logger.info("Stored AI summary for session \(sessionId, privacy: .public)")
 
                 await MainActor.run {
-                    SessionListViewModel.notifySessionsChanged()
+                    SessionWatcher.notifySessionsChanged()
                 }
             } catch {
                 // swiftlint:disable:next line_length
