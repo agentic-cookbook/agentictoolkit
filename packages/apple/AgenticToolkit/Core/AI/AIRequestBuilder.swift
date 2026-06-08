@@ -1,5 +1,4 @@
 import Foundation
-import AgenticToolkitCoreMacOS
 
 /// Configuration for an AI API request.
 public struct AIRequestConfig {
