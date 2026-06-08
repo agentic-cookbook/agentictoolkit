@@ -581,6 +581,13 @@ extension SessionWatcher {
     }
 }
 
+extension SessionWatcher.SessionWatcherSummarizer: SessionWatcher.SessionSummarizing {
+    /// Conformance to the window's summarize seam — delegates to the in-app pipeline.
+    public func summarize(sessionId: String) async throws {
+        try await summarizeAndStore(sessionId: sessionId)
+    }
+}
+
 extension SessionWatcher.SessionWatcherSummarizer: Loggable {
     public static nonisolated let logger = makeLogger()
 }

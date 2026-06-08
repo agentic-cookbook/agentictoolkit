@@ -67,7 +67,7 @@ extension SessionWatcher {
         @Published public var lastPermissionPane: SessionWatcherPermissionPane?
 
         /// The session summarizer for manual AI summarization.
-        public var sessionSummarizer: SessionWatcherSummarizer?
+        public var sessionSummarizer: SessionSummarizing?
 
         /// SessionWatcherSession IDs currently being summarized (for UI progress indication).
         @Published private(set) var summarizingSessionIds: Set<String> = []
@@ -469,7 +469,7 @@ extension SessionWatcher {
 
             Task.detached(priority: .userInitiated) { [weak self] in
                 do {
-                    try await summarizer.summarizeAndStore(sessionId: session.sessionId)
+                    try await summarizer.summarize(sessionId: session.sessionId)
                 } catch {
                     await MainActor.run {
                         self?.lastActionError = "Summarizer: \(error.localizedDescription)"

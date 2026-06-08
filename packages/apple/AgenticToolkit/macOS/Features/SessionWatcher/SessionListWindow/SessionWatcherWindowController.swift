@@ -73,7 +73,7 @@ extension SessionWatcher {
             window.backgroundColor = .windowBackgroundColor
         }
 
-        public func setSessionSummarizer(_ summarizer: SessionWatcherSummarizer) {
+        public func setSessionSummarizer(_ summarizer: SessionSummarizing) {
             viewController?.viewModel.sessionSummarizer = summarizer
         }
 
