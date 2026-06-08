@@ -266,6 +266,9 @@ schemes:
     test:
       config: Debug
       targets:
+        - AgenticToolkitCoreTests
+        - AgenticToolkitCoreUITests
+        - AgenticToolkitCoreMacOSTests
         - AIPluginKitTests
         - AgenticToolkitMacOSTests
     profile:

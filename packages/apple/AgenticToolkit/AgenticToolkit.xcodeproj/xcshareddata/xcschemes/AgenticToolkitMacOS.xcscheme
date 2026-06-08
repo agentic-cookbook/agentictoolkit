@@ -44,6 +44,39 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F7587C3114CC9BBF138D57B4"
+               BuildableName = "AgenticToolkitCoreTests.xctest"
+               BlueprintName = "AgenticToolkitCoreTests"
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0C146E1D667CC0539A0AE0E6"
+               BuildableName = "AgenticToolkitCoreUITests.xctest"
+               BlueprintName = "AgenticToolkitCoreUITests"
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F2116E5AFEEF6DE97574A067"
+               BuildableName = "AgenticToolkitCoreMacOSTests.xctest"
+               BlueprintName = "AgenticToolkitCoreMacOSTests"
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "CA91BF5C6678A6A1DB58725C"
                BuildableName = "AIPluginKitTests.xctest"
                BlueprintName = "AIPluginKitTests"

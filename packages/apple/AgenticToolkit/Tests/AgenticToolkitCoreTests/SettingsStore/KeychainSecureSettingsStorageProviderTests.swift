@@ -18,13 +18,16 @@ final class KeychainSecureStorageProviderTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        // Cancel subscriptions FIRST: otherwise the cleanup removes below re-emit
+        // change notifications into a test's still-live sink, fulfilling an already
+        // satisfied XCTestExpectation and tripping its over-fulfillment assertion.
+        cancellables = nil
         // Best-effort: remove every key our tests touch.
         store.remove(UserSettings.displayName)
         store.remove(UserSettings.userPreferences)
         store.remove(UserSettings.launchCount)
         store.remove(UserSettings.hasCompletedOnboarding)
         store = nil
-        cancellables = nil
         try await super.tearDown()
     }
 

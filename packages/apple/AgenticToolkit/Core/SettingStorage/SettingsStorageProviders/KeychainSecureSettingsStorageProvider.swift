@@ -25,15 +25,23 @@ public final class KeychainSecureSettingsStorageProvider: SecureSettingsStorageP
     }
 
     /// Creates a Keychain-backed secure settings provider.
-    /// - Parameter service: Optional service identifier override. Sets `KeychainHelper.service`
-    ///   when non-nil. Pass `nil` (the default) to use the bundle identifier.
+    /// - Parameters:
+    ///   - service: Optional service identifier override. Sets `KeychainHelper.service`
+    ///     when non-nil. Pass `nil` (the default) to use the bundle identifier.
+    ///   - accessGroup: Optional shared Keychain access group. Sets
+    ///     `KeychainHelper.accessGroup` when non-nil so a co-signed binary (e.g. a
+    ///     daemon) carrying the matching entitlement can read the same items.
     public init(
         service: String? = nil,
+        accessGroup: String? = nil,
         encoder: JSONEncoder = JSONEncoder(),
         decoder: JSONDecoder = JSONDecoder()
     ) {
         if let service {
             KeychainHelper.service = service
+        }
+        if let accessGroup {
+            KeychainHelper.accessGroup = accessGroup
         }
         self.encoder = encoder
         self.decoder = decoder

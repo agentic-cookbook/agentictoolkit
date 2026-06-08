@@ -9,6 +9,28 @@ public enum KeychainHelper {
     /// The Keychain service identifier. Defaults to the main bundle identifier.
     nonisolated(unsafe) public static var service: String = Bundle.main.bundleIdentifier ?? "com.agentictoolkit"
 
+    /// Optional shared Keychain access group. When set, items are scoped to this
+    /// group so multiple signed binaries (e.g. an app and its daemon) carrying the
+    /// matching `keychain-access-groups` entitlement can share them. `nil` (the
+    /// default) preserves the original per-binary behavior.
+    nonisolated(unsafe) public static var accessGroup: String?
+
+    /// Builds the base generic-password query for an account key. When an access
+    /// group is in play, scopes the item to it and forces the macOS data-protection
+    /// keychain (required for access groups on macOS).
+    static func makeQuery(account: String, accessGroup: String? = KeychainHelper.accessGroup) -> [String: Any] {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        if let accessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+        return query
+    }
+
     /// Stores a value in the Keychain for the given account key.
     /// Overwrites any existing value for the same key.
     @discardableResult
@@ -16,12 +38,8 @@ public enum KeychainHelper {
         let data = Data(value.utf8)
         delete(forKey: key)
 
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data
-        ]
+        var query = makeQuery(account: key)
+        query[kSecValueData as String] = data
 
         let status = SecItemAdd(query as CFDictionary, nil)
         if status != errSecSuccess {
@@ -32,13 +50,9 @@ public enum KeychainHelper {
 
     /// Retrieves a value from the Keychain for the given account key.
     public static func get(forKey key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        var query = makeQuery(account: key)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -56,11 +70,7 @@ public enum KeychainHelper {
     /// Deletes the Keychain item for the given account key.
     @discardableResult
     public static func delete(forKey key: String) -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key
-        ]
+        let query = makeQuery(account: key)
 
         let status = SecItemDelete(query as CFDictionary)
         return status == errSecSuccess || status == errSecItemNotFound
@@ -68,12 +78,8 @@ public enum KeychainHelper {
 
     /// Returns whether a value exists in the Keychain for the given key.
     public static func exists(forKey key: String) -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        var query = makeQuery(account: key)
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
 
         return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }

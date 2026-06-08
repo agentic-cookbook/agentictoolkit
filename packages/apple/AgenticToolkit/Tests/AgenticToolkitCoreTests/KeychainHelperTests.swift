@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Security
 @testable import AgenticToolkitCore
 
 /// These tests touch the real macOS Keychain. They use a unique account key
@@ -81,6 +82,35 @@ struct KeychainHelperTests {
         let value = "日本語 🔑 émoji\n\t"
         #expect(KeychainHelper.set(value, forKey: key))
         #expect(KeychainHelper.get(forKey: key) == value)
+    }
+
+    // MARK: - Access group (shared-keychain) query building
+
+    // These verify the query the helper builds, NOT live Keychain behavior:
+    // a real access-group item requires the `keychain-access-groups` entitlement
+    // the unentitled test host lacks. The `accessGroup` argument is passed
+    // explicitly so these never mutate the `KeychainHelper.accessGroup` global —
+    // keeping the parallel real-Keychain tests above safe.
+
+    @Test("makeQuery injects access group and data-protection flag when set")
+    func queryWithAccessGroup() {
+        let group = "ABCDE12345.com.agentic-cookbook.stenographer.shared"
+        let query = KeychainHelper.makeQuery(account: "acct", accessGroup: group)
+
+        #expect(query[kSecAttrAccessGroup as String] as? String == group)
+        // Access groups only work against the data-protection keychain on macOS.
+        #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        // Base attributes still present.
+        #expect(query[kSecAttrAccount as String] as? String == "acct")
+    }
+
+    @Test("makeQuery omits access group and data-protection flag when nil")
+    func queryWithoutAccessGroup() {
+        let query = KeychainHelper.makeQuery(account: "acct", accessGroup: nil)
+
+        #expect(query[kSecAttrAccessGroup as String] == nil)
+        #expect(query[kSecUseDataProtectionKeychain as String] == nil)
+        #expect(query[kSecAttrAccount as String] as? String == "acct")
     }
 
     @Test("isolated keys don't interfere")
