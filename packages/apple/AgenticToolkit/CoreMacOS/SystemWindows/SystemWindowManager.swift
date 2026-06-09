@@ -82,6 +82,14 @@ public final class SystemWindowManager: SystemWindowControlling {
     public func focus(windowID: UInt32) throws {
         let (axElement, windowInfo) = try resolveAXElement(for: windowID)
 
+        // If the window is parked off every screen (parking moves windows far left while
+        // keeping Y), nudge it back on-screen first — otherwise focusing it just raises an
+        // invisible window. Y is preserved (it was never moved), so only X needs fixing.
+        if !Self.isOnScreenHorizontally(windowInfo.frame), let screen = NSScreen.main {
+            let target = CGPoint(x: screen.visibleFrame.minX + 80, y: windowInfo.frame.origin.y)
+            _ = SystemWindowAXHelper.setPosition(of: axElement, to: target)
+        }
+
         // Raise the window within the app
         let raiseResult = SystemWindowAXHelper.raise(axElement)
         if raiseResult != .success {
@@ -230,6 +238,16 @@ public final class SystemWindowManager: SystemWindowControlling {
         return CGMainDisplayID()
     }
 
+    /// Whether a window frame overlaps any display horizontally. Parking moves inactive
+    /// windows far to the left (keeping Y), so a parked window's X-extent lies off every
+    /// screen. This is the coordinate-system-safe test for "is this window visible" — it
+    /// avoids comparing CG top-left Y against AppKit bottom-left screen Y.
+    static func isOnScreenHorizontally(_ frame: CGRect) -> Bool {
+        NSScreen.screens.contains { screen in
+            frame.maxX > screen.frame.minX && frame.minX < screen.frame.maxX
+        }
+    }
+
     // MARK: - Title Backfill
 
     /// Backfills empty titles via Accessibility.
@@ -239,7 +257,9 @@ public final class SystemWindowManager: SystemWindowControlling {
     /// Accessibility alone. This keeps titles working under the app's Accessibility-only
     /// permission model. Cost is one AX enumeration per owning PID that needs a title,
     /// incurred only when CG returned empty titles (near-zero when Screen Recording is
-    /// granted).
+    /// granted), batched once per owning PID. Uses AX attribute *reads* only (no actions
+    /// or observers), which are safe off the main thread, so callers may enumerate on a
+    /// background queue.
     private func backfillTitles(_ windows: [SystemWindowInfo]) -> [SystemWindowInfo] {
         let pidsNeedingTitles = Set(windows.filter { $0.title.isEmpty }.map(\.pid))
         guard !pidsNeedingTitles.isEmpty else { return windows }
@@ -261,17 +281,27 @@ public final class SystemWindowManager: SystemWindowControlling {
         }
     }
 
-    /// Finds the AX window whose frame matches `frame` (within tolerance) and returns
-    /// its title, or nil if no match.
+    /// Resolves the title for a CG window record from the owning app's AX windows.
+    ///
+    /// - A single-window app is unambiguous, so its title is used regardless of frame —
+    ///   this is what lets *minimized/off-screen* windows (whose AX geometry differs from
+    ///   their CG bounds) still get a title.
+    /// - Otherwise the frame must match exactly ONE AX window within tolerance. If several
+    ///   windows share the frame (a sheet over its document, stacked editors), the match
+    ///   is ambiguous and we return nil — better an empty title than the wrong window's.
     private static func axTitle(forFrame frame: CGRect, in axWindows: [AXUIElement]) -> String? {
-        for axWindow in axWindows {
-            guard let position = SystemWindowAXHelper.position(of: axWindow),
-                  let size = SystemWindowAXHelper.size(of: axWindow) else { continue }
-            if abs(position.x - frame.origin.x) < 2, abs(position.y - frame.origin.y) < 2,
-               abs(size.width - frame.size.width) < 2, abs(size.height - frame.size.height) < 2 {
-                return SystemWindowAXHelper.title(of: axWindow)
-            }
+        if axWindows.count == 1 {
+            return SystemWindowAXHelper.title(of: axWindows[0])
         }
-        return nil
+
+        let frameMatches = axWindows.filter { axWindow in
+            guard let position = SystemWindowAXHelper.position(of: axWindow),
+                  let size = SystemWindowAXHelper.size(of: axWindow) else { return false }
+            return abs(position.x - frame.origin.x) < 2 && abs(position.y - frame.origin.y) < 2
+                && abs(size.width - frame.size.width) < 2 && abs(size.height - frame.size.height) < 2
+        }
+
+        guard frameMatches.count == 1 else { return nil }
+        return SystemWindowAXHelper.title(of: frameMatches[0])
     }
 }

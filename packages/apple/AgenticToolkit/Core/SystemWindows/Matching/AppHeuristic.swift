@@ -59,6 +59,10 @@ public extension AppHeuristic {
 public enum HeuristicTitleParser {
     /// Separators macOS apps place between title components, most specific first.
     /// Apps render an em dash (U+2014); a few locales/builds use an en dash (U+2013).
+    ///
+    /// NOTE: en-dash support is intentional (covered by `HeuristicTests`). The trade-off —
+    /// a title whose *content* contains " – " (e.g. a folder "App – Prod") gets split — is
+    /// accepted: em-dash is by far the common separator and content en-dashes are rare.
     public static let separators = [" \u{2014} ", " \u{2013} "]
 
     /// Splits `title` on the first recognized separator and trims each component.

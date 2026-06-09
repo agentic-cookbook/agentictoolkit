@@ -90,8 +90,10 @@ public final class SystemWindowContextManager: Loggable {
     /// recycled IDs instead of re-matching by fingerprint.
     private func reconcilePersistedWindowIDs() {
         var liveByID: [UInt32: SystemWindowInfo] = [:]
+        var liveAppNames: Set<String> = []
         for window in windowManager.listAllWindows() {
             liveByID[window.id] = window
+            liveAppNames.insert(window.app.lowercased())
         }
 
         var invalidated = 0
@@ -99,10 +101,23 @@ public final class SystemWindowContextManager: Loggable {
             for snapshotIndex in 0..<contexts[contextIndex].windowSnapshots.count {
                 let snapshot = contexts[contextIndex].windowSnapshots[snapshotIndex]
                 guard let windowID = snapshot.windowID else { continue }
-                // Valid only if a live window with that ID exists AND belongs to the same
-                // app (guards against an ID recycled to a different application).
-                let live = liveByID[windowID]
-                if live?.app.lowercased() != snapshot.app.lowercased() {
+                let app = snapshot.app.lowercased()
+
+                let shouldInvalidate: Bool
+                if let live = liveByID[windowID] {
+                    // ID is in use — valid only if it still belongs to the same app
+                    // (else the OS recycled it to a different application).
+                    shouldInvalidate = live.app.lowercased() != app
+                } else {
+                    // ID not in the live list. Only invalidate if the owning app is
+                    // actually enumerable (has at least one live window). An app with
+                    // zero live windows may still be mid-launch at this instant; nilling
+                    // here would orphan a valid window, so leave it and let the window
+                    // observer / fingerprint re-matching reconcile it once it appears.
+                    shouldInvalidate = liveAppNames.contains(app)
+                }
+
+                if shouldInvalidate {
                     contexts[contextIndex].windowSnapshots[snapshotIndex].windowID = nil
                     invalidated += 1
                 }
@@ -752,6 +767,25 @@ public final class SystemWindowContextManager: Loggable {
         parkWindow(windowID, savedFrameY: savedFrameY)
     }
 
+    /// Captures a window's current frame into its snapshot — but only while the window is
+    /// genuinely on a real screen. If it's already parked (or the OS clamped a park move
+    /// to a not-quite-off-screen X), the live frame is NOT saved, so a parked/clamped
+    /// position can never be persisted as the restore target. Also preserves interim moves
+    /// of an on-screen window.
+    private func captureFrameIfOnScreen(
+        contextIndex: Int,
+        snapshotIndex: Int,
+        liveWindows: [SystemWindowInfo]
+    ) {
+        guard let windowID = contexts[contextIndex].windowSnapshots[snapshotIndex].windowID,
+              let live = liveWindows.first(where: { $0.id == windowID }),
+              SystemWindowManager.isOnScreenHorizontally(live.frame) else {
+            return
+        }
+        contexts[contextIndex].windowSnapshots[snapshotIndex].savedFrame = live.frame
+        contexts[contextIndex].windowSnapshots[snapshotIndex].lastSeen = Date()
+    }
+
     /// Saves current window positions and parks all windows in the context off-screen.
     private func saveAndParkContext(at index: Int) {
         let allWindows = windowManager.listAllWindows()
@@ -760,30 +794,24 @@ public final class SystemWindowContextManager: Loggable {
             guard let windowID = contexts[index].windowSnapshots[snapshotIndex].windowID else {
                 continue // Dormant window, skip
             }
-
-            // Save the current position from the live frame — but only if the window is
-            // actually on a real screen. If it's already parked off-screen (left of every
-            // display), keep the existing savedFrame so a parked position is never
-            // persisted as the restore target.
-            if let liveWindow = allWindows.first(where: { $0.id == windowID }),
-               liveWindow.frame.origin.x > leftmostDisplayMinX - Self.parkingMargin / 2 {
-                contexts[index].windowSnapshots[snapshotIndex].savedFrame = liveWindow.frame
-                contexts[index].windowSnapshots[snapshotIndex].lastSeen = Date()
-            }
-
-            // Park the window off-screen.
+            captureFrameIfOnScreen(contextIndex: index, snapshotIndex: snapshotIndex, liveWindows: allWindows)
             let savedFrame = contexts[index].windowSnapshots[snapshotIndex].savedFrame
             parkWindow(windowID, savedFrameY: savedFrame.origin.y)
         }
     }
 
-    /// Parks all live windows in a context off-screen without saving positions.
+    /// Parks all live windows in a context off-screen. Also captures the live frame of any
+    /// window that happens to be on-screen first, so an interim move isn't lost on restore.
     private func parkContext(at index: Int) {
-        for snapshot in contexts[index].windowSnapshots {
-            guard let windowID = snapshot.windowID else {
+        let allWindows = windowManager.listAllWindows()
+
+        for snapshotIndex in 0..<contexts[index].windowSnapshots.count {
+            guard let windowID = contexts[index].windowSnapshots[snapshotIndex].windowID else {
                 continue // Dormant window, skip
             }
-            parkWindow(windowID, savedFrameY: snapshot.savedFrame.origin.y)
+            captureFrameIfOnScreen(contextIndex: index, snapshotIndex: snapshotIndex, liveWindows: allWindows)
+            let savedFrame = contexts[index].windowSnapshots[snapshotIndex].savedFrame
+            parkWindow(windowID, savedFrameY: savedFrame.origin.y)
         }
     }
 

@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import os.log
 
 /// Creates window fingerprints from live windows using app-specific heuristics,
 /// and re-matches windows to context fingerprints after restart.
@@ -10,7 +11,9 @@ import Foundation
 ///
 /// The re-matching engine scores all running windows against all context
 /// fingerprints and produces a greedy one-to-one assignment.
-public struct SystemWindowMatcher {
+public struct SystemWindowMatcher: Loggable {
+
+    public static nonisolated let logger = makeLogger()
 
     /// Minimum score for a match to be auto-assigned without user confirmation.
     public static let autoAssignThreshold: Int = 80
@@ -305,24 +308,35 @@ public struct SystemWindowMatcher {
         return window.title
     }
 
-    /// Whether a substring match holds in either direction, guarded by a minimum
-    /// length so very short patterns don't over-match. All inputs are lowercased.
+    /// Whether the live window's (extracted or raw) title contains the stored pattern,
+    /// guarded by a minimum length so very short patterns don't over-match. All inputs
+    /// are lowercased. The reverse direction — a long stored pattern *containing* a short
+    /// live token — was dropped: it admitted unrelated windows as 60-pt matches.
     private static func substringMatches(live: String, pattern: String, rawTitle: String) -> Bool {
         let minLen = minSubstringPatternLength
-        if pattern.count >= minLen, live.contains(pattern) { return true }
-        if live.count >= minLen, pattern.contains(live) { return true }
-        if pattern.count >= minLen, rawTitle.contains(pattern) { return true }
-        return false
+        guard pattern.count >= minLen else { return false }
+        return live.contains(pattern) || rawTitle.contains(pattern)
     }
 
     /// Whether `title` matches the case-insensitive regex `pattern`.
+    ///
+    /// Requires a non-empty match: a zero-width pattern (`.*`, `^`, `\b`, `a?`, …) would
+    /// otherwise match every title. An invalid pattern is logged rather than silently
+    /// swallowed, so a corrupt/uncompilable fingerprint isn't mistaken for "no match"
+    /// and the window orphaned forever.
     private static func regexMatches(pattern: String, title: String) -> Bool {
-        guard !pattern.isEmpty,
-              let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
-        else {
+        guard !pattern.isEmpty else { return false }
+        let regex: NSRegularExpression
+        do {
+            regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+        } catch {
+            logger.error(
+                "Invalid title regex '\(pattern, privacy: .public)': \(error.localizedDescription, privacy: .public)"
+            )
             return false
         }
         let range = NSRange(title.startIndex..<title.endIndex, in: title)
-        return regex.firstMatch(in: title, options: [], range: range) != nil
+        guard let match = regex.firstMatch(in: title, options: [], range: range) else { return false }
+        return match.range.length > 0
     }
 }

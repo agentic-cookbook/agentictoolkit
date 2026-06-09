@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 /// How a custom heuristic rule matches against window titles.
 public enum CustomMatchMode: String, Codable, Equatable, Sendable, CaseIterable {
@@ -23,7 +24,10 @@ public enum CustomMatchMode: String, Codable, Equatable, Sendable, CaseIterable 
 /// by allowing users to define their own app-specific title patterns. Each rule
 /// specifies an app name, a title match pattern (substring or regex), and an
 /// optional target context for auto-assignment.
-public struct CustomHeuristicRule: Codable, Equatable, Identifiable, Sendable {
+public struct CustomHeuristicRule: Codable, Equatable, Identifiable, Sendable, Loggable {
+
+    public static nonisolated let logger = makeLogger()
+
     /// Unique identifier for this rule.
     public let id: UUID
 
@@ -90,17 +94,23 @@ public struct CustomHeuristicRule: Codable, Equatable, Identifiable, Sendable {
             return nil
 
         case .regex:
-            guard let regex = try? NSRegularExpression(
-                pattern: titlePattern,
-                options: [.caseInsensitive]
-            ) else {
+            let regex: NSRegularExpression
+            do {
+                regex = try NSRegularExpression(pattern: titlePattern, options: [.caseInsensitive])
+            } catch {
+                let reason = error.localizedDescription
+                Self.logger.error(
+                    "Invalid custom-rule regex '\(titlePattern, privacy: .public)': \(reason, privacy: .public)"
+                )
                 return nil
             }
 
             let range = NSRange(title.startIndex..<title.endIndex, in: title)
-            // `Range(_:in:)` returns nil when the match range falls on a non-character
-            // boundary (e.g. inside an emoji/surrogate pair); bail instead of trapping.
+            // Require a non-empty match: a zero-width pattern (e.g. `.*`, `^`) would
+            // otherwise "match" every title and extract an empty pattern.
+            // `Range(_:in:)` returns nil on a non-character boundary; bail vs trapping.
             guard let match = regex.firstMatch(in: title, options: [], range: range),
+                  match.range.length > 0,
                   let matchRange = Range(match.range, in: title) else {
                 return nil
             }
