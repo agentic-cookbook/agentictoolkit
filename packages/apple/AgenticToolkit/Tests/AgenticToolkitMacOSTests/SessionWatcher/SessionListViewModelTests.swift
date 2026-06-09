@@ -1,4 +1,5 @@
 import XCTest
+import Combine
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 @testable import AgenticToolkitMacOS
@@ -6,7 +7,7 @@ import AgenticToolkitCoreMacOS
 /// A `SessionListSource` test double: returns canned sessions and lets the test
 /// fire the change signal on demand — so the view model can be exercised with no
 /// SQLite, no daemon, and no NotificationCenter.
-private final class FakeSessionListSource: SessionWatcher.SessionListSource {
+private final class FakeSessionListSource: SessionWatcher.SessionListSource, @unchecked Sendable {
     var sessions: [SessionWatcher.SessionWatcherSession]
     private(set) var isObserving = false
     private var onChange: (@Sendable () -> Void)?
@@ -15,7 +16,7 @@ private final class FakeSessionListSource: SessionWatcher.SessionListSource {
         self.sessions = sessions
     }
 
-    func fetchSessions() throws -> [SessionWatcher.SessionWatcherSession] {
+    func fetchSessions() async throws -> [SessionWatcher.SessionWatcherSession] {
         sessions
     }
 
@@ -38,6 +39,19 @@ private final class FakeSessionListSource: SessionWatcher.SessionListSource {
 @MainActor
 final class SessionListViewModelTests: XCTestCase {
 
+    /// The view model under test, tracked so tearDown can stop its timers/observer.
+    private var viewModel: SessionWatcher.SessionListViewModel?
+
+    override func tearDown() async throws {
+        // Explicit teardown: the view model's init starts two repeating timers and a
+        // notification observer. stopListening() tears them down deterministically
+        // instead of relying on `deinit` firing promptly when the local goes out of
+        // scope (which only holds while the test bodies never spin the run loop).
+        viewModel?.stopListening()
+        viewModel = nil
+        try await super.tearDown()
+    }
+
     private func makeSession(
         _ identifier: String,
         term: String,
@@ -55,16 +69,19 @@ final class SessionListViewModelTests: XCTestCase {
     private func makeViewModel(
         _ source: FakeSessionListSource
     ) -> SessionWatcher.SessionListViewModel {
-        SessionWatcher.SessionListViewModel(source: source, settingsStore: UserSettings.shared)
+        let viewModel = SessionWatcher.SessionListViewModel(source: source, settingsStore: UserSettings.shared)
+        self.viewModel = viewModel
+        return viewModel
     }
 
-    func testGroupsLiveSessionsByTerminalApp() {
+    func testGroupsLiveSessionsByTerminalApp() async {
         let source = FakeSessionListSource([
             makeSession("alpha", term: "iTerm.app", cwd: "/Users/me/projA"),
             makeSession("bravo", term: "WarpTerminal", cwd: "/Users/me/projB")
         ])
 
         let viewModel = makeViewModel(source)
+        await viewModel.reloadSessions()
 
         XCTAssertEqual(viewModel.groups.count, 2)
         XCTAssertEqual(viewModel.sessionCount, 2)
@@ -73,7 +90,7 @@ final class SessionListViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.groups.map(\.termProgram), ["iTerm.app", "WarpTerminal"])
     }
 
-    func testExcludesEndedEmptyAndRootCwdSessions() {
+    func testExcludesEndedEmptyAndRootCwdSessions() async {
         let source = FakeSessionListSource([
             makeSession("live", term: "iTerm.app", cwd: "/Users/me/projA", status: .active),
             makeSession("ended", term: "iTerm.app", cwd: "/Users/me/projB", status: .ended),
@@ -82,19 +99,28 @@ final class SessionListViewModelTests: XCTestCase {
         ])
 
         let viewModel = makeViewModel(source)
+        await viewModel.reloadSessions()
 
         XCTAssertEqual(viewModel.sessionCount, 1)
     }
 
-    func testSubscribesToSourceAndReloadsOnChange() {
+    func testSubscribesToSourceAndReloadsOnChange() async {
         let source = FakeSessionListSource([])
         let viewModel = makeViewModel(source)
 
         XCTAssertTrue(source.isObserving, "view model should subscribe to the source")
+        await viewModel.reloadSessions()
         XCTAssertEqual(viewModel.sessionCount, 0)
 
+        // The change signal triggers an async reload; wait for the republished count.
         source.sessions = [makeSession("alpha", term: "iTerm.app", cwd: "/Users/me/projA")]
+        let reloaded = expectation(description: "reload after change signal")
+        let token = viewModel.$sessionCount
+            .dropFirst()
+            .sink { if $0 == 1 { reloaded.fulfill() } }
         source.fireChange()
+        await fulfillment(of: [reloaded], timeout: 2)
+        token.cancel()
 
         XCTAssertEqual(viewModel.sessionCount, 1, "change signal should trigger a reload")
     }

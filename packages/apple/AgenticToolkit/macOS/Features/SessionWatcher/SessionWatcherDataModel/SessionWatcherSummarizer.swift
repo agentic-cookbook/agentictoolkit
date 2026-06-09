@@ -83,7 +83,7 @@ extension SessionWatcher {
         /// Summarizes a session by reading all its events from the database,
         /// building a prompt, and calling the configured AI provider.
         /// Throws `SummarizerError` on failure.
-        public func summarize(sessionId: String) async throws -> String {
+        public func generateSummary(sessionId: String) async throws -> String {
             // Check if enabled before any logging
             let summariesEnabled: Bool = await MainActor.run {
                 settingsStore.get(UserSettings.aiSummariesEnabled)
@@ -364,7 +364,7 @@ extension SessionWatcher {
 
             let summary: String
             do {
-                summary = try await summarize(sessionId: sessionId)
+                summary = try await generateSummary(sessionId: sessionId)
             } catch let error as SummarizerError where !error.isFatal {
                 // swiftlint:disable:next line_length
                 logger.debug("Skipping summarization for \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
@@ -583,7 +583,13 @@ extension SessionWatcher {
 
 extension SessionWatcher.SessionWatcherSummarizer: SessionWatcher.SessionSummarizing {
     /// Conformance to the window's summarize seam — delegates to the in-app pipeline.
+    ///
+    /// A *manual* request (this seam) surfaces the disabled state as a thrown error so
+    /// the UI can tell the user, unlike the automatic ingestion path
+    /// (`summarizeAndStore`), which stays silent by design.
     public func summarize(sessionId: String) async throws {
+        let enabled = await MainActor.run { settingsStore.get(UserSettings.aiSummariesEnabled) }
+        guard enabled else { throw SummarizerError.disabled }
         try await summarizeAndStore(sessionId: sessionId)
     }
 }

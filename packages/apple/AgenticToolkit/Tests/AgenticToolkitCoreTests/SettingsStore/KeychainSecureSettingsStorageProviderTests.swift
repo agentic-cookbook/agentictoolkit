@@ -5,6 +5,7 @@ import Combine
 @MainActor
 final class KeychainSecureStorageProviderTests: XCTestCase {
     var serviceID: String!
+    var originalService: String!
     var store: KeychainSecureSettingsStorageProvider!
     var cancellables: Set<AnyCancellable>!
 
@@ -12,6 +13,10 @@ final class KeychainSecureStorageProviderTests: XCTestCase {
     // and from the real bundle's keychain entries.
     override func setUp() async throws {
         try await super.setUp()
+        // Capture the global so tearDown can restore it: KeychainHelperTests (same
+        // bundle) documents that it relies on the default service, so this suite must
+        // not leave its per-run UUID service behind on the shared global.
+        originalService = KeychainHelper.service
         serviceID = "KeychainSettingsTests-\(UUID().uuidString)"
         store = KeychainSecureSettingsStorageProvider(service: serviceID)
         cancellables = []
@@ -28,6 +33,9 @@ final class KeychainSecureStorageProviderTests: XCTestCase {
         store.remove(UserSettings.launchCount)
         store.remove(UserSettings.hasCompletedOnboarding)
         store = nil
+        // Restore the global service this suite overrode in setUp.
+        KeychainHelper.service = originalService
+        originalService = nil
         try await super.tearDown()
     }
 

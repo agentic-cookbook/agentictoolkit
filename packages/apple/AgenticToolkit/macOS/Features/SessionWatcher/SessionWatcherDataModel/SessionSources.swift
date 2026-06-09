@@ -15,13 +15,13 @@ extension SessionWatcher {
 
     /// A read-only source of sessions for the Sessions window, plus a change signal.
     ///
-    /// `fetchSessions()` is synchronous so the view model's reload path stays simple:
-    /// a local DB read satisfies it directly, and an async/HTTP source satisfies it by
-    /// returning a cached snapshot that its own refresh loop keeps fresh (then calls
-    /// `onChange`).
-    public protocol SessionListSource: AnyObject {
+    /// `fetchSessions()` is `async` so a network-backed source (Stenographer's HTTP
+    /// daemon) can await its own fetch — or return a cached snapshot instantly — without
+    /// the seam forcing a synchronous read. A local DB source performs its (fast,
+    /// synchronous) read inside the async method.
+    public protocol SessionListSource: AnyObject, Sendable {
         /// The current set of sessions (the view model does its own grouping/filtering).
-        func fetchSessions() throws -> [SessionWatcherSession]
+        func fetchSessions() async throws -> [SessionWatcherSession]
 
         /// Begins delivering change notifications; `onChange` is invoked whenever the
         /// session set may have changed. Call again is a no-op-or-replace per source.

@@ -14,7 +14,7 @@ import Foundation
 
 extension SessionWatcher {
 
-    public final class WhippetSessionListSource: SessionListSource {
+    public final class WhippetSessionListSource: SessionListSource, @unchecked Sendable {
 
         private let databaseManager: SessionWatcherDatabaseManager
         private var observer: NSObjectProtocol?
@@ -27,7 +27,7 @@ extension SessionWatcher {
             stopObserving()
         }
 
-        public func fetchSessions() throws -> [SessionWatcherSession] {
+        public func fetchSessions() async throws -> [SessionWatcherSession] {
             try databaseManager.fetchAllSessions()
         }
 

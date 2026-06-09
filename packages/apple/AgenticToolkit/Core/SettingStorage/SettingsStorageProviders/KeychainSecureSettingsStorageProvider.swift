@@ -28,9 +28,10 @@ public final class KeychainSecureSettingsStorageProvider: SecureSettingsStorageP
     /// - Parameters:
     ///   - service: Optional service identifier override. Sets `KeychainHelper.service`
     ///     when non-nil. Pass `nil` (the default) to use the bundle identifier.
-    ///   - accessGroup: Optional shared Keychain access group. Sets
-    ///     `KeychainHelper.accessGroup` when non-nil so a co-signed binary (e.g. a
-    ///     daemon) carrying the matching entitlement can read the same items.
+    ///   - accessGroup: Optional shared Keychain access group, assigned to
+    ///     `KeychainHelper.accessGroup` (including `nil`, which clears any group a
+    ///     prior provider set) so a co-signed binary (e.g. a daemon) carrying the
+    ///     matching entitlement can read the same items.
     public init(
         service: String? = nil,
         accessGroup: String? = nil,
@@ -40,9 +41,12 @@ public final class KeychainSecureSettingsStorageProvider: SecureSettingsStorageP
         if let service {
             KeychainHelper.service = service
         }
-        if let accessGroup {
-            KeychainHelper.accessGroup = accessGroup
-        }
+        // Assign unconditionally: the default is `nil` (no group), so passing `nil`
+        // must CLEAR any group a previously-constructed provider left on the global —
+        // otherwise a later app-local provider silently inherits a shared group.
+        // (`service` keeps its conditional form because its default is the bundle id,
+        // which must not be clobbered with `nil`.)
+        KeychainHelper.accessGroup = accessGroup
         self.encoder = encoder
         self.decoder = decoder
     }

@@ -53,7 +53,10 @@ public enum AIRequestBuilder {
             return try buildOpenAIRequest(config: config, messages: messages, systemPrompt: systemPrompt,
                                           baseURL: config.customBaseURL)
         case .claudeCLI:
-            fatalError("This needs to be implemented")
+            // The Claude CLI provider doesn't issue HTTP requests; callers must branch
+            // on `provider.usesCLI` before reaching here. Surface a recoverable error
+            // rather than trapping the process from this shared (Core) layer.
+            throw AIRequestError.unsupportedProvider
         }
     }
 

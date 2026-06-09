@@ -40,6 +40,13 @@ public enum KeychainHelper {
 
         var query = makeQuery(account: key)
         query[kSecValueData as String] = data
+        if accessGroup != nil {
+            // Data-protection items default to `WhenUnlocked`. A co-signed daemon may
+            // run before first unlock or while the screen is locked, so make shared
+            // secrets readable after first unlock. `ThisDeviceOnly`: local app↔daemon
+            // secrets must never sync to iCloud or migrate off this machine.
+            query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        }
 
         let status = SecItemAdd(query as CFDictionary, nil)
         if status != errSecSuccess {
@@ -50,7 +57,23 @@ public enum KeychainHelper {
 
     /// Retrieves a value from the Keychain for the given account key.
     public static func get(forKey key: String) -> String? {
-        var query = makeQuery(account: key)
+        if let value = copyValue(forKey: key, accessGroup: accessGroup) {
+            return value
+        }
+        // Legacy migration: secrets written before an access group was configured live
+        // in the default keychain and are invisible to access-group / data-protection
+        // queries (and to a co-signed daemon). Recover one if present and re-store it
+        // under the current group so future reads — including the daemon's — succeed.
+        if accessGroup != nil, let legacy = copyValue(forKey: key, accessGroup: nil) {
+            set(legacy, forKey: key)
+            return legacy
+        }
+        return nil
+    }
+
+    /// Copies the stored string for an account, scoped to the given access group.
+    private static func copyValue(forKey key: String, accessGroup: String?) -> String? {
+        var query = makeQuery(account: key, accessGroup: accessGroup)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
 

@@ -54,9 +54,6 @@ extension SessionWatcher {
         private var refreshTimer: Timer?
         private var accessibilityTimer: Timer?
 
-        /// Project names we've ever seen — kept across reloads so groups don't disappear.
-        private var knownProjects: Set<String> = []
-
         /// The action handler for session click actions.
         public let actionHandler: SessionWatcherActionHandler
 
@@ -93,55 +90,56 @@ extension SessionWatcher {
 
         // MARK: - Data Loading
 
-        /// Loads active and stale sessions from the database and groups them by project.
-        /// Ended sessions are excluded. Known projects are kept even if they have no sessions.
+        /// Loads active and stale sessions from the source and groups them by project.
+        /// Ended sessions are excluded. Fire-and-forget: the actual work runs in
+        /// ``reloadSessions()`` so production call sites stay synchronous.
         public func loadSessions() {
+            Task { [weak self] in await self?.reloadSessions() }
+        }
+
+        /// Fetches from the source and republishes. The fetch is awaited off the main
+        /// actor (so a network source never blocks the UI); the published state is then
+        /// applied on the main actor. `internal` so tests can await a deterministic load.
+        func reloadSessions() async {
+            let allSessions: [SessionWatcherSession]
             do {
-                let allSessions = try source.fetchSessions()
-                let liveSessions = allSessions.filter { $0.status != .ended && !$0.cwd.isEmpty && $0.cwd != "/" }
-
-                // Group live sessions by terminal app
-                let sessionsByApp = Dictionary(grouping: liveSessions) { session -> String in
-                    session.termProgram.isEmpty ? "unknown" : session.termProgram
-                }
-
-                // Only track apps that currently have live sessions
-                knownProjects = Set(sessionsByApp.keys)
-
-                // Build groups for apps with live sessions, sorted by app name.
-                // Sessions within each group keep their DB insertion order (started_at ASC)
-                // so new sessions appear at the bottom.
-                let sortedGroups = sessionsByApp.keys
-                    .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-                    .compactMap { app -> SessionWatcherGroup? in
-                        let sessions = sessionsByApp[app] ?? []
-                        guard !sessions.isEmpty else { return nil }
-                        return SessionWatcherGroup(
-                            id: app,
-                            termProgram: app,
-                            sessions: sessions
-                        )
-                    }
-
-                let count = liveSessions.count
-                let activeCount = liveSessions.filter { $0.status == .active }.count
-                let empty = sortedGroups.isEmpty
-
-                if Thread.isMainThread {
-                    self.groups = sortedGroups
-                    self.isEmpty = empty
-                    self.sessionCount = count
-                    self.activeSessionCount = activeCount
-                } else {
-                    DispatchQueue.main.async { [weak self] in
-                        self?.groups = sortedGroups
-                        self?.isEmpty = empty
-                        self?.sessionCount = count
-                        self?.activeSessionCount = activeCount
-                    }
-                }
+                allSessions = try await source.fetchSessions()
             } catch {
                 logger.error("Failed to load sessions: \(error.localizedDescription, privacy: .public)")
+                return
+            }
+
+            let liveSessions = allSessions.filter { $0.status != .ended && !$0.cwd.isEmpty && $0.cwd != "/" }
+
+            // Group live sessions by terminal app
+            let sessionsByApp = Dictionary(grouping: liveSessions) { session -> String in
+                session.termProgram.isEmpty ? "unknown" : session.termProgram
+            }
+
+            // Build groups for apps with live sessions, sorted by app name.
+            // Sessions within each group keep their DB insertion order (started_at ASC)
+            // so new sessions appear at the bottom.
+            let sortedGroups = sessionsByApp.keys
+                .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+                .compactMap { app -> SessionWatcherGroup? in
+                    let sessions = sessionsByApp[app] ?? []
+                    guard !sessions.isEmpty else { return nil }
+                    return SessionWatcherGroup(
+                        id: app,
+                        termProgram: app,
+                        sessions: sessions
+                    )
+                }
+
+            let count = liveSessions.count
+            let activeCount = liveSessions.filter { $0.status == .active }.count
+            let empty = sortedGroups.isEmpty
+
+            await MainActor.run {
+                self.groups = sortedGroups
+                self.isEmpty = empty
+                self.sessionCount = count
+                self.activeSessionCount = activeCount
             }
         }
 
