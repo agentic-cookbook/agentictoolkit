@@ -69,7 +69,7 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
         isLoading = true
         accessibilityDenied = false
 
-        guard AXIsProcessTrusted() else {
+        guard SystemAccessibilityPermission.isGranted else {
             isLoading = false
             accessibilityDenied = true
             return
