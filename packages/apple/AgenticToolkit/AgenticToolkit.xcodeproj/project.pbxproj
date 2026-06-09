@@ -53,6 +53,7 @@
 		018BAA3BEC7E81B1EC6A6B06 /* NotesListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B79F54E44FA17A32F10648 /* NotesListViewController.swift */; };
 		0278D7F4A7E60DF7788A2F43 /* AIChatCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4D7CD70F49720EA92F1B42 /* AIChatCommands.swift */; };
 		02CE8B8B3EF061F8561BD836 /* AppleScriptRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06981BE7678C13904564EBF0 /* AppleScriptRunnerTests.swift */; };
+		02D1434BEF75F060D0C3A2E6 /* ClaudeCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DF57595093D7A815C86BA53 /* ClaudeCLI.swift */; };
 		063C07FB68027C7B91836EA9 /* WhippetChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CBDEAC1120C78D1B2462109 /* WhippetChatBackend.swift */; };
 		069321F695E18AE000164D44 /* SessionWatcherSummarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F10F200FE8B226C3D092BBE /* SessionWatcherSummarizer.swift */; };
 		077162A8A32ADFD9713F342B /* ScriptingHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA5D9118A1080C5EE9E8FD9 /* ScriptingHost.swift */; };
@@ -175,6 +176,7 @@
 		684F6017CF23B82D8F696159 /* LanguageDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85ABE851B5CCFC3FBFC8591 /* LanguageDetectionTests.swift */; };
 		6896BC5559FFE5093EE00AA6 /* FileTreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A9343C36100629E2F39BDF /* FileTreeManager.swift */; };
 		697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */; };
+		699D0BDBD0FF23DBFF85FD1C /* NSWindow+FitHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F3B2DDE9E4F4930EF59CDC /* NSWindow+FitHeight.swift */; };
 		6C620EF13FC80A3002135271 /* TerminalSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22AF47A752273B94A3878209 /* TerminalSessionManager.swift */; };
 		6CD239EECF2D94FBBE65D19D /* GitMetadataResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DED1F6D31B5242800F0151 /* GitMetadataResolver.swift */; };
 		6D8381DDE965C718F595FEDD /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0813A7282649BE9C8162E901 /* Project.swift */; };
@@ -686,6 +688,7 @@
 		0BEECDBE30F93A0D0C750E3B /* NotesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesManager.swift; sourceTree = "<group>"; };
 		0C2C97C2C2545E32DCD0C2F1 /* SessionsDatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsDatabaseManager.swift; sourceTree = "<group>"; };
 		0C86FC37F48D2DC557B60669 /* AIPluginManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginManagerTests.swift; sourceTree = "<group>"; };
+		0DF57595093D7A815C86BA53 /* ClaudeCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCLI.swift; sourceTree = "<group>"; };
 		0E574D92FE93D15A12138FEB /* WindowManagerSimulatedRelaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerSimulatedRelaunchTests.swift; sourceTree = "<group>"; };
 		0EC9AF6D58778C0D50626FC6 /* FileTreeNodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeNodeTests.swift; sourceTree = "<group>"; };
 		100B07B85D9C237535E20F8C /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
@@ -902,6 +905,7 @@
 		B6482AAB006B499689718564 /* TerminalSessionContentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionContentViewController.swift; sourceTree = "<group>"; };
 		B6C9D05F7EB1D05CAFE73F5E /* MathUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathUtils.swift; sourceTree = "<group>"; };
 		B6DD4B195BF0A65AE3DF6DF4 /* AgenticToolkitMacOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitMacOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6F3B2DDE9E4F4930EF59CDC /* NSWindow+FitHeight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSWindow+FitHeight.swift"; sourceTree = "<group>"; };
 		B80E4CA204954CD2D5B64C67 /* CheckboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxView.swift; sourceTree = "<group>"; };
 		B8C6F25D5AEDC37D45C4D7D3 /* ActivateAppCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivateAppCommand.swift; sourceTree = "<group>"; };
 		BA6F980C469F477A1897B613 /* TerminalSessionListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionListViewController.swift; sourceTree = "<group>"; };
@@ -1130,6 +1134,7 @@
 		1AD1C35610E9564E711A779D /* CoreUI */ = {
 			isa = PBXGroup;
 			children = (
+				B6F3B2DDE9E4F4930EF59CDC /* NSWindow+FitHeight.swift */,
 				5F83BBD3D83F2AB14DFF0FD2 /* Placeholder.swift */,
 			);
 			path = CoreUI;
@@ -1929,6 +1934,7 @@
 			children = (
 				500FB0294239707F62E39E98 /* AIProvider.swift */,
 				397A28ABB51ED004474C44A5 /* AIRequestBuilder.swift */,
+				0DF57595093D7A815C86BA53 /* ClaudeCLI.swift */,
 			);
 			path = AI;
 			sourceTree = "<group>";
@@ -2065,7 +2071,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_E4F4C7EE-66B3-44DC-A923-3D6E5A4DB6B0" /* Settings */ = {
+		"TEMP_9E2D904E-6169-4A0F-A8CE-2C0F927A79B5" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2789,6 +2795,7 @@
 				DFB45E982DB72965DBF94205 /* AIRequestBuilder.swift in Sources */,
 				17FE9EDC907863B301001ADD /* ChatBackend.swift in Sources */,
 				81BCC1A948810DDE2FF31ADC /* ChatStreamEvent.swift in Sources */,
+				02D1434BEF75F060D0C3A2E6 /* ClaudeCLI.swift in Sources */,
 				3FA882101362678876F45F83 /* CodableIgnored.swift in Sources */,
 				9F173A2DD1B90807959C4F6D /* ColorSetting.swift in Sources */,
 				85697B9B49D973C59F7390F0 /* InMemorySecureSettingsStorageProvider.swift in Sources */,
@@ -2894,6 +2901,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				699D0BDBD0FF23DBFF85FD1C /* NSWindow+FitHeight.swift in Sources */,
 				1074B44470516E280C4288D6 /* Placeholder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

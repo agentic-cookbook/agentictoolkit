@@ -134,15 +134,7 @@ extension SessionWatcher {
         }
 
         private func updatePanelHeight(to contentHeight: CGFloat) {
-            guard let panelWindow = window else { return }
-            let titleBarHeight = panelWindow.frame.height - panelWindow.contentLayoutRect.height
-            let screenMax = (panelWindow.screen ?? NSScreen.main)?.visibleFrame.height ?? 800
-            let newHeight = min(max(contentHeight + titleBarHeight, panelWindow.minSize.height), screenMax)
-            var frame = panelWindow.frame
-            guard abs(frame.height - newHeight) > 1 else { return }
-            frame.origin.y -= (newHeight - frame.height)
-            frame.size.height = newHeight
-            panelWindow.setFrame(frame, display: true, animate: false)
+            window?.fitHeight(toContentHeight: contentHeight)
         }
 
         // MARK: - NSWindowDelegate

@@ -139,7 +139,8 @@ public final class SessionSummarizer: @unchecked Sendable {
 
     // MARK: - Claude CLI Summarization
 
-    /// Runs `claude -p` with the prompt piped to stdin.
+    /// Runs `claude -p` with the prompt piped to stdin, via the shared `ClaudeCLI` runner
+    /// (one robust Process/Pipe implementation, also used by the Stenographer daemon).
     private func summarizeViaCLI(
         prompt: String,
         model: String,
@@ -148,106 +149,26 @@ public final class SessionSummarizer: @unchecked Sendable {
     ) async throws -> String {
         dbg.append("Using Claude CLI (model: \(model))")
 
-        // Find the claude binary
-        let claudePath = Self.findClaudeBinary()
-        guard let claudePath else {
-            dbg.append("BAIL: claude binary not found in PATH")
-            throw SummarizerError.apiError("Claude CLI not found. Install Claude Code or check your PATH.")
-        }
-        dbg.append("Claude binary: \(claudePath)")
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: claudePath)
-        var args = ["-p", "--system-prompt", Self.systemPrompt]
-        if !model.isEmpty {
-            args += ["--model", model]
-        }
-        process.arguments = args
-
-        let stdinPipe = Pipe()
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardInput = stdinPipe
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        // Inherit PATH so claude can find its dependencies
-        var env = ProcessInfo.processInfo.environment
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        let extraPaths = [
-            "\(homeDir)/.local/bin",
-            "/usr/local/bin",
-            "/opt/homebrew/bin"
-        ]
-        let existingPath = env["PATH"] ?? "/usr/bin:/bin"
-        env["PATH"] = (extraPaths + [existingPath]).joined(separator: ":")
-        process.environment = env
-
+        let reply: String
         do {
-            try process.run()
-        } catch {
-            dbg.append("BAIL: Failed to launch claude — \(error.localizedDescription)")
-            throw SummarizerError.apiError("Failed to launch claude: \(error.localizedDescription)")
-        }
-
-        // Write prompt to stdin and close
-        stdinPipe.fileHandleForWriting.write(Data(prompt.utf8))
-        stdinPipe.fileHandleForWriting.closeFile()
-
-        // Wait for completion (with timeout)
-        let timeoutTask = Task {
-            try await Task.sleep(for: .seconds(Self.requestTimeout))
-            if process.isRunning {
-                process.terminate()
-            }
-        }
-
-        process.waitUntilExit()
-        timeoutTask.cancel()
-
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        let reply = String(data: stdoutData, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let errorOutput = String(data: stderrData, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        dbg.append("Exit code: \(process.terminationStatus)")
-        if !errorOutput.isEmpty {
-            dbg.append("stderr: \(errorOutput.prefix(500))")
-        }
-
-        guard process.terminationStatus == 0 else {
-            let msg = errorOutput.isEmpty ? "Exit code \(process.terminationStatus)" : errorOutput
-            dbg.append("BAIL: claude exited with error")
-            throw SummarizerError.apiError("claude -p failed: \(String(msg.prefix(200)))")
+            reply = try await ClaudeCLI.run(
+                prompt: prompt,
+                systemPrompt: Self.systemPrompt,
+                model: model,
+                timeout: Self.requestTimeout
+            )
+        } catch let error as ClaudeCLI.CLIError {
+            dbg.append("BAIL: \(error.localizedDescription)")
+            if case .emptyReply = error { throw SummarizerError.emptyReply }
+            throw SummarizerError.apiError(error.localizedDescription)
         }
 
         dbg.append("--- REPLY ---")
         dbg.append(reply)
         dbg.append("--- END REPLY ---")
-
-        guard !reply.isEmpty else {
-            dbg.append("BAIL: Empty reply")
-            throw SummarizerError.emptyReply
-        }
-
         dbg.append("SUCCESS: Summary generated")
         logger.info("Generated summary for \(sessionId, privacy: .public): \(reply.prefix(80), privacy: .public)")
         return reply
-    }
-
-    /// Searches common locations for the `claude` binary.
-    private static func findClaudeBinary() -> String? {
-        let candidates = [
-            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/claude").path,
-            "/usr/local/bin/claude",
-            "/opt/homebrew/bin/claude"
-        ]
-        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
-            return path
-        }
-        return nil
     }
 
     // MARK: - API-based Summarization
