@@ -5,12 +5,12 @@ import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import os
 
-/// A single window discovered via the Accessibility API.
+/// A single window discovered from the system window list.
 public struct DiscoveredWindow: Identifiable {
-    public let id: Int
+    /// The window's CGWindowID — used to focus the window via the engine.
+    public let id: CGWindowID
     public let title: String
     public let pid: pid_t
-    public let axElement: AXUIElement
     /// Whether this window's title matches the session's project name.
     public let isMatch: Bool
 }
@@ -25,8 +25,12 @@ public struct DiscoveredApp: Identifiable {
     public var hasMatch: Bool { windows.contains { $0.isMatch } }
 }
 
-/// Discovers all on-screen windows using the Accessibility API and groups them by app.
-/// Does not require Screen Recording permission — only Accessibility.
+/// Discovers windows via the SystemWindow engine and groups them by app, including
+/// minimized and off-screen windows so the user can bring any of them back.
+///
+/// Works with Accessibility permission alone: when CGWindowListCopyWindowInfo omits a
+/// title (it does for other apps without Screen Recording permission), the engine
+/// backfills it via the Accessibility API.
 public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendable {
 
     // MARK: - Published State
@@ -41,6 +45,9 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
 
     /// Called after the user selects and activates a window so the panel can close.
     public var onWindowActivated: (() -> Void)?
+
+    /// The engine used to enumerate and focus other apps' windows.
+    private let windowManager = SystemWindowManager()
 
     // MARK: - Initialization
 
@@ -68,14 +75,15 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
             return
         }
 
-        // Snapshot app metadata on the main thread (NSWorkspace/NSRunningApplication are main-thread APIs)
+        // Snapshot app metadata on the main thread (NSWorkspace/NSRunningApplication
+        // are main-thread APIs). Only regular apps are eligible for discovery.
         let appSnapshots: [AppSnapshot] = NSWorkspace.shared.runningApplications.compactMap { app in
             guard app.activationPolicy == .regular else { return nil }
             return AppSnapshot(pid: app.processIdentifier, name: app.localizedName ?? "Unknown", icon: app.icon)
         }
         let projectName = session.projectName
 
-        // AX enumeration on a background thread — this is the slow part
+        // Window enumeration on a background thread.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             let results = self.enumerateWindows(for: appSnapshots, matching: projectName)
@@ -86,66 +94,63 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
         }
     }
 
-    /// Queries the Accessibility API for each snapshotted app's windows.
-    /// Safe to call from any thread — only uses AX C API and the pre-captured snapshots.
+    /// Groups the engine's windows by owning app, applies heuristic matching, and sorts.
+    /// Restricted to the snapshotted (regular) apps, with their icons. Uses the full
+    /// window list (including minimized/off-screen windows) so any window is reachable.
     private func enumerateWindows(for snapshots: [AppSnapshot], matching projectName: String) -> [DiscoveredApp] {
-        var result: [DiscoveredApp] = []
+        let snapshotsByPID = Dictionary(snapshots.map { ($0.pid, $0) }, uniquingKeysWith: { first, _ in first })
 
-        for app in snapshots {
-            let axApp = AXUIElementCreateApplication(app.pid)
-            var windowsRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
-                  let axWindows = windowsRef as? [AXUIElement] else { continue }
-
-            var windows: [DiscoveredWindow] = []
-            for (index, axWindow) in axWindows.enumerated() {
-                var titleRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &titleRef)
-                let title = (titleRef as? String) ?? ""
-
-                // Skip windows with empty titles (menus, toolbars, popups)
-                guard !title.isEmpty else { continue }
-
-                let isMatch = !projectName.isEmpty
-                    && projectName != "Unknown"
-                    && title.localizedCaseInsensitiveContains(projectName)
-
-                windows.append(DiscoveredWindow(
-                    id: Int(app.pid) * 10000 + index,
-                    title: title,
-                    pid: app.pid,
-                    axElement: axWindow,
-                    isMatch: isMatch
-                ))
-            }
-
-            guard !windows.isEmpty else { continue }
-
-            result.append(DiscoveredApp(
-                id: app.pid,
-                name: app.name,
-                icon: app.icon,
-                windows: windows
+        var windowsByPID: [pid_t: [DiscoveredWindow]] = [:]
+        for window in windowManager.listAllWindows() where !window.title.isEmpty {
+            // Keep only windows owned by a regular app we snapshotted.
+            guard snapshotsByPID[window.pid] != nil else { continue }
+            windowsByPID[window.pid, default: []].append(DiscoveredWindow(
+                id: window.id,
+                title: window.title,
+                pid: window.pid,
+                isMatch: Self.matches(window: window, projectName: projectName)
             ))
         }
 
-        // Sort: apps with matches first, then alphabetical
+        let result: [DiscoveredApp] = windowsByPID.compactMap { pid, windows in
+            guard let snapshot = snapshotsByPID[pid] else { return nil }
+            return DiscoveredApp(id: pid, name: snapshot.name, icon: snapshot.icon, windows: windows)
+        }
+
+        // Sort: apps with matches first, then alphabetical.
         return result.sorted { lhs, rhs in
             if lhs.hasMatch != rhs.hasMatch { return lhs.hasMatch }
             return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
     }
 
+    /// Heuristic match: extract the app-specific title pattern (Xcode/Warp/VSCode/…)
+    /// and test it against the session project name, falling back to the raw title so
+    /// existing substring matches still hold.
+    static func matches(window: SystemWindowInfo, projectName: String) -> Bool {
+        guard !projectName.isEmpty, projectName != "Unknown" else { return false }
+        let pattern = HeuristicRegistry.shared.heuristic(for: window.app)?
+            .extractPattern(from: window.title) ?? window.title
+        return pattern.localizedCaseInsensitiveContains(projectName)
+            || window.title.localizedCaseInsensitiveContains(projectName)
+    }
+
     // MARK: - Activation
 
-    /// Activates the selected window and its owning app.
+    /// Activates the selected window and its owning app via the engine.
+    ///
+    /// Only dismisses the panel when the focus actually succeeds; on failure it logs and
+    /// leaves the panel open so the user can retry or pick another window, rather than
+    /// silently closing as if it worked.
     public func activateWindow(_ window: DiscoveredWindow) {
         logger.info("WindowDiscovery: activating '\(window.title, privacy: .public)' (PID \(window.pid))")
-        if let app = NSRunningApplication(processIdentifier: window.pid) {
-            app.activate()
+        do {
+            try windowManager.focus(windowID: window.id)
+            onWindowActivated?()
+        } catch {
+            let reason = error.localizedDescription
+            logger.error("WindowDiscovery: focus failed (PID \(window.pid)): \(reason, privacy: .public)")
         }
-        AXUIElementPerformAction(window.axElement, kAXRaiseAction as CFString)
-        onWindowActivated?()
     }
 
     public func openAccessibilitySettings() {
