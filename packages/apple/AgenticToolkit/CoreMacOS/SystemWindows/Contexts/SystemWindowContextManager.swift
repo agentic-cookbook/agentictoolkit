@@ -151,16 +151,17 @@ public final class SystemWindowContextManager: Loggable {
     }
 
     /// Applies matched pairs from a re-matching result to update context snapshots.
+    ///
+    /// Every pair in `matchResult.matched` has already cleared the matcher's
+    /// auto-assign threshold (filtering happens in `SystemWindowMatcher.matchWindows`),
+    /// so each is applied unconditionally here.
     @discardableResult
     public func applyMatches(
-        _ matchResult: SystemWindowMatcher.MatchResult,
-        threshold: Int = SystemWindowMatcher.autoAssignThreshold
+        _ matchResult: SystemWindowMatcher.MatchResult
     ) throws -> Int {
         var applied = 0
 
         for match in matchResult.matched {
-            guard match.score >= threshold else { continue }
-
             guard let contextIndex = contexts.firstIndex(where: { $0.id == match.contextID }) else {
                 continue
             }
