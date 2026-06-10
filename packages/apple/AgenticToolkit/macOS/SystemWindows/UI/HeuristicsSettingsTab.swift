@@ -364,17 +364,3 @@ struct HeuristicRuleEditor: View {
         onSave(savedRule)
     }
 }
-
-// MARK: - MatchStrategy Display Extension
-
-extension MatchStrategy {
-    /// Human-readable display name for each strategy.
-    var displayName: String {
-        switch self {
-        case .appAndTitleExact: return "Exact"
-        case .appAndTitleSubstring: return "Substring"
-        case .appAndTitleRegex: return "Regex"
-        case .appOnly: return "App Only"
-        }
-    }
-}

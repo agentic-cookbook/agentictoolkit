@@ -18,4 +18,18 @@ public enum MatchStrategy: String, Codable, Equatable, Sendable, CaseIterable {
 
     /// Match by app name only (ignores title).
     case appOnly
+
+    /// Human-readable display name for each strategy.
+    ///
+    /// Lives here (public, beside the enum) to match `CustomMatchMode.displayName`
+    /// so any host rendering a strategy picker reads the label from the model
+    /// rather than reaching into the macOS framework's UI layer.
+    public var displayName: String {
+        switch self {
+        case .appAndTitleExact: return "Exact"
+        case .appAndTitleSubstring: return "Substring"
+        case .appAndTitleRegex: return "Regex"
+        case .appOnly: return "App Only"
+        }
+    }
 }
