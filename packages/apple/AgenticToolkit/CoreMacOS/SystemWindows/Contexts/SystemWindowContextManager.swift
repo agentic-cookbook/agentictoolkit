@@ -46,6 +46,11 @@ public final class SystemWindowContextManager: Loggable {
     /// The currently loaded custom heuristic rules.
     public private(set) var customHeuristicRules: [CustomHeuristicRule] = []
 
+    /// The on-disk directory where context state is persisted. Exposed so a
+    /// host's settings UI can show (and reveal) the state location without
+    /// hard-coding an app-specific path.
+    public var rootDirectory: URL { stateStore.rootDirectory }
+
     // MARK: - Initialization
 
     /// Creates a manager with the given dependencies.

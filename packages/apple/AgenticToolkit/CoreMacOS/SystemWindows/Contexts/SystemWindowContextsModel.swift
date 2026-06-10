@@ -489,6 +489,15 @@ public final class SystemWindowContextsModel: ObservableObject {
     /// Host-supplied plural noun for contexts (e.g. "Hairballs").
     public var contextNounPlural: String { configuration.contextNounPlural }
 
+    /// Name of the host app's own windows (e.g. "Hairball"), so views can
+    /// exclude the host itself from app-filter pickers without hard-coding it.
+    /// `nil` when the host excludes nothing.
+    public var selfAppName: String? { configuration.selfAppName }
+
+    /// The on-disk directory where context state is persisted, for a settings
+    /// UI to display and reveal in Finder.
+    public var stateDirectory: URL { contextManager.rootDirectory }
+
     /// Returns the current app settings.
     public var settings: SystemWindowContextsSettings {
         settingsSetting.value
