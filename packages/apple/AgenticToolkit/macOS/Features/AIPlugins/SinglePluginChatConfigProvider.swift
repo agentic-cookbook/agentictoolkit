@@ -1,4 +1,5 @@
 import Foundation
+import AIPluginKit
 import AgenticToolkitCore
 
 /// A `ChatConfigProvider` pinned to one specific plugin descriptor rather than the

@@ -1,4 +1,5 @@
 import AgenticToolkitCore
+import AIPluginKit
 import AgenticToolkitCoreMacOS
 import AppKit
 

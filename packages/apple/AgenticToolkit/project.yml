@@ -76,6 +76,8 @@ targets:
       - SwiftLint
     sources:
       - AIPluginKit
+    dependencies:
+      - target: AgenticToolkitCore
 
   AgenticToolkitCore:
     type: framework

@@ -1,4 +1,5 @@
 import Foundation
+import AIPluginKit
 import AgenticToolkitCore
 
 /// Default `ChatConfigProvider` backed by `PluginConfigStore`: it reports the

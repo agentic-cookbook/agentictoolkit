@@ -1,5 +1,4 @@
 import Foundation
-import AIPluginKit
 
 /// Drives one `AIRequestSpec` to completion and streams the decoded
 /// `AIStreamEvent`s, regardless of whether the plugin chose HTTP or a local
@@ -10,18 +9,18 @@ import AIPluginKit
 /// The decoder (`AIPlugin.makeDecoder`) is created *inside* the streaming task:
 /// it is not `Sendable` and holds per-response parsing state, so it must never
 /// be shared. The plugin itself is `Sendable`, so capturing it is safe.
-enum PluginTransport {
+public enum PluginTransport {
 
     /// A provider-level failure raised after the plugin described the request:
     /// a non-2xx HTTP response or a non-zero subprocess exit. The message is the
     /// plugin's own `describeError` text when it offers one, else a generic
     /// fallback.
-    enum TransportError: Error, LocalizedError {
+    public enum TransportError: Error, LocalizedError {
         case http(status: Int, message: String)
         case commandFailed(status: Int32, message: String)
         case invalidResponse
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .http(_, let message): return message
             case .commandFailed(_, let message): return message
@@ -32,7 +31,7 @@ enum PluginTransport {
 
     /// Performs `spec` and streams decoded events. Cancelling the consuming task
     /// cancels the underlying transfer or terminates the subprocess.
-    static func run(spec: AIRequestSpec, plugin: any AIPlugin) -> AsyncThrowingStream<AIStreamEvent, Error> {
+    public static func run(spec: AIRequestSpec, plugin: any AIPlugin) -> AsyncThrowingStream<AIStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {

@@ -1,4 +1,5 @@
 import Foundation
+import AIPluginKit
 import AgenticToolkitCore
 
 /// The single authoritative place that maps a plugin's descriptor onto persisted

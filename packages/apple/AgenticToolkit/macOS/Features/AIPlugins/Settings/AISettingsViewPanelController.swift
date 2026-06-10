@@ -1,4 +1,5 @@
 import AgenticToolkitCoreMacOS
+import AIPluginKit
 import AppKit
 
 /// The "AI" settings split view. One config panel per *discovered* plugin —

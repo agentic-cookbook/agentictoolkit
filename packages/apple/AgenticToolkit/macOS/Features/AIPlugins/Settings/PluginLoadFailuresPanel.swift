@@ -1,4 +1,5 @@
 import AgenticToolkitCoreMacOS
+import AIPluginKit
 import AppKit
 
 /// Settings panel shown when one or more plugins fail to load. Surfaces the

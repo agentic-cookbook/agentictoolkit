@@ -1,4 +1,5 @@
 import AppKit
+import AIPluginKit
 import OSLog
 import AgenticToolkitCore
 
