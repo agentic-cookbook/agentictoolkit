@@ -32,6 +32,10 @@ public struct SystemWindowContextsConfiguration: Sendable {
     /// or the default, "context").
     public let contextNoun: String
 
+    /// Plural noun for contexts in user-facing labels (e.g. "Hairballs" or the
+    /// default, "contexts"). Defaults to `contextNoun` + "s".
+    public let contextNounPlural: String
+
     /// Title for the reconcile user-notification.
     public let notificationTitle: String
 
@@ -45,6 +49,7 @@ public struct SystemWindowContextsConfiguration: Sendable {
         selfAppName: String? = nil,
         settingsKey: String,
         contextNoun: String = "context",
+        contextNounPlural: String? = nil,
         notificationTitle: String,
         notificationIdentifier: String,
         defaultContexts: [DefaultContext] = []
@@ -52,6 +57,7 @@ public struct SystemWindowContextsConfiguration: Sendable {
         self.selfAppName = selfAppName
         self.settingsKey = settingsKey
         self.contextNoun = contextNoun
+        self.contextNounPlural = contextNounPlural ?? (contextNoun + "s")
         self.notificationTitle = notificationTitle
         self.notificationIdentifier = notificationIdentifier
         self.defaultContexts = defaultContexts
@@ -475,6 +481,13 @@ public final class SystemWindowContextsModel: ObservableObject {
             logger.error("Failed to update context color: \(error.localizedDescription)")
         }
     }
+
+    /// Host-supplied singular noun for a context (e.g. "Hairball"), for views to
+    /// de-brand their labels without reaching into the configuration directly.
+    public var contextNoun: String { configuration.contextNoun }
+
+    /// Host-supplied plural noun for contexts (e.g. "Hairballs").
+    public var contextNounPlural: String { configuration.contextNounPlural }
 
     /// Returns the current app settings.
     public var settings: SystemWindowContextsSettings {
