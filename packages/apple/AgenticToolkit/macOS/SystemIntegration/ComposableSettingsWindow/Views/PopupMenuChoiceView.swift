@@ -33,6 +33,11 @@ extension ComposableSettings {
             self.popUpButton.target = self
             self.popUpButton.action = #selector(popupChanged(_:))
 
+            // The visible title label sits beside the popup but AppKit doesn't
+            // associate them, so VoiceOver would announce the popup with no name.
+            // Tie the label to the control as its accessibility title element.
+            self.popUpButton.setAccessibilityTitleUIElement(self.label)
+
             viewModel.onChange = { [weak self] _ in
                 self?.syncSelection()
             }
