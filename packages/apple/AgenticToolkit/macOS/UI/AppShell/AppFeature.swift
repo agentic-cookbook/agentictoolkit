@@ -20,17 +20,23 @@ open class AppFeature {
     /// Called once per launch, after the feature has been constructed and
     /// other features in the same launch wave are visible. Bring up
     /// long-running services here (timers, file watchers, ingestion, …).
-    public func start() throws {
+    ///
+    /// `open` so host apps in other modules can override it.
+    open func start() throws {
     }
 
     /// Called from `applicationWillTerminate(_:)`. Stop synchronous services
     /// here. Pair with `terminate()` for async cleanup.
-    public func stop() {
+    ///
+    /// `open` so host apps in other modules can override it.
+    open func stop() {
     }
 
     /// Called from `applicationWillTerminate(_:)`, after `stop()`. Use for
     /// async shutdown work like flushing pending saves.
-    public func terminate() async {
+    ///
+    /// `open` so host apps in other modules can override it.
+    open func terminate() async {
 
     }
 
@@ -53,13 +59,17 @@ open class AppFeature {
 
     /// Read the value for a key in `scriptingKeys`. Return `nil` if the key
     /// is unknown — the router will move on to the next contributor.
-    public func value(forScriptingKey key: String) -> Any? {
+    ///
+    /// `open` so host apps in other modules can override it.
+    open func value(forScriptingKey key: String) -> Any? {
         nil
     }
 
     /// Write the value for a key in `scriptingKeys`. Default no-op; override
     /// for read-write keys.
-    public func setValue(_ value: Any?, forScriptingKey key: String) {
+    ///
+    /// `open` so host apps in other modules can override it.
+    open func setValue(_ value: Any?, forScriptingKey key: String) {
 
     }
 

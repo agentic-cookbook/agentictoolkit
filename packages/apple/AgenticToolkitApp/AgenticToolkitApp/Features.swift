@@ -14,6 +14,7 @@ class Features {
     let aiChatCoordinator: AIChatCoordinator
     let summarizerDebug: SessionWatcher.SummarizerDebugCoordinator
     let sessionWatcherCoordinator: SessionWatcher.SessionWatcherCoordinator
+    let windowContextsCoordinator: WindowContextsCoordinator
     let settingsCoordinator: ComposableSettings.AppCoordinator
 
     let menuManager: MenuManager
@@ -26,6 +27,7 @@ class Features {
         self.terminalCoordinator = TerminalCoordinator()
         self.summarizerDebug = SessionWatcher.SummarizerDebugCoordinator()
         self.sessionWatcherCoordinator = SessionWatcher.SessionWatcherCoordinator()
+        self.windowContextsCoordinator = WindowContextsCoordinator()
 
         // Chat runs through the loaded plugins: the config provider reports the
         // user's selection (from the AI settings panel) and the backend asks the

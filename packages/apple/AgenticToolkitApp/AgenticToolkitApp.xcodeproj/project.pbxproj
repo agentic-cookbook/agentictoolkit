@@ -24,6 +24,7 @@
 		A860815445888B1ECA5B2927 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8DE707FA2CA51A09E03A8483 /* AgenticToolkitCore.framework */; };
 		DCC31AB0A13DD3C339AA79C3 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9D90A308FFB1350944749C5 /* AgenticToolkitCoreUI.framework */; };
 		E5D36452A8A159B11DD7B04F /* AgenticToolkitMacOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A03A4C321C9351071CD224A5 /* AgenticToolkitMacOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		F47B9255567A7D4E576D7997 /* WindowContextsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8824C7CA6D20F146F6EF6ACC /* WindowContextsCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -147,6 +148,7 @@
 		1B67010DACFE78CA174F35BE /* Features.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features.swift; sourceTree = "<group>"; };
 		68C69C566432A6C267AE692E /* AgenticToolkitApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgenticToolkitApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		711244F8F5F5CCE26995F087 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		8824C7CA6D20F146F6EF6ACC /* WindowContextsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowContextsCoordinator.swift; sourceTree = "<group>"; };
 		8B3E5EDF5F3976D706679DA4 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A20BEEA83D3D826F4BC4DADC /* AgenticToolkitAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA340F4FF6EF77C7FECDC7E0 /* AppFeaturesSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeaturesSmokeTests.swift; sourceTree = "<group>"; };
@@ -201,6 +203,7 @@
 				1B67010DACFE78CA174F35BE /* Features.swift */,
 				8B3E5EDF5F3976D706679DA4 /* main.swift */,
 				FB609791064AAA4A3FD0EF08 /* MenuManager.swift */,
+				8824C7CA6D20F146F6EF6ACC /* WindowContextsCoordinator.swift */,
 			);
 			path = AgenticToolkitApp;
 			sourceTree = "<group>";
@@ -416,6 +419,7 @@
 				95BF9B324E1937CD904F2BF3 /* AppDelegate.swift in Sources */,
 				4CFBFCE2E7C6DBA28FA44569 /* Features.swift in Sources */,
 				0A1672A29384E138CC1DCC19 /* MenuManager.swift in Sources */,
+				F47B9255567A7D4E576D7997 /* WindowContextsCoordinator.swift in Sources */,
 				24ED1EE749ABB6DFD85D9181 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -199,6 +199,7 @@
 		676D3CAB645D60F7A9F23F2F /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 8F9AB10D3AC2FB3C5BB6FE4D /* KeyboardShortcuts */; };
 		684F6017CF23B82D8F696159 /* LanguageDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85ABE851B5CCFC3FBFC8591 /* LanguageDetectionTests.swift */; };
 		6896BC5559FFE5093EE00AA6 /* FileTreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A9343C36100629E2F39BDF /* FileTreeManager.swift */; };
+		6977E8701F7260E6B1882CF3 /* SystemWindowSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C6E0E9EF8CC1D3E7E865B5 /* SystemWindowSettingsWindowController.swift */; };
 		697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */; };
 		699D0BDBD0FF23DBFF85FD1C /* NSWindow+FitHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F3B2DDE9E4F4930EF59CDC /* NSWindow+FitHeight.swift */; };
 		6C620EF13FC80A3002135271 /* TerminalSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22AF47A752273B94A3878209 /* TerminalSessionManager.swift */; };
@@ -1075,6 +1076,7 @@
 		F801935FF47FB37D7B8EB930 /* TerminalSessionLayoutState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionLayoutState.swift; sourceTree = "<group>"; };
 		F902FBE3A0B9FE99A0A4852C /* MCPServerConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfigurationTests.swift; sourceTree = "<group>"; };
 		F92FB7BCCF9327A97360842B /* WindowSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSpec.swift; sourceTree = "<group>"; };
+		F9C6E0E9EF8CC1D3E7E865B5 /* SystemWindowSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowSettingsWindowController.swift; sourceTree = "<group>"; };
 		F9CCB269D15E0F9F6CF57382 /* ShortcutsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsSettingsTab.swift; sourceTree = "<group>"; };
 		FAB1F42F7222138ED0FC86CC /* SessionWatcherEventIngestionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherEventIngestionManager.swift; sourceTree = "<group>"; };
 		FC30CF35DB65AE35FCEE6758 /* InMemorySettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemorySettingsStorageProvider.swift; sourceTree = "<group>"; };
@@ -1361,6 +1363,7 @@
 			children = (
 				421A8DD0B0A598874BE929C0 /* SystemWindowContextPickerPanel.swift */,
 				F5DC328EE579D93F8F566A10 /* SystemWindowDiscoveryWindowController.swift */,
+				F9C6E0E9EF8CC1D3E7E865B5 /* SystemWindowSettingsWindowController.swift */,
 			);
 			path = Windows;
 			sourceTree = "<group>";
@@ -2319,7 +2322,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_3DB1FC09-DA40-4516-B6DE-2BCA948A0F73" /* Settings */ = {
+		"TEMP_4E4145D5-7396-48A4-BFFA-96C3DAAE9FBC" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -2993,6 +2996,7 @@
 				6716519D57EA18D4BE9075DD /* SystemWindowContextPickerPanel.swift in Sources */,
 				8C9C0178B17C177BBF9B6B07 /* SystemWindowDiscoveryWindowController.swift in Sources */,
 				B9936352C2F14E8BB2746AB0 /* SystemWindowSettingsView.swift in Sources */,
+				6977E8701F7260E6B1882CF3 /* SystemWindowSettingsWindowController.swift in Sources */,
 				44A57C73AD49D4B30AA8482A /* SystemWindowShortcutManager.swift in Sources */,
 				DE83E361A79692954F82EAC6 /* SystemWindowShortcutNames.swift in Sources */,
 				E11925F3E5FAF07A8C37B196 /* TTYResolver.swift in Sources */,
