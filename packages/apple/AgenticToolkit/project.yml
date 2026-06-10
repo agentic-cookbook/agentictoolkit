@@ -64,6 +64,9 @@ packages:
     url: https://github.com/modelcontextprotocol/swift-sdk
     minVersion: "0.11.0"
     maxVersion: "1.0.0"
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.0.0"
 
 targets:
   AIPluginKit:
@@ -141,6 +144,7 @@ targets:
       - package: SwiftTerm
       - package: CodeEditSourceEditor
       - package: CodeEditLanguages
+      - package: KeyboardShortcuts
 
   AgenticToolkitCoreTests:
     type: bundle.unit-test
