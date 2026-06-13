@@ -1,12 +1,6 @@
 import AppKit
-import ApplicationServices
 import UserNotifications
-
-// `kAXTrustedCheckOptionPrompt` is an imported C global which Swift 6
-// strict-concurrency flags as not concurrency-safe. The literal CFString
-// value of that constant is "AXTrustedCheckOptionPrompt"; using the literal
-// avoids the global access entirely (the AX API just looks it up by string).
-private let axTrustedCheckOptionPromptKey: String = "AXTrustedCheckOptionPrompt"
+import AgenticToolkitCoreMacOS
 
 /// Enumerates the macOS permissions that Whippet requires to function.
 public enum AppPermission: Int, CaseIterable, Sendable {
@@ -56,7 +50,7 @@ public enum AppPermission: Int, CaseIterable, Sendable {
     public var isGranted: Bool {
         switch self {
         case .accessibility:
-            return AXIsProcessTrusted()
+            return SystemAccessibilityPermission.isGranted
         case .notifications:
             // Synchronous check — the actual async result is cached by NotificationManager,
             // but for the settings pane we do a synchronous snapshot.
@@ -85,8 +79,7 @@ public enum AppPermission: Int, CaseIterable, Sendable {
     public func openSettings() {
         switch self {
         case .accessibility:
-            let options = [axTrustedCheckOptionPromptKey: true] as CFDictionary
-            AXIsProcessTrustedWithOptions(options)
+            SystemAccessibilityPermission.request()
         case .notifications:
             if let bundleId = Bundle.main.bundleIdentifier,
                let url = URL(
@@ -107,11 +100,9 @@ public enum AppPermission: Int, CaseIterable, Sendable {
     public func request(completion: @escaping @Sendable (Bool) -> Void) {
         switch self {
         case .accessibility:
-            let options = [axTrustedCheckOptionPromptKey: true] as CFDictionary
-            let trusted = AXIsProcessTrustedWithOptions(options)
             // AX prompt is async — the user has to toggle it in Settings.
             // Return current state; the caller should poll.
-            completion(trusted)
+            completion(SystemAccessibilityPermission.request())
 
         case .notifications:
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in

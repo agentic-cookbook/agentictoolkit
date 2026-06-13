@@ -20,8 +20,10 @@ final class WindowContextsCoordinator: AppFeature {
 
     private let discoveryController: SystemWindowDiscoveryWindowController
     private let settingsController: SystemWindowSettingsWindowController
+    private let reconcileController: SystemWindowReconcileWindowController
     private var pickerPanel: SystemWindowContextPickerPanel?
     private var shortcutManager: SystemWindowShortcutManager?
+    private var pickerDismissObserver: NSObjectProtocol?
     private var cancellables = Set<AnyCancellable>()
 
     override init() {
@@ -39,6 +41,9 @@ final class WindowContextsCoordinator: AppFeature {
         self.model = model
         self.discoveryController = SystemWindowDiscoveryWindowController(model: model)
         self.settingsController = SystemWindowSettingsWindowController(model: model)
+        // Self-observes `showReconcileWindow`; retaining it is enough to surface
+        // the reconcile prompt when launch re-matching leaves unmatched windows.
+        self.reconcileController = SystemWindowReconcileWindowController(model: model)
 
         super.init()
 
@@ -91,14 +96,17 @@ final class WindowContextsCoordinator: AppFeature {
             }
             .store(in: &cancellables)
 
-        // The panel dismisses itself on Escape / focus loss; mirror that back
-        // into the model so the flag stays in sync.
-        NotificationCenter.default.addObserver(
-            forName: .contextPickerDismissed,
-            object: nil,
-            queue: .main
-        ) { [weak model] _ in
-            Task { @MainActor in model?.showContextPicker = false }
+        // The panel dismisses itself on Escape / focus loss; route that back into
+        // the model through the shared helper, retaining the token so `deinit`
+        // can remove it.
+        pickerDismissObserver = SystemWindowContextPickerPanel.observeDismissal(updating: model)
+    }
+
+    override func stop() {
+        super.stop()
+        if let observer = pickerDismissObserver {
+            NotificationCenter.default.removeObserver(observer)
+            pickerDismissObserver = nil
         }
     }
 
@@ -136,6 +144,9 @@ extension SystemWindowContextsConfiguration {
             .init(name: "Build", color: "#007AFF"),       // Blue
             .init(name: "Review", color: "#FF9500"),      // Orange
             .init(name: "Docs", color: "#AF52DE")         // Purple
-        ]
+        ],
+        // A regular app owns its own activation model; don't expose a
+        // "Show App in Dock" toggle that would override it.
+        managesAppActivationPolicy: false
     )
 }

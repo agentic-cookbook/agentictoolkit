@@ -45,6 +45,13 @@ public struct SystemWindowContextsConfiguration: Sendable {
     /// Contexts created on first launch when none exist.
     public let defaultContexts: [DefaultContext]
 
+    /// Whether this host manages its Dock visibility via the application
+    /// activation policy. `true` for menu-bar/accessory hosts (like Hairball),
+    /// where a "Show App in Dock" toggle makes sense; `false` for a regular app
+    /// that owns its own activation model — in which case the settings UI hides
+    /// that toggle and never mutates `NSApp`'s activation policy.
+    public let managesAppActivationPolicy: Bool
+
     public init(
         selfAppName: String? = nil,
         settingsKey: String,
@@ -52,7 +59,8 @@ public struct SystemWindowContextsConfiguration: Sendable {
         contextNounPlural: String? = nil,
         notificationTitle: String,
         notificationIdentifier: String,
-        defaultContexts: [DefaultContext] = []
+        defaultContexts: [DefaultContext] = [],
+        managesAppActivationPolicy: Bool = true
     ) {
         self.selfAppName = selfAppName
         self.settingsKey = settingsKey
@@ -61,6 +69,7 @@ public struct SystemWindowContextsConfiguration: Sendable {
         self.notificationTitle = notificationTitle
         self.notificationIdentifier = notificationIdentifier
         self.defaultContexts = defaultContexts
+        self.managesAppActivationPolicy = managesAppActivationPolicy
     }
 }
 
@@ -101,11 +110,24 @@ public final class SystemWindowContextsModel: ObservableObject {
     /// The custom heuristic rules currently loaded, for display in the Settings UI.
     @Published public private(set) var customHeuristicRules: [CustomHeuristicRule] = []
 
+    /// The current app settings, cached in memory and republished on change so
+    /// SwiftUI reads don't re-decode from `UserSettings` on every access.
+    @Published public private(set) var settings: SystemWindowContextsSettings
+
     /// Whether to send macOS notifications. Disabled in tests.
     public var notificationsEnabled: Bool = true
 
     /// Whether window observation is enabled. Disabled in tests.
     public var observationEnabled: Bool = true
+
+    /// This process's PID. Windows owned by us are never eligible for context
+    /// management — comparing PIDs is host-name-independent, unlike matching the
+    /// window owner's display name against a configured string.
+    private let ownProcessID = ProcessInfo.processInfo.processIdentifier
+
+    /// Whether first-launch default contexts should be seeded. Disabled in test
+    /// environments, independently of `observationEnabled`.
+    private let seedsDefaultContexts: Bool
 
     /// The cached match result from launch re-matching.
     private var lastMatchResult: SystemWindowMatcher.MatchResult?
@@ -128,20 +150,33 @@ public final class SystemWindowContextsModel: ObservableObject {
 
     // MARK: - Initialization
 
+    /// Whether the process is running inside an XCTest host. Used as the default
+    /// for `isTestEnvironment` so existing call sites keep their behavior; a
+    /// swift-testing suite that constructs the model can pass `true` explicitly.
+    public static var isRunningInTests: Bool {
+        NSClassFromString("XCTestCase") != nil
+    }
+
     public init(
         contextManager: SystemWindowContextManager,
         windowManager: SystemWindowControlling,
-        configuration: SystemWindowContextsConfiguration
+        configuration: SystemWindowContextsConfiguration,
+        isTestEnvironment: Bool = SystemWindowContextsModel.isRunningInTests
     ) {
         self.contextManager = contextManager
         self.windowManager = windowManager
         self.configuration = configuration
-        self.settingsSetting = UserSetting<SystemWindowContextsSettings>(
+        let settingsSetting = UserSetting<SystemWindowContextsSettings>(
             configuration.settingsKey,
             default: SystemWindowContextsSettings()
         )
-        // Disable notifications and observation in test environments
-        if NSClassFromString("XCTestCase") != nil {
+        self.settingsSetting = settingsSetting
+        self.settings = settingsSetting.value
+        // In a test environment, suppress notifications, window observation, and
+        // first-launch default-context seeding — each gated explicitly so a host
+        // that only wants one of them disabled isn't forced into all three.
+        self.seedsDefaultContexts = !isTestEnvironment
+        if isTestEnvironment {
             self.notificationsEnabled = false
             self.observationEnabled = false
         }
@@ -153,7 +188,7 @@ public final class SystemWindowContextsModel: ObservableObject {
         do {
             try contextManager.loadState()
             syncFromManager()
-            if contexts.isEmpty && observationEnabled {
+            if contexts.isEmpty && seedsDefaultContexts {
                 createDefaultContexts()
             }
         } catch {
@@ -288,24 +323,19 @@ public final class SystemWindowContextsModel: ObservableObject {
     ///
     /// For each unmatched item with candidates, the highest-scoring candidate is assigned.
     public func autoAssignAllRemainingMatches() {
-        var assignedCount = 0
-        // Work on a copy since we mutate during iteration
-        let currentItems = unmatchedItems
-
-        for item in currentItems {
-            guard let bestCandidate = item.candidates.first else { continue }
-
-            do {
-                try contextManager.assignWindowToSnapshot(
-                    windowID: bestCandidate.windowID,
-                    snapshotID: item.id,
-                    contextID: item.contextID
-                )
-                assignedCount += 1
-            } catch {
-                logger.error("Failed to auto-assign window \(bestCandidate.windowID): \(error.localizedDescription)")
-            }
+        // Build the assignment list once, then apply it in a single batch so the
+        // manager enumerates live windows and persists to disk once — not once
+        // per item.
+        let assignments = unmatchedItems.compactMap { item -> SystemWindowContextManager.SnapshotAssignment? in
+            guard let bestCandidate = item.candidates.first else { return nil }
+            return SystemWindowContextManager.SnapshotAssignment(
+                windowID: bestCandidate.windowID,
+                snapshotID: item.id,
+                contextID: item.contextID
+            )
         }
+
+        let assignedCount = contextManager.assignWindowsToSnapshots(assignments)
 
         if assignedCount > 0 {
             syncFromManager()
@@ -494,27 +524,33 @@ public final class SystemWindowContextsModel: ObservableObject {
     /// `nil` when the host excludes nothing.
     public var selfAppName: String? { configuration.selfAppName }
 
+    /// Whether this host manages its Dock visibility via the activation policy,
+    /// so the settings UI can hide the "Show App in Dock" control for hosts that
+    /// don't (see `SystemWindowContextsConfiguration.managesAppActivationPolicy`).
+    public var managesAppActivationPolicy: Bool { configuration.managesAppActivationPolicy }
+
     /// The on-disk directory where context state is persisted, for a settings
     /// UI to display and reveal in Finder.
     public var stateDirectory: URL { contextManager.rootDirectory }
 
-    /// Returns the current app settings.
-    public var settings: SystemWindowContextsSettings {
-        settingsSetting.value
+    /// Mutates the cached settings and writes them back to persistent storage in
+    /// one step, keeping the in-memory `@Published` copy and disk in sync (and
+    /// publishing the change to SwiftUI).
+    private func updateSettings(_ mutate: (inout SystemWindowContextsSettings) -> Void) {
+        var newSettings = settings
+        mutate(&newSettings)
+        settings = newSettings
+        settingsSetting.value = newSettings
     }
 
     /// Updates the launch-at-login setting.
     public func setLaunchAtLogin(_ enabled: Bool) {
-        var newSettings = settingsSetting.value
-        newSettings.launchAtLogin = enabled
-        settingsSetting.value = newSettings
+        updateSettings { $0.launchAtLogin = enabled }
     }
 
     /// Updates the reconcile behavior setting.
     public func setReconcileBehavior(_ behavior: ReconcileBehavior) {
-        var newSettings = settingsSetting.value
-        newSettings.reconcileBehavior = behavior
-        settingsSetting.value = newSettings
+        updateSettings { $0.reconcileBehavior = behavior }
     }
 
     /// Updates the show-app-in-dock setting (persistence only).
@@ -522,28 +558,22 @@ public final class SystemWindowContextsModel: ObservableObject {
     /// AppKit; the model keeps AppKit side-effects out of persistence so it
     /// stays usable from non-app contexts (tests, previews).
     public func setShowAppInDock(_ enabled: Bool) {
-        var newSettings = settingsSetting.value
-        newSettings.showAppInDock = enabled
-        settingsSetting.value = newSettings
+        updateSettings { $0.showAppInDock = enabled }
     }
 
     /// Adds an app name to the hidden apps filter list.
     public func addHiddenApp(_ appName: String) {
-        var newSettings = settingsSetting.value
-        guard !newSettings.hiddenApps.contains(appName) else { return }
-        newSettings.hiddenApps.append(appName)
-        newSettings.hiddenApps.sort()
-        settingsSetting.value = newSettings
-        objectWillChange.send()
+        guard !settings.hiddenApps.contains(appName) else { return }
+        updateSettings {
+            $0.hiddenApps.append(appName)
+            $0.hiddenApps.sort()
+        }
         logger.debug("Added '\(appName)' to hidden apps filter.")
     }
 
     /// Removes an app name from the hidden apps filter list.
     public func removeHiddenApp(_ appName: String) {
-        var newSettings = settingsSetting.value
-        newSettings.hiddenApps.removeAll { $0 == appName }
-        settingsSetting.value = newSettings
-        objectWillChange.send()
+        updateSettings { $0.hiddenApps.removeAll { $0 == appName } }
         logger.debug("Removed '\(appName)' from hidden apps filter.")
     }
 
@@ -558,9 +588,9 @@ public final class SystemWindowContextsModel: ObservableObject {
         }
     }
 
-    /// Returns all currently visible windows (excluding the host app itself).
+    /// Returns all currently visible windows (excluding the host app's own).
     public func listAllWindows() -> [SystemWindowInfo] {
-        windowManager.listAllWindows().filter { isForeignApp($0.app) }
+        windowManager.listAllWindows().filter { !isOwnWindow($0) }
     }
 
     /// Returns the context a window belongs to, if any.
@@ -568,11 +598,13 @@ public final class SystemWindowContextsModel: ObservableObject {
         contextManager.context(for: windowID)
     }
 
-    /// Whether an app name is not the host app's own (and thus eligible for
-    /// context management). When no `selfAppName` is configured, all apps qualify.
-    private func isForeignApp(_ app: String) -> Bool {
-        guard let selfAppName = configuration.selfAppName else { return true }
-        return app != selfAppName
+    /// Whether a window belongs to the host process itself (and is therefore not
+    /// eligible for context management). Compares the window owner's PID to this
+    /// process's PID, which is host-name-independent — unlike matching
+    /// `kCGWindowOwnerName` against a configured `selfAppName` string, which
+    /// silently fails when a host's display name differs from its process name.
+    private func isOwnWindow(_ window: SystemWindowInfo) -> Bool {
+        window.pid == ownProcessID
     }
 
     /// Adds the frontmost window to the active context.
@@ -588,7 +620,7 @@ public final class SystemWindowContextsModel: ObservableObject {
 
         // Find the frontmost window that isn't owned by the host app itself
         let windows = windowManager.listWindows()
-        guard let frontWindow = windows.first(where: { isForeignApp($0.app) }) else {
+        guard let frontWindow = windows.first(where: { !isOwnWindow($0) }) else {
             lastError = "No window found to add."
             return false
         }
@@ -633,7 +665,7 @@ public final class SystemWindowContextsModel: ObservableObject {
     @discardableResult
     public func removeFrontmostWindow() -> Bool {
         let windows = windowManager.listWindows()
-        guard let frontWindow = windows.first(where: { isForeignApp($0.app) }) else {
+        guard let frontWindow = windows.first(where: { !isOwnWindow($0) }) else {
             lastError = "No window found to remove."
             return false
         }

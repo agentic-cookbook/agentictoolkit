@@ -65,6 +65,23 @@ public final class SystemWindowContextPickerPanel: NSPanel {
 
     public override var canBecomeKey: Bool { true }
 
+    /// Installs a NotificationCenter observer that clears `model.showContextPicker`
+    /// when the panel self-dismisses (Escape / focus loss), so each host doesn't
+    /// re-implement the same bridge. The caller retains the returned token and
+    /// removes it when finished (e.g. in `deinit`).
+    @MainActor
+    public static func observeDismissal(
+        updating model: SystemWindowContextsModel
+    ) -> NSObjectProtocol {
+        NotificationCenter.default.addObserver(
+            forName: .contextPickerDismissed,
+            object: nil,
+            queue: .main
+        ) { [weak model] _ in
+            Task { @MainActor in model?.showContextPicker = false }
+        }
+    }
+
     public override func cancelOperation(_ sender: Any?) {
         orderOut(nil)
         DispatchQueue.main.async {

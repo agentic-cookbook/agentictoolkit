@@ -31,7 +31,9 @@ public final class SystemWindowDiscoveryWindowController: SingleWindowController
         )
         self.windowTitle = "Discover Windows"
         self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
-        self.minSize = NSSize(width: 420, height: 320)
+        // Single source of truth for the minimum size: track the spec rather than
+        // repeating the literal.
+        self.minSize = self.windowSpec?.minSize
     }
 
     public override func showWindow() {

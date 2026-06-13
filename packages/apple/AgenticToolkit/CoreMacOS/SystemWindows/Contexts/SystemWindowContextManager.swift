@@ -230,6 +230,59 @@ public final class SystemWindowContextManager: Loggable {
         try persistState()
     }
 
+    /// A single window→snapshot assignment for `assignWindowsToSnapshots`.
+    public struct SnapshotAssignment: Sendable {
+        public let windowID: UInt32
+        public let snapshotID: UUID
+        public let contextID: UUID
+        public init(windowID: UInt32, snapshotID: UUID, contextID: UUID) {
+            self.windowID = windowID
+            self.snapshotID = snapshotID
+            self.contextID = contextID
+        }
+    }
+
+    /// Assigns multiple live windows to dormant snapshots in a single pass,
+    /// enumerating live windows once and persisting once — instead of once per
+    /// assignment as repeated `assignWindowToSnapshot` calls would. Assignments
+    /// whose context or snapshot can't be resolved are skipped. Returns the count
+    /// applied.
+    @discardableResult
+    public func assignWindowsToSnapshots(_ assignments: [SnapshotAssignment]) -> Int {
+        guard !assignments.isEmpty else { return 0 }
+
+        let allWindows = windowManager.listAllWindows()
+        var applied = 0
+
+        for assignment in assignments {
+            guard let contextIndex = contexts.firstIndex(where: { $0.id == assignment.contextID }) else {
+                continue
+            }
+            let windowTitle = allWindows.first(where: { $0.id == assignment.windowID })?.title ?? ""
+
+            var savedFrameY: CGFloat = 0
+            let updated = contexts[contextIndex].updateSnapshot(id: assignment.snapshotID) { snapshot in
+                snapshot.windowID = assignment.windowID
+                snapshot.title = windowTitle
+                snapshot.lastSeen = Date()
+                savedFrameY = snapshot.savedFrame.origin.y
+            }
+            guard updated else { continue }
+
+            parkWindowIfContextInactive(
+                windowID: assignment.windowID,
+                contextID: assignment.contextID,
+                savedFrameY: savedFrameY
+            )
+            applied += 1
+        }
+
+        if applied > 0 {
+            try? persistState()
+        }
+        return applied
+    }
+
     /// Removes a dormant snapshot from its context.
     public func removeDormantSnapshot(snapshotID: UUID, contextID: UUID) throws {
         guard let contextIndex = contexts.firstIndex(where: { $0.id == contextID }) else {

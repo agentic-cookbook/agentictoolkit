@@ -1,6 +1,5 @@
 import AppKit
 import OSLog
-import ServiceManagement
 import SwiftUI
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
@@ -21,9 +20,14 @@ public struct GeneralSettingsTab: View {
                 Toggle("Launch at login", isOn: launchAtLoginBinding)
                     .help("Automatically start this app when you log in to your Mac.")
 
-                Toggle("Show App in Dock", isOn: showAppInDockBinding)
-                    .help("When enabled, the app appears in the Dock and Cmd-Tab switcher " +
-                          "like a regular app. When disabled, it runs as a menu-bar-only accessory.")
+                // Only menu-bar/accessory hosts manage their Dock visibility this
+                // way; a regular app owns its own activation model, so hide the
+                // toggle there rather than letting it hijack the host's policy.
+                if appState.managesAppActivationPolicy {
+                    Toggle("Show App in Dock", isOn: showAppInDockBinding)
+                        .help("When enabled, the app appears in the Dock and Cmd-Tab switcher " +
+                              "like a regular app. When disabled, it runs as a menu-bar-only accessory.")
+                }
             }
 
             Section("Window Reconciliation") {
@@ -146,24 +150,17 @@ public struct GeneralSettingsTab: View {
         )
     }
 
-    /// Registers or unregisters the app as a login item using SMAppService.
-    ///
-    /// SMAppService requires macOS 13+ and a bundled app. In SPM/debug builds
-    /// this may fail silently, which is acceptable.
+    /// Registers or unregisters the app as a login item via the toolkit's
+    /// `LaunchAtLoginManager`, which wraps `SMAppService` with error handling and
+    /// is unit-tested — rather than re-implementing the register/unregister dance
+    /// inline. In SPM/debug builds this may fail, which is acceptable.
     private func updateLoginItem(enabled: Bool) {
-        if #available(macOS 13.0, *) {
-            let service = SMAppService.mainApp
-            do {
-                if enabled {
-                    try service.register()
-                } else {
-                    try service.unregister()
-                }
-            } catch {
-                logger.error(
-                    "Failed to \(enabled ? "register" : "unregister") login item: \(error.localizedDescription)"
-                )
-            }
+        do {
+            try LaunchAtLoginManager().setEnabled(enabled)
+        } catch {
+            logger.error(
+                "Failed to \(enabled ? "register" : "unregister") login item: \(error.localizedDescription)"
+            )
         }
     }
 }

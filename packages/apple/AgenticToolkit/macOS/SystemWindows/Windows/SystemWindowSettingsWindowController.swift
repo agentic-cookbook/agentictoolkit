@@ -30,7 +30,9 @@ public final class SystemWindowSettingsWindowController: SingleWindowController 
         )
         self.windowTitle = "\(model.contextNounPlural) Settings"
         self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
-        self.minSize = NSSize(width: 480, height: 400)
+        // Single source of truth for the minimum size: track the spec rather than
+        // repeating the literal.
+        self.minSize = self.windowSpec?.minSize
     }
 
     public override func showWindow() {
