@@ -12,6 +12,15 @@ public final class ChatView: NSView, NSTextFieldDelegate {
     private let sendButton = NSButton()
     private var isAtBottom = true
 
+    /// The transcript width the bubbles were last laid out for. Bubbles bake in a
+    /// fixed width at build time (their text is pre-measured), so we rebuild them
+    /// when the width changes — see `layout()` — to keep them proportional on resize.
+    private var lastTranscriptWidth: CGFloat = 0
+
+    /// Bubbles cap at this fraction of the transcript width, so they read as chat
+    /// bubbles and grow/shrink with the window rather than spanning it.
+    private static let maxBubbleWidthFraction: CGFloat = 0.75
+
     public init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
         super.init(frame: .zero)
@@ -120,6 +129,18 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         ])
     }
 
+    /// Rebuild the transcript when the transcript width changes (window resize),
+    /// so the pre-measured bubbles reflow to the new proportional width. Guarded on
+    /// a width delta so the rebuild's own relayout doesn't recurse.
+    public override func layout() {
+        super.layout()
+        let width = transcriptScroll.contentView.bounds.width
+        if width > 0, abs(width - lastTranscriptWidth) > 1 {
+            lastTranscriptWidth = width
+            rebuildTranscript()
+        }
+    }
+
     private func bindViewModel() {
         viewModel.$messages
             .receive(on: DispatchQueue.main)
@@ -138,7 +159,7 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         transcriptStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         let scrollWidth = transcriptScroll.contentView.bounds.width
-        let maxBubbleWidth = max(scrollWidth - 32 - 16, 200)
+        let maxBubbleWidth = max(scrollWidth * Self.maxBubbleWidthFraction, 200)
 
         let topSpacer = NSView()
         topSpacer.translatesAutoresizingMaskIntoConstraints = false
