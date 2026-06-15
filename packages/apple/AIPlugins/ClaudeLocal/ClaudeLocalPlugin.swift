@@ -20,7 +20,10 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
         if let systemPrompt = context.systemPrompt, !systemPrompt.isEmpty {
             arguments += ["--system-prompt", systemPrompt]
         }
-        arguments += ["--max-turns", "1"]
+        // No `--max-turns` cap: the current Claude CLI intermittently exits
+        // non-zero with "Error: Reached max turns (1)" — sometimes returning no
+        // reply at all — even for a one-shot `-p` answer, which surfaces in chat
+        // as a generic failure. Let the CLI use its own turn budget for print mode.
 
         let prompt = Self.buildPrompt(messages: context.messages)
 
