@@ -16,4 +16,14 @@ public protocol WindowStateStorage {
     func loadVisibility(for id: String) -> Bool?
     func saveVisibility(_ visible: Bool, for id: String)
     func removeVisibility(for id: String)
+
+    /// IDs of every window whose last saved visibility is `true`. Lets
+    /// `WindowManager.restoreOnLaunch()` detect a window that was visible but has
+    /// no registered factory (a host wiring gap). Defaults to empty so in-memory
+    /// test doubles need not implement it.
+    func visibleWindowIDs() -> [String]
+}
+
+public extension WindowStateStorage {
+    func visibleWindowIDs() -> [String] { [] }
 }

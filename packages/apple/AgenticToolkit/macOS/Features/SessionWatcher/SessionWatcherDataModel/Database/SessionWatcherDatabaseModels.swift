@@ -61,7 +61,13 @@ extension SessionWatcher {
             return (cwd as NSString).lastPathComponent
         }
 
-        /// Derives the project name from the last path component of the working directory.
+        /// The last path component of the **working directory**.
+        ///
+        /// Use this for terminal-window-title matching (activation / liveness),
+        /// where the title reflects the cwd — NOT for the Sessions-window grouping
+        /// header, which uses ``projectGroupName`` (the project *root*). For a linked
+        /// worktree or a submodule subdir these two differ on purpose, so don't
+        /// substitute one for the other.
         public var projectName: String {
             guard !cwd.isEmpty, cwd != "/" else { return "Unknown" }
             return (cwd as NSString).lastPathComponent
@@ -74,7 +80,9 @@ extension SessionWatcher {
         }
 
         /// A human-readable name for the project group — the last path component
-        /// of ``projectGroupKey``.
+        /// of ``projectGroupKey`` (the project root). This is the Sessions-window
+        /// grouping/header name; contrast ``projectName`` (cwd-based, for
+        /// terminal-title matching).
         public var projectGroupName: String {
             let key = projectGroupKey
             guard !key.isEmpty, key != "/" else { return "Unknown" }

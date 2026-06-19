@@ -234,6 +234,26 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
         XCTAssertEqual(restored.origin.x, 1920 + (2560 - 600) / 2, accuracy: 1)
     }
 
+    // MARK: - Restore registration
+
+    func testRestoreOnLaunchBuildsEveryRegisteredRestorable() {
+        let provider = MockScreenProvider(screens: [
+            MockScreen(frame: NSRect(x: 0, y: 0, width: 1920, height: 1080),
+                       uuid: "MAIN", name: "Built-in", isMain: true)
+        ])
+        let windowManager = WindowManager(screenProvider: provider, storage: MockStorage())
+
+        var built: Set<String> = []
+        windowManager.registerRestorable(id: "alpha") { built.insert("alpha") }
+        windowManager.registerRestorable(id: "beta") { built.insert("beta") }
+
+        windowManager.restoreOnLaunch()
+
+        // Every registered factory runs so its controller is in the registry for the
+        // visibility-restore pass — the host no longer hand-constructs each window.
+        XCTAssertEqual(built, ["alpha", "beta"])
+    }
+
     // MARK: - Helper
 
     private func makeState(

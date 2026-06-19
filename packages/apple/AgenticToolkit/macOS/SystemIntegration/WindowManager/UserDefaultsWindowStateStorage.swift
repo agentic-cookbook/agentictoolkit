@@ -41,4 +41,11 @@ public struct UserDefaultsWindowStateStorage: WindowStateStorage {
     public func removeVisibility(for id: String) {
         UserDefaults.standard.removeObject(forKey: visibilityKeyPrefix + id)
     }
+
+    public func visibleWindowIDs() -> [String] {
+        UserDefaults.standard.dictionaryRepresentation().compactMap { key, value in
+            guard key.hasPrefix(visibilityKeyPrefix), (value as? Bool) == true else { return nil }
+            return String(key.dropFirst(visibilityKeyPrefix.count))
+        }
+    }
 }

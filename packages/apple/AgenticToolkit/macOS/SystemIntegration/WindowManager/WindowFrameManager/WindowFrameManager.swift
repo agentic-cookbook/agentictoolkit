@@ -163,6 +163,13 @@ public final class WindowFrameManager {
         return storage.loadVisibility(for: id)
     }
 
+    /// IDs of every window saved as visible (across launches). Used by
+    /// `WindowManager.restoreOnLaunch()` to flag a window that was visible but
+    /// isn't registered for restore.
+    public func visibleWindowIDs() -> [String] {
+        storage.visibleWindowIDs()
+    }
+
     /// Persists the window's current visible/hidden state. No-op when the
     /// window's spec doesn't opt in.
     public func saveVisibility(_ visible: Bool, for id: String) {
