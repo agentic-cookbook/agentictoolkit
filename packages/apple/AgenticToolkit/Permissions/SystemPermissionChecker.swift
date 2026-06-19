@@ -18,6 +18,11 @@ public struct SystemPermissionChecker: PermissionChecking {
     public func status(_ permission: Permission) async -> PermissionStatus {
         switch permission {
         case .accessibility:
+            // Deliberately re-calls the OS primitive rather than delegating to
+            // CoreMacOS's `SystemAccessibilityPermission`: this target is daemon-safe
+            // and must not depend on CoreMacOS (which pulls in AppKit). `AXIsProcessTrusted`
+            // is an OS-defined primitive, not knowledge we own, so the two thin
+            // wrappers can't meaningfully diverge.
             return AXIsProcessTrusted() ? .granted : .denied
         case .notifications:
             let settings = await UNUserNotificationCenter.current().notificationSettings()
