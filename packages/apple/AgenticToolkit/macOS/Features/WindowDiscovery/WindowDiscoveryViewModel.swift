@@ -154,7 +154,7 @@ public final class WindowDiscoveryViewModel: ObservableObject, @unchecked Sendab
     }
 
     public func openAccessibilitySettings() {
-        SessionWatcher.SessionWatcherPermissionPane.accessibility.open()
+        SystemAccessibilityPermission.request()
     }
 }
 

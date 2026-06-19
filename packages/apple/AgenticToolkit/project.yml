@@ -136,12 +136,13 @@ targets:
           - "Features/TerminalSession/Settings/TerminalSettingsPanelViewController.swift"
           - "SystemIntegration/Appearance/OldAppearanceSettingsPane.swift"
           - "SystemIntegration/Appearance/OldAppearanceSettingsPanelViewController.swift"
-          - "SystemIntegration/PermissionWalkthrough/OldSystemSettingsPane.swift"
           - "UI/Settings/SettingStorage/RGBAColor+NSColor.swift"
     dependencies:
       - target: AgenticToolkitCore
       - target: AgenticToolkitCoreUI
       - target: AgenticToolkitCoreMacOS
+      - target: AgenticToolkitPermissions
+      - target: AgenticToolkitPermissionsUI
       - target: AIPluginKit
       - package: SwiftTerm
       - package: CodeEditSourceEditor

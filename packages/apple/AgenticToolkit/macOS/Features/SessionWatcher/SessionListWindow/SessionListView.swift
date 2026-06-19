@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import AgenticToolkitPermissions
 
 extension SessionWatcher {
     /// The main AppKit view displayed inside the floating session palette.
@@ -81,10 +82,10 @@ extension SessionWatcher {
                 .store(in: &cancellables)
 
             viewModel.$lastActionError
-                .combineLatest(viewModel.$lastPermissionPane)
+                .combineLatest(viewModel.$lastRequiredPermission)
                 .receive(on: DispatchQueue.main)
-                .sink { [weak self] error, pane in
-                    self?.updateErrorBanner(error: error, pane: pane)
+                .sink { [weak self] error, permission in
+                    self?.updateErrorBanner(error: error, requiredPermission: permission)
                 }
                 .store(in: &cancellables)
         }
@@ -124,7 +125,7 @@ extension SessionWatcher {
             }
         }
 
-        private func updateErrorBanner(error: String?, pane: SessionWatcherPermissionPane?) {
+        private func updateErrorBanner(error: String?, requiredPermission: Permission?) {
             errorBanner?.removeFromSuperview()
             errorBanner = nil
 
@@ -132,7 +133,7 @@ extension SessionWatcher {
 
             let banner = SessionWatcherErrorBanner(
                 message: error,
-                isPermissionError: pane != nil,
+                isPermissionError: requiredPermission != nil,
                 onOpenSettings: { [weak self] in self?.viewModel.openPermissionSettings() }
             )
             banner.translatesAutoresizingMaskIntoConstraints = false

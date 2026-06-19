@@ -1,17 +1,28 @@
 import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
+import AgenticToolkitPermissions
+import AgenticToolkitPermissionsUI
 
-/// System panel: shows the live grant-state of every `AppPermission` in card
-/// rows that poll every 2 seconds, plus a button to reset the first-launch
-/// permission walkthrough. This panel doesn't bind any `UserSetting`s — it's
-/// a status/action surface, not a preferences surface.
+/// System panel: shows the live grant-state of each permission via the reusable
+/// `PermissionsPanelView`, plus a button to reset the first-launch walkthrough.
+/// This panel doesn't bind any `UserSetting`s — it's a status/action surface,
+/// not a preferences surface.
 @MainActor
 public final class PermissionsSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
-    private var permissionRows: [PermissionRowView] = []
+    /// Permissions the panel surfaces. Automation is per target app; the default
+    /// uses iTerm2, the common terminal for Claude Code sessions.
+    public static let defaultPermissions: [Permission] = [
+        .accessibility,
+        .notifications,
+        .automation(targetBundleID: "com.googlecode.iterm2")
+    ]
 
-    public init() {
+    private let permissions: [Permission]
+
+    public init(permissions: [Permission] = PermissionsSettingsPanelViewController.defaultPermissions) {
+        self.permissions = permissions
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Permissions",
             icon: NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
@@ -28,17 +39,6 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
         self.settingsView.addGroup(createWalkthroughGroup())
     }
 
-    public override func viewWillAppear() {
-        super.viewWillAppear()
-        // Re-read grant state every time the panel comes back into view.
-        // The original Whippet panel polled on a 2-second timer; Swift 6
-        // strict-concurrency makes that awkward to express here (NSViewController
-        // isn't Sendable, so [weak self] capture in a `@Sendable` Timer block
-        // fails). Refresh-on-appear is good enough for now — surface this if
-        // you want continuous polling.
-        permissionRows.forEach { $0.refresh() }
-    }
-
     private func createPermissionsGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Permissions")
 
@@ -46,11 +46,9 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
             withText: "The following permissions are required to monitor and activate Claude Code sessions."
         ))
 
-        for permission in AppPermission.allCases {
-            let row = PermissionRowView(permission: permission)
-            self.permissionRows.append(row)
-            group.addSettingSubview(row)
-        }
+        // PermissionsPanelView refreshes itself on appear and on app
+        // reactivation (e.g. returning from System Settings) — no polling timer.
+        group.addSettingSubview(PermissionsPanelView(permissions: permissions))
 
         return group
     }

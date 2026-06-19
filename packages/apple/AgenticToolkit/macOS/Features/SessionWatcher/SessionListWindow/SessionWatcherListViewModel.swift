@@ -1,6 +1,8 @@
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import AgenticToolkitPermissions
+import AgenticToolkitPermissionsUI
 
 import AppKit
 import ApplicationServices
@@ -61,8 +63,8 @@ extension SessionWatcher {
         /// The last error message from a click action, shown briefly in the UI.
         @Published public var lastActionError: String?
 
-        /// If the last error was a permission issue, the Settings pane the user should open.
-        @Published public var lastPermissionPane: SessionWatcherPermissionPane?
+        /// If the last error was a permission issue, the permission the user must grant.
+        @Published public var lastRequiredPermission: Permission?
 
         /// The session summarizer for manual AI summarization.
         public var sessionSummarizer: SessionSummarizing?
@@ -242,7 +244,7 @@ extension SessionWatcher {
                 if case .success = result {
                     log.append("  execute() returned success")
                     lastActionError = nil
-                    lastPermissionPane = nil
+                    lastRequiredPermission = nil
 
                     // Verify activation actually worked after the target app has time to process
                     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -281,10 +283,10 @@ extension SessionWatcher {
                     // If it's a permission error, show it
                     if case .permissionDenied = error {
                         lastActionError = error.localizedDescription
-                        lastPermissionPane = error.permissionPane
+                        lastRequiredPermission = error.requiredPermission
                         DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
                             self?.lastActionError = nil
-                            self?.lastPermissionPane = nil
+                            self?.lastRequiredPermission = nil
                         }
                         return
                     }
@@ -294,7 +296,7 @@ extension SessionWatcher {
                 log.append("  Falling back to bringing terminal app to front")
                 Self.activateTerminalApp(termProgram: session.termProgram)
                 lastActionError = nil
-                lastPermissionPane = nil
+                lastRequiredPermission = nil
                 return
             }
 
@@ -302,23 +304,26 @@ extension SessionWatcher {
             switch result {
             case .success:
                 lastActionError = nil
-                lastPermissionPane = nil
+                lastRequiredPermission = nil
             case .failure(let error):
                 lastActionError = error.localizedDescription
-                lastPermissionPane = error.permissionPane
+                lastRequiredPermission = error.requiredPermission
                 // swiftlint:disable:next line_length
                 logger.warning("Click action failed for session \(session.sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)")
 
-                let delay: TimeInterval = error.permissionPane != nil ? 10 : 4
+                let delay: TimeInterval = error.requiredPermission != nil ? 10 : 4
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                     self?.lastActionError = nil
-                    self?.lastPermissionPane = nil
+                    self?.lastRequiredPermission = nil
                 }
             }
         }
 
         public func openPermissionSettings() {
-            lastPermissionPane?.open()
+            guard let permission = lastRequiredPermission else { return }
+            Task { @MainActor in
+                await PermissionPresenter.present(permission, using: SystemPermissionChecker())
+            }
         }
 
         // MARK: - Activation Test

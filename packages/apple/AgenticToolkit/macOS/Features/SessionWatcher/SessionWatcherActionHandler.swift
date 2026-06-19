@@ -1,6 +1,7 @@
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
+import AgenticToolkitPermissions
 
 import AppKit
 import ApplicationServices
@@ -9,36 +10,6 @@ import os
 
 extension SessionWatcher {
 
-    /// The System Settings pane to open when guiding the user to fix a permission.
-    public enum SessionWatcherPermissionPane: String, Sendable {
-        case accessibility
-        case automation = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
-        case notifications = "x-apple.systempreferences:com.apple.preference.security?Privacy_Notifications"
-
-        public var displayName: String {
-            switch self {
-            case .accessibility: return "Accessibility"
-            case .automation: return "Automation"
-            case .notifications: return "Notifications"
-            }
-        }
-
-        public func open() {
-            switch self {
-            case .accessibility:
-                logger.info("Opening Accessibility settings via AXIsProcessTrustedWithOptions")
-                let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-                let trusted = AXIsProcessTrustedWithOptions(options)
-                logger.info("AXIsProcessTrustedWithOptions returned: \(trusted)")
-            default:
-                logger.info("Opening System Settings URL: \(rawValue, privacy: .public)")
-                if let url = URL(string: rawValue) {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-        }
-    }
-
     /// Errors that can occur when executing a session click action.
     public enum SessionWatcherActionError: Error, LocalizedError {
         case directoryNotFound(String)
@@ -46,7 +17,7 @@ extension SessionWatcher {
         case commandFailed(String)
         case notificationFailed(String)
         case noActionConfigured
-        case permissionDenied(String, pane: SessionWatcherPermissionPane)
+        case permissionDenied(String, requiredPermission: Permission)
 
         public var errorDescription: String? {
             switch self {
@@ -65,9 +36,9 @@ extension SessionWatcher {
             }
         }
 
-        /// If this is a permission error, returns the pane the user should open.
-        public var permissionPane: SessionWatcherPermissionPane? {
-            if case .permissionDenied(_, let pane) = self { return pane }
+        /// If this is a permission error, the permission the user needs to grant.
+        public var requiredPermission: Permission? {
+            if case .permissionDenied(_, let permission) = self { return permission }
             return nil
         }
     }
@@ -207,7 +178,9 @@ extension SessionWatcher {
                     appleScript.executeAndReturnError(&error)
                     if let error = error {
                         logger.warning("openTerminal: iTerm2 error: \(String(describing: error), privacy: .public)")
-                        if let permError = appleScriptPermissionError(error, appName: "iTerm2") {
+                        if let permError = appleScriptPermissionError(
+                            error, appName: "iTerm2", bundleID: "com.googlecode.iterm2"
+                        ) {
                             return .failure(permError)
                         }
                         return openTerminalApp(at: expandedPath)
@@ -232,7 +205,9 @@ extension SessionWatcher {
             if let appleScript = NSAppleScript(source: script) {
                 appleScript.executeAndReturnError(&error)
                 if let error = error {
-                    if let permError = appleScriptPermissionError(error, appName: "Terminal") {
+                    if let permError = appleScriptPermissionError(
+                        error, appName: "Terminal", bundleID: "com.apple.Terminal"
+                    ) {
                         return .failure(permError)
                     }
                     return .failure(.commandFailed("Terminal.app script error: \(error)"))
@@ -322,7 +297,7 @@ extension SessionWatcher {
                 logger.error("activateWarp: Accessibility permission not granted")
                 return .failure(.permissionDenied(
                     "Whippet needs Accessibility access to raise Warp windows. Grant access in System Settings.",
-                    pane: .accessibility
+                    requiredPermission: .accessibility
                 ))
             }
 
@@ -397,25 +372,36 @@ extension SessionWatcher {
                 return .failure(.commandFailed("No project name to match — session has no working directory"))
             }
 
-            guard Self.isAccessibilityTrusted else {
-                return .failure(.permissionDenied(
-                    "Whippet needs Accessibility access to discover windows. Grant access in System Settings.",
-                    pane: .accessibility
-                ))
-            }
-
             // Strategy 1: For iTerm2 sessions, try TTY-based tab activation first.
             // iTerm2 window titles show Claude's session names, not project names,
-            // so AX title matching won't work. TTY matching is precise.
+            // so AX title matching won't work. TTY matching is precise. This path
+            // drives iTerm2 via AppleScript, which needs Automation permission
+            // (not Accessibility) — so it runs *before* the Accessibility gate, and
+            // surfaces an Automation permission error if denied.
             if session.termProgram == "iTerm.app" && session.pid > 0 {
                 if let tty = ttyForPid(session.pid) {
                     log.append("  iTerm TTY strategy: pid=\(session.pid) tty=\(tty)")
-                    if activateITermByTTY(tty: tty) {
+                    switch activateITermByTTY(tty: tty) {
+                    case .activated:
                         log.append("  iTerm TTY activation succeeded")
                         return .success
+                    case .permissionDenied(let error):
+                        log.append("  iTerm TTY activation denied — needs Automation permission")
+                        return .failure(error)
+                    case .notFound:
+                        log.append("  iTerm TTY activation: no match, falling through to AX scan")
                     }
-                    log.append("  iTerm TTY activation failed, falling through to AX scan")
                 }
+            }
+
+            // Strategy 2 onward scans windows via the Accessibility API, which needs
+            // Accessibility permission. Check it here — after the iTerm2 path — so an
+            // iTerm2 switch isn't blocked on the wrong permission.
+            guard Self.isAccessibilityTrusted else {
+                return .failure(.permissionDenied(
+                    "Whippet needs Accessibility access to discover windows. Grant access in System Settings.",
+                    requiredPermission: .accessibility
+                ))
             }
 
             // Strategy 2: Collect all candidate windows across all apps, scored by match quality
@@ -710,8 +696,21 @@ extension SessionWatcher {
             }
         }
 
+        /// Outcome of attempting to activate an iTerm2 tab by TTY.
+        private enum ITermActivation {
+            case activated
+            case notFound
+            case permissionDenied(SessionWatcherActionError)
+        }
+
         /// Activates the iTerm2 tab whose session is on the given TTY.
-        private func activateITermByTTY(tty: String) -> Bool {
+        ///
+        /// Driving iTerm2 via AppleScript needs Automation permission; a denial
+        /// surfaces as `errAEEventNotPermitted` (-1743), which we map to a
+        /// `.permissionDenied` error (pointing at the Automation pane) rather than
+        /// swallowing it as a generic miss — that swallowing was why a missing
+        /// Automation grant looked like a failed Accessibility check.
+        private func activateITermByTTY(tty: String) -> ITermActivation {
             let devTTY = tty.hasPrefix("/dev/") ? tty : "/dev/\(tty)"
             let script = """
         tell application "iTerm2"
@@ -729,10 +728,18 @@ extension SessionWatcher {
         end tell
         """
             var error: NSDictionary?
-            guard let appleScript = NSAppleScript(source: script) else { return false }
+            guard let appleScript = NSAppleScript(source: script) else { return .notFound }
             let result = appleScript.executeAndReturnError(&error)
-            if error != nil { return false }
+            if let error {
+                if let permError = appleScriptPermissionError(
+                    error, appName: "iTerm2", bundleID: "com.googlecode.iterm2"
+                ) {
+                    return .permissionDenied(permError)
+                }
+                return .notFound
+            }
             return result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) == "found"
+                ? .activated : .notFound
         }
 
         // MARK: - Helpers
@@ -758,8 +765,13 @@ extension SessionWatcher {
         }
 
         /// Checks an AppleScript error dictionary for authorization/permission failures.
-        /// Returns a `.permissionDenied` error if detected, nil otherwise.
-        private func appleScriptPermissionError(_ error: NSDictionary, appName: String) -> SessionWatcherActionError? {
+        /// Returns a `.permissionDenied` error (carrying the Automation permission for
+        /// `bundleID`) if detected, nil otherwise.
+        private func appleScriptPermissionError(
+            _ error: NSDictionary,
+            appName: String,
+            bundleID: String
+        ) -> SessionWatcherActionError? {
             let errorNumber = error[NSAppleScript.errorNumber] as? Int
             let errorMessage = error[NSAppleScript.errorMessage] as? String ?? ""
 
@@ -773,7 +785,7 @@ extension SessionWatcher {
                 return .permissionDenied(
                     "Whippet needs permission to control \(appName)."
                     + " Grant access in System Settings > Privacy & Security > Automation.",
-                    pane: .automation
+                    requiredPermission: .automation(targetBundleID: bundleID)
                 )
             }
             return nil
@@ -781,9 +793,5 @@ extension SessionWatcher {
     }
 }
 extension SessionWatcher.SessionWatcherActionHandler: Loggable {
-    public static nonisolated let logger = makeLogger()
-}
-
-extension SessionWatcher.SessionWatcherPermissionPane: Loggable {
     public static nonisolated let logger = makeLogger()
 }

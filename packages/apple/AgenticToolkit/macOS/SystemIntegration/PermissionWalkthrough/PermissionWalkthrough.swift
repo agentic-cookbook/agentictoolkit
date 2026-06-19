@@ -1,9 +1,12 @@
 import AppKit
-import ApplicationServices
+import AgenticToolkitPermissions
+import AgenticToolkitPermissionsUI
 
-/// Walks the user through granting each required permission on first launch.
-/// Shows one modal sheet per permission, waits for the user to grant it (polling),
-/// then advances to the next. Skips permissions already granted.
+/// Walks the user through granting each required permission on first launch by
+/// presenting a single window hosting the reusable `PermissionsPanelView` for
+/// the not-yet-granted permissions. The panel refreshes itself as permissions
+/// are granted (on app reactivation), so there's no polling timer; the user
+/// clicks Done when finished.
 @MainActor
 public final class PermissionWalkthrough: AppFeature {
 
@@ -20,219 +23,86 @@ public final class PermissionWalkthrough: AppFeature {
         UserDefaults.standard.removeObject(forKey: walkthroughCompleteKey)
     }
 
-    private var permissions: [AppPermission]
-    private var currentIndex = 0
-    private var completion: (() -> Void)?
-    private var pollingTimer: Timer?
+    private let permissions: [Permission]
+    private let checker: any PermissionChecking
     private let windowController = PermissionWalkthroughWindowController()
-    private var statusDot: NSView?
-    private var statusLabel: NSTextField?
+    private var completion: (() -> Void)?
 
     public override init() {
-        self.permissions = AppPermission.allCases
+        self.permissions = [.accessibility, .notifications]
+        self.checker = SystemPermissionChecker()
     }
 
-    /// Runs the walkthrough if it hasn't been completed yet.
-    /// Calls `completion` when all permissions have been addressed.
+    /// Runs the walkthrough if it hasn't been completed, skipping permissions
+    /// already granted. Calls `completion` when done.
     public func runIfNeeded(completion: @escaping () -> Void) {
         guard !Self.isComplete else {
             completion()
             return
         }
-
-        // Filter to only permissions not yet granted
-        let pending = permissions.filter { !$0.isGranted }
-        guard !pending.isEmpty else {
-            markComplete()
-            completion()
-            return
-        }
-
-        self.permissions = pending
         self.completion = completion
-        self.currentIndex = 0
-        showCurrentPermission()
+
+        Task { @MainActor in
+            var pending: [Permission] = []
+            for permission in permissions where await !checker.isGranted(permission) {
+                pending.append(permission)
+            }
+            guard !pending.isEmpty else {
+                Self.markComplete()
+                completion()
+                return
+            }
+            self.present(pending: pending)
+        }
     }
 
-    private func showCurrentPermission() {
-        guard currentIndex < permissions.count else {
-            markComplete()
-            dismissWindow()
-            completion?()
-            return
-        }
+    private func present(pending: [Permission]) {
+        let container = windowController.contentContainer
+        container.subviews.forEach { $0.removeFromSuperview() }
 
-        let permission = permissions[currentIndex]
-
-        // If already granted, skip to next
-        if permission.isGranted {
-            currentIndex += 1
-            showCurrentPermission()
-            return
-        }
-
-        presentPermissionWindow(for: permission)
-    }
-
-    private func presentPermissionWindow(for permission: AppPermission) {
-        // Reuse the controller's container; clear any previous permission's UI.
-        let contentView = windowController.contentContainer
-        contentView.subviews.forEach { $0.removeFromSuperview() }
-
-        let stack = NSStackView()
-        stack.orientation = .vertical
-        stack.spacing = 14
-        stack.alignment = .centerX
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        // Icon
-        let icon = NSImageView()
-        icon.image = NSImage(systemSymbolName: permission.systemImage, accessibilityDescription: nil)
-        icon.symbolConfiguration = .init(pointSize: 32, weight: .regular)
-        icon.contentTintColor = .controlAccentColor
-
-        // Title
-        let title = NSTextField(labelWithString: "\(permission.displayName) Permission")
+        let title = NSTextField(labelWithString: "Grant Permissions")
         title.font = .systemFont(ofSize: 18, weight: .semibold)
-        title.alignment = .center
 
-        // Explanation
-        let explanation = NSTextField(wrappingLabelWithString: permission.explanation)
-        explanation.font = .systemFont(ofSize: 13)
+        let explanation = NSTextField(wrappingLabelWithString:
+            "These permissions let the app monitor and activate your Claude Code sessions."
+            + " Grant them in System Settings — this list updates automatically.")
+        explanation.font = .systemFont(ofSize: 12)
         explanation.textColor = .secondaryLabelColor
-        explanation.alignment = .center
         explanation.translatesAutoresizingMaskIntoConstraints = false
 
-        // Settings path
-        let pathLabel = NSTextField(labelWithString: permission.settingsPath)
-        pathLabel.font = .systemFont(ofSize: 12, weight: .medium)
-        pathLabel.textColor = .tertiaryLabelColor
-        pathLabel.alignment = .center
+        let panel = PermissionsPanelView(permissions: pending, checker: checker)
 
-        // Status indicator
-        let dot = NSView()
-        dot.wantsLayer = true
-        dot.layer?.cornerRadius = 5
-        dot.layer?.backgroundColor = NSColor.systemOrange.cgColor
-        dot.translatesAutoresizingMaskIntoConstraints = false
+        let doneButton = NSButton(title: "Done", target: self, action: #selector(doneClicked))
+        doneButton.bezelStyle = .rounded
+        doneButton.controlSize = .large
+        doneButton.keyEquivalent = "\r"
 
-        let statusText = NSTextField(labelWithString: "Not Granted")
-        statusText.font = .systemFont(ofSize: 12, weight: .medium)
-        statusText.textColor = .systemOrange
+        let stack = NSStackView(views: [title, explanation, panel, doneButton])
+        stack.orientation = .vertical
+        stack.spacing = 12
+        stack.alignment = .leading
+        stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let statusRow = NSStackView(views: [dot, statusText])
-        statusRow.orientation = .horizontal
-        statusRow.spacing = 8
-        statusRow.alignment = .centerY
-
-        self.statusDot = dot
-        self.statusLabel = statusText
-
-        // Progress indicator
-        let progressLabel = NSTextField(labelWithString: "Permission \(currentIndex + 1) of \(permissions.count)")
-        progressLabel.font = .systemFont(ofSize: 11)
-        progressLabel.textColor = .tertiaryLabelColor
-
-        // Buttons
-        let openButton = NSButton(title: "Open System Settings", target: self, action: #selector(openSettingsClicked))
-        openButton.bezelStyle = .rounded
-        openButton.controlSize = .large
-
-        let skipButton = NSButton(title: "Skip", target: self, action: #selector(skipClicked))
-        skipButton.bezelStyle = .rounded
-        skipButton.controlSize = .large
-
-        let buttonRow = NSStackView(views: [openButton, skipButton])
-        buttonRow.orientation = .horizontal
-        buttonRow.spacing = 12
-
-        stack.addArrangedSubview(icon)
-        stack.addArrangedSubview(title)
-        stack.addArrangedSubview(explanation)
-        stack.addArrangedSubview(pathLabel)
-        stack.addArrangedSubview(statusRow)
-        stack.addArrangedSubview(buttonRow)
-        stack.addArrangedSubview(progressLabel)
-
-        contentView.addSubview(stack)
+        container.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            explanation.widthAnchor.constraint(lessThanOrEqualToConstant: 340),
-            dot.widthAnchor.constraint(equalToConstant: 10),
-            dot.heightAnchor.constraint(equalToConstant: 10)
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
+            explanation.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            panel.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
 
         windowController.present()
-
-        // Request the permission (triggers system prompt for notifications, opens settings for others).
-        // The completion may fire from a non-MainActor context; hop to the main actor before
-        // touching MainActor-isolated state.
-        permission.request { [weak self] granted in
-            guard granted else { return }
-            Task { @MainActor [weak self] in
-                self?.handleGranted()
-            }
-        }
-
-        // Start polling for permission grant
-        startPolling(for: permission)
     }
 
-    private func startPolling(for permission: AppPermission) {
-        pollingTimer?.invalidate()
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            // Timers fire on the main run loop, so we are already on the main
-            // actor — assert it so we can call MainActor-isolated members sync.
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                if permission.isGranted {
-                    self.handleGranted()
-                }
-            }
-        }
-    }
-
-    private func handleGranted() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
-        statusDot?.layer?.backgroundColor = NSColor.systemGreen.cgColor
-        statusLabel?.stringValue = "Granted"
-        statusLabel?.textColor = .systemGreen
-
-        // Auto-advance after a brief pause
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            self?.advanceToNext()
-        }
-    }
-
-    private func advanceToNext() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
-        currentIndex += 1
-        showCurrentPermission()
-    }
-
-    private func dismissWindow() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
+    @objc private func doneClicked() {
+        Self.markComplete()
         windowController.dismiss()
-        statusDot = nil
-        statusLabel = nil
+        completion?()
+        completion = nil
     }
 
-    private func markComplete() {
-        UserDefaults.standard.set(true, forKey: Self.walkthroughCompleteKey)
-    }
-
-    // MARK: - Actions
-
-    @objc private func openSettingsClicked() {
-        guard currentIndex < permissions.count else { return }
-        permissions[currentIndex].openSettings()
-    }
-
-    @objc private func skipClicked() {
-        advanceToNext()
+    private static func markComplete() {
+        UserDefaults.standard.set(true, forKey: walkthroughCompleteKey)
     }
 }
