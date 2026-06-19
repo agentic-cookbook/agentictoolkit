@@ -4,33 +4,36 @@ import AgenticToolkitPermissions
 @testable import AgenticToolkitPermissionsUI
 
 private struct StubChecker: PermissionChecking {
-    let granted: Bool
-    func isGranted(_ permission: Permission) async -> Bool { granted }
-    func request(_ permission: Permission) async -> Bool { granted }
+    let result: PermissionStatus
+    func status(_ permission: Permission) async -> PermissionStatus { result }
+    func request(_ permission: Permission) async -> PermissionStatus { result }
 }
 
 @MainActor
 @Suite("Permission row view")
 struct PermissionRowViewTests {
+    private func row(_ status: PermissionStatus) -> PermissionRowView {
+        PermissionRowView(permission: .accessibility, checker: StubChecker(result: status), onAction: { _ in })
+    }
+
     @Test("row shows Granted when the checker reports granted")
     func showsGranted() async {
-        let row = PermissionRowView(
-            permission: .accessibility,
-            checker: StubChecker(granted: true),
-            onAction: { _ in }
-        )
+        let row = row(.granted)
         await row.refresh()
         #expect(row.statusText == "Granted")
     }
 
     @Test("row shows Not Granted when the checker reports denied")
     func showsDenied() async {
-        let row = PermissionRowView(
-            permission: .automation(targetBundleID: "com.googlecode.iterm2"),
-            checker: StubChecker(granted: false),
-            onAction: { _ in }
-        )
+        let row = row(.denied)
         await row.refresh()
         #expect(row.statusText == "Not Granted")
+    }
+
+    @Test("row shows Unknown when the status is undetermined")
+    func showsUndetermined() async {
+        let row = row(.undetermined)
+        await row.refresh()
+        #expect(row.statusText == "Unknown")
     }
 }

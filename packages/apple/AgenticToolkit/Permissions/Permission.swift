@@ -57,8 +57,14 @@ extension Permission {
         case .accessibility:
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         case .notifications:
-            "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id="
-                + (Bundle.main.bundleIdentifier ?? "")
+            // Append the app id only when we have one; an empty `?id=` would open
+            // the Notifications pane scoped to a nonexistent app. With no id the
+            // bare extension URL opens the Notifications pane root.
+            if let bundleID = Bundle.main.bundleIdentifier, !bundleID.isEmpty {
+                "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(bundleID)"
+            } else {
+                "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+            }
         case .automation:
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
         }

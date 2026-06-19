@@ -20,6 +20,7 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
     ]
 
     private let permissions: [Permission]
+    private weak var panel: PermissionsPanelView?
 
     public init(permissions: [Permission] = PermissionsSettingsPanelViewController.defaultPermissions) {
         self.permissions = permissions
@@ -39,6 +40,16 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
         self.settingsView.addGroup(createWalkthroughGroup())
     }
 
+    public override func viewWillAppear() {
+        super.viewWillAppear()
+        // ComposableSettings may keep this panel in the window hierarchy across
+        // tab switches, so the panel's own viewDidMoveToWindow doesn't re-fire.
+        // Refresh on every appearance so re-selecting the Permissions tab shows
+        // current status.
+        let panel = self.panel
+        Task { @MainActor in await panel?.refresh() }
+    }
+
     private func createPermissionsGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Permissions")
 
@@ -48,7 +59,9 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
 
         // PermissionsPanelView refreshes itself on appear and on app
         // reactivation (e.g. returning from System Settings) — no polling timer.
-        group.addSettingSubview(PermissionsPanelView(permissions: permissions))
+        let panel = PermissionsPanelView(permissions: permissions)
+        self.panel = panel
+        group.addSettingSubview(panel)
 
         return group
     }

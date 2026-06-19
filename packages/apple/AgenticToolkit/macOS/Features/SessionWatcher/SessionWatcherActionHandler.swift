@@ -5,6 +5,7 @@ import AgenticToolkitPermissions
 
 import AppKit
 import ApplicationServices
+import Darwin
 import UserNotifications
 import os
 
@@ -168,7 +169,7 @@ extension SessionWatcher {
             if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.googlecode.iterm2") != nil {
                 logger.debug("openTerminal: using iTerm2")
                 let script = """
-                tell application "iTerm"
+                tell application id "com.googlecode.iterm2"
                     activate
                     create window with default profile command "cd \(shellEscape(expandedPath)) && exec $SHELL -l"
                 end tell
@@ -296,7 +297,7 @@ extension SessionWatcher {
             guard Self.isAccessibilityTrusted else {
                 logger.error("activateWarp: Accessibility permission not granted")
                 return .failure(.permissionDenied(
-                    "Whippet needs Accessibility access to raise Warp windows. Grant access in System Settings.",
+                    "Accessibility access is required to raise Warp windows. Grant it in System Settings.",
                     requiredPermission: .accessibility
                 ))
             }
@@ -389,8 +390,19 @@ extension SessionWatcher {
                         log.append("  iTerm TTY activation denied — needs Automation permission")
                         return .failure(error)
                     case .notFound:
-                        log.append("  iTerm TTY activation: no match, falling through to AX scan")
+                        log.append("  iTerm TTY activation: no match")
                     }
+                }
+                // No TTY, or no tab matched. The AX title-scan can't match iTerm2
+                // (its window titles carry session names, not project names), so
+                // bring iTerm2 forward — which needs no permission — rather than
+                // failing the Accessibility gate below with a misleading error.
+                if let iterm = NSRunningApplication.runningApplications(
+                    withBundleIdentifier: "com.googlecode.iterm2"
+                ).first {
+                    log.append("  iTerm: no tab match — activating iTerm2 app")
+                    iterm.activate()
+                    return .success
                 }
             }
 
@@ -399,7 +411,7 @@ extension SessionWatcher {
             // iTerm2 switch isn't blocked on the wrong permission.
             guard Self.isAccessibilityTrusted else {
                 return .failure(.permissionDenied(
-                    "Whippet needs Accessibility access to discover windows. Grant access in System Settings.",
+                    "Accessibility access is required to discover windows. Grant it in System Settings.",
                     requiredPermission: .accessibility
                 ))
             }
@@ -676,24 +688,22 @@ extension SessionWatcher {
 
         // MARK: - iTerm2 TTY Activation
 
-        /// Gets the TTY for a process ID using `ps`.
+        /// Gets the controlling-terminal device path for a process ID.
+        ///
+        /// Uses `proc_pidinfo` (a direct libproc syscall) instead of forking `ps`:
+        /// no subprocess, near-instant, and safe to call on the main thread (the
+        /// old `ps` + `waitUntilExit` blocked the caller for the lifetime of a fork).
         private func ttyForPid(_ pid: Int32) -> String? {
             guard pid > 0 else { return nil }
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/ps")
-            process.arguments = ["-p", "\(pid)", "-o", "tty="]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = FileHandle.nullDevice
-            do {
-                try process.run()
-                process.waitUntilExit()
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                let tty = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                return tty.isEmpty ? nil : tty
-            } catch {
-                return nil
+            var info = proc_bsdinfo()
+            let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+            let result = withUnsafeMutablePointer(to: &info) { pointer in
+                proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, pointer, size)
             }
+            guard result == size, info.e_tdev != 0 else { return nil }
+            let device = dev_t(Int32(bitPattern: info.e_tdev))
+            guard let name = devname(device, S_IFCHR) else { return nil }
+            return "/dev/" + String(cString: name)
         }
 
         /// Outcome of attempting to activate an iTerm2 tab by TTY.
@@ -712,16 +722,21 @@ extension SessionWatcher {
         /// Automation grant looked like a failed Accessibility check.
         private func activateITermByTTY(tty: String) -> ITermActivation {
             let devTTY = tty.hasPrefix("/dev/") ? tty : "/dev/\(tty)"
+            // Address iTerm2 by bundle id (not the name "iTerm"/"iTerm2", which has
+            // varied across versions) and iterate *all* sessions of each tab so a
+            // split-pane or background session on the target TTY still matches.
             let script = """
-        tell application "iTerm2"
+        tell application id "com.googlecode.iterm2"
             repeat with w in windows
                 repeat with t in tabs of w
-                    set s to current session of t
-                    if tty of s is "\(devTTY)" then
-                        select t
-                        activate
-                        return "found"
-                    end if
+                    repeat with s in sessions of t
+                        if tty of s is "\(devTTY)" then
+                            select s
+                            select t
+                            activate
+                            return "found"
+                        end if
+                    end repeat
                 end repeat
             end repeat
             return "not_found"
@@ -783,7 +798,7 @@ extension SessionWatcher {
                 // swiftlint:disable:next line_length
                 logger.error("AppleScript permission denied for \(appName, privacy: .public): \(errorMessage, privacy: .public)")
                 return .permissionDenied(
-                    "Whippet needs permission to control \(appName)."
+                    "Automation permission is required to control \(appName)."
                     + " Grant access in System Settings > Privacy & Security > Automation.",
                     requiredPermission: .automation(targetBundleID: bundleID)
                 )

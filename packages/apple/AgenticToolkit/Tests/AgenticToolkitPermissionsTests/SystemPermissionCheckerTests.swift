@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UserNotifications
 @testable import AgenticToolkitPermissions
 
 /// Records the last probe call and returns a configured status.
@@ -25,35 +26,50 @@ struct AutomationMappingTests {
         SystemPermissionChecker(automationProbe: StubAutomationProbe(status: status, recorder: recorder))
     }
 
-    @Test("noErr means granted")
+    @Test("noErr maps to granted")
     func granted() async {
-        #expect(await checker(noErr).isGranted(.automation(targetBundleID: "com.googlecode.iterm2")))
+        #expect(await checker(noErr).status(.automation(targetBundleID: "com.googlecode.iterm2")) == .granted)
     }
 
-    @Test("errAEEventNotPermitted (-1743) means not granted")
+    @Test("errAEEventNotPermitted (-1743) maps to denied")
     func denied() async {
-        #expect(await checker(-1743).isGranted(.automation(targetBundleID: "com.googlecode.iterm2")) == false)
+        #expect(await checker(-1743).status(.automation(targetBundleID: "com.googlecode.iterm2")) == .denied)
     }
 
-    @Test("consent-required (-1744) means not granted")
-    func consentRequired() async {
-        #expect(await checker(-1744).isGranted(.automation(targetBundleID: "x")) == false)
+    @Test("consent-required (-1744) and target-not-running (-600) map to undetermined, not denied")
+    func undetermined() async {
+        #expect(await checker(-1744).status(.automation(targetBundleID: "x")) == .undetermined)
+        #expect(await checker(-600).status(.automation(targetBundleID: "x")) == .undetermined)
     }
 
-    @Test("isAutomationGranted maps statuses")
+    @Test("automationStatus maps OSStatus values to the tri-state")
     func mapping() {
-        #expect(SystemPermissionChecker.isAutomationGranted(noErr) == true)
-        #expect(SystemPermissionChecker.isAutomationGranted(-1743) == false)
-        #expect(SystemPermissionChecker.isAutomationGranted(-1744) == false)
-        #expect(SystemPermissionChecker.isAutomationGranted(-600) == false)
+        #expect(SystemPermissionChecker.automationStatus(noErr) == .granted)
+        #expect(SystemPermissionChecker.automationStatus(-1743) == .denied)
+        #expect(SystemPermissionChecker.automationStatus(-1744) == .undetermined)
+        #expect(SystemPermissionChecker.automationStatus(-600) == .undetermined)
     }
 
-    @Test("checking does not prompt, requesting does; bundle id is forwarded")
+    @Test("notificationStatus: notDetermined is undetermined, not denied")
+    func notificationMapping() {
+        #expect(SystemPermissionChecker.notificationStatus(.authorized) == .granted)
+        #expect(SystemPermissionChecker.notificationStatus(.denied) == .denied)
+        #expect(SystemPermissionChecker.notificationStatus(.notDetermined) == .undetermined)
+    }
+
+    @Test("isGranted convenience is true only for .granted")
+    func isGrantedConvenience() async {
+        #expect(await checker(noErr).isGranted(.automation(targetBundleID: "x")) == true)
+        #expect(await checker(-1743).isGranted(.automation(targetBundleID: "x")) == false)
+        #expect(await checker(-600).isGranted(.automation(targetBundleID: "x")) == false)
+    }
+
+    @Test("status does not prompt, request does; bundle id is forwarded")
     func promptFlag() async {
         let recorder = ProbeRecorder()
         let checker = checker(noErr, recorder)
 
-        _ = await checker.isGranted(.automation(targetBundleID: "com.googlecode.iterm2"))
+        _ = await checker.status(.automation(targetBundleID: "com.googlecode.iterm2"))
         #expect(recorder.lastBundleID == "com.googlecode.iterm2")
         #expect(recorder.lastPromptIfNeeded == false)
 

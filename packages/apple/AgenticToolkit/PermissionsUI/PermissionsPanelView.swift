@@ -13,7 +13,7 @@ public final class PermissionsPanelView: NSView {
     private let permissions: [Permission]
     private let checker: any PermissionChecking
     private var rows: [PermissionRowView] = []
-    private var activationObserver: (any NSObjectProtocol)?
+    private var isObserving = false
 
     public init(permissions: [Permission], checker: any PermissionChecking = SystemPermissionChecker()) {
         self.permissions = permissions
@@ -25,6 +25,13 @@ public final class PermissionsPanelView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        // Selector-based observers are auto-zeroed on dealloc since macOS 10.11,
+        // but remove explicitly so a view deallocated while still in a window
+        // doesn't leave a dangling registration.
+        NotificationCenter.default.removeObserver(self)
     }
 
     /// Re-reads the grant state of every row.
@@ -49,6 +56,9 @@ public final class PermissionsPanelView: NSView {
             }
             rows.append(row)
             stack.addArrangedSubview(row)
+            // A vertical NSStackView doesn't stretch arranged subviews across its
+            // width (alignment governs cross-axis *positioning*, not fill), so each
+            // row's width is pinned to the stack explicitly.
             row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
@@ -73,26 +83,24 @@ public final class PermissionsPanelView: NSView {
         if window != nil {
             startObservingActivation()
             Task { @MainActor in await refresh() }
-        } else {
-            stopObservingActivation()
         }
     }
 
     private func startObservingActivation() {
-        guard activationObserver == nil else { return }
-        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.refresh() }
-        }
+        guard !isObserving else { return }
+        isObserving = true
+        // Refresh when *our* app becomes active (e.g. the user returns from
+        // System Settings) — not on every app switch system-wide, which
+        // `NSWorkspace.didActivateApplicationNotification` would do.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
     }
 
-    private func stopObservingActivation() {
-        if let activationObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
-            self.activationObserver = nil
-        }
+    @objc private func appDidBecomeActive() {
+        Task { @MainActor in await refresh() }
     }
 }

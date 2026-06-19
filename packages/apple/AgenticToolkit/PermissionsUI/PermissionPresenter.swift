@@ -13,8 +13,11 @@ public enum PermissionPresenter {
             // Accessibility pane, so opening the URL too would be redundant.
             _ = await checker.request(permission)
         case .notifications, .automation:
-            let granted = await checker.request(permission)
-            if !granted {
+            // Only fall back to System Settings on a hard denial. An undetermined
+            // result (consent dialog cancelled/dismissed, or target app not running)
+            // means the inline prompt already handled it — opening the pane on top
+            // would be redundant, jarring UI.
+            if await checker.request(permission) == .denied {
                 NSWorkspace.shared.open(permission.settingsPaneURL)
             }
         }

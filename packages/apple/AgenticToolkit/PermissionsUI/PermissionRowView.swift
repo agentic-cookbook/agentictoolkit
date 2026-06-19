@@ -37,14 +37,27 @@ public final class PermissionRowView: NSView {
 
     /// Re-reads the grant state and updates the status dot + label.
     public func refresh() async {
-        let granted = await checker.isGranted(permission)
-        apply(granted: granted)
+        apply(status: await checker.status(permission))
     }
 
-    private func apply(granted: Bool) {
-        let color: NSColor = granted ? .systemGreen : .systemOrange
+    private func apply(status: PermissionStatus) {
+        let color: NSColor
+        let text: String
+        switch status {
+        case .granted:
+            color = .systemGreen
+            text = "Granted"
+        case .denied:
+            color = .systemOrange
+            text = "Not Granted"
+        case .undetermined:
+            // Can't prove granted or denied (e.g. the Automation target app isn't
+            // running) — show a neutral state rather than a misleading "Not Granted".
+            color = .secondaryLabelColor
+            text = "Unknown"
+        }
         statusDot.layer?.backgroundColor = color.cgColor
-        statusLabel.stringValue = granted ? "Granted" : "Not Granted"
+        statusLabel.stringValue = text
         statusLabel.textColor = color
     }
 

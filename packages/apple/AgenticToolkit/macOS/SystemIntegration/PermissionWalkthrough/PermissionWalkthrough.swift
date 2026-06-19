@@ -10,6 +10,10 @@ import AgenticToolkitPermissionsUI
 @MainActor
 public final class PermissionWalkthrough: AppFeature {
 
+    /// The terminal whose Automation grant the walkthrough surfaces. Injectable so
+    /// hosts that drive a different terminal can override it.
+    public static let defaultAutomationTarget = "com.googlecode.iterm2"
+
     /// UserDefaults key tracking whether the walkthrough has completed.
     public static let walkthroughCompleteKey = "permission_walkthrough_complete"
 
@@ -29,7 +33,13 @@ public final class PermissionWalkthrough: AppFeature {
     private var completion: (() -> Void)?
 
     public override init() {
-        self.permissions = [.accessibility, .notifications]
+        // Include Automation so first-launch onboarding covers the permission the
+        // terminal-activation feature actually needs (Apple Events to the terminal).
+        self.permissions = [
+            .accessibility,
+            .notifications,
+            .automation(targetBundleID: Self.defaultAutomationTarget)
+        ]
         self.checker = SystemPermissionChecker()
     }
 
@@ -44,12 +54,12 @@ public final class PermissionWalkthrough: AppFeature {
 
         Task { @MainActor in
             var pending: [Permission] = []
-            for permission in permissions where await !checker.isGranted(permission) {
+            for permission in permissions where await checker.status(permission) != .granted {
                 pending.append(permission)
             }
             guard !pending.isEmpty else {
                 Self.markComplete()
-                completion()
+                finish()
                 return
             }
             self.present(pending: pending)
@@ -96,8 +106,23 @@ public final class PermissionWalkthrough: AppFeature {
     }
 
     @objc private func doneClicked() {
-        Self.markComplete()
-        windowController.dismiss()
+        // Mark the walkthrough permanently complete only once everything is granted.
+        // Clicking Done early just dismisses for this launch (the walkthrough
+        // re-runs next launch) rather than silently suppressing it forever.
+        Task { @MainActor in
+            var allGranted = true
+            for permission in permissions where await checker.status(permission) != .granted {
+                allGranted = false
+            }
+            if allGranted {
+                Self.markComplete()
+            }
+            windowController.dismiss()
+            finish()
+        }
+    }
+
+    private func finish() {
         completion?()
         completion = nil
     }
