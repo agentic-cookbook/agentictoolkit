@@ -8,10 +8,10 @@ import Combine
 import Foundation
 import os
 extension SessionWatcher {
-    /// Groups sessions by terminal application (e.g. iTerm2, Warp, VS Code).
+    /// Groups sessions by their top-level (non-submodule) git project.
     public struct SessionWatcherGroup: Identifiable {
-        public let id: String  // termProgram key
-        public let termProgram: String
+        public let id: String           // project group key (project root path, or cwd)
+        public let projectName: String  // display name (last path component of the key)
         public let sessions: [SessionWatcherSession]
 
         /// Whether any session in this group is active.
@@ -27,13 +27,14 @@ extension SessionWatcher {
 
     /// Bridges SQLite session data to AppKit views with real-time update support.
     ///
-    /// Projects are "sticky" — once a project appears, it stays in the list even when
-    /// all its sessions end, showing "None" instead. Groups are sorted alphabetically.
+    /// Sessions are grouped by their top-level git project and ordered by when they
+    /// started: within a project the oldest session is first, and projects are ordered
+    /// by their earliest session start (so a newly-started project joins at the bottom).
     public final class SessionListViewModel: ObservableObject, @unchecked Sendable {
 
         // MARK: - Published Properties
 
-        /// All sessions grouped by project, sorted alphabetically.
+        /// All live sessions grouped by project, ordered by start time.
         @Published public private(set) var groups: [SessionWatcherGroup] = []
 
         /// Whether there are zero known projects (true only before any session is ever seen).
@@ -111,24 +112,29 @@ extension SessionWatcher {
 
             let liveSessions = allSessions.filter { $0.status != .ended && !$0.cwd.isEmpty && $0.cwd != "/" }
 
-            // Group live sessions by terminal app
-            let sessionsByApp = Dictionary(grouping: liveSessions) { session -> String in
-                session.termProgram.isEmpty ? "unknown" : session.termProgram
-            }
+            // Group live sessions by their top-level git project.
+            let sessionsByProject = Dictionary(grouping: liveSessions) { $0.projectGroupKey }
 
-            // Build groups for apps with live sessions, sorted by app name.
-            // Sessions within each group keep their DB insertion order (started_at ASC)
-            // so new sessions appear at the bottom.
-            let sortedGroups = sessionsByApp.keys
-                .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-                .compactMap { app -> SessionWatcherGroup? in
-                    let sessions = sessionsByApp[app] ?? []
+            // Within each group, order sessions by when they started (oldest first);
+            // order the groups by their earliest session's start so a newly-started
+            // project joins at the bottom. `startedAt` is a fixed-width UTC timestamp,
+            // so a lexicographic string compare is chronological.
+            let sortedGroups = sessionsByProject
+                .compactMap { key, sessions -> SessionWatcherGroup? in
                     guard !sessions.isEmpty else { return nil }
+                    let ordered = sessions.sorted { $0.startedAt < $1.startedAt }
                     return SessionWatcherGroup(
-                        id: app,
-                        termProgram: app,
-                        sessions: sessions
+                        id: key,
+                        projectName: ordered.first?.projectGroupName ?? key,
+                        sessions: ordered
                     )
+                }
+                .sorted { lhs, rhs in
+                    let lhsStart = lhs.sessions.first?.startedAt ?? ""
+                    let rhsStart = rhs.sessions.first?.startedAt ?? ""
+                    if lhsStart != rhsStart { return lhsStart < rhsStart }
+                    // Deterministic tie-break when two projects' earliest starts match.
+                    return lhs.projectName.localizedCaseInsensitiveCompare(rhs.projectName) == .orderedAscending
                 }
 
             let count = liveSessions.count

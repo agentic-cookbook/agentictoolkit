@@ -17,6 +17,10 @@ extension SessionWatcher {
         public var summary: String
         public var pid: Int32
         public var termProgram: String
+        /// The top-level (non-submodule) git project root for `cwd`. Empty when
+        /// unknown (not yet enriched, or cwd isn't a git working tree). Used to
+        /// group sessions by project in the Sessions window.
+        public var projectRoot: String
 
         public init(
             id: Int? = nil,
@@ -30,7 +34,8 @@ extension SessionWatcher {
             gitBranch: String = "",
             summary: String = "",
             pid: Int32 = 0,
-            termProgram: String = ""
+            termProgram: String = "",
+            projectRoot: String = ""
         ) {
             self.id = id
             self.sessionId = sessionId
@@ -44,6 +49,7 @@ extension SessionWatcher {
             self.summary = summary
             self.pid = pid
             self.termProgram = termProgram
+            self.projectRoot = projectRoot
         }
 
         /// Returns the best available description for this session.
@@ -59,6 +65,20 @@ extension SessionWatcher {
         public var projectName: String {
             guard !cwd.isEmpty, cwd != "/" else { return "Unknown" }
             return (cwd as NSString).lastPathComponent
+        }
+
+        /// The key the Sessions window groups by: the top-level git project root,
+        /// falling back to `cwd` when the project root is unknown.
+        public var projectGroupKey: String {
+            projectRoot.isEmpty ? cwd : projectRoot
+        }
+
+        /// A human-readable name for the project group — the last path component
+        /// of ``projectGroupKey``.
+        public var projectGroupName: String {
+            let key = projectGroupKey
+            guard !key.isEmpty, key != "/" else { return "Unknown" }
+            return (key as NSString).lastPathComponent
         }
     }
 

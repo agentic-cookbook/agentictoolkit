@@ -208,7 +208,7 @@ extension SessionWatcher {
             self.onSummarize = onSummarize
             self.frontmostSessionId = frontmostSessionId
             super.init(frame: .zero)
-            accessibilityID("session-panel.group.\(AccessibilityID.slug(group.termProgram))")
+            accessibilityID("session-panel.group.\(AccessibilityID.slug(group.projectName))")
             wantsLayer = true
             layer?.cornerRadius = 8
             layer?.backgroundColor = NSColor.white.withAlphaComponent(0.05).cgColor
@@ -274,53 +274,44 @@ extension SessionWatcher {
             let container = NSView()
             container.translatesAutoresizingMaskIntoConstraints = false
 
-            let appName = terminalAppName(for: group.termProgram)
+            // Folder icon — the group is a project (git) directory now.
+            let iconView = NSImageView()
+            iconView.image = NSImage(systemSymbolName: "folder.fill", accessibilityDescription: nil)
+            iconView.symbolConfiguration = .init(pointSize: 18, weight: .regular)
+            iconView.contentTintColor = .secondaryLabelColor
+            iconView.toolTip = group.id  // full project-root path
+            iconView.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(iconView)
 
-            // App icon
-            var leadingAnchorView: NSView = container
-            var leadingConstant: CGFloat = 10
-
-            if let icon = terminalAppIcon(for: group.termProgram) {
-                let iconView = NSImageView(image: icon)
-                iconView.toolTip = appName
-                iconView.imageScaling = .scaleProportionallyUpOrDown
-                iconView.setContentHuggingPriority(.defaultLow, for: .horizontal)
-                iconView.setContentHuggingPriority(.defaultLow, for: .vertical)
-                iconView.translatesAutoresizingMaskIntoConstraints = false
-                container.addSubview(iconView)
-                let iconSize: CGFloat = 64
-                NSLayoutConstraint.activate([
-                    iconView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
-                    iconView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                    iconView.widthAnchor.constraint(equalToConstant: iconSize),
-                    iconView.heightAnchor.constraint(equalToConstant: iconSize)
-                ])
-                leadingAnchorView = iconView
-                leadingConstant = 6
-            }
-
-            let titleLabel = NSTextField(labelWithString: appName)
+            let titleLabel = NSTextField(labelWithString: group.projectName)
             titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
             titleLabel.textColor = .labelColor
+            titleLabel.lineBreakMode = .byTruncatingTail
+            titleLabel.maximumNumberOfLines = 1
+            titleLabel.toolTip = group.id
             titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
             let suffix = group.sessions.count == 1 ? "" : "s"
             let countLabel = NSTextField(labelWithString: "\(group.sessions.count) session\(suffix)")
             countLabel.font = .systemFont(ofSize: 10)
             countLabel.textColor = .tertiaryLabelColor
+            countLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
             countLabel.translatesAutoresizingMaskIntoConstraints = false
 
             container.addSubview(titleLabel)
             container.addSubview(countLabel)
 
-            let titleLeading = leadingAnchorView === container
-            ? titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: leadingConstant)
-            : titleLabel.leadingAnchor.constraint(equalTo: leadingAnchorView.trailingAnchor, constant: leadingConstant)
-
             NSLayoutConstraint.activate([
-                container.heightAnchor.constraint(greaterThanOrEqualToConstant: 72),
-                titleLeading,
+                container.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
+
+                iconView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
+                iconView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                iconView.widthAnchor.constraint(equalToConstant: 22),
+                iconView.heightAnchor.constraint(equalToConstant: 22),
+
+                titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
                 titleLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+
                 countLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
                 countLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 countLabel.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 5)
@@ -681,40 +672,4 @@ extension SessionWatcher {
             onOpenSettingsAction?()
         }
     }
-}
-
-// MARK: - Terminal App Icon helpers
-//
-// File-private free helpers because the extension on `SessionWatcher` (an
-// enum namespace) can't carry stored properties, and `SessionWatcherGroupCardView`
-// is the only consumer.
-
-private let termProgramBundleIDs: [String: String] = [
-    "Apple_Terminal": "com.apple.Terminal",
-    "iTerm.app": "com.googlecode.iterm2",
-    "WarpTerminal": "dev.warp.Warp-Stable",
-    "vscode": "com.microsoft.VSCode",
-    "tmux": "com.apple.Terminal"
-]
-
-private let termProgramDisplayNames: [String: String] = [
-    "Apple_Terminal": "Terminal",
-    "iTerm.app": "iTerm2",
-    "WarpTerminal": "Warp",
-    "vscode": "Visual Studio Code",
-    "tmux": "tmux (Terminal)"
-]
-
-@MainActor
-private func terminalAppIcon(for termProgram: String) -> NSImage? {
-    guard !termProgram.isEmpty,
-          let bundleID = termProgramBundleIDs[termProgram],
-          let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
-        return nil
-    }
-    return NSWorkspace.shared.icon(forFile: url.path)
-}
-
-private func terminalAppName(for termProgram: String) -> String {
-    termProgramDisplayNames[termProgram] ?? termProgram
 }
