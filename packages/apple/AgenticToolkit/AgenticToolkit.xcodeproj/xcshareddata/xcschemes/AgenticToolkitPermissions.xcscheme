@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-               BuildableName = "AgenticToolkitMacOS.framework"
-               BlueprintName = "AgenticToolkitMacOS"
+               BlueprintIdentifier = "2EFC363C175DD44B5CD8E0E4"
+               BuildableName = "AgenticToolkitPermissions.framework"
+               BlueprintName = "AgenticToolkitPermissions"
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-            BuildableName = "AgenticToolkitMacOS.framework"
-            BlueprintName = "AgenticToolkitMacOS"
+            BlueprintIdentifier = "2EFC363C175DD44B5CD8E0E4"
+            BuildableName = "AgenticToolkitPermissions.framework"
+            BlueprintName = "AgenticToolkitPermissions"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -44,64 +44,9 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "F7587C3114CC9BBF138D57B4"
-               BuildableName = "AgenticToolkitCoreTests.xctest"
-               BlueprintName = "AgenticToolkitCoreTests"
-               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0C146E1D667CC0539A0AE0E6"
-               BuildableName = "AgenticToolkitCoreUITests.xctest"
-               BlueprintName = "AgenticToolkitCoreUITests"
-               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "F2116E5AFEEF6DE97574A067"
-               BuildableName = "AgenticToolkitCoreMacOSTests.xctest"
-               BlueprintName = "AgenticToolkitCoreMacOSTests"
-               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CA91BF5C6678A6A1DB58725C"
-               BuildableName = "AIPluginKitTests.xctest"
-               BlueprintName = "AIPluginKitTests"
-               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "AF1B6D156999EBA1E66D7B49"
                BuildableName = "AgenticToolkitPermissionsTests.xctest"
                BlueprintName = "AgenticToolkitPermissionsTests"
-               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FB6FD55DBA606361A9BEEB56"
-               BuildableName = "AgenticToolkitMacOSTests.xctest"
-               BlueprintName = "AgenticToolkitMacOSTests"
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -122,9 +67,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-            BuildableName = "AgenticToolkitMacOS.framework"
-            BlueprintName = "AgenticToolkitMacOS"
+            BlueprintIdentifier = "2EFC363C175DD44B5CD8E0E4"
+            BuildableName = "AgenticToolkitPermissions.framework"
+            BlueprintName = "AgenticToolkitPermissions"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -142,9 +87,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "365680A3AF7F55383EB7E763"
-            BuildableName = "AgenticToolkitMacOS.framework"
-            BlueprintName = "AgenticToolkitMacOS"
+            BlueprintIdentifier = "2EFC363C175DD44B5CD8E0E4"
+            BuildableName = "AgenticToolkitPermissions.framework"
+            BlueprintName = "AgenticToolkitPermissions"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

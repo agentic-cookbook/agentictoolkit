@@ -148,6 +148,16 @@ targets:
       - package: CodeEditLanguages
       - package: KeyboardShortcuts
 
+  AgenticToolkitPermissions:
+    type: framework
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Permissions
+    # Daemon-safe: Foundation + ApplicationServices (AX) + CoreServices (Apple
+    # Events) + UserNotifications, all auto-linked via import. No AppKit.
+
   AgenticToolkitCoreTests:
     type: bundle.unit-test
     platform: macOS
@@ -202,6 +212,18 @@ targets:
         embed: true
         codeSign: true
 
+  AgenticToolkitPermissionsTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AgenticToolkitPermissionsTests
+    dependencies:
+      - target: AgenticToolkitPermissions
+        embed: true
+        codeSign: true
+
   AgenticToolkitMacOSTests:
     type: bundle.unit-test
     platform: macOS
@@ -230,6 +252,7 @@ aggregateTargets:
       - AgenticToolkitCore
       - AgenticToolkitCoreUI
       - AgenticToolkitCoreMacOS
+      - AgenticToolkitPermissions
       - AgenticToolkitMacOS
 
   AgenticToolkitMacOSTestsAll:
@@ -238,11 +261,13 @@ aggregateTargets:
       - AgenticToolkitCore
       - AgenticToolkitCoreMacOS
       - AgenticToolkitCoreUI
+      - AgenticToolkitPermissions
       - AgenticToolkitMacOS
       - AIPluginKitTests
       - AgenticToolkitCoreMacOSTests
       - AgenticToolkitCoreTests
       - AgenticToolkitCoreUITests
+      - AgenticToolkitPermissionsTests
       - AgenticToolkitMacOSTests
 
 schemes:
@@ -263,6 +288,23 @@ schemes:
     archive:
       config: Release
 
+  AgenticToolkitPermissions:
+    build:
+      targets:
+        AgenticToolkitPermissions: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitPermissionsTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
   AgenticToolkitMacOS:
     build:
       targets:
@@ -276,6 +318,7 @@ schemes:
         - AgenticToolkitCoreUITests
         - AgenticToolkitCoreMacOSTests
         - AIPluginKitTests
+        - AgenticToolkitPermissionsTests
         - AgenticToolkitMacOSTests
     profile:
       config: Release
