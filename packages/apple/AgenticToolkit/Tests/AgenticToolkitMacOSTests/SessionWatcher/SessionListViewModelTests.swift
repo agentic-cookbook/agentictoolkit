@@ -155,7 +155,11 @@ final class SessionListViewModelTests: XCTestCase {
         let source = FakeSessionListSource([])
         let viewModel = makeViewModel(source)
 
-        XCTAssertTrue(source.isObserving, "view model should subscribe to the source")
+        // The view controller starts observation on viewWillAppear; the model no
+        // longer subscribes in init, so drive it explicitly here.
+        XCTAssertFalse(source.isObserving, "model should not observe until started")
+        viewModel.startListening()
+        XCTAssertTrue(source.isObserving, "startListening should subscribe to the source")
         await viewModel.reloadSessions()
         XCTAssertEqual(viewModel.sessionCount, 0)
 
@@ -175,10 +179,23 @@ final class SessionListViewModelTests: XCTestCase {
     func testStopListeningUnsubscribesFromSource() {
         let source = FakeSessionListSource([])
         let viewModel = makeViewModel(source)
+        viewModel.startListening()
         XCTAssertTrue(source.isObserving)
 
         viewModel.stopListening()
 
+        XCTAssertFalse(source.isObserving)
+    }
+
+    func testStartListeningIsIdempotent() {
+        let source = FakeSessionListSource([])
+        let viewModel = makeViewModel(source)
+        viewModel.startListening()
+        viewModel.startListening()  // second call must not re-subscribe/stack timers
+        XCTAssertTrue(source.isObserving)
+
+        // A single stop fully unsubscribes (no leaked second subscription).
+        viewModel.stopListening()
         XCTAssertFalse(source.isObserving)
     }
 }

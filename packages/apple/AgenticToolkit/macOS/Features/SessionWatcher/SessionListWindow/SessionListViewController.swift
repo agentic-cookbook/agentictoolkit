@@ -30,7 +30,17 @@ extension SessionWatcher {
 
         public override func viewWillAppear() {
             super.viewWillAppear()
-            viewModel.loadSessions()
+            // Start observation (initial load + source subscription + timers) only
+            // while the window is visible, so a pre-constructed-but-hidden window
+            // (e.g. one created at launch for restore) does no background polling.
+            viewModel.startListening()
+        }
+
+        public override func viewDidDisappear() {
+            super.viewDidDisappear()
+            // Tear down observation when the window is hidden/closed; viewWillAppear
+            // restarts it if the window is shown again.
+            viewModel.stopListening()
         }
     }
 }

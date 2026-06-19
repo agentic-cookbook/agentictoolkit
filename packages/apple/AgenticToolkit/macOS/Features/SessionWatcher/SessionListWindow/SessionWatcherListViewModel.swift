@@ -77,12 +77,20 @@ extension SessionWatcher {
 
         // MARK: - Initialization
 
+        /// Whether real-time observation (source subscription + accessibility/
+        /// frontmost timers) is currently running. The hosting view controller
+        /// starts it on appear and stops it on disappear so a constructed-but-
+        /// hidden window (e.g. one pre-constructed for launch restore) does no
+        /// background polling.
+        private var isListening = false
+
         @MainActor
         public init(source: SessionListSource, settingsStore: SettingsStore) {
             self.source = source
             self.actionHandler = SessionWatcherActionHandler(settingsStore: settingsStore)
-            loadSessions()
-            startListening()
+            // Observation is started by the hosting view controller on viewWillAppear,
+            // not here — constructing the view model must not start timers/polling
+            // for a window that may never be shown.
         }
 
         deinit {
@@ -151,7 +159,18 @@ extension SessionWatcher {
 
         // MARK: - Real-time Updates
 
-        private func startListening() {
+        /// Starts real-time observation: an initial load, the source subscription,
+        /// and the accessibility/frontmost timers. Idempotent — a second call while
+        /// already listening is a no-op, so balanced appear/disappear pairing can't
+        /// stack duplicate observers or timers. Called by the view controller on
+        /// `viewWillAppear`.
+        public func startListening() {
+            guard !isListening else { return }
+            isListening = true
+
+            // Load immediately so a freshly-shown window isn't blank until the first poll.
+            loadSessions()
+
             // Reload whenever the source signals its session set may have changed.
             source.startObserving { [weak self] in
                 self?.loadSessions()
@@ -180,6 +199,7 @@ extension SessionWatcher {
         }
 
         public func stopListening() {
+            isListening = false
             source.stopObserving()
             let center = NotificationCenter.default
             center.removeObserver(self, name: NSApplication.didBecomeActiveNotification, object: nil)

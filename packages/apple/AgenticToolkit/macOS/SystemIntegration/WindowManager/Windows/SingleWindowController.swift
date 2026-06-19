@@ -269,3 +269,30 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         window.alphaValue = clamped
     }
 }
+
+// MARK: - Singleton convenience
+
+/// A `SingleWindowController` the app keeps as a process-wide singleton in its
+/// `current` slot. Conformers supply the slot and a `makeShared()` factory; the
+/// default `ensureCurrent()` centralizes the construct-if-nil guard (and the
+/// `WindowManager` registration that construction performs) so it isn't copy-
+/// pasted into every controller. Controllers whose construction needs a runtime
+/// argument (e.g. the Sessions window's plugin manager) keep a bespoke
+/// constructor instead of conforming.
+@MainActor
+public protocol SingletonWindowController: SingleWindowController {
+    static var current: Self? { get set }
+    /// Builds the singleton instance. Implemented inside the concrete controller
+    /// so it can call a private initializer.
+    static func makeShared() -> Self
+}
+
+public extension SingletonWindowController {
+    /// Constructs the singleton (whose `init` registers it with `WindowManager`)
+    /// without showing it, if it doesn't exist yet. `main.swift` calls this at
+    /// launch so `restoreOnLaunch()` can reopen a window that was visible last
+    /// session — no per-controller boilerplate.
+    static func ensureCurrent() {
+        if current == nil { current = makeShared() }
+    }
+}
