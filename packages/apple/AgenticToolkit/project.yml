@@ -158,6 +158,18 @@ targets:
     # Daemon-safe: Foundation + ApplicationServices (AX) + CoreServices (Apple
     # Events) + UserNotifications, all auto-linked via import. No AppKit.
 
+  AgenticToolkitPermissionsUI:
+    type: framework
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - PermissionsUI
+    dependencies:
+      - target: AgenticToolkitPermissions
+    # AppKit settings panel (toolkit convention: AppKit, not SwiftUI). No
+    # ComposableSettings dependency — hosts wrap PermissionsPanelView themselves.
+
   AgenticToolkitCoreTests:
     type: bundle.unit-test
     platform: macOS
@@ -224,6 +236,21 @@ targets:
         embed: true
         codeSign: true
 
+  AgenticToolkitPermissionsUITests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AgenticToolkitPermissionsUITests
+    dependencies:
+      - target: AgenticToolkitPermissionsUI
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitPermissions
+        embed: true
+        codeSign: true
+
   AgenticToolkitMacOSTests:
     type: bundle.unit-test
     platform: macOS
@@ -253,6 +280,7 @@ aggregateTargets:
       - AgenticToolkitCoreUI
       - AgenticToolkitCoreMacOS
       - AgenticToolkitPermissions
+      - AgenticToolkitPermissionsUI
       - AgenticToolkitMacOS
 
   AgenticToolkitMacOSTestsAll:
@@ -262,12 +290,14 @@ aggregateTargets:
       - AgenticToolkitCoreMacOS
       - AgenticToolkitCoreUI
       - AgenticToolkitPermissions
+      - AgenticToolkitPermissionsUI
       - AgenticToolkitMacOS
       - AIPluginKitTests
       - AgenticToolkitCoreMacOSTests
       - AgenticToolkitCoreTests
       - AgenticToolkitCoreUITests
       - AgenticToolkitPermissionsTests
+      - AgenticToolkitPermissionsUITests
       - AgenticToolkitMacOSTests
 
 schemes:
@@ -305,6 +335,23 @@ schemes:
     archive:
       config: Release
 
+  AgenticToolkitPermissionsUI:
+    build:
+      targets:
+        AgenticToolkitPermissionsUI: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitPermissionsUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
   AgenticToolkitMacOS:
     build:
       targets:
@@ -319,6 +366,7 @@ schemes:
         - AgenticToolkitCoreMacOSTests
         - AIPluginKitTests
         - AgenticToolkitPermissionsTests
+        - AgenticToolkitPermissionsUITests
         - AgenticToolkitMacOSTests
     profile:
       config: Release
