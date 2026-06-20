@@ -1,5 +1,6 @@
 import XCTest
 import AgenticToolkitCore
+@testable import AIPluginKit
 @testable import AgenticToolkitMacOS
 
 final class AIRequestBuilderTests: XCTestCase {

@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+@testable import AIPluginKit
 @testable import AgenticToolkitMacOS
 
 @Suite("AIPluginManager")

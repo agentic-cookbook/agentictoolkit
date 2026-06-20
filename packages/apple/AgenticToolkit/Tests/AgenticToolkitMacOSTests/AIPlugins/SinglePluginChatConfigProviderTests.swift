@@ -1,4 +1,5 @@
 import Testing
+@testable import AIPluginKit
 @testable import AgenticToolkitMacOS
 
 @Suite("SinglePluginChatConfigProvider")

@@ -1,5 +1,6 @@
 import Testing
 import AppKit
+@testable import AIPluginKit
 @testable import AgenticToolkitMacOS
 
 @Suite("PluginConfigPanel")
