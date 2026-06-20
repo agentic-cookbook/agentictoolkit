@@ -28,6 +28,14 @@ extension SessionWatcher {
         public static let contentSizeDidChangeNotification = Notification.Name("SessionContentViewContentSizeDidChange")
 
         public override var intrinsicContentSize: NSSize {
+            // No session cards → the empty-state view is what's visible. Report its
+            // height so the host window sizes to show it. Reporting the empty stack's
+            // collapsed inset height instead would shrink the list area to nothing and
+            // the centered "No Active Sessions" content would overflow up into the
+            // header (the empty-state UI the user saw as "mangled").
+            if stackView.arrangedSubviews.isEmpty {
+                return NSSize(width: NSView.noIntrinsicMetric, height: emptyStateView.intrinsicContentSize.height)
+            }
             let contentHeight = stackView.fittingSize.height
             return NSSize(width: NSView.noIntrinsicMetric, height: contentHeight)
         }
@@ -151,6 +159,13 @@ extension SessionWatcher {
     // MARK: - Empty State View
 
     public final class SessionWatcherEmptyStateView: NSView {
+        /// Natural footprint for the empty state: the dog icon + "No Active Sessions"
+        /// label centered with comfortable vertical breathing room. Vended as the
+        /// view's intrinsic height so the host window sizes to display it instead of
+        /// collapsing the list area to nothing (which crushes the centered content up
+        /// into the header above). See `SessionListView.intrinsicContentSize`.
+        public static let preferredHeight: CGFloat = 80
+
         public override init(frame: NSRect) {
             super.init(frame: frame)
             accessibilityID("session-panel.empty-state")
@@ -159,6 +174,10 @@ extension SessionWatcher {
 
         @available(*, unavailable)
         public required init?(coder: NSCoder) { fatalError() }
+
+        public override var intrinsicContentSize: NSSize {
+            NSSize(width: NSView.noIntrinsicMetric, height: Self.preferredHeight)
+        }
 
         private func setupViews() {
             let imageView = NSImageView()
