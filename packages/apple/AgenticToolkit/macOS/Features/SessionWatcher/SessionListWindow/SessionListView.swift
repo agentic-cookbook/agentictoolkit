@@ -386,6 +386,29 @@ extension SessionWatcher {
         @available(*, unavailable)
         public required init?(coder: NSCoder) { fatalError() }
 
+        /// App icon for the terminal a session runs in, from its `TERM_PROGRAM`.
+        /// Prefers a running instance's icon, falls back to the installed app
+        /// bundle, then a generic terminal glyph for unknown/empty terminals.
+        private static func appIcon(forTermProgram termProgram: String) -> NSImage? {
+            let bundleIDs: [String: String] = [
+                "iTerm.app": "com.googlecode.iterm2",
+                "Apple_Terminal": "com.apple.Terminal",
+                "WarpTerminal": "dev.warp.Warp-Stable",
+                "vscode": "com.microsoft.VSCode",
+                "tmux": "com.apple.Terminal"
+            ]
+            if let bundleID = bundleIDs[termProgram] {
+                if let running = NSRunningApplication
+                    .runningApplications(withBundleIdentifier: bundleID).first?.icon {
+                    return running
+                }
+                if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                    return NSWorkspace.shared.icon(forFile: url.path)
+                }
+            }
+            return NSImage(systemSymbolName: "terminal", accessibilityDescription: "terminal")
+        }
+
         private func setupViews() {
             let padding: CGFloat = 12
 
@@ -395,6 +418,18 @@ extension SessionWatcher {
             headerRow.spacing = 6
             headerRow.alignment = .centerY
             headerRow.translatesAutoresizingMaskIntoConstraints = false
+
+            // App icon for the terminal the session runs in (leftmost in the header).
+            let iconView = NSImageView()
+            iconView.image = Self.appIcon(forTermProgram: session.termProgram)
+            iconView.imageScaling = .scaleProportionallyUpOrDown
+            iconView.toolTip = session.termProgram.isEmpty ? nil : session.termProgram
+            iconView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                iconView.widthAnchor.constraint(equalToConstant: 15),
+                iconView.heightAnchor.constraint(equalToConstant: 15)
+            ])
+            headerRow.addArrangedSubview(iconView)
 
             // Project name (first, upper left)
             let projectLabel = NSTextField(labelWithString: session.projectName)

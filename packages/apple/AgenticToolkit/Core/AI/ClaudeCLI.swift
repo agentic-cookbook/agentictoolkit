@@ -66,6 +66,11 @@ public enum ClaudeCLI {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let extras = ["\(home)/.local/bin", "/usr/local/bin", "/opt/homebrew/bin"]
         env["PATH"] = (extras + [env["PATH"] ?? "/usr/bin:/bin"]).joined(separator: ":")
+        // Mark this as a programmatic/headless claude invocation so a session
+        // tracker's hooks (which this child process inherits) can tell it apart
+        // from a real interactive user session and not record it — e.g.
+        // stenographer's EnvelopeBuilder drops events carrying this marker.
+        env["AGENTIC_TOOLKIT_HEADLESS"] = "1"
         process.environment = env
 
         do {

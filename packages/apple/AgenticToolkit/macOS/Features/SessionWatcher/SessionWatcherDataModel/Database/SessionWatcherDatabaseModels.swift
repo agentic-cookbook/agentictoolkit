@@ -21,6 +21,9 @@ extension SessionWatcher {
         /// unknown (not yet enriched, or cwd isn't a git working tree). Used to
         /// group sessions by project in the Sessions window.
         public var projectRoot: String
+        /// The terminal's `TERM_SESSION_ID` (e.g. iTerm's "w0t1p0:UUID"), used to
+        /// jump to the exact tab/pane on click. Empty for terminals that don't set it.
+        public var termSessionId: String
 
         public init(
             id: Int? = nil,
@@ -35,7 +38,8 @@ extension SessionWatcher {
             summary: String = "",
             pid: Int32 = 0,
             termProgram: String = "",
-            projectRoot: String = ""
+            projectRoot: String = "",
+            termSessionId: String = ""
         ) {
             self.id = id
             self.sessionId = sessionId
@@ -50,6 +54,7 @@ extension SessionWatcher {
             self.pid = pid
             self.termProgram = termProgram
             self.projectRoot = projectRoot
+            self.termSessionId = termSessionId
         }
 
         /// Returns the best available description for this session.

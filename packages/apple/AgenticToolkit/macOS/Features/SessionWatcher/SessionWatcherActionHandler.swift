@@ -379,8 +379,23 @@ extension SessionWatcher {
             // drives iTerm2 via AppleScript, which needs Automation permission
             // (not Accessibility) — so it runs *before* the Accessibility gate, and
             // surfaces an Automation permission error if denied.
-            if session.termProgram == "iTerm.app" && session.pid > 0 {
-                if let tty = ttyForPid(session.pid) {
+            if session.termProgram == "iTerm.app" {
+                // Strongest signal: the recorded TERM_SESSION_ID maps directly to an
+                // iTerm session `id` — precise, and doesn't need a live pid.
+                if !session.termSessionId.isEmpty {
+                    log.append("  iTerm session-id strategy: \(session.termSessionId)")
+                    switch activateITermBySessionId(session.termSessionId) {
+                    case .activated:
+                        log.append("  iTerm session-id activation succeeded")
+                        return .success
+                    case .permissionDenied(let error):
+                        log.append("  iTerm session-id activation denied — needs Automation permission")
+                        return .failure(error)
+                    case .notFound:
+                        log.append("  iTerm session-id activation: no match")
+                    }
+                }
+                if session.pid > 0, let tty = ttyForPid(session.pid) {
                     log.append("  iTerm TTY strategy: pid=\(session.pid) tty=\(tty)")
                     switch activateITermByTTY(tty: tty) {
                     case .activated:
@@ -731,6 +746,45 @@ extension SessionWatcher {
                 repeat with t in tabs of w
                     repeat with s in sessions of t
                         if tty of s is "\(devTTY)" then
+                            select s
+                            select t
+                            activate
+                            return "found"
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            return "not_found"
+        end tell
+        """
+            var error: NSDictionary?
+            guard let appleScript = NSAppleScript(source: script) else { return .notFound }
+            let result = appleScript.executeAndReturnError(&error)
+            if let error {
+                if let permError = appleScriptPermissionError(
+                    error, appName: "iTerm2", bundleID: "com.googlecode.iterm2"
+                ) {
+                    return .permissionDenied(permError)
+                }
+                return .notFound
+            }
+            return result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) == "found"
+                ? .activated : .notFound
+        }
+
+        /// Activates the iTerm2 tab/pane whose session `id` matches the session's
+        /// `TERM_SESSION_ID`. That env var is "<window/tab/pane>:<uuid>"; iTerm's
+        /// `id of session` is the uuid. More robust than the TTY path (it doesn't
+        /// depend on a live pid and survives pane moves). Needs Automation permission.
+        private func activateITermBySessionId(_ termSessionId: String) -> ITermActivation {
+            let uuid = termSessionId.split(separator: ":").last.map(String.init) ?? termSessionId
+            guard !uuid.isEmpty else { return .notFound }
+            let script = """
+        tell application id "com.googlecode.iterm2"
+            repeat with w in windows
+                repeat with t in tabs of w
+                    repeat with s in sessions of t
+                        if id of s is "\(uuid)" then
                             select s
                             select t
                             activate
