@@ -241,6 +241,7 @@
 		7B2ED1D6783038C46E7AD287 /* HeuristicsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0028396C00D80631AFF612E5 /* HeuristicsSettingsTab.swift */; };
 		7CB3DB6B65E9305CAA792C9F /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2951B18E81A33463286D9EE4 /* FileSystemWatcher.swift */; };
 		7CFFEA150BB6C132E93BA1A7 /* SessionListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC98A9EAFD2AEA6EFC2F2DE2 /* SessionListViewModelTests.swift */; };
+		7D5F96ED90E05AE4171C33CA /* ChatTranscriptReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAA6F1867906CCB1C562F3E9 /* ChatTranscriptReducerTests.swift */; };
 		7E06A61532A711063DA6EC4D /* SessionListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32DB64D049628A66B23446A /* SessionListViewController.swift */; };
 		7EBBE56D00F7FC851114A7E7 /* PermissionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929134DCCD09CD27C3271504 /* PermissionStatus.swift */; };
 		7EBEEE27BF502BC3814BEFCD /* GeneralSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C03A7CF1937C3EC7B28B05 /* GeneralSettingsPanelViewController.swift */; };
@@ -365,6 +366,7 @@
 		C6C255A128CA45F0C98C6BDE /* MainActorScriptCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952C7E3DA7AB65B35021477E /* MainActorScriptCommandTests.swift */; };
 		C80DD668F297C9680A16B1B2 /* NotesSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4ED71A3B2B4EAEBE0483F9 /* NotesSplitViewController.swift */; };
 		CA269927A2C05060E0D239BB /* KeychainSecureSettingsStorageProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFFAA37CE8334ABDAEEFAEE6 /* KeychainSecureSettingsStorageProviderTests.swift */; };
+		CA4C1BB936969AA1622CB99E /* ChatTranscriptReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D8AF051E35975AF66D86F3E /* ChatTranscriptReducer.swift */; };
 		CB53A899C846C84BC57368A2 /* Loggable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44C16FF5550600D6EF44C65 /* Loggable.swift */; };
 		CB5EB35E0A483B1D33C209FA /* SessionWatcherEventFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0204AC187624C3C0E4C2AF09 /* SessionWatcherEventFile.swift */; };
 		CC0C0992D429704C5BD3EFD4 /* SummarizerDebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35F9D6F9C23B0B9539863B52 /* SummarizerDebugLog.swift */; };
@@ -917,6 +919,7 @@
 		1B58829FEE5D03814FD25AB0 /* InMemorySecureSettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemorySecureSettingsStorageProvider.swift; sourceTree = "<group>"; };
 		1BA5D9118A1080C5EE9E8FD9 /* ScriptingHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptingHost.swift; sourceTree = "<group>"; };
 		1CD4A55688BD6FC0C69D4AD4 /* TerminalSessionSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionSummarizer.swift; sourceTree = "<group>"; };
+		1D8AF051E35975AF66D86F3E /* ChatTranscriptReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTranscriptReducer.swift; sourceTree = "<group>"; };
 		1E5BB708EB090504A23A0FAF /* SummarizerDebugCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizerDebugCommands.swift; sourceTree = "<group>"; };
 		1EEFD96B23DBED0737E91903 /* MatchStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchStrategy.swift; sourceTree = "<group>"; };
 		1F10F200FE8B226C3D092BBE /* SessionWatcherSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherSummarizer.swift; sourceTree = "<group>"; };
@@ -1211,6 +1214,7 @@
 		E94E4226C9F21C5C1E6E0DE3 /* ContextsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextsSettingsTab.swift; sourceTree = "<group>"; };
 		E9A1E913777AA53295489FAA /* SettingsPanelListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelListViewController.swift; sourceTree = "<group>"; };
 		EA46CC60E98301AA82013F9D /* UserDefaultsWindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsWindowStateStorage.swift; sourceTree = "<group>"; };
+		EAA6F1867906CCB1C562F3E9 /* ChatTranscriptReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTranscriptReducerTests.swift; sourceTree = "<group>"; };
 		EBF39C026522BC346B944957 /* MCPServersPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServersPanelViewController.swift; sourceTree = "<group>"; };
 		EC220478903118D361CF5A97 /* HorizontalStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalStackView.swift; sourceTree = "<group>"; };
 		EC7181F57AD1A664A8DA86E0 /* NestedSplitViewWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedSplitViewWindowController.swift; sourceTree = "<group>"; };
@@ -1428,6 +1432,7 @@
 				AA5CD36148C38DB0350750DD /* ChatMessage.swift */,
 				5E9AAB4E3EBB388E9FD3A941 /* ChatSession.swift */,
 				AF83EC0036A5B9DE88298D63 /* ChatSessionState.swift */,
+				1D8AF051E35975AF66D86F3E /* ChatTranscriptReducer.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -2180,6 +2185,7 @@
 		9B4780723DFEE0935D7B745C /* AgenticToolkitCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				D313D8396D2CEA7B7CBADE2F /* Chat */,
 				1C317B81A4A0F44D95F82B8C /* MCP */,
 				27852FE10F3225077090F465 /* SettingsStore */,
 				996BC129EFE3C2D78BE1C0D2 /* CGFloatClampedTests.swift */,
@@ -2386,6 +2392,14 @@
 			path = WindowDiscovery;
 			sourceTree = "<group>";
 		};
+		D313D8396D2CEA7B7CBADE2F /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				EAA6F1867906CCB1C562F3E9 /* ChatTranscriptReducerTests.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
 		D3C9139ADE6E7860D5B91112 /* AIPlugins */ = {
 			isa = PBXGroup;
 			children = (
@@ -2585,7 +2599,7 @@
 			path = LoggingWindow;
 			sourceTree = "<group>";
 		};
-		"TEMP_671CE58C-4E65-4519-955B-5BDA17DF77C3" /* Settings */ = {
+		"TEMP_8274DC99-5BB4-4C07-AF98-ABA58455CF22" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -3223,6 +3237,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A4615DB470BB4650A1631599 /* CGFloatClampedTests.swift in Sources */,
+				7D5F96ED90E05AE4171C33CA /* ChatTranscriptReducerTests.swift in Sources */,
 				16C4C0E0EA485890B97F4DEF /* InMemorySettingsStoreTests.swift in Sources */,
 				90F9F4DE37B2BD2D06BFE024 /* KeychainHelperTests.swift in Sources */,
 				CA269927A2C05060E0D239BB /* KeychainSecureSettingsStorageProviderTests.swift in Sources */,
@@ -3505,6 +3520,7 @@
 				4C36E57AF8EC9A698C2C7791 /* ChatSession.swift in Sources */,
 				E54C5712DCB1369C05A68847 /* ChatSessionState.swift in Sources */,
 				81BCC1A948810DDE2FF31ADC /* ChatStreamEvent.swift in Sources */,
+				CA4C1BB936969AA1622CB99E /* ChatTranscriptReducer.swift in Sources */,
 				02D1434BEF75F060D0C3A2E6 /* ClaudeCLI.swift in Sources */,
 				3FA882101362678876F45F83 /* CodableIgnored.swift in Sources */,
 				9F173A2DD1B90807959C4F6D /* ColorSetting.swift in Sources */,
