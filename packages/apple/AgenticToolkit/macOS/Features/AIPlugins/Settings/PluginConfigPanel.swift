@@ -57,8 +57,27 @@ final class PluginConfigPanel: ComposableSettings.SettingsPanelViewController {
     /// panel's bottom — which the split controller pins to the window — so the chat
     /// fills the remaining height and grows with the window.
     private func addChatView(below group: NSView) {
-        let backend = AIPluginChatBackend(pluginManager: pluginManager, configProvider: chatConfigProvider)
-        let chatView = ChatView(viewModel: ChatViewModel(backend: backend))
+        // Snapshot all @MainActor values up front so the @Sendable closures below
+        // can capture value types only — avoiding cross-actor calls inside them.
+        let pluginIdentifier = chatConfigProvider.selectedPluginIdentifier
+        let model = chatConfigProvider.selectedModel
+        let configValues = chatConfigProvider.pluginConfigValues
+        // Load the plugin now (main actor); the closure captures the instance.
+        let plugin: (any AIPlugin)? = try? pluginManager.loadPlugin(identifier: pluginIdentifier)
+
+        let session = LocalChatSession(
+            resolvePlugin: { plugin },
+            makeContext: { history in
+                AIChatContext(
+                    messages: history,
+                    model: model,
+                    systemPrompt: nil,
+                    tools: [],
+                    config: AIPluginConfig(configValues)
+                )
+            }
+        )
+        let chatView = ChatView(viewModel: ChatViewModel(session: session))
         chatView.translatesAutoresizingMaskIntoConstraints = false
         settingsView.addSubview(chatView)
 

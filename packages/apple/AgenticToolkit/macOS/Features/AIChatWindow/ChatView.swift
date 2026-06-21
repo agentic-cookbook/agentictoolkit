@@ -80,41 +80,14 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         inputRow.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
         inputRow.translatesAutoresizingMaskIntoConstraints = false
 
-        let topAnchorView: NSView
-        let topDivider = NSBox()
-        topDivider.boxType = .separator
-        topDivider.translatesAutoresizingMaskIntoConstraints = false
-
-        if let registry = viewModel.registry {
-            let chipsBar = MCPChipsBarView(viewModel: viewModel, registry: registry)
-            addSubview(chipsBar)
-            addSubview(topDivider)
-            NSLayoutConstraint.activate([
-                chipsBar.topAnchor.constraint(equalTo: topAnchor),
-                chipsBar.leadingAnchor.constraint(equalTo: leadingAnchor),
-                chipsBar.trailingAnchor.constraint(equalTo: trailingAnchor),
-                topDivider.topAnchor.constraint(equalTo: chipsBar.bottomAnchor),
-                topDivider.leadingAnchor.constraint(equalTo: leadingAnchor),
-                topDivider.trailingAnchor.constraint(equalTo: trailingAnchor)
-            ])
-            topAnchorView = topDivider
-        } else {
-            topAnchorView = self
-        }
+        let topAnchorView: NSView = self
 
         addSubview(transcriptScroll)
         addSubview(divider)
         addSubview(inputRow)
 
-        let transcriptTop: NSLayoutConstraint
-        if topAnchorView === self {
-            transcriptTop = transcriptScroll.topAnchor.constraint(equalTo: topAnchor)
-        } else {
-            transcriptTop = transcriptScroll.topAnchor.constraint(equalTo: topAnchorView.bottomAnchor)
-        }
-
         NSLayoutConstraint.activate([
-            transcriptTop,
+            transcriptScroll.topAnchor.constraint(equalTo: topAnchorView.topAnchor),
             transcriptScroll.leadingAnchor.constraint(equalTo: leadingAnchor),
             transcriptScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
             transcriptScroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
@@ -144,13 +117,25 @@ public final class ChatView: NSView, NSTextFieldDelegate {
     private func bindViewModel() {
         viewModel.$messages
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.rebuildTranscript() }
+            .sink { [weak self] _ in self?.scheduleRender() }
             .store(in: &cancellables)
 
-        viewModel.$isTyping
+        viewModel.$state
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.rebuildTranscript() }
+            .sink { [weak self] _ in self?.scheduleRender() }
             .store(in: &cancellables)
+    }
+
+    /// Coalesce high-frequency delta updates into one rebuild per runloop tick.
+    private var renderScheduled = false
+    private func scheduleRender() {
+        guard !renderScheduled else { return }
+        renderScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.renderScheduled = false
+            self.rebuildTranscript()
+        }
     }
 
     // MARK: - Transcript
@@ -186,11 +171,16 @@ public final class ChatView: NSView, NSTextFieldDelegate {
             }
         }
 
-        if viewModel.isTyping {
+        let responding = viewModel.state == .responding
+        if responding {
             let indicator = TypingIndicatorView()
             transcriptStack.addArrangedSubview(indicator)
             indicator.startAnimating()
         }
+
+        // Disable input controls while responding so rapid sends can't overlap turns.
+        inputField.isEnabled = !responding
+        sendButton.isEnabled = !responding
 
         if isAtBottom {
             DispatchQueue.main.async { [weak self] in self?.scrollToBottom() }

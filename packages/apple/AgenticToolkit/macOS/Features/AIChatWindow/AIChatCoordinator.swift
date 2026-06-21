@@ -4,17 +4,17 @@ import AgenticToolkitCore
 
 /// Owns the AI Chat window. Lazy: nothing is constructed until
 /// `showWindow()` is called or scripting reads `aiChatVisible`. The chat
-/// backend is host-specific (Whippet uses `WhippetChatBackend`), so the
-/// coordinator takes a backend-factory closure at init.
+/// session is host-specific, so the coordinator takes a session-factory closure
+/// at init.
 @MainActor
 public final class AIChatCoordinator: AppFeature {
 
-    private let makeBackend: () -> ChatBackend
+    private let makeSession: () -> any ChatSession
     public private(set) var viewModel: ChatViewModel?
     public private(set) var windowController: AIChatWindowController?
 
-    public init(makeBackend: @escaping () -> ChatBackend) {
-        self.makeBackend = makeBackend
+    public init(makeSession: @escaping () -> any ChatSession) {
+        self.makeSession = makeSession
         super.init()
 
         self.menuContributions = [
@@ -30,13 +30,18 @@ public final class AIChatCoordinator: AppFeature {
         self.scriptingKeys.insert("scriptingChatViewModel")
     }
 
+    /// Legacy convenience: wraps a `ChatBackend` factory in the bridge adapter.
+    @available(*, deprecated, message: "Pass makeSession: with a ChatSession (e.g. LocalChatSession).")
+    public convenience init(makeBackend: @escaping () -> ChatBackend) {
+        self.init(makeSession: { ChatBackendSession(backend: makeBackend()) })
+    }
+
     // MARK: - Public API
 
     /// Idempotent — safe to call before reading `viewModel` from scripting.
     public func ensureWindow() {
         guard windowController == nil else { return }
-        let backend = makeBackend()
-        let chatViewModel = ChatViewModel(backend: backend)
+        let chatViewModel = ChatViewModel(session: makeSession())
         viewModel = chatViewModel
         windowController = AIChatWindowController(viewModel: chatViewModel)
     }
