@@ -1,0 +1,69 @@
+import AppKit
+import OSLog
+import AgenticToolkitCore
+
+/// Owns the app-wide active theme. Resolves the selected `ColorTheme` and its
+/// `SemanticPalette`, applies the saved selection at launch, and reacts to live
+/// changes (from the theme settings panel). Modeled on `AppearanceManager`.
+///
+/// Themeable controls read `ThemeManager.shared?.currentPalette` and observe
+/// `didChangeNotification` to repaint when the theme changes.
+@MainActor
+public final class ThemeManager: AppFeature {
+
+    /// Posted (object = the manager) whenever the active theme or its definition
+    /// changes. Themeable controls observe this to reapply colors live.
+    public static let didChangeNotification = Notification.Name("AgenticToolkit.ThemeManager.didChange")
+
+    /// The most recently constructed manager. Held weakly — the
+    /// `AppFeatureRegistry` retains the instance for the app's lifetime.
+    public private(set) static weak var shared: ThemeManager?
+
+    public let store: ThemeStore
+
+    public private(set) var currentTheme: ColorTheme
+    public private(set) var currentPalette: SemanticPalette
+
+    private var activeObserver: UserSettingObserver<String>?
+    private var customObserver: UserSettingObserver<[ColorTheme]>?
+
+    public override init() {
+        let store = ThemeStore()
+        let theme = store.theme(withID: UserSettings.activeThemeID.value) ?? BuiltInThemes.solarizedDark
+        self.store = store
+        self.currentTheme = theme
+        self.currentPalette = SemanticPalette(theme: theme)
+        super.init()
+
+        ThemeManager.shared = self
+
+        // React to a different theme being selected, or to the active theme's
+        // definition being edited in place.
+        activeObserver = UserSettingObserver(UserSettings.activeThemeID) { [weak self] _ in
+            self?.reload()
+        }
+        customObserver = UserSettingObserver(UserSettings.customThemes) { [weak self] _ in
+            self?.reload()
+        }
+    }
+
+    /// Selects a theme by ID. Persists the choice and updates the resolved
+    /// theme/palette synchronously (the live-update observer also fires for
+    /// external changes such as in-place edits to a custom theme).
+    public func selectTheme(id: String) {
+        UserSettings.activeThemeID.value = id
+        reload()
+    }
+
+    private func reload() {
+        let theme = store.theme(withID: UserSettings.activeThemeID.value) ?? BuiltInThemes.solarizedDark
+        currentTheme = theme
+        currentPalette = SemanticPalette(theme: theme)
+        logger.info("Active theme: \(theme.name, privacy: .public)")
+        NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
+    }
+}
+
+extension ThemeManager: Loggable {
+    public static nonisolated let logger = makeLogger()
+}
