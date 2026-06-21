@@ -745,7 +745,7 @@ extension SessionWatcher {
             repeat with w in windows
                 repeat with t in tabs of w
                     repeat with s in sessions of t
-                        if tty of s is "\(devTTY)" then
+                        if tty of s is "\(shellEscape(devTTY))" then
                             select s
                             select t
                             activate
@@ -784,7 +784,7 @@ extension SessionWatcher {
             repeat with w in windows
                 repeat with t in tabs of w
                     repeat with s in sessions of t
-                        if id of s is "\(uuid)" then
+                        if id of s is "\(shellEscape(uuid))" then
                             select s
                             select t
                             activate
