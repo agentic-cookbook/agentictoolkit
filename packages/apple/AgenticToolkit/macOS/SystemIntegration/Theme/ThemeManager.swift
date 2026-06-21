@@ -24,6 +24,12 @@ public final class ThemeManager: AppFeature {
     public private(set) var currentTheme: ColorTheme
     public private(set) var currentPalette: SemanticPalette
 
+    /// When true (the default), the manager sets `NSApp.appearance` to match the
+    /// active theme's light/dark/auto so AppKit's semantic colors contrast
+    /// correctly against themed surfaces. Hosts that manage appearance
+    /// themselves can opt out.
+    public var drivesApplicationAppearance = true
+
     private var activeObserver: UserSettingObserver<String>?
     private var customObserver: UserSettingObserver<[ColorTheme]>?
 
@@ -36,6 +42,7 @@ public final class ThemeManager: AppFeature {
         super.init()
 
         ThemeManager.shared = self
+        applyApplicationAppearance()
 
         // React to a different theme being selected, or to the active theme's
         // definition being edited in place.
@@ -45,6 +52,11 @@ public final class ThemeManager: AppFeature {
         customObserver = UserSettingObserver(UserSettings.customThemes) { [weak self] _ in
             self?.reload()
         }
+    }
+
+    private func applyApplicationAppearance() {
+        guard drivesApplicationAppearance else { return }
+        NSApp.appearance = currentTheme.appearance.nsAppearance
     }
 
     /// Selects a theme by ID. Persists the choice and updates the resolved
@@ -59,8 +71,20 @@ public final class ThemeManager: AppFeature {
         let theme = store.theme(withID: UserSettings.activeThemeID.value) ?? BuiltInThemes.solarizedDark
         currentTheme = theme
         currentPalette = SemanticPalette(theme: theme)
+        applyApplicationAppearance()
         logger.info("Active theme: \(theme.name, privacy: .public)")
         NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
+    }
+}
+
+extension ThemeAppearance {
+    /// The matching `NSAppearance` (`nil` follows the system).
+    public var nsAppearance: NSAppearance? {
+        switch self {
+        case .auto: return nil
+        case .dark: return NSAppearance(named: .darkAqua)
+        case .light: return NSAppearance(named: .aqua)
+        }
     }
 }
 
