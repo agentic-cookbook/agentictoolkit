@@ -16,6 +16,9 @@ public final class ChatViewModel: ObservableObject {
     /// referenced `isTyping`.
     public var isTyping: Bool { if case .responding = state { return true } else { return false } }
 
+    /// True while an assistant response is streaming.
+    public var isResponding: Bool { if case .responding = state { true } else { false } }
+
     private let session: any ChatSession
     private var pump: Task<Void, Never>?
 
@@ -37,12 +40,16 @@ public final class ChatViewModel: ObservableObject {
     public func sendMessage(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        guard !isResponding else { return }
         session.send(trimmed)
     }
 
     public func interrupt() { session.interrupt() }
 
-    public func clearHistory() { messages.removeAll() }
+    public func clearHistory() {
+        session.clear()
+        messages.removeAll()
+    }
 
     // MARK: - Reducer pump
 

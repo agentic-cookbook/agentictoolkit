@@ -2631,7 +2631,7 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_9EC4ADE3-9217-4DC0-8455-FF9B5BC64240" /* Settings */ = {
+		"TEMP_C895C846-865B-49E4-83F9-C05ACFD3610F" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);

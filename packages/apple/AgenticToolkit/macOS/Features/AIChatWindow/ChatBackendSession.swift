@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import AgenticToolkitCore
 
 /// Adapts a legacy `ChatBackend` to the `ChatSession` contract so consumers that
@@ -13,6 +14,9 @@ public final class ChatBackendSession: ChatSession, @unchecked Sendable {
     private var continuation: AsyncStream<ChatEvent>.Continuation?
     private var history: [ChatBackendMessage] = []
     private var liveTurn: Task<Void, Never>?
+    /// Guards concurrent-send: true while a turn task is active.
+    /// Uses `Synchronization.Mutex` so `withLock` is safe from async contexts.
+    private let turnActiveMutex = Mutex(false)
 
     public init(backend: ChatBackend) { self.backend = backend }
 
@@ -25,13 +29,33 @@ public final class ChatBackendSession: ChatSession, @unchecked Sendable {
     }
 
     public func send(_ text: String) {
+        let busy = turnActiveMutex.withLock { state -> Bool in
+            if state { return true }
+            state = true
+            return false
+        }
+        guard !busy else { return }
         liveTurn = Task { [weak self] in await self?.runTurn(text) }
     }
 
-    public func interrupt() { liveTurn?.cancel() }
-    public func close() { liveTurn?.cancel(); withLock { continuation }?.finish() }
+    public func interrupt() {
+        liveTurn?.cancel()
+        turnActiveMutex.withLock { $0 = false }
+    }
+
+    public func clear() {
+        lock.lock(); history.removeAll(); lock.unlock()
+    }
+
+    public func close() {
+        liveTurn?.cancel()
+        turnActiveMutex.withLock { $0 = false }
+        withLock { continuation }?.finish()
+    }
 
     private func runTurn(_ text: String) async {
+        defer { turnActiveMutex.withLock { $0 = false } }
+
         emit(.userMessage(ChatMessage(role: .user, text: text)))
         appendHistory(ChatBackendMessage(role: .user, content: text))
         emit(.stateChanged(.responding))

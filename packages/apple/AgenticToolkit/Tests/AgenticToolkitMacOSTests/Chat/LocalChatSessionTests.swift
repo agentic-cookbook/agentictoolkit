@@ -9,8 +9,10 @@ import AIPluginKit
 private actor EventCollector {
     private(set) var deltas: [String] = []
     private(set) var finished = false
+    private(set) var responseStartedReceived = false
     func appendDelta(_ text: String) { deltas.append(text) }
     func setFinished() { finished = true }
+    func setResponseStarted() { responseStartedReceived = true }
 }
 
 @Suite("LocalChatSession")
@@ -40,18 +42,27 @@ struct LocalChatSessionTests {
 
         let collectorTask = Task {
             for await event in session.events() {
+                if case .responseStarted = event { await collector.setResponseStarted() }
                 if case .responseDelta(_, let text) = event { await collector.appendDelta(text) }
                 if case .responseFinished = event { await collector.setFinished(); break }
             }
         }
         try? await Task.sleep(for: .milliseconds(20))
         session.send("hi")
-        await collectorTask.value
+
+        // Bounded wait: poll up to ~2 s (200 × 10 ms) so a regression can't hang the suite.
+        for _ in 0..<200 {
+            if await collector.finished { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        collectorTask.cancel()
         session.close()
 
         let deltas = await collector.deltas
         let finished = await collector.finished
+        let startedReceived = await collector.responseStartedReceived
 
+        #expect(startedReceived, "expected .responseStarted before deltas")
         #expect(deltas.joined() == "Hello")
         #expect(finished)
     }

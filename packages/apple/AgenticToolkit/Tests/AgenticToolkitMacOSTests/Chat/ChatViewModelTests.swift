@@ -20,11 +20,16 @@ struct ChatViewModelTests {
             try? await Task.sleep(for: .milliseconds(10))
         }
 
-        #expect(viewModel.messages.count == 2)
-        #expect(viewModel.messages[0].role == .user)
-        #expect(viewModel.messages[0].text == "hi")
-        #expect(viewModel.messages[1].role == .assistant)
-        #expect(viewModel.messages[1].text == "Hello")
-        #expect(viewModel.messages[1].isStreaming == false)
+        guard viewModel.messages.count == 2 else {
+            Issue.record("expected 2 messages, got \(viewModel.messages.count)")
+            return
+        }
+        let user = viewModel.messages[0]
+        let assistant = viewModel.messages[1]
+        #expect(user.role == .user)
+        #expect(user.text == "hi")
+        #expect(assistant.role == .assistant)
+        #expect(assistant.text == "Hello")
+        #expect(assistant.isStreaming == false)
     }
 }

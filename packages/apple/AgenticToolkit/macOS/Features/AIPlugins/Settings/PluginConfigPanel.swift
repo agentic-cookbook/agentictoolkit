@@ -57,24 +57,27 @@ final class PluginConfigPanel: ComposableSettings.SettingsPanelViewController {
     /// panel's bottom — which the split controller pins to the window — so the chat
     /// fills the remaining height and grows with the window.
     private func addChatView(below group: NSView) {
-        // Snapshot all @MainActor values up front so the @Sendable closures below
-        // can capture value types only — avoiding cross-actor calls inside them.
-        let pluginIdentifier = chatConfigProvider.selectedPluginIdentifier
-        let model = chatConfigProvider.selectedModel
-        let configValues = chatConfigProvider.pluginConfigValues
-        // Load the plugin now (main actor); the closure captures the instance.
-        let plugin: (any AIPlugin)? = try? pluginManager.loadPlugin(identifier: pluginIdentifier)
+        // Capture @MainActor reference types; read their properties live per-turn
+        // inside MainActor.run so the session always sees the current config.
+        let pluginManager = self.pluginManager
+        let chatConfigProvider = self.chatConfigProvider
 
         let session = LocalChatSession(
-            resolvePlugin: { plugin },
+            resolvePlugin: {
+                await MainActor.run {
+                    try? pluginManager.loadPlugin(identifier: chatConfigProvider.selectedPluginIdentifier)
+                }
+            },
             makeContext: { history in
-                AIChatContext(
-                    messages: history,
-                    model: model,
-                    systemPrompt: nil,
-                    tools: [],
-                    config: AIPluginConfig(configValues)
-                )
+                await MainActor.run {
+                    AIChatContext(
+                        messages: history,
+                        model: chatConfigProvider.selectedModel,
+                        systemPrompt: nil,
+                        tools: [],
+                        config: AIPluginConfig(chatConfigProvider.pluginConfigValues)
+                    )
+                }
             }
         )
         let chatView = ChatView(viewModel: ChatViewModel(session: session))
