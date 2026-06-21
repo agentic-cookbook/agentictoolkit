@@ -30,8 +30,9 @@ public final class AIChatCoordinator: AppFeature {
         self.scriptingKeys.insert("scriptingChatViewModel")
     }
 
-    /// Legacy convenience: wraps a `ChatBackend` factory in the bridge adapter.
-    @available(*, deprecated, message: "Pass makeSession: with a ChatSession (e.g. LocalChatSession).")
+    /// Legacy convenience: wraps a `ChatBackend` factory in `ChatBackendSession`.
+    /// Prefer `init(makeSession:)`. Retained until AgenticToolkitApp & Whippet
+    /// migrate, then deleted.
     public convenience init(makeBackend: @escaping () -> ChatBackend) {
         self.init(makeSession: { ChatBackendSession(backend: makeBackend()) })
     }
