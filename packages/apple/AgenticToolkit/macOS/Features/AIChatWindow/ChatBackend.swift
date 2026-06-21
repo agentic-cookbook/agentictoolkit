@@ -79,6 +79,10 @@ public struct ChatBackendMessage: Sendable, Equatable {
 /// Conformers choose their own actor isolation. A UI-driven backend may be
 /// `@MainActor`; an HTTP-driven backend may be an `actor` of its own. The
 /// chat UI awaits both `isReady` and `sendMessages`, so either works.
+///
+/// - Important: Deprecated. New code conforms to `ChatSession` (e.g.
+///   `LocalChatSession`). This rides `ChatBackendSession` until AgenticToolkitApp
+///   and Whippet migrate, then it (and `WhippetChatBackend`) are deleted.
 public protocol ChatBackend: AnyObject, Sendable {
     /// Whether the backend is currently ready to accept messages. The chat UI
     /// uses this to enable or disable the input field (e.g. disable when no

@@ -22,6 +22,10 @@ public protocol ChatConfigProvider: AnyObject {
 /// that request with `PluginTransport` and maps the decoded `AIStreamEvent`s onto
 /// the chat UI's `ChatStreamEvent`s.
 ///
+/// - Important: Deprecated. New code conforms to `ChatSession` (e.g.
+///   `LocalChatSession`). This rides `ChatBackendSession` until AgenticToolkitApp
+///   and Whippet migrate, then it (and `WhippetChatBackend`) are deleted.
+///
 /// Not main-actor isolated itself — the per-call work (resolving the plugin and
 /// reading config) is done inside a `MainActor.run` block, leaving the transport
 /// and decoding off the main actor.
