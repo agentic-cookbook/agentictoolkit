@@ -43,6 +43,18 @@ struct ThemeManagerTests {
         #expect(manager.currentTheme.name == "Nord Custom")
     }
 
+    @Test("drives NSApplication appearance from the theme's light/dark/auto")
+    func drivesAppearance() {
+        // Must reference NSApplication.shared (not the NSApp implicitly-unwrapped
+        // global, which is nil until the host first touches NSApplication.shared)
+        // so a host that builds the manager before app setup does not crash.
+        let manager = ThemeManager()
+        manager.selectTheme(id: BuiltInThemes.solarizedDark.id)
+        #expect(NSApplication.shared.appearance?.name == .darkAqua)
+        manager.selectTheme(id: BuiltInThemes.githubLight.id)
+        #expect(NSApplication.shared.appearance?.name == .aqua)
+    }
+
     @Test("posts didChange when the theme changes")
     func postsNotification() {
         final class Flag: @unchecked Sendable { var fired = false }

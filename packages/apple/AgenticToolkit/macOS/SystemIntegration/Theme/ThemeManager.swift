@@ -24,7 +24,7 @@ public final class ThemeManager: AppFeature {
     public private(set) var currentTheme: ColorTheme
     public private(set) var currentPalette: SemanticPalette
 
-    /// When true (the default), the manager sets `NSApp.appearance` to match the
+    /// When true (the default), the manager sets `NSApplication.shared.appearance` to match the
     /// active theme's light/dark/auto so AppKit's semantic colors contrast
     /// correctly against themed surfaces. Hosts that manage appearance
     /// themselves can opt out.
@@ -56,7 +56,13 @@ public final class ThemeManager: AppFeature {
 
     private func applyApplicationAppearance() {
         guard drivesApplicationAppearance else { return }
-        NSApp.appearance = currentTheme.appearance.nsAppearance
+        // Use `NSApplication.shared`, not the `NSApp` implicitly-unwrapped global:
+        // `NSApp` stays nil until the host first accesses `NSApplication.shared`,
+        // so a host that constructs the manager before app setup (Stenographer
+        // builds it in `main.swift` ahead of `NSApplication.shared`) would
+        // crash force-unwrapping `NSApp`. `NSApplication.shared` lazily creates
+        // the instance and is safe at any point.
+        NSApplication.shared.appearance = currentTheme.appearance.nsAppearance
     }
 
     /// Selects a theme by ID. Persists the choice and updates the resolved
