@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 extension ComposableSettings {
 
@@ -16,6 +18,9 @@ extension ComposableSettings {
 
         private let detailContainer = NSViewController()
 
+        // Repaints the window chrome and detail pane on every theme change.
+        private var themeObserver: ThemePaletteObserver?
+
         public init(listViewController: PanelListViewController = PanelListViewController()) {
             self.listViewController = listViewController
             super.init(nibName: nil, bundle: nil)
@@ -27,7 +32,9 @@ extension ComposableSettings {
         open override func viewDidLoad() {
             super.viewDidLoad()
 
-            detailContainer.view = NSView()
+            let detailView = NSView()
+            detailView.wantsLayer = true
+            detailContainer.view = detailView
 
             let sidebarItem = NSSplitViewItem(sidebarWithViewController: listViewController)
             sidebarItem.minimumThickness = 180
@@ -38,6 +45,10 @@ extension ComposableSettings {
             listViewController.onSelectPanel = { [weak self] panel in
                 self?.show(panel)
             }
+
+            themeObserver = ThemePaletteObserver { [weak self] palette in
+                self?.applyTheme(palette)
+            }
         }
 
         open override func viewWillAppear() {
@@ -46,6 +57,15 @@ extension ComposableSettings {
             if currentPanel == nil, let first = panels.first {
                 selectPanel(first)
             }
+        }
+
+        private func applyTheme(_ palette: SemanticPalette) {
+            // Window background follows the theme so the title bar and
+            // overall chrome don't stay system-dark when a light theme is active.
+            view.window?.backgroundColor = palette.windowBackgroundColor
+            // Detail pane uses a slightly elevated surface to visually
+            // separate it from the sidebar.
+            detailContainer.view.layer?.backgroundColor = palette.surfaceColor.cgColor
         }
 
         // MARK: - Panel management

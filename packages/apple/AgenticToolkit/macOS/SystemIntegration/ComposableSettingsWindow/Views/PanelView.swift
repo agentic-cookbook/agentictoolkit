@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 extension ComposableSettings {
 
@@ -8,6 +10,7 @@ extension ComposableSettings {
     open class PanelView: NSView, SettingsViewProtocol {
 
         private let stackView = NSStackView()
+        private var themeObserver: ThemePaletteObserver?
 
         public convenience init() {
             self.init(frame: .zero)
@@ -16,6 +19,7 @@ extension ComposableSettings {
         public override init(frame frameRect: NSRect) {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
+            self.wantsLayer = true
 
             self.stackView.orientation = .vertical
             self.stackView.spacing = SettingsLayout.default[.groupSpacing]
@@ -30,6 +34,10 @@ extension ComposableSettings {
                 self.stackView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -inset),
                 self.stackView.bottomAnchor.constraint(lessThanOrEqualTo: self.bottomAnchor, constant: -inset)
             ])
+
+            themeObserver = ThemePaletteObserver { [weak self] palette in
+                self?.layer?.backgroundColor = palette.surfaceColor.cgColor
+            }
         }
 
         public required init?(coder: NSCoder) {

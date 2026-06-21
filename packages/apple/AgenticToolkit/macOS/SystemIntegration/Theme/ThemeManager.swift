@@ -63,6 +63,17 @@ public final class ThemeManager: AppFeature {
         // crash force-unwrapping `NSApp`. `NSApplication.shared` lazily creates
         // the instance and is safe at any point.
         NSApplication.shared.appearance = currentTheme.appearance.nsAppearance
+        applyWindowBackgrounds()
+    }
+
+    /// Paints every titled app window's backdrop with the theme's window color so
+    /// chrome around content (and any view that hasn't opted into theming yet)
+    /// follows the theme — broad coverage on top of per-view theming.
+    private func applyWindowBackgrounds() {
+        let background = NSColor(currentPalette.windowBackground)
+        for window in NSApplication.shared.windows where window.styleMask.contains(.titled) {
+            window.backgroundColor = background
+        }
     }
 
     /// Selects a theme by ID. Persists the choice and updates the resolved

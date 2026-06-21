@@ -32,6 +32,7 @@ public final class ThemeProfilesSettingsView: NSView {
     private var themes: [ColorTheme] = []
     private var editingTheme: ColorTheme?
 
+    private let scrollView = NSScrollView()
     private let contentStack = NSStackView()
     private let galleryStack = NSStackView()
     private let customizeHost = NSStackView()
@@ -59,7 +60,7 @@ public final class ThemeProfilesSettingsView: NSView {
     // MARK: - Setup
 
     private func setupViews() {
-        let scroll = NSScrollView()
+        let scroll = scrollView
         scroll.hasVerticalScroller = true
         scroll.drawsBackground = false
         scroll.automaticallyAdjustsContentInsets = false
@@ -174,6 +175,12 @@ public final class ThemeProfilesSettingsView: NSView {
         editingTheme = themes.first { $0.id == id }
         for card in cards { card.isActive = card.themeID == id }
         rebuildCustomize()
+        // Clicking a theme discloses it — bring the disclosed section into view.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.layoutSubtreeIfNeeded()
+            self.customizeHost.scrollToVisible(self.customizeHost.bounds)
+        }
     }
 
     // MARK: - Customize (progressive disclosure)
@@ -183,24 +190,41 @@ public final class ThemeProfilesSettingsView: NSView {
         guard let theme = editingTheme else { return }
         let editable = !store.isBuiltIn(id: theme.id)
 
-        let content: NSView = editable ? makeEditor(for: theme) : makeBuiltInNotice()
-        let group = DisclosureGroup(title: "Customize \(theme.name)", content: content, expanded: editable)
+        // Clicking a theme always discloses it (expanded) — editor for a custom
+        // theme, or a preview + Duplicate affordance for a read-only built-in.
+        let content: NSView = editable ? makeEditor(for: theme) : makeBuiltInNotice(for: theme)
+        let title = editable ? "Edit \(theme.name)" : "\(theme.name)"
+        let group = DisclosureGroup(title: title, content: content, expanded: true)
         group.translatesAutoresizingMaskIntoConstraints = false
         customizeHost.addArrangedSubview(group)
         group.widthAnchor.constraint(equalTo: customizeHost.widthAnchor).isActive = true
     }
 
-    private func makeBuiltInNotice() -> NSView {
+    private func makeBuiltInNotice(for theme: ColorTheme) -> NSView {
+        let preview = ComposableSettings.ThemePreviewView(theme: theme)
+        preview.wantsLayer = true
+        preview.layer?.cornerRadius = 10
+        preview.layer?.masksToBounds = true
+        preview.translatesAutoresizingMaskIntoConstraints = false
+        preview.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
+
         let label = NSTextField(wrappingLabelWithString:
-            "Built-in themes can’t be edited. Duplicate this theme to customize its colors and fonts.")
+            "Built-in theme — duplicate it to customize its colors and fonts.")
         label.textColor = .secondaryLabelColor
-        let button = NSButton(title: "Duplicate to Customize", target: self, action: #selector(duplicateTheme))
+        let button = NSButton(title: "Duplicate to Edit", target: self, action: #selector(duplicateTheme))
         button.bezelStyle = .rounded
-        let stack = NSStackView(views: [label, button])
+        button.keyEquivalent = "\r"
+        let row = NSStackView(views: [label, button])
+        row.orientation = .horizontal
+        row.spacing = 12
+        row.alignment = .centerY
+
+        let stack = NSStackView(views: [preview, row])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 4, left: 2, bottom: 4, right: 2)
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        preview.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         return stack
     }
 
@@ -244,7 +268,16 @@ public final class ThemeProfilesSettingsView: NSView {
         let terminal = DisclosureGroup(title: "Terminal palette (advanced)",
                                        content: makeTerminalEditor(for: theme), expanded: false)
 
-        let stack = NSStackView(views: [preview, meta, colors, typography, terminal])
+        let duplicate = NSButton(title: "Duplicate", target: self, action: #selector(duplicateTheme))
+        duplicate.bezelStyle = .rounded
+        let delete = NSButton(title: "Delete Theme", target: self, action: #selector(deleteSelected))
+        delete.bezelStyle = .rounded
+        delete.hasDestructiveAction = true
+        let footer = NSStackView(views: [duplicate, delete])
+        footer.orientation = .horizontal
+        footer.spacing = 8
+
+        let stack = NSStackView(views: [preview, meta, colors, typography, terminal, footer])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 14
@@ -671,9 +704,11 @@ private final class ThemeCardView: NSView {
         nameLabel.stringValue = theme.name
         nameLabel.font = .systemFont(ofSize: 12, weight: .medium)
         nameLabel.lineBreakMode = .byTruncatingTail
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
         appearanceLabel.stringValue = theme.appearance.rawValue.capitalized
         appearanceLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         appearanceLabel.textColor = .tertiaryLabelColor
+        appearanceLabel.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(thumbnail)
         addSubview(nameLabel)

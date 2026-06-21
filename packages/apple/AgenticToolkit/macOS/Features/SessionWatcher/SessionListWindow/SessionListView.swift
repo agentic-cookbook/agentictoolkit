@@ -1,5 +1,7 @@
 import AppKit
 import Combine
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 import AgenticToolkitPermissions
 
 extension SessionWatcher {
@@ -166,10 +168,15 @@ extension SessionWatcher {
         /// into the header above). See `SessionListView.intrinsicContentSize`.
         public static let preferredHeight: CGFloat = 80
 
+        private var iconView: NSImageView!
+        private var label: NSTextField!
+        private var themeObserver: ThemePaletteObserver?
+
         public override init(frame: NSRect) {
             super.init(frame: frame)
             accessibilityID("session-panel.empty-state")
             setupViews()
+            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)
@@ -180,19 +187,16 @@ extension SessionWatcher {
         }
 
         private func setupViews() {
-            let imageView = NSImageView()
-            imageView.image = NSImage(systemSymbolName: "dog.fill", accessibilityDescription: nil)
-            imageView.symbolConfiguration = .init(pointSize: 24, weight: .regular)
-            imageView.contentTintColor = .secondaryLabelColor
-            imageView.translatesAutoresizingMaskIntoConstraints = false
+            iconView = NSImageView()
+            iconView.image = NSImage(systemSymbolName: "dog.fill", accessibilityDescription: nil)
+            iconView.symbolConfiguration = .init(pointSize: 24, weight: .regular)
+            iconView.translatesAutoresizingMaskIntoConstraints = false
 
-            let label = NSTextField(labelWithString: "No Active Sessions")
-            label.font = .systemFont(ofSize: 12, weight: .medium)
-            label.textColor = .secondaryLabelColor
+            label = NSTextField(labelWithString: "No Active Sessions")
             label.alignment = .center
             label.translatesAutoresizingMaskIntoConstraints = false
 
-            let stack = NSStackView(views: [imageView, label])
+            let stack = NSStackView(views: [iconView, label])
             stack.orientation = .vertical
             stack.spacing = 8
             stack.alignment = .centerX
@@ -204,6 +208,12 @@ extension SessionWatcher {
                 stack.centerYAnchor.constraint(equalTo: centerYAnchor)
             ])
         }
+
+        private func applyTheme(_ palette: SemanticPalette) {
+            iconView.contentTintColor = palette.secondaryTextColor
+            label.textColor = palette.secondaryTextColor
+            label.font = palette.font(.caption)
+        }
     }
 
     // MARK: - SessionWatcherSession Group Card View
@@ -214,6 +224,14 @@ extension SessionWatcher {
         private let summarizingSessionIds: Set<String>
         private let onSummarize: ((SessionWatcherSession) -> Void)?
         private let frontmostSessionId: String?
+
+        // Theme-sensitive subviews
+        private var folderIconView: NSImageView!
+        private var titleLabel: NSTextField!
+        private var countLabel: NSTextField!
+        private var dividerView: NSBox!
+        private var noneLabel: NSTextField?
+        private var themeObserver: ThemePaletteObserver?
 
         public init(
             group: SessionWatcherGroup,
@@ -231,14 +249,27 @@ extension SessionWatcher {
             accessibilityID("session-panel.group.\(AccessibilityID.slug(group.projectName))")
             wantsLayer = true
             layer?.cornerRadius = 8
-            layer?.backgroundColor = NSColor.white.withAlphaComponent(0.05).cgColor
-            layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
-            layer?.borderWidth = 0.5
             setupViews()
+            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)
         public required init?(coder: NSCoder) { fatalError() }
+
+        private func applyTheme(_ palette: SemanticPalette) {
+            layer?.backgroundColor = palette.surfaceColor.cgColor
+            layer?.borderColor = palette.borderColor.cgColor
+            layer?.borderWidth = 0.5
+            folderIconView.contentTintColor = palette.secondaryTextColor
+            titleLabel.textColor = palette.primaryTextColor
+            titleLabel.font = palette.font(.heading)
+            countLabel.textColor = palette.tertiaryTextColor
+            countLabel.font = palette.font(.caption)
+            noneLabel?.textColor = palette.tertiaryTextColor
+            noneLabel?.font = palette.font(.caption)
+            // NSBox separator color is driven by the system; tint via layer instead
+            dividerView.alphaValue = 0.3
+        }
 
         private func setupViews() {
             let stack = NSStackView()
@@ -247,22 +278,25 @@ extension SessionWatcher {
             stack.translatesAutoresizingMaskIntoConstraints = false
 
             // Header
-            stack.addArrangedSubview(makeSessionHeader())
-            stack.addArrangedSubview(makeDivider())
+            let header = makeSessionHeader()
+            stack.addArrangedSubview(header)
+
+            let divider = makeDivider()
+            dividerView = divider
+            stack.addArrangedSubview(divider)
 
             // Sessions
             if group.sessions.isEmpty {
-                let noneLabel = NSTextField(labelWithString: "None")
-                noneLabel.font = .systemFont(ofSize: 11)
-                noneLabel.textColor = .tertiaryLabelColor
+                let none = NSTextField(labelWithString: "None")
+                noneLabel = none
                 let wrapper = NSView()
                 wrapper.translatesAutoresizingMaskIntoConstraints = false
-                noneLabel.translatesAutoresizingMaskIntoConstraints = false
-                wrapper.addSubview(noneLabel)
+                none.translatesAutoresizingMaskIntoConstraints = false
+                wrapper.addSubview(none)
                 NSLayoutConstraint.activate([
-                    noneLabel.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor, constant: 10),
-                    noneLabel.topAnchor.constraint(equalTo: wrapper.topAnchor, constant: 6),
-                    noneLabel.bottomAnchor.constraint(equalTo: wrapper.bottomAnchor, constant: -6)
+                    none.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor, constant: 10),
+                    none.topAnchor.constraint(equalTo: wrapper.topAnchor, constant: 6),
+                    none.bottomAnchor.constraint(equalTo: wrapper.bottomAnchor, constant: -6)
                 ])
                 stack.addArrangedSubview(wrapper)
             } else {
@@ -298,28 +332,26 @@ extension SessionWatcher {
             let iconView = NSImageView()
             iconView.image = NSImage(systemSymbolName: "folder.fill", accessibilityDescription: nil)
             iconView.symbolConfiguration = .init(pointSize: 18, weight: .regular)
-            iconView.contentTintColor = .secondaryLabelColor
             iconView.toolTip = group.id  // full project-root path
             iconView.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(iconView)
+            folderIconView = iconView
 
-            let titleLabel = NSTextField(labelWithString: group.projectName)
-            titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-            titleLabel.textColor = .labelColor
-            titleLabel.lineBreakMode = .byTruncatingTail
-            titleLabel.maximumNumberOfLines = 1
-            titleLabel.toolTip = group.id
-            titleLabel.translatesAutoresizingMaskIntoConstraints = false
+            let title = NSTextField(labelWithString: group.projectName)
+            title.lineBreakMode = .byTruncatingTail
+            title.maximumNumberOfLines = 1
+            title.toolTip = group.id
+            title.translatesAutoresizingMaskIntoConstraints = false
+            titleLabel = title
 
             let suffix = group.sessions.count == 1 ? "" : "s"
-            let countLabel = NSTextField(labelWithString: "\(group.sessions.count) session\(suffix)")
-            countLabel.font = .systemFont(ofSize: 10)
-            countLabel.textColor = .tertiaryLabelColor
-            countLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-            countLabel.translatesAutoresizingMaskIntoConstraints = false
+            let count = NSTextField(labelWithString: "\(group.sessions.count) session\(suffix)")
+            count.setContentCompressionResistancePriority(.required, for: .horizontal)
+            count.translatesAutoresizingMaskIntoConstraints = false
+            countLabel = count
 
-            container.addSubview(titleLabel)
-            container.addSubview(countLabel)
+            container.addSubview(title)
+            container.addSubview(count)
 
             NSLayoutConstraint.activate([
                 container.heightAnchor.constraint(greaterThanOrEqualToConstant: 40),
@@ -329,18 +361,18 @@ extension SessionWatcher {
                 iconView.widthAnchor.constraint(equalToConstant: 22),
                 iconView.heightAnchor.constraint(equalToConstant: 22),
 
-                titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
-                titleLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                title.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
+                title.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
-                countLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
-                countLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                countLabel.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 5)
+                count.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
+                count.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                count.leadingAnchor.constraint(greaterThanOrEqualTo: title.trailingAnchor, constant: 5)
             ])
 
             return container
         }
 
-        private func makeDivider() -> NSView {
+        private func makeDivider() -> NSBox {
             let divider = NSBox()
             divider.boxType = .separator
             divider.alphaValue = 0.15
@@ -360,6 +392,19 @@ extension SessionWatcher {
         private var trackingArea: NSTrackingArea?
         private var isHovered = false
 
+        // Theme-sensitive subviews
+        private var projectLabel: NSTextField!
+        private var statusDot: NSView!
+        private var timeLabel: NSTextField!
+        private var summaryLabel: NSTextField!
+        private var detailIconViews: [NSImageView] = []
+        private var detailLabels: [NSTextField] = []
+        private var themeObserver: ThemePaletteObserver?
+
+        // Cached status for theming the dot color correctly
+        private let dotStatus: SessionWatcher.SessionWatcherStatus
+        private let isFrontmostSession: Bool
+
         public init(
             session: SessionWatcherSession,
             onTap: ((SessionWatcherSession) -> Void)?,
@@ -372,19 +417,62 @@ extension SessionWatcher {
             self.isSummarizing = isSummarizing
             self.onSummarize = onSummarize
             self.isFrontmost = isFrontmost
+            self.dotStatus = session.status
+            self.isFrontmostSession = isFrontmost
             super.init(frame: .zero)
             accessibilityID("session-panel.row.\(session.sessionId)")
             wantsLayer = true
             layer?.cornerRadius = 6
-            layer?.backgroundColor = NSColor.white.withAlphaComponent(0.03).cgColor
-            layer?.borderColor = NSColor.white.withAlphaComponent(0.06).cgColor
-            layer?.borderWidth = 0.5
             setupViews()
             setupContextMenu()
+            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)
         public required init?(coder: NSCoder) { fatalError() }
+
+        private func applyTheme(_ palette: SemanticPalette) {
+            // Card background: subtle surface tint (idle)
+            layer?.backgroundColor = palette.surfaceColor.withAlphaComponent(0.5).cgColor
+            layer?.borderColor = palette.borderColor.cgColor
+            layer?.borderWidth = 0.5
+
+            // Header row labels
+            projectLabel.textColor = palette.primaryTextColor
+            projectLabel.font = palette.font(.body)
+
+            // Status dot color
+            let dotColor: NSColor
+            if isFrontmostSession {
+                dotColor = palette.accentColor
+            } else {
+                switch dotStatus {
+                case .active: dotColor = palette.successColor
+                case .stale:  dotColor = palette.warningColor
+                case .ended:  dotColor = palette.tertiaryTextColor
+                }
+            }
+            statusDot.layer?.backgroundColor = dotColor.cgColor
+
+            // Time label
+            timeLabel.textColor = palette.tertiaryTextColor
+            timeLabel.font = palette.font(.code)
+
+            // Summary line
+            summaryLabel.textColor = session.summary.isEmpty
+                ? palette.tertiaryTextColor
+                : palette.secondaryTextColor
+            summaryLabel.font = palette.font(.caption)
+
+            // Detail lines (cwd / branch / session ID)
+            for iconView in detailIconViews {
+                iconView.contentTintColor = palette.tertiaryTextColor
+            }
+            for lbl in detailLabels {
+                lbl.textColor = palette.tertiaryTextColor
+                lbl.font = palette.font(.code)
+            }
+        }
 
         /// App icon for the terminal a session runs in, from its `TERM_PROGRAM`.
         /// Prefers a running instance's icon, falls back to the installed app
@@ -432,34 +520,23 @@ extension SessionWatcher {
             headerRow.addArrangedSubview(iconView)
 
             // Project name (first, upper left)
-            let projectLabel = NSTextField(labelWithString: session.projectName)
-            projectLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-            projectLabel.textColor = .labelColor
-            projectLabel.lineBreakMode = .byTruncatingTail
-            projectLabel.maximumNumberOfLines = 1
-            headerRow.addArrangedSubview(projectLabel)
+            let projLabel = NSTextField(labelWithString: session.projectName)
+            projLabel.lineBreakMode = .byTruncatingTail
+            projLabel.maximumNumberOfLines = 1
+            headerRow.addArrangedSubview(projLabel)
+            projectLabel = projLabel
 
             // Status dot
             let dot = NSView()
             dot.wantsLayer = true
             dot.layer?.cornerRadius = 3
-            let dotColor: NSColor
-            if isFrontmost {
-                dotColor = .systemBlue
-            } else {
-                switch session.status {
-                case .active: dotColor = .systemGreen
-                case .stale: dotColor = .systemYellow
-                case .ended: dotColor = .systemGray
-                }
-            }
-            dot.layer?.backgroundColor = dotColor.cgColor
             dot.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 dot.widthAnchor.constraint(equalToConstant: 6),
                 dot.heightAnchor.constraint(equalToConstant: 6)
             ])
             headerRow.addArrangedSubview(dot)
+            statusDot = dot
 
             // Spacer
             let spacer = NSView()
@@ -480,23 +557,21 @@ extension SessionWatcher {
             }
 
             // Relative time
-            let timeLabel = NSTextField(labelWithString: relativeTime(session.lastActivityAt))
-            timeLabel.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
-            timeLabel.textColor = .tertiaryLabelColor
-            timeLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-            headerRow.addArrangedSubview(timeLabel)
+            let timeLbl = NSTextField(labelWithString: relativeTime(session.lastActivityAt))
+            timeLbl.setContentCompressionResistancePriority(.required, for: .horizontal)
+            headerRow.addArrangedSubview(timeLbl)
+            timeLabel = timeLbl
 
             addSubview(headerRow)
 
             // --- Summary line ---
             let summaryText = session.summary.isEmpty ? "thinking..." : session.summary
-            let summaryLabel = NSTextField(wrappingLabelWithString: summaryText)
-            summaryLabel.font = .systemFont(ofSize: 11)
-            summaryLabel.textColor = session.summary.isEmpty ? .tertiaryLabelColor : .secondaryLabelColor
-            summaryLabel.maximumNumberOfLines = 2
-            summaryLabel.lineBreakMode = .byTruncatingTail
-            summaryLabel.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(summaryLabel)
+            let summaryLbl = NSTextField(wrappingLabelWithString: summaryText)
+            summaryLbl.maximumNumberOfLines = 2
+            summaryLbl.lineBreakMode = .byTruncatingTail
+            summaryLbl.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(summaryLbl)
+            summaryLabel = summaryLbl
 
             // --- Detail lines: cwd, branch, session ID ---
             let detailStack = NSStackView()
@@ -528,11 +603,11 @@ extension SessionWatcher {
                 headerRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
                 headerRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
 
-                summaryLabel.topAnchor.constraint(equalTo: headerRow.bottomAnchor, constant: 4),
-                summaryLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
-                summaryLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
+                summaryLbl.topAnchor.constraint(equalTo: headerRow.bottomAnchor, constant: 4),
+                summaryLbl.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
+                summaryLbl.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
 
-                detailStack.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor, constant: 4),
+                detailStack.topAnchor.constraint(equalTo: summaryLbl.bottomAnchor, constant: 4),
                 detailStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
                 detailStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -padding),
                 detailStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padding)
@@ -540,24 +615,23 @@ extension SessionWatcher {
         }
 
         private func makeDetailLine(icon: String, text: String) -> NSView {
-            let imageView = NSImageView()
+            let imgView = NSImageView()
             if let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
-                imageView.image = image
+                imgView.image = image
             }
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            imageView.contentTintColor = .tertiaryLabelColor
+            imgView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                imageView.widthAnchor.constraint(equalToConstant: 11),
-                imageView.heightAnchor.constraint(equalToConstant: 11)
+                imgView.widthAnchor.constraint(equalToConstant: 11),
+                imgView.heightAnchor.constraint(equalToConstant: 11)
             ])
+            detailIconViews.append(imgView)
 
-            let label = NSTextField(labelWithString: text)
-            label.font = .monospacedSystemFont(ofSize: 9.5, weight: .regular)
-            label.textColor = .tertiaryLabelColor
-            label.lineBreakMode = .byTruncatingMiddle
-            label.maximumNumberOfLines = 1
+            let lbl = NSTextField(labelWithString: text)
+            lbl.lineBreakMode = .byTruncatingMiddle
+            lbl.maximumNumberOfLines = 1
+            detailLabels.append(lbl)
 
-            let line = NSStackView(views: [imageView, label])
+            let line = NSStackView(views: [imgView, lbl])
             line.orientation = .horizontal
             line.spacing = 4
             line.alignment = .centerY
@@ -606,24 +680,26 @@ extension SessionWatcher {
 
         public override func mouseEntered(with event: NSEvent) {
             isHovered = true
-            wantsLayer = true
-            layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+            let palette = ThemePaletteObserver.currentPalette
+            layer?.backgroundColor = palette.selectionColor.withAlphaComponent(0.18).cgColor
         }
 
         public override func mouseExited(with event: NSEvent) {
             isHovered = false
-            layer?.backgroundColor = NSColor.clear.cgColor
+            let palette = ThemePaletteObserver.currentPalette
+            layer?.backgroundColor = palette.surfaceColor.withAlphaComponent(0.5).cgColor
         }
 
         public override func mouseDown(with event: NSEvent) {
-            wantsLayer = true
-            layer?.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
+            let palette = ThemePaletteObserver.currentPalette
+            layer?.backgroundColor = palette.selectionColor.withAlphaComponent(0.35).cgColor
         }
 
         public override func mouseUp(with event: NSEvent) {
+            let palette = ThemePaletteObserver.currentPalette
             layer?.backgroundColor = isHovered
-            ? NSColor.white.withAlphaComponent(0.06).cgColor
-            : NSColor.clear.cgColor
+                ? palette.selectionColor.withAlphaComponent(0.18).cgColor
+                : palette.surfaceColor.withAlphaComponent(0.5).cgColor
             let location = convert(event.locationInWindow, from: nil)
             if bounds.contains(location) {
                 onTap?(session)
@@ -659,16 +735,35 @@ extension SessionWatcher {
 
     public final class SessionWatcherErrorBanner: NSView {
         private var onOpenSettingsAction: (() -> Void)?
+        private let isPermissionError: Bool
+        private var bannerLabel: NSTextField!
+        private var warningIcon: NSImageView!
+        private var themeObserver: ThemePaletteObserver?
 
         public init(message: String, isPermissionError: Bool, onOpenSettings: (() -> Void)?) {
             self.onOpenSettingsAction = onOpenSettings
+            self.isPermissionError = isPermissionError
             super.init(frame: .zero)
             accessibilityID("session-panel.error-banner")
             wantsLayer = true
-            layer?.backgroundColor = (isPermissionError
-                                      ? NSColor.systemOrange.withAlphaComponent(0.15)
-                                      : NSColor.systemRed.withAlphaComponent(0.15)).cgColor
+            setupViews(message: message, isPermissionError: isPermissionError)
+            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        }
 
+        @available(*, unavailable)
+        public required init?(coder: NSCoder) { fatalError() }
+
+        private func applyTheme(_ palette: SemanticPalette) {
+            let bgColor = isPermissionError
+                ? palette.warningColor.withAlphaComponent(0.15)
+                : palette.dangerColor.withAlphaComponent(0.15)
+            layer?.backgroundColor = bgColor.cgColor
+            bannerLabel.textColor = palette.primaryTextColor
+            bannerLabel.font = palette.font(.caption)
+            warningIcon.contentTintColor = palette.warningColor
+        }
+
+        private func setupViews(message: String, isPermissionError: Bool) {
             let stack = NSStackView()
             stack.orientation = .vertical
             stack.spacing = 4
@@ -684,19 +779,20 @@ extension SessionWatcher {
                 systemSymbolName: isPermissionError ? "lock.shield" : "exclamationmark.triangle.fill",
                 accessibilityDescription: nil
             )
-            icon.contentTintColor = .systemYellow
             icon.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 icon.widthAnchor.constraint(equalToConstant: 16),
                 icon.heightAnchor.constraint(equalToConstant: 16)
             ])
+            warningIcon = icon
 
-            let label = NSTextField(wrappingLabelWithString: message)
-            label.font = .systemFont(ofSize: 11)
-            label.maximumNumberOfLines = 3
+            let lbl = NSTextField(wrappingLabelWithString: message)
+            lbl.font = .systemFont(ofSize: 11)
+            lbl.maximumNumberOfLines = 3
+            bannerLabel = lbl
 
             messageRow.addArrangedSubview(icon)
-            messageRow.addArrangedSubview(label)
+            messageRow.addArrangedSubview(lbl)
             stack.addArrangedSubview(messageRow)
 
             if isPermissionError {
@@ -719,9 +815,6 @@ extension SessionWatcher {
                 stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6)
             ])
         }
-
-        @available(*, unavailable)
-        public required init?(coder: NSCoder) { fatalError() }
 
         @objc private func openSettingsClicked() {
             onOpenSettingsAction?()

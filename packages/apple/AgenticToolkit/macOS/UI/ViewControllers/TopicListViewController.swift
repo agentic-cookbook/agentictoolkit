@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 public protocol TopicListItemProtocol: Sendable {
     var id: String { get }
@@ -61,21 +63,37 @@ open class TopicListViewController: NSViewController {
     private let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
 
+    // Keeps the sidebar painted in the active theme's window-background color.
+    private var themeObserver: ThemePaletteObserver?
+
     open override func loadView() {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TopicListColumn"))
         column.title = ""
         outlineView.addTableColumn(column)
         outlineView.outlineTableColumn = column
         outlineView.headerView = nil
-        outlineView.style = .sourceList
+        // Use .automatic (not .sourceList) so no internal NSVisualEffectView
+        // forces a dark sidebar material regardless of NSApp.appearance.
+        outlineView.style = .automatic
         outlineView.rowSizeStyle = .default
         outlineView.dataSource = self
         outlineView.delegate = self
 
         scrollView.documentView = outlineView
         scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
+        scrollView.drawsBackground = true
         self.view = scrollView
+
+        themeObserver = ThemePaletteObserver { [weak self] palette in
+            self?.applyTheme(palette)
+        }
+    }
+
+    private func applyTheme(_ palette: SemanticPalette) {
+        let background = palette.windowBackgroundColor
+        scrollView.backgroundColor = background
+        outlineView.backgroundColor = background
+        outlineView.reloadData()
     }
 
     /// Populate the list as a flat sequence with no section headers.
@@ -184,6 +202,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
 
     public func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         guard let node = item as? TopicListNode else { return nil }
+        let palette = ThemePaletteObserver.currentPalette
 
         switch node.kind {
         case .header(let title):
@@ -191,6 +210,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
             let cell = outlineView.makeView(withIdentifier: id, owner: nil) as? NSTableCellView
                 ?? Self.makeHeaderCell(identifier: id)
             cell.textField?.stringValue = title
+            cell.textField?.textColor = palette.secondaryTextColor
             return cell
 
         case .item(let item):
@@ -198,11 +218,23 @@ extension TopicListViewController: NSOutlineViewDelegate {
             let cell = outlineView.makeView(withIdentifier: id, owner: nil) as? NSTableCellView
                 ?? Self.makeItemCell(identifier: id)
             cell.textField?.stringValue = item.title
-            cell.textField?.alphaValue = item.isDisabled ? 0.5 : 1.0
+            cell.textField?.textColor = item.isDisabled ? palette.tertiaryTextColor : palette.primaryTextColor
+            cell.textField?.alphaValue = 1.0
             cell.imageView?.image = item.icon
-            cell.imageView?.contentTintColor = item.isDisabled ? .tertiaryLabelColor : .controlAccentColor
+            cell.imageView?.contentTintColor = item.isDisabled
+                ? palette.tertiaryTextColor
+                : palette.accentColor
             return cell
         }
+    }
+
+    public func outlineView(
+        _ outlineView: NSOutlineView,
+        rowViewForItem item: Any
+    ) -> NSTableRowView? {
+        let row = ThemedTableRowView()
+        row.palette = ThemePaletteObserver.currentPalette
+        return row
     }
 
     public func outlineViewSelectionDidChange(_ notification: Notification) {

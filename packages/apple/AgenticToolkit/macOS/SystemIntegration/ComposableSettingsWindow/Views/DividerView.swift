@@ -1,9 +1,13 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 extension ComposableSettings {
 
     @MainActor
     public class DividerView: NSView, SettingsViewProtocol {
+
+        private var themeObserver: ThemePaletteObserver?
 
         public convenience init() {
             self.init(frame: .zero)
@@ -17,6 +21,10 @@ extension ComposableSettings {
             NSLayoutConstraint.activate([
                 self.heightAnchor.constraint(equalToConstant: SettingsLayout.default[.dividerThickness])
             ])
+
+            themeObserver = ThemePaletteObserver { [weak self] palette in
+                self?.layer?.backgroundColor = palette.dividerColor.cgColor
+            }
         }
 
         required init?(coder: NSCoder) {
@@ -25,7 +33,7 @@ extension ComposableSettings {
 
         public override func updateLayer() {
             super.updateLayer()
-            self.layer?.backgroundColor = NSColor.separatorColor.cgColor
+            self.layer?.backgroundColor = ThemePaletteObserver.currentPalette.dividerColor.cgColor
         }
     }
 }
