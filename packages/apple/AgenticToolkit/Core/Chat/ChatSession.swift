@@ -18,4 +18,11 @@ public protocol ChatSession: Sendable {
 
     /// Tear down: terminate the subprocess / drop the connection. Ends `events()`.
     func close()
+
+    /// Clear the conversation history. Does not affect the active turn.
+    func clear()
+}
+
+extension ChatSession {
+    public func clear() {}
 }

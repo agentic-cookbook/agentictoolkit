@@ -2898,7 +2898,7 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_0B4D8EED-6A7B-4280-8645-1A80B8A0A5A4" /* Settings */ = {
+		"TEMP_9B06F77E-23F2-4D92-8C90-19E2F80059A5" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);

@@ -1,5 +1,6 @@
 // macOS/Features/AIPlugins/LocalChatSession.swift
 import Foundation
+import Synchronization
 import AgenticToolkitCore
 import AIPluginKit
 
@@ -13,8 +14,8 @@ public final class LocalChatSession: ChatSession, @unchecked Sendable {
     public typealias EventStreamFactory =
         @Sendable (AIRequestSpec, any AIPlugin) -> AsyncThrowingStream<AIStreamEvent, Error>
 
-    private let resolvePlugin: @Sendable () -> (any AIPlugin)?
-    private let makeContext: @Sendable ([AIChatMessage]) -> AIChatContext
+    private let resolvePlugin: @Sendable () async -> (any AIPlugin)?
+    private let makeContext: @Sendable ([AIChatMessage]) async -> AIChatContext
     private let eventStreamFactory: EventStreamFactory
     private let toolSource: (any ChatToolSource)?
 
@@ -22,12 +23,15 @@ public final class LocalChatSession: ChatSession, @unchecked Sendable {
     private var continuation: AsyncStream<ChatEvent>.Continuation?
     private var history: [AIChatMessage] = []
     private var liveTurn: Task<Void, Never>?
+    /// Guards concurrent-send: true while a turn task is active.
+    /// Uses `Synchronization.Mutex` so `withLock` is safe from async contexts.
+    private let turnActiveMutex = Mutex(false)
 
     private static let maxToolIterations = 8
 
     public init(
-        resolvePlugin: @escaping @Sendable () -> (any AIPlugin)?,
-        makeContext: @escaping @Sendable ([AIChatMessage]) -> AIChatContext,
+        resolvePlugin: @escaping @Sendable () async -> (any AIPlugin)?,
+        makeContext: @escaping @Sendable ([AIChatMessage]) async -> AIChatContext,
         eventStreamFactory: @escaping EventStreamFactory = { PluginTransport.run(spec: $0, plugin: $1) },
         toolSource: (any ChatToolSource)? = nil
     ) {
@@ -46,13 +50,27 @@ public final class LocalChatSession: ChatSession, @unchecked Sendable {
     }
 
     public func send(_ text: String) {
+        let busy = turnActiveMutex.withLock { state -> Bool in
+            if state { return true }
+            state = true
+            return false
+        }
+        guard !busy else { return }
         liveTurn = Task { [weak self] in await self?.runTurn(userText: text) }
     }
 
-    public func interrupt() { liveTurn?.cancel() }
+    public func interrupt() {
+        liveTurn?.cancel()
+        turnActiveMutex.withLock { $0 = false }
+    }
+
+    public func clear() {
+        lock.lock(); history.removeAll(); lock.unlock()
+    }
 
     public func close() {
         liveTurn?.cancel()
+        turnActiveMutex.withLock { $0 = false }
         emit(.stateChanged(.closed))
         withLock { continuation }?.finish()
     }
@@ -60,11 +78,13 @@ public final class LocalChatSession: ChatSession, @unchecked Sendable {
     // MARK: - Turn
 
     private func runTurn(userText: String) async {
+        defer { turnActiveMutex.withLock { $0 = false } }
+
         emit(.userMessage(ChatMessage(role: .user, text: userText)))
         appendHistory(AIChatMessage(role: .user, content: userText))
         emit(.stateChanged(.responding))
 
-        guard let plugin = resolvePlugin() else {
+        guard let plugin = await resolvePlugin() else {
             emit(.turnFailed(ChatError(message: "No AI provider is configured.", isRetryable: false)))
             emit(.stateChanged(.ready))
             return
@@ -76,7 +96,7 @@ public final class LocalChatSession: ChatSession, @unchecked Sendable {
         do {
             for _ in 0..<Self.maxToolIterations {
                 let toolDefs = await toolSource?.toolDefinitions() ?? []
-                let context = makeContext(snapshotHistory()).withTools(toolDefs)
+                let context = await makeContext(snapshotHistory()).withTools(toolDefs)
                 let spec = try plugin.buildRequest(context)
 
                 var turnText = ""
