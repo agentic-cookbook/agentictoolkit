@@ -41,9 +41,17 @@ extension ComposableSettings {
             // against the real chrome color.
             self.layer?.backgroundColor = palette.nsColor(.windowBackground).cgColor
             self.container.arrangedSubviews.forEach { $0.removeFromSuperview() }
-            self.container.addArrangedSubview(self.makeChromeSample(palette))
+            let chrome = self.makeChromeSample(palette)
+            let terminal = self.makeTerminalSample(palette)
+            self.container.addArrangedSubview(chrome)
             self.container.addArrangedSubview(SwatchGridView(colors: palette.ansiColors, columns: 8))
-            self.container.addArrangedSubview(self.makeTerminalSample(palette))
+            self.container.addArrangedSubview(terminal)
+            // Sample cards fill the full preview width (the container is leading-
+            // aligned, so stretch them explicitly to read as real app chrome).
+            NSLayoutConstraint.activate([
+                chrome.widthAnchor.constraint(equalTo: self.container.widthAnchor),
+                terminal.widthAnchor.constraint(equalTo: self.container.widthAnchor)
+            ])
         }
 
         // MARK: - App-chrome sample
@@ -91,10 +99,14 @@ extension ComposableSettings {
             NSLayoutConstraint.activate([
                 stack.topAnchor.constraint(equalTo: box.topAnchor, constant: 10),
                 stack.leadingAnchor.constraint(equalTo: box.leadingAnchor, constant: 12),
-                stack.trailingAnchor.constraint(equalTo: box.trailingAnchor, constant: -12),
+                // `lessThanOrEqualTo` so the box width is free to fill the preview
+                // (set by the caller) rather than being driven to content width.
+                stack.trailingAnchor.constraint(lessThanOrEqualTo: box.trailingAnchor, constant: -12),
                 stack.bottomAnchor.constraint(equalTo: box.bottomAnchor, constant: -10),
                 box.widthAnchor.constraint(greaterThanOrEqualToConstant: 280),
-                divider.widthAnchor.constraint(equalTo: stack.widthAnchor)
+                // Divider + inner panel span the full card width.
+                divider.widthAnchor.constraint(equalTo: box.widthAnchor, constant: -24),
+                inner.widthAnchor.constraint(equalTo: box.widthAnchor, constant: -24)
             ])
             return box
         }

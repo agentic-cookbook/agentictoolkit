@@ -32,11 +32,14 @@ struct ThemeUITests {
         #expect(!picker.subviews.isEmpty)
     }
 
-    @Test("ThemeProfilesSettingsView lists all themes")
-    func settingsViewLists() {
-        let view = ThemeProfilesSettingsView(frame: .zero)
-        #expect(view.subviews.contains { $0 is NSSplitView })
-        #expect(view.numberOfRows(in: NSTableView()) == BuiltInThemes.all.count)
+    @Test("ThemeProfilesSettingsView builds a flipped, scrollable gallery")
+    func settingsViewGallery() {
+        let view = ThemeProfilesSettingsView(frame: NSRect(x: 0, y: 0, width: 760, height: 640))
+        view.layoutSubtreeIfNeeded()
+        let scroll = view.subviews.compactMap { $0 as? NSScrollView }.first
+        #expect(scroll != nil)
+        // Content must pin to the TOP — the document view has to be flipped.
+        #expect(scroll?.documentView?.isFlipped == true)
     }
 
     @Test("ThemeSettingsPanelViewController wires up its view")
