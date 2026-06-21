@@ -14,17 +14,17 @@ import AgenticToolkitCore
 /// Header bar that lets the user pick which configured MCP servers are
 /// active for this chat. Hosts a SwiftUI view inside an `NSHostingView`.
 ///
-/// The view binds to `ChatViewModel.activeServerIds` so toggles flow
-/// through to the same set the dispatch loop reads when assembling tool
-/// definitions for the next turn.
+/// - Note: Not wired to any chat consumer in Phase 1 — the MCP tool loop
+///   lives in `MCPChatToolSource`. This bar is retained for Phase 2 when a
+///   consumer surfaces the registry selection UI again.
 @MainActor
 final class MCPChipsBarView: NSView {
 
-    init(viewModel: ChatViewModel, registry: MCPServerRegistry) {
+    init(registry: MCPServerRegistry, activeServerIds: Binding<Set<UUID>>) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
-        let model = MCPChipsBarViewModel(viewModel: viewModel, registry: registry)
+        let model = MCPChipsBarViewModel(registry: registry, activeServerIds: activeServerIds)
         let hosting = NSHostingView(rootView: MCPChipsBar(viewModel: model))
         hosting.translatesAutoresizingMaskIntoConstraints = false
         addSubview(hosting)
@@ -46,12 +46,14 @@ private final class MCPChipsBarViewModel: ObservableObject {
 
     @Published var availableServerIds: [UUID] = []
     @Published var serverNames: [UUID: String] = [:]
+    @Published var activeServerIds: Set<UUID>
 
-    let chatViewModel: ChatViewModel
+    private let activeBinding: Binding<Set<UUID>>
     private var cancellables: Set<AnyCancellable> = []
 
-    init(viewModel: ChatViewModel, registry: MCPServerRegistry) {
-        self.chatViewModel = viewModel
+    init(registry: MCPServerRegistry, activeServerIds: Binding<Set<UUID>>) {
+        self.activeBinding = activeServerIds
+        self.activeServerIds = activeServerIds.wrappedValue
 
         registry.$clients
             .sink { [weak self] clients in
@@ -71,15 +73,16 @@ private final class MCPChipsBarViewModel: ObservableObject {
     }
 
     func isActive(_ id: UUID) -> Bool {
-        chatViewModel.activeServerIds.contains(id)
+        activeServerIds.contains(id)
     }
 
     func toggle(_ id: UUID) {
-        if chatViewModel.activeServerIds.contains(id) {
-            chatViewModel.activeServerIds.remove(id)
+        if activeServerIds.contains(id) {
+            activeServerIds.remove(id)
         } else {
-            chatViewModel.activeServerIds.insert(id)
+            activeServerIds.insert(id)
         }
+        activeBinding.wrappedValue = activeServerIds
     }
 }
 
@@ -114,7 +117,7 @@ private struct MCPChipsBar: View {
     }
 
     private var buttonLabel: String {
-        let active = viewModel.chatViewModel.activeServerIds.intersection(Set(viewModel.availableServerIds))
+        let active = viewModel.activeServerIds.intersection(Set(viewModel.availableServerIds))
         if viewModel.availableServerIds.isEmpty {
             return "No MCP servers"
         }

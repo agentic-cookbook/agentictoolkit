@@ -127,7 +127,7 @@ public final class LocalChatSession: ChatSession, @unchecked Sendable {
             if responseOpened { emit(.responseFinished(messageID: assistantID, stopReason: nil)) }
             emit(.stateChanged(.ready))
         } catch {
-            emit(.turnFailed(ChatError(message: "Sorry, something went wrong. Let's try again.", isRetryable: true)))
+            emit(.turnFailed(ChatError(from: error, isRetryable: true)))
             emit(.stateChanged(.ready))
         }
     }

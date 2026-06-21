@@ -10,6 +10,20 @@ public struct ChatError: Error, Sendable, Equatable {
         self.message = message
         self.isRetryable = isRetryable
     }
+
+    /// Builds a failure that names what actually went wrong (HTTP status text,
+    /// "model not found", …) instead of a generic apology. `LocalizedError`
+    /// conformers — the transport and plugin errors — carry the useful text in
+    /// `errorDescription`.
+    public init(from error: Error, isRetryable: Bool) {
+        self.init(message: Self.userFacingMessage(for: error), isRetryable: isRetryable)
+    }
+
+    static func userFacingMessage(for error: Error) -> String {
+        let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Request failed." : "Request failed: \(trimmed)"
+    }
 }
 
 /// Lifecycle of a chat session. Drives input-enable + spinner in the UI.

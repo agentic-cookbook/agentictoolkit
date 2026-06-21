@@ -12,7 +12,7 @@ struct LLMProviderEditorView: View {
     /// The chat test + its backend, owned by the hosting view controller so the
     /// same session is reachable for scripted tests; model changes post a notice
     /// into its live transcript.
-    let chat: ChatSession
+    let chat: ChatTestSession
     @State private var name: String
     /// The displayed model, mirrored into view state so picking one updates the
     /// label immediately (the underlying store is not SwiftUI-observable).
@@ -29,7 +29,7 @@ struct LLMProviderEditorView: View {
     /// seconds when the local server is busy serving other requests).
     @State private var isFetchingModels = false
 
-    init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, chat: ChatSession) {
+    init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, chat: ChatTestSession) {
         self.configuration = configuration
         self.viewModel = viewModel
         self.chat = chat
@@ -258,8 +258,12 @@ struct LLMProviderEditorView: View {
 /// the same `ChatViewModel` the transcript renders (e.g. to post model-change
 /// notices). The backend holds the provider weakly, so this strong reference
 /// keeps it alive.
+///
+/// Named for the chat *test* affordance, not the `ChatSession` protocol: the
+/// backend is bridged onto that protocol via `ChatBackendSession`, which keeps
+/// the provider's live per-turn config while the view model drives a session.
 @MainActor
-final class ChatSession: ObservableObject {
+final class ChatTestSession: ObservableObject {
     let provider: SingleConfigurationChatConfigProvider
     let backend: AIPluginChatBackend
     let viewModel: ChatViewModel
@@ -268,7 +272,7 @@ final class ChatSession: ObservableObject {
         self.provider = SingleConfigurationChatConfigProvider(
             configuration: configuration, pluginManager: pluginManager)
         self.backend = AIPluginChatBackend(pluginManager: pluginManager, configProvider: provider)
-        self.viewModel = ChatViewModel(backend: backend)
+        self.viewModel = ChatViewModel(session: ChatBackendSession(backend: backend))
     }
 }
 

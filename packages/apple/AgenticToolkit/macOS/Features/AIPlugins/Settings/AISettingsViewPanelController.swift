@@ -67,7 +67,7 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     ///
     /// Existing panels are REUSED by configuration id — only genuinely new
     /// configurations get a fresh panel. Rebuilding every panel would recreate each
-    /// one's `ChatSession`, silently wiping the live test-chat transcript of
+    /// one's `ChatTestSession`, silently wiping the live test-chat transcript of
     /// configurations that weren't even touched by the add/remove.
     private func rebuildPanels(selecting selectID: UUID?) {
         let configs = viewModel.configurations
@@ -235,7 +235,7 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
     let config: AIProviderConfiguration
     /// The chat test session for this configuration, owned here so it's reachable
     /// for scripted tests (see `AIPanelViewController.selectedChatViewModel`).
-    let chatSession: ChatSession
+    let chatSession: ChatTestSession
     private let viewModel: LLMProvidersListViewModel
     private let onRenamed: () -> Void
     private var nameObserver: AnyCancellable?
@@ -246,7 +246,7 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
 
     init(config: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, onRenamed: @escaping () -> Void) {
         self.config = config
-        self.chatSession = ChatSession(configuration: config, pluginManager: viewModel.pluginManager)
+        self.chatSession = ChatTestSession(configuration: config, pluginManager: viewModel.pluginManager)
         self.viewModel = viewModel
         self.onRenamed = onRenamed
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
