@@ -12,7 +12,25 @@ public final class ThemeProfilesSettingsView: NSView, NSTableViewDataSource, NST
 
     private enum Slot: Equatable {
         case foreground, background, cursor, selection, ansi(Int)
+        case role(ThemeRole)
     }
+
+    /// Semantic chrome roles exposed as editable color wells (override the
+    /// derived value). Backgrounds, lines, text, and status — what users asked to
+    /// theme directly.
+    private static let editableRoles: [ThemeRole] = [
+        .windowBackground, .surface, .elevatedSurface, .controlBackground,
+        .primaryText, .secondaryText, .tertiaryText,
+        .accent, .success, .warning, .danger, .info,
+        .border, .outline, .divider
+    ]
+
+    private static let roleCaptions: [ThemeRole: String] = [
+        .windowBackground: "Window", .surface: "Panel", .elevatedSurface: "Raised",
+        .controlBackground: "Field", .primaryText: "Text", .secondaryText: "Text2",
+        .tertiaryText: "Text3", .accent: "Accent", .success: "OK", .warning: "Warn",
+        .danger: "Error", .info: "Info", .border: "Border", .outline: "Outline", .divider: "Divide"
+    ]
 
     private let store = ThemeStore()
     private var themes: [ColorTheme] = []
@@ -29,6 +47,14 @@ public final class ThemeProfilesSettingsView: NSView, NSTableViewDataSource, NST
     private let preview = ComposableSettings.ThemePreviewView()
     private let wellsContainer = NSStackView()
     private var colorWells: [(slot: Slot, well: NSColorWell)] = []
+
+    private let typographyContainer = NSStackView()
+    private let scaleSlider = NSSlider(value: 1.0, minValue: 0.8, maxValue: 1.6, target: nil, action: nil)
+    private let scaleLabel = NSTextField(labelWithString: "100%")
+    private var sizeFields: [TextRole: NSTextField] = [:]
+    private var sizeSteppers: [TextRole: NSStepper] = [:]
+    private var weightPopups: [TextRole: NSPopUpButton] = [:]
+    private var familyFields: [TextRole: NSTextField] = [:]
 
     public override init(frame: NSRect) {
         super.init(frame: frame)
@@ -138,11 +164,17 @@ public final class ThemeProfilesSettingsView: NSView, NSTableViewDataSource, NST
         wellsContainer.alignment = .leading
         wellsContainer.spacing = 6
 
+        typographyContainer.orientation = .vertical
+        typographyContainer.alignment = .leading
+        typographyContainer.spacing = 6
+
         let stack = NSStackView(views: [
             labeledRow("Name", nameField),
             labeledRow("Appearance", appearancePopUp),
             sectionLabel("Colors"),
             wellsContainer,
+            sectionLabel("Typography"),
+            typographyContainer,
             sectionLabel("Preview"),
             preview
         ])
@@ -294,7 +326,139 @@ public final class ThemeProfilesSettingsView: NSView, NSTableViewDataSource, NST
         appearancePopUp.isEnabled = editable
 
         rebuildWells(for: theme, editable: editable)
+        rebuildTypography(for: theme, editable: editable)
         preview.show(theme)
+    }
+
+    // MARK: - Typography editor
+
+    private func rebuildTypography(for theme: ColorTheme, editable: Bool) {
+        typographyContainer.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        sizeFields.removeAll(); sizeSteppers.removeAll()
+        weightPopups.removeAll(); familyFields.removeAll()
+
+        // Global size scale.
+        scaleSlider.doubleValue = theme.typography.sizeScale
+        scaleSlider.isEnabled = editable
+        scaleSlider.target = self
+        scaleSlider.action = #selector(scaleChanged)
+        scaleSlider.translatesAutoresizingMaskIntoConstraints = false
+        scaleSlider.widthAnchor.constraint(equalToConstant: 140).isActive = true
+        scaleLabel.stringValue = "\(Int((theme.typography.sizeScale * 100).rounded()))%"
+        let scaleRow = NSStackView(views: [captionLabel("Text size", width: 70), scaleSlider, scaleLabel])
+        scaleRow.orientation = .horizontal
+        scaleRow.spacing = 8
+        typographyContainer.addArrangedSubview(scaleRow)
+
+        let header = NSStackView(views: [
+            captionLabel("", width: 70), captionLabel("Size", width: 70),
+            captionLabel("Weight", width: 110), captionLabel("Font family", width: 140)
+        ])
+        header.orientation = .horizontal
+        header.spacing = 8
+        typographyContainer.addArrangedSubview(header)
+
+        for role in TextRole.allCases {
+            typographyContainer.addArrangedSubview(typographyRow(role, theme: theme, editable: editable))
+        }
+    }
+
+    private func typographyRow(_ role: TextRole, theme: ColorTheme, editable: Bool) -> NSView {
+        let style = theme.typography.style(role)
+        let roleID = NSUserInterfaceItemIdentifier(role.rawValue)
+
+        let sizeField = NSTextField()
+        sizeField.doubleValue = style.size
+        sizeField.identifier = roleID
+        sizeField.isEditable = editable
+        sizeField.target = self
+        sizeField.action = #selector(typographyChanged(_:))
+        sizeField.translatesAutoresizingMaskIntoConstraints = false
+        sizeField.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        sizeFields[role] = sizeField
+
+        let stepper = NSStepper()
+        stepper.minValue = 8; stepper.maxValue = 48; stepper.increment = 1
+        stepper.doubleValue = style.size
+        stepper.identifier = roleID
+        stepper.isEnabled = editable
+        stepper.target = self
+        stepper.action = #selector(sizeStepperChanged(_:))
+        sizeSteppers[role] = stepper
+
+        let weightPopup = NSPopUpButton()
+        for weight in FontWeight.allCases {
+            weightPopup.addItem(withTitle: weight.rawValue.capitalized)
+            weightPopup.lastItem?.representedObject = weight
+        }
+        weightPopup.identifier = roleID
+        weightPopup.isEnabled = editable
+        weightPopup.target = self
+        weightPopup.action = #selector(typographyChanged(_:))
+        if let index = FontWeight.allCases.firstIndex(of: style.weight) { weightPopup.selectItem(at: index) }
+        weightPopup.translatesAutoresizingMaskIntoConstraints = false
+        weightPopup.widthAnchor.constraint(equalToConstant: 110).isActive = true
+        weightPopups[role] = weightPopup
+
+        let familyField = NSTextField()
+        familyField.stringValue = style.family ?? ""
+        familyField.placeholderString = "System"
+        familyField.identifier = roleID
+        familyField.isEditable = editable
+        familyField.target = self
+        familyField.action = #selector(typographyChanged(_:))
+        familyField.translatesAutoresizingMaskIntoConstraints = false
+        familyField.widthAnchor.constraint(equalToConstant: 140).isActive = true
+        familyFields[role] = familyField
+
+        let row = NSStackView(views: [
+            captionLabel(role.rawValue.capitalized, width: 70), sizeField, stepper, weightPopup, familyField
+        ])
+        row.orientation = .horizontal
+        row.spacing = 8
+        row.alignment = .centerY
+        return row
+    }
+
+    private func captionLabel(_ text: String, width: CGFloat) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        label.textColor = .secondaryLabelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.widthAnchor.constraint(equalToConstant: width).isActive = true
+        return label
+    }
+
+    @objc private func scaleChanged() {
+        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
+        theme.typography.sizeScale = scaleSlider.doubleValue
+        scaleLabel.stringValue = "\(Int((scaleSlider.doubleValue * 100).rounded()))%"
+        persist(theme)
+    }
+
+    @objc private func sizeStepperChanged(_ sender: NSStepper) {
+        guard let raw = sender.identifier?.rawValue, let role = TextRole(rawValue: raw) else { return }
+        sizeFields[role]?.doubleValue = sender.doubleValue
+        applyTypography(for: role)
+    }
+
+    @objc private func typographyChanged(_ sender: NSControl) {
+        guard let raw = sender.identifier?.rawValue, let role = TextRole(rawValue: raw) else { return }
+        if let field = sizeFields[role] { sizeSteppers[role]?.doubleValue = field.doubleValue }
+        applyTypography(for: role)
+    }
+
+    private func applyTypography(for role: TextRole) {
+        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
+        let size = max(8, min(48, sizeFields[role]?.doubleValue ?? ThemeTypography.defaultStyle(role).size))
+        let weight = (weightPopups[role]?.selectedItem?.representedObject as? FontWeight) ?? .regular
+        let familyRaw = familyFields[role]?.stringValue.trimmingCharacters(in: .whitespaces) ?? ""
+        let family = familyRaw.isEmpty ? nil : familyRaw
+        let isMono = ThemeTypography.defaultStyle(role).monospaced
+        theme.typography.styles[role.rawValue] = FontStyle(
+            family: family, size: size, weight: weight, monospaced: isMono
+        )
+        persist(theme)
     }
 
     private func rebuildWells(for theme: ColorTheme, editable: Bool) {
@@ -324,6 +488,27 @@ public final class ThemeProfilesSettingsView: NSView, NSTableViewDataSource, NST
                 let index = half * 8 + offset
                 guard theme.ansi.indices.contains(index) else { continue }
                 row.addArrangedSubview(wellColumn("\(index)", .ansi(index), theme.ansi[index], editable))
+            }
+            wellsContainer.addArrangedSubview(row)
+        }
+
+        // Semantic chrome roles — resolved (override or derived) values; editing
+        // one writes an override so users can theme backgrounds/panels/borders/
+        // outlines/text directly.
+        let rolesLabel = NSTextField(labelWithString: "App roles")
+        rolesLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        rolesLabel.textColor = .secondaryLabelColor
+        wellsContainer.addArrangedSubview(rolesLabel)
+
+        let palette = SemanticPalette(theme: theme)
+        let roles = Self.editableRoles
+        for chunk in stride(from: 0, to: roles.count, by: 5) {
+            let row = NSStackView()
+            row.orientation = .horizontal
+            row.spacing = 4
+            for role in roles[chunk..<min(chunk + 5, roles.count)] {
+                let caption = Self.roleCaptions[role] ?? role.rawValue
+                row.addArrangedSubview(wellColumn(caption, .role(role), palette.color(role), editable))
             }
             wellsContainer.addArrangedSubview(row)
         }
@@ -371,6 +556,7 @@ public final class ThemeProfilesSettingsView: NSView, NSTableViewDataSource, NST
         case .selection: theme.selection = rgba
         case .ansi(let index) where theme.ansi.indices.contains(index): theme.ansi[index] = rgba
         case .ansi: return
+        case .role(let role): theme.roleOverrides[role.rawValue] = rgba
         }
         persist(theme)
     }

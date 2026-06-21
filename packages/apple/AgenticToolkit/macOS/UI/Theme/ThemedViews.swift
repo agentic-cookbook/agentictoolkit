@@ -24,14 +24,17 @@ public final class ThemedBackgroundView: NSView, Themeable {
     }
 }
 
-/// A non-editable label whose text color tracks a semantic role.
+/// A non-editable label whose text color tracks a `ThemeRole` and whose font
+/// tracks a `TextRole` (so both color *and* size/weight follow the theme).
 @MainActor
 public final class ThemedLabel: NSTextField, Themeable {
     public var role: ThemeRole { didSet { applyTheme(ThemePaletteObserver.currentPalette) } }
+    public var textRole: TextRole { didSet { applyTheme(ThemePaletteObserver.currentPalette) } }
     private var observer: ThemePaletteObserver?
 
-    public init(string: String = "", role: ThemeRole = .primaryText) {
+    public init(string: String = "", role: ThemeRole = .primaryText, textRole: TextRole = .body) {
         self.role = role
+        self.textRole = textRole
         super.init(frame: .zero)
         self.isEditable = false
         self.isBordered = false
@@ -46,6 +49,39 @@ public final class ThemedLabel: NSTextField, Themeable {
 
     public func applyTheme(_ palette: SemanticPalette) {
         textColor = palette.nsColor(role)
+        font = palette.font(textRole)
+    }
+}
+
+/// An editable text field themed from the palette: control-background fill,
+/// primary text, body font, and a placeholder in the placeholder-text role.
+@MainActor
+public final class ThemedTextField: NSTextField, Themeable {
+    private var observer: ThemePaletteObserver?
+
+    public init(string: String = "") {
+        super.init(frame: .zero)
+        self.stringValue = string
+        self.isEditable = true
+        self.isBezeled = true
+        self.bezelStyle = .roundedBezel
+        self.drawsBackground = true
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        backgroundColor = palette.controlBackgroundColor
+        textColor = palette.primaryTextColor
+        font = palette.font(.body)
+        if let placeholder = placeholderString {
+            placeholderAttributedString = NSAttributedString(string: placeholder, attributes: [
+                .foregroundColor: palette.placeholderTextColor,
+                .font: palette.font(.body)
+            ])
+        }
     }
 }
 
@@ -73,22 +109,53 @@ public final class ThemedButton: NSButton, Themeable {
     public required init?(coder: NSCoder) { fatalError() }
 
     public func applyTheme(_ palette: SemanticPalette) {
-        let accent = palette.color(.accent)
-        layer?.backgroundColor = NSColor(accent).cgColor
-        let titleColor: NSColor = accent.isDark ? .white : .black
+        layer?.backgroundColor = palette.nsColor(.accent).cgColor
         attributedTitle = NSAttributedString(string: title, attributes: [
-            .foregroundColor: titleColor,
-            .font: font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)
+            .foregroundColor: palette.onAccentTextColor,
+            .font: palette.font(.button)
         ])
     }
 }
 
-/// A one-point hairline using the `border` role. Defaults to horizontal.
+/// A panel: a layer-backed surface fill with an optional outline stroke and
+/// rounded corners. Replaces raw `NSBox`/`.controlBackgroundColor` boxes so the
+/// theme drives panel background **and** border/outline color.
 @MainActor
-public final class ThemedSeparatorView: NSView, Themeable {
+public final class ThemedBox: NSView, Themeable {
+    public let fillRole: ThemeRole
+    public let strokeRole: ThemeRole?
     private var observer: ThemePaletteObserver?
 
-    public init() {
+    public init(fill: ThemeRole = .surface, stroke: ThemeRole? = .outline, cornerRadius: CGFloat = 8) {
+        self.fillRole = fill
+        self.strokeRole = stroke
+        super.init(frame: .zero)
+        self.wantsLayer = true
+        self.layer?.cornerRadius = cornerRadius
+        self.layer?.borderWidth = stroke == nil ? 0 : 1
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        layer?.backgroundColor = palette.nsColor(fillRole).cgColor
+        if let strokeRole {
+            layer?.borderColor = palette.nsColor(strokeRole).cgColor
+        }
+    }
+}
+
+/// A one-point hairline. Defaults to the `border` role; pass `.divider` for a
+/// fainter line.
+@MainActor
+public final class ThemedSeparatorView: NSView, Themeable {
+    public let role: ThemeRole
+    private var observer: ThemePaletteObserver?
+
+    public init(role: ThemeRole = .border) {
+        self.role = role
         super.init(frame: .zero)
         self.wantsLayer = true
         self.heightAnchor.constraint(equalToConstant: 1).isActive = true
@@ -99,7 +166,7 @@ public final class ThemedSeparatorView: NSView, Themeable {
     public required init?(coder: NSCoder) { fatalError() }
 
     public func applyTheme(_ palette: SemanticPalette) {
-        layer?.backgroundColor = palette.nsColor(.border).cgColor
+        layer?.backgroundColor = palette.nsColor(role).cgColor
     }
 }
 

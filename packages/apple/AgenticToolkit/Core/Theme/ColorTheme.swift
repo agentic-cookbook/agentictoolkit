@@ -51,6 +51,12 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
     /// by `SemanticPalette`. Overrides always win over the derived value.
     public var roleOverrides: [String: RGBAColor]
 
+    // MARK: Typography
+
+    /// Fonts (per `TextRole`) + a global size scale. Defaults to the system
+    /// typography so existing/imported themes look unchanged until customized.
+    public var typography: ThemeTypography
+
     public init(
         id: String = UUID().uuidString,
         name: String,
@@ -61,7 +67,8 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         cursor: RGBAColor,
         selection: RGBAColor,
         ansi: [RGBAColor],
-        roleOverrides: [String: RGBAColor] = [:]
+        roleOverrides: [String: RGBAColor] = [:],
+        typography: ThemeTypography = .system
     ) {
         self.id = id
         self.name = name
@@ -73,6 +80,24 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         self.selection = selection
         self.ansi = ansi
         self.roleOverrides = roleOverrides
+        self.typography = typography
+    }
+
+    // Custom decoding so themes persisted before typography existed still load
+    // (the field defaults to `.system` when absent).
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        appearance = try container.decode(ThemeAppearance.self, forKey: .appearance)
+        isBuiltIn = try container.decode(Bool.self, forKey: .isBuiltIn)
+        foreground = try container.decode(RGBAColor.self, forKey: .foreground)
+        background = try container.decode(RGBAColor.self, forKey: .background)
+        cursor = try container.decode(RGBAColor.self, forKey: .cursor)
+        selection = try container.decode(RGBAColor.self, forKey: .selection)
+        ansi = try container.decode([RGBAColor].self, forKey: .ansi)
+        roleOverrides = try container.decodeIfPresent([String: RGBAColor].self, forKey: .roleOverrides) ?? [:]
+        typography = try container.decodeIfPresent(ThemeTypography.self, forKey: .typography) ?? .system
     }
 }
 
