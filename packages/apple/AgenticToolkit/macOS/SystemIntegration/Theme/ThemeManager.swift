@@ -71,9 +71,19 @@ public final class ThemeManager: AppFeature {
     /// follows the theme — broad coverage on top of per-view theming.
     private func applyWindowBackgrounds() {
         let background = NSColor(currentPalette.windowBackground)
-        for window in NSApplication.shared.windows where window.styleMask.contains(.titled) {
+        for window in NSApplication.shared.windows where Self.shouldThemeBackground(of: window) {
             window.backgroundColor = background
         }
+    }
+
+    /// Whether a window's backdrop should follow the theme. Excludes the shared
+    /// system pickers (`NSColorPanel`/`NSFontPanel`), which AppKit owns: the theme
+    /// editor opens an `NSColorWell` → `NSColorPanel`, and editing a swatch would
+    /// otherwise repaint the system picker's own backdrop with the theme color.
+    static func shouldThemeBackground(of window: NSWindow) -> Bool {
+        guard window.styleMask.contains(.titled) else { return false }
+        if window is NSColorPanel || window is NSFontPanel { return false }
+        return true
     }
 
     /// Selects a theme by ID. Persists the choice and updates the resolved
@@ -86,6 +96,12 @@ public final class ThemeManager: AppFeature {
 
     private func reload() {
         let theme = store.theme(withID: UserSettings.activeThemeID.value) ?? BuiltInThemes.solarizedDark
+        // `selectTheme` both sets `activeThemeID` (which fires `activeObserver` →
+        // `reload()` on the next runloop tick) and calls `reload()` synchronously,
+        // so `reload()` runs twice per selection. Bail when nothing actually
+        // changed: the second call is a no-op (no duplicate notification / repaint),
+        // while an in-place edit of the active theme still differs and proceeds.
+        guard theme != currentTheme else { return }
         currentTheme = theme
         currentPalette = SemanticPalette(theme: theme)
         applyApplicationAppearance()

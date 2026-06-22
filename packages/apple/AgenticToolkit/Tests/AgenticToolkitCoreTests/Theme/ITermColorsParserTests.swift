@@ -73,6 +73,14 @@ struct ITermColorsParserTests {
         #expect(theme.appearance == .light)
     }
 
+    @Test("rejects a degenerate theme whose foreground equals its background")
+    func rejectsForegroundEqualsBackground() throws {
+        let data = try Self.makeData(foreground: (0, 0, 0), background: (0, 0, 0))
+        #expect(throws: ITermColorsParseError.foregroundMatchesBackground) {
+            try ITermColorsParser.parse(data: data, name: "Degenerate")
+        }
+    }
+
     @Test("falls back when cursor and selection are absent")
     func fallbacks() throws {
         let data = try Self.makeData(

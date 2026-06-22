@@ -58,7 +58,8 @@ public final class ThemeStore {
             cursor: theme.cursor,
             selection: theme.selection,
             ansi: theme.ansi,
-            roleOverrides: theme.roleOverrides
+            roleOverrides: theme.roleOverrides,
+            typography: theme.typography
         )
         return add(copy)
     }

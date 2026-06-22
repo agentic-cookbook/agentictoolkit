@@ -99,4 +99,18 @@ struct ThemeStoreTests {
         #expect(imported.name == "Imported")
         #expect(store.theme(withID: imported.id) != nil)
     }
+
+    @Test("duplicate preserves the source theme's typography")
+    func duplicatePreservesTypography() {
+        var custom = sampleTheme(name: "Typed")
+        custom.typography.sizeScale = 1.4
+        custom.typography.styles[TextRole.body.rawValue] =
+            FontStyle(family: "Menlo", size: 15, weight: .bold)
+        store.add(custom)
+
+        let copy = store.duplicate(custom)
+        #expect(copy.typography == custom.typography)
+        #expect(copy.typography.sizeScale == 1.4)
+        #expect(copy.typography.styles[TextRole.body.rawValue]?.family == "Menlo")
+    }
 }

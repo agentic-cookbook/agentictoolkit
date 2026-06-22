@@ -68,4 +68,34 @@ struct ThemeManagerTests {
         manager.selectTheme(id: BuiltInThemes.dracula.id)
         #expect(flag.fired)
     }
+
+    @Test("re-selecting the active theme posts nothing (no redundant reload)")
+    func reselectingActiveThemePostsNothing() {
+        final class Counter: @unchecked Sendable { var count = 0 }
+        let counter = Counter()
+        let manager = ThemeManager()
+        manager.selectTheme(id: BuiltInThemes.dracula.id)
+        // Drain any pending async observer fire from the first selection.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+
+        let token = NotificationCenter.default.addObserver(
+            forName: ThemeManager.didChangeNotification, object: manager, queue: nil
+        ) { _ in counter.count += 1 }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        manager.selectTheme(id: BuiltInThemes.dracula.id)   // already active → guard bails
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        #expect(counter.count == 0)
+    }
+
+    @Test("excludes the shared system pickers from window-background theming")
+    func windowBackgroundFilter() {
+        let normal = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        #expect(ThemeManager.shouldThemeBackground(of: normal))
+        #expect(!ThemeManager.shouldThemeBackground(of: NSColorPanel.shared))
+        #expect(!ThemeManager.shouldThemeBackground(of: NSFontPanel.shared))
+    }
 }

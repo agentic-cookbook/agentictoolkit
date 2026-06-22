@@ -37,4 +37,19 @@ struct ColorThemeTests {
         )
         #expect(!short.hasValidPalette)
     }
+
+    @Test("RGBAColor clamps out-of-range and non-finite components to [0, 1]")
+    func rgbaClampsComponents() {
+        let over = RGBAColor(red: 1.5, green: -0.2, blue: 2.0, alpha: 9)
+        #expect(over.red == 1)
+        #expect(over.green == 0)
+        #expect(over.blue == 1)
+        #expect(over.alpha == 1)
+
+        let nonFinite = RGBAColor(red: .nan, green: 0.5, blue: .infinity, alpha: -.infinity)
+        #expect(nonFinite.red == 0)       // NaN → 0
+        #expect(nonFinite.green == 0.5)
+        #expect(nonFinite.blue == 1)      // +∞ → 1
+        #expect(nonFinite.alpha == 0)     // -∞ → 0
+    }
 }

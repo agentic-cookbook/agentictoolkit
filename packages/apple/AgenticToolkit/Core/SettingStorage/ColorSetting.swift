@@ -9,11 +9,15 @@ public struct RGBAColor: Codable, Sendable, Equatable {
     public let blue: Double
     public let alpha: Double
 
+    /// Components are clamped to `[0, 1]` so a malformed source (an imported
+    /// `.itermcolors` with an out-of-gamut/rounding-artifact value, or a NaN
+    /// from color math) can never store an out-of-range or non-finite channel
+    /// that would later corrupt rendering or trap on conversion.
     public init(red: Double, green: Double, blue: Double, alpha: Double) {
-        self.red = red
-        self.green = green
-        self.blue = blue
-        self.alpha = alpha
+        self.red = red.clamped()
+        self.green = green.clamped()
+        self.blue = blue.clamped()
+        self.alpha = alpha.clamped()
     }
 
     /// Parses `"#RRGGBBAA"` (the leading `#` is optional, case-insensitive).

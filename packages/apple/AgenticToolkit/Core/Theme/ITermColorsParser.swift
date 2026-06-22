@@ -8,6 +8,9 @@ public enum ITermColorsParseError: Error, Equatable {
     case missingColor(String)
     /// A required RGB component was absent inside a color dictionary.
     case missingComponent(colorKey: String, component: String)
+    /// Foreground and background are identical, so the theme renders all text
+    /// invisible — rejected rather than imported into an unusable state.
+    case foregroundMatchesBackground
 }
 
 /// Parses iTerm2 `.itermcolors` files into a `ColorTheme`.
@@ -42,6 +45,9 @@ public enum ITermColorsParser {
 
         let foreground = try color(in: dict, forKey: "Foreground Color")
         let background = try color(in: dict, forKey: "Background Color")
+        guard foreground != background else {
+            throw ITermColorsParseError.foregroundMatchesBackground
+        }
 
         var ansi: [RGBAColor] = []
         ansi.reserveCapacity(ColorTheme.ansiColorCount)

@@ -210,7 +210,7 @@ public final class ThemeProfilesSettingsView: NSView {
 
         let label = NSTextField(wrappingLabelWithString:
             "Built-in theme — duplicate it to customize its colors and fonts.")
-        label.textColor = .secondaryLabelColor
+        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
         let button = NSButton(title: "Duplicate to Edit", target: self, action: #selector(duplicateTheme))
         button.bezelStyle = .rounded
         button.keyEquivalent = "\r"
@@ -363,7 +363,7 @@ public final class ThemeProfilesSettingsView: NSView {
 
         let label = NSTextField(labelWithString: caption)
         label.font = .systemFont(ofSize: 10)
-        label.textColor = .secondaryLabelColor
+        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
         label.alignment = .center
         let column = NSStackView(views: [well, label])
         column.orientation = .vertical
@@ -471,7 +471,7 @@ public final class ThemeProfilesSettingsView: NSView {
     private func sectionTitle(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .secondaryLabelColor
+        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
         return label
     }
 
@@ -484,7 +484,7 @@ public final class ThemeProfilesSettingsView: NSView {
     private func captionLabel(_ text: String, _ width: CGFloat) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        label.textColor = .secondaryLabelColor
+        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
         label.translatesAutoresizingMaskIntoConstraints = false
         label.widthAnchor.constraint(equalToConstant: width).isActive = true
         return label
@@ -685,6 +685,7 @@ private final class ThemeCardView: NSView {
     private let thumbnail: ThemeThumbnailView
     private let nameLabel = NSTextField(labelWithString: "")
     private let appearanceLabel = NSTextField(labelWithString: "")
+    private var observer: ThemePaletteObserver?
 
     init(theme: ColorTheme, isActive: Bool, onSelect: @escaping (String) -> Void) {
         self.themeID = theme.id
@@ -707,7 +708,6 @@ private final class ThemeCardView: NSView {
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         appearanceLabel.stringValue = theme.appearance.rawValue.capitalized
         appearanceLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        appearanceLabel.textColor = .tertiaryLabelColor
         appearanceLabel.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(thumbnail)
@@ -725,10 +725,19 @@ private final class ThemeCardView: NSView {
             appearanceLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 1),
             appearanceLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
         ])
+
+        // The card persists across theme switches (unlike the rebuilt editor), so
+        // its labels must observe the palette to stay readable on the themed panel.
+        observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    private func applyTheme(_ palette: SemanticPalette) {
+        nameLabel.textColor = palette.primaryTextColor
+        appearanceLabel.textColor = palette.tertiaryTextColor
+    }
 
     func update(theme: ColorTheme) {
         self.theme = theme

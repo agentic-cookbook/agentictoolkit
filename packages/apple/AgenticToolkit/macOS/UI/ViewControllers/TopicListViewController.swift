@@ -232,9 +232,8 @@ extension TopicListViewController: NSOutlineViewDelegate {
         _ outlineView: NSOutlineView,
         rowViewForItem item: Any
     ) -> NSTableRowView? {
-        let row = ThemedTableRowView()
-        row.palette = ThemePaletteObserver.currentPalette
-        return row
+        // Self-themed: it observes the palette and repaints on theme change.
+        return ThemedTableRowView(frame: .zero)
     }
 
     public func outlineViewSelectionDidChange(_ notification: Notification) {

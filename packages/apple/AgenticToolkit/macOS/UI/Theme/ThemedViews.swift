@@ -189,10 +189,26 @@ public final class ThemedScrollView: NSScrollView, Themeable {
     }
 }
 
-/// A table row view whose selection fill uses the `selection` role.
+/// A table row view whose selection fill uses the `selection` role. Observes the
+/// theme so reused row instances repaint live; without this, an AppKit-pooled row
+/// keeps the palette captured at creation and draws stale selection after a swap.
 @MainActor
-public final class ThemedTableRowView: NSTableRowView {
-    public var palette: SemanticPalette = ThemePaletteObserver.currentPalette
+public final class ThemedTableRowView: NSTableRowView, Themeable {
+    private(set) var palette: SemanticPalette = ThemePaletteObserver.currentPalette
+    private var observer: ThemePaletteObserver?
+
+    public override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        self.palette = palette
+        needsDisplay = true
+    }
 
     public override func drawSelection(in dirtyRect: NSRect) {
         guard selectionHighlightStyle != .none else { return }

@@ -59,4 +59,18 @@ struct SemanticPaletteFontTests {
         _ = palette.dividerColor
         #expect(palette.outlineColor != palette.borderColor)
     }
+
+    @Test("color(named:) maps server color names onto themed roles")
+    func colorNamed() {
+        let palette = SemanticPalette(theme: sampleTheme())
+        #expect(palette.color(named: "red") == palette.dangerColor)
+        #expect(palette.color(named: "yellow") == palette.warningColor)
+        #expect(palette.color(named: "green") == palette.successColor)
+        #expect(palette.color(named: "blue") == palette.accentColor)
+        #expect(palette.color(named: "purple") == palette.infoColor)
+        #expect(palette.color(named: "gray") == palette.secondaryTextColor)
+        #expect(palette.color(named: "secondary") == palette.secondaryTextColor)
+        #expect(palette.color(named: "unknown") == nil)
+        #expect(palette.color(named: nil) == nil)
+    }
 }

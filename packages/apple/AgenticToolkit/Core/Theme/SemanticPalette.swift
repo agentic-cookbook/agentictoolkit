@@ -65,16 +65,27 @@ public enum ThemeRole: String, CaseIterable, Sendable {
 public struct SemanticPalette: Equatable, Sendable {
     public let theme: ColorTheme
 
+    /// Every role resolved once at construction (override-or-derived), so repeated
+    /// `color(_:)` lookups are O(1) dictionary reads. Resolving `secondaryText` /
+    /// `tertiaryText` / `placeholderText` runs the iterative `dimmed()` contrast
+    /// loop (pow-heavy); doing it per access in cell/draw/applyTheme paths is
+    /// wasteful, so we pay it once per palette instance. Derived purely from
+    /// `theme`, so it never breaks `Equatable`.
+    private let resolved: [ThemeRole: RGBAColor]
+
     public init(theme: ColorTheme) {
         self.theme = theme
+        var map: [ThemeRole: RGBAColor] = [:]
+        map.reserveCapacity(ThemeRole.allCases.count)
+        for role in ThemeRole.allCases {
+            map[role] = Self.resolve(role, theme: theme)
+        }
+        self.resolved = map
     }
 
     /// The resolved color for `role` (override if present, else derived).
     public func color(_ role: ThemeRole) -> RGBAColor {
-        if let override = theme.roleOverrides[role.rawValue] {
-            return override
-        }
-        return derived(role)
+        resolved[role] ?? Self.resolve(role, theme: theme)
     }
 
     /// The default palette-derived color for `role`, ignoring overrides.
@@ -85,6 +96,15 @@ public struct SemanticPalette: Equatable, Sendable {
     /// low-contrast imported scheme stays readable. `onAccentText`/`selectionText`
     /// auto-pick black or white for contrast on their fills.
     public func derived(_ role: ThemeRole) -> RGBAColor {
+        Self.derive(role, theme: theme)
+    }
+
+    /// Override-or-derived resolution for a single role.
+    private static func resolve(_ role: ThemeRole, theme: ColorTheme) -> RGBAColor {
+        theme.roleOverrides[role.rawValue] ?? derive(role, theme: theme)
+    }
+
+    private static func derive(_ role: ThemeRole, theme: ColorTheme) -> RGBAColor {
         let background = theme.background
         let foreground = theme.foreground
         switch role {
@@ -105,7 +125,7 @@ public struct SemanticPalette: Equatable, Sendable {
         case .placeholderText:
             return foreground.dimmed(towards: background, by: 0.68, minContrast: 1.6)
         case .onAccentText:
-            return derived(.accent).bestTextColor()
+            return derive(.accent, theme: theme).bestTextColor()
         case .accent:
             return theme.ansiColor(at: 4) ?? foreground
         case .success:
@@ -129,6 +149,19 @@ public struct SemanticPalette: Equatable, Sendable {
         case .cursor:
             return theme.cursor
         }
+    }
+
+    /// An ordered list of visually distinct series colors for charts, guaranteed
+    /// non-empty and to contrast against `surface` so no series collapses into
+    /// the backdrop. The terminal "black"/"white" ANSI slots (0, 7, 8, 15) — which
+    /// sit ~on the background on most themes — are deliberately excluded: leading
+    /// with semantic accents, then the bright ANSI hues for additional variety.
+    public var chartSeriesColors: [RGBAColor] {
+        let surface = color(.surface)
+        let semantic = [color(.accent), color(.success), color(.info), color(.warning), color(.danger)]
+        let brights = [9, 10, 11, 12, 13, 14].compactMap { theme.ansiColor(at: $0) }
+        let visible = (semantic + brights).filter { $0.contrastRatio(against: surface) >= 1.5 }
+        return visible.isEmpty ? semantic : visible
     }
 }
 

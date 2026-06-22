@@ -49,4 +49,15 @@ struct ThemedControlsTests {
         plain.applyTheme(palette)
         #expect(plain.layer?.borderWidth == 0)
     }
+
+    @Test("ThemedTableRowView tracks the palette across a theme change")
+    func tableRow() {
+        let row = ThemedTableRowView(frame: .zero)
+        // A reused, pooled row must adopt the new palette (its selection fill
+        // would otherwise stay frozen at the palette captured when it was created).
+        row.applyTheme(lightPalette)
+        #expect(row.palette == lightPalette)
+        row.applyTheme(palette)
+        #expect(row.palette == palette)
+    }
 }

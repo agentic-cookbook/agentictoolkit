@@ -41,4 +41,31 @@ struct SemanticPaletteTests {
         #expect(palette.color(.accent) == custom)
         #expect(palette.derived(.accent) == theme.ansi[4])  // derivation ignores overrides
     }
+
+    @Test("chartSeriesColors are non-empty and all contrast against the surface")
+    func chartSeriesVisible() {
+        let series = palette.chartSeriesColors
+        #expect(series.count >= 5)
+        let surface = palette.color(.surface)
+        for color in series {
+            #expect(color.contrastRatio(against: surface) >= 1.5)
+        }
+    }
+
+    @Test("chartSeriesColors never collapse onto the window background")
+    func chartSeriesAvoidBackground() {
+        // Regression: charts used to cycle ansiColors from index 0; the terminal
+        // "black" slot equals the background on many themes, so the first series
+        // was invisible. chartSeriesColors must exclude any near-background color.
+        var ansi = Array(repeating: RGBAColor(hexString: "#268bd2ff")!, count: 16)
+        ansi[0] = RGBAColor(hexString: "#1e1e2eff")!   // ANSI black == background
+        let degenerate = ColorTheme(
+            name: "T", appearance: .dark,
+            foreground: RGBAColor(hexString: "#cdd6f4ff")!,
+            background: RGBAColor(hexString: "#1e1e2eff")!,
+            cursor: .white, selection: RGBAColor(hexString: "#445566ff")!, ansi: ansi
+        )
+        let palette = SemanticPalette(theme: degenerate)
+        #expect(!palette.chartSeriesColors.contains(palette.color(.windowBackground)))
+    }
 }
