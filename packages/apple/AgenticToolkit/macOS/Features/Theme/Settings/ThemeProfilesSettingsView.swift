@@ -66,7 +66,7 @@ public final class ThemeProfilesSettingsView: NSView {
         scroll.automaticallyAdjustsContentInsets = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
 
-        let doc = FlippedView()
+        let doc = ThemeFlippedView()
         doc.translatesAutoresizingMaskIntoConstraints = false
         scroll.documentView = doc
 
@@ -194,7 +194,7 @@ public final class ThemeProfilesSettingsView: NSView {
         // theme, or a preview + Duplicate affordance for a read-only built-in.
         let content: NSView = editable ? makeEditor(for: theme) : makeBuiltInNotice(for: theme)
         let title = editable ? "Edit \(theme.name)" : "\(theme.name)"
-        let group = DisclosureGroup(title: title, content: content, expanded: true)
+        let group = ThemeDisclosureGroup(title: title, content: content, expanded: true)
         group.translatesAutoresizingMaskIntoConstraints = false
         customizeHost.addArrangedSubview(group)
         group.widthAnchor.constraint(equalTo: customizeHost.widthAnchor).isActive = true
@@ -262,10 +262,10 @@ public final class ThemeProfilesSettingsView: NSView {
         meta.columnSpacing = 8
         meta.column(at: 0).xPlacement = .leading
 
-        let colors = DisclosureGroup(title: "Colors", content: makeColorsEditor(for: theme), expanded: true)
-        let typography = DisclosureGroup(title: "Typography",
+        let colors = ThemeDisclosureGroup(title: "Colors", content: makeColorsEditor(for: theme), expanded: true)
+        let typography = ThemeDisclosureGroup(title: "Typography",
                                          content: makeTypographyEditor(for: theme), expanded: false)
-        let terminal = DisclosureGroup(title: "Terminal palette (advanced)",
+        let terminal = ThemeDisclosureGroup(title: "Terminal palette (advanced)",
                                        content: makeTerminalEditor(for: theme), expanded: false)
 
         let duplicate = NSButton(title: "Duplicate", target: self, action: #selector(duplicateTheme))
@@ -610,215 +610,5 @@ public final class ThemeProfilesSettingsView: NSView {
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .warning
         alert.runModal()
-    }
-}
-
-// MARK: - Flipped document view (content pins to the top)
-
-private final class FlippedView: NSView {
-    override var isFlipped: Bool { true }
-}
-
-// MARK: - Disclosure group (progressive disclosure, HIG triangle + label)
-
-private final class DisclosureGroup: NSView {
-    private let triangle = NSButton()
-    private let body: NSView
-
-    init(title: String, content: NSView, expanded: Bool) {
-        self.body = content
-        super.init(frame: .zero)
-        translatesAutoresizingMaskIntoConstraints = false
-
-        triangle.title = title
-        triangle.setButtonType(.onOff)
-        triangle.bezelStyle = .disclosure
-        triangle.state = expanded ? .on : .off
-        triangle.target = self
-        triangle.action = #selector(toggle)
-        triangle.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
-        let labelClick = NSClickGestureRecognizer(target: self, action: #selector(toggle))
-        label.addGestureRecognizer(labelClick)
-
-        let header = NSStackView(views: [triangle, label])
-        header.orientation = .horizontal
-        header.spacing = 4
-        header.translatesAutoresizingMaskIntoConstraints = false
-
-        content.translatesAutoresizingMaskIntoConstraints = false
-        content.isHidden = !expanded
-
-        addSubview(header)
-        addSubview(content)
-        NSLayoutConstraint.activate([
-            header.topAnchor.constraint(equalTo: topAnchor),
-            header.leadingAnchor.constraint(equalTo: leadingAnchor),
-            content.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
-            content.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            content.trailingAnchor.constraint(equalTo: trailingAnchor),
-            content.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    @objc private func toggle() {
-        // Expand iff currently collapsed; keep the triangle state in sync whether
-        // the triangle button or the label was clicked.
-        let expand = body.isHidden
-        body.isHidden = !expand
-        triangle.state = expand ? .on : .off
-    }
-}
-
-// MARK: - Theme thumbnail card (rendered "show, don't tell" preview)
-
-private final class ThemeCardView: NSView {
-    let themeID: String
-    var isActive: Bool { didSet { needsDisplay = true } }
-    private var theme: ColorTheme
-    private let onSelect: (String) -> Void
-    private let thumbnail: ThemeThumbnailView
-    private let nameLabel = NSTextField(labelWithString: "")
-    private let appearanceLabel = NSTextField(labelWithString: "")
-    private var observer: ThemePaletteObserver?
-
-    init(theme: ColorTheme, isActive: Bool, onSelect: @escaping (String) -> Void) {
-        self.themeID = theme.id
-        self.theme = theme
-        self.isActive = isActive
-        self.onSelect = onSelect
-        self.thumbnail = ThemeThumbnailView(theme: theme)
-        super.init(frame: .zero)
-        wantsLayer = true
-        translatesAutoresizingMaskIntoConstraints = false
-
-        thumbnail.translatesAutoresizingMaskIntoConstraints = false
-        thumbnail.wantsLayer = true
-        thumbnail.layer?.cornerRadius = 7
-        thumbnail.layer?.masksToBounds = true
-
-        nameLabel.stringValue = theme.name
-        nameLabel.font = .systemFont(ofSize: 12, weight: .medium)
-        nameLabel.lineBreakMode = .byTruncatingTail
-        nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        appearanceLabel.stringValue = theme.appearance.rawValue.capitalized
-        appearanceLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        appearanceLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        addSubview(thumbnail)
-        addSubview(nameLabel)
-        addSubview(appearanceLabel)
-        NSLayoutConstraint.activate([
-            thumbnail.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            thumbnail.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
-            thumbnail.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
-            thumbnail.heightAnchor.constraint(equalToConstant: 96),
-            nameLabel.topAnchor.constraint(equalTo: thumbnail.bottomAnchor, constant: 6),
-            nameLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            nameLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -8),
-            appearanceLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
-            appearanceLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 1),
-            appearanceLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
-        ])
-
-        // The card persists across theme switches (unlike the rebuilt editor), so
-        // its labels must observe the palette to stay readable on the themed panel.
-        observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    private func applyTheme(_ palette: SemanticPalette) {
-        nameLabel.textColor = palette.primaryTextColor
-        appearanceLabel.textColor = palette.tertiaryTextColor
-    }
-
-    func update(theme: ColorTheme) {
-        self.theme = theme
-        nameLabel.stringValue = theme.name
-        appearanceLabel.stringValue = theme.appearance.rawValue.capitalized
-        thumbnail.update(theme: theme)
-    }
-
-    override func updateLayer() {
-        // Minimal chrome: the rendered thumbnail carries its own hairline; only the
-        // active card gets an accent ring so the gallery stays clean.
-        layer?.cornerRadius = 10
-        layer?.borderWidth = isActive ? 3 : 0
-        layer?.borderColor = NSColor.controlAccentColor.cgColor
-        layer?.backgroundColor = NSColor.clear.cgColor
-    }
-
-    override var wantsUpdateLayer: Bool { true }
-
-    override func mouseDown(with event: NSEvent) { onSelect(themeID) }
-}
-
-/// Draws a miniature app-window rendering of a theme: titlebar with traffic
-/// lights, title/body/caption bars, an accent pill, status dots and a code line.
-private final class ThemeThumbnailView: NSView {
-    private var palette: SemanticPalette
-
-    init(theme: ColorTheme) {
-        self.palette = SemanticPalette(theme: theme)
-        super.init(frame: .zero)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    func update(theme: ColorTheme) {
-        palette = SemanticPalette(theme: theme)
-        needsDisplay = true
-    }
-
-    override var isFlipped: Bool { true }
-
-    override func draw(_ dirtyRect: NSRect) {
-        let bounds = self.bounds
-        func fill(_ rect: NSRect, _ color: NSColor, radius: CGFloat = 0) {
-            color.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-        }
-        // Window background.
-        fill(bounds, palette.nsColor(.windowBackground))
-        // Title bar.
-        let titleBarHeight: CGFloat = 18
-        fill(NSRect(x: 0, y: 0, width: bounds.width, height: titleBarHeight), palette.nsColor(.surface))
-        for (index, role) in [ThemeRole.danger, .warning, .success].enumerated() {
-            let dot = NSRect(x: 8 + CGFloat(index) * 11, y: titleBarHeight / 2 - 3, width: 6, height: 6)
-            fill(dot, palette.nsColor(role), radius: 3)
-        }
-        // Content.
-        let left: CGFloat = 12
-        var row = titleBarHeight + 12
-        fill(NSRect(x: left, y: row, width: bounds.width * 0.5, height: 7),
-             palette.nsColor(.primaryText), radius: 2)
-        row += 14
-        fill(NSRect(x: left, y: row, width: bounds.width * 0.72, height: 5),
-             palette.nsColor(.secondaryText), radius: 2)
-        row += 10
-        fill(NSRect(x: left, y: row, width: bounds.width * 0.6, height: 5),
-             palette.nsColor(.secondaryText), radius: 2)
-        row += 14
-        fill(NSRect(x: left, y: row, width: 38, height: 14), palette.nsColor(.accent), radius: 4)
-        for (index, role) in [ThemeRole.info, .warning, .danger].enumerated() {
-            let dot = NSRect(x: left + 48 + CGFloat(index) * 12, y: row + 3, width: 8, height: 8)
-            fill(dot, palette.nsColor(role), radius: 4)
-        }
-        row += 22
-        fill(NSRect(x: left, y: row, width: bounds.width * 0.66, height: 5),
-             palette.nsColor(.tertiaryText), radius: 2)
-        // Hairline border.
-        palette.nsColor(.border).setStroke()
-        let border = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
-        border.lineWidth = 1
-        border.stroke()
     }
 }
