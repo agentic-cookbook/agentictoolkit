@@ -113,6 +113,7 @@
 		2379C7574D0AAF1D97F00B48 /* StoredSettingPropertyWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0448347D601C05E85051B6 /* StoredSettingPropertyWrapper.swift */; };
 		2574598DAD92C7B1127E0465 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C87939516A070CC66803F4 /* Placeholder.swift */; };
 		26AED5EE9B95D116FB23994B /* SessionWatcherWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB5B36757BC82A74FBBD30D /* SessionWatcherWindowController.swift */; };
+		278CA7A2D60F12C6B857BE9D /* Badge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6E8EA3F66DE979A9977004 /* Badge.swift */; };
 		2798A43C990BDE7D22D1FFE4 /* AgenticToolkitCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; };
 		28262D417BE939062E1A0B33 /* ThemedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE176E76A4DCA8EB707F7E28 /* ThemedViews.swift */; };
 		282C238B07C73C6080DEF653 /* XcodeHeuristic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 234428AD995F284FF4451931 /* XcodeHeuristic.swift */; };
@@ -1168,6 +1169,7 @@
 		97968EFD1C9C7597C4C09F4D /* ThemePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePreviewView.swift; sourceTree = "<group>"; };
 		97D73AE672A872337EA8DEB2 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		996BC129EFE3C2D78BE1C0D2 /* CGFloatClampedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGFloatClampedTests.swift; sourceTree = "<group>"; };
+		9A6E8EA3F66DE979A9977004 /* Badge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badge.swift; sourceTree = "<group>"; };
 		9B1329D11B1EB5258D60D38C /* TerminalSessionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionProfile.swift; sourceTree = "<group>"; };
 		9DBFE11A0941ECAA09739ACF /* SessionWatcherCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWatcherCommands.swift; sourceTree = "<group>"; };
 		9DD9139A93E469F94DF53EB2 /* MockStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStorage.swift; sourceTree = "<group>"; };
@@ -1769,6 +1771,7 @@
 			children = (
 				9B40AE0CA0A26897B1480F0A /* Accessibility */,
 				60FA12AADE918057522A2138 /* AppShell */,
+				D5AF7F1812C85FF659C6C51C /* Badge */,
 				1F62C0D62EE0032DB3E6417D /* Document */,
 				FE539DABB2B8624FA09B5FF9 /* Theme */,
 				9B98611E780BAA553707EB5B /* ViewControllers */,
@@ -2547,6 +2550,14 @@
 			path = AIPlugins;
 			sourceTree = "<group>";
 		};
+		D5AF7F1812C85FF659C6C51C /* Badge */ = {
+			isa = PBXGroup;
+			children = (
+				9A6E8EA3F66DE979A9977004 /* Badge.swift */,
+			);
+			path = Badge;
+			sourceTree = "<group>";
+		};
 		D6D5B33DFC8558B33EF0D9BD /* Scripting */ = {
 			isa = PBXGroup;
 			children = (
@@ -2745,7 +2756,7 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		"TEMP_DF9B11AE-391F-4F22-8C04-C31E0820E7CC" /* Settings */ = {
+		"TEMP_680FDDAB-CC1A-46CD-8766-A64694D8D212" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -3431,6 +3442,7 @@
 				371CA289D649C85620E0EA06 /* AppearanceManager.swift in Sources */,
 				86DE2D3368738D7C9142D885 /* AppearanceSettingsPanelViewController.swift in Sources */,
 				3F9D51DC75033A31E99C4733 /* AppleScriptRunner.swift in Sources */,
+				278CA7A2D60F12C6B857BE9D /* Badge.swift in Sources */,
 				6E72E0F55B5153026FEA120E /* BuiltInActivationStrategies.swift in Sources */,
 				B6DD01A409C6D8DEF9125041 /* ButtonView.swift in Sources */,
 				9608E169F7BF2D69DF3141FD /* ButtonViewModel.swift in Sources */,
