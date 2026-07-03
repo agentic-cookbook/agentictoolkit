@@ -112,6 +112,10 @@ public final class BoundedExecutionQueue<Resource: BoundedExecutionResource>: @u
     private let stateLock = NSLock()
     private var shuttingDown = false
     private let watchdog: DispatchSourceTimer
+    /// Set on every worker's queue to its pool name, so `isExecuting(on:)` can tell
+    /// whether the current thread is already inside a unit of a given pool — the
+    /// reentrancy guard a caller needs to avoid deadlocking on its own lane.
+    private let poolKey = DispatchSpecificKey<String>()
 
     // MARK: - Init
 
@@ -124,9 +128,11 @@ public final class BoundedExecutionQueue<Resource: BoundedExecutionResource>: @u
         var built: [PoolID: [Worker]] = [:]
         for (id, resources) in pools {
             precondition(!resources.isEmpty, "pool \(id) must have at least one resource")
-            built[id] = resources.enumerated().map { index, resource in
+            let workers = resources.enumerated().map { index, resource in
                 Worker(resource: resource, label: "com.agentic.execution.\(id.name).\(index)")
             }
+            for worker in workers { worker.queue.setSpecific(key: poolKey, value: id.name) }
+            built[id] = workers
         }
         self.pools = built
 
@@ -208,6 +214,15 @@ public final class BoundedExecutionQueue<Resource: BoundedExecutionResource>: @u
     }
 
     // MARK: - Introspection
+
+    /// Whether the current thread is already executing a unit on `pool`. Lets a
+    /// caller run nested work inline on the same connection instead of submitting
+    /// again (which would deadlock on that pool's serial lane) — e.g. a read issued
+    /// from inside a write transaction, which must use the write connection to see
+    /// its own uncommitted rows.
+    public func isExecuting(on pool: PoolID) -> Bool {
+        DispatchQueue.getSpecific(key: poolKey) == pool.name
+    }
 
     public var stats: ExecutionStats {
         let poolStats = pools.map { id, workers -> PoolStats in

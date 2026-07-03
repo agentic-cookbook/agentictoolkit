@@ -129,6 +129,19 @@ final class BoundedExecutionQueueTests: XCTestCase {
         XCTAssertEqual(peak.peak, 1, "a single-resource write pool never overlaps")
     }
 
+    // MARK: - Reentrancy guard
+
+    func testIsExecutingDetectsCurrentLane() throws {
+        let queue = makeQueue(); defer { queue.shutdown() }
+        XCTAssertFalse(queue.isExecuting(on: write), "not executing anything yet")
+
+        try queue.runSync(pool: write, deadline: .seconds(1)) { _ in
+            XCTAssertTrue(queue.isExecuting(on: self.write), "inside a write unit")
+            XCTAssertFalse(queue.isExecuting(on: self.read), "but not on the read lane")
+        }
+        XCTAssertFalse(queue.isExecuting(on: write), "cleared after the unit")
+    }
+
     // MARK: - Chunking
 
     func testRunChunkedStopsAtDone() throws {
