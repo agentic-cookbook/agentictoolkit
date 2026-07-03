@@ -127,6 +127,17 @@
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EB1A7E6905A3CAB04C0083D5"
+               BuildableName = "AgenticToolkitSQLiteTests.xctest"
+               BlueprintName = "AgenticToolkitSQLiteTests"
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

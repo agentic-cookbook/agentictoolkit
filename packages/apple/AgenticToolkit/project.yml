@@ -194,6 +194,34 @@ targets:
         embed: true
         codeSign: true
 
+  AgenticToolkitSQLite:
+    type: framework
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - SQLite
+    dependencies:
+      - target: AgenticToolkitExecution
+      - sdk: libsqlite3.tbd
+    # Daemon-safe SQLite conformance of BoundedExecutionResource: progress_handler
+    # self-eject + sqlite3_interrupt, plus a WAL reader/writer pool factory.
+
+  AgenticToolkitSQLiteTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AgenticToolkitSQLiteTests
+    dependencies:
+      - target: AgenticToolkitSQLite
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitExecution
+        embed: true
+        codeSign: true
+
   AgenticToolkitCoreTests:
     type: bundle.unit-test
     platform: macOS
@@ -307,6 +335,7 @@ aggregateTargets:
       - AgenticToolkitPermissionsUI
       - AgenticToolkitMacOS
       - AgenticToolkitExecution
+      - AgenticToolkitSQLite
 
   AgenticToolkitMacOSTestsAll:
     targets:
@@ -326,6 +355,8 @@ aggregateTargets:
       - AgenticToolkitMacOSTests
       - AgenticToolkitExecution
       - AgenticToolkitExecutionTests
+      - AgenticToolkitSQLite
+      - AgenticToolkitSQLiteTests
 
 schemes:
   AgenticToolkitExecution:
@@ -338,6 +369,23 @@ schemes:
       config: Debug
       targets:
         - AgenticToolkitExecutionTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  AgenticToolkitSQLite:
+    build:
+      targets:
+        AgenticToolkitSQLite: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitSQLiteTests
     profile:
       config: Release
     analyze:
@@ -413,6 +461,7 @@ schemes:
         - AgenticToolkitPermissionsUITests
         - AgenticToolkitMacOSTests
         - AgenticToolkitExecutionTests
+        - AgenticToolkitSQLiteTests
     profile:
       config: Release
     analyze:
