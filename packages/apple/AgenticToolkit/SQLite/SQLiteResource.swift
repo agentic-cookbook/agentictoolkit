@@ -39,6 +39,7 @@ public final class SQLiteResource: BoundedExecutionResource, @unchecked Sendable
 
     private let lock = NSLock()
     private var abortHook: (@Sendable () -> Bool)?
+    private var closed = false
 
     public init(path: String, mode: SQLiteOpenMode) throws {
         var database: OpaquePointer?
@@ -68,8 +69,19 @@ public final class SQLiteResource: BoundedExecutionResource, @unchecked Sendable
     }
 
     deinit {
-        sqlite3_progress_handler(handle, 0, nil, nil)   // detach before close
-        sqlite3_close(handle)
+        close()
+    }
+
+    /// Idempotent: detaches the progress handler and closes the connection once.
+    /// Guarded by `lock` so a concurrent `interrupt()` (watchdog) can never touch a
+    /// closed handle.
+    public func close() {
+        lock.withLock {
+            guard !closed else { return }
+            closed = true
+            sqlite3_progress_handler(handle, 0, nil, nil)
+            sqlite3_close(handle)
+        }
     }
 
     public func installAbortHook(_ shouldAbort: @escaping @Sendable () -> Bool) {
@@ -85,7 +97,10 @@ public final class SQLiteResource: BoundedExecutionResource, @unchecked Sendable
     }
 
     public func interrupt() {
-        sqlite3_interrupt(handle)
+        // Guarded so the watchdog never interrupts a handle `close()` has freed.
+        lock.withLock {
+            if !closed { sqlite3_interrupt(handle) }
+        }
     }
 
     private func shouldAbortNow() -> Bool {

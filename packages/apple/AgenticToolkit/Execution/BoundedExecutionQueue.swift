@@ -244,12 +244,20 @@ public final class BoundedExecutionQueue<Resource: BoundedExecutionResource>: @u
         return ExecutionStats(pools: poolStats.sorted { $0.pool < $1.pool })
     }
 
-    /// Stops the watchdog and rejects further work. Idempotent.
+    /// Stops the watchdog, closes every resource, and rejects further work.
+    /// Idempotent. Closing here (rather than leaving it to ARC) makes teardown
+    /// deterministic — important when a consumer creates and destroys many queues
+    /// on the same underlying file and must not leave connections holding locks.
     public func shutdown() {
-        stateLock.withLock {
-            if shuttingDown { return }
+        let alreadyDown: Bool = stateLock.withLock {
+            if shuttingDown { return true }
             shuttingDown = true
             watchdog.cancel()
+            return false
+        }
+        guard !alreadyDown else { return }
+        for workers in pools.values {
+            for worker in workers { worker.resource.close() }
         }
     }
 

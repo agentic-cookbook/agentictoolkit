@@ -35,9 +35,17 @@ public protocol BoundedExecutionResource: AnyObject, Sendable {
     /// Abort whatever unit is currently running on this resource, from another
     /// thread. Idempotent; a no-op when the resource is idle.
     func interrupt()
+
+    /// Release any underlying handle. The queue's `shutdown()` calls this so a
+    /// resource's connection/socket/process is torn down *deterministically* rather
+    /// than whenever ARC releases the queue (whose watchdog timer can keep the
+    /// resources alive briefly). Must be idempotent; default no-op.
+    func close()
 }
 
 public extension BoundedExecutionResource {
     /// Default: a resource that can't self-poll relies solely on `interrupt()`.
     func installAbortHook(_ shouldAbort: @escaping @Sendable () -> Bool) {}
+    /// Default: nothing to release.
+    func close() {}
 }
