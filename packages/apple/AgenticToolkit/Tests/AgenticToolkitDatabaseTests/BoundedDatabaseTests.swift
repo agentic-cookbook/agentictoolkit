@@ -1,0 +1,74 @@
+import XCTest
+import GRDB
+@testable import AgenticToolkitDatabase
+
+final class BoundedDatabaseTests: XCTestCase {
+
+    private var path: String!
+
+    override func setUpWithError() throws {
+        path = NSTemporaryDirectory() + "bdb-\(UUID().uuidString).db"
+    }
+
+    override func tearDownWithError() throws {
+        for suffix in ["", "-wal", "-shm"] {
+            try? FileManager.default.removeItem(atPath: path + suffix)
+        }
+    }
+
+    func testWriteThenReadAcrossLanes() throws {
+        let store = try BoundedDatabase(path: path, readers: 2)
+        try store.write { conn in try conn.execute(sql: "CREATE TABLE t(x INTEGER); INSERT INTO t VALUES (42)") }
+        // A reader connection sees the committed write through WAL.
+        let value = try store.read { conn in try Int.fetchOne(conn, sql: "SELECT x FROM t") }
+        XCTAssertEqual(value, 42)
+    }
+
+    func testReadYourWritesInsideWrite() throws {
+        let store = try BoundedDatabase(path: path)
+        try store.write { conn in
+            try conn.execute(sql: "CREATE TABLE t(x INTEGER)")
+            try conn.execute(sql: "INSERT INTO t VALUES (7)")
+            // A read issued inside the write is reentrant → runs on the writer
+            // connection and sees its own uncommitted row.
+            let inner = try store.read { reader in try Int.fetchOne(reader, sql: "SELECT x FROM t") }
+            XCTAssertEqual(inner, 7)
+        }
+    }
+
+    func testRunawayQueryIsEjectedWithinBudget() throws {
+        let store = try BoundedDatabase(path: path, readers: 1)
+        try store.write { conn in
+            try conn.execute(sql: """
+                CREATE TABLE big(x INTEGER);
+                INSERT INTO big(x)
+                  WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 1500)
+                  SELECT n FROM seq;
+                """)
+        }
+        // ~3.4e9 nested-loop rows — must be ejected near the 200 ms deadline.
+        let start = Date()
+        XCTAssertThrowsError(
+            try store.read(deadline: .milliseconds(200)) { conn in
+                try Int.fetchOne(conn, sql: "SELECT count(*) FROM big AS a, big AS b, big AS c")
+            }
+        ) { error in
+            guard case BoundedDatabaseError.deadlineExceeded(let lane, _) = error else {
+                return XCTFail("expected deadlineExceeded, got \(error)")
+            }
+            XCTAssertEqual(lane, "read")
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(start), 3, "ejected promptly, did not hang")
+    }
+
+    func testStatsCountLanes() throws {
+        let store = try BoundedDatabase(path: path)
+        try store.write { conn in try conn.execute(sql: "CREATE TABLE t(x INTEGER)") }
+        _ = try store.read { conn in try Int.fetchOne(conn, sql: "SELECT count(*) FROM t") }
+
+        let lanes = Dictionary(uniqueKeysWithValues: store.stats.lanes.map { ($0.lane, $0) })
+        XCTAssertGreaterThan(lanes["write"]?.completed ?? 0, 0)
+        XCTAssertGreaterThan(lanes["read"]?.completed ?? 0, 0)
+        XCTAssertEqual(lanes["read"]?.evicted, 0)
+    }
+}

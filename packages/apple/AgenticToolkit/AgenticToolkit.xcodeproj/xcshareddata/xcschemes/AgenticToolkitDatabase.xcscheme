@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "983245C7B4BE5D97064F7D1E"
-               BuildableName = "AgenticToolkitExecution.framework"
-               BlueprintName = "AgenticToolkitExecution"
+               BlueprintIdentifier = "5BFCF4EF9B6A3F62F3599C61"
+               BuildableName = "AgenticToolkitDatabase.framework"
+               BlueprintName = "AgenticToolkitDatabase"
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "983245C7B4BE5D97064F7D1E"
-            BuildableName = "AgenticToolkitExecution.framework"
-            BlueprintName = "AgenticToolkitExecution"
+            BlueprintIdentifier = "5BFCF4EF9B6A3F62F3599C61"
+            BuildableName = "AgenticToolkitDatabase.framework"
+            BlueprintName = "AgenticToolkitDatabase"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -44,9 +44,9 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B63DA30690AAE30395FFAB4D"
-               BuildableName = "AgenticToolkitExecutionTests.xctest"
-               BlueprintName = "AgenticToolkitExecutionTests"
+               BlueprintIdentifier = "DF9077A081DB04AD94BC6802"
+               BuildableName = "AgenticToolkitDatabaseTests.xctest"
+               BlueprintName = "AgenticToolkitDatabaseTests"
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -67,9 +67,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "983245C7B4BE5D97064F7D1E"
-            BuildableName = "AgenticToolkitExecution.framework"
-            BlueprintName = "AgenticToolkitExecution"
+            BlueprintIdentifier = "5BFCF4EF9B6A3F62F3599C61"
+            BuildableName = "AgenticToolkitDatabase.framework"
+            BlueprintName = "AgenticToolkitDatabase"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -87,9 +87,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "983245C7B4BE5D97064F7D1E"
-            BuildableName = "AgenticToolkitExecution.framework"
-            BlueprintName = "AgenticToolkitExecution"
+            BlueprintIdentifier = "5BFCF4EF9B6A3F62F3599C61"
+            BuildableName = "AgenticToolkitDatabase.framework"
+            BlueprintName = "AgenticToolkitDatabase"
             ReferencedContainer = "container:AgenticToolkit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

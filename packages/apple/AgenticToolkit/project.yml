@@ -67,6 +67,9 @@ packages:
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     from: "2.0.0"
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
 
 targets:
   AIPluginKit:
@@ -171,56 +174,34 @@ targets:
     # AppKit settings panel (toolkit convention: AppKit, not SwiftUI). No
     # ComposableSettings dependency — hosts wrap PermissionsPanelView themselves.
 
-  AgenticToolkitExecution:
+  AgenticToolkitDatabase:
     type: framework
     platform: macOS
     templates:
       - SwiftLint
     sources:
-      - Execution
-    # Daemon-safe, dependency-free: a generic bounded execution queue over the
-    # BoundedExecutionResource protocol. Foundation/Dispatch only — no AppKit and
-    # no SQLite (that boundary is enforced by the module graph, not convention).
-
-  AgenticToolkitExecutionTests:
-    type: bundle.unit-test
-    platform: macOS
-    templates:
-      - SwiftLint
-    sources:
-      - Tests/AgenticToolkitExecutionTests
+      - Database
     dependencies:
-      - target: AgenticToolkitExecution
-        embed: true
-        codeSign: true
-
-  AgenticToolkitSQLite:
-    type: framework
-    platform: macOS
-    templates:
-      - SwiftLint
-    sources:
-      - SQLite
-    dependencies:
-      - target: AgenticToolkitExecution
+      - package: GRDB
+        product: GRDB
       - sdk: libsqlite3.tbd
-    # Daemon-safe SQLite conformance of BoundedExecutionResource: progress_handler
-    # self-eject + sqlite3_interrupt, plus a WAL reader/writer pool factory.
+    # Daemon-safe: a GRDB DatabasePool with deadline-ejection (progress_handler),
+    # read/write reentrancy (read-your-writes), and per-lane stats. Foundation +
+    # GRDB + system SQLite only; no AppKit.
 
-  AgenticToolkitSQLiteTests:
+  AgenticToolkitDatabaseTests:
     type: bundle.unit-test
     platform: macOS
     templates:
       - SwiftLint
     sources:
-      - Tests/AgenticToolkitSQLiteTests
+      - Tests/AgenticToolkitDatabaseTests
     dependencies:
-      - target: AgenticToolkitSQLite
+      - target: AgenticToolkitDatabase
         embed: true
         codeSign: true
-      - target: AgenticToolkitExecution
-        embed: true
-        codeSign: true
+      - package: GRDB
+        product: GRDB
 
   AgenticToolkitCoreTests:
     type: bundle.unit-test
@@ -334,8 +315,7 @@ aggregateTargets:
       - AgenticToolkitPermissions
       - AgenticToolkitPermissionsUI
       - AgenticToolkitMacOS
-      - AgenticToolkitExecution
-      - AgenticToolkitSQLite
+      - AgenticToolkitDatabase
 
   AgenticToolkitMacOSTestsAll:
     targets:
@@ -353,39 +333,20 @@ aggregateTargets:
       - AgenticToolkitPermissionsTests
       - AgenticToolkitPermissionsUITests
       - AgenticToolkitMacOSTests
-      - AgenticToolkitExecution
-      - AgenticToolkitExecutionTests
-      - AgenticToolkitSQLite
-      - AgenticToolkitSQLiteTests
+      - AgenticToolkitDatabase
+      - AgenticToolkitDatabaseTests
 
 schemes:
-  AgenticToolkitExecution:
+  AgenticToolkitDatabase:
     build:
       targets:
-        AgenticToolkitExecution: all
+        AgenticToolkitDatabase: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - AgenticToolkitExecutionTests
-    profile:
-      config: Release
-    analyze:
-      config: Debug
-    archive:
-      config: Release
-
-  AgenticToolkitSQLite:
-    build:
-      targets:
-        AgenticToolkitSQLite: all
-    run:
-      config: Debug
-    test:
-      config: Debug
-      targets:
-        - AgenticToolkitSQLiteTests
+        - AgenticToolkitDatabaseTests
     profile:
       config: Release
     analyze:
@@ -460,8 +421,7 @@ schemes:
         - AgenticToolkitPermissionsTests
         - AgenticToolkitPermissionsUITests
         - AgenticToolkitMacOSTests
-        - AgenticToolkitExecutionTests
-        - AgenticToolkitSQLiteTests
+        - AgenticToolkitDatabaseTests
     profile:
       config: Release
     analyze:
