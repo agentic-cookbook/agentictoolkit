@@ -107,12 +107,14 @@ public final class BoundedDatabase: @unchecked Sendable {
 
     // MARK: - Access
 
-    /// Runs `body` on the writer connection, ejected if it exceeds `deadline`
-    /// (default `writeDeadline`). Reentrant: a nested write/read runs inline.
+    private enum Access { case read, write, writeNoTransaction }
+
+    /// Runs `body` on the writer connection inside a transaction, ejected if it
+    /// exceeds `deadline`. Reentrant: a nested write/read runs inline.
     @discardableResult
     public func write<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
         if let database = Self.currentDB { return try body(database) }
-        return try run(lane: "write", deadline: deadline ?? writeDeadline, write: true, body)
+        return try run(access: .write, deadline: deadline ?? writeDeadline, body)
     }
 
     /// Runs `body` on a reader connection (or, inside a write, the writer
@@ -120,13 +122,23 @@ public final class BoundedDatabase: @unchecked Sendable {
     @discardableResult
     public func read<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
         if let database = Self.currentDB { return try body(database) }
-        return try run(lane: "read", deadline: deadline ?? readDeadline, write: false, body)
+        return try run(access: .read, deadline: deadline ?? readDeadline, body)
+    }
+
+    /// Like `write`, but does NOT open a transaction — for blocks that manage their
+    /// own (explicit `BEGIN`/`COMMIT`) or run statements that can't be inside one
+    /// (`ATTACH`, `VACUUM`). Still deadline-bounded and reentrant.
+    @discardableResult
+    public func writeWithoutTransaction<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
+        if let database = Self.currentDB { return try body(database) }
+        return try run(access: .writeNoTransaction, deadline: deadline ?? writeDeadline, body)
     }
 
     private func run<T>(
-        lane: String, deadline: Duration, write: Bool, _ body: (Database) throws -> T
+        access: Access, deadline: Duration, _ body: (Database) throws -> T
     ) throws -> T {
         let start = Date()
+        let isWrite = access != .read
         func op(_ database: Database) throws -> T {
             Self.currentDB = database
             Self.armDeadline(deadline)
@@ -135,16 +147,21 @@ public final class BoundedDatabase: @unchecked Sendable {
                 return try body(database)
             } catch let error as DatabaseError where error.resultCode == .SQLITE_INTERRUPT {
                 throw BoundedDatabaseError.deadlineExceeded(
-                    lane: lane, elapsedMs: Date().timeIntervalSince(start) * 1000
+                    lane: isWrite ? "write" : "read", elapsedMs: Date().timeIntervalSince(start) * 1000
                 )
             }
         }
         do {
-            let value = write ? try writer.write(op) : try writer.read(op)
-            record(write: write, evicted: false, seconds: Date().timeIntervalSince(start))
+            let value: T
+            switch access {
+            case .read: value = try writer.read(op)
+            case .write: value = try writer.write(op)
+            case .writeNoTransaction: value = try writer.writeWithoutTransaction(op)
+            }
+            record(write: isWrite, evicted: false, seconds: Date().timeIntervalSince(start))
             return value
         } catch let error as BoundedDatabaseError {
-            record(write: write, evicted: true, seconds: Date().timeIntervalSince(start))
+            record(write: isWrite, evicted: true, seconds: Date().timeIntervalSince(start))
             throw error
         }
     }
