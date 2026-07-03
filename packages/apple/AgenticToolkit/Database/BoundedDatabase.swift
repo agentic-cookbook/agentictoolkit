@@ -52,8 +52,9 @@ public struct BoundedDatabaseStats: Sendable, Equatable {
 /// per-op state lives in thread-local storage on the connection's own thread.
 public final class BoundedDatabase: @unchecked Sendable {
 
-    /// The underlying GRDB pool, for callers that want direct GRDB access.
-    public let pool: DatabasePool
+    /// The underlying GRDB writer — a `DatabasePool` for file databases, a serial
+    /// `DatabaseQueue` for in-memory ones — for callers that want direct GRDB access.
+    public let writer: any DatabaseWriter
 
     private let readDeadline: Duration
     private let writeDeadline: Duration
@@ -93,7 +94,15 @@ public final class BoundedDatabase: @unchecked Sendable {
             try prepare?(database)
             BoundedDatabase.installEjectionHandler(database.sqliteConnection)
         }
-        self.pool = try DatabasePool(path: path, configuration: config)
+        // DatabasePool needs a real file (WAL). In-memory databases are private
+        // per connection, so use a serial DatabaseQueue there — reads and writes
+        // share the single connection (read-your-writes is trivial); ejection and
+        // metrics still apply.
+        if path == ":memory:" {
+            self.writer = try DatabaseQueue(configuration: config)
+        } else {
+            self.writer = try DatabasePool(path: path, configuration: config)
+        }
     }
 
     // MARK: - Access
@@ -131,7 +140,7 @@ public final class BoundedDatabase: @unchecked Sendable {
             }
         }
         do {
-            let value = write ? try pool.write(op) : try pool.read(op)
+            let value = write ? try writer.write(op) : try writer.read(op)
             record(write: write, evicted: false, seconds: Date().timeIntervalSince(start))
             return value
         } catch let error as BoundedDatabaseError {

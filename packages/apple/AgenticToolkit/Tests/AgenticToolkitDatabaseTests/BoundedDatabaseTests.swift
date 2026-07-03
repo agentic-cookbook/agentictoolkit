@@ -61,6 +61,14 @@ final class BoundedDatabaseTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(start), 3, "ejected promptly, did not hang")
     }
 
+    func testInMemoryUsesSerialQueue() throws {
+        // `:memory:` → DatabaseQueue; reads and writes share the one connection.
+        let store = try BoundedDatabase(path: ":memory:")
+        try store.write { conn in try conn.execute(sql: "CREATE TABLE t(x INTEGER); INSERT INTO t VALUES (5)") }
+        let value = try store.read { conn in try Int.fetchOne(conn, sql: "SELECT x FROM t") }
+        XCTAssertEqual(value, 5)
+    }
+
     func testStatsCountLanes() throws {
         let store = try BoundedDatabase(path: path)
         try store.write { conn in try conn.execute(sql: "CREATE TABLE t(x INTEGER)") }
