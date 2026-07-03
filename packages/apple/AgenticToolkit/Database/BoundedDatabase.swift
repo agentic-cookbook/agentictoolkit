@@ -20,13 +20,14 @@ public enum BoundedDatabaseError: Error, Sendable, Equatable {
 public struct BoundedDatabaseStats: Sendable, Equatable {
     public struct Lane: Sendable, Equatable {
         public let lane: String        // "write" | "read"
+        public let inFlight: Int
         public let completed: Int
         public let evicted: Int
         public let p50Ms: Double
         public let p99Ms: Double
-        public init(lane: String, completed: Int, evicted: Int, p50Ms: Double, p99Ms: Double) {
-            self.lane = lane; self.completed = completed; self.evicted = evicted
-            self.p50Ms = p50Ms; self.p99Ms = p99Ms
+        public init(lane: String, inFlight: Int, completed: Int, evicted: Int, p50Ms: Double, p99Ms: Double) {
+            self.lane = lane; self.inFlight = inFlight; self.completed = completed
+            self.evicted = evicted; self.p50Ms = p50Ms; self.p99Ms = p99Ms
         }
     }
     public let lanes: [Lane]
@@ -107,13 +108,17 @@ public final class BoundedDatabase: @unchecked Sendable {
 
     // MARK: - Access
 
-    private enum Access { case read, write, writeNoTransaction }
+    private enum Access {
+        case read, write, writeNoTransaction
+        var lane: String { self == .read ? "read" : "write" }
+        var isWrite: Bool { self != .read }
+    }
 
     /// Runs `body` on the writer connection inside a transaction, ejected if it
     /// exceeds `deadline`. Reentrant: a nested write/read runs inline.
     @discardableResult
     public func write<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
-        if let database = Self.currentDB { return try body(database) }
+        if let database = Self.currentDB { return try Self.translatingInterrupt(lane: "write") { try body(database) } }
         return try run(access: .write, deadline: deadline ?? writeDeadline, body)
     }
 
@@ -121,7 +126,7 @@ public final class BoundedDatabase: @unchecked Sendable {
     /// connection — read-your-writes), ejected if it exceeds `deadline`.
     @discardableResult
     public func read<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
-        if let database = Self.currentDB { return try body(database) }
+        if let database = Self.currentDB { return try Self.translatingInterrupt(lane: "read") { try body(database) } }
         return try run(access: .read, deadline: deadline ?? readDeadline, body)
     }
 
@@ -130,27 +135,54 @@ public final class BoundedDatabase: @unchecked Sendable {
     /// (`ATTACH`, `VACUUM`). Still deadline-bounded and reentrant.
     @discardableResult
     public func writeWithoutTransaction<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
-        if let database = Self.currentDB { return try body(database) }
+        if let database = Self.currentDB { return try Self.translatingInterrupt(lane: "write") { try body(database) } }
         return try run(access: .writeNoTransaction, deadline: deadline ?? writeDeadline, body)
+    }
+
+    /// Maps a raw `SQLITE_INTERRUPT` (what the progress handler raises when the
+    /// deadline passes) to a typed ``BoundedDatabaseError/deadlineExceeded``, so an
+    /// ejection surfaces the same way whether it happens on the outer `run` path or
+    /// inline on a reentrant nested call.
+    private static func translatingInterrupt<T>(lane: String, _ body: () throws -> T) throws -> T {
+        do {
+            return try body()
+        } catch let error as DatabaseError where error.resultCode == .SQLITE_INTERRUPT {
+            throw BoundedDatabaseError.deadlineExceeded(lane: lane, elapsedMs: 0)
+        }
     }
 
     private func run<T>(
         access: Access, deadline: Duration, _ body: (Database) throws -> T
     ) throws -> T {
-        let start = Date()
-        let isWrite = access != .read
+        let start = DispatchTime.now()
+        func elapsedSeconds() -> Double {
+            Double(DispatchTime.now().uptimeNanoseconds &- start.uptimeNanoseconds) / 1e9
+        }
         func op(_ database: Database) throws -> T {
             Self.currentDB = database
             Self.armDeadline(deadline)
-            defer { Self.disarmDeadline(); Self.currentDB = nil }
+            defer {
+                // Disarm BEFORE any cleanup so the cleanup itself can't be ejected.
+                Self.disarmDeadline()
+                // Safety net: a writeWithoutTransaction body manages its own
+                // transaction; if it was ejected (or otherwise returned) with one
+                // still open, roll it back here (deadline already disarmed) so the
+                // pooled writer connection is never handed back mid-transaction.
+                if access == .writeNoTransaction, database.isInsideTransaction {
+                    try? database.execute(sql: "ROLLBACK")
+                }
+                Self.currentDB = nil
+            }
             do {
                 return try body(database)
             } catch let error as DatabaseError where error.resultCode == .SQLITE_INTERRUPT {
                 throw BoundedDatabaseError.deadlineExceeded(
-                    lane: isWrite ? "write" : "read", elapsedMs: Date().timeIntervalSince(start) * 1000
+                    lane: access.lane, elapsedMs: elapsedSeconds() * 1000
                 )
             }
         }
+        enter(write: access.isWrite)
+        defer { leave(write: access.isWrite) }
         do {
             let value: T
             switch access {
@@ -158,10 +190,10 @@ public final class BoundedDatabase: @unchecked Sendable {
             case .write: value = try writer.write(op)
             case .writeNoTransaction: value = try writer.writeWithoutTransaction(op)
             }
-            record(write: isWrite, evicted: false, seconds: Date().timeIntervalSince(start))
+            record(write: access.isWrite, evicted: false, seconds: elapsedSeconds())
             return value
         } catch let error as BoundedDatabaseError {
-            record(write: isWrite, evicted: true, seconds: Date().timeIntervalSince(start))
+            record(write: access.isWrite, evicted: true, seconds: elapsedSeconds())
             throw error
         }
     }
@@ -179,15 +211,20 @@ public final class BoundedDatabase: @unchecked Sendable {
     /// Installed on every connection. Fires every ~1000 VM instructions on the
     /// statement's own thread; returns non-zero (abort) once the thread-local
     /// deadline set by `run` has passed. No captures ⇒ bridges to `@convention(c)`.
+    ///
+    /// The deadline is a MONOTONIC clock reading (`DispatchTime` uptime nanos), not
+    /// wall-clock: an NTP step or sleep/wake that moves the wall clock backward must
+    /// not stop ejection (that would re-enable the wedge this exists to prevent).
     private static func installEjectionHandler(_ connection: OpaquePointer?) {
         sqlite3_progress_handler(connection, 1000, { _ in
-            guard let deadline = Thread.current.threadDictionary[deadlineKey] as? Date else { return 0 }
-            return Date() >= deadline ? 1 : 0
+            guard let deadline = Thread.current.threadDictionary[deadlineKey] as? NSNumber else { return 0 }
+            return DispatchTime.now().uptimeNanoseconds >= deadline.uint64Value ? 1 : 0
         }, nil)
     }
 
     private static func armDeadline(_ deadline: Duration) {
-        Thread.current.threadDictionary[deadlineKey] = Date().addingTimeInterval(deadline.seconds)
+        let horizon = DispatchTime.now().uptimeNanoseconds &+ UInt64(deadline.seconds * 1e9)
+        Thread.current.threadDictionary[deadlineKey] = NSNumber(value: horizon)
     }
     private static func disarmDeadline() {
         Thread.current.threadDictionary.removeObject(forKey: deadlineKey)
@@ -215,10 +252,22 @@ public final class BoundedDatabase: @unchecked Sendable {
             }
         }
     }
+
+    /// Bracket an op with in-flight accounting so `stats` can report how many ops
+    /// each lane is currently running (a lane stuck with in-flight > 0 and no
+    /// completions is a wedge). Only the non-reentrant `run` path calls these — a
+    /// nested reentrant op is already counted by its enclosing op.
+    private func enter(write: Bool) {
+        metricsLock.withLock { if write { writeMetrics.inFlight += 1 } else { readMetrics.inFlight += 1 } }
+    }
+    private func leave(write: Bool) {
+        metricsLock.withLock { if write { writeMetrics.inFlight -= 1 } else { readMetrics.inFlight -= 1 } }
+    }
 }
 
 /// Per-lane counters + a bounded window of recent durations for percentiles.
 private struct LaneMetrics {
+    var inFlight = 0
     private(set) var completed = 0
     private(set) var evicted = 0
     private var recent: [Double] = []
@@ -237,7 +286,7 @@ private struct LaneMetrics {
     func snapshot(_ lane: String) -> BoundedDatabaseStats.Lane {
         let sorted = recent.sorted()
         return BoundedDatabaseStats.Lane(
-            lane: lane, completed: completed, evicted: evicted,
+            lane: lane, inFlight: inFlight, completed: completed, evicted: evicted,
             p50Ms: Self.percentile(sorted, 0.50) * 1000,
             p99Ms: Self.percentile(sorted, 0.99) * 1000
         )

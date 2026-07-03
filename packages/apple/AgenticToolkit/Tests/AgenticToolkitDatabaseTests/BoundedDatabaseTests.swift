@@ -78,5 +78,42 @@ final class BoundedDatabaseTests: XCTestCase {
         XCTAssertGreaterThan(lanes["write"]?.completed ?? 0, 0)
         XCTAssertGreaterThan(lanes["read"]?.completed ?? 0, 0)
         XCTAssertEqual(lanes["read"]?.evicted, 0)
+        // No op is running once the calls above returned.
+        XCTAssertEqual(lanes["write"]?.inFlight, 0)
+        XCTAssertEqual(lanes["read"]?.inFlight, 0)
+    }
+
+    /// A `writeWithoutTransaction` body that opens its own transaction, is ejected
+    /// mid-statement, and SWALLOWS the error (as a self-managed importer's catch
+    /// does) must not hand a connection with an open transaction back to the pool —
+    /// otherwise the next write fails with "cannot start a transaction within a
+    /// transaction" and the writer wedges. The safety net in `run` must roll it back.
+    func testSwallowedEjectionInWriteWithoutTransactionDoesNotPoisonPool() throws {
+        let store = try BoundedDatabase(path: path, readers: 1)
+        try store.write { conn in
+            try conn.execute(sql: """
+                CREATE TABLE big(x INTEGER);
+                INSERT INTO big(x)
+                  WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 1500)
+                  SELECT n FROM seq;
+                """)
+        }
+        XCTAssertNoThrow(
+            try store.writeWithoutTransaction(deadline: .milliseconds(200)) { conn in
+                try conn.execute(sql: "BEGIN")
+                do {
+                    try conn.execute(sql: "CREATE TABLE sink(n INTEGER)")
+                    // Runaway under the open transaction → ejected.
+                    try conn.execute(sql: "INSERT INTO sink SELECT count(*) FROM big AS a, big AS b, big AS c")
+                    try conn.execute(sql: "COMMIT")
+                } catch {
+                    // Swallow, exactly like a self-managed importer reporting the error.
+                }
+            }
+        )
+        // The pooled writer must be clean: a fresh write can open its own transaction.
+        XCTAssertNoThrow(
+            try store.write { conn in try conn.execute(sql: "CREATE TABLE after(x INTEGER)") }
+        )
     }
 }
