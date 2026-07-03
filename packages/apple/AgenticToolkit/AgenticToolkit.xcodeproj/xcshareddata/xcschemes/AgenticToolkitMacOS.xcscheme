@@ -116,6 +116,17 @@
                ReferencedContainer = "container:AgenticToolkit.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B63DA30690AAE30395FFAB4D"
+               BuildableName = "AgenticToolkitExecutionTests.xctest"
+               BlueprintName = "AgenticToolkitExecutionTests"
+               ReferencedContainer = "container:AgenticToolkit.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

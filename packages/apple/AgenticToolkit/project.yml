@@ -171,6 +171,29 @@ targets:
     # AppKit settings panel (toolkit convention: AppKit, not SwiftUI). No
     # ComposableSettings dependency — hosts wrap PermissionsPanelView themselves.
 
+  AgenticToolkitExecution:
+    type: framework
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Execution
+    # Daemon-safe, dependency-free: a generic bounded execution queue over the
+    # BoundedExecutionResource protocol. Foundation/Dispatch only — no AppKit and
+    # no SQLite (that boundary is enforced by the module graph, not convention).
+
+  AgenticToolkitExecutionTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AgenticToolkitExecutionTests
+    dependencies:
+      - target: AgenticToolkitExecution
+        embed: true
+        codeSign: true
+
   AgenticToolkitCoreTests:
     type: bundle.unit-test
     platform: macOS
@@ -283,6 +306,7 @@ aggregateTargets:
       - AgenticToolkitPermissions
       - AgenticToolkitPermissionsUI
       - AgenticToolkitMacOS
+      - AgenticToolkitExecution
 
   AgenticToolkitMacOSTestsAll:
     targets:
@@ -300,8 +324,27 @@ aggregateTargets:
       - AgenticToolkitPermissionsTests
       - AgenticToolkitPermissionsUITests
       - AgenticToolkitMacOSTests
+      - AgenticToolkitExecution
+      - AgenticToolkitExecutionTests
 
 schemes:
+  AgenticToolkitExecution:
+    build:
+      targets:
+        AgenticToolkitExecution: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitExecutionTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
   AIPluginKit:
     build:
       targets:
@@ -369,6 +412,7 @@ schemes:
         - AgenticToolkitPermissionsTests
         - AgenticToolkitPermissionsUITests
         - AgenticToolkitMacOSTests
+        - AgenticToolkitExecutionTests
     profile:
       config: Release
     analyze:
