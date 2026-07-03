@@ -115,7 +115,9 @@ public final class BoundedDatabase: @unchecked Sendable {
     }
 
     /// Runs `body` on the writer connection inside a transaction, ejected if it
-    /// exceeds `deadline`. Reentrant: a nested write/read runs inline.
+    /// exceeds `deadline`. Reentrant: a nested write/read runs inline on the current
+    /// connection and is bounded by the ENCLOSING op's deadline — a nested call's own
+    /// `deadline:` argument is ignored (there is one armed deadline per thread).
     @discardableResult
     public func write<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
         if let database = Self.currentDB { return try Self.translatingInterrupt(lane: "write") { try body(database) } }
@@ -123,7 +125,9 @@ public final class BoundedDatabase: @unchecked Sendable {
     }
 
     /// Runs `body` on a reader connection (or, inside a write, the writer
-    /// connection — read-your-writes), ejected if it exceeds `deadline`.
+    /// connection — read-your-writes), ejected if it exceeds `deadline`. Reentrant:
+    /// a nested call inherits the enclosing op's deadline (its own `deadline:` is
+    /// ignored — see ``write(deadline:_:)``).
     @discardableResult
     public func read<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
         if let database = Self.currentDB { return try Self.translatingInterrupt(lane: "read") { try body(database) } }
@@ -132,12 +136,20 @@ public final class BoundedDatabase: @unchecked Sendable {
 
     /// Like `write`, but does NOT open a transaction — for blocks that manage their
     /// own (explicit `BEGIN`/`COMMIT`) or run statements that can't be inside one
-    /// (`ATTACH`, `VACUUM`). Still deadline-bounded and reentrant.
+    /// (`ATTACH`, `VACUUM`). Deadline-bounded; reentrant calls inherit the enclosing
+    /// op's deadline (see ``write(deadline:_:)``).
     @discardableResult
     public func writeWithoutTransaction<T>(deadline: Duration? = nil, _ body: (Database) throws -> T) throws -> T {
         if let database = Self.currentDB { return try Self.translatingInterrupt(lane: "write") { try body(database) } }
         return try run(access: .writeNoTransaction, deadline: deadline ?? writeDeadline, body)
     }
+
+    /// True when the calling thread is already inside a `read`/`write`/
+    /// `writeWithoutTransaction` on this database (so a nested call runs inline). Lets
+    /// a consumer map/wrap errors only at the OUTERMOST boundary: a reentrant inner
+    /// call should rethrow the `BoundedDatabaseError` untouched so the enclosing
+    /// `run` still records the eviction, and only the top-level caller translates it.
+    public var isReentrant: Bool { Self.currentDB != nil }
 
     /// Maps a raw `SQLITE_INTERRUPT` (what the progress handler raises when the
     /// deadline passes) to a typed ``BoundedDatabaseError/deadlineExceeded``, so an
@@ -223,7 +235,9 @@ public final class BoundedDatabase: @unchecked Sendable {
     }
 
     private static func armDeadline(_ deadline: Duration) {
-        let horizon = DispatchTime.now().uptimeNanoseconds &+ UInt64(deadline.seconds * 1e9)
+        // max(0,…): UInt64(negativeDouble) is a fatal trap; a non-positive deadline
+        // should eject immediately, not crash the connection thread.
+        let horizon = DispatchTime.now().uptimeNanoseconds &+ UInt64(max(0, deadline.seconds) * 1e9)
         Thread.current.threadDictionary[deadlineKey] = NSNumber(value: horizon)
     }
     private static func disarmDeadline() {

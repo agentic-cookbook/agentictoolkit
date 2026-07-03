@@ -102,16 +102,21 @@ final class BoundedDatabaseTests: XCTestCase {
             try store.writeWithoutTransaction(deadline: .milliseconds(200)) { conn in
                 try conn.execute(sql: "BEGIN")
                 do {
+                    // A pending write, then a runaway SELECT. Interrupting a WRITE
+                    // statement makes SQLite auto-rollback the whole txn (autocommit
+                    // returns to 1); interrupting a SELECT while a write is pending
+                    // leaves the txn OPEN (autocommit stays 0) — the real
+                    // connection-poisoning case the safety net exists to clean up.
                     try conn.execute(sql: "CREATE TABLE sink(n INTEGER)")
-                    // Runaway under the open transaction → ejected.
-                    try conn.execute(sql: "INSERT INTO sink SELECT count(*) FROM big AS a, big AS b, big AS c")
+                    _ = try Int.fetchOne(conn, sql: "SELECT count(*) FROM big AS a, big AS b, big AS c")
                     try conn.execute(sql: "COMMIT")
                 } catch {
                     // Swallow, exactly like a self-managed importer reporting the error.
                 }
             }
         )
-        // The pooled writer must be clean: a fresh write can open its own transaction.
+        // Without the safety net the connection returns to the pool mid-transaction,
+        // so this fresh write throws "cannot start a transaction within a transaction".
         XCTAssertNoThrow(
             try store.write { conn in try conn.execute(sql: "CREATE TABLE after(x INTEGER)") }
         )
