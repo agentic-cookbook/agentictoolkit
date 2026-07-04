@@ -3,13 +3,15 @@ import UniformTypeIdentifiers
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// Theme settings, gallery-first. The page is a grid of **rendered theme
-/// thumbnails** (show, don't tell) — click one to apply it app-wide. Editing is
-/// behind progressive disclosure: a collapsed "Customize" section that, for a
-/// custom theme, reveals a live preview and disclosure groups for Colors,
-/// Typography, and the advanced Terminal palette. Built-ins are read-only
-/// (duplicate to edit). Content pins to the top (flipped document view).
-public final class ThemeProfilesSettingsView: NSView {
+/// One theme's detail pane in the Theme settings split. Shows a live preview
+/// plus, for a custom theme, the Colors / Typography / Terminal editor;
+/// built-ins are read-only with a Duplicate affordance. Selecting the panel
+/// (its row in the sidebar) activates the theme app-wide. Structural edits
+/// (import / duplicate / delete) call `onStructuralChange` so the parent split
+/// rebuilds its panel list; a rename calls `onRowInvalidated` so the sidebar
+/// row re-reads its title/swatch without tearing the editor down.
+@MainActor
+final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     private enum Slot: Equatable {
         case foreground, background, cursor, selection, ansi(Int)
@@ -28,14 +30,15 @@ public final class ThemeProfilesSettingsView: NSView {
                                (.divider, "Divider"), (.selection, "Selection")])
     ]
 
-    private let store = ThemeStore()
-    private var themes: [ColorTheme] = []
-    private var editingTheme: ColorTheme?
+    private let store: ThemeStore
+    private var theme: ColorTheme
+    private let onStructuralChange: (_ selectID: String) -> Void
+    private let onRowInvalidated: () -> Void
 
-    private let galleryStack = NSStackView()
-    private let customizeHost = NSStackView()
-    private var cards: [ThemeCardView] = []
+    /// The theme this panel edits, for the parent split's selection bookkeeping.
+    var themeID: String { theme.id }
 
+    private let preview = ComposableSettings.ThemePreviewView()
     private var colorWells: [(slot: Slot, well: NSColorWell)] = []
     private var sizeFields: [TextRole: NSTextField] = [:]
     private var sizeSteppers: [TextRole: NSStepper] = [:]
@@ -43,216 +46,89 @@ public final class ThemeProfilesSettingsView: NSView {
     private var familyFields: [TextRole: NSTextField] = [:]
     private let scaleLabel = NSTextField(labelWithString: "100%")
 
-    public override init(frame: NSRect) {
-        super.init(frame: frame)
-        self.themes = store.allThemes
-        setupViews()
-        editingTheme = themes.first { $0.id == UserSettings.activeThemeID.value } ?? themes.first
-        rebuildGallery()
-        rebuildCustomize()
+    init(theme: ColorTheme,
+         store: ThemeStore,
+         onStructuralChange: @escaping (_ selectID: String) -> Void,
+         onRowInvalidated: @escaping () -> Void) {
+        self.theme = theme
+        self.store = store
+        self.onStructuralChange = onStructuralChange
+        self.onRowInvalidated = onRowInvalidated
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
+            title: theme.name,
+            icon: Self.swatch(for: theme)))
     }
 
     @available(*, unavailable)
-    public required init?(coder: NSCoder) { fatalError() }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    // MARK: - Setup
+    /// The detail hosts its own scroll so a wide editor grid can overflow into a
+    /// horizontal scroll rather than force the window wider.
+    var hostsOwnScroll: Bool { true }
 
-    /// Topic/detail layout: a scrollable list of themes on the left, the selected
-    /// theme's preview + editor on the right.
-    private func setupViews() {
-        // Left column — the theme list (one card per theme) + import/duplicate.
-        galleryStack.orientation = .vertical
-        galleryStack.alignment = .leading
-        galleryStack.spacing = 10
-        galleryStack.translatesAutoresizingMaskIntoConstraints = false
+    // MARK: - View
 
-        let listColumn = NSStackView(views: [sectionTitle("THEMES"), galleryStack, makeListButtons()])
-        listColumn.orientation = .vertical
-        listColumn.alignment = .leading
-        listColumn.spacing = 12
-        listColumn.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 12)
-        listColumn.translatesAutoresizingMaskIntoConstraints = false
-
-        let leftDoc = ThemeFlippedView()
-        leftDoc.translatesAutoresizingMaskIntoConstraints = false
-        leftDoc.addSubview(listColumn)
-        let leftScroll = NSScrollView()
-        leftScroll.translatesAutoresizingMaskIntoConstraints = false
-        leftScroll.hasVerticalScroller = true
-        leftScroll.drawsBackground = false
-        leftScroll.documentView = leftDoc
-
-        // Right column — the selected theme's detail (preview + editor), scrollable.
-        customizeHost.orientation = .vertical
-        customizeHost.alignment = .leading
-        customizeHost.spacing = 12
-        customizeHost.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 20, right: 16)
-        customizeHost.translatesAutoresizingMaskIntoConstraints = false
-
-        let rightDoc = ThemeFlippedView()
-        rightDoc.translatesAutoresizingMaskIntoConstraints = false
-        rightDoc.addSubview(customizeHost)
-        let rightScroll = NSScrollView()
-        rightScroll.translatesAutoresizingMaskIntoConstraints = false
-        rightScroll.hasVerticalScroller = true
-        rightScroll.hasHorizontalScroller = true
-        rightScroll.autohidesScrollers = true
-        rightScroll.drawsBackground = false
-        rightScroll.documentView = rightDoc
-
-        let divider = NSBox()
-        divider.boxType = .separator
-        divider.translatesAutoresizingMaskIntoConstraints = false
-
-        addSubview(leftScroll)
-        addSubview(divider)
-        addSubview(rightScroll)
-
-        let leftClip = leftScroll.contentView
-        let rightClip = rightScroll.contentView
-        NSLayoutConstraint.activate([
-            leftScroll.topAnchor.constraint(equalTo: topAnchor),
-            leftScroll.leadingAnchor.constraint(equalTo: leadingAnchor),
-            leftScroll.bottomAnchor.constraint(equalTo: bottomAnchor),
-            leftScroll.widthAnchor.constraint(equalToConstant: 236),
-
-            divider.leadingAnchor.constraint(equalTo: leftScroll.trailingAnchor),
-            divider.topAnchor.constraint(equalTo: topAnchor),
-            divider.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            rightScroll.leadingAnchor.constraint(equalTo: divider.trailingAnchor),
-            rightScroll.topAnchor.constraint(equalTo: topAnchor),
-            rightScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
-            rightScroll.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            leftDoc.topAnchor.constraint(equalTo: leftClip.topAnchor),
-            leftDoc.leadingAnchor.constraint(equalTo: leftClip.leadingAnchor),
-            leftDoc.widthAnchor.constraint(equalTo: leftClip.widthAnchor),
-            listColumn.topAnchor.constraint(equalTo: leftDoc.topAnchor),
-            listColumn.leadingAnchor.constraint(equalTo: leftDoc.leadingAnchor),
-            listColumn.trailingAnchor.constraint(equalTo: leftDoc.trailingAnchor),
-            listColumn.bottomAnchor.constraint(equalTo: leftDoc.bottomAnchor),
-
-            rightDoc.topAnchor.constraint(equalTo: rightClip.topAnchor),
-            rightDoc.leadingAnchor.constraint(equalTo: rightClip.leadingAnchor),
-            // Fill the viewport; a wide editor grid overflows into a horizontal
-            // scroll rather than forcing the window's width.
-            rightDoc.widthAnchor.constraint(greaterThanOrEqualTo: rightClip.widthAnchor),
-            customizeHost.topAnchor.constraint(equalTo: rightDoc.topAnchor),
-            customizeHost.leadingAnchor.constraint(equalTo: rightDoc.leadingAnchor),
-            customizeHost.trailingAnchor.constraint(equalTo: rightDoc.trailingAnchor),
-            customizeHost.bottomAnchor.constraint(equalTo: rightDoc.bottomAnchor),
-
-            // The width comes from the enclosing split's detail minimumThickness;
-            // the two scroll columns have no intrinsic height, so give the panel a
-            // baseline height (matching the window's own minimum) so it neither
-            // collapses nor forces the window taller than that minimum.
-            heightAnchor.constraint(greaterThanOrEqualToConstant: 440)
-        ])
-    }
-
-    /// The import / duplicate buttons shown under the theme list.
-    private func makeListButtons() -> NSView {
-        let importButton = NSButton(title: "Import…", target: self, action: #selector(importTheme))
-        importButton.bezelStyle = .rounded
-        importButton.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
-        importButton.imagePosition = .imageLeading
-        importButton.toolTip = "Import an .itermcolors theme"
-
-        let newButton = NSButton(title: "New from Current", target: self, action: #selector(duplicateTheme))
-        newButton.bezelStyle = .rounded
-        newButton.image = NSImage(systemSymbolName: "plus", accessibilityDescription: nil)
-        newButton.imagePosition = .imageLeading
-        newButton.toolTip = "Duplicate the selected theme to customize it"
-
-        let stack = NSStackView(views: [importButton, newButton])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 6
-        return stack
-    }
-
-    // MARK: - Gallery
-
-    /// Widest a theme card grows to in the single-column list before it stops
-    /// stretching (it still shrinks below this on a narrow window).
-    private static let maxCardWidth: CGFloat = 360
-
-    private func rebuildGallery() {
-        galleryStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        cards.removeAll()
-        let activeID = UserSettings.activeThemeID.value
-        // One card per row (a list, not a fixed 3-column grid): the grid forced a
-        // wide minimum that stopped the settings window from being resized smaller.
-        // Each card fills the width up to `maxCardWidth`, and shrinks below it, so
-        // the panel — and the window — stays resizable.
-        for theme in themes {
-            let card = ThemeCardView(theme: theme, isActive: theme.id == activeID) { [weak self] id in
-                self?.selectTheme(id: id)
-            }
-            cards.append(card)
-            galleryStack.addArrangedSubview(card)
-            let fill = card.widthAnchor.constraint(equalTo: galleryStack.widthAnchor)
-            fill.priority = .defaultHigh
-            fill.isActive = true
-            card.widthAnchor.constraint(lessThanOrEqualToConstant: Self.maxCardWidth).isActive = true
-        }
-    }
-
-    private func selectTheme(id: String) {
-        if let manager = ThemeManager.shared {
-            manager.selectTheme(id: id)
-        } else {
-            UserSettings.activeThemeID.value = id
-        }
-        editingTheme = themes.first { $0.id == id }
-        for card in cards { card.isActive = card.themeID == id }
-        rebuildCustomize()
-        // Clicking a theme discloses it — bring the disclosed section into view.
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.layoutSubtreeIfNeeded()
-            self.customizeHost.scrollToVisible(self.customizeHost.bounds)
-        }
-    }
-
-    // MARK: - Customize (progressive disclosure)
-
-    private func rebuildCustomize() {
-        customizeHost.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        guard let theme = editingTheme else { return }
+    override func loadView() {
         let editable = !store.isBuiltIn(id: theme.id)
+        let content = editable ? makeEditor() : makeBuiltInNotice()
+        content.translatesAutoresizingMaskIntoConstraints = false
 
-        // Clicking a theme always discloses it (expanded) — editor for a custom
-        // theme, or a preview + Duplicate affordance for a read-only built-in.
-        let content: NSView = editable ? makeEditor(for: theme) : makeBuiltInNotice(for: theme)
-        let title = editable ? "Edit \(theme.name)" : "\(theme.name)"
-        let group = ThemeDisclosureGroup(title: title, content: content, expanded: true)
-        group.translatesAutoresizingMaskIntoConstraints = false
-        customizeHost.addArrangedSubview(group)
-        group.widthAnchor.constraint(equalTo: customizeHost.widthAnchor).isActive = true
+        let doc = ThemeFlippedView()
+        doc.translatesAutoresizingMaskIntoConstraints = false
+        doc.addSubview(content)
+
+        let scroll = NSScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.hasVerticalScroller = true
+        scroll.hasHorizontalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.drawsBackground = false
+        scroll.documentView = doc
+
+        let clip = scroll.contentView
+        NSLayoutConstraint.activate([
+            doc.topAnchor.constraint(equalTo: clip.topAnchor),
+            doc.leadingAnchor.constraint(equalTo: clip.leadingAnchor),
+            // Fill the viewport; a wide editor grid overflows horizontally.
+            doc.widthAnchor.constraint(greaterThanOrEqualTo: clip.widthAnchor),
+
+            content.topAnchor.constraint(equalTo: doc.topAnchor, constant: 16),
+            content.leadingAnchor.constraint(equalTo: doc.leadingAnchor, constant: 16),
+            content.trailingAnchor.constraint(equalTo: doc.trailingAnchor, constant: -16),
+            content.bottomAnchor.constraint(equalTo: doc.bottomAnchor, constant: -20)
+        ])
+        self.view = scroll
     }
 
-    private func makeBuiltInNotice(for theme: ColorTheme) -> NSView {
-        let preview = ComposableSettings.ThemePreviewView(theme: theme)
+    /// Selecting a theme row activates it app-wide.
+    override func viewWillAppear() {
+        super.viewWillAppear()
+        if let manager = ThemeManager.shared {
+            manager.selectTheme(id: theme.id)
+        } else {
+            UserSettings.activeThemeID.value = theme.id
+        }
+    }
+
+    // MARK: - Detail content
+
+    private func configurePreview() {
+        preview.show(theme)
         preview.wantsLayer = true
         preview.layer?.cornerRadius = 10
         preview.layer?.masksToBounds = true
         preview.translatesAutoresizingMaskIntoConstraints = false
         preview.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
+    }
 
+    private func makeBuiltInNotice() -> NSView {
+        configurePreview()
         let label = NSTextField(wrappingLabelWithString:
             "Built-in theme — duplicate it to customize its colors and fonts.")
         label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
-        let button = NSButton(title: "Duplicate to Edit", target: self, action: #selector(duplicateTheme))
-        button.bezelStyle = .rounded
-        button.keyEquivalent = "\r"
-        let row = NSStackView(views: [label, button])
-        row.orientation = .horizontal
-        row.spacing = 12
-        row.alignment = .centerY
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let stack = NSStackView(views: [preview, row])
+        let stack = NSStackView(views: [preview, label, makeActionsRow(editable: false)])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
@@ -261,17 +137,12 @@ public final class ThemeProfilesSettingsView: NSView {
         return stack
     }
 
-    private func makeEditor(for theme: ColorTheme) -> NSView {
+    private func makeEditor() -> NSView {
         colorWells.removeAll()
         sizeFields.removeAll(); sizeSteppers.removeAll()
         weightPopups.removeAll(); familyFields.removeAll()
 
-        let preview = ComposableSettings.ThemePreviewView(theme: theme)
-        preview.wantsLayer = true
-        preview.layer?.cornerRadius = 10
-        preview.layer?.masksToBounds = true
-        preview.translatesAutoresizingMaskIntoConstraints = false
-        preview.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
+        configurePreview()
 
         let nameField = NSTextField(string: theme.name)
         nameField.target = self
@@ -295,22 +166,14 @@ public final class ThemeProfilesSettingsView: NSView {
         meta.columnSpacing = 8
         meta.column(at: 0).xPlacement = .leading
 
-        let colors = ThemeDisclosureGroup(title: "Colors", content: makeColorsEditor(for: theme), expanded: true)
+        let colors = ThemeDisclosureGroup(title: "Colors", content: makeColorsEditor(), expanded: true)
         let typography = ThemeDisclosureGroup(title: "Typography",
-                                         content: makeTypographyEditor(for: theme), expanded: false)
+                                         content: makeTypographyEditor(), expanded: false)
         let terminal = ThemeDisclosureGroup(title: "Terminal palette (advanced)",
-                                       content: makeTerminalEditor(for: theme), expanded: false)
+                                       content: makeTerminalEditor(), expanded: false)
 
-        let duplicate = NSButton(title: "Duplicate", target: self, action: #selector(duplicateTheme))
-        duplicate.bezelStyle = .rounded
-        let delete = NSButton(title: "Delete Theme", target: self, action: #selector(deleteSelected))
-        delete.bezelStyle = .rounded
-        delete.hasDestructiveAction = true
-        let footer = NSStackView(views: [duplicate, delete])
-        footer.orientation = .horizontal
-        footer.spacing = 8
-
-        let stack = NSStackView(views: [preview, meta, colors, typography, terminal, footer])
+        let stack = NSStackView(views: [preview, meta, colors, typography, terminal,
+                                        makeActionsRow(editable: true)])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 14
@@ -321,9 +184,35 @@ public final class ThemeProfilesSettingsView: NSView {
         return stack
     }
 
+    /// Import (global) + Duplicate, plus Delete for a custom theme.
+    private func makeActionsRow(editable: Bool) -> NSView {
+        let importButton = NSButton(title: "Import…", target: self, action: #selector(importTheme))
+        importButton.bezelStyle = .rounded
+        importButton.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
+        importButton.imagePosition = .imageLeading
+        importButton.toolTip = "Import an .itermcolors theme"
+
+        let duplicate = NSButton(title: editable ? "Duplicate" : "Duplicate to Edit",
+                                 target: self, action: #selector(duplicateTheme))
+        duplicate.bezelStyle = .rounded
+        if !editable { duplicate.keyEquivalent = "\r" }
+
+        var views: [NSView] = [importButton, duplicate]
+        if editable {
+            let delete = NSButton(title: "Delete Theme", target: self, action: #selector(deleteSelected))
+            delete.bezelStyle = .rounded
+            delete.hasDestructiveAction = true
+            views.append(delete)
+        }
+        let row = NSStackView(views: views)
+        row.orientation = .horizontal
+        row.spacing = 8
+        return row
+    }
+
     // MARK: - Colors editor
 
-    private func makeColorsEditor(for theme: ColorTheme) -> NSView {
+    private func makeColorsEditor() -> NSView {
         let palette = SemanticPalette(theme: theme)
         let container = NSStackView()
         container.orientation = .vertical
@@ -354,7 +243,7 @@ public final class ThemeProfilesSettingsView: NSView {
         return container
     }
 
-    private func makeTerminalEditor(for theme: ColorTheme) -> NSView {
+    private func makeTerminalEditor() -> NSView {
         let container = NSStackView()
         container.orientation = .vertical
         container.alignment = .leading
@@ -424,7 +313,7 @@ public final class ThemeProfilesSettingsView: NSView {
 
     // MARK: - Typography editor
 
-    private func makeTypographyEditor(for theme: ColorTheme) -> NSView {
+    private func makeTypographyEditor() -> NSView {
         let scale = NSSlider(value: theme.typography.sizeScale, minValue: 0.8, maxValue: 1.6,
                              target: self, action: #selector(scaleChanged(_:)))
         scale.translatesAutoresizingMaskIntoConstraints = false
@@ -440,7 +329,7 @@ public final class ThemeProfilesSettingsView: NSView {
         grid.addRow(with: [captionLabel("", 60), captionLabel("Size", 76),
                            captionLabel("Weight", 110), captionLabel("Font family", 150)])
         for role in TextRole.allCases {
-            grid.addRow(with: typographyCells(role, theme: theme))
+            grid.addRow(with: typographyCells(role))
         }
         grid.column(at: 0).xPlacement = .leading
 
@@ -451,7 +340,7 @@ public final class ThemeProfilesSettingsView: NSView {
         return stack
     }
 
-    private func typographyCells(_ role: TextRole, theme: ColorTheme) -> [NSView] {
+    private func typographyCells(_ role: TextRole) -> [NSView] {
         let style = theme.typography.style(role)
         let roleID = NSUserInterfaceItemIdentifier(role.rawValue)
 
@@ -532,37 +421,44 @@ public final class ThemeProfilesSettingsView: NSView {
     }
 
     private func apply(_ rgba: RGBAColor, to slot: Slot) {
-        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
+        guard !store.isBuiltIn(id: theme.id) else { return }
+        var updated = theme
         switch slot {
-        case .foreground: theme.foreground = rgba
-        case .background: theme.background = rgba
-        case .cursor: theme.cursor = rgba
-        case .selection: theme.selection = rgba
-        case .ansi(let index) where theme.ansi.indices.contains(index): theme.ansi[index] = rgba
+        case .foreground: updated.foreground = rgba
+        case .background: updated.background = rgba
+        case .cursor: updated.cursor = rgba
+        case .selection: updated.selection = rgba
+        case .ansi(let index) where updated.ansi.indices.contains(index): updated.ansi[index] = rgba
         case .ansi: return
-        case .role(let role): theme.roleOverrides[role.rawValue] = rgba
+        case .role(let role): updated.roleOverrides[role.rawValue] = rgba
         }
-        persist(theme)
+        persist(updated)
     }
 
     @objc private func nameChanged(_ sender: NSTextField) {
-        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
-        theme.name = sender.stringValue
-        persist(theme)
+        guard !store.isBuiltIn(id: theme.id) else { return }
+        var updated = theme
+        updated.name = sender.stringValue
+        descriptor.title = updated.name
+        persist(updated)
+        // The sidebar row snapshots its title once; re-read it after a rename.
+        onRowInvalidated()
     }
 
     @objc private func appearanceChanged(_ sender: NSPopUpButton) {
-        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id),
+        guard !store.isBuiltIn(id: theme.id),
               let appearance = sender.selectedItem?.representedObject as? ThemeAppearance else { return }
-        theme.appearance = appearance
-        persist(theme)
+        var updated = theme
+        updated.appearance = appearance
+        persist(updated)
     }
 
     @objc private func scaleChanged(_ sender: NSSlider) {
-        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
-        theme.typography.sizeScale = sender.doubleValue
+        guard !store.isBuiltIn(id: theme.id) else { return }
+        var updated = theme
+        updated.typography.sizeScale = sender.doubleValue
         scaleLabel.stringValue = "\(Int((sender.doubleValue * 100).rounded()))%"
-        persist(theme)
+        persist(updated)
     }
 
     @objc private func sizeStepperChanged(_ sender: NSStepper) {
@@ -578,29 +474,31 @@ public final class ThemeProfilesSettingsView: NSView {
     }
 
     private func applyTypography(for role: TextRole) {
-        guard var theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
+        guard !store.isBuiltIn(id: theme.id) else { return }
         let size = max(8, min(48, sizeFields[role]?.doubleValue ?? ThemeTypography.defaultStyle(role).size))
         let weight = (weightPopups[role]?.selectedItem?.representedObject as? FontWeight) ?? .regular
         let familyRaw = familyFields[role]?.stringValue.trimmingCharacters(in: .whitespaces) ?? ""
         let family = familyRaw.isEmpty ? nil : familyRaw
         let isMono = ThemeTypography.defaultStyle(role).monospaced
-        theme.typography.styles[role.rawValue] = FontStyle(
+        var updated = theme
+        updated.typography.styles[role.rawValue] = FontStyle(
             family: family, size: size, weight: weight, monospaced: isMono)
-        persist(theme)
+        persist(updated)
     }
 
-    private func persist(_ theme: ColorTheme) {
-        editingTheme = theme
-        store.update(theme)
-        themes = store.allThemes
-        // Refresh the matching card's thumbnail + live app theme.
-        if let card = cards.first(where: { $0.themeID == theme.id }) { card.update(theme: theme) }
-        if UserSettings.activeThemeID.value == theme.id, let manager = ThemeManager.shared {
-            manager.selectTheme(id: theme.id)
+    private func persist(_ updated: ColorTheme) {
+        theme = updated
+        store.update(updated)
+        // Live feedback: refresh the in-panel preview + the sidebar swatch, and
+        // re-apply the theme app-wide when it's the active one.
+        preview.show(updated)
+        descriptor.icon = Self.swatch(for: updated)
+        if UserSettings.activeThemeID.value == updated.id, let manager = ThemeManager.shared {
+            manager.selectTheme(id: updated.id)
         }
     }
 
-    // MARK: - List actions
+    // MARK: - Structural actions
 
     @objc private func importTheme() {
         let panel = NSOpenPanel()
@@ -613,28 +511,21 @@ public final class ThemeProfilesSettingsView: NSView {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let imported = try store.importITermColors(contentsOf: url)
-            themes = store.allThemes
-            rebuildGallery()
-            selectTheme(id: imported.id)
+            onStructuralChange(imported.id)
         } catch {
             presentImportError(error)
         }
     }
 
     @objc private func duplicateTheme() {
-        guard let theme = editingTheme else { return }
         let copy = store.duplicate(theme)
-        themes = store.allThemes
-        rebuildGallery()
-        selectTheme(id: copy.id)
+        onStructuralChange(copy.id)
     }
 
     @objc private func deleteSelected() {
-        guard let theme = editingTheme, !store.isBuiltIn(id: theme.id) else { return }
+        guard !store.isBuiltIn(id: theme.id) else { return }
         store.delete(id: theme.id)
-        themes = store.allThemes
-        rebuildGallery()
-        selectTheme(id: themes.first?.id ?? BuiltInThemes.defaultID)
+        onStructuralChange(store.allThemes.first?.id ?? BuiltInThemes.defaultID)
     }
 
     private func presentImportError(_ error: Error) {
@@ -643,5 +534,28 @@ public final class ThemeProfilesSettingsView: NSView {
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .warning
         alert.runModal()
+    }
+
+    // MARK: - Sidebar swatch
+
+    /// A small color chip for the sidebar row: the theme's background with an
+    /// accent dot, so themes are recognizable at a glance.
+    private static func swatch(for theme: ColorTheme) -> NSImage {
+        let size = NSSize(width: 22, height: 16)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let body = rect.insetBy(dx: 1, dy: 1)
+            let path = NSBezierPath(roundedRect: body, xRadius: 4, yRadius: 4)
+            NSColor(theme.background).setFill()
+            path.fill()
+            NSColor.separatorColor.setStroke()
+            path.lineWidth = 1
+            path.stroke()
+            let palette = SemanticPalette(theme: theme)
+            NSColor(palette.color(.accent)).setFill()
+            NSBezierPath(ovalIn: NSRect(x: body.minX + 4, y: body.midY - 3, width: 6, height: 6)).fill()
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 }

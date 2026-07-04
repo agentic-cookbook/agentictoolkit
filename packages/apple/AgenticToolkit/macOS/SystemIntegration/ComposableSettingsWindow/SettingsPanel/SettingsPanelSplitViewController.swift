@@ -30,5 +30,11 @@ extension ComposableSettings {
         /// its own detail floor on top of the outer one (that would compound the
         /// window's minimum width at every level of nesting).
         open override var detailMinimumThickness: CGFloat { 0 }
+
+        /// A distinct autosave per nested split (keyed on the panel title) so each
+        /// topic list persists its own width independently of the others.
+        open override var sidebarAutosaveName: String? {
+            "ComposableSettings.Sidebar.\(descriptor.title)"
+        }
     }
 }

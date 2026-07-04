@@ -19,6 +19,11 @@ extension ComposableSettings {
         /// re-impose the outer floor.
         open var detailMinimumThickness: CGFloat { 400 }
 
+        /// Autosave name for the sidebar divider, so the user's chosen topic-list
+        /// width persists across launches. Each split needs a distinct name;
+        /// nested splits override this with one keyed on their panel.
+        open var sidebarAutosaveName: String? { "ComposableSettings.RootSidebar" }
+
         /// The sidebar list controller. Inject a subclass to customize row
         /// presentation; defaults to a stock `PanelListViewController`.
         public let listViewController: PanelListViewController
@@ -44,8 +49,10 @@ extension ComposableSettings {
             detailContainer.view = detailView
 
             let sidebarItem = NSSplitViewItem(sidebarWithViewController: listViewController)
-            sidebarItem.minimumThickness = 180
-            sidebarItem.maximumThickness = 220
+            // A generous thickness band so the divider is freely user-draggable;
+            // the detail's own minimumThickness keeps it from being squeezed away.
+            sidebarItem.minimumThickness = 160
+            sidebarItem.maximumThickness = 360
             // The topic list must never auto-hide — it's the only way to switch
             // panels, so a collapse (from a narrow window or the toolbar toggle)
             // would strand the user in the detail pane.
@@ -59,6 +66,11 @@ extension ComposableSettings {
             detailItem.minimumThickness = detailMinimumThickness
             detailItem.holdingPriority = .defaultLow
             addSplitViewItem(detailItem)
+
+            // Persist the divider position (the user's chosen topic-list width).
+            // Set *after* the items exist so NSSplitView associates the saved frames
+            // with them — set earlier, drags aren't captured and nothing restores.
+            splitView.autosaveName = sidebarAutosaveName
 
             listViewController.onSelectPanel = { [weak self] panel in
                 self?.show(panel)
