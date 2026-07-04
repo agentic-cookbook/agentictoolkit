@@ -25,5 +25,10 @@ extension ComposableSettings {
         public required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+
+        /// A nested split fills whatever the outer detail gives it; it must not add
+        /// its own detail floor on top of the outer one (that would compound the
+        /// window's minimum width at every level of nesting).
+        open override var detailMinimumThickness: CGFloat { 0 }
     }
 }
