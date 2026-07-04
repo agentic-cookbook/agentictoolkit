@@ -62,6 +62,8 @@ public final class ThemeProfilesSettingsView: NSView {
     private func setupViews() {
         let scroll = scrollView
         scroll.hasVerticalScroller = true
+        scroll.hasHorizontalScroller = true
+        scroll.autohidesScrollers = true
         scroll.drawsBackground = false
         scroll.automaticallyAdjustsContentInsets = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
@@ -99,8 +101,10 @@ public final class ThemeProfilesSettingsView: NSView {
             scroll.bottomAnchor.constraint(equalTo: bottomAnchor),
             doc.topAnchor.constraint(equalTo: scroll.topAnchor),
             doc.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
-            doc.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
-            doc.widthAnchor.constraint(equalTo: scroll.widthAnchor),
+            // Fill the viewport, but let fixed-width content (the customize grid)
+            // overflow into a horizontal scroll rather than forcing the whole
+            // window — and thus the settings window — to that content's width.
+            doc.widthAnchor.constraint(greaterThanOrEqualTo: scroll.widthAnchor),
             contentStack.topAnchor.constraint(equalTo: doc.topAnchor),
             contentStack.leadingAnchor.constraint(equalTo: doc.leadingAnchor),
             contentStack.trailingAnchor.constraint(equalTo: doc.trailingAnchor),

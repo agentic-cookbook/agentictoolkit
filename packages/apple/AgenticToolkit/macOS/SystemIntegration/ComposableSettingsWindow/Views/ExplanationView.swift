@@ -16,6 +16,12 @@ extension ComposableSettings {
             self.label.lineBreakMode = .byWordWrapping
             self.label.maximumNumberOfLines = 0
             self.label.setContentCompressionResistancePriority(.required, for: .vertical)
+            // A wrapping label still reports its one-line intrinsic width unless it
+            // is allowed to yield horizontally — otherwise a long blurb forces the
+            // whole panel (and the settings window) as wide as the text. Let it be
+            // compressed so it wraps to the available width instead.
+            self.label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            self.label.setContentHuggingPriority(.defaultLow, for: .horizontal)
             self.addSubview(self.label)
 
             NSLayoutConstraint.activate([

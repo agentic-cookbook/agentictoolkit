@@ -25,5 +25,10 @@ extension ComposableSettings {
         public required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+
+        /// A nested split's leaves must not each re-impose the outer window's
+        /// detail-width floor — that would cascade the window wider on every
+        /// level of nesting. The nested split sizes to its own content.
+        open override var detailFloorWidth: CGFloat { 0 }
     }
 }

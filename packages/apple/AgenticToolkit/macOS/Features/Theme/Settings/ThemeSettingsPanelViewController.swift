@@ -16,6 +16,9 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// The theme editor scrolls its own gallery/customize content.
+    public var hostsOwnScroll: Bool { true }
+
     public override func loadView() {
         let host = NSView()
         host.translatesAutoresizingMaskIntoConstraints = false

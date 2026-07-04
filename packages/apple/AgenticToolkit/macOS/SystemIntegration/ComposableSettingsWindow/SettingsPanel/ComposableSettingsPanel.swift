@@ -11,4 +11,13 @@ import AppKit
 public protocol ComposableSettingsPanel: NSViewController {
     var descriptor: ComposableSettings.SettingsPanelDescriptor { get }
 //    func addGroup(_ group: ComposableSettings.GroupView)
+
+    /// True when the panel manages its own scrolling (e.g. the theme editor).
+    /// When false, the split hosts the panel inside a scroll view so oversized
+    /// content scrolls instead of resizing the settings window.
+    var hostsOwnScroll: Bool { get }
+}
+
+public extension ComposableSettingsPanel {
+    var hostsOwnScroll: Bool { false }
 }
