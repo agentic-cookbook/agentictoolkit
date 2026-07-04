@@ -105,7 +105,7 @@ public final class ThemeProfilesSettingsView: NSView {
             contentStack.leadingAnchor.constraint(equalTo: doc.leadingAnchor),
             contentStack.trailingAnchor.constraint(equalTo: doc.trailingAnchor),
             contentStack.bottomAnchor.constraint(equalTo: doc.bottomAnchor),
-            widthAnchor.constraint(greaterThanOrEqualToConstant: 520)
+            widthAnchor.constraint(greaterThanOrEqualToConstant: 340)
         ])
         // Header, gallery and customize span the content width.
         for view in [header, galleryStack, customizeHost] {
@@ -140,29 +140,28 @@ public final class ThemeProfilesSettingsView: NSView {
 
     // MARK: - Gallery
 
+    /// Widest a theme card grows to in the single-column list before it stops
+    /// stretching (it still shrinks below this on a narrow window).
+    private static let maxCardWidth: CGFloat = 360
+
     private func rebuildGallery() {
         galleryStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         cards.removeAll()
         let activeID = UserSettings.activeThemeID.value
-        let columns = 3
-        for chunk in stride(from: 0, to: themes.count, by: columns) {
-            let rowThemes = themes[chunk..<min(chunk + columns, themes.count)]
-            let row = NSStackView()
-            row.orientation = .horizontal
-            row.distribution = .fillEqually
-            row.spacing = 14
-            row.translatesAutoresizingMaskIntoConstraints = false
-            for theme in rowThemes {
-                let card = ThemeCardView(theme: theme, isActive: theme.id == activeID) { [weak self] id in
-                    self?.selectTheme(id: id)
-                }
-                cards.append(card)
-                row.addArrangedSubview(card)
+        // One card per row (a list, not a fixed 3-column grid): the grid forced a
+        // wide minimum that stopped the settings window from being resized smaller.
+        // Each card fills the width up to `maxCardWidth`, and shrinks below it, so
+        // the panel — and the window — stays resizable.
+        for theme in themes {
+            let card = ThemeCardView(theme: theme, isActive: theme.id == activeID) { [weak self] id in
+                self?.selectTheme(id: id)
             }
-            // Pad the final short row so cards keep their column width.
-            for _ in rowThemes.count..<columns { row.addArrangedSubview(NSView()) }
-            galleryStack.addArrangedSubview(row)
-            row.widthAnchor.constraint(equalTo: galleryStack.widthAnchor).isActive = true
+            cards.append(card)
+            galleryStack.addArrangedSubview(card)
+            let fill = card.widthAnchor.constraint(equalTo: galleryStack.widthAnchor)
+            fill.priority = .defaultHigh
+            fill.isActive = true
+            card.widthAnchor.constraint(lessThanOrEqualToConstant: Self.maxCardWidth).isActive = true
         }
     }
 
