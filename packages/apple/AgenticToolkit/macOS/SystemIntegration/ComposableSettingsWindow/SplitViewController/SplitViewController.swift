@@ -12,12 +12,6 @@ extension ComposableSettings {
 
         public private(set) var panels: [any ComposableSettingsPanel] = []
 
-        /// Required minimum width for a scroll-wrapped detail panel, so the window
-        /// holds a usable size across panel switches. Nested splits override this
-        /// to 0 (their leaves must not each re-impose the outer floor, which would
-        /// cascade the window ever wider).
-        open var detailFloorWidth: CGFloat { 560 }
-
         /// The sidebar list controller. Inject a subclass to customize row
         /// presentation; defaults to a stock `PanelListViewController`.
         public let listViewController: PanelListViewController
@@ -129,14 +123,14 @@ extension ComposableSettings {
             let container = detailContainer.view
             panel.view.translatesAutoresizingMaskIntoConstraints = false
 
-            // Nested splits, self-scrolling panels, and — when this split opts out
-            // via `detailFloorWidth == 0` (nested splits) — every panel are hosted
-            // directly so their wrapping labels wrap to the detail width and their
-            // controls fill it. Otherwise (the top-level settings split) each panel
-            // is wrapped in a scroll view so oversized content (long paths, wide
-            // grids, tall forms) scrolls instead of resizing the window — the window
-            // is the user's to size, never the content's.
-            if panel is SplitViewController || panel.hostsOwnScroll || detailFloorWidth <= 0 {
+            // Self-scrolling panels (the theme editor) are hosted directly. Every
+            // other panel — including nested topic splits — is wrapped in a scroll
+            // view whose document is pinned to exactly the viewport width, so content
+            // fills the detail and wrapping labels wrap, tall content scrolls
+            // vertically, and content *wider* than the window is clipped rather than
+            // resizing the window. The window's size is the user's alone; content
+            // never drives it.
+            if panel.hostsOwnScroll {
                 container.addSubview(panel.view)
                 NSLayoutConstraint.activate([
                     panel.view.topAnchor.constraint(equalTo: container.topAnchor),
@@ -175,16 +169,11 @@ extension ComposableSettings {
                 panel.view.trailingAnchor.constraint(equalTo: document.trailingAnchor),
                 panel.view.bottomAnchor.constraint(equalTo: document.bottomAnchor),
 
-                // Fill the viewport, but let bigger content overflow into a scroll
-                // rather than pushing the window's size.
-                panel.view.widthAnchor.constraint(greaterThanOrEqualTo: clip.widthAnchor),
-                panel.view.heightAnchor.constraint(greaterThanOrEqualTo: clip.heightAnchor),
-
-                // A required floor on the detail width so the window holds a usable
-                // size (this constraint IS respected, unlike window.minSize which
-                // NSSplitViewController overrides when it fits itself to content).
-                // Content wider than this scrolls; the window never shrinks below it.
-                panel.view.widthAnchor.constraint(greaterThanOrEqualToConstant: detailFloorWidth)
+                // Exactly the viewport width (content fills + wrapping labels wrap;
+                // wider content is clipped, never resizing the window) and at least
+                // the viewport height (fills, or scrolls vertically when taller).
+                panel.view.widthAnchor.constraint(equalTo: clip.widthAnchor),
+                panel.view.heightAnchor.constraint(greaterThanOrEqualTo: clip.heightAnchor)
             ])
         }
     }
