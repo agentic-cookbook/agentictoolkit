@@ -32,8 +32,6 @@ public final class ThemeProfilesSettingsView: NSView {
     private var themes: [ColorTheme] = []
     private var editingTheme: ColorTheme?
 
-    private let scrollView = NSScrollView()
-    private let contentStack = NSStackView()
     private let galleryStack = NSStackView()
     private let customizeHost = NSStackView()
     private var cards: [ThemeCardView] = []
@@ -59,68 +57,101 @@ public final class ThemeProfilesSettingsView: NSView {
 
     // MARK: - Setup
 
+    /// Topic/detail layout: a scrollable list of themes on the left, the selected
+    /// theme's preview + editor on the right.
     private func setupViews() {
-        let scroll = scrollView
-        scroll.hasVerticalScroller = true
-        scroll.hasHorizontalScroller = true
-        scroll.autohidesScrollers = true
-        scroll.drawsBackground = false
-        scroll.automaticallyAdjustsContentInsets = false
-        scroll.translatesAutoresizingMaskIntoConstraints = false
-
-        let doc = ThemeFlippedView()
-        doc.translatesAutoresizingMaskIntoConstraints = false
-        scroll.documentView = doc
-
-        let header = makeHeader()
-
+        // Left column — the theme list (one card per theme) + import/duplicate.
         galleryStack.orientation = .vertical
         galleryStack.alignment = .leading
-        galleryStack.spacing = 14
+        galleryStack.spacing = 10
         galleryStack.translatesAutoresizingMaskIntoConstraints = false
 
+        let listColumn = NSStackView(views: [sectionTitle("THEMES"), galleryStack, makeListButtons()])
+        listColumn.orientation = .vertical
+        listColumn.alignment = .leading
+        listColumn.spacing = 12
+        listColumn.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 12)
+        listColumn.translatesAutoresizingMaskIntoConstraints = false
+
+        let leftDoc = ThemeFlippedView()
+        leftDoc.translatesAutoresizingMaskIntoConstraints = false
+        leftDoc.addSubview(listColumn)
+        let leftScroll = NSScrollView()
+        leftScroll.translatesAutoresizingMaskIntoConstraints = false
+        leftScroll.hasVerticalScroller = true
+        leftScroll.drawsBackground = false
+        leftScroll.documentView = leftDoc
+
+        // Right column — the selected theme's detail (preview + editor), scrollable.
         customizeHost.orientation = .vertical
         customizeHost.alignment = .leading
-        customizeHost.spacing = 8
+        customizeHost.spacing = 12
+        customizeHost.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 20, right: 16)
         customizeHost.translatesAutoresizingMaskIntoConstraints = false
 
-        contentStack.orientation = .vertical
-        contentStack.alignment = .leading
-        contentStack.spacing = 20
-        contentStack.translatesAutoresizingMaskIntoConstraints = false
-        contentStack.edgeInsets = NSEdgeInsets(top: 18, left: 20, bottom: 24, right: 20)
-        [header, sectionTitle("THEMES"), galleryStack, customizeHost]
-            .forEach { contentStack.addArrangedSubview($0) }
+        let rightDoc = ThemeFlippedView()
+        rightDoc.translatesAutoresizingMaskIntoConstraints = false
+        rightDoc.addSubview(customizeHost)
+        let rightScroll = NSScrollView()
+        rightScroll.translatesAutoresizingMaskIntoConstraints = false
+        rightScroll.hasVerticalScroller = true
+        rightScroll.hasHorizontalScroller = true
+        rightScroll.autohidesScrollers = true
+        rightScroll.drawsBackground = false
+        rightScroll.documentView = rightDoc
 
-        doc.addSubview(contentStack)
-        addSubview(scroll)
+        let divider = NSBox()
+        divider.boxType = .separator
+        divider.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(leftScroll)
+        addSubview(divider)
+        addSubview(rightScroll)
+
+        let leftClip = leftScroll.contentView
+        let rightClip = rightScroll.contentView
         NSLayoutConstraint.activate([
-            scroll.topAnchor.constraint(equalTo: topAnchor),
-            scroll.leadingAnchor.constraint(equalTo: leadingAnchor),
-            scroll.trailingAnchor.constraint(equalTo: trailingAnchor),
-            scroll.bottomAnchor.constraint(equalTo: bottomAnchor),
-            doc.topAnchor.constraint(equalTo: scroll.topAnchor),
-            doc.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
-            // Fill the viewport, but let fixed-width content (the customize grid)
-            // overflow into a horizontal scroll rather than forcing the whole
-            // window — and thus the settings window — to that content's width.
-            doc.widthAnchor.constraint(greaterThanOrEqualTo: scroll.widthAnchor),
-            contentStack.topAnchor.constraint(equalTo: doc.topAnchor),
-            contentStack.leadingAnchor.constraint(equalTo: doc.leadingAnchor),
-            contentStack.trailingAnchor.constraint(equalTo: doc.trailingAnchor),
-            contentStack.bottomAnchor.constraint(equalTo: doc.bottomAnchor),
-            widthAnchor.constraint(greaterThanOrEqualToConstant: 340)
+            leftScroll.topAnchor.constraint(equalTo: topAnchor),
+            leftScroll.leadingAnchor.constraint(equalTo: leadingAnchor),
+            leftScroll.bottomAnchor.constraint(equalTo: bottomAnchor),
+            leftScroll.widthAnchor.constraint(equalToConstant: 236),
+
+            divider.leadingAnchor.constraint(equalTo: leftScroll.trailingAnchor),
+            divider.topAnchor.constraint(equalTo: topAnchor),
+            divider.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            rightScroll.leadingAnchor.constraint(equalTo: divider.trailingAnchor),
+            rightScroll.topAnchor.constraint(equalTo: topAnchor),
+            rightScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
+            rightScroll.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            leftDoc.topAnchor.constraint(equalTo: leftClip.topAnchor),
+            leftDoc.leadingAnchor.constraint(equalTo: leftClip.leadingAnchor),
+            leftDoc.widthAnchor.constraint(equalTo: leftClip.widthAnchor),
+            listColumn.topAnchor.constraint(equalTo: leftDoc.topAnchor),
+            listColumn.leadingAnchor.constraint(equalTo: leftDoc.leadingAnchor),
+            listColumn.trailingAnchor.constraint(equalTo: leftDoc.trailingAnchor),
+            listColumn.bottomAnchor.constraint(equalTo: leftDoc.bottomAnchor),
+
+            rightDoc.topAnchor.constraint(equalTo: rightClip.topAnchor),
+            rightDoc.leadingAnchor.constraint(equalTo: rightClip.leadingAnchor),
+            // Fill the viewport; a wide editor grid overflows into a horizontal
+            // scroll rather than forcing the window's width.
+            rightDoc.widthAnchor.constraint(greaterThanOrEqualTo: rightClip.widthAnchor),
+            customizeHost.topAnchor.constraint(equalTo: rightDoc.topAnchor),
+            customizeHost.leadingAnchor.constraint(equalTo: rightDoc.leadingAnchor),
+            customizeHost.trailingAnchor.constraint(equalTo: rightDoc.trailingAnchor),
+            customizeHost.bottomAnchor.constraint(equalTo: rightDoc.bottomAnchor),
+
+            // A baseline size so the two scroll columns (which have no intrinsic
+            // size of their own) don't collapse the panel.
+            widthAnchor.constraint(greaterThanOrEqualToConstant: 560),
+            heightAnchor.constraint(greaterThanOrEqualToConstant: 460)
         ])
-        // Header, gallery and customize span the content width.
-        for view in [header, galleryStack, customizeHost] {
-            view.widthAnchor.constraint(equalTo: contentStack.widthAnchor, constant: -40).isActive = true
-        }
     }
 
-    private func makeHeader() -> NSView {
-        let title = NSTextField(labelWithString: "Theme")
-        title.font = .systemFont(ofSize: 17, weight: .bold)
-
+    /// The import / duplicate buttons shown under the theme list.
+    private func makeListButtons() -> NSView {
         let importButton = NSButton(title: "Import…", target: self, action: #selector(importTheme))
         importButton.bezelStyle = .rounded
         importButton.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
@@ -133,13 +164,11 @@ public final class ThemeProfilesSettingsView: NSView {
         newButton.imagePosition = .imageLeading
         newButton.toolTip = "Duplicate the selected theme to customize it"
 
-        let spacer = NSView()
-        spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-        let row = NSStackView(views: [title, spacer, importButton, newButton])
-        row.orientation = .horizontal
-        row.spacing = 8
-        row.alignment = .centerY
-        return row
+        let stack = NSStackView(views: [importButton, newButton])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        return stack
     }
 
     // MARK: - Gallery
