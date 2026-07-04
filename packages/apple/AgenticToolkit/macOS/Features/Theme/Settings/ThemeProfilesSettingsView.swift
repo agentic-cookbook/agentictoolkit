@@ -143,10 +143,11 @@ public final class ThemeProfilesSettingsView: NSView {
             customizeHost.trailingAnchor.constraint(equalTo: rightDoc.trailingAnchor),
             customizeHost.bottomAnchor.constraint(equalTo: rightDoc.bottomAnchor),
 
-            // A baseline size so the two scroll columns (which have no intrinsic
-            // size of their own) don't collapse the panel.
-            widthAnchor.constraint(greaterThanOrEqualToConstant: 560),
-            heightAnchor.constraint(greaterThanOrEqualToConstant: 460)
+            // The width comes from the enclosing split's detail minimumThickness;
+            // the two scroll columns have no intrinsic height, so give the panel a
+            // baseline height (matching the window's own minimum) so it neither
+            // collapses nor forces the window taller than that minimum.
+            heightAnchor.constraint(greaterThanOrEqualToConstant: 440)
         ])
     }
 
