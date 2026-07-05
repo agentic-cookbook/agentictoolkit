@@ -2,6 +2,8 @@ packages:
   - './packages/ui'
   - './packages/olylo'
   - './packages/themes'
+  - './packages/markdown'
+  - './packages/search'
   - './packages/model'
   - './packages/layout'
   - './packages/content'

@@ -9,26 +9,79 @@
   "sideEffects": [
     "**/*.css"
   ],
+  "comment:files": "`src/styles` ships ALONGSIDE dist: the `./styles/globals.css` export resolves to `./src/styles/globals.css` unconditionally (prod too), and `pnpm deploy`/`npm pack` only include listed paths. See @adh-shared/adh comment:files for the full rationale.",
   "files": [
-    "dist"
+    "dist",
+    "src/styles"
   ],
+  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Self-degrading if the bundler ignores it. See @adh-shared/adh for the full rationale. Wildcards: components/* and blocks/* are all .tsx (blocks/index.ts is served by the exact ./blocks key, never the wildcard).",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
     "./lib/utils": {
       "types": "./dist/lib/utils.d.ts",
+      "development": "./src/lib/utils.ts",
       "import": "./dist/lib/utils.js"
+    },
+    "./lib/errors": {
+      "types": "./dist/lib/errors.d.ts",
+      "development": "./src/lib/errors.ts",
+      "import": "./dist/lib/errors.js"
+    },
+    "./lib/typography": {
+      "types": "./dist/lib/typography.d.ts",
+      "development": "./src/lib/typography.ts",
+      "import": "./dist/lib/typography.js"
+    },
+    "./lib/nav-rail": {
+      "types": "./dist/lib/nav-rail.d.ts",
+      "development": "./src/lib/nav-rail.ts",
+      "import": "./dist/lib/nav-rail.js"
+    },
+    "./lib/tone": {
+      "types": "./dist/lib/tone.d.ts",
+      "development": "./src/lib/tone.ts",
+      "import": "./dist/lib/tone.js"
     },
     "./hooks/useIsomorphicLayoutEffect": {
       "types": "./dist/hooks/useIsomorphicLayoutEffect.d.ts",
+      "development": "./src/hooks/useIsomorphicLayoutEffect.ts",
       "import": "./dist/hooks/useIsomorphicLayoutEffect.js"
     },
-    "./styles/globals.css": "./dist/styles/globals.css",
+    "./hooks/useClipboard": {
+      "types": "./dist/hooks/useClipboard.d.ts",
+      "development": "./src/hooks/useClipboard.ts",
+      "import": "./dist/hooks/useClipboard.js"
+    },
+    "./hooks/useMediaQuery": {
+      "types": "./dist/hooks/useMediaQuery.d.ts",
+      "development": "./src/hooks/useMediaQuery.ts",
+      "import": "./dist/hooks/useMediaQuery.js"
+    },
+    "./hooks/useAction": {
+      "types": "./dist/hooks/useAction.d.ts",
+      "development": "./src/hooks/useAction.ts",
+      "import": "./dist/hooks/useAction.js"
+    },
+    "./styles/globals.css": "./src/styles/globals.css",
+    "./styles/components.css": "./src/styles/components.css",
     "./components/*": {
       "types": "./dist/components/*.d.ts",
+      "development": "./src/components/*.tsx",
       "import": "./dist/components/*.js"
+    },
+    "./blocks": {
+      "types": "./dist/blocks/index.d.ts",
+      "development": "./src/blocks/index.ts",
+      "import": "./dist/blocks/index.js"
+    },
+    "./blocks/*": {
+      "types": "./dist/blocks/*.d.ts",
+      "development": "./src/blocks/*.tsx",
+      "import": "./dist/blocks/*.js"
     }
   },
   "scripts": {
@@ -37,22 +90,31 @@
     "build:css": "node ../../copy-css.mjs",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@base-ui/react": "^1.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "harper.js": "^2.4.0",
+    "lucide-react": "^1.16.0",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite": "^6",
+    "vitest": "^4.1.4"
   }
 }

@@ -1,0 +1,25 @@
+{
+  "type": {
+    "display-large":  { "font": { "$value": "{font.serif}", "$type": "fontFamily" }, "size": { "$value": "3.5rem", "$type": "dimension" }, "line-height": { "$value": "1.05", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "-0.02em", "$type": "dimension" } },
+    "display-medium": { "font": { "$value": "{font.serif}", "$type": "fontFamily" }, "size": { "$value": "2.8rem", "$type": "dimension" }, "line-height": { "$value": "1.1", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "-0.02em", "$type": "dimension" } },
+    "display-small":  { "font": { "$value": "{font.serif}", "$type": "fontFamily" }, "size": { "$value": "2.25rem", "$type": "dimension" }, "line-height": { "$value": "1.15", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "-0.01em", "$type": "dimension" } },
+
+    "headline-large":  { "font": { "$value": "{font.serif}", "$type": "fontFamily" }, "size": { "$value": "2rem", "$type": "dimension" }, "line-height": { "$value": "1.2", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "-0.01em", "$type": "dimension" } },
+    "headline-medium": { "font": { "$value": "{font.serif}", "$type": "fontFamily" }, "size": { "$value": "1.75rem", "$type": "dimension" }, "line-height": { "$value": "1.25", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } },
+    "headline-small":  { "font": { "$value": "{font.serif}", "$type": "fontFamily" }, "size": { "$value": "1.5rem", "$type": "dimension" }, "line-height": { "$value": "1.3", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } },
+
+    "title-large":  { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "1.375rem", "$type": "dimension" }, "line-height": { "$value": "1.3", "$type": "number" }, "weight": { "$value": "500", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } },
+    "title-medium": { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "1rem", "$type": "dimension" }, "line-height": { "$value": "1.4", "$type": "number" }, "weight": { "$value": "500", "$type": "fontWeight" }, "tracking": { "$value": "0.01em", "$type": "dimension" } },
+    "title-small":  { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "0.875rem", "$type": "dimension" }, "line-height": { "$value": "1.4", "$type": "number" }, "weight": { "$value": "500", "$type": "fontWeight" }, "tracking": { "$value": "0.02em", "$type": "dimension" } },
+
+    "body-large":  { "font": { "$value": "{font.sans}", "$type": "fontFamily" }, "size": { "$value": "1rem", "$type": "dimension" }, "line-height": { "$value": "1.6", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } },
+    "body-medium": { "font": { "$value": "{font.sans}", "$type": "fontFamily" }, "size": { "$value": "0.9375rem", "$type": "dimension" }, "line-height": { "$value": "1.7", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } },
+    "body-small":  { "font": { "$value": "{font.sans}", "$type": "fontFamily" }, "size": { "$value": "0.8125rem", "$type": "dimension" }, "line-height": { "$value": "1.5", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } },
+
+    "label-large":  { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "0.875rem", "$type": "dimension" }, "line-height": { "$value": "1.4", "$type": "number" }, "weight": { "$value": "500", "$type": "fontWeight" }, "tracking": { "$value": "0.08em", "$type": "dimension" }, "transform": { "$value": "uppercase", "$type": "other" } },
+    "label-medium": { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "0.75rem", "$type": "dimension" }, "line-height": { "$value": "1.4", "$type": "number" }, "weight": { "$value": "500", "$type": "fontWeight" }, "tracking": { "$value": "0.08em", "$type": "dimension" }, "transform": { "$value": "uppercase", "$type": "other" } },
+    "label-small":  { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "0.6875rem", "$type": "dimension" }, "line-height": { "$value": "1.4", "$type": "number" }, "weight": { "$value": "500", "$type": "fontWeight" }, "tracking": { "$value": "0.08em", "$type": "dimension" }, "transform": { "$value": "uppercase", "$type": "other" } },
+
+    "code": { "font": { "$value": "{font.mono}", "$type": "fontFamily" }, "size": { "$value": "0.8125rem", "$type": "dimension" }, "line-height": { "$value": "1.5", "$type": "number" }, "weight": { "$value": "400", "$type": "fontWeight" }, "tracking": { "$value": "0", "$type": "dimension" } }
+  }
+}

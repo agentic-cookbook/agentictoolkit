@@ -1,0 +1,48 @@
+{
+  "pc": {
+    "surface": { "$value": "{alpha.surface-94}", "$type": "color" },
+    "persona-bg": { "$value": "{alpha.gold-12}", "$type": "color" },
+    "persona-border": { "$value": "{alpha.gold-25}", "$type": "color" },
+    "persona-text": { "$value": "{color.on-surface}", "$type": "color" },
+    "persona-name": { "$value": "{color.primary}", "$type": "color" },
+    "user-bg": { "$value": "{alpha.white-06}", "$type": "color" },
+    "user-border": { "$value": "{palette.neutral.760}", "$type": "color" },
+    "user-text": { "$value": "{color.on-surface}", "$type": "color" },
+    "user-name": { "$value": "{color.on-surface-variant}", "$type": "color" },
+    "input-bg": { "$value": "{color.surface}", "$type": "color" },
+    "input-border": { "$value": "{palette.neutral.760}", "$type": "color" },
+    "input-focus": { "$value": "{color.primary}", "$type": "color" },
+    "send-bg": { "$value": "{color.primary}", "$type": "color" },
+    "send-text": { "$value": "{color.on-primary}", "$type": "color" },
+    "send-bg-hover": { "$value": "{color.primary-bright}", "$type": "color" },
+    "time-color": { "$value": "{color.text-dim}", "$type": "color" },
+    "font": { "$value": "{font.sans}", "$type": "fontFamily" },
+    "radius": { "$value": "6px", "$type": "dimension" }
+  },
+  "scp": {
+    "shiki-theme": { "$value": "'github-dark'", "$type": "other" }
+  },
+  "adh": {
+    "card-radius": { "$value": "{shape.corner.medium}", "$type": "dimension" },
+    "container-max-width": { "$value": "{size.container-max-width}", "$type": "dimension" },
+    "header-title-font": { "$value": "{font.serif}", "$type": "fontFamily" },
+    "header-title-style": { "$value": "italic", "$type": "other" },
+    "header-title-color": { "$value": "{color.accent}", "$type": "color" },
+    "header-title-color-hover": { "$value": "{color.accent-bright}", "$type": "color" },
+    "header-title-size": { "$value": "1.15rem", "$type": "dimension" },
+    "header-title-weight": { "$value": "400", "$type": "fontWeight" },
+    "header-nav-font": { "$value": "{font.mono}", "$type": "fontFamily" },
+    "header-nav-size": { "$value": "0.875rem", "$type": "dimension" },
+    "header-nav-letter-spacing": { "$value": "0.04em", "$type": "dimension" },
+    "header-nav-gap": { "$value": "1.25rem", "$type": "dimension" },
+    "header-nav-link-color": { "$value": "{color.text-secondary}", "$type": "color" },
+    "header-nav-link-hover-color": { "$value": "{color.accent}", "$type": "color" },
+    "header-nav-link-active-color": { "$value": "{color.accent}", "$type": "color" },
+    "footer-font": { "$value": "{font.mono}", "$type": "fontFamily" },
+    "footer-size": { "$value": "0.7rem", "$type": "dimension" },
+    "footer-color": { "$value": "{palette.white}", "$type": "color" },
+    "footer-link-color": { "$value": "{palette.white}", "$type": "color" },
+    "footer-link-color-hover": { "$value": "{color.accent}", "$type": "color" },
+    "footer-separator": { "$value": "'·'", "$type": "other" }
+  }
+}

@@ -4,6 +4,7 @@ import {
   adhCourierCss,
   adhFiraCss,
   adhIosevkaCss,
+  adhDevPreviewCss,
   adhJetbrainsCss,
   adhManropeCss,
   agenticcookbookwebCss,
@@ -16,12 +17,18 @@ import {
   terminalCss,
   terminalSplitCss,
   whimsicalCss,
+  gruvboxCss,
+  nordCss,
+  rosePineCss,
+  signalCss,
+  solarizedCss,
 } from './theme-data'
 
 export type ThemeKey =
   | 'adh'
   | 'adh-comic'
   | 'adh-courier'
+  | 'adh-dev-preview'
   | 'adh-fira'
   | 'adh-iosevka'
   | 'adh-jetbrains'
@@ -36,6 +43,11 @@ export type ThemeKey =
   | 'terminal'
   | 'terminal-split'
   | 'whimsical'
+  | 'gruvbox'
+  | 'nord'
+  | 'rose-pine'
+  | 'signal'
+  | 'solarized'
 
 export interface ThemeEntry {
   id: ThemeKey
@@ -47,6 +59,7 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   adh: { id: 'adh', label: 'ADH', css: adhCss },
   'adh-comic': { id: 'adh-comic', label: 'ADH · Comic', css: adhComicCss },
   'adh-courier': { id: 'adh-courier', label: 'ADH · Courier', css: adhCourierCss },
+  'adh-dev-preview': { id: 'adh-dev-preview', label: 'ADH · Dev Preview', css: adhDevPreviewCss },
   'adh-fira': { id: 'adh-fira', label: 'ADH · Fira', css: adhFiraCss },
   'adh-iosevka': { id: 'adh-iosevka', label: 'ADH · Iosevka', css: adhIosevkaCss },
   'adh-jetbrains': { id: 'adh-jetbrains', label: 'ADH · JetBrains', css: adhJetbrainsCss },
@@ -61,6 +74,11 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   terminal: { id: 'terminal', label: 'Terminal', css: terminalCss },
   'terminal-split': { id: 'terminal-split', label: 'Terminal Split', css: terminalSplitCss },
   whimsical: { id: 'whimsical', label: 'Whimsical', css: whimsicalCss },
+  gruvbox: { id: 'gruvbox', label: 'Gruvbox', css: gruvboxCss },
+  nord: { id: 'nord', label: 'Nord', css: nordCss },
+  'rose-pine': { id: 'rose-pine', label: 'Rosé Pine', css: rosePineCss },
+  signal: { id: 'signal', label: 'Signal', css: signalCss },
+  solarized: { id: 'solarized', label: 'Solarized', css: solarizedCss },
 }
 
 export const themeIds: ThemeKey[] = Object.keys(themes) as ThemeKey[]
