@@ -2,6 +2,7 @@ packages:
   - './packages/ui'
   - './packages/themes'
   - './packages/markdown'
+  - './packages/search'
   - './packages/model'
   - './packages/layout'
   - './packages/content'

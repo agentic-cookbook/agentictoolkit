@@ -1,0 +1,55 @@
+{
+  "name": "@agentic-toolkit/search",
+  "version": "0.1.0",
+  "description": "Reusable, configurable document-search view for the agentic-developer-hub. Two seams: a per-document-type result+preview renderer registry (markdown today), and an injected search SCOPE/source (base URL + endpoint paths + query-param mapping). Self-contained: ships its own compiled Tailwind stylesheet so marketing apps that do not scan @adh-shared/ui still get the utilities.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:files": "`dist` carries the JS + the COMPILED `dist/styles.css` (built by `build:css` via the Tailwind CLI). Unlike @adh-shared/markdown/ui/themes — which ship hand-written src CSS — this package's `./styles` is a Tailwind BUILD over its own components AND the @adh-shared/ui components it composes, so a marketing app (which deliberately does not @source node_modules/@adh-shared/ui) still gets the needed utility classes. The export points at the compiled dist file, so `dist` is the only path needed.",
+  "files": [
+    "dist"
+  ],
+  "comment:exports": "`development` → src for `next dev` (HMR of the COMPONENT logic, no build/restart); prod skips it → dist. Mirrors @adh-shared/markdown. NOTE: `./styles` resolves to the COMPILED `dist/styles.css` in both dev and prod (it is a build artifact, not source CSS), so editing a component's utility classes needs a `build:css` to refresh it.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles": "./dist/styles.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "tailwindcss -i ./src/styles/search.css -o ./dist/styles.css --minify",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@agentic-toolkit/markdown": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@agentic-toolkit/themes": "workspace:*",
+    "@tailwindcss/cli": "^4.0.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "tailwindcss": "^4.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}
