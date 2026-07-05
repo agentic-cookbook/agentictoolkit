@@ -141,9 +141,12 @@ extension ComposableSettings {
 
         private func show(_ panel: (any ComposableSettingsPanel)?) {
             for child in detailContainer.children {
-                child.view.removeFromSuperview()
                 child.removeFromParent()
             }
+            // Remove every hosted view. A scroll-wrapped panel's view lives inside a
+            // wrapper NSScrollView (added below), so removing only the panel's own
+            // view would orphan that wrapper in the container on each switch.
+            detailContainer.view.subviews.forEach { $0.removeFromSuperview() }
             guard let panel else { return }
             detailContainer.addChild(panel)
             let container = detailContainer.view

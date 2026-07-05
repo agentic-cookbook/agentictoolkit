@@ -32,20 +32,27 @@ struct ThemeUITests {
         #expect(!picker.subviews.isEmpty)
     }
 
-    @Test("ThemeProfilesSettingsView builds a flipped, scrollable gallery")
-    func settingsViewGallery() {
-        let view = ThemeProfilesSettingsView(frame: NSRect(x: 0, y: 0, width: 760, height: 640))
-        view.layoutSubtreeIfNeeded()
-        let scroll = view.subviews.compactMap { $0 as? NSScrollView }.first
+    @Test("ThemeDetailPanelViewController builds a flipped, scrollable detail")
+    func detailPanelScroll() {
+        let store = ThemeStore()
+        guard let theme = store.allThemes.first else { Issue.record("no themes"); return }
+        let panel = ThemeDetailPanelViewController(
+            theme: theme, store: store, onStructuralChange: { _ in }, onRowInvalidated: {})
+        panel.loadViewIfNeeded()
+        let scroll = panel.view as? NSScrollView
         #expect(scroll != nil)
         // Content must pin to the TOP — the document view has to be flipped.
         #expect(scroll?.documentView?.isFlipped == true)
     }
 
-    @Test("ThemeSettingsPanelViewController wires up its view")
+    @Test("ThemeSettingsPanelViewController builds one panel per theme")
     func panel() {
         let panel = ThemeSettingsPanelViewController()
         #expect(panel.descriptor.title == "Theme")
-        #expect(panel.view.subviews.contains { $0 is ThemeProfilesSettingsView })
+        // Loading the view runs viewDidLoad, which populates one detail panel per
+        // theme in the nested split.
+        panel.loadViewIfNeeded()
+        #expect(!panel.panels.isEmpty)
+        #expect(panel.panels.count == ThemeStore().allThemes.count)
     }
 }

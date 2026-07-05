@@ -45,6 +45,8 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     private var weightPopups: [TextRole: NSPopUpButton] = [:]
     private var familyFields: [TextRole: NSTextField] = [:]
     private let scaleLabel = NSTextField(labelWithString: "100%")
+    /// Coalesces the expensive global side effects of an edit (see persist).
+    private var pendingRefresh: DispatchWorkItem?
 
     init(theme: ColorTheme,
          store: ThemeStore,
@@ -476,6 +478,10 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     private func applyTypography(for role: TextRole) {
         guard !store.isBuiltIn(id: theme.id) else { return }
         let size = max(8, min(48, sizeFields[role]?.doubleValue ?? ThemeTypography.defaultStyle(role).size))
+        // Reflect the clamp back so the field/stepper show what's actually applied
+        // (typing "100" lands on 48, not a stale out-of-range "100").
+        sizeFields[role]?.doubleValue = size
+        sizeSteppers[role]?.doubleValue = size
         let weight = (weightPopups[role]?.selectedItem?.representedObject as? FontWeight) ?? .regular
         let familyRaw = familyFields[role]?.stringValue.trimmingCharacters(in: .whitespaces) ?? ""
         let family = familyRaw.isEmpty ? nil : familyRaw
@@ -488,11 +494,25 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
 
     private func persist(_ updated: ColorTheme) {
         theme = updated
+        // Keep the store authoritative and the in-panel preview live every tick
+        // (both cheap and local, so a structural edit always sees the latest).
         store.update(updated)
-        // Live feedback: refresh the in-panel preview + the sidebar swatch, and
-        // re-apply the theme app-wide when it's the active one.
         preview.show(updated)
+        // Coalesce the expensive, purely-cosmetic global work — the app-wide
+        // re-theme and the sidebar swatch refresh — so dragging a color well
+        // doesn't repaint every window and rebuild the sidebar on every tick.
+        pendingRefresh?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.applyGlobalRefresh(updated) }
+        pendingRefresh = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
+    }
+
+    /// The debounced tail of persist(_:): refresh the sidebar swatch and re-apply
+    /// the theme app-wide once edits settle. Safe to skip if the panel is torn
+    /// down first — a structural rebuild re-themes and re-reads the swatch anyway.
+    private func applyGlobalRefresh(_ updated: ColorTheme) {
         descriptor.icon = Self.swatch(for: updated)
+        onRowInvalidated()
         if UserSettings.activeThemeID.value == updated.id, let manager = ThemeManager.shared {
             manager.selectTheme(id: updated.id)
         }

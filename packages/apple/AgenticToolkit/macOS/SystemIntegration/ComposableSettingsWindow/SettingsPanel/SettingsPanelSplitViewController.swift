@@ -26,10 +26,12 @@ extension ComposableSettings {
             fatalError("init(coder:) has not been implemented")
         }
 
-        /// A nested split fills whatever the outer detail gives it; it must not add
-        /// its own detail floor on top of the outer one (that would compound the
-        /// window's minimum width at every level of nesting).
-        open override var detailMinimumThickness: CGFloat { 0 }
+        /// A modest floor so the nested detail (the sub-panel content) can't be
+        /// squeezed to a sliver when the inner sidebar is dragged wide at the
+        /// minimum window width. It stays below the outer detail's own floor
+        /// (nested sidebar 160 + this 200 = 360 ≤ the outer's 400), so it caps the
+        /// inner sidebar's drag rather than compounding the window's minimum width.
+        open override var detailMinimumThickness: CGFloat { 200 }
 
         /// A distinct autosave per nested split (keyed on the panel title) so each
         /// topic list persists its own width independently of the others.

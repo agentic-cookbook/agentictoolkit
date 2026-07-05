@@ -118,7 +118,10 @@ open class TopicListViewController: NSViewController {
             return false
         }) else { return }
         let row = outlineView.row(forItem: node)
-        guard row >= 0 else { return }
+        // Bail if the row is already selected: selectRowIndexes would be a no-op
+        // and never fire the selection-changed callback, leaving
+        // suppressNextSelectionCallback stuck on to swallow the user's next click.
+        guard row >= 0, outlineView.selectedRow != row else { return }
         suppressNextSelectionCallback = true
         outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
     }
