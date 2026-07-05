@@ -19,10 +19,28 @@ extension ComposableSettings {
         /// re-impose the outer floor.
         open var detailMinimumThickness: CGFloat { 400 }
 
-        /// Autosave name for the sidebar divider, so the user's chosen topic-list
-        /// width persists across launches. Each split needs a distinct name;
-        /// nested splits override this with one keyed on their panel.
+        /// Autosave name for the sidebar divider, so a draggable topic list
+        /// persists its width. Only consulted when `contentSizedSidebar` is false.
         open var sidebarAutosaveName: String? { "ComposableSettings.RootSidebar" }
+
+        /// When true, the sidebar is pinned to its content width (every title
+        /// disclosed, never draggable, so switching panels never shifts the
+        /// layout); when false it's the classic draggable band with autosave.
+        ///
+        /// Default false: the full-height *root* window sidebar keeps the draggable
+        /// behaviour (its outline's column-fill misbehaves under a fixed width).
+        /// Nested topic/detail splits opt in — they're the ones that visibly
+        /// "move around" as you switch between them.
+        open var contentSizedSidebar: Bool { false }
+
+        /// External floor for the sidebar thickness. A parent split sets this on
+        /// its nested-split panels so their sibling topic lists share one width —
+        /// switching between panels then never moves the inner divider. `nil`
+        /// sizes purely to this list's own content. Only used when
+        /// `contentSizedSidebar` is true.
+        open var minimumSidebarWidthOverride: CGFloat? {
+            didSet { applySidebarWidth() }
+        }
 
         /// The sidebar list controller. Inject a subclass to customize row
         /// presentation; defaults to a stock `PanelListViewController`.
@@ -49,10 +67,6 @@ extension ComposableSettings {
             detailContainer.view = detailView
 
             let sidebarItem = NSSplitViewItem(sidebarWithViewController: listViewController)
-            // A generous thickness band so the divider is freely user-draggable;
-            // the detail's own minimumThickness keeps it from being squeezed away.
-            sidebarItem.minimumThickness = 160
-            sidebarItem.maximumThickness = 360
             // The topic list must never auto-hide — it's the only way to switch
             // panels, so a collapse (from a narrow window or the toolbar toggle)
             // would strand the user in the detail pane.
@@ -67,10 +81,18 @@ extension ComposableSettings {
             detailItem.holdingPriority = .defaultLow
             addSplitViewItem(detailItem)
 
-            // Persist the divider position (the user's chosen topic-list width).
-            // Set *after* the items exist so NSSplitView associates the saved frames
-            // with them — set earlier, drags aren't captured and nothing restores.
-            splitView.autosaveName = sidebarAutosaveName
+            if contentSizedSidebar {
+                // Content-sized, fixed-width sidebar: exactly as wide as the widest
+                // row needs (every title disclosed) and never draggable, so
+                // switching panels never shifts the layout. No autosave — the width
+                // is derived from content, not a remembered drag.
+                applySidebarWidth()
+            } else {
+                // Classic draggable band, width persisted via autosave.
+                sidebarItem.minimumThickness = 160
+                sidebarItem.maximumThickness = 360
+                splitView.autosaveName = sidebarAutosaveName
+            }
 
             listViewController.onSelectPanel = { [weak self] panel in
                 self?.show(panel)
@@ -83,9 +105,37 @@ extension ComposableSettings {
 
         open override func viewWillAppear() {
             super.viewWillAppear()
+            unifyNestedSidebars()
             // Auto-select the first panel so the detail pane is never blank.
             if currentPanel == nil, let first = panels.first {
                 selectPanel(first)
+            }
+        }
+
+        /// Sizes the sidebar to `max(own content width, override)` and pins it
+        /// there (min == max), so the topic list fully discloses its rows and can
+        /// never be dragged to a different width.
+        private func applySidebarWidth() {
+            guard contentSizedSidebar, isViewLoaded, let sidebarItem = splitViewItems.first else { return }
+            let width = max(listViewController.preferredWidth(), minimumSidebarWidthOverride ?? 0)
+            sidebarItem.minimumThickness = width
+            sidebarItem.maximumThickness = width
+        }
+
+        /// When this split's panels are themselves nested splits (siblings that
+        /// swap into the detail slot), give them all one width — the widest any of
+        /// their topic lists needs — so switching between them never moves the
+        /// inner divider. Force-loads each so its list is populated enough to
+        /// report a content width (they otherwise load lazily on first show).
+        private func unifyNestedSidebars() {
+            let nested = panels.compactMap { $0 as? SplitViewController }
+            guard nested.count > 1 else { return }
+            let widest = nested.map { split -> CGFloat in
+                _ = split.view
+                return split.listViewController.preferredWidth()
+            }.max() ?? 0
+            for split in nested {
+                split.minimumSidebarWidthOverride = widest
             }
         }
 
@@ -103,16 +153,19 @@ extension ComposableSettings {
         public func setPanels(_ panels: [any ComposableSettingsPanel]) {
             self.panels = panels
             listViewController.setPanels(panels)
+            applySidebarWidth()
         }
 
         public func addPanel(_ panel: any ComposableSettingsPanel) {
             panels.append(panel)
             listViewController.setPanels(panels)
+            applySidebarWidth()
         }
 
         public func removePanel(_ panel: any ComposableSettingsPanel) {
             panels.removeAll { $0 === panel }
             listViewController.setPanels(panels)
+            applySidebarWidth()
             if currentPanel === panel { show(nil) }
         }
 

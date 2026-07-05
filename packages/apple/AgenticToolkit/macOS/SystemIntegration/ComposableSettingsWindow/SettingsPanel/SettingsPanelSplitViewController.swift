@@ -27,16 +27,13 @@ extension ComposableSettings {
         }
 
         /// A modest floor so the nested detail (the sub-panel content) can't be
-        /// squeezed to a sliver when the inner sidebar is dragged wide at the
-        /// minimum window width. It stays below the outer detail's own floor
-        /// (nested sidebar 160 + this 200 = 360 ≤ the outer's 400), so it caps the
-        /// inner sidebar's drag rather than compounding the window's minimum width.
+        /// squeezed to a sliver. It stays below the outer detail's own floor, so it
+        /// caps the inner content rather than compounding the window's minimum width.
         open override var detailMinimumThickness: CGFloat { 200 }
 
-        /// A distinct autosave per nested split (keyed on the panel title) so each
-        /// topic list persists its own width independently of the others.
-        open override var sidebarAutosaveName: String? {
-            "ComposableSettings.Sidebar.\(descriptor.title)"
-        }
+        /// Nested topic lists are content-sized and unified to one width by the
+        /// parent split, so switching between sibling panels never shifts the inner
+        /// divider and every title stays fully disclosed.
+        open override var contentSizedSidebar: Bool { true }
     }
 }

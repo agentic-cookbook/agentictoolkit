@@ -60,7 +60,10 @@ open class TopicListViewController: NSViewController {
     /// (the previous behaviour) made `row(forItem:)` always return -1, which
     /// in turn made `selectItem(withId:)` silently no-op.
     private var rootNodesCache: [TopicListNode] = []
-    private let outlineView = NSOutlineView()
+    // Self-fitting: its single column always fills the (content-sized) sidebar
+    // width on every layout pass, so rows never clip their labels regardless of
+    // when the enclosing split view settles the sidebar's width.
+    private let outlineView = ColumnFillingOutlineView()
     private let scrollView = NSScrollView()
 
     // Keeps the sidebar painted in the active theme's window-background color.
@@ -69,6 +72,9 @@ open class TopicListViewController: NSViewController {
     open override func loadView() {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TopicListColumn"))
         column.title = ""
+        // The single column fills the outline's width (see ColumnFillingOutlineView),
+        // so rows never clip their labels.
+        column.resizingMask = .autoresizingMask
         outlineView.addTableColumn(column)
         outlineView.outlineTableColumn = column
         outlineView.headerView = nil
@@ -76,6 +82,11 @@ open class TopicListViewController: NSViewController {
         // forces a dark sidebar material regardless of NSApp.appearance.
         outlineView.style = .automatic
         outlineView.rowSizeStyle = .default
+        // Flat list (no disclosure triangles) — reclaim the per-level indent so
+        // the row's own leading inset is the only left margin, keeping the
+        // content-sized width honest.
+        outlineView.indentationPerLevel = 0
+        outlineView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         outlineView.dataSource = self
         outlineView.delegate = self
 
@@ -109,6 +120,37 @@ open class TopicListViewController: NSViewController {
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
     }
+
+    /// The width needed to fully show the widest row (icon + label) without
+    /// truncation, so the sidebar can be sized to its content instead of an
+    /// arbitrary draggable width. Mirrors the cell layout in `makeItemCell` /
+    /// `makeHeaderCell` (leading inset + icon + gap + text + trailing inset) plus
+    /// an allowance for the outline's internal margins and the vertical scroller.
+    open func preferredWidth() -> CGFloat {
+        let itemFont = NSFont.systemFont(ofSize: 13)
+        let headerFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        func textWidth(_ string: String, _ font: NSFont) -> CGFloat {
+            ceil((string as NSString).size(withAttributes: [.font: font]).width)
+        }
+        var widest: CGFloat = 0
+        for section in sections {
+            if let title = section.title, !title.isEmpty {
+                widest = max(widest, Self.headerLeadingInset + textWidth(title, headerFont))
+            }
+            for item in section.items {
+                // leading(4) + icon(16) + gap(6) + text + trailing(4)
+                widest = max(widest, Self.itemChromeWidth + textWidth(item.title, itemFont))
+            }
+        }
+        return widest + Self.outlineChromePadding
+    }
+
+    private static let headerLeadingInset: CGFloat = 2
+    private static let itemChromeWidth: CGFloat = 4 + 16 + 6 + 4
+    /// Allowance beyond the cell's own content: the source-list sidebar's built-in
+    /// leading inset, the vertical-scroller gutter, and a small trailing margin.
+    /// Without it the widest row clips even at its own computed width.
+    private static let outlineChromePadding: CGFloat = 64
 
     /// Selects the row matching `id` without firing `onSelect`.
     /// No-op if the id isn't present.
@@ -155,6 +197,17 @@ open class TopicListViewController: NSViewController {
 // types in a class lets us return the same instance for the same logical
 // row across reloads, which keeps NSOutlineView's selection bookkeeping
 // stable.
+
+/// An outline view whose single column fills the available width on every layout
+/// pass, so rows never clip their labels. `sizeLastColumnToFit()` after
+/// `super.layout()` is the safe primitive here — setting `column.width` directly
+/// from `layout()` re-enters `NSTableView.tile`/`setFrameSize` and throws.
+private final class ColumnFillingOutlineView: NSOutlineView {
+    override func layout() {
+        super.layout()
+        sizeLastColumnToFit()
+    }
+}
 
 private final class TopicListNode: NSObject {
     enum Kind {
