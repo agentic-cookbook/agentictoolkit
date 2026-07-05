@@ -9,11 +9,11 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:files": "`dist` carries the JS + the COMPILED `dist/styles.css` (built by `build:css` via the Tailwind CLI). Unlike @adh-shared/markdown/ui/themes — which ship hand-written src CSS — this package's `./styles` is a Tailwind BUILD over its own components AND the @adh-shared/ui components it composes, so a marketing app (which deliberately does not @source node_modules/@adh-shared/ui) still gets the needed utility classes. The export points at the compiled dist file, so `dist` is the only path needed.",
+  "comment:files": "`dist` carries the JS + the COMPILED `dist/styles.css` (built by `build:css` via the Tailwind CLI). Unlike @adh-shared/markdown/ui/themes \u2014 which ship hand-written src CSS \u2014 this package's `./styles` is a Tailwind BUILD over its own components AND the @adh-shared/ui components it composes, so a marketing app (which deliberately does not @source node_modules/@adh-shared/ui) still gets the needed utility classes. The export points at the compiled dist file, so `dist` is the only path needed.",
   "files": [
     "dist"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR of the COMPONENT logic, no build/restart); prod skips it → dist. Mirrors @adh-shared/markdown. NOTE: `./styles` resolves to the COMPILED `dist/styles.css` in both dev and prod (it is a build artifact, not source CSS), so editing a component's utility classes needs a `build:css` to refresh it.",
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR of the COMPONENT logic, no build/restart); prod skips it \u2192 dist. Mirrors @adh-shared/markdown. NOTE: `./styles` resolves to the COMPILED `dist/styles.css` in both dev and prod (it is a build artifact, not source CSS), so editing a component's utility classes needs a `build:css` to refresh it.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -44,8 +44,8 @@
     "@agentic-toolkit/themes": "workspace:*",
     "@tailwindcss/cli": "^4.0.0",
     "@types/node": "^24.0.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
     "tailwindcss": "^4.0.0",
     "tsup": "^8.3.5",

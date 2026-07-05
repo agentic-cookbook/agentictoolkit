@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/auth",
   "version": "0.1.0",
-  "description": "Shared authentication for Agentic Developer Hub sites — capabilities-based AuthProvider, Bearer HTTP client with refresh, and a shared LoginCard.",
+  "description": "Shared authentication for Agentic Developer Hub sites \u2014 capabilities-based AuthProvider, Bearer HTTP client with refresh, and a shared LoginCard.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -44,8 +44,8 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
     "jsdom": "^29.0.2",
     "next": "^15.1.0",

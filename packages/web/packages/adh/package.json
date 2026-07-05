@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/adh",
   "version": "0.2.0",
-  "description": "Agentic Developer Hub shared components — header, footer, theme switcher composed on shadcn + @agentic-toolkit primitives.",
+  "description": "Agentic Developer Hub shared components \u2014 header, footer, theme switcher composed on shadcn + @agentic-toolkit primitives.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -70,8 +70,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
     "next": "^15.1.0",
     "tsup": "^8.3.5",
