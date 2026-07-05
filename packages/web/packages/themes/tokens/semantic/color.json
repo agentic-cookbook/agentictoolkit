@@ -1,0 +1,94 @@
+{
+  "color": {
+    "$type": "color",
+
+    "primary": { "$value": "{palette.gold.500}", "$description": "M3 primary — brand gold" },
+    "on-primary": { "$value": "{palette.neutral.950}", "$description": "M3 on-primary — text/icons on primary" },
+    "primary-container": { "$value": "{palette.gold.700}", "$description": "M3 primary-container" },
+    "on-primary-container": { "$value": "{palette.gold.200}", "$description": "M3 on-primary-container" },
+    "inverse-primary": { "$value": "{palette.gold.800}", "$description": "M3 inverse-primary" },
+    "primary-bright": { "$value": "{palette.gold.300}", "$description": "extension — primary hover/bright" },
+    "primary-dim": { "$value": "{alpha.gold-15}", "$description": "extension — primary @15% (selection/containers)" },
+
+    "secondary": { "$value": "{palette.taupe.500}", "$description": "M3 secondary — muted bronze" },
+    "on-secondary": { "$value": "{palette.neutral.950}" },
+    "secondary-container": { "$value": "{palette.taupe.900}" },
+    "on-secondary-container": { "$value": "{palette.taupe.200}" },
+
+    "tertiary": { "$value": "{palette.blue.500}", "$description": "M3 tertiary — blue" },
+    "on-tertiary": { "$value": "{palette.neutral.950}" },
+    "tertiary-container": { "$value": "{palette.blue.900}" },
+    "on-tertiary-container": { "$value": "{palette.blue.200}" },
+
+    "error": { "$value": "{palette.red.500}", "$description": "M3 error — the red Delete" },
+    "on-error": { "$value": "{palette.neutral.950}" },
+    "error-container": { "$value": "{palette.red.900}" },
+    "on-error-container": { "$value": "{palette.red.200}" },
+
+    "surface": { "$value": "{palette.neutral.950}", "$description": "M3 surface — base background" },
+    "surface-dim": { "$value": "{palette.neutral.975}" },
+    "surface-bright": { "$value": "{palette.neutral.bright}" },
+    "surface-container-lowest": { "$value": "{palette.neutral.1000}" },
+    "surface-container-low": { "$value": "{palette.neutral.925}" },
+    "surface-container": { "$value": "{palette.neutral.900}", "$description": "M3 surface-container (was surface-raised)" },
+    "surface-container-high": { "$value": "{palette.neutral.860}", "$description": "M3 surface-container-high (was surface-hover)" },
+    "surface-container-highest": { "$value": "{palette.neutral.820}" },
+    "on-surface": { "$value": "{palette.neutral.100}", "$description": "M3 on-surface — primary text" },
+    "on-surface-variant": { "$value": "{palette.neutral.500}", "$description": "M3 on-surface-variant — secondary text" },
+    "text-dim": { "$value": "{palette.neutral.600}", "$description": "extension — dim/disabled-ish text" },
+
+    "outline": { "$value": "{palette.neutral.780}", "$description": "M3 outline — default border" },
+    "outline-variant": { "$value": "{palette.neutral.800}", "$description": "M3 outline-variant — subtle border" },
+    "outline-strong": { "$value": "{palette.neutral.700}", "$description": "extension — strong border" },
+
+    "inverse-surface": { "$value": "{palette.neutral.100}" },
+    "inverse-on-surface": { "$value": "{palette.neutral.900}" },
+    "scrim": { "$value": "{palette.black}" },
+    "shadow": { "$value": "{palette.black}" },
+    "surface-tint": { "$value": "{color.primary}" },
+
+    "success": { "$value": "{palette.green.500}", "$description": "custom M3 color — success" },
+    "on-success": { "$value": "{palette.neutral.950}" },
+    "success-container": { "$value": "{palette.green.900}" },
+    "on-success-container": { "$value": "{palette.green.200}" },
+
+    "warning": { "$value": "{palette.amber.500}", "$description": "custom M3 color — warning" },
+    "on-warning": { "$value": "{palette.neutral.950}" },
+    "warning-container": { "$value": "{palette.amber.900}" },
+    "on-warning-container": { "$value": "{palette.amber.200}" },
+
+    "info": { "$value": "{palette.blue.500}", "$description": "custom M3 color — info" },
+    "on-info": { "$value": "{palette.neutral.950}" },
+    "info-container": { "$value": "{palette.blue.900}" },
+    "on-info-container": { "$value": "{palette.blue.200}" },
+
+    "link": { "$value": "{color.primary}" },
+    "link-hover": { "$value": "{color.primary-bright}" },
+
+    "surface-raised": { "$value": "{color.surface-container}", "$description": "COMPAT (delete after migration) → surface-container" },
+    "surface-hover": { "$value": "{color.surface-container-high}", "$description": "COMPAT → surface-container-high" },
+    "border": { "$value": "{color.outline}", "$description": "COMPAT → outline" },
+    "border-subtle": { "$value": "{color.outline-variant}", "$description": "COMPAT → outline-variant" },
+    "border-strong": { "$value": "{color.outline-strong}", "$description": "COMPAT → outline-strong" },
+    "text-primary": { "$value": "{color.on-surface}", "$description": "COMPAT → on-surface" },
+    "text-secondary": { "$value": "{color.on-surface-variant}", "$description": "COMPAT → on-surface-variant" },
+    "accent": { "$value": "{color.primary}", "$description": "COMPAT → primary" },
+    "accent-bright": { "$value": "{color.primary-bright}", "$description": "COMPAT → primary-bright" },
+    "accent-dim": { "$value": "{color.primary-dim}", "$description": "COMPAT → primary-dim" },
+
+    "apt-bg": { "$value": "{color.surface}", "$description": "COMPAT (legacy Tailwind apt-* palette) → delete after migration" },
+    "apt-surface": { "$value": "{color.surface-raised}", "$description": "COMPAT" },
+    "apt-surface-2": { "$value": "{color.surface-hover}", "$description": "COMPAT" },
+    "apt-input": { "$value": "{color.surface-hover}", "$description": "COMPAT" },
+    "apt-border": { "$value": "{color.border}", "$description": "COMPAT" },
+    "apt-border-strong": { "$value": "{color.border-strong}", "$description": "COMPAT" },
+    "apt-text": { "$value": "{color.text-primary}", "$description": "COMPAT" },
+    "apt-text-muted": { "$value": "{color.text-secondary}", "$description": "COMPAT" },
+    "apt-text-dim": { "$value": "{color.text-dim}", "$description": "COMPAT" },
+    "apt-gold": { "$value": "{color.accent}", "$description": "COMPAT" },
+    "apt-gold-bright": { "$value": "{color.accent-bright}", "$description": "COMPAT" },
+    "apt-blue": { "$value": "{color.info}", "$description": "COMPAT" },
+    "apt-green": { "$value": "{color.success}", "$description": "COMPAT" },
+    "apt-red": { "$value": "{color.error}", "$description": "COMPAT" }
+  }
+}

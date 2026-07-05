@@ -1,0 +1,9 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": { "$value": "{font-family.comic-neue-sans}" },
+    "serif": { "$value": "{font-family.comic-neue-serif}" },
+    "mono": { "$value": "{font-family.comic-neue-mono}" },
+    "display": { "$value": "{font.serif}" }
+  }
+}

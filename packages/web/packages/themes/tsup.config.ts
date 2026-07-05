@@ -5,8 +5,11 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     colorMode: 'src/colorMode.tsx',
+    appearance: 'src/appearance.ts',
+    'appearance-store': 'src/appearance-store.tsx',
     ThemeStyle: 'src/ThemeStyle.tsx',
     manifest: 'src/manifest.ts',
+    tokens: 'src/tokens.ts',
   },
   outDir: 'dist',
   format: ['esm'],

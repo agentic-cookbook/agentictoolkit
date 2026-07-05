@@ -4,6 +4,7 @@ import {
   adhCourierCss,
   adhFiraCss,
   adhIosevkaCss,
+  adhDevPreviewCss,
   adhJetbrainsCss,
   adhManropeCss,
   agenticcookbookwebCss,
@@ -22,6 +23,7 @@ export type ThemeKey =
   | 'adh'
   | 'adh-comic'
   | 'adh-courier'
+  | 'adh-dev-preview'
   | 'adh-fira'
   | 'adh-iosevka'
   | 'adh-jetbrains'
@@ -47,6 +49,7 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   adh: { id: 'adh', label: 'ADH', css: adhCss },
   'adh-comic': { id: 'adh-comic', label: 'ADH · Comic', css: adhComicCss },
   'adh-courier': { id: 'adh-courier', label: 'ADH · Courier', css: adhCourierCss },
+  'adh-dev-preview': { id: 'adh-dev-preview', label: 'ADH · Dev Preview', css: adhDevPreviewCss },
   'adh-fira': { id: 'adh-fira', label: 'ADH · Fira', css: adhFiraCss },
   'adh-iosevka': { id: 'adh-iosevka', label: 'ADH · Iosevka', css: adhIosevkaCss },
   'adh-jetbrains': { id: 'adh-jetbrains', label: 'ADH · JetBrains', css: adhJetbrainsCss },

@@ -1,0 +1,9 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": { "$value": "{font-family.jetbrains-mono-sans}" },
+    "serif": { "$value": "{font-family.jetbrains-mono-serif}" },
+    "mono": { "$value": "{font-family.jetbrains-mono-mono}" },
+    "display": { "$value": "{font.serif}" }
+  }
+}

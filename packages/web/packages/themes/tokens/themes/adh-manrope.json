@@ -1,0 +1,9 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": { "$value": "{font-family.manrope}" },
+    "serif": { "$value": "{font-family.instrument-serif}" },
+    "mono": { "$value": "{font-family.dm-mono}" },
+    "display": { "$value": "{font.serif}" }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "shape": {
+    "corner": {
+      "$type": "dimension",
+      "none": { "$value": "0" },
+      "extra-small": { "$value": "4px" },
+      "small": { "$value": "8px" },
+      "medium": { "$value": "12px" },
+      "large": { "$value": "16px" },
+      "extra-large": { "$value": "28px" },
+      "full": { "$value": "9999px" }
+    }
+  },
+  "elevation": {
+    "$type": "other",
+    "level0": { "$value": "none" },
+    "level1": { "$value": "0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15)" },
+    "level2": { "$value": "0 1px 2px 0 rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15)" },
+    "level3": { "$value": "0 1px 3px 0 rgba(0,0,0,0.3), 0 4px 8px 3px rgba(0,0,0,0.15)" },
+    "level4": { "$value": "0 2px 3px 0 rgba(0,0,0,0.3), 0 6px 10px 4px rgba(0,0,0,0.15)" },
+    "level5": { "$value": "0 4px 4px 0 rgba(0,0,0,0.3), 0 8px 12px 6px rgba(0,0,0,0.15)" }
+  },
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "short1": { "$value": "50ms" },
+      "short2": { "$value": "100ms" },
+      "short3": { "$value": "150ms" },
+      "short4": { "$value": "200ms" },
+      "medium1": { "$value": "250ms" },
+      "medium2": { "$value": "300ms" },
+      "medium3": { "$value": "350ms" },
+      "medium4": { "$value": "400ms" },
+      "long1": { "$value": "450ms" },
+      "long2": { "$value": "500ms" }
+    },
+    "easing": {
+      "$type": "other",
+      "standard": { "$value": "cubic-bezier(0.2, 0, 0, 1)" },
+      "standard-decelerate": { "$value": "cubic-bezier(0, 0, 0, 1)" },
+      "standard-accelerate": { "$value": "cubic-bezier(0.3, 0, 1, 1)" },
+      "emphasized": { "$value": "cubic-bezier(0.2, 0, 0, 1)" },
+      "emphasized-decelerate": { "$value": "cubic-bezier(0.05, 0.7, 0.1, 1)" },
+      "emphasized-accelerate": { "$value": "cubic-bezier(0.3, 0, 0.8, 0.15)" },
+      "linear": { "$value": "linear" }
+    }
+  },
+  "state": {
+    "$type": "number",
+    "hover-opacity": { "$value": "0.08", "$description": "M3 hover state-layer opacity" },
+    "focus-opacity": { "$value": "0.12" },
+    "pressed-opacity": { "$value": "0.12" },
+    "dragged-opacity": { "$value": "0.16" },
+    "disabled-content-opacity": { "$value": "0.38", "$description": "M3 disabled content" },
+    "disabled-container-opacity": { "$value": "0.12" }
+  },
+  "space": {
+    "$type": "dimension",
+    "0": { "$value": "0" },
+    "1": { "$value": "4px" },
+    "2": { "$value": "8px" },
+    "3": { "$value": "12px" },
+    "4": { "$value": "16px" },
+    "5": { "$value": "20px" },
+    "6": { "$value": "24px" },
+    "8": { "$value": "32px" },
+    "10": { "$value": "40px" },
+    "12": { "$value": "48px" },
+    "16": { "$value": "64px" }
+  },
+  "focus": {
+    "ring-color": { "$value": "{color.primary}", "$type": "color" },
+    "ring-width": { "$value": "2px", "$type": "dimension" },
+    "ring-offset": { "$value": "2px", "$type": "dimension" }
+  },
+  "z": {
+    "$type": "number",
+    "header": { "$value": "50" },
+    "footer": { "$value": "45" },
+    "overlay": { "$value": "100" },
+    "modal": { "$value": "1000" },
+    "popover": { "$value": "1100" },
+    "tooltip": { "$value": "1200" }
+  },
+  "size": {
+    "control-sm": { "$value": "32px", "$type": "dimension" },
+    "control-md": { "$value": "36px", "$type": "dimension" },
+    "control-lg": { "$value": "40px", "$type": "dimension" },
+    "input-height": { "$value": "40px", "$type": "dimension" },
+    "container-max-width": { "$value": "72rem", "$type": "dimension" }
+  }
+}
