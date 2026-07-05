@@ -8,7 +8,7 @@ export interface MarkdownDocument {
   id: string
   customerId: string
   /** Ecosystem (tenant) id. */
-  ownerId: string
+  ecosystemId: string
   deletedAt?: string | null
   title: string
   /** Full raw markdown, byte-exact. */
