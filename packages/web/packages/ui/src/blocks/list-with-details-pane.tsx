@@ -34,6 +34,14 @@ export interface ListWithDetailsPaneProps<T> {
   deleteConfirm?: { title: string; description?: React.ReactNode }
   actions?: ListAction[]
   storageKey?: string
+  /** Opt-in URL-driven selection (a deep-linkable detail row). When provided, the
+   *  SINGLE selected row is mirrored into `?<paramKey>=<id>` via `history.replaceState`
+   *  (selecting a row neither remounts the route nor spams the history stack) and the
+   *  initial selection is seeded from it on mount, so a reload / shared link restores
+   *  the open row. A 0-or-many selection clears the param. Omit for the legacy
+   *  internal-selection behavior — byte-for-byte unchanged. Sibling to `storageKey`
+   *  (which persists only the split-bar position, never selection). */
+  paramKey?: string
   loading?: boolean
   emptyLabel?: string
   ariaLabel: string
@@ -54,6 +62,7 @@ export function ListWithDetailsPane<T>({
   deleteConfirm,
   actions = [],
   storageKey,
+  paramKey,
   loading,
   emptyLabel,
   ariaLabel,
@@ -62,6 +71,44 @@ export function ListWithDetailsPane<T>({
   const [internalFilter, setInternalFilter] = React.useState("")
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
   const [confirming, setConfirming] = React.useState(false)
+
+  // Opt-in URL selection (deep-linkable row): mirror the SINGLE selected row into
+  // `?<paramKey>=<id>` and seed the initial selection from it on mount. When `paramKey`
+  // is absent every branch below is inert, so behavior is byte-for-byte the legacy
+  // internal-state one.
+  function writeParam(ids: Set<string>): void {
+    if (!paramKey || typeof window === "undefined") return
+    const arr = [...ids]
+    const only = arr.length === 1 ? arr[0] : undefined
+    const url = new URL(window.location.href)
+    if (only !== undefined) url.searchParams.set(paramKey, only)
+    else url.searchParams.delete(paramKey)
+    window.history.replaceState(null, "", url)
+  }
+  // The one write path for selection: update state AND reflect it to the URL.
+  function updateSelection(ids: Set<string>): void {
+    setSelectedIds(ids)
+    writeParam(ids)
+  }
+  // Seed selection from the URL once on mount (deep-link / reload restore). An id no
+  // longer present in `rows` is dropped by the existing stale-id prune below, so a
+  // stale link fails safe to "nothing open" rather than a blank screen.
+  React.useEffect(() => {
+    if (!paramKey) return
+    const id = new URLSearchParams(window.location.search).get(paramKey)
+    if (id) setSelectedIds(new Set([id]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Once rows are loaded, prune a URL-seeded id that no longer exists (deleted/renamed) from BOTH
+  // state and the URL, so a stale `?<paramKey>=` doesn't linger and re-seed on reload. Guarded on
+  // `loading` / non-empty rows so an async load never drops a valid deep-link before rows arrive.
+  React.useEffect(() => {
+    if (!paramKey || loading || rows.length === 0) return
+    const kept = new Set([...selectedIds].filter((id) => rows.some((r) => getRowId(r) === id)))
+    if (kept.size !== selectedIds.size) updateSelection(kept)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramKey, loading, rows, selectedIds])
 
   // Controlled or internal filter
   const filterValue = filterText ?? internalFilter
@@ -100,7 +147,7 @@ export function ListWithDetailsPane<T>({
   function handleConfirmDelete(): void {
     setConfirming(false)
     onDelete?.(selectedArr)
-    setSelectedIds(new Set())
+    updateSelection(new Set())
   }
 
   return (
@@ -154,7 +201,7 @@ export function ListWithDetailsPane<T>({
             rows={visible}
             getRowId={getRowId}
             selectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
+            onSelectionChange={updateSelection}
             loading={loading}
             emptyLabel={emptyLabel}
             ariaLabel={ariaLabel}

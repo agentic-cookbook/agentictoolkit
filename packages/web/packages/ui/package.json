@@ -26,6 +26,11 @@
       "development": "./src/lib/utils.ts",
       "import": "./dist/lib/utils.js"
     },
+    "./lib/search-params": {
+      "types": "./dist/lib/search-params.d.ts",
+      "development": "./src/lib/search-params.ts",
+      "import": "./dist/lib/search-params.js"
+    },
     "./lib/errors": {
       "types": "./dist/lib/errors.d.ts",
       "development": "./src/lib/errors.ts",
@@ -65,6 +70,11 @@
       "types": "./dist/hooks/useAction.d.ts",
       "development": "./src/hooks/useAction.ts",
       "import": "./dist/hooks/useAction.js"
+    },
+    "./hooks/useDualModeSelection": {
+      "types": "./dist/hooks/useDualModeSelection.d.ts",
+      "development": "./src/hooks/useDualModeSelection.ts",
+      "import": "./dist/hooks/useDualModeSelection.js"
     },
     "./styles/globals.css": "./src/styles/globals.css",
     "./styles/components.css": "./src/styles/components.css",
