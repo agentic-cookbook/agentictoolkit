@@ -1,0 +1,147 @@
+/* Skins for the @adh-shared/ui primitives that style through SEMANTIC classes
+ * rather than utilities: these class names are a public theming surface — the
+ * theme editor (and user CSS themes) target them (e.g. `.adh-dropdown-menu__item`),
+ * and chrome like NavigationPopover composes them — so they must stay stable
+ * class hooks in the DOM. The skin lives HERE (the package that owns the
+ * components); @adh-shared/adh re-imports this file in its styles.css, so every
+ * site gets it through the one import it already has.
+ */
+
+/* Avatar primitive */
+.adh-avatar {
+  position: relative;
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 9999px;
+}
+
+.adh-avatar__image {
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  width: 100%;
+}
+
+.adh-avatar__fallback {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+/* Dropdown menu primitive */
+.adh-dropdown-menu__content {
+  z-index: 50;
+  min-width: 14rem;
+  overflow: hidden;
+  border-radius: var(--pc-radius, 0.375rem);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  padding: 0.25rem;
+  color: var(--color-text-primary);
+  box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--color-shadow, #000) 50%, transparent);
+}
+
+.adh-dropdown-menu__item {
+  position: relative;
+  display: flex;
+  cursor: default;
+  user-select: none;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  outline: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.adh-dropdown-menu__item[data-highlighted],
+.adh-dropdown-menu__item:focus {
+  background: var(--color-surface-hover);
+}
+
+/* Accent (brand-gold) highlight — opt-in via the DropdownMenu* `accent` prop,
+   for accent selectors like the focused-item rail picker. Single home for the
+   gold-focus treatment that call sites used to hand-roll. --color-accent-dim is
+   the brand gold at 15% (the old `bg-apt-gold/15`). */
+.adh-dropdown-menu__item--accent {
+  cursor: pointer;
+}
+
+.adh-dropdown-menu__item--accent[data-highlighted],
+.adh-dropdown-menu__item--accent:focus {
+  background: var(--color-accent-dim);
+  color: var(--color-text-primary);
+}
+
+.adh-dropdown-menu__item[data-disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.adh-dropdown-menu__item--inset {
+  padding-left: 2rem;
+}
+
+.adh-dropdown-menu__item--indicator-left {
+  padding-left: 2rem;
+  padding-right: 0.5rem;
+}
+
+.adh-dropdown-menu__item-icon {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+.adh-dropdown-menu__sub-trigger[data-popup-open] {
+  background: var(--color-surface-hover);
+}
+
+.adh-dropdown-menu__sub-trigger-chevron {
+  margin-left: auto;
+  height: 1rem;
+  width: 1rem;
+}
+
+.adh-dropdown-menu__indicator-slot {
+  position: absolute;
+  left: 0.5rem;
+  display: flex;
+  height: 0.875rem;
+  width: 0.875rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.adh-dropdown-menu__indicator-check {
+  height: 1rem;
+  width: 1rem;
+}
+
+.adh-dropdown-menu__indicator-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  fill: currentColor;
+}
+
+.adh-dropdown-menu__label {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.adh-dropdown-menu__separator {
+  margin: 0.25rem -0.25rem;
+  height: 1px;
+  background: var(--color-border);
+}

@@ -1,0 +1,110 @@
+import * as React from "react";
+import { Search } from "lucide-react";
+
+import { cn } from "../lib/utils";
+import { Input } from "./input";
+import { Select } from "./select";
+
+/** The search field of a {@link SearchFilterBar}. */
+export interface SearchFieldConfig {
+  /** Controlled text value. */
+  value: string;
+  /** Called with the new text on every keystroke. */
+  onChange: (value: string) => void;
+  /** Accessible label — the field is icon-only, so this is its only name. */
+  label: string;
+  /** Placeholder shown when empty. */
+  placeholder?: string;
+  /**
+   * Optional key handler on the search input — e.g. to commit a search
+   * immediately on Enter (flushing a debounce) on top of the live `onChange`.
+   */
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+}
+
+/**
+ * One filter `<select>` axis in a {@link SearchFilterBar}. An empty `value`
+ * selects the leading all-pass option (no filter on this axis).
+ */
+export interface FilterSelectConfig {
+  /** Stable identity for the React key and for distinguishing axes. */
+  name: string;
+  /** Accessible label for the control, e.g. `"Filter by category"`. */
+  label: string;
+  /** Selected option value; `""` selects the all-pass entry. */
+  value: string;
+  /** Option values (each is both the value and the visible text). */
+  options: string[];
+  /** Label for the leading all-pass option, e.g. `"All categories"`. */
+  allLabel: string;
+  /** Called with the newly selected value (`""` for the all-pass entry). */
+  onChange: (value: string) => void;
+}
+
+export interface SearchFilterBarProps {
+  /** The (required) search field configuration. */
+  search: SearchFieldConfig;
+  /** Zero or more filter dropdowns, rendered in a row under the search field. */
+  filters?: FilterSelectConfig[];
+  /** Extra classes on the `role="search"` root. */
+  className?: string;
+  /**
+   * Accessible name for the `role="search"` landmark. Recommended when a page has
+   * more than one search region so assistive tech can tell them apart.
+   */
+  "aria-label"?: string;
+}
+
+/**
+ * A search field plus a configurable row of filter `<select>`s, wrapped in a
+ * `role="search"` region. Every axis is fully controlled by the caller (value +
+ * onChange); the option sets are supplied by the caller so a narrowed result
+ * list can never empty its own dropdowns. Composes the shared {@link Input} and
+ * {@link Select} primitives — the single home for the "search + filters above a
+ * list" pattern across the platform.
+ */
+export function SearchFilterBar({
+  search,
+  filters = [],
+  className,
+  "aria-label": ariaLabel,
+}: SearchFilterBarProps): React.ReactElement {
+  return (
+    <div role="search" aria-label={ariaLabel} className={cn("flex flex-col gap-2", className)}>
+      <div className="relative">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
+        />
+        <Input
+          type="search"
+          value={search.value}
+          aria-label={search.label}
+          placeholder={search.placeholder}
+          className="pl-8"
+          onChange={(e) => search.onChange(e.target.value)}
+          onKeyDown={search.onKeyDown}
+        />
+      </div>
+      {filters.length > 0 && (
+        <div className="flex gap-2">
+          {filters.map((f) => (
+            <Select
+              key={f.name}
+              aria-label={f.label}
+              value={f.value}
+              onChange={(e) => f.onChange(e.target.value)}
+            >
+              <option value="">{f.allLabel}</option>
+              {f.options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </Select>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
