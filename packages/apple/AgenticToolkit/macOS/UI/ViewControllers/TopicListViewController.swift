@@ -127,30 +127,47 @@ open class TopicListViewController: NSViewController {
     /// `makeHeaderCell` (leading inset + icon + gap + text + trailing inset) plus
     /// an allowance for the outline's internal margins and the vertical scroller.
     open func preferredWidth() -> CGFloat {
-        let itemFont = NSFont.systemFont(ofSize: 13)
-        let headerFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        func textWidth(_ string: String, _ font: NSFont) -> CGFloat {
-            ceil((string as NSString).size(withAttributes: [.font: font]).width)
-        }
         var widest: CGFloat = 0
         for section in sections {
             if let title = section.title, !title.isEmpty {
-                widest = max(widest, Self.headerLeadingInset + textWidth(title, headerFont))
+                widest = max(widest, CellMetrics.headerLeadingInset
+                    + ceil(title.renderedWidth(usingFont: CellMetrics.headerFont)))
             }
             for item in section.items {
-                // leading(4) + icon(16) + gap(6) + text + trailing(4)
-                widest = max(widest, Self.itemChromeWidth + textWidth(item.title, itemFont))
+                widest = max(widest, CellMetrics.itemChromeWidth
+                    + ceil(item.title.renderedWidth(usingFont: CellMetrics.itemFont)))
             }
         }
         return widest + Self.outlineChromePadding
     }
 
-    private static let headerLeadingInset: CGFloat = 2
-    private static let itemChromeWidth: CGFloat = 4 + 16 + 6 + 4
-    /// Allowance beyond the cell's own content: the source-list sidebar's built-in
-    /// leading inset, the vertical-scroller gutter, and a small trailing margin.
-    /// Without it the widest row clips even at its own computed width.
-    private static let outlineChromePadding: CGFloat = 64
+    /// The one source of truth for the row layout, shared by `preferredWidth`
+    /// (which measures it) and `makeItemCell`/`makeHeaderCell` (which build it),
+    /// so the two can never drift and silently re-clip labels.
+    fileprivate enum CellMetrics {
+        static var itemFont: NSFont { .systemFont(ofSize: 13) }
+        static var headerFont: NSFont { .systemFont(ofSize: 11, weight: .semibold) }
+        static let iconLeadingInset: CGFloat = 4
+        static let iconSize: CGFloat = 16
+        static let iconToTextGap: CGFloat = 6
+        static let textTrailingInset: CGFloat = 4
+        static let headerLeadingInset: CGFloat = 2
+        /// Everything around an item row's text: leading inset + icon + gap + trailing.
+        static var itemChromeWidth: CGFloat {
+            iconLeadingInset + iconSize + iconToTextGap + textTrailingInset
+        }
+    }
+
+    // Allowance beyond a row's own cell content: the source-list sidebar's
+    // built-in leading inset, the vertical-scroller gutter, and a trailing margin.
+    // These are AppKit implementation details with no public metric, so they're
+    // empirical — named separately to document what the total (64) is paying for.
+    private static let sourceListLeadingInset: CGFloat = 30
+    private static let scrollerGutter: CGFloat = 16
+    private static let trailingMargin: CGFloat = 18
+    private static var outlineChromePadding: CGFloat {
+        sourceListLeadingInset + scrollerGutter + trailingMargin
+    }
 
     /// Selects the row matching `id` without firing `onSelect`.
     /// No-op if the id isn't present.
@@ -198,14 +215,17 @@ open class TopicListViewController: NSViewController {
 // row across reloads, which keeps NSOutlineView's selection bookkeeping
 // stable.
 
-/// An outline view whose single column fills the available width on every layout
-/// pass, so rows never clip their labels. `sizeLastColumnToFit()` after
-/// `super.layout()` is the safe primitive here — setting `column.width` directly
-/// from `layout()` re-enters `NSTableView.tile`/`setFrameSize` and throws.
-private final class ColumnFillingOutlineView: NSOutlineView {
-    override func layout() {
-        super.layout()
-        sizeLastColumnToFit()
+extension TopicListViewController {
+    /// An outline view whose single column fills the available width on every
+    /// layout pass, so rows never clip their labels. `sizeLastColumnToFit()`
+    /// after `super.layout()` is the safe primitive here — setting `column.width`
+    /// directly from `layout()` re-enters `NSTableView.tile`/`setFrameSize` and
+    /// throws.
+    fileprivate final class ColumnFillingOutlineView: NSOutlineView {
+        override func layout() {
+            super.layout()
+            sizeLastColumnToFit()
+        }
     }
 }
 
@@ -318,13 +338,14 @@ extension TopicListViewController: NSOutlineViewDelegate {
         let cell = NSTableCellView()
         cell.identifier = identifier
         let textField = NSTextField(labelWithString: "")
-        textField.font = .systemFont(ofSize: 11, weight: .semibold)
+        textField.font = CellMetrics.headerFont
         textField.textColor = .secondaryLabelColor
         textField.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(textField)
         cell.textField = textField
         NSLayoutConstraint.activate([
-            textField.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 2),
+            textField.leadingAnchor.constraint(
+                equalTo: cell.leadingAnchor, constant: CellMetrics.headerLeadingInset),
             textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
         ])
         return cell
@@ -338,7 +359,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let textField = NSTextField(labelWithString: "")
-        textField.font = .systemFont(ofSize: 13)
+        textField.font = CellMetrics.itemFont
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
 
@@ -348,13 +369,16 @@ extension TopicListViewController: NSOutlineViewDelegate {
         cell.textField = textField
 
         NSLayoutConstraint.activate([
-            imageView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 4),
+            imageView.leadingAnchor.constraint(
+                equalTo: cell.leadingAnchor, constant: CellMetrics.iconLeadingInset),
             imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 16),
-            imageView.heightAnchor.constraint(equalToConstant: 16),
+            imageView.widthAnchor.constraint(equalToConstant: CellMetrics.iconSize),
+            imageView.heightAnchor.constraint(equalToConstant: CellMetrics.iconSize),
 
-            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-            textField.trailingAnchor.constraint(lessThanOrEqualTo: cell.trailingAnchor, constant: -4),
+            textField.leadingAnchor.constraint(
+                equalTo: imageView.trailingAnchor, constant: CellMetrics.iconToTextGap),
+            textField.trailingAnchor.constraint(
+                lessThanOrEqualTo: cell.trailingAnchor, constant: -CellMetrics.textTrailingInset),
             textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
         ])
 

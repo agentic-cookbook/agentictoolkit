@@ -105,19 +105,32 @@ extension ComposableSettings {
 
         open override func viewWillAppear() {
             super.viewWillAppear()
-            unifyNestedSidebars()
+            updateSidebarLayout()
             // Auto-select the first panel so the detail pane is never blank.
             if currentPanel == nil, let first = panels.first {
                 selectPanel(first)
             }
         }
 
-        /// Sizes the sidebar to `max(own content width, override)` and pins it
-        /// there (min == max), so the topic list fully discloses its rows and can
-        /// never be dragged to a different width.
+        /// Re-unifies sibling nested sidebars and re-pins this split's own sidebar.
+        /// Called on appearance and whenever the panel set changes, so panels added
+        /// while the window is already open still share one width (rather than the
+        /// new split sizing to its own content while its siblings keep the old one).
+        private func updateSidebarLayout() {
+            unifyNestedSidebars()
+            applySidebarWidth()
+        }
+
+        /// Pins the content-sized sidebar to a single width (min == max), so the
+        /// topic list fully discloses its rows and can never be dragged.
         private func applySidebarWidth() {
             guard contentSizedSidebar, isViewLoaded, let sidebarItem = splitViewItems.first else { return }
-            let width = max(listViewController.preferredWidth(), minimumSidebarWidthOverride ?? 0)
+            // When a parent has unified sibling widths, `minimumSidebarWidthOverride`
+            // is already the authoritative (widest) width, so use it directly rather
+            // than re-measuring this list. Capped so a pathologically long row
+            // truncates instead of blowing out the sidebar (and the window minimum).
+            let width = min(minimumSidebarWidthOverride ?? listViewController.preferredWidth(),
+                            Self.maximumContentSidebarWidth)
             sidebarItem.minimumThickness = width
             sidebarItem.maximumThickness = width
         }
@@ -130,14 +143,26 @@ extension ComposableSettings {
         private func unifyNestedSidebars() {
             let nested = panels.compactMap { $0 as? SplitViewController }
             guard nested.count > 1 else { return }
-            let widest = nested.map { split -> CGFloat in
-                _ = split.view
-                return split.listViewController.preferredWidth()
-            }.max() ?? 0
+            let widest = min(
+                nested.map { split -> CGFloat in
+                    _ = split.view
+                    return split.listViewController.preferredWidth()
+                }.max() ?? 0,
+                Self.maximumContentSidebarWidth)
             for split in nested {
                 split.minimumSidebarWidthOverride = widest
             }
+            // Widen the detail pane hosting these nested splits so the widest one
+            // (its now-fixed sidebar + its own detail floor) can't be squeezed
+            // below that floor at the window's minimum size; this lifts the
+            // window's effective minimum width to fit the content instead.
+            let neededDetail = nested.map { widest + $0.detailMinimumThickness }.max() ?? 0
+            splitViewItems.last?.minimumThickness = max(detailMinimumThickness, neededDetail)
         }
+
+        /// Upper bound on a content-sized sidebar, so one unusually long row
+        /// truncates rather than pushing the window's minimum width arbitrarily wide.
+        private static let maximumContentSidebarWidth: CGFloat = 480
 
         private func applyTheme(_ palette: SemanticPalette) {
             // Window background follows the theme so the title bar and
@@ -153,19 +178,19 @@ extension ComposableSettings {
         public func setPanels(_ panels: [any ComposableSettingsPanel]) {
             self.panels = panels
             listViewController.setPanels(panels)
-            applySidebarWidth()
+            updateSidebarLayout()
         }
 
         public func addPanel(_ panel: any ComposableSettingsPanel) {
             panels.append(panel)
             listViewController.setPanels(panels)
-            applySidebarWidth()
+            updateSidebarLayout()
         }
 
         public func removePanel(_ panel: any ComposableSettingsPanel) {
             panels.removeAll { $0 === panel }
             listViewController.setPanels(panels)
-            applySidebarWidth()
+            updateSidebarLayout()
             if currentPanel === panel { show(nil) }
         }
 

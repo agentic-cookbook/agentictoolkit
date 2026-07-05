@@ -108,6 +108,7 @@
 		17FE9EDC907863B301001ADD /* ChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EA98060EA6B2608283BFF8 /* ChatBackend.swift */; };
 		19268E8027ECBCAC1810B587 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035AE53EF8F5238E77BF732 /* ProgressView.swift */; };
 		19ED617C02B1A3CE272B1E86 /* TerminalSessionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1329D11B1EB5258D60D38C /* TerminalSessionProfile.swift */; };
+		1A4B3132C9EA6955BA9D75D2 /* StringRenderedWidth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143BB28B18F37E34CE02E2CB /* StringRenderedWidth.swift */; };
 		1AC1EFD9A6ED45A8731489D0 /* AgenticToolkitCoreUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7A6A6F1AF7704D404EE128D5 /* AgenticToolkitCoreUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		1BA4D8928F4584D0024ED5E6 /* UserDefaultsWindowStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA46CC60E98301AA82013F9D /* UserDefaultsWindowStateStorage.swift */; };
 		1CF724EAAFCA775665D6C36B /* LogColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783F11D016705C92E0829D05 /* LogColumn.swift */; };
@@ -988,6 +989,7 @@
 		127425969220F166083FBCAD /* AIRequestSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequestSpec.swift; sourceTree = "<group>"; };
 		13380BD45E62954C3DBA7727 /* SystemWindowShortcutNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowShortcutNames.swift; sourceTree = "<group>"; };
 		140B7E5133EF9E3212A9A543 /* TerminalSessionRowCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionRowCellView.swift; sourceTree = "<group>"; };
+		143BB28B18F37E34CE02E2CB /* StringRenderedWidth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringRenderedWidth.swift; sourceTree = "<group>"; };
 		14CA1670EBFA9E13E74A71B7 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		14D79B17B7A4A814634CF92D /* WorkGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkGroupsView.swift; sourceTree = "<group>"; };
 		14F0D7A30AF00561219B8FCF /* ContextVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextVisualizationView.swift; sourceTree = "<group>"; };
@@ -1855,6 +1857,7 @@
 				1F62C0D62EE0032DB3E6417D /* Document */,
 				FE539DABB2B8624FA09B5FF9 /* Theme */,
 				9B98611E780BAA553707EB5B /* ViewControllers */,
+				143BB28B18F37E34CE02E2CB /* StringRenderedWidth.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -2863,7 +2866,7 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		"TEMP_45A7FBE4-3DF4-44A8-8C97-AB69007A9586" /* Settings */ = {
+		"TEMP_22713636-B4F5-40BA-B6E8-EA6AEB32F369" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -3789,6 +3792,7 @@
 				411232E3A56BD1FD8B201869 /* SliderView.swift in Sources */,
 				C408F9A22A6D80AB6C05EDFF /* SplitViewController.swift in Sources */,
 				38995CAB02C10C1B10AD206F /* StepperView.swift in Sources */,
+				1A4B3132C9EA6955BA9D75D2 /* StringRenderedWidth.swift in Sources */,
 				8C4E3E137BFF06DA6688CFD4 /* SummarizerDebugCommands.swift in Sources */,
 				E5CF1F9F509EEF822EA87A59 /* SummarizerDebugCoordinator.swift in Sources */,
 				CC0C0992D429704C5BD3EFD4 /* SummarizerDebugLog.swift in Sources */,

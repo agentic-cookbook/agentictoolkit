@@ -111,9 +111,9 @@ extension ComposableSettings {
         }
 
         private static func maxLabelWidth(for labels: [String], font: NSFont?) -> CGFloat {
-            let attributes: [NSAttributedString.Key: Any] = [.font: font ?? .systemFont(ofSize: 11)]
+            let font = font ?? .systemFont(ofSize: 11)
             return labels
-                .map { ($0 as NSString).size(withAttributes: attributes).width }
+                .map { $0.renderedWidth(usingFont: font) }
                 .max() ?? 0
         }
     }
