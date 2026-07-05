@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog"
-import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
+import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem } from "./topic-detail"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -62,10 +62,13 @@ export interface TopicLevel {
    *  package calls it for re-click-deselect, breadcrumb up-navigation, and Back. */
   onClear: () => void
   emptyLabel?: string
-  /** Leading rail row above the topics (e.g. a "New…" affordance). A `(collapsed) =>
-   *  node` function shrinks it to an icon-only "+" when the rail is undisclosed. */
-  railSlot?: RailSlot
-  railSlotActive?: boolean
+  /** Create affordance: when set, a right-justified `+` in this level's list header fires it
+   *  (replaces the old leading "New…" rail row). */
+  onNew?: () => void
+  /** Accessible name + tooltip for the `+` (e.g. "New Persona"). Defaults to "New". */
+  newLabel?: string
+  /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
+  newActive?: boolean
   /** Fixed rail width in px for THIS level (default 240 / FULL_RAIL). Widen a level
    *  whose rows must show on one line (e.g. long API paths). Covered style. */
   width?: number
@@ -630,8 +633,9 @@ function MinimizedStack({
               selectedId={level.selectedId}
               onSelect={railOnSelect(level, attemptExit)}
               emptyLabel={level.emptyLabel ?? "Nothing here yet."}
-              railSlot={level.railSlot}
-              railSlotActive={level.railSlotActive}
+              onNew={level.onNew}
+              newLabel={level.newLabel}
+              newActive={level.newActive}
               collapsed={isCollapsed(level)}
               onToggle={
                 manualCollapse
@@ -709,6 +713,25 @@ function CoveredStack({
   // Lists the USER manually covered (by id) — persists across resizes; the auto layer may add more
   // but must never uncover one the user covered.
   const [manualCovered, setManualCovered] = useState<Set<string>>(new Set())
+  // Whole-list HOVER reveal: the covered (peeking) list the pointer is inside (`hoverId`) wipes OPEN to
+  // full width above its neighbours (a `clip-path` from the 40px peek to full), so no popover copy is
+  // needed. Disclosed ONLY while the pointer stays inside it; leaving — or clicking a row — wipes it
+  // back to the peek. It is pointer-only on purpose: a keyboard/mouse FOCUS reveal would keep a list
+  // disclosed after a click (the clicked button holds focus), jamming the auto-cover as the window shrinks.
+  const [hoverId, setHoverId] = useState<string | null>(null)
+  // The revealed list is lifted above its neighbours (z-50) so its expanding clip shows OVER them. On
+  // CLOSE the z-lift must LINGER for the wipe-shut transition (z-index can't animate) — else the list
+  // would drop behind its child mid-close and the wipe would be invisible. `zLiftId` tracks `hoverId`
+  // but trails it by the transition duration when clearing.
+  const [zLiftId, setZLiftId] = useState<string | null>(null)
+  useEffect(() => {
+    if (hoverId !== null) {
+      setZLiftId(hoverId)
+      return
+    }
+    const t = setTimeout(() => setZLiftId(null), 300)
+    return () => clearTimeout(t)
+  }, [hoverId])
 
   // Measure the container in a ResizeObserver. useLayoutEffect (not useEffect) takes the FIRST
   // measurement before the browser paints, so the detail pane never flashes at width 0 (containerW
@@ -831,34 +854,67 @@ function CoveredStack({
       className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
     >
       {rendered.map((level, i) => {
+        const covered = isCovered(i)
         // The covered list directly under THIS one (its parent is covered) → cast a left shadow on
         // THIS child so the overlap reads as physical. Index 0 has no parent.
         const parentCovered = i > 0 && isCovered(i - 1)
+        // Whole-list reveal: a covered list is rendered at its FULL width but the wrapper is clipped
+        // (`overflow-hidden`) to a COVERED_PEEK-wide box, so only the leading icon of each row shows —
+        // the same 40px peek. Hovering it WIPES the box open to the full rail width (animated via the
+        // `width` transition) above its neighbours (z-lifted); leaving/selecting wipes it shut. The rows
+        // are always FULL (never an icon strip), so the wipe reveals the labels with no content swap.
+        const revealed = covered && hoverId === level.id
+        const zLifted = covered && zLiftId === level.id
         return (
           <div
             key={level.id}
             data-htd-col={i}
+            // Reveal on pointer-enter of a covered list; conceal when the pointer leaves it (only
+            // disclosed while the mouse is inside it) OR when a row is selected (below).
+            onPointerEnter={covered ? () => setHoverId(level.id) : undefined}
+            onPointerLeave={() => setHoverId((p) => (p === level.id ? null : p))}
             style={{
               left: left[i]! - offshift,
-              width: railWidth(level),
-              zIndex: i + 1,
+              // Peek → full: the covered box is COVERED_PEEK wide (clipping all but the leading icons) and
+              // wipes open to the level's full rail width when revealed; the inner rail stays a fixed
+              // railWidth so its rows don't reflow as the box widens.
+              width: covered ? (revealed ? railWidth(level) : COVERED_PEEK) : railWidth(level),
+              gridTemplateColumns: `${railWidth(level)}px`,
+              // z-lift LINGERS through the wipe-shut (zLifted trails hoverId) so the closing box stays
+              // above its child instead of dropping behind it mid-animation.
+              zIndex: zLifted ? 50 : i + 1,
             }}
-            className="absolute top-0 bottom-0 grid [grid-template-columns:minmax(0,1fr)] transition-[left] duration-300 ease-in-out motion-reduce:transition-none"
+            className={cn(
+              "absolute top-0 bottom-0 grid overflow-hidden transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
+              // Shadows ride the WRAPPER (its own box-shadow isn't clipped by its overflow, unlike a
+              // child's): a RIGHT shadow while revealed so the lifted list floats over its neighbours
+              // (fades out as it wipes shut), else a LEFT shadow when the list under this one is covered
+              // so the peek stack reads as layered cards. The two are mutually exclusive.
+              revealed
+                ? "shadow-[8px_0_24px_-6px_var(--color-shadow)]"
+                : parentCovered && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
+            )}
           >
             <TopicRail
               title={level.title}
-              // A covered (peeking) list renders its rows as an icon strip and reveals the full row /
-              // its header on hover.
-              covered={isCovered(i)}
+              // Rows are ALWAYS full (never an icon strip): the wrapper's clip makes the peek, and the
+              // hover wipe reveals the labels — so there is no covered↔full content swap to jar the wipe.
+              covered={false}
               isRoot={i === 0}
               // Selection is shown by the dash (root) + connector overlay, not the gold bar.
               selectionStyle="marker"
               items={level.items}
               selectedId={level.selectedId}
-              onSelect={railOnSelect(level, attemptExit)}
+              // Selecting a row also drops the hover reveal, so the list animates closed (back to its
+              // peek) on click instead of lingering disclosed under the pointer.
+              onSelect={(id) => {
+                setHoverId(null)
+                railOnSelect(level, attemptExit)(id)
+              }}
               emptyLabel={level.emptyLabel ?? "Nothing here yet."}
-              railSlot={level.railSlot}
-              railSlotActive={level.railSlotActive}
+              onNew={level.onNew}
+              newLabel={level.newLabel}
+              newActive={level.newActive}
               // Covered lists never shrink to an icon strip; the toggle/resize are inert here.
               collapsed={false}
               onToggle={() => {}}
@@ -866,8 +922,9 @@ function CoveredStack({
               showToggle={false}
               // The cover toggle covers/uncovers THIS list's PARENT (the list to its left).
               leftControl={i >= 1 ? coverControl(i - 1) : undefined}
-              // A left shadow when the list directly under this one is covered.
-              coveredShadow={parentCovered}
+              // The layered-card left shadow rides the wrapper (the rail's own shadow would be clipped
+              // by the wrapper's overflow), so the rail doesn't draw one.
+              coveredShadow={false}
             />
           </div>
         )

@@ -1,9 +1,8 @@
 "use client"
 
-import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactNode } from "react"
-import { createPortal } from "react-dom"
+import { Fragment, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react"
 
-import { Circle } from "lucide-react"
+import { Circle, Plus } from "lucide-react"
 
 import { CollapseToggle } from "../components/collapse-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/tooltip"
@@ -37,8 +36,11 @@ export interface TopicDetailItem {
   trailing?: ReactNode
 }
 
-/** A leading rail row (e.g. a "New…" affordance). A function form receives the
- *  rail's collapsed state so it can shrink to an icon-only "+" when undisclosed. */
+/** A leading rail row rendered ABOVE the topics (e.g. a custom list header, or a PopupMenu control in
+ *  FocusedTopicDetail). A function form receives the rail's collapsed state so it can shrink/hide when
+ *  undisclosed. Rendered only when provided — an absent slot reserves NO space (the first topic sits at
+ *  the top padding). This is distinct from the header `+` create affordance (`onNew`), which the
+ *  hierarchical stack uses for its "New …" button. */
 export type RailSlot = ReactNode | ((collapsed: boolean) => ReactNode)
 
 // One shared element reference for icon-less rows — stable across renders so
@@ -54,38 +56,6 @@ const FALLBACK_ICON = <Circle size={16} aria-hidden />
 // HierarchicalTopicDetail's fit math uses the SAME contract (one authoritative home).
 export const FULL_RAIL = 240
 export const COLLAPSED_RAIL = 48
-
-/**
- * A portaled overlay that floats `children` at a fixed on-screen rect, above everything. The
- * "covered" disclosure style uses it to reveal a peeking row (or list header) as its full uncovered
- * self in the EXACT spot it occupies. Portaled to <body> so it escapes the stack's clip + z-order.
- */
-function RevealPortal({
-  rect,
-  className,
-  onPointerLeave,
-  onClick,
-  children,
-}: {
-  rect: DOMRect
-  className?: string
-  onPointerLeave?: () => void
-  onClick?: () => void
-  children: ReactNode
-}) {
-  if (typeof document === "undefined") return null
-  return createPortal(
-    <div
-      style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width, zIndex: 60 }}
-      className={cn("overflow-hidden", className)}
-      onPointerLeave={onPointerLeave}
-      onClick={onClick}
-    >
-      {children}
-    </div>,
-    document.body,
-  )
-}
 
 function TopicList({
   items,
@@ -103,71 +73,31 @@ function TopicList({
   selectedId: string | null
   onSelect: (id: string) => void
   emptyLabel: ReactNode
+  /** Optional leading row above the topics (a custom header / control). Rendered only when provided. */
   railSlot?: RailSlot
+  /** Move the gold selection bar onto the rail slot (nothing in the list selected). */
   railSlotActive?: boolean
   /** Currently collapsed → icon-only rows; labels move to title/aria-label. */
   collapsed?: boolean
   /** This is the ROOT (outermost) list: its selected row shows a leading gold dash (marker style). */
   isRoot?: boolean
   /** Covered (peeking under a child in the "covered" style): render a clean LEFT-aligned icon strip
-   *  (icon only, so the icon stays inside the ~40px peek) and, on hover of any icon, an INSTANT
-   *  popover reproducing the full uncovered row over the EXACT spot the item occupies. Clicking the
-   *  popover selects the item, exactly like clicking the row. */
+   *  (icon only, so the icon stays inside the ~40px peek). The whole list is revealed on hover by the
+   *  covered stack (it re-layers the real rail full-width above its neighbours), so there is no
+   *  per-row popover here. */
   covered?: boolean
   /** How a selected row is marked: `"bar"` (default) is the classic gold left bar — for standalone
    *  TopicDetail and the minimized stack. `"marker"` drops the bar for the dash (root) + the
    *  parent→child connector line (drawn by the covered stack's overlay). */
   selectionStyle?: "bar" | "marker"
 }) {
-  // The covered row to reveal as a full-width popover. `via` records how it opened — a pointer hover
-  // or keyboard focus — so the close logic can match (a pointer reveal closes when the pointer leaves
-  // its box; a focus reveal closes on blur).
-  const [reveal, setReveal] = useState<
-    { item: TopicDetailItem; active: boolean; rect: DOMRect; via: "pointer" | "focus" } | null
-  >(null)
-  // While a reveal is open, close it on scroll (the captured rect would otherwise drift), Escape, or —
-  // for a POINTER reveal — once the pointer is outside the row's box. The pointer-outside check also
-  // covers the mount race (pointer already gone before the portal mounted) and replaces the popover's
-  // own onPointerLeave so there's a single, robust close path.
-  useEffect(() => {
-    if (!reveal) return
-    const close = () => setReveal(null)
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close()
-    }
-    const onMove = (e: globalThis.PointerEvent) => {
-      if (reveal.via !== "pointer") return
-      const r = reveal.rect
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close()
-    }
-    window.addEventListener("scroll", close, true)
-    window.addEventListener("keydown", onKey)
-    window.addEventListener("pointermove", onMove, true)
-    return () => {
-      window.removeEventListener("scroll", close, true)
-      window.removeEventListener("keydown", onKey)
-      window.removeEventListener("pointermove", onMove, true)
-    }
-  }, [reveal])
   // Icon-only layouts share the no-label row: `collapsed` CENTRES the icon (minimized icon strip);
-  // `covered` keeps it LEFT-aligned so the icon stays inside the peek. Reveal applies only to covered.
+  // `covered` keeps it LEFT-aligned so the icon stays inside the peek.
   const iconOnly = !!collapsed || covered
 
-  // One row renderer for both the list row and its reveal popover, so the popover IS the uncovered
-  // row (DRY). `full` forces the uncovered shape (icon + label, left-aligned) for the popover.
-  const itemButton = (
-    item: TopicDetailItem,
-    active: boolean,
-    opts?: {
-      full?: boolean
-      onPointerEnter?: (e: PointerEvent<HTMLButtonElement>) => void
-      onFocus?: (e: FocusEvent<HTMLButtonElement>) => void
-      onBlur?: () => void
-    },
-  ) => {
-    const full = opts?.full ?? false
-    const hideLabel = full ? false : iconOnly
-    const centered = full ? false : !!collapsed
+  const itemButton = (item: TopicDetailItem, active: boolean) => {
+    const hideLabel = iconOnly
+    const centered = !!collapsed
     // Every row is guaranteed a leading icon so the icon-only strip never shows a blank slot.
     const icon = item.icon || FALLBACK_ICON
     return (
@@ -175,19 +105,14 @@ function TopicList({
         type="button"
         disabled={item.disabled}
         onClick={() => {
-          // Covered lists pure-SELECT: a click (on the icon or its reveal popover) only CHANGES the
-          // selection — it never toggles/unselects, and is a no-op if this row is already selected.
-          // Selecting clears the descendant lists and shows the chosen item's detail (onSelect's job).
-          // Uncovered lists keep the package's toggle (re-click a selected row to deselect).
+          // Covered lists pure-SELECT: a click only CHANGES the selection — it never toggles/unselects,
+          // and is a no-op if this row is already selected. Selecting clears the descendant lists and
+          // shows the chosen item's detail (onSelect's job). Uncovered lists keep the package's toggle
+          // (re-click a selected row to deselect).
           if (covered && active) return
           onSelect(item.id)
         }}
-        onPointerEnter={opts?.onPointerEnter}
-        onFocus={opts?.onFocus}
-        onBlur={opts?.onBlur}
-        // The reveal popover is a transient duplicate of the selected row — only the real in-list row
-        // carries aria-current, so AT doesn't see two "current" items.
-        aria-current={active && !full ? "true" : undefined}
+        aria-current={active ? "true" : undefined}
         // Icon-only rows have no visible text → carry the label as the accessible name.
         aria-label={hideLabel ? item.label : undefined}
         className={cn(
@@ -241,20 +166,20 @@ function TopicList({
       {/* min-h-full lets a `spacerAfter` flex spacer push trailing items (e.g. a
           bottom-pinned Settings) to the rail's bottom when the list is shorter than it. */}
       <ul className="m-0 flex min-h-full list-none flex-col p-0">
-        {/* Leading rail slot (e.g. a "New…" affordance). ALWAYS reserved at a fixed height —
-            empty when there is no railSlot — so the first topic row sits at the same vertical
-            position in every rail, whether or not the rail has a New button. It stays put when
-            collapsed (only the topic list shrinks to icons), and carries the gold selection bar
-            when nothing is focused (railSlotActive). */}
-        <li
-          className={cn(
-            "flex min-h-[2.15rem] items-center border-l-2 border-transparent",
-            collapsed && "justify-center",
-            railSlotActive && "border-l-apt-gold",
-          )}
-        >
-          {typeof railSlot === "function" ? railSlot(!!collapsed) : railSlot}
-        </li>
+        {/* Optional leading rail slot (a custom header / control). Rendered ONLY when a railSlot is
+            supplied — an absent slot reserves no space, so the first topic sits at the list's top
+            padding. Carries the gold selection bar when nothing is focused (railSlotActive). */}
+        {railSlot !== undefined && (
+          <li
+            className={cn(
+              "flex min-h-[2.15rem] items-center border-l-2 border-transparent",
+              collapsed && "justify-center",
+              railSlotActive && "border-l-apt-gold",
+            )}
+          >
+            {typeof railSlot === "function" ? railSlot(!!collapsed) : railSlot}
+          </li>
+        )}
         {items.length === 0 && (
           <li>
             <p
@@ -269,18 +194,7 @@ function TopicList({
         )}
         {items.map((item) => {
           const active = item.id === selectedId
-          // Capture the row's rect to position the reveal over its exact spot. Pointer hover opens a
-          // "pointer" reveal (closed by the global pointer-outside check); keyboard focus opens a
-          // "focus" reveal (closed on blur) — so covered rows are reachable without a mouse.
-          const open = (via: "pointer" | "focus", el: HTMLButtonElement) =>
-            setReveal({ item, active, rect: el.getBoundingClientRect(), via })
-          const button = itemButton(item, active, {
-            onPointerEnter: covered ? (e) => open("pointer", e.currentTarget) : undefined,
-            onFocus: covered ? (e) => open("focus", e.currentTarget) : undefined,
-            onBlur: covered
-              ? () => setReveal((r) => (r?.via === "focus" && r.item.id === item.id ? null : r))
-              : undefined,
-          })
+          const button = itemButton(item, active)
           return (
             <Fragment key={item.id}>
               <li>
@@ -308,19 +222,6 @@ function TopicList({
           )
         })}
       </ul>
-      {/* Covered-row reveal: a full uncovered copy of the row, floated over its exact spot and
-          INTERACTIVE — clicking it selects the item just like clicking the row. Closing is owned by
-          the effect above (pointer-outside / blur / scroll / Escape), so there's no enter/leave
-          flicker and it can't get stuck if the pointer left before the portal mounted. */}
-      {covered && reveal && (
-        <RevealPortal
-          rect={reveal.rect}
-          className="bg-apt-nav shadow-[6px_0_18px_-8px_var(--color-shadow)]"
-          onClick={() => setReveal(null)}
-        >
-          {itemButton(reveal.item, reveal.active, { full: true })}
-        </RevealPortal>
-      )}
     </TooltipProvider>
   )
 }
@@ -340,6 +241,9 @@ export function TopicRail({
   emptyLabel,
   railSlot,
   railSlotActive,
+  onNew,
+  newLabel,
+  newActive,
   collapsed,
   onToggle,
   onResize,
@@ -359,8 +263,16 @@ export function TopicRail({
   selectedId: string | null
   onSelect: (id: string) => void
   emptyLabel: ReactNode
+  /** Optional leading row above the topics (a custom header / control). Rendered only when provided. */
   railSlot?: RailSlot
+  /** Move the gold selection bar onto the rail slot (nothing in the list selected). */
   railSlotActive?: boolean
+  /** Create affordance: when set, a right-justified `+` button in the list header fires it. */
+  onNew?: () => void
+  /** Accessible name + tooltip for the `+` (e.g. "New Persona"). Defaults to "New". */
+  newLabel?: string
+  /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
+  newActive?: boolean
   collapsed: boolean
   onToggle: () => void
   /** Drag of the trailing border reports the column's new pixel width (raw — the parent
@@ -389,8 +301,9 @@ export function TopicRail({
    *  start, so every titled list reserves the same header height and rows align vertically across
    *  lists. Omit (standalone TopicDetail) to keep the bare control strip with no header/divider. */
   title?: string
-  /** This list is covered (peeking) in the "covered" style: rows render as an icon strip and
-   *  hovering an icon — or the header — instantly reveals the full row/title in place. */
+  /** This list is covered (peeking) in the "covered" style: rows render as a left-aligned icon
+   *  strip. The covered stack reveals the whole list on hover by re-layering the real rail
+   *  full-width above its neighbours (there is no per-row/header popover). */
   covered?: boolean
   /** This is the ROOT (outermost) list — its selected row shows the leading gold dash (marker style). */
   isRoot?: boolean
@@ -398,29 +311,6 @@ export function TopicRail({
   selectionStyle?: "bar" | "marker"
 }) {
   const asideRef = useRef<HTMLElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
-  const [headerReveal, setHeaderReveal] = useState<DOMRect | null>(null)
-  // Close the header reveal once the pointer leaves its box, or on scroll (its captured rect would
-  // drift) or Escape. The pointer-outside check also covers the mount race.
-  useEffect(() => {
-    if (!headerReveal) return
-    const close = () => setHeaderReveal(null)
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close()
-    }
-    const onMove = (e: globalThis.PointerEvent) => {
-      const r = headerReveal
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close()
-    }
-    window.addEventListener("scroll", close, true)
-    window.addEventListener("keydown", onKey)
-    window.addEventListener("pointermove", onMove, true)
-    return () => {
-      window.removeEventListener("scroll", close, true)
-      window.removeEventListener("keydown", onKey)
-      window.removeEventListener("pointermove", onMove, true)
-    }
-  }, [headerReveal])
   const listId = useId()
   const draggingRef = useRef(false)
   const onDragStart = (e: PointerEvent<HTMLDivElement>) => {
@@ -439,9 +329,40 @@ export function TopicRail({
     e.currentTarget.releasePointerCapture?.(e.pointerId)
   }
 
-  // The titled header's inner content — rendered both in place (clipped under the covering card when
-  // this list is covered) and, on hover of a covered list, in the RevealPortal. The control slot is a
-  // fixed width matching where item icons start; the title sits where item labels start.
+  // The create affordance: a compact `+` right-justified in the header (replaces the old leading
+  // "New…" rail row). Gold while a create is in progress (`newActive`). Icon-only, so its label
+  // rides as the accessible name + native tooltip.
+  const newButton = onNew ? (
+    <button
+      type="button"
+      aria-label={newLabel ?? "New"}
+      title={newLabel ?? "New"}
+      onClick={onNew}
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded p-0.5 outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40",
+        newActive ? "text-apt-gold" : "text-apt-text-muted",
+      )}
+    >
+      <Plus size={16} aria-hidden />
+    </button>
+  ) : null
+
+  const collapseToggle = (
+    <CollapseToggle collapsed={collapsed} onToggle={onToggle} label="topic list" controls={listId} />
+  )
+
+  // Right-justified header controls: the New `+` (all widths) and, in the minimized style, the
+  // desktop collapse toggle (`«`). The covered style passes `showToggle=false` + its own leftControl.
+  const rightControls =
+    newButton || (showToggle && !leftControl) ? (
+      <span className="ml-auto flex shrink-0 items-center gap-1">
+        {newButton}
+        {showToggle && !leftControl && <span className="max-md:hidden">{collapseToggle}</span>}
+      </span>
+    ) : null
+
+  // The titled header's inner content. The control slot is a fixed width matching where item icons
+  // start; the title sits where item labels start; the New/toggle controls are right-justified.
   const headerInner = (
     <>
       <div className="flex w-8 shrink-0 items-center justify-center">{leftControl ?? backSlot ?? null}</div>
@@ -450,11 +371,7 @@ export function TopicRail({
           {title}
         </span>
       )}
-      {showToggle && !leftControl && (
-        <span className="ml-auto shrink-0 max-md:hidden">
-          <CollapseToggle collapsed={collapsed} onToggle={onToggle} label="topic list" controls={listId} />
-        </span>
-      )}
+      {rightControls}
     </>
   )
   return (
@@ -487,41 +404,39 @@ export function TopicRail({
       )}
       {/* Top of the list. With a `title` (and not collapsed to an icon strip) this is the titled
           HEADER: a fixed control slot (the covered `«`/`»` or a minimized Back) where item icons
-          start, the left-aligned title where item labels start, an optional right-justified collapse
+          start, the left-aligned title where item labels start, the right-justified New `+` / collapse
           toggle, and a divider beneath — so every titled list reserves the same header height and
           their rows line up. Without a title (standalone TopicDetail) or when collapsed, fall back to
-          the bare control strip (priority: leftControl → backSlot+toggle → toggle → nothing). */}
+          the bare control strip (priority: leftControl → backSlot → toggle/`+` → nothing). */}
       {title !== undefined && !collapsed ? (
-        <div
-          ref={headerRef}
-          // Covered (peeking) lists reveal their full header on hover — the same instant popover the
-          // covered icons use — so a peeking list still shows its name + cover control.
-          onPointerEnter={
-            covered ? () => setHeaderReveal(headerRef.current?.getBoundingClientRect() ?? null) : undefined
-          }
-          className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border pr-2"
-        >
+        <div className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border pr-2">
           {headerInner}
         </div>
       ) : leftControl ? (
-        <div className="flex shrink-0 items-center px-1.5 pt-1.5">{leftControl}</div>
+        <div className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
+          {leftControl}
+          {newButton}
+        </div>
       ) : backSlot ? (
         <div className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
           {backSlot}
-          {showToggle && (
-            <span className="max-md:hidden">
-              <CollapseToggle collapsed={collapsed} onToggle={onToggle} label="topic list" controls={listId} />
-            </span>
-          )}
+          <span className="flex items-center gap-1">
+            {newButton}
+            {showToggle && <span className="max-md:hidden">{collapseToggle}</span>}
+          </span>
         </div>
-      ) : showToggle ? (
+      ) : showToggle || newButton ? (
         <div
           className={cn(
-            "flex shrink-0 items-center pt-1.5 max-md:hidden",
-            collapsed ? "justify-center" : "justify-end pr-1.5",
+            "flex shrink-0 items-center gap-1 pt-1.5",
+            // Collapsed icon strip (~48px): stack the `+` above the toggle. Else right-justify the row.
+            collapsed ? "flex-col" : "justify-end pr-1.5",
+            // Without a `+`, the strip is just the desktop-only collapse toggle — hidden on mobile.
+            !newButton && "max-md:hidden",
           )}
         >
-          <CollapseToggle collapsed={collapsed} onToggle={onToggle} label="topic list" controls={listId} />
+          {newButton}
+          {showToggle && <span className={cn(newButton && "max-md:hidden")}>{collapseToggle}</span>}
         </div>
       ) : null}
       <div
@@ -545,18 +460,6 @@ export function TopicRail({
         />
       </div>
       {footer && <div className="shrink-0 border-t border-apt-border p-2">{footer}</div>}
-      {/* Covered header reveal: float the full header over its exact spot (above the covering cards),
-          so a peeking list still names itself + offers its cover control on hover. Hides on leave. */}
-      {covered && title !== undefined && headerReveal && (
-        <RevealPortal
-          rect={headerReveal}
-          className="bg-apt-nav shadow-[6px_0_18px_-8px_var(--color-shadow)]"
-        >
-          <div className="flex min-h-[2.15rem] items-center gap-2 border-b border-apt-border pr-2">
-            {headerInner}
-          </div>
-        </RevealPortal>
-      )}
     </aside>
   )
 }
@@ -570,7 +473,7 @@ export function TopicRail({
  * The rail is ALWAYS collapsible (a core part of the site design, not a config
  * flag): a top-right toggle (desktop only) shrinks the topic list to an icon-only
  * strip for more pane room — each topic stays clickable as its icon, the active
- * icon keeps the gold selection bar, and any railSlot stays put.
+ * icon keeps the gold selection bar, and the header `+` stays put.
  */
 export function TopicDetail({
   items,
@@ -579,6 +482,9 @@ export function TopicDetail({
   emptyLabel = "Nothing here yet.",
   railSlot,
   railSlotActive,
+  onNew,
+  newLabel,
+  newActive,
   panePadding = true,
   collapsed: collapsedProp,
   onCollapsedChange,
@@ -590,12 +496,17 @@ export function TopicDetail({
   selectedId: string | null
   onSelect: (id: string) => void
   emptyLabel?: ReactNode
-  /** Leading rail row above the topics (e.g. a "New…" affordance). Stays visible
-   *  when the rail is collapsed; pass a `(collapsed) => node` function to shrink it
-   *  to an icon-only "+" when undisclosed. */
+  /** Optional leading row above the topics (a custom header / control). Rendered only when provided;
+   *  an absent slot reserves no space. Distinct from the header `+` create affordance (`onNew`). */
   railSlot?: RailSlot
-  /** Move the gold selection bar onto the rail slot (no topic active). */
+  /** Move the gold selection bar onto the rail slot (nothing in the list selected). */
   railSlotActive?: boolean
+  /** Create affordance: when set, a right-justified `+` in the list header fires it. */
+  onNew?: () => void
+  /** Accessible name + tooltip for the `+` (e.g. "New Topic"). Defaults to "New". */
+  newLabel?: string
+  /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
+  newActive?: boolean
   /** Default true: the pane carries the standard content inset (px-6 py-4 +
    *  gap-6). Pass false for edge-to-edge content (hub's .settings-content has
    *  no inset — each row carries its own, e.g. a ButtonBar) so consumers never
@@ -657,6 +568,9 @@ export function TopicDetail({
         emptyLabel={emptyLabel}
         railSlot={railSlot}
         railSlotActive={railSlotActive}
+        onNew={onNew}
+        newLabel={newLabel}
+        newActive={newActive}
         collapsed={collapsed}
         onToggle={toggleCollapsed}
         onResize={onResize}

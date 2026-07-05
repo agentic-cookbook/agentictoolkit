@@ -17,6 +17,11 @@ import {
   terminalCss,
   terminalSplitCss,
   whimsicalCss,
+  gruvboxCss,
+  nordCss,
+  rosePineCss,
+  signalCss,
+  solarizedCss,
 } from './theme-data'
 
 export type ThemeKey =
@@ -38,6 +43,11 @@ export type ThemeKey =
   | 'terminal'
   | 'terminal-split'
   | 'whimsical'
+  | 'gruvbox'
+  | 'nord'
+  | 'rose-pine'
+  | 'signal'
+  | 'solarized'
 
 export interface ThemeEntry {
   id: ThemeKey
@@ -64,6 +74,11 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   terminal: { id: 'terminal', label: 'Terminal', css: terminalCss },
   'terminal-split': { id: 'terminal-split', label: 'Terminal Split', css: terminalSplitCss },
   whimsical: { id: 'whimsical', label: 'Whimsical', css: whimsicalCss },
+  gruvbox: { id: 'gruvbox', label: 'Gruvbox', css: gruvboxCss },
+  nord: { id: 'nord', label: 'Nord', css: nordCss },
+  'rose-pine': { id: 'rose-pine', label: 'Rosé Pine', css: rosePineCss },
+  signal: { id: 'signal', label: 'Signal', css: signalCss },
+  solarized: { id: 'solarized', label: 'Solarized', css: solarizedCss },
 }
 
 export const themeIds: ThemeKey[] = Object.keys(themes) as ThemeKey[]

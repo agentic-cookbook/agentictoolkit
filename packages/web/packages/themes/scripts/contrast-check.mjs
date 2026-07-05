@@ -7,7 +7,11 @@
 import { readFile } from 'node:fs/promises'
 
 const REPORT_ONLY = process.argv.includes('--report')
-const THEMES = ['adh', 'adh-manrope'] // share one color layer; check both anyway
+// adh-family themes share one dark `:root` color layer (check both anyway). Full-palette
+// themes ship their OWN complete M3 palette in dual blocks — a dark `html:root` and a light
+// `html:root[data-color-mode]:not(.dark)` override — so each is gated in BOTH modes.
+const ADH_THEMES = ['adh', 'adh-manrope']
+const FULL_PALETTE_THEMES = ['signal', 'nord', 'solarized', 'rose-pine', 'gruvbox']
 
 // pairs: [foreground role, background role, minRatio, label]
 const TEXT = 4.5
@@ -101,24 +105,55 @@ function ratio(fgColor, bgColor) {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-let failures = 0
-for (const theme of THEMES) {
+/** Body of the first `selector { … }` rule (token blocks have no nested braces). */
+function blockBody(css, selector) {
+  const at = css.indexOf(`${selector} {`)
+  if (at < 0) return null
+  const open = css.indexOf('{', at)
+  const close = css.indexOf('}', open)
+  return close < 0 ? null : css.slice(open + 1, close)
+}
+
+// Build the list of (label, varMap) targets to gate. adh-family: one dark map from the
+// whole file. Full-palette: a dark map (its `html:root` block) and a light map (dark with
+// the `html:root[data-color-mode]:not(.dark)` block layered on top — it overrides only the
+// colors that change between modes), so both modes are checked against the same M3 pairs.
+const targets = []
+for (const theme of ADH_THEMES) {
   const css = await readFile(new URL(`../src/styles/${theme}.css`, import.meta.url), 'utf8')
-  const map = parseVars(css)
-  console.log(`\n${theme}`)
-  for (const [fgName, bgName, min, label] of PAIRS) {
+  targets.push({ label: theme, map: parseVars(css) })
+}
+for (const theme of FULL_PALETTE_THEMES) {
+  const css = await readFile(new URL(`../src/styles/${theme}.css`, import.meta.url), 'utf8')
+  const darkBody = blockBody(css, 'html:root')
+  const lightBody = blockBody(css, 'html:root[data-color-mode]:not(.dark)')
+  if (darkBody == null || lightBody == null) {
+    console.log(`\n${theme}\n  ?? missing html:root dark/light block — cannot gate`)
+    // Counted as a failure below via the empty-map path.
+  }
+  const darkMap = parseVars(darkBody ?? '')
+  const lightMap = new Map(darkMap)
+  for (const [k, v] of parseVars(lightBody ?? '')) lightMap.set(k, v)
+  targets.push({ label: `${theme} (dark)`, map: darkMap })
+  targets.push({ label: `${theme} (light)`, map: lightMap })
+}
+
+let failures = 0
+for (const { label, map } of targets) {
+  console.log(`\n${label}`)
+  for (const [fgName, bgName, min, pairLabel] of PAIRS) {
     const fg = resolve(fgName, map)
     const bg = resolve(bgName, map)
     const r = fg && bg ? ratio(fg, bg) : null
     if (r == null) {
-      console.log(`  ?? ${label}: could not resolve ${fgName}/${bgName}`)
+      console.log(`  ?? ${pairLabel}: could not resolve ${fgName}/${bgName}`)
       failures++
       continue
     }
     const ok = r >= min
     if (!ok) failures++
     const tag = ok ? 'ok ' : 'FAIL'
-    console.log(`  ${tag} ${r.toFixed(2)}:1 (min ${min}) — ${label}  [${fg} on ${bg}]`)
+    console.log(`  ${tag} ${r.toFixed(2)}:1 (min ${min}) — ${pairLabel}  [${fg} on ${bg}]`)
   }
 }
 

@@ -9,6 +9,7 @@ export {
   type TopicLevel,
   type PaneExitGuard,
 } from "./hierarchical-topic-detail"
+export { ViewTabBar, type ViewTabItem, type ViewTabLink } from "./view-tab-bar"
 export { ButtonBar, type ButtonBarActions } from "./button-bar"
 export { PopupMenu, type PopupMenuItem } from "./popup-menu"
 export { FocusedTopicDetail, type FocusedTopicDetailItem } from "./focused-topic-detail"
