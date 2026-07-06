@@ -10,6 +10,9 @@
     {
       "id": "claude-local",
       "displayName": "Claude Code (local CLI)",
+      "provider": "Anthropic",
+      "llm": "Claude",
+      "configType": "OAuth Account",
       "defaultValues": {},
       "models": ["sonnet", "haiku", "opus"],
       "defaultModel": "sonnet",

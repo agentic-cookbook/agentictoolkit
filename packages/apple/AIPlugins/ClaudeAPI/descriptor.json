@@ -11,12 +11,14 @@
   "templates": [
     {
       "id": "anthropic-api", "displayName": "Anthropic API",
+      "provider": "Anthropic", "llm": "Claude", "configType": "API Key",
       "defaultValues": { "baseURL": "https://api.anthropic.com/v1", "authMode": "x-api-key" },
       "models": ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-7"],
       "defaultModel": "claude-sonnet-4-6", "secretRequired": true
     },
     {
       "id": "claude-max-token", "displayName": "Claude Max (token)",
+      "provider": "Anthropic", "llm": "Claude", "configType": "Subscription Token",
       "defaultValues": { "baseURL": "https://api.anthropic.com/v1", "authMode": "bearer-oauth" },
       "models": ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-7"],
       "defaultModel": "claude-sonnet-4-6", "secretRequired": true,

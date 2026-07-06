@@ -3,27 +3,33 @@ import AIPluginKit
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// One selectable row in the provider picker: a provider template plus the
-/// display name of the plugin that serves it (its "configuration type").
+/// One selectable row in the provider picker, split into three clear columns:
+/// the vendor (Provider), the model brand (LLM), and the auth method (Config
+/// Type) — read from the template's descriptor metadata.
 public struct ProviderPickerRow: Equatable, Sendable {
     public let available: AIPluginManager.AvailableProviderTemplate
-    public let configType: String
 
-    public init(available: AIPluginManager.AvailableProviderTemplate, configType: String) {
+    public init(available: AIPluginManager.AvailableProviderTemplate) {
         self.available = available
-        self.configType = configType
     }
 
-    public var providerName: String { available.template.displayName }
+    /// Vendor / service — the Provider column (e.g. "Anthropic", "Google").
+    public var provider: String { available.template.resolvedProvider }
+    /// Model brand — the LLM column (e.g. "Claude", "Gemini", "GPT").
+    public var llm: String { available.template.resolvedLLM }
+    /// Auth method — the Config Type column (e.g. "API Key", "OAuth Account").
+    public var configType: String { available.template.resolvedConfigType }
 }
 
-/// Pure, testable substring filter over provider rows (name + configuration type).
+/// Pure, testable substring filter over provider rows (provider + LLM + config type).
 public enum ProviderPickerFilter {
     public static func filter(_ rows: [ProviderPickerRow], query: String) -> [ProviderPickerRow] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !needle.isEmpty else { return rows }
         return rows.filter {
-            $0.providerName.lowercased().contains(needle) || $0.configType.lowercased().contains(needle)
+            $0.provider.lowercased().contains(needle)
+                || $0.llm.lowercased().contains(needle)
+                || $0.configType.lowercased().contains(needle)
         }
     }
 }
@@ -57,7 +63,8 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private var didSetInitialSplit = false
     private var escapeMonitor: Any?
 
-    private static let nameColumnID = NSUserInterfaceItemIdentifier("provider.name")
+    private static let providerColumnID = NSUserInterfaceItemIdentifier("provider.provider")
+    private static let llmColumnID = NSUserInterfaceItemIdentifier("provider.llm")
     private static let typeColumnID = NSUserInterfaceItemIdentifier("provider.type")
 
     public init(rows: [ProviderPickerRow]) {
@@ -165,19 +172,26 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         tableView.target = self
         tableView.doubleAction = #selector(chooseAction)
 
-        let nameColumn = NSTableColumn(identifier: Self.nameColumnID)
-        nameColumn.title = "Provider"
-        nameColumn.width = 320
-        nameColumn.minWidth = 160
-        nameColumn.resizingMask = .userResizingMask
+        let providerColumn = NSTableColumn(identifier: Self.providerColumnID)
+        providerColumn.title = "Provider"
+        providerColumn.width = 220
+        providerColumn.minWidth = 120
+        providerColumn.resizingMask = .userResizingMask
+
+        let llmColumn = NSTableColumn(identifier: Self.llmColumnID)
+        llmColumn.title = "LLM"
+        llmColumn.width = 160
+        llmColumn.minWidth = 90
+        llmColumn.resizingMask = .userResizingMask
 
         let typeColumn = NSTableColumn(identifier: Self.typeColumnID)
-        typeColumn.title = "Configuration Type"
-        typeColumn.width = 360
-        typeColumn.minWidth = 160
+        typeColumn.title = "Config Type"
+        typeColumn.width = 300
+        typeColumn.minWidth = 120
         typeColumn.resizingMask = .autoresizingMask
 
-        tableView.addTableColumn(nameColumn)
+        tableView.addTableColumn(providerColumn)
+        tableView.addTableColumn(llmColumn)
         tableView.addTableColumn(typeColumn)
 
         tableScroll.documentView = tableView
@@ -252,7 +266,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         // Per spec: arrowing mirrors the highlighted provider into the filter
         // field. A programmatic stringValue set does not fire controlTextDidChange,
         // so this never re-filters the list out from under the selection.
-        searchField.stringValue = filteredRows[next].providerName
+        searchField.stringValue = filteredRows[next].provider
     }
 
     private func applyFilter() {
@@ -270,7 +284,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     private static func infoText(for row: ProviderPickerRow) -> String {
         let template = row.available.template
-        var lines = [template.displayName, "Configuration type: \(row.configType)"]
+        var lines: [String] = []
+        lines.append(row.llm.isEmpty ? row.provider : "\(row.provider) · \(row.llm)")
+        lines.append("Config type: \(row.configType)")
         if !template.models.isEmpty {
             lines.append("Models: \(template.models.joined(separator: ", "))")
         }
@@ -333,9 +349,16 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
         guard row >= 0, row < filteredRows.count, let column = tableColumn else { return nil }
         let palette = ThemePaletteObserver.currentPalette
         let entry = filteredRows[row]
-        let isName = column.identifier == Self.nameColumnID
-        let text = isName ? entry.providerName : entry.configType
-        let color = isName ? palette.primaryTextColor : palette.secondaryTextColor
+        let text: String
+        let color: NSColor
+        switch column.identifier {
+        case Self.providerColumnID:
+            text = entry.provider; color = palette.primaryTextColor
+        case Self.llmColumnID:
+            text = entry.llm; color = palette.secondaryTextColor
+        default:
+            text = entry.configType; color = palette.secondaryTextColor
+        }
         return cell(for: column.identifier, text: text, color: color)
     }
 

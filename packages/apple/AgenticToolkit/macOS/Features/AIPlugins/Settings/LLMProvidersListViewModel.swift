@@ -25,35 +25,24 @@ final class LLMProvidersListViewModel: ObservableObject {
         self.configurations = UserSettings.aiProviderConfigurations.value
     }
 
-    /// The picker's rows: every available template, flattened, each tagged with
-    /// the display name of the plugin that serves it (its configuration type).
+    /// The picker's rows: every available template as a (provider, LLM, config
+    /// type) row, always sorted by provider name (then LLM, then config type for
+    /// a stable, readable order — e.g. Anthropic's rows group together).
     var pickerRows: [ProviderPickerRow] {
-        availableTemplateGroups.flatMap { group in
-            group.templates.map { ProviderPickerRow(available: $0, configType: group.pluginName) }
-        }
+        availableTemplates
+            .map { ProviderPickerRow(available: $0) }
+            .sorted { lhs, rhs in
+                let byProvider = lhs.provider.localizedCaseInsensitiveCompare(rhs.provider)
+                if byProvider != .orderedSame { return byProvider == .orderedAscending }
+                let byLLM = lhs.llm.localizedCaseInsensitiveCompare(rhs.llm)
+                if byLLM != .orderedSame { return byLLM == .orderedAscending }
+                return lhs.configType.localizedCaseInsensitiveCompare(rhs.configType) == .orderedAscending
+            }
     }
 
-    /// Every provider template every installed plugin advertises — the `+` menu.
+    /// Every provider template every installed plugin advertises.
     var availableTemplates: [AIPluginManager.AvailableProviderTemplate] {
         pluginManager.availableTemplates
-    }
-
-    /// `availableTemplates` grouped by the plugin that serves them, preserving
-    /// discovery order — the sections of the modal provider picker.
-    var availableTemplateGroups: [ProviderTemplateGroup] {
-        var order: [String] = []
-        var byPlugin: [String: [AIPluginManager.AvailableProviderTemplate]] = [:]
-        for available in availableTemplates {
-            if byPlugin[available.pluginIdentifier] == nil { order.append(available.pluginIdentifier) }
-            byPlugin[available.pluginIdentifier, default: []].append(available)
-        }
-        return order.map { identifier in
-            ProviderTemplateGroup(
-                pluginIdentifier: identifier,
-                pluginName: pluginManager.descriptor(for: identifier)?.displayName ?? identifier,
-                templates: byPlugin[identifier] ?? []
-            )
-        }
     }
 
     func add(_ available: AIPluginManager.AvailableProviderTemplate) {
@@ -118,13 +107,4 @@ final class LLMProvidersListViewModel: ObservableObject {
     private func persist() {
         UserSettings.aiProviderConfigurations.value = configurations
     }
-}
-
-/// A plugin and the provider templates it advertises — one section of the modal
-/// provider picker.
-struct ProviderTemplateGroup: Identifiable, Equatable {
-    let pluginIdentifier: String
-    let pluginName: String
-    let templates: [AIPluginManager.AvailableProviderTemplate]
-    var id: String { pluginIdentifier }
 }

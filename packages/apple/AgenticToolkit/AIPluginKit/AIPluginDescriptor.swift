@@ -125,6 +125,16 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
         public let secretRequired: Bool
         /// Field overrides for this template; nil inherits the descriptor's fields.
         public let fields: [Field]?
+        /// The vendor/service the provider connects to, e.g. "Anthropic", "Google",
+        /// "Groq". Shown as the picker's Provider column. Falls back to `displayName`.
+        public let provider: String?
+        /// The model brand this provider serves, e.g. "Claude", "Gemini", "GPT".
+        /// Shown as the picker's LLM column.
+        public let llm: String?
+        /// The auth/connection method, e.g. "API Key", "OAuth Account",
+        /// "Subscription Token". Shown as the picker's Config Type column. Falls back
+        /// to "API Key" / "Local" based on `secretRequired`.
+        public let configType: String?
 
         public init(
             id: String,
@@ -133,7 +143,10 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
             models: [String] = [],
             defaultModel: String? = nil,
             secretRequired: Bool = true,
-            fields: [Field]? = nil
+            fields: [Field]? = nil,
+            provider: String? = nil,
+            llm: String? = nil,
+            configType: String? = nil
         ) {
             self.id = id
             self.displayName = displayName
@@ -142,10 +155,25 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
             self.defaultModel = defaultModel
             self.secretRequired = secretRequired
             self.fields = fields
+            self.provider = provider
+            self.llm = llm
+            self.configType = configType
         }
 
         public var resolvedDefaultModel: String {
             defaultModel ?? models.first ?? ""
+        }
+
+        /// Vendor name for the Provider column (falls back to `displayName`).
+        public var resolvedProvider: String { provider ?? displayName }
+
+        /// Model brand for the LLM column (empty when unspecified).
+        public var resolvedLLM: String { llm ?? "" }
+
+        /// Auth method for the Config Type column (inferred from `secretRequired`
+        /// when unspecified).
+        public var resolvedConfigType: String {
+            configType ?? (secretRequired ? "API Key" : "Local")
         }
     }
 }
