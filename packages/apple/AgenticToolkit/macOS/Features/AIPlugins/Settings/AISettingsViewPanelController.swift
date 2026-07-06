@@ -1,21 +1,24 @@
 import AgenticToolkitCoreMacOS
 import AIPluginKit
 import AppKit
+import SwiftUI
 
-/// The "AI" settings split view. One config panel per *discovered* plugin —
-/// built from its descriptor without loading any binary — plus a single failures
-/// panel if any plugin's binary could not be loaded.
+/// The "LLM Providers" settings panel: a list of the user's configured LLM
+/// providers with add/remove, beside a per-configuration editor. Providers come
+/// from templates the installed plugins advertise; nothing here loads a plugin
+/// binary until a configuration's chat test runs.
 @MainActor
-open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewController {
+open class AIPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     public let pluginManager: AIPluginManager
+    private let viewModel: LLMProvidersListViewModel
 
     public init(pluginManager: AIPluginManager) {
         self.pluginManager = pluginManager
-
+        self.viewModel = LLMProvidersListViewModel(pluginManager: pluginManager)
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
-            title: "AI",
-            icon: NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
+            title: "LLM Providers",
+            icon: NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
         ))
     }
 
@@ -23,29 +26,9 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         fatalError("init(coder:) has not been implemented")
     }
 
-    private var didLoadPlugins = false
-
-    public override func viewDidLoad() {
-        super.viewDidLoad()
-
-        // Configuration UI comes from descriptors alone — no plugin code runs.
-        // Kept cheap so this view can be force-loaded merely to measure the
-        // settings sidebar width without dlopen'ing any plugin binaries.
-        for descriptor in pluginManager.descriptors {
-            addPanel(PluginConfigPanel(descriptor: descriptor, pluginManager: pluginManager))
-        }
-    }
-
-    public override func viewWillAppear() {
-        super.viewWillAppear()
-        // Loading binaries is where things can fail; do it only when the panel is
-        // actually shown — not when it's force-loaded just to measure the sidebar
-        // — and only once.
-        guard !didLoadPlugins else { return }
-        didLoadPlugins = true
-        let failures = pluginManager.loadAllPlugins().failures
-        if !failures.isEmpty {
-            addPanel(PluginLoadFailuresPanel(failures: failures))
-        }
+    public override func loadView() {
+        let hosting = NSHostingView(rootView: LLMProvidersView(viewModel: viewModel))
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        self.view = hosting
     }
 }
