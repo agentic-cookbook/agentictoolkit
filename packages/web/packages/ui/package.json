@@ -51,6 +51,16 @@
       "development": "./src/lib/tone.ts",
       "import": "./dist/lib/tone.js"
     },
+    "./lib/invitations-types": {
+      "types": "./dist/lib/invitations-types.d.ts",
+      "development": "./src/lib/invitations-types.ts",
+      "import": "./dist/lib/invitations-types.js"
+    },
+    "./lib/invitations-endpoints": {
+      "types": "./dist/lib/invitations-endpoints.d.ts",
+      "development": "./src/lib/invitations-endpoints.ts",
+      "import": "./dist/lib/invitations-endpoints.js"
+    },
     "./hooks/useIsomorphicLayoutEffect": {
       "types": "./dist/hooks/useIsomorphicLayoutEffect.d.ts",
       "development": "./src/hooks/useIsomorphicLayoutEffect.ts",
