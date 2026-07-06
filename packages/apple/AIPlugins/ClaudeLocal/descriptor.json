@@ -1,9 +1,20 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "identifier": "com.agentictoolkit.plugin.claude-local",
   "displayName": "Claude (Local)",
   "version": "1.0",
-  "models": ["haiku", "sonnet", "opus"],
-  "defaultModel": "haiku",
-  "fields": []
+  "models": ["sonnet", "haiku", "opus"],
+  "defaultModel": "sonnet",
+  "fields": [],
+  "templates": [
+    {
+      "id": "claude-local",
+      "displayName": "Claude Code (local CLI)",
+      "defaultValues": {},
+      "models": ["sonnet", "haiku", "opus"],
+      "defaultModel": "sonnet",
+      "secretRequired": false,
+      "fields": []
+    }
+  ]
 }

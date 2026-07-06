@@ -28,6 +28,7 @@
 
 /* Begin PBXBuildFile section */
 		1339A42FE1E9DEC27CC621A4 /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
+		1F60DED76900A0C0CC6C0BCE /* DescriptorCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8AA1099BF41B48A15831765 /* DescriptorCatalogTests.swift */; };
 		27C753F2AC1AE55808FCA62E /* OpenAICompatiblePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */; };
 		2C143887F7DCC6DF93CB7954 /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23B536D26A9E9F1FF75EF851 /* AIPluginKit.framework */; };
 		2FCD35BD2AF65928D2853B08 /* descriptor.json in Resources */ = {isa = PBXBuildFile; fileRef = 01AFC2D039B840CE140AF9AB /* descriptor.json */; };
@@ -171,6 +172,7 @@
 		AE0AF1BEA1B1871B876D693A /* Google.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Google.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		B571AAC015A36CF7AC1CB2AF /* OpenAICompatiblePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatiblePlugin.swift; sourceTree = "<group>"; };
 		D19C0E456C2DCC53E589A20F /* OpenAICompatible.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAICompatible.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8AA1099BF41B48A15831765 /* DescriptorCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptorCatalogTests.swift; sourceTree = "<group>"; };
 		D8FDDE4F8160D84E641D3F01 /* descriptor.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = descriptor.json; sourceTree = "<group>"; };
 		E8E7F00486CCEB3CFB46EB96 /* GooglePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GooglePlugin.swift; sourceTree = "<group>"; };
 		FCF0E2C70955B3DCFD52F42E /* ClaudeAPIPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAPIPlugin.swift; sourceTree = "<group>"; };
@@ -231,6 +233,7 @@
 		079A00D2A2D0F1E3A0AC19E2 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				D8AA1099BF41B48A15831765 /* DescriptorCatalogTests.swift */,
 				9885A563B070C0B3B9723366 /* PluginDecoderTests.swift */,
 				1C0B2564A8AAEE7E7080F2FC /* PluginRequestTests.swift */,
 			);
@@ -781,6 +784,7 @@
 			files = (
 				4032C08C69EF2791523A7154 /* ClaudeAPIPlugin.swift in Sources */,
 				8EF26FE8DB45DCBDA8542325 /* ClaudeLocalPlugin.swift in Sources */,
+				1F60DED76900A0C0CC6C0BCE /* DescriptorCatalogTests.swift in Sources */,
 				38272E4A8383A25809FCAA2F /* GooglePlugin.swift in Sources */,
 				27C753F2AC1AE55808FCA62E /* OpenAICompatiblePlugin.swift in Sources */,
 				511A9EC6FA1F2EC6B97A1DB1 /* OpenAIPlugin.swift in Sources */,

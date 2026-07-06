@@ -1,15 +1,21 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "identifier": "com.agentictoolkit.plugin.google",
   "displayName": "Google (Gemini)",
   "version": "1.0",
-  "models": [
-    "gemini-2.0-flash",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-05-06"
-  ],
-  "defaultModel": "gemini-2.0-flash",
+  "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+  "defaultModel": "gemini-2.5-flash",
   "fields": [
     { "key": "apiKey", "label": "API Key", "kind": "secret" }
+  ],
+  "templates": [
+    {
+      "id": "gemini",
+      "displayName": "Gemini",
+      "defaultValues": {},
+      "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+      "defaultModel": "gemini-2.5-flash",
+      "secretRequired": true
+    }
   ]
 }
