@@ -18,6 +18,28 @@ public final class AIPluginManager {
     /// Descriptors for every discovered plugin. Binaries are not yet loaded.
     public var descriptors: [AIPluginDescriptor] { records.map(\.descriptor) }
 
+    /// A provider template paired with the plugin that serves it. The picker's
+    /// data source: every template every discovered plugin advertises.
+    public struct AvailableProviderTemplate: Sendable, Equatable {
+        public let pluginIdentifier: String
+        public let template: AIPluginDescriptor.ProviderTemplate
+    }
+
+    /// Every advertised template across all discovered plugins, in descriptor
+    /// order then template order.
+    public var availableTemplates: [AvailableProviderTemplate] {
+        records.flatMap { record in
+            record.descriptor.resolvedTemplates.map {
+                AvailableProviderTemplate(pluginIdentifier: record.descriptor.identifier, template: $0)
+            }
+        }
+    }
+
+    /// The template with `templateId` advertised by `pluginIdentifier`, if any.
+    public func template(pluginIdentifier: String, templateId: String) -> AIPluginDescriptor.ProviderTemplate? {
+        descriptor(for: pluginIdentifier)?.resolvedTemplates.first { $0.id == templateId }
+    }
+
     /// Internal storage pairing each descriptor with the bundle it came from.
     private var records: [Record] = []
 
@@ -116,9 +138,9 @@ public final class AIPluginManager {
                     continue
                 }
 
-                guard descriptor.schemaVersion == AIPluginDescriptor.currentSchemaVersion else {
+                guard (2...AIPluginDescriptor.currentSchemaVersion).contains(descriptor.schemaVersion) else {
                     // swiftlint:disable:next line_length
-                    logger.warning("Skipping incompatible plugin '\(descriptor.displayName, privacy: .public)': schema \(descriptor.schemaVersion) != \(AIPluginDescriptor.currentSchemaVersion)")
+                    logger.warning("Skipping incompatible plugin '\(descriptor.displayName, privacy: .public)': schema \(descriptor.schemaVersion) not in 2...\(AIPluginDescriptor.currentSchemaVersion)")
                     continue
                 }
 

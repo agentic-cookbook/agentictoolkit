@@ -13,7 +13,7 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
     /// The descriptor schema the host understands. Bundles whose
     /// `schemaVersion` differs are skipped at discovery, which is how old
     /// v1 plugins (no `descriptor.json`) are cleanly ignored.
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     public let schemaVersion: Int
     public let identifier: String
@@ -30,6 +30,10 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
     /// Settings the host renders as a form and persists per plugin.
     public let fields: [Field]
 
+    /// Provider presets this plugin advertises. When nil (a v2 descriptor), the
+    /// host synthesises one implicit template from the descriptor itself.
+    public let templates: [ProviderTemplate]?
+
     public init(
         schemaVersion: Int = AIPluginDescriptor.currentSchemaVersion,
         identifier: String,
@@ -37,7 +41,8 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
         version: String,
         models: [String] = [],
         defaultModel: String? = nil,
-        fields: [Field] = []
+        fields: [Field] = [],
+        templates: [ProviderTemplate]? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.identifier = identifier
@@ -46,12 +51,34 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
         self.models = models
         self.defaultModel = defaultModel
         self.fields = fields
+        self.templates = templates
     }
 
     /// The model to use when the user has not picked one: the explicit default,
     /// else the first listed model, else an empty string.
     public var resolvedDefaultModel: String {
         defaultModel ?? models.first ?? ""
+    }
+
+    /// The templates to present: the explicit list, or one implicit template
+    /// derived from this descriptor (so v2 plugins still surface as a provider).
+    public var resolvedTemplates: [ProviderTemplate] {
+        if let templates, !templates.isEmpty { return templates }
+        return [ProviderTemplate(
+            id: "default",
+            displayName: displayName,
+            defaultValues: [:],
+            models: models,
+            defaultModel: defaultModel,
+            secretRequired: true,
+            fields: fields
+        )]
+    }
+
+    /// The fields to render for a template: the template's own override, else the
+    /// descriptor's shared fields.
+    public func fields(for template: ProviderTemplate) -> [Field] {
+        template.fields ?? fields
     }
 
     /// One configurable value: a credential, a base URL, etc. The `kind`
@@ -81,5 +108,44 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
         }
 
         public var isSecret: Bool { kind == .secret }
+    }
+
+    /// A named provider preset a plugin advertises: a base URL / auth mode and a
+    /// model list the user instantiates as a configuration. Pure data.
+    public struct ProviderTemplate: Codable, Sendable, Equatable {
+        public let id: String
+        public let displayName: String
+        /// Seeded config values (e.g. `baseURL`, `authMode`) injected into the
+        /// `AIPluginConfig` bag before `buildRequest`.
+        public let defaultValues: [String: String]
+        public let models: [String]
+        public let defaultModel: String?
+        /// Whether a secret field must be filled for this provider (false for
+        /// keyless local providers like Ollama).
+        public let secretRequired: Bool
+        /// Field overrides for this template; nil inherits the descriptor's fields.
+        public let fields: [Field]?
+
+        public init(
+            id: String,
+            displayName: String,
+            defaultValues: [String: String] = [:],
+            models: [String] = [],
+            defaultModel: String? = nil,
+            secretRequired: Bool = true,
+            fields: [Field]? = nil
+        ) {
+            self.id = id
+            self.displayName = displayName
+            self.defaultValues = defaultValues
+            self.models = models
+            self.defaultModel = defaultModel
+            self.secretRequired = secretRequired
+            self.fields = fields
+        }
+
+        public var resolvedDefaultModel: String {
+            defaultModel ?? models.first ?? ""
+        }
     }
 }
