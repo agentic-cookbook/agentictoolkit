@@ -15,9 +15,22 @@ final class LLMProvidersListViewModel: ObservableObject {
 
     let pluginManager: AIPluginManager
 
+    /// Invoked when the `+` control is tapped. The hosting AppKit controller sets
+    /// this to present the modal provider picker over its window (SwiftUI can't
+    /// present the AppKit sheet itself).
+    var onRequestAddProvider: (() -> Void)?
+
     init(pluginManager: AIPluginManager) {
         self.pluginManager = pluginManager
         self.configurations = UserSettings.aiProviderConfigurations.value
+    }
+
+    /// The picker's rows: every available template, flattened, each tagged with
+    /// the display name of the plugin that serves it (its configuration type).
+    var pickerRows: [ProviderPickerRow] {
+        availableTemplateGroups.flatMap { group in
+            group.templates.map { ProviderPickerRow(available: $0, configType: group.pluginName) }
+        }
     }
 
     /// Every provider template every installed plugin advertises — the `+` menu.

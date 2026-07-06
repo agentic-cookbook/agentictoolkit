@@ -43,4 +43,12 @@ extension UserSettings {
         "aiplugin.migratedToConfigurations",
         default: false
     )
+
+    /// One-time guard: true once the first-run default configuration has been
+    /// seeded (see `AIProviderDefaults`). Separate from `aiProvidersMigrated` so
+    /// it also seeds on installs that already migrated (and produced nothing).
+    public static let aiDefaultConfigSeeded = UserSetting<Bool>(
+        "aiplugin.defaultConfigSeeded",
+        default: false
+    )
 }

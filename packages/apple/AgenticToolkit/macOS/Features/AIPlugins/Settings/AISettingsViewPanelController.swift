@@ -27,6 +27,12 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelViewController
     }
 
     public override func loadView() {
+        viewModel.onRequestAddProvider = { [weak self] in
+            guard let self, let window = self.view.window else { return }
+            ProviderPicker.present(over: window, rows: self.viewModel.pickerRows) { [weak self] available in
+                self?.viewModel.add(available)
+            }
+        }
         let hosting = NSHostingView(rootView: LLMProvidersView(viewModel: viewModel))
         hosting.translatesAutoresizingMaskIntoConstraints = false
         self.view = hosting
