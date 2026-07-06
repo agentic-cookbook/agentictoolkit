@@ -109,6 +109,21 @@ struct PluginRequestTests {
         }
     }
 
+    @Test("ClaudeAPI uses bearer + oauth-beta when authMode is bearer-oauth")
+    func claudeAPIBearerOAuth() throws {
+        let values = ["apiKey": "tok-123", "authMode": "bearer-oauth",
+                      "baseURL": "https://api.anthropic.com/v1"]
+        let spec = try ClaudeAPIPlugin().buildRequest(
+            context(config: AIPluginConfig(values))
+        )
+        let (_, url, headers, _) = try #require(httpParts(spec))
+        #expect(url.absoluteString == "https://api.anthropic.com/v1/messages")
+        #expect(headers["Authorization"] == "Bearer tok-123")
+        #expect(headers["anthropic-beta"] == "oauth-2025-04-20")
+        #expect(headers["anthropic-version"] == "2023-06-01")
+        #expect(headers["x-api-key"] == nil)
+    }
+
     // MARK: - OpenAI
 
     @Test("OpenAI targets chat completions with bearer auth and a default model")

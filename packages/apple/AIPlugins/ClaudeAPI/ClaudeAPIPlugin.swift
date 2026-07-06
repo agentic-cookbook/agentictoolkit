@@ -14,7 +14,9 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
         guard let apiKey = context.config.apiKey, !apiKey.isEmpty else {
             throw PluginError.missingAPIKey
         }
-        guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
+        let base = context.config.baseURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseURL = (base?.isEmpty == false) ? base! : "https://api.anthropic.com/v1"
+        guard let url = URL(string: baseURL)?.appendingPathComponent("messages") else {
             throw PluginError.invalidURL
         }
 
@@ -35,14 +37,23 @@ public final class ClaudeAPIPlugin: NSObject, AIPlugin, @unchecked Sendable {
             body["system"] = systemPrompt
         }
 
+        var headers = [
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        ]
+        if context.config["authMode"] == "bearer-oauth" {
+            // A `claude setup-token` subscription credential, authenticated like
+            // the official client for OAuth calls (cf. scripts/claude-account).
+            headers["Authorization"] = "Bearer \(apiKey)"
+            headers["anthropic-beta"] = "oauth-2025-04-20"
+        } else {
+            headers["x-api-key"] = apiKey
+        }
+
         return .http(
             method: .post,
             url: url,
-            headers: [
-                "x-api-key": apiKey,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json"
-            ],
+            headers: headers,
             body: try JSONSerialization.data(withJSONObject: body)
         )
     }

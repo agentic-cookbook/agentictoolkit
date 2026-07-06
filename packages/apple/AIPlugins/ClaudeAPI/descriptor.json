@@ -1,15 +1,28 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "identifier": "com.agentictoolkit.plugin.claude-api",
   "displayName": "Claude (API)",
   "version": "1.0",
-  "models": [
-    "claude-haiku-4-5-20251001",
-    "claude-sonnet-4-6",
-    "claude-opus-4-6"
-  ],
-  "defaultModel": "claude-haiku-4-5-20251001",
+  "models": ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-7"],
+  "defaultModel": "claude-sonnet-4-6",
   "fields": [
     { "key": "apiKey", "label": "API Key", "kind": "secret" }
+  ],
+  "templates": [
+    {
+      "id": "anthropic-api", "displayName": "Anthropic API",
+      "defaultValues": { "baseURL": "https://api.anthropic.com/v1", "authMode": "x-api-key" },
+      "models": ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-7"],
+      "defaultModel": "claude-sonnet-4-6", "secretRequired": true
+    },
+    {
+      "id": "claude-max-token", "displayName": "Claude Max (token)",
+      "defaultValues": { "baseURL": "https://api.anthropic.com/v1", "authMode": "bearer-oauth" },
+      "models": ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-7"],
+      "defaultModel": "claude-sonnet-4-6", "secretRequired": true,
+      "fields": [
+        { "key": "apiKey", "label": "Session Token", "kind": "secret", "placeholder": "Run: claude setup-token" }
+      ]
+    }
   ]
 }
