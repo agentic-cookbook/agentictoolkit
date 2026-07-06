@@ -48,10 +48,20 @@ open class TopicListViewController: NSViewController {
     /// Fired when the user changes the selection. Nil when nothing is selected.
     public var onSelect: (((any TopicListItemProtocol)?) -> Void)?
 
-    /// Suppresses the next `onSelect` callback. Used by `selectItem(withId:)`
-    /// so programmatic selection doesn't echo back to callers that just told
-    /// us what to select.
-    private var suppressNextSelectionCallback = false
+    /// Nesting depth of "suppress the selection callback" scopes. While > 0, the
+    /// outline's selection-changed delegate is a no-op, so programmatic selection
+    /// never echoes back through `onSelect`. A counter (not a one-shot flag) so a
+    /// single scope absorbs *both* the notification `reloadData()` posts when it
+    /// drops the selection and the one the following re-selection posts — AppKit
+    /// delivers these synchronously within the scope.
+    private var selectionSuppressionDepth = 0
+
+    /// Runs `body` with `onSelect` suppressed for any selection changes it makes.
+    private func suppressingSelectionCallbacks(_ body: () -> Void) {
+        selectionSuppressionDepth += 1
+        defer { selectionSuppressionDepth -= 1 }
+        body()
+    }
 
     private var sections: [TopicListSection] = []
     /// Stable per-section node instances. NSOutlineView identifies items by
@@ -148,16 +158,19 @@ open class TopicListViewController: NSViewController {
         scrollView.backgroundColor = background
         outlineView.backgroundColor = background
 
-        // reloadData() repaints the rows' themed text, but it also drops the
+        // reloadData() repaints the rows' themed text, but it can also drop the
         // outline's selection — and a theme change is exactly what triggers this,
         // so without restoring it the highlighted row loses its highlight on every
-        // theme switch. Capture and restore the selection, suppressing the echo so
-        // the restore never re-fires `onSelect`.
+        // theme switch. Suppress across the whole reload+restore: reloadData()'s
+        // own selection-drop would otherwise fire a spurious onSelect(nil) (which
+        // clears the detail pane), and the restore fires another callback — a
+        // scope absorbs both.
         let selection = outlineView.selectedRowIndexes
-        outlineView.reloadData()
-        if !selection.isEmpty, outlineView.selectedRowIndexes != selection {
-            suppressNextSelectionCallback = true
-            outlineView.selectRowIndexes(selection, byExtendingSelection: false)
+        suppressingSelectionCallbacks {
+            outlineView.reloadData()
+            if !selection.isEmpty, outlineView.selectedRowIndexes != selection {
+                outlineView.selectRowIndexes(selection, byExtendingSelection: false)
+            }
         }
     }
 
@@ -300,11 +313,11 @@ open class TopicListViewController: NSViewController {
         }) else { return }
         let row = outlineView.row(forItem: node)
         // Bail if the row is already selected: selectRowIndexes would be a no-op
-        // and never fire the selection-changed callback, leaving
-        // suppressNextSelectionCallback stuck on to swallow the user's next click.
+        // that fires no callback, so there'd be nothing to suppress anyway.
         guard row >= 0, outlineView.selectedRow != row else { return }
-        suppressNextSelectionCallback = true
-        outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        suppressingSelectionCallbacks {
+            outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        }
     }
 
     private static func buildRootNodes(from sections: [TopicListSection]) -> [TopicListNode] {
@@ -435,10 +448,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
     }
 
     public func outlineViewSelectionDidChange(_ notification: Notification) {
-        if suppressNextSelectionCallback {
-            suppressNextSelectionCallback = false
-            return
-        }
+        if selectionSuppressionDepth > 0 { return }
         let row = outlineView.selectedRow
         guard row >= 0,
               let node = outlineView.item(atRow: row) as? TopicListNode,

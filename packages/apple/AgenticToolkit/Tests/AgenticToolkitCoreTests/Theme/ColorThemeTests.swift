@@ -31,6 +31,18 @@ struct ColorThemeTests {
         #expect(decoded.attribution == "Arctic Ice Studio")
     }
 
+    @Test("a shared/hand-authored theme JSON that omits isBuiltIn still decodes")
+    func decodesWithoutIsBuiltIn() throws {
+        let ansi = Array(repeating: "\"#000000ff\"", count: 16).joined(separator: ",")
+        // No "isBuiltIn" key — a file a user would hand-write or receive.
+        let json = "{\"id\":\"x\",\"name\":\"Shared\",\"appearance\":\"dark\","
+            + "\"foreground\":\"#ffffffff\",\"background\":\"#000000ff\",\"cursor\":\"#ffffffff\","
+            + "\"selection\":\"#111111ff\",\"ansi\":[\(ansi)]}"
+        let decoded = try JSONDecoder().decode(ColorTheme.self, from: Data(json.utf8))
+        #expect(decoded.isBuiltIn == false)
+        #expect(decoded.isImported == false)
+    }
+
     @Test("themes persisted before isImported/attribution existed still decode")
     func decodesLegacyWithoutNewFields() throws {
         let ansi = Array(repeating: "\"#000000ff\"", count: 16).joined(separator: ",")

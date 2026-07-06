@@ -102,7 +102,12 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         appearance = try container.decode(ThemeAppearance.self, forKey: .appearance)
-        isBuiltIn = try container.decode(Bool.self, forKey: .isBuiltIn)
+        // `isBuiltIn` / `isImported` are internal lock flags a hand-authored or
+        // third-party theme file wouldn't carry, and the import path overwrites
+        // them anyway — so default them when absent rather than failing to decode.
+        // (Persisted custom themes are never built-in, so `false` is also correct
+        // for the storage round-trip.)
+        isBuiltIn = try container.decodeIfPresent(Bool.self, forKey: .isBuiltIn) ?? false
         // Fields added after the first shipping format default when absent, so
         // themes persisted (or exported) by an older build still decode.
         isImported = try container.decodeIfPresent(Bool.self, forKey: .isImported) ?? false

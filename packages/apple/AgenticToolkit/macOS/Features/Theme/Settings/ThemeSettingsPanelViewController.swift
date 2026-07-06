@@ -39,8 +39,8 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         // Selecting a theme row activates it (updating activeThemeID), so this
         // also fires whenever the selection changes — keeping "remove" enabled
         // only for deletable themes.
-        activeThemeObserver = UserSettingObserver(UserSettings.activeThemeID) { [weak self] _ in
-            self?.updateFooterState()
+        activeThemeObserver = UserSettingObserver(UserSettings.activeThemeID) { [weak self] id in
+            self?.updateFooterState(for: id)
         }
     }
 
@@ -64,12 +64,20 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         }
         setPanels(panels)
         let targetID = selectID ?? themes.first?.id
+        // Track which theme actually ends up selected so the footer reflects it
+        // immediately — activeThemeID isn't updated until the new panel's
+        // viewWillAppear runs, which is too late for the updateFooterState below.
+        let selectedID: String?
         if let index = themes.firstIndex(where: { $0.id == targetID }) {
             selectPanel(at: index)
+            selectedID = targetID
         } else if !panels.isEmpty {
             selectPanel(at: 0)
+            selectedID = themes.first?.id
+        } else {
+            selectedID = nil
         }
-        updateFooterState()
+        updateFooterState(for: selectedID)
     }
 
     /// Re-reads the sidebar rows (titles/swatches) from the existing panels after
@@ -141,8 +149,14 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         return item
     }
 
-    private func updateFooterState() {
-        addRemoveControl?.setEnabled(selectedTheme?.isDeletable ?? false, forSegment: 1)
+    /// Enables the remove(−) segment only for a deletable theme. Callers pass the
+    /// theme that is (about to be) selected: the active-theme observer passes the
+    /// live `activeThemeID`, while a structural action passes the id it just
+    /// selected, so the footer is correct immediately rather than lagging until
+    /// the new panel's `viewWillAppear` updates `activeThemeID`.
+    private func updateFooterState(for themeID: String?) {
+        let deletable = themeID.flatMap { store.theme(withID: $0) }?.isDeletable ?? false
+        addRemoveControl?.setEnabled(deletable, forSegment: 1)
     }
 
     // MARK: - Structural actions
@@ -170,7 +184,7 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
     }
 
     @objc private func duplicateSelected() {
-        guard let theme = selectedTheme else { return }
+        guard let theme = selectedTheme else { NSSound.beep(); return }
         rebuildPanels(selecting: store.duplicate(theme).id)
     }
 
@@ -185,9 +199,9 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         panel.prompt = "Import"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let imported = url.pathExtension.lowercased() == "itermcolors"
-                ? try store.importITermColors(contentsOf: url)
-                : try store.importJSON(contentsOf: url)
+            // Routes by file content (not extension), so a mis-named file still
+            // lands in the right parser.
+            let imported = try store.importTheme(contentsOf: url)
             rebuildPanels(selecting: imported.id)
         } catch {
             present(error, title: "Couldn’t import theme")
@@ -195,10 +209,10 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
     }
 
     @objc private func exportJSONAction() {
-        guard let theme = selectedTheme else { return }
+        guard let theme = selectedTheme else { NSSound.beep(); return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "\(theme.name).json"
+        panel.nameFieldStringValue = "\(Self.sanitizedFilename(theme.name)).json"
         panel.prompt = "Export"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
@@ -214,5 +228,15 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .warning
         alert.runModal()
+    }
+
+    /// Strips path separators (and other filename-illegal characters) from a
+    /// free-text theme name so it can seed a save panel's default file name —
+    /// otherwise a name like "Light/Dark" would be read as a path component.
+    private static func sanitizedFilename(_ name: String) -> String {
+        let illegal = CharacterSet(charactersIn: "/:\\")
+        let cleaned = name.components(separatedBy: illegal).joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Theme" : cleaned
     }
 }

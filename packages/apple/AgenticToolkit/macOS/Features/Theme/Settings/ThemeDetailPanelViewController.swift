@@ -123,10 +123,6 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     /// Builds the theme as a vertical stack of cards. Interactive controls are
     /// live for an editable theme and disabled (read-only) for a locked one.
     private func makeContent() -> NSView {
-        colorWells.removeAll()
-        sizeFields.removeAll(); sizeSteppers.removeAll()
-        weightPopups.removeAll(); familyFields.removeAll()
-
         configurePreview()
 
         let cards: [NSView] = [
@@ -455,8 +451,16 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
 
     @objc private func nameChanged(_ sender: NSTextField) {
         guard theme.isEditable else { return }
+        let trimmed = sender.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Reject an empty/whitespace name: it would leave a blank sidebar row and
+        // a blank panel title that's impossible to tell apart or re-select. Snap
+        // the field back to the current name.
+        guard !trimmed.isEmpty else {
+            sender.stringValue = theme.name
+            return
+        }
         var updated = theme
-        updated.name = sender.stringValue
+        updated.name = trimmed
         descriptor.title = updated.name
         persist(updated)
         // The sidebar row snapshots its title once; re-read it after a rename.

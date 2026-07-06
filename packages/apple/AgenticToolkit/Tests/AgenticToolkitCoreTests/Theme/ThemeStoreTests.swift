@@ -185,4 +185,70 @@ struct ThemeStoreTests {
         #expect(copy.typography.sizeScale == 1.4)
         #expect(copy.typography.styles[TextRole.body.rawValue]?.family == "Menlo")
     }
+
+    // MARK: - Import validation & routing
+
+    private func themeJSON(name: String, ansiCount: Int, foreground: String, background: String) -> Data {
+        let ansi = Array(repeating: "\"#000000ff\"", count: ansiCount).joined(separator: ",")
+        let json = "{\"id\":\"x\",\"name\":\"\(name)\",\"appearance\":\"dark\",\"isBuiltIn\":false,"
+            + "\"foreground\":\"\(foreground)\",\"background\":\"\(background)\",\"cursor\":\"#ffffffff\","
+            + "\"selection\":\"#111111ff\",\"ansi\":[\(ansi)]}"
+        return Data(json.utf8)
+    }
+
+    @Test("importJSON rejects a theme without 16 ANSI colors")
+    func importJSONRejectsShortPalette() {
+        let data = themeJSON(name: "Broken", ansiCount: 3, foreground: "#ffffffff", background: "#000000ff")
+        #expect(throws: ThemeImportError.self) { try store.importJSON(data: data) }
+        #expect(store.customThemes.isEmpty)   // nothing persisted on failure
+    }
+
+    @Test("importJSON rejects a theme whose foreground equals its background")
+    func importJSONRejectsInvisibleText() {
+        let data = themeJSON(name: "Invisible", ansiCount: 16, foreground: "#000000ff", background: "#000000ff")
+        #expect(throws: ThemeImportError.self) { try store.importJSON(data: data) }
+        #expect(store.customThemes.isEmpty)
+    }
+
+    @Test("importJSON accepts a well-formed 16-color theme")
+    func importJSONAcceptsValid() throws {
+        let data = themeJSON(name: "Good", ansiCount: 16, foreground: "#ffffffff", background: "#000000ff")
+        let imported = try store.importJSON(data: data)
+        #expect(imported.name == "Good")
+        #expect(imported.hasValidPalette)
+        #expect(imported.isImported)
+    }
+
+    @Test("importTheme routes by content, not extension")
+    func importThemeSniffsContent() throws {
+        // A ColorTheme JSON saved with a .itermcolors extension still imports as JSON.
+        let data = try store.exportJSON(sampleTheme(name: "Mislabeled"))
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Mislabeled-\(UUID().uuidString).itermcolors")
+        try data.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let imported = try store.importTheme(contentsOf: url)
+        #expect(imported.name == "Mislabeled")
+        #expect(imported.isImported)
+    }
+
+    @Test("addNewTheme disambiguates repeated names")
+    func addNewUniquifiesNames() {
+        let first = store.addNewTheme(name: "New Theme")
+        let second = store.addNewTheme(name: "New Theme")
+        let third = store.addNewTheme(name: "New Theme")
+        #expect(first.name == "New Theme")
+        #expect(second.name == "New Theme 2")
+        #expect(third.name == "New Theme 3")
+    }
+
+    @Test("duplicate disambiguates repeated copies")
+    func duplicateUniquifiesNames() {
+        let base = store.add(sampleTheme(name: "Base"))
+        let first = store.duplicate(base)
+        let second = store.duplicate(base)
+        #expect(first.name == "Base Copy")
+        #expect(second.name == "Base Copy 2")
+    }
 }
