@@ -76,12 +76,15 @@ export function InvitationRequestsPane({
   rows,
   loading,
   onDelete,
+  paramKey,
   renderNotesAndHistory,
   renderNotesModal,
 }: {
   rows: InvitationRequest[]
   loading?: boolean
   onDelete: (ids: string[]) => void
+  /** Optional URL search-param key for deep-linking the selected row (forwarded to ListWithDetailsPane). */
+  paramKey?: string
 } & NotesSlots): React.ReactElement {
   const [notesForId, setNotesForId] = React.useState<string | null>(null)
   const selectedRow = rows.find((r) => r.id === notesForId) ?? null
@@ -97,6 +100,7 @@ export function InvitationRequestsPane({
         ariaLabel="Invitation requests"
         emptyLabel="No invitation requests."
         storageKey="adm-inv-requests"
+        paramKey={paramKey}
         onDelete={onDelete}
         deleteConfirm={{ title: "Delete requests?", description: "This removes the selected invitation requests." }}
         actions={[{ id: "notes", label: "Admin notes", requiresSelection: true, onClick: (ids) => setNotesForId(ids[0] ?? null) }]}
@@ -128,6 +132,7 @@ export function InvitationPendingUsersPane({
   onAdd,
   sendBusy,
   addBusy,
+  paramKey,
   renderNotesAndHistory,
   renderNotesModal,
 }: {
@@ -138,6 +143,8 @@ export function InvitationPendingUsersPane({
   onAdd: (users: DraftUser[]) => void
   sendBusy?: boolean
   addBusy?: boolean
+  /** Optional URL search-param key for deep-linking the selected row (forwarded to ListWithDetailsPane). */
+  paramKey?: string
 } & NotesSlots): React.ReactElement {
   const [notesForId, setNotesForId] = React.useState<string | null>(null)
   const [sendOpen, setSendOpen] = React.useState(false)
@@ -167,6 +174,7 @@ export function InvitationPendingUsersPane({
         ariaLabel="Pending users"
         emptyLabel="No pending users."
         storageKey="adm-inv-pending"
+        paramKey={paramKey}
         onDelete={onDelete}
         deleteConfirm={{ title: "Delete pending users?", description: "This removes the selected pending users." }}
         actions={[
@@ -221,12 +229,15 @@ export function InvitationInvitesPane({
   rows,
   loading,
   onDelete,
+  paramKey,
   renderNotesAndHistory,
   renderNotesModal,
 }: {
   rows: Invite[]
   loading?: boolean
   onDelete: (ids: string[]) => void
+  /** Optional URL search-param key for deep-linking the selected row (forwarded to ListWithDetailsPane). */
+  paramKey?: string
 } & NotesSlots): React.ReactElement {
   const [notesForId, setNotesForId] = React.useState<string | null>(null)
   const selectedRow = rows.find((i) => i.id === notesForId) ?? null
@@ -242,6 +253,7 @@ export function InvitationInvitesPane({
         ariaLabel="Sent invites"
         emptyLabel="No invites sent."
         storageKey="adm-inv-invites"
+        paramKey={paramKey}
         onDelete={onDelete}
         deleteConfirm={{ title: "Delete invites?", description: "This removes the selected sent invites." }}
         actions={[{ id: "notes", label: "Admin notes", requiresSelection: true, onClick: (ids) => setNotesForId(ids[0] ?? null) }]}
