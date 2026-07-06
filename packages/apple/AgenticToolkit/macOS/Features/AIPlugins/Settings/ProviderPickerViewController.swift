@@ -72,8 +72,8 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         self.filteredRows = rows
         super.init(nibName: nil, bundle: nil)
         let rowCount = max(rows.count, 1)
-        let listHeight = min(CGFloat(rowCount) * 24 + 26 /* header + pad */, 460)
-        let height = 16 + 26 /* search */ + 8 + listHeight + 8 + 150 /* info */ + 10 + 32 /* buttons */ + 16
+        let listHeight = min(CGFloat(rowCount) * 24 + 26 /* header + pad */, 420)
+        let height = 16 + 26 /* search */ + 8 + listHeight + 8 + 230 /* info */ + 10 + 32 /* buttons */ + 16
         self.preferredContentSize = NSSize(width: 760, height: height)
     }
 
@@ -127,7 +127,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         super.viewDidLayout()
         if !didSetInitialSplit, splitView.bounds.height > 200 {
             didSetInitialSplit = true
-            splitView.setPosition(splitView.bounds.height - 150, ofDividerAt: 0)
+            splitView.setPosition(splitView.bounds.height - 230, ofDividerAt: 0)
         }
     }
 
@@ -277,27 +277,94 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     private func updateInfo(for row: ProviderPickerRow?) {
         let palette = ThemePaletteObserver.currentPalette
-        infoTextView.string = row.map(Self.infoText(for:)) ?? ""
-        infoTextView.textColor = palette.primaryTextColor
-        infoTextView.font = .systemFont(ofSize: NSFont.systemFontSize)
+        infoTextView.linkTextAttributes = [
+            .foregroundColor: palette.accentColor,
+            .underlineStyle: NSUnderlineStyle.single.rawValue,
+            .cursor: NSCursor.pointingHand
+        ]
+        let content = row.map { Self.attributedInfo(for: $0, palette: palette) }
+            ?? NSAttributedString(string: "")
+        infoTextView.textStorage?.setAttributedString(content)
     }
 
-    private static func infoText(for row: ProviderPickerRow) -> String {
+    /// A `location`-based tab stop so every label row's value starts at the same x,
+    /// giving the details pane a fixed-width label column.
+    private static let labelStyle: NSParagraphStyle = {
+        let style = NSMutableParagraphStyle()
+        style.tabStops = [NSTextTab(textAlignment: .left, location: 120)]
+        style.defaultTabInterval = 120
+        style.headIndent = 120
+        style.paragraphSpacing = 2
+        return style
+    }()
+
+    private static let wrapStyle: NSParagraphStyle = {
+        let style = NSMutableParagraphStyle()
+        style.paragraphSpacing = 4
+        return style
+    }()
+
+    /// Builds the structured details pane for a provider: header, provider/LLM
+    /// blurbs, an aligned label/value block (with a clickable base URL), and one
+    /// line per model with its description / tool support / strengths when known.
+    private static func attributedInfo(for row: ProviderPickerRow, palette: SemanticPalette) -> NSAttributedString {
+        let primary = palette.primaryTextColor
+        let secondary = palette.secondaryTextColor
+        let tertiary = palette.nsColor(.tertiaryText)
+        let accent = palette.accentColor
+        let body = NSFont.systemFont(ofSize: 12)
+        let caption = NSFont.systemFont(ofSize: 11)
+
+        let out = NSMutableAttributedString()
+        func add(_ string: String, _ font: NSFont, _ color: NSColor, _ paragraph: NSParagraphStyle? = nil) {
+            var attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+            if let paragraph { attrs[.paragraphStyle] = paragraph }
+            out.append(NSAttributedString(string: string, attributes: attrs))
+        }
+        func labelRow(_ label: String, _ value: String) {
+            add("\(label)\t", body, secondary, labelStyle)
+            add("\(value)\n", body, primary, labelStyle)
+        }
+
         let template = row.available.template
-        var lines: [String] = []
-        lines.append(row.llm.isEmpty ? row.provider : "\(row.provider) · \(row.llm)")
-        lines.append("Config type: \(row.configType)")
+
+        add((row.llm.isEmpty ? row.provider : "\(row.provider) · \(row.llm)") + "\n",
+            NSFont.boldSystemFont(ofSize: 14), primary)
+        if let text = template.providerDescription, !text.isEmpty { add(text + "\n", body, secondary, wrapStyle) }
+        if let text = template.llmDescription, !text.isEmpty { add(text + "\n", body, secondary, wrapStyle) }
+        add("\n", body, secondary)
+
+        labelRow("Provider", row.provider)
+        if !row.llm.isEmpty { labelRow("LLM", row.llm) }
+        labelRow("Config Type", row.configType)
+        if let url = template.defaultValues["baseURL"], !url.isEmpty {
+            add("Base URL\t", body, secondary, labelStyle)
+            var attrs: [NSAttributedString.Key: Any] = [
+                .font: body, .foregroundColor: accent, .paragraphStyle: labelStyle,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+            if let link = URL(string: url) { attrs[.link] = link }
+            out.append(NSAttributedString(string: url + "\n", attributes: attrs))
+        }
+        if !template.resolvedDefaultModel.isEmpty { labelRow("Default model", template.resolvedDefaultModel) }
+        labelRow("API key", template.secretRequired ? "Required" : "Not required")
+
         if !template.models.isEmpty {
-            lines.append("Models: \(template.models.joined(separator: ", "))")
+            add("\nModels\n", NSFont.boldSystemFont(ofSize: 12), primary)
+            for model in template.models {
+                add("  \(model)\n", NSFont.systemFont(ofSize: 12, weight: .semibold), primary)
+                guard let detail = template.modelDetail(for: model) else { continue }
+                if let text = detail.description, !text.isEmpty {
+                    add("      \(text)\n", caption, secondary)
+                }
+                var caps: [String] = []
+                if let tools = detail.tools { caps.append("Tools: \(tools ? "Yes" : "No")") }
+                if let goodFor = detail.goodFor, !goodFor.isEmpty { caps.append("Good for: \(goodFor)") }
+                if !caps.isEmpty { add("      \(caps.joined(separator: " · "))\n", caption, tertiary) }
+            }
         }
-        if !template.resolvedDefaultModel.isEmpty {
-            lines.append("Default model: \(template.resolvedDefaultModel)")
-        }
-        lines.append(template.secretRequired ? "Requires an API key." : "No API key required.")
-        if let baseURL = template.defaultValues["baseURL"], !baseURL.isEmpty {
-            lines.append("Base URL: \(baseURL)")
-        }
-        return lines.joined(separator: "\n")
+
+        return out
     }
 
     // MARK: - Actions

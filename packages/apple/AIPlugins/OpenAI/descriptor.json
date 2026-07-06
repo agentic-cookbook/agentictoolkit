@@ -15,10 +15,18 @@
       "provider": "OpenAI",
       "llm": "GPT",
       "configType": "API Key",
+      "providerDescription": "OpenAI — maker of GPT and the ChatGPT API.",
+      "llmDescription": "GPT — general-purpose models; 4o is multimodal, with native tool use.",
       "defaultValues": {},
       "models": ["gpt-4.1", "gpt-4o", "gpt-4o-mini", "o1-mini"],
       "defaultModel": "gpt-4.1",
-      "secretRequired": true
+      "secretRequired": true,
+      "modelDetails": [
+        { "id": "gpt-4.1", "description": "Strong general-purpose GPT with a large context window.", "tools": true, "goodFor": "Coding and general tasks" },
+        { "id": "gpt-4o", "description": "Multimodal 'omni' model (text and vision).", "tools": true, "goodFor": "Multimodal and general use" },
+        { "id": "gpt-4o-mini", "description": "Small, fast, and inexpensive.", "tools": true, "goodFor": "High-volume, cost-sensitive tasks" },
+        { "id": "o1-mini", "description": "Reasoning-optimized model.", "goodFor": "Math and step-by-step reasoning" }
+      ]
     }
   ]
 }

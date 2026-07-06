@@ -110,6 +110,25 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
         public var isSecret: Bool { kind == .secret }
     }
 
+    /// Optional descriptive metadata for one model, shown in the provider picker's
+    /// details pane. All fields optional — populated where known.
+    public struct ModelDetail: Codable, Sendable, Equatable {
+        public let id: String
+        /// One-line description of the model.
+        public let description: String?
+        /// Whether the model supports tool / function calling.
+        public let tools: Bool?
+        /// What the model is well-suited for.
+        public let goodFor: String?
+
+        public init(id: String, description: String? = nil, tools: Bool? = nil, goodFor: String? = nil) {
+            self.id = id
+            self.description = description
+            self.tools = tools
+            self.goodFor = goodFor
+        }
+    }
+
     /// A named provider preset a plugin advertises: a base URL / auth mode and a
     /// model list the user instantiates as a configuration. Pure data.
     public struct ProviderTemplate: Codable, Sendable, Equatable {
@@ -135,6 +154,13 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
         /// "Subscription Token". Shown as the picker's Config Type column. Falls back
         /// to "API Key" / "Local" based on `secretRequired`.
         public let configType: String?
+        /// One-line blurb about the vendor, for the details pane.
+        public let providerDescription: String?
+        /// One-line blurb about the model family, for the details pane.
+        public let llmDescription: String?
+        /// Per-model descriptive metadata (description / tool support / strengths),
+        /// keyed by model id. Models without an entry render as a plain line.
+        public let modelDetails: [ModelDetail]?
 
         public init(
             id: String,
@@ -146,7 +172,10 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
             fields: [Field]? = nil,
             provider: String? = nil,
             llm: String? = nil,
-            configType: String? = nil
+            configType: String? = nil,
+            providerDescription: String? = nil,
+            llmDescription: String? = nil,
+            modelDetails: [ModelDetail]? = nil
         ) {
             self.id = id
             self.displayName = displayName
@@ -158,6 +187,14 @@ public struct AIPluginDescriptor: Codable, Sendable, Equatable {
             self.provider = provider
             self.llm = llm
             self.configType = configType
+            self.providerDescription = providerDescription
+            self.llmDescription = llmDescription
+            self.modelDetails = modelDetails
+        }
+
+        /// The `ModelDetail` for a model id, if the template supplies one.
+        public func modelDetail(for modelID: String) -> ModelDetail? {
+            modelDetails?.first { $0.id == modelID }
         }
 
         public var resolvedDefaultModel: String {

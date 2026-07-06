@@ -33,6 +33,24 @@ struct ProviderPickerTests {
         #expect(bareLocal.resolvedConfigType == "Local")
     }
 
+    @Test("ProviderTemplate decodes provider/llm descriptions and per-model details")
+    func decodesDetails() throws {
+        let json = """
+        {"id":"t","displayName":"T","defaultValues":{},"models":["m1"],"secretRequired":true,
+         "provider":"Anthropic","llm":"Claude","configType":"API Key",
+         "providerDescription":"P","llmDescription":"L",
+         "modelDetails":[{"id":"m1","description":"d","tools":true,"goodFor":"g"}]}
+        """
+        let template = try JSONDecoder().decode(AIPluginDescriptor.ProviderTemplate.self, from: Data(json.utf8))
+        #expect(template.providerDescription == "P")
+        #expect(template.llmDescription == "L")
+        let detail = try #require(template.modelDetail(for: "m1"))
+        #expect(detail.description == "d")
+        #expect(detail.tools == true)
+        #expect(detail.goodFor == "g")
+        #expect(template.modelDetail(for: "missing") == nil)
+    }
+
     @Test("Filter matches provider, llm, or config type (case-insensitive)")
     func filterAcrossColumns() {
         let rows = [

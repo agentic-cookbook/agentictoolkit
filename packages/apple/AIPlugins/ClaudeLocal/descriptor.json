@@ -13,11 +13,18 @@
       "provider": "Anthropic",
       "llm": "Claude",
       "configType": "OAuth Account",
+      "providerDescription": "Anthropic — Claude run through your installed Claude Code CLI.",
+      "llmDescription": "Claude via the local `claude` CLI — no API key; uses your existing logged-in account.",
       "defaultValues": {},
       "models": ["sonnet", "haiku", "opus"],
       "defaultModel": "sonnet",
       "secretRequired": false,
-      "fields": []
+      "fields": [],
+      "modelDetails": [
+        { "id": "sonnet", "description": "Balanced default (latest Sonnet).", "tools": true, "goodFor": "Everyday tasks" },
+        { "id": "haiku", "description": "Fastest, cheapest (latest Haiku).", "tools": true, "goodFor": "Quick, high-volume tasks" },
+        { "id": "opus", "description": "Most capable (latest Opus).", "tools": true, "goodFor": "Hard reasoning" }
+      ]
     }
   ]
 }
