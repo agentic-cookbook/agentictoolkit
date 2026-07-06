@@ -2902,7 +2902,7 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		"TEMP_EF06D4EF-EDB7-470C-A142-0993A7898A86" /* Settings */ = {
+		"TEMP_15D08F64-F66E-4CEF-A2E8-FFBEA3D194C0" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
