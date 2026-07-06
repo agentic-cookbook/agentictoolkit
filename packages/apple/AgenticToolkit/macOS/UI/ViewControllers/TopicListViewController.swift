@@ -66,6 +66,16 @@ open class TopicListViewController: NSViewController {
     private let outlineView = ColumnFillingOutlineView()
     private let scrollView = NSScrollView()
 
+    // Optional title header shown above the list, and an optional client footer
+    // (e.g. add/remove/actions) below it. Both collapse to zero height when
+    // unset, since they're arranged subviews of `contentStack`.
+    private var listTitle: String?
+    private let titleLabel = NSTextField(labelWithString: "")
+    private let headerView = NSView()
+    private let footerContainer = NSView()
+    private var footerView: NSView?
+    private let contentStack = NSStackView()
+
     // Keeps the sidebar painted in the active theme's window-background color.
     private var themeObserver: ThemePaletteObserver?
 
@@ -92,8 +102,34 @@ open class TopicListViewController: NSViewController {
 
         scrollView.documentView = outlineView
         scrollView.hasVerticalScroller = true
+        // Overlay + autohide: the scroller floats over the content and only
+        // appears while scrolling *and* only when the list actually overflows, so
+        // a short topic list shows no scroller gutter.
+        scrollView.scrollerStyle = .overlay
+        scrollView.autohidesScrollers = true
         scrollView.drawsBackground = true
-        self.view = scrollView
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        configureHeader()
+        applyFooterView()
+
+        contentStack.orientation = .vertical
+        contentStack.alignment = .leading
+        contentStack.spacing = 0
+        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        contentStack.addArrangedSubview(headerView)
+        contentStack.addArrangedSubview(scrollView)
+        contentStack.addArrangedSubview(footerContainer)
+        for sub in [headerView, scrollView, footerContainer] {
+            sub.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        }
+        // The list soaks up the free vertical space; the header/footer keep their
+        // natural height (a hidden arranged subview collapses to zero in the stack).
+        scrollView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        headerView.setContentHuggingPriority(.required, for: .vertical)
+        footerContainer.setContentHuggingPriority(.required, for: .vertical)
+
+        self.view = contentStack
 
         themeObserver = ThemePaletteObserver { [weak self] palette in
             self?.applyTheme(palette)
@@ -102,9 +138,83 @@ open class TopicListViewController: NSViewController {
 
     private func applyTheme(_ palette: SemanticPalette) {
         let background = palette.windowBackgroundColor
+        contentStack.wantsLayer = true
+        contentStack.layer?.backgroundColor = background.cgColor
+        headerView.wantsLayer = true
+        headerView.layer?.backgroundColor = background.cgColor
+        footerContainer.wantsLayer = true
+        footerContainer.layer?.backgroundColor = background.cgColor
+        titleLabel.textColor = palette.secondaryTextColor
         scrollView.backgroundColor = background
         outlineView.backgroundColor = background
+
+        // reloadData() repaints the rows' themed text, but it also drops the
+        // outline's selection — and a theme change is exactly what triggers this,
+        // so without restoring it the highlighted row loses its highlight on every
+        // theme switch. Capture and restore the selection, suppressing the echo so
+        // the restore never re-fires `onSelect`.
+        let selection = outlineView.selectedRowIndexes
         outlineView.reloadData()
+        if !selection.isEmpty, outlineView.selectedRowIndexes != selection {
+            suppressNextSelectionCallback = true
+            outlineView.selectRowIndexes(selection, byExtendingSelection: false)
+        }
+    }
+
+    // MARK: - Title header + footer
+
+    /// Sets the sidebar's title, shown as a header above the list. A nil or empty
+    /// title hides the header entirely.
+    open func setTitle(_ title: String?) {
+        listTitle = title
+        if isViewLoaded { updateHeaderVisibility() }
+    }
+
+    /// Installs (or, with nil, clears) a client footer pinned below the list —
+    /// e.g. an add / remove / actions bar. The footer spans the sidebar width.
+    open func setFooterView(_ view: NSView?) {
+        footerView = view
+        if isViewLoaded { applyFooterView() }
+    }
+
+    private func configureHeader() {
+        titleLabel.font = CellMetrics.titleFont
+        titleLabel.textColor = .secondaryLabelColor
+        titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        headerView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 14),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: headerView.trailingAnchor, constant: -8),
+            titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 10),
+            titleLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -6)
+        ])
+        updateHeaderVisibility()
+    }
+
+    private func updateHeaderVisibility() {
+        let text = listTitle?.trimmingCharacters(in: .whitespaces) ?? ""
+        titleLabel.stringValue = text
+        headerView.isHidden = text.isEmpty
+    }
+
+    private func applyFooterView() {
+        footerContainer.translatesAutoresizingMaskIntoConstraints = false
+        footerContainer.subviews.forEach { $0.removeFromSuperview() }
+        guard let footerView else {
+            footerContainer.isHidden = true
+            return
+        }
+        footerContainer.isHidden = false
+        footerView.translatesAutoresizingMaskIntoConstraints = false
+        footerContainer.addSubview(footerView)
+        NSLayoutConstraint.activate([
+            footerView.leadingAnchor.constraint(equalTo: footerContainer.leadingAnchor),
+            footerView.trailingAnchor.constraint(equalTo: footerContainer.trailingAnchor),
+            footerView.topAnchor.constraint(equalTo: footerContainer.topAnchor),
+            footerView.bottomAnchor.constraint(equalTo: footerContainer.bottomAnchor)
+        ])
     }
 
     /// Populate the list as a flat sequence with no section headers.
@@ -128,6 +238,11 @@ open class TopicListViewController: NSViewController {
     /// an allowance for the outline's internal margins and the vertical scroller.
     open func preferredWidth() -> CGFloat {
         var widest: CGFloat = 0
+        // The title header participates so a long panel name never truncates.
+        if let listTitle, !listTitle.isEmpty {
+            widest = max(widest, CellMetrics.titleLeadingInset
+                + ceil(listTitle.renderedWidth(usingFont: CellMetrics.titleFont)))
+        }
         for section in sections {
             if let title = section.title, !title.isEmpty {
                 widest = max(widest, CellMetrics.headerLeadingInset
@@ -138,7 +253,12 @@ open class TopicListViewController: NSViewController {
                     + ceil(item.title.renderedWidth(usingFont: CellMetrics.itemFont)))
             }
         }
-        return widest + Self.outlineChromePadding
+        var width = widest + Self.outlineChromePadding
+        // A footer bar (add/remove/actions) shouldn't be clipped either.
+        if let footerView {
+            width = max(width, footerView.fittingSize.width)
+        }
+        return width
     }
 
     /// The one source of truth for the row layout, shared by `preferredWidth`
@@ -147,6 +267,8 @@ open class TopicListViewController: NSViewController {
     fileprivate enum CellMetrics {
         static var itemFont: NSFont { .systemFont(ofSize: 13) }
         static var headerFont: NSFont { .systemFont(ofSize: 11, weight: .semibold) }
+        static var titleFont: NSFont { .systemFont(ofSize: 13, weight: .semibold) }
+        static let titleLeadingInset: CGFloat = 14
         static let iconLeadingInset: CGFloat = 4
         static let iconSize: CGFloat = 16
         static let iconToTextGap: CGFloat = 6

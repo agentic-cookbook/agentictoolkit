@@ -1,15 +1,16 @@
 import AppKit
-import UniformTypeIdentifiers
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// One theme's detail pane in the Theme settings split. Shows a live preview
-/// plus, for a custom theme, the Colors / Typography / Terminal editor;
-/// built-ins are read-only with a Duplicate affordance. Selecting the panel
-/// (its row in the sidebar) activates the theme app-wide. Structural edits
-/// (import / duplicate / delete) call `onStructuralChange` so the parent split
-/// rebuilds its panel list; a rename calls `onRowInvalidated` so the sidebar
-/// row re-reads its title/swatch without tearing the editor down.
+/// One theme's detail pane in the Theme settings split. Shows the theme as a set
+/// of cards — Preview, Details, Colors, Typography, Terminal palette. For an
+/// editable (custom) theme the cards' controls are live; for a locked theme
+/// (built-in or imported) they're read-only and the Details card shows a lock +
+/// "duplicate to edit" note. Selecting the panel (its row in the sidebar)
+/// activates the theme app-wide. Structural actions (add / remove / duplicate /
+/// import / export) live in the sidebar footer, not here; a rename calls
+/// `onRowInvalidated` so the sidebar row re-reads its title/swatch without
+/// tearing the editor down.
 @MainActor
 final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelViewController {
 
@@ -32,7 +33,6 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
 
     private let store: ThemeStore
     private var theme: ColorTheme
-    private let onStructuralChange: (_ selectID: String) -> Void
     private let onRowInvalidated: () -> Void
 
     /// The theme this panel edits, for the parent split's selection bookkeeping.
@@ -50,11 +50,9 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
 
     init(theme: ColorTheme,
          store: ThemeStore,
-         onStructuralChange: @escaping (_ selectID: String) -> Void,
          onRowInvalidated: @escaping () -> Void) {
         self.theme = theme
         self.store = store
-        self.onStructuralChange = onStructuralChange
         self.onRowInvalidated = onRowInvalidated
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: theme.name,
@@ -71,8 +69,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     // MARK: - View
 
     override func loadView() {
-        let editable = !store.isBuiltIn(id: theme.id)
-        let content = editable ? makeEditor() : makeBuiltInNotice()
+        let content = makeContent()
         content.translatesAutoresizingMaskIntoConstraints = false
 
         let doc = ThemeFlippedView()
@@ -123,32 +120,46 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         preview.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
     }
 
-    private func makeBuiltInNotice() -> NSView {
-        configurePreview()
-        let label = NSTextField(wrappingLabelWithString:
-            "Built-in theme — duplicate it to customize its colors and fonts.")
-        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
-        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        let stack = NSStackView(views: [preview, label, makeActionsRow(editable: false)])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        preview.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        return stack
-    }
-
-    private func makeEditor() -> NSView {
+    /// Builds the theme as a vertical stack of cards. Interactive controls are
+    /// live for an editable theme and disabled (read-only) for a locked one.
+    private func makeContent() -> NSView {
         colorWells.removeAll()
         sizeFields.removeAll(); sizeSteppers.removeAll()
         weightPopups.removeAll(); familyFields.removeAll()
 
         configurePreview()
 
+        let cards: [NSView] = [
+            ThemeCard(title: "Preview", content: preview),
+            ThemeCard(title: "Details", content: makeDetailsEditor()),
+            ThemeCard(title: "Colors", content: makeColorsEditor()),
+            ThemeCard(title: "Typography", content: makeTypographyEditor()),
+            ThemeCard(title: "Terminal palette", content: makeTerminalEditor())
+        ]
+
+        let stack = NSStackView(views: cards)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 16
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        for card in cards {
+            card.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
+        return stack
+    }
+
+    /// Name / Style / Attribution. Editable for a custom theme; for a locked
+    /// theme the fields are read-only and a lock + "duplicate to edit" note leads.
+    private func makeDetailsEditor() -> NSView {
+        let editable = theme.isEditable
+
         let nameField = NSTextField(string: theme.name)
         nameField.target = self
         nameField.action = #selector(nameChanged(_:))
+        nameField.isEditable = editable
+        nameField.translatesAutoresizingMaskIntoConstraints = false
+        nameField.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true
+
         let appearancePopUp = NSPopUpButton()
         for appearance in ThemeAppearance.allCases {
             appearancePopUp.addItem(withTitle: appearance.rawValue.capitalized)
@@ -156,59 +167,56 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         }
         appearancePopUp.target = self
         appearancePopUp.action = #selector(appearanceChanged(_:))
+        appearancePopUp.isEnabled = editable
         for (index, item) in appearancePopUp.itemArray.enumerated()
         where item.representedObject as? ThemeAppearance == theme.appearance {
             appearancePopUp.selectItem(at: index)
         }
-        let meta = NSGridView(views: [
+
+        let attributionField = NSTextField(string: theme.attribution ?? "")
+        attributionField.placeholderString = "Author or source"
+        attributionField.target = self
+        attributionField.action = #selector(attributionChanged(_:))
+        attributionField.isEditable = editable
+        attributionField.translatesAutoresizingMaskIntoConstraints = false
+        attributionField.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true
+
+        let grid = NSGridView(views: [
             [rightLabel("Name"), nameField],
-            [rightLabel("Style"), appearancePopUp]
+            [rightLabel("Style"), appearancePopUp],
+            [rightLabel("Attribution"), attributionField]
         ])
-        meta.rowSpacing = 8
-        meta.columnSpacing = 8
-        meta.column(at: 0).xPlacement = .leading
+        grid.rowSpacing = 8
+        grid.columnSpacing = 8
+        grid.column(at: 0).xPlacement = .leading
+        grid.translatesAutoresizingMaskIntoConstraints = false
 
-        let colors = ThemeDisclosureGroup(title: "Colors", content: makeColorsEditor(), expanded: true)
-        let typography = ThemeDisclosureGroup(title: "Typography",
-                                         content: makeTypographyEditor(), expanded: false)
-        let terminal = ThemeDisclosureGroup(title: "Terminal palette (advanced)",
-                                       content: makeTerminalEditor(), expanded: false)
+        guard !editable else { return grid }
 
-        let stack = NSStackView(views: [preview, meta, colors, typography, terminal,
-                                        makeActionsRow(editable: true)])
+        let stack = NSStackView(views: [makeLockRow(), grid])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 14
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        for view in [preview, colors, typography, terminal] {
-            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        }
+        stack.spacing = 12
         return stack
     }
 
-    /// Import (global) + Duplicate, plus Delete for a custom theme.
-    private func makeActionsRow(editable: Bool) -> NSView {
-        let importButton = NSButton(title: "Import…", target: self, action: #selector(importTheme))
-        importButton.bezelStyle = .rounded
-        importButton.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
-        importButton.imagePosition = .imageLeading
-        importButton.toolTip = "Import an .itermcolors theme"
+    /// A lock glyph + guidance shown on a locked theme's Details card.
+    private func makeLockRow() -> NSView {
+        let icon = NSImageView()
+        icon.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "Locked")
+        icon.contentTintColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        icon.setContentHuggingPriority(.required, for: .horizontal)
 
-        let duplicate = NSButton(title: editable ? "Duplicate" : "Duplicate to Edit",
-                                 target: self, action: #selector(duplicateTheme))
-        duplicate.bezelStyle = .rounded
-        if !editable { duplicate.keyEquivalent = "\r" }
+        let label = NSTextField(wrappingLabelWithString: theme.isBuiltIn
+            ? "Built-in theme — duplicate it to customize its colors and fonts."
+            : "Imported theme — duplicate it to customize its colors and fonts.")
+        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        var views: [NSView] = [importButton, duplicate]
-        if editable {
-            let delete = NSButton(title: "Delete Theme", target: self, action: #selector(deleteSelected))
-            delete.bezelStyle = .rounded
-            delete.hasDestructiveAction = true
-            views.append(delete)
-        }
-        let row = NSStackView(views: views)
+        let row = NSStackView(views: [icon, label])
         row.orientation = .horizontal
-        row.spacing = 8
+        row.spacing = 6
+        row.alignment = .centerY
         return row
     }
 
@@ -278,6 +286,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         well.color = NSColor(rgba)
         well.target = self
         well.action = #selector(colorWellChanged(_:))
+        well.isEnabled = theme.isEditable
         well.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             well.widthAnchor.constraint(equalToConstant: 40),
@@ -304,6 +313,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         well.target = self
         well.action = #selector(colorWellChanged(_:))
         well.toolTip = "ANSI \(index)"
+        well.isEnabled = theme.isEditable
         well.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             well.widthAnchor.constraint(equalToConstant: 26),
@@ -318,6 +328,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     private func makeTypographyEditor() -> NSView {
         let scale = NSSlider(value: theme.typography.sizeScale, minValue: 0.8, maxValue: 1.6,
                              target: self, action: #selector(scaleChanged(_:)))
+        scale.isEnabled = theme.isEditable
         scale.translatesAutoresizingMaskIntoConstraints = false
         scale.widthAnchor.constraint(equalToConstant: 160).isActive = true
         scaleLabel.stringValue = "\(Int((theme.typography.sizeScale * 100).rounded()))%"
@@ -343,6 +354,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     }
 
     private func typographyCells(_ role: TextRole) -> [NSView] {
+        let editable = theme.isEditable
         let style = theme.typography.style(role)
         let roleID = NSUserInterfaceItemIdentifier(role.rawValue)
 
@@ -351,6 +363,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         sizeField.identifier = roleID
         sizeField.target = self
         sizeField.action = #selector(typographyChanged(_:))
+        sizeField.isEditable = editable
         sizeField.translatesAutoresizingMaskIntoConstraints = false
         sizeField.widthAnchor.constraint(equalToConstant: 48).isActive = true
         sizeFields[role] = sizeField
@@ -361,6 +374,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         stepper.identifier = roleID
         stepper.target = self
         stepper.action = #selector(sizeStepperChanged(_:))
+        stepper.isEnabled = editable
         sizeSteppers[role] = stepper
         let sizeCell = NSStackView(views: [sizeField, stepper])
         sizeCell.orientation = .horizontal
@@ -374,6 +388,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         weightPopup.identifier = roleID
         weightPopup.target = self
         weightPopup.action = #selector(typographyChanged(_:))
+        weightPopup.isEnabled = editable
         if let index = FontWeight.allCases.firstIndex(of: style.weight) { weightPopup.selectItem(at: index) }
         weightPopups[role] = weightPopup
 
@@ -383,6 +398,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         familyField.identifier = roleID
         familyField.target = self
         familyField.action = #selector(typographyChanged(_:))
+        familyField.isEditable = editable
         familyField.translatesAutoresizingMaskIntoConstraints = false
         familyField.widthAnchor.constraint(equalToConstant: 150).isActive = true
         familyFields[role] = familyField
@@ -423,7 +439,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     }
 
     private func apply(_ rgba: RGBAColor, to slot: Slot) {
-        guard !store.isBuiltIn(id: theme.id) else { return }
+        guard theme.isEditable else { return }
         var updated = theme
         switch slot {
         case .foreground: updated.foreground = rgba
@@ -438,7 +454,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     }
 
     @objc private func nameChanged(_ sender: NSTextField) {
-        guard !store.isBuiltIn(id: theme.id) else { return }
+        guard theme.isEditable else { return }
         var updated = theme
         updated.name = sender.stringValue
         descriptor.title = updated.name
@@ -448,15 +464,23 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     }
 
     @objc private func appearanceChanged(_ sender: NSPopUpButton) {
-        guard !store.isBuiltIn(id: theme.id),
+        guard theme.isEditable,
               let appearance = sender.selectedItem?.representedObject as? ThemeAppearance else { return }
         var updated = theme
         updated.appearance = appearance
         persist(updated)
     }
 
+    @objc private func attributionChanged(_ sender: NSTextField) {
+        guard theme.isEditable else { return }
+        var updated = theme
+        let trimmed = sender.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.attribution = trimmed.isEmpty ? nil : trimmed
+        persist(updated)
+    }
+
     @objc private func scaleChanged(_ sender: NSSlider) {
-        guard !store.isBuiltIn(id: theme.id) else { return }
+        guard theme.isEditable else { return }
         var updated = theme
         updated.typography.sizeScale = sender.doubleValue
         scaleLabel.stringValue = "\(Int((sender.doubleValue * 100).rounded()))%"
@@ -476,7 +500,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
     }
 
     private func applyTypography(for role: TextRole) {
-        guard !store.isBuiltIn(id: theme.id) else { return }
+        guard theme.isEditable else { return }
         let size = max(8, min(48, sizeFields[role]?.doubleValue ?? ThemeTypography.defaultStyle(role).size))
         // Reflect the clamp back so the field/stepper show what's actually applied
         // (typing "100" lands on 48, not a stale out-of-range "100").
@@ -518,48 +542,11 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
         }
     }
 
-    // MARK: - Structural actions
-
-    @objc private func importTheme() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        if let type = UTType(filenameExtension: "itermcolors") {
-            panel.allowedContentTypes = [type]
-        }
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let imported = try store.importITermColors(contentsOf: url)
-            onStructuralChange(imported.id)
-        } catch {
-            presentImportError(error)
-        }
-    }
-
-    @objc private func duplicateTheme() {
-        let copy = store.duplicate(theme)
-        onStructuralChange(copy.id)
-    }
-
-    @objc private func deleteSelected() {
-        guard !store.isBuiltIn(id: theme.id) else { return }
-        store.delete(id: theme.id)
-        onStructuralChange(store.allThemes.first?.id ?? BuiltInThemes.defaultID)
-    }
-
-    private func presentImportError(_ error: Error) {
-        let alert = NSAlert()
-        alert.messageText = "Couldn’t import theme"
-        alert.informativeText = error.localizedDescription
-        alert.alertStyle = .warning
-        alert.runModal()
-    }
-
     // MARK: - Sidebar swatch
 
     /// A small color chip for the sidebar row: the theme's background with an
-    /// accent dot, so themes are recognizable at a glance.
+    /// accent dot, so themes are recognizable at a glance. Locked themes
+    /// (built-in or imported) also get a small lock badge in the corner.
     private static func swatch(for theme: ColorTheme) -> NSImage {
         let size = NSSize(width: 22, height: 16)
         let image = NSImage(size: size, flipped: false) { rect in
@@ -573,9 +560,25 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
             let palette = SemanticPalette(theme: theme)
             NSColor(palette.color(.accent)).setFill()
             NSBezierPath(ovalIn: NSRect(x: body.minX + 4, y: body.midY - 3, width: 6, height: 6)).fill()
+            if theme.isLocked {
+                Self.drawLockBadge(in: body, foreground: NSColor(theme.foreground))
+            }
             return true
         }
         image.isTemplate = false
         return image
+    }
+
+    /// Composites a lock glyph into the swatch's bottom-right corner, tinted with
+    /// the theme's foreground so it reads against the theme background.
+    private static func drawLockBadge(in body: NSRect, foreground: NSColor) {
+        let config = NSImage.SymbolConfiguration(pointSize: 8, weight: .bold)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [foreground]))
+        guard let lock = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "Locked")?
+            .withSymbolConfiguration(config) else { return }
+        let glyph = lock.size
+        let rect = NSRect(x: body.maxX - glyph.width - 1, y: body.minY + 1,
+                          width: glyph.width, height: glyph.height)
+        lock.draw(in: rect)
     }
 }

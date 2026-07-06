@@ -46,6 +46,14 @@ extension ComposableSettings {
         /// presentation; defaults to a stock `PanelListViewController`.
         public let listViewController: PanelListViewController
 
+        /// Title shown as a header above the sidebar's topic list; nil hides it.
+        /// Forwards to the list controller, so it can be set before or after the
+        /// view loads. The root settings window sets "Settings"; nested
+        /// topic/detail panels default it to their own panel title.
+        public var sidebarTitle: String? {
+            didSet { if isViewLoaded { listViewController.setTitle(sidebarTitle) } }
+        }
+
         private let detailContainer = NSViewController()
 
         // Repaints the window chrome and detail pane on every theme change.
@@ -61,6 +69,8 @@ extension ComposableSettings {
 
         open override func viewDidLoad() {
             super.viewDidLoad()
+
+            listViewController.setTitle(sidebarTitle)
 
             let detailView = NSView()
             detailView.wantsLayer = true

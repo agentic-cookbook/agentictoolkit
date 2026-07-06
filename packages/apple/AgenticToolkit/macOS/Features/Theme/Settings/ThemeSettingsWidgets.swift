@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 /// A document view that pins its content to the top (AppKit's default flips the
 /// origin to the bottom-left). Used as the scroll document for the theme gallery.
@@ -6,59 +7,57 @@ final class ThemeFlippedView: NSView {
     override var isFlipped: Bool { true }
 }
 
-/// Progressive disclosure: an HIG disclosure triangle + label that show/hide a
-/// content view. Clicking either the triangle or the label toggles the section.
-/// (Theme-prefixed to avoid clashing with SwiftUI's `DisclosureGroup`.)
-final class ThemeDisclosureGroup: NSView {
-    private let triangle = NSButton()
-    private let body: NSView
+/// A titled "card": a header label above a rounded, outlined surface (`ThemedBox`)
+/// holding the section's content. Each part of a theme (Preview, Details, Colors,
+/// Typography, Terminal palette) is shown as its own card, so the editor reads as
+/// a set of labeled panels rather than a stack of disclosure triangles.
+final class ThemeCard: NSView {
 
-    init(title: String, content: NSView, expanded: Bool) {
-        self.body = content
+    private let header = NSTextField(labelWithString: "")
+    private var observer: ThemePaletteObserver?
+
+    init(title: String, content: NSView) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
-        triangle.title = title
-        triangle.setButtonType(.onOff)
-        triangle.bezelStyle = .disclosure
-        triangle.state = expanded ? .on : .off
-        triangle.target = self
-        triangle.action = #selector(toggle)
-        triangle.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
-        let labelClick = NSClickGestureRecognizer(target: self, action: #selector(toggle))
-        label.addGestureRecognizer(labelClick)
-
-        let header = NSStackView(views: [triangle, label])
-        header.orientation = .horizontal
-        header.spacing = 4
+        header.stringValue = title
+        header.font = .systemFont(ofSize: 12, weight: .semibold)
+        header.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
         header.translatesAutoresizingMaskIntoConstraints = false
 
         content.translatesAutoresizingMaskIntoConstraints = false
-        content.isHidden = !expanded
+
+        // Elevated (vs. the detail pane's own surface) with an outline, so cards
+        // read as distinct panels against the background.
+        let box = ThemedBox(fill: .elevatedSurface, stroke: .outline, cornerRadius: 10)
+        box.translatesAutoresizingMaskIntoConstraints = false
+        box.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: box.topAnchor, constant: 14),
+            content.leadingAnchor.constraint(equalTo: box.leadingAnchor, constant: 14),
+            content.trailingAnchor.constraint(equalTo: box.trailingAnchor, constant: -14),
+            content.bottomAnchor.constraint(equalTo: box.bottomAnchor, constant: -14)
+        ])
 
         addSubview(header)
-        addSubview(content)
+        addSubview(box)
         NSLayoutConstraint.activate([
             header.topAnchor.constraint(equalTo: topAnchor),
-            header.leadingAnchor.constraint(equalTo: leadingAnchor),
-            content.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
-            content.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            content.trailingAnchor.constraint(equalTo: trailingAnchor),
-            content.bottomAnchor.constraint(equalTo: bottomAnchor)
+            header.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
+            header.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+
+            box.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 6),
+            box.leadingAnchor.constraint(equalTo: leadingAnchor),
+            box.trailingAnchor.constraint(equalTo: trailingAnchor),
+            box.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+
+        // Recolor the header live so editing the active theme updates it too.
+        observer = ThemePaletteObserver { [weak self] palette in
+            self?.header.textColor = palette.secondaryTextColor
+        }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
-
-    @objc private func toggle() {
-        // Expand iff currently collapsed; keep the triangle state in sync whether
-        // the triangle button or the label was clicked.
-        let expand = body.isHidden
-        body.isHidden = !expand
-        triangle.state = expand ? .on : .off
-    }
 }

@@ -37,6 +37,7 @@ public enum BuiltInThemes {
         name: "Solarized Dark",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Ethan Schoonover",
         foreground: rgb("839496"), background: rgb("002b36"),
         cursor: rgb("839496"), selection: rgb("073642"),
         ansi: [
@@ -54,6 +55,7 @@ public enum BuiltInThemes {
         name: "Dracula",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Dracula Theme — Zeno Rocha & contributors",
         foreground: rgb("f8f8f2"), background: rgb("282a36"),
         cursor: rgb("f8f8f2"), selection: rgb("44475a"),
         ansi: [
@@ -71,6 +73,7 @@ public enum BuiltInThemes {
         name: "Nord",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Arctic Ice Studio — Sven Greb",
         foreground: rgb("d8dee9"), background: rgb("2e3440"),
         cursor: rgb("d8dee9"), selection: rgb("434c5e"),
         ansi: [
@@ -88,6 +91,7 @@ public enum BuiltInThemes {
         name: "Tokyo Night",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "enkia",
         foreground: rgb("a9b1d6"), background: rgb("1a1b26"),
         cursor: rgb("c0caf5"), selection: rgb("33467c"),
         ansi: [
@@ -105,6 +109,7 @@ public enum BuiltInThemes {
         name: "One Dark",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Atom — GitHub",
         foreground: rgb("abb2bf"), background: rgb("282c34"),
         cursor: rgb("528bff"), selection: rgb("3e4451"),
         ansi: [
@@ -122,6 +127,7 @@ public enum BuiltInThemes {
         name: "Monokai Pro",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Monokai — Wimer Hazenberg",
         foreground: rgb("fcfcfa"), background: rgb("2d2a2e"),
         cursor: rgb("fcfcfa"), selection: rgb("5b595c"),
         ansi: [
@@ -139,6 +145,7 @@ public enum BuiltInThemes {
         name: "Rosé Pine",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Rosé Pine",
         foreground: rgb("e0def4"), background: rgb("191724"),
         cursor: rgb("e0def4"), selection: rgb("403d52"),
         ansi: [
@@ -156,6 +163,7 @@ public enum BuiltInThemes {
         name: "Catppuccin Mocha",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Catppuccin",
         foreground: rgb("cdd6f4"), background: rgb("1e1e2e"),
         cursor: rgb("f5e0dc"), selection: rgb("45475a"),
         ansi: [
@@ -173,6 +181,7 @@ public enum BuiltInThemes {
         name: "Ayu Dark",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Ayu — Ike Ku (dempfi)",
         foreground: rgb("b3b1ad"), background: rgb("0a0e14"),
         cursor: rgb("ffcc66"), selection: rgb("1d2733"),
         ansi: [
@@ -190,6 +199,7 @@ public enum BuiltInThemes {
         name: "GitHub Dark",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "GitHub",
         foreground: rgb("c9d1d9"), background: rgb("0d1117"),
         cursor: rgb("58a6ff"), selection: rgb("173b6b"),
         ansi: [
@@ -207,6 +217,7 @@ public enum BuiltInThemes {
         name: "Gruvbox Dark",
         appearance: .dark,
         isBuiltIn: true,
+        attribution: "Gruvbox — Pavel Pertsev",
         foreground: rgb("ebdbb2"), background: rgb("282828"),
         cursor: rgb("ebdbb2"), selection: rgb("504945"),
         ansi: [
@@ -226,6 +237,7 @@ public enum BuiltInThemes {
         name: "Solarized Light",
         appearance: .light,
         isBuiltIn: true,
+        attribution: "Ethan Schoonover",
         foreground: rgb("657b83"), background: rgb("fdf6e3"),
         cursor: rgb("657b83"), selection: rgb("eee8d5"),
         ansi: [
@@ -243,6 +255,7 @@ public enum BuiltInThemes {
         name: "Catppuccin Latte",
         appearance: .light,
         isBuiltIn: true,
+        attribution: "Catppuccin",
         foreground: rgb("4c4f69"), background: rgb("eff1f5"),
         cursor: rgb("dc8a78"), selection: rgb("ccd0da"),
         ansi: [
@@ -260,6 +273,7 @@ public enum BuiltInThemes {
         name: "GitHub Light",
         appearance: .light,
         isBuiltIn: true,
+        attribution: "GitHub",
         foreground: rgb("24292e"), background: rgb("ffffff"),
         cursor: rgb("044289"), selection: rgb("c8c8fa"),
         ansi: [
@@ -277,6 +291,7 @@ public enum BuiltInThemes {
         name: "Gruvbox Light",
         appearance: .light,
         isBuiltIn: true,
+        attribution: "Gruvbox — Pavel Pertsev",
         foreground: rgb("3c3836"), background: rgb("fbf1c7"),
         cursor: rgb("3c3836"), selection: rgb("ebdbb2"),
         ansi: [

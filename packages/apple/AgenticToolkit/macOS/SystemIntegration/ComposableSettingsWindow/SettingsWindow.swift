@@ -25,6 +25,8 @@ extension ComposableSettings {
             super.init(windowID: Self.windowID, contentViewController: SplitViewController())
             self.windowTitle = "Settings"
             self.windowStyleMask = [.titled, .closable, .miniaturizable, .resizable]
+            // Give the root topic list (and thus the settings panel) a visible title.
+            self.viewController?.sidebarTitle = "Settings"
         }
 
         public var settingPanels: [any ComposableSettingsPanel] {

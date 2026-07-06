@@ -45,29 +45,70 @@ public final class ThemeStore {
         UserSettings.customThemes.value = customThemes.filter { $0.id != id }
     }
 
-    /// Duplicates any theme (built-in or custom) into a fresh, editable custom theme.
+    /// Creates a fresh, editable custom theme seeded from `template` (the active
+    /// theme by default is a good starting point supplied by the caller) and
+    /// stores it. This backs the sidebar footer's "add" action.
+    @discardableResult
+    public func addNewTheme(
+        basedOn template: ColorTheme = BuiltInThemes.solarizedDark,
+        name: String = "New Theme"
+    ) -> ColorTheme {
+        var seed = template
+        seed.id = UUID().uuidString
+        seed.name = name
+        seed.isBuiltIn = false
+        seed.isImported = false
+        seed.attribution = nil
+        return add(seed)
+    }
+
+    /// Duplicates any theme (built-in, imported, or custom) into a fresh, fully
+    /// editable custom theme — the standard way to customize a locked theme.
     @discardableResult
     public func duplicate(_ theme: ColorTheme, nameSuffix: String = " Copy") -> ColorTheme {
-        let copy = ColorTheme(
-            id: UUID().uuidString,
-            name: theme.name + nameSuffix,
-            appearance: theme.appearance,
-            isBuiltIn: false,
-            foreground: theme.foreground,
-            background: theme.background,
-            cursor: theme.cursor,
-            selection: theme.selection,
-            ansi: theme.ansi,
-            roleOverrides: theme.roleOverrides,
-            typography: theme.typography
-        )
+        var copy = theme
+        copy.id = UUID().uuidString
+        copy.name = theme.name + nameSuffix
+        // A duplicate is the user's own theme: never locked, regardless of source.
+        copy.isBuiltIn = false
+        copy.isImported = false
         return add(copy)
     }
 
-    /// Parses an `.itermcolors` file and stores it as a new custom theme.
+    /// Parses an `.itermcolors` file and stores it as a new **locked** imported
+    /// theme (duplicate to edit).
     @discardableResult
     public func importITermColors(contentsOf url: URL) throws -> ColorTheme {
-        let theme = try ITermColorsParser.parse(contentsOf: url)
+        var theme = try ITermColorsParser.parse(contentsOf: url)
+        theme.isImported = true
         return add(theme)
+    }
+
+    /// Decodes a `ColorTheme` JSON file and stores it as a new **locked** imported
+    /// theme. See `importJSON(data:)` for the sanitizing rules.
+    @discardableResult
+    public func importJSON(contentsOf url: URL) throws -> ColorTheme {
+        try importJSON(data: try Data(contentsOf: url))
+    }
+
+    /// Decodes `ColorTheme` JSON and stores it as a locked, deletable import.
+    /// A fresh id is always assigned (so it can't collide with a built-in or an
+    /// existing custom theme) and `isBuiltIn` is forced off (an imported theme is
+    /// never permanent), so a hand-edited or malicious file can't shadow a
+    /// built-in or become un-deletable.
+    @discardableResult
+    public func importJSON(data: Data) throws -> ColorTheme {
+        var theme = try JSONDecoder().decode(ColorTheme.self, from: data)
+        theme.id = UUID().uuidString
+        theme.isBuiltIn = false
+        theme.isImported = true
+        return add(theme)
+    }
+
+    /// Encodes a theme as pretty-printed JSON suitable for `importJSON`.
+    public func exportJSON(_ theme: ColorTheme) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(theme)
     }
 }

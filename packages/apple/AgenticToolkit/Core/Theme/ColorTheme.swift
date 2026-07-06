@@ -27,9 +27,17 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
     public var id: String
     public var name: String
     public var appearance: ThemeAppearance
-    /// Built-ins are read-only in the UI (duplicate to edit). Imported/custom
-    /// themes are editable and deletable.
+    /// Built-ins are read-only in the UI (duplicate to edit). They are also never
+    /// deletable.
     public var isBuiltIn: Bool
+    /// Themes brought in from an external file (JSON or `.itermcolors`). Like
+    /// built-ins they are **locked** — read-only in the UI, edited by duplicating —
+    /// but unlike built-ins they *are* deletable. A duplicate is a plain custom
+    /// theme (`isBuiltIn == false && isImported == false`), so it edits freely.
+    public var isImported: Bool
+    /// Optional free-form credit for the theme's author/source (e.g.
+    /// "Ethan Schoonover"). Shown in the editor and preserved on export.
+    public var attribution: String?
 
     // MARK: Terminal palette (superset of TerminalSessionColorPalette)
 
@@ -62,6 +70,8 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         name: String,
         appearance: ThemeAppearance,
         isBuiltIn: Bool = false,
+        isImported: Bool = false,
+        attribution: String? = nil,
         foreground: RGBAColor,
         background: RGBAColor,
         cursor: RGBAColor,
@@ -74,6 +84,8 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         self.name = name
         self.appearance = appearance
         self.isBuiltIn = isBuiltIn
+        self.isImported = isImported
+        self.attribution = attribution
         self.foreground = foreground
         self.background = background
         self.cursor = cursor
@@ -91,6 +103,10 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         appearance = try container.decode(ThemeAppearance.self, forKey: .appearance)
         isBuiltIn = try container.decode(Bool.self, forKey: .isBuiltIn)
+        // Fields added after the first shipping format default when absent, so
+        // themes persisted (or exported) by an older build still decode.
+        isImported = try container.decodeIfPresent(Bool.self, forKey: .isImported) ?? false
+        attribution = try container.decodeIfPresent(String.self, forKey: .attribution)
         foreground = try container.decode(RGBAColor.self, forKey: .foreground)
         background = try container.decode(RGBAColor.self, forKey: .background)
         cursor = try container.decode(RGBAColor.self, forKey: .cursor)
@@ -102,6 +118,18 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
 }
 
 extension ColorTheme {
+    /// True when the theme can be edited in place. Built-ins and imported themes
+    /// are locked (edit by duplicating); a plain custom theme is editable.
+    public var isEditable: Bool { !isBuiltIn && !isImported }
+
+    /// True when the theme is read-only in the UI and shows a lock affordance.
+    /// The inverse of `isEditable`.
+    public var isLocked: Bool { !isEditable }
+
+    /// True when the theme can be removed. Built-ins are permanent; imported and
+    /// custom themes can be deleted.
+    public var isDeletable: Bool { !isBuiltIn }
+
     /// The number of ANSI colors a well-formed theme carries.
     public static let ansiColorCount = 16
 

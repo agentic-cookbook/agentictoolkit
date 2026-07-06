@@ -17,6 +17,59 @@ struct ColorThemeTests {
         #expect(decoded == theme)
     }
 
+    @Test("attribution and isImported round-trip through Codable")
+    func metadataRoundTrip() throws {
+        var theme = BuiltInThemes.nord
+        theme.isImported = true
+        theme.attribution = "Arctic Ice Studio"
+
+        let data = try JSONEncoder().encode(theme)
+        let decoded = try JSONDecoder().decode(ColorTheme.self, from: data)
+
+        #expect(decoded == theme)
+        #expect(decoded.isImported)
+        #expect(decoded.attribution == "Arctic Ice Studio")
+    }
+
+    @Test("themes persisted before isImported/attribution existed still decode")
+    func decodesLegacyWithoutNewFields() throws {
+        let ansi = Array(repeating: "\"#000000ff\"", count: 16).joined(separator: ",")
+        let legacy = "{\"id\":\"x\",\"name\":\"Legacy\",\"appearance\":\"dark\",\"isBuiltIn\":false,"
+            + "\"foreground\":\"#ffffffff\",\"background\":\"#000000ff\",\"cursor\":\"#ffffffff\","
+            + "\"selection\":\"#000000ff\",\"ansi\":[\(ansi)]}"
+        let decoded = try JSONDecoder().decode(ColorTheme.self, from: Data(legacy.utf8))
+        #expect(decoded.isImported == false)
+        #expect(decoded.attribution == nil)
+    }
+
+    @Test("editability: built-in and imported are locked, custom is editable")
+    func editability() {
+        #expect(BuiltInThemes.dracula.isLocked)
+        #expect(!BuiltInThemes.dracula.isEditable)
+        #expect(!BuiltInThemes.dracula.isDeletable)
+
+        var imported = BuiltInThemes.dracula
+        imported.isBuiltIn = false
+        imported.isImported = true
+        #expect(imported.isLocked)
+        #expect(!imported.isEditable)
+        #expect(imported.isDeletable)
+
+        var custom = BuiltInThemes.dracula
+        custom.isBuiltIn = false
+        custom.isImported = false
+        #expect(custom.isEditable)
+        #expect(!custom.isLocked)
+        #expect(custom.isDeletable)
+    }
+
+    @Test("every built-in theme carries an attribution")
+    func builtInsHaveAttribution() {
+        for theme in BuiltInThemes.all {
+            #expect(theme.attribution?.isEmpty == false, "\(theme.name) missing attribution")
+        }
+    }
+
     @Test("ansiColor(at:) returns the color in range and nil out of range")
     func ansiIndexing() {
         let theme = BuiltInThemes.nord

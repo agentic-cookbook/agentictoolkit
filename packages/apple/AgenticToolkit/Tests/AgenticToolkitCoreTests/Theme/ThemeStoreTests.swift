@@ -100,6 +100,78 @@ struct ThemeStoreTests {
         #expect(store.theme(withID: imported.id) != nil)
     }
 
+    @Test("addNewTheme creates an editable custom theme")
+    func addNew() {
+        let created = store.addNewTheme(name: "Fresh")
+        #expect(created.name == "Fresh")
+        #expect(created.isEditable)
+        #expect(store.customThemes.contains(created))
+    }
+
+    @Test("importITermColors stores a locked, deletable import")
+    func importITermMarksLocked() throws {
+        var dict: [String: Any] = [
+            "Foreground Color": ["Red Component": 1.0, "Green Component": 1.0, "Blue Component": 1.0],
+            "Background Color": ["Red Component": 0.0, "Green Component": 0.0, "Blue Component": 0.0]
+        ]
+        for index in 0..<16 {
+            dict["Ansi \(index) Color"] = ["Red Component": 0.0, "Green Component": 0.0, "Blue Component": 0.0]
+        }
+        let data = try PropertyListSerialization.data(fromPropertyList: dict, format: .xml, options: 0)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Locked.itermcolors")
+        try data.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let imported = try store.importITermColors(contentsOf: url)
+        #expect(imported.isImported)
+        #expect(imported.isLocked)
+        #expect(imported.isDeletable)
+    }
+
+    @Test("exportJSON → importJSON stores a locked import with a fresh id")
+    func jsonRoundTripLocks() throws {
+        let source = sampleTheme(name: "Shared")
+        let data = try store.exportJSON(source)
+        let imported = try store.importJSON(data: data)
+
+        #expect(imported.id != source.id)          // fresh id, never collides
+        #expect(imported.name == "Shared")
+        #expect(imported.isImported)
+        #expect(imported.isLocked)
+        #expect(imported.isDeletable)
+        #expect(store.theme(withID: imported.id) != nil)
+    }
+
+    @Test("importJSON refuses to let a payload masquerade as a built-in")
+    func importJSONSanitizesBuiltIn() throws {
+        var evil = sampleTheme(name: "Fake Builtin")
+        evil.isBuiltIn = true
+        let data = try store.exportJSON(evil)
+        let imported = try store.importJSON(data: data)
+        #expect(imported.isBuiltIn == false)
+        #expect(imported.isImported)
+        #expect(imported.isDeletable)
+    }
+
+    @Test("duplicating an imported theme yields a fully editable custom theme")
+    func duplicateOfImportUnlocks() throws {
+        let data = try store.exportJSON(sampleTheme(name: "Imp"))
+        let imported = try store.importJSON(data: data)
+        let copy = store.duplicate(imported)
+        #expect(copy.isImported == false)
+        #expect(copy.isBuiltIn == false)
+        #expect(copy.isEditable)
+    }
+
+    @Test("duplicate preserves attribution")
+    func duplicateKeepsAttribution() {
+        var custom = sampleTheme()
+        custom.attribution = "Somebody"
+        store.add(custom)
+        let copy = store.duplicate(custom)
+        #expect(copy.attribution == "Somebody")
+    }
+
     @Test("duplicate preserves the source theme's typography")
     func duplicatePreservesTypography() {
         var custom = sampleTheme(name: "Typed")

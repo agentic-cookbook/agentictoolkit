@@ -37,7 +37,7 @@ struct ThemeUITests {
         let store = ThemeStore()
         guard let theme = store.allThemes.first else { Issue.record("no themes"); return }
         let panel = ThemeDetailPanelViewController(
-            theme: theme, store: store, onStructuralChange: { _ in }, onRowInvalidated: {})
+            theme: theme, store: store, onRowInvalidated: {})
         panel.loadViewIfNeeded()
         let scroll = panel.view as? NSScrollView
         #expect(scroll != nil)

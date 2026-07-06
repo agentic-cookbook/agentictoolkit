@@ -20,6 +20,9 @@ extension ComposableSettings {
                 self.descriptor = SettingsPanelDescriptor()
             }
             super.init()
+            // A nested topic/detail panel titles its own sidebar with its panel
+            // name by default (subclasses may override, e.g. Theme → "Themes").
+            self.sidebarTitle = self.descriptor.title
         }
 
         public required init?(coder: NSCoder) {
