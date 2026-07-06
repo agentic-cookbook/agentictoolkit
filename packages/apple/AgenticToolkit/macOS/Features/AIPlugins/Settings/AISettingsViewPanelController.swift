@@ -130,12 +130,35 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     }
 
     private func removeSelected() {
-        guard let id = viewModel.selectedId else { NSSound.beep(); return }
-        // Land on the previous row (or the first) after the delete.
-        let ids = viewModel.configurations.map(\.id)
-        let previous = ids.firstIndex(of: id).flatMap { $0 > 0 ? ids[$0 - 1] : nil }
-        viewModel.remove(id)
-        rebuildPanels(selecting: previous ?? viewModel.configurations.first?.id)
+        guard let id = viewModel.selectedId,
+              let config = viewModel.configurations.first(where: { $0.id == id }) else {
+            NSSound.beep()
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "Delete “\(config.name)”?"
+        alert.informativeText = "This removes the configuration and its stored settings, including any API key."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+
+        let confirmDelete: () -> Void = { [weak self] in
+            guard let self else { return }
+            // Land on the previous row (or the first) after the delete.
+            let ids = self.viewModel.configurations.map(\.id)
+            let previous = ids.firstIndex(of: id).flatMap { $0 > 0 ? ids[$0 - 1] : nil }
+            self.viewModel.remove(id)
+            self.rebuildPanels(selecting: previous ?? self.viewModel.configurations.first?.id)
+        }
+
+        if let window = view.window {
+            alert.beginSheetModal(for: window) { response in
+                if response == .alertFirstButtonReturn { confirmDelete() }
+            }
+        } else if alert.runModal() == .alertFirstButtonReturn {
+            confirmDelete()
+        }
     }
 }
 

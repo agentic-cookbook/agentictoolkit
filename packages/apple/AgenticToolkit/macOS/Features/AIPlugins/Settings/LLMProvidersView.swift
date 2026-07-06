@@ -10,11 +10,20 @@ struct LLMProviderEditorView: View {
     let configuration: AIProviderConfiguration
     @ObservedObject var viewModel: LLMProvidersListViewModel
     @State private var name: String
+    /// The displayed model, mirrored into view state so picking one updates the
+    /// label immediately (the underlying store is not SwiftUI-observable).
+    @State private var currentModel: String
+    @State private var showModelPicker = false
 
     init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel) {
         self.configuration = configuration
         self.viewModel = viewModel
         _name = State(initialValue: configuration.name)
+        let template = viewModel.pluginManager.template(
+            pluginIdentifier: configuration.pluginIdentifier, templateId: configuration.templateId
+        )
+        let model = template.map { AIProviderConfigStore.selectedModel(config: configuration, template: $0) }
+        _currentModel = State(initialValue: model ?? "")
     }
 
     private var template: AIPluginDescriptor.ProviderTemplate? {
@@ -61,9 +70,7 @@ struct LLMProviderEditorView: View {
                     }
 
                 if let template, !template.models.isEmpty {
-                    Picker("Model", selection: modelBinding(template)) {
-                        ForEach(template.models, id: \.self) { Text($0).tag($0) }
-                    }
+                    modelRow(template)
                 }
 
                 ForEach(fields, id: \.key) { field in
@@ -85,6 +92,48 @@ struct LLMProviderEditorView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// The Model row: a "popdown" button showing the current model that opens a
+    /// filterable, keyboard-navigable model picker (rich per-model info).
+    @ViewBuilder
+    private func modelRow(_ template: AIPluginDescriptor.ProviderTemplate) -> some View {
+        let binding = modelBinding(template)
+        LabeledContent("Model") {
+            Button {
+                showModelPicker = true
+            } label: {
+                HStack(spacing: 6) {
+                    Text(currentModel.isEmpty ? template.resolvedDefaultModel : currentModel)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.bordered)
+            .popover(isPresented: $showModelPicker, arrowEdge: .bottom) {
+                ModelPickerHost(
+                    items: modelItems(template),
+                    selected: currentModel.isEmpty ? template.resolvedDefaultModel : currentModel,
+                    onSelect: { binding.wrappedValue = $0; currentModel = $0; showModelPicker = false },
+                    onDismiss: { showModelPicker = false }
+                )
+                .frame(width: 380, height: modelPickerHeight(template))
+            }
+        }
+    }
+
+    private func modelItems(_ template: AIPluginDescriptor.ProviderTemplate) -> [ModelPickerItem] {
+        template.models.map { model in
+            let detail = template.modelDetail(for: model)
+            return ModelPickerItem(id: model, description: detail?.description,
+                                   tools: detail?.tools, goodFor: detail?.goodFor)
+        }
+    }
+
+    private func modelPickerHeight(_ template: AIPluginDescriptor.ProviderTemplate) -> CGFloat {
+        let rows = min(max(template.models.count, 1), 6)
+        return min(16 + 24 + 8 + CGFloat(rows) * 56 + 12, 440)
     }
 
     private func fieldBinding(_ field: AIPluginDescriptor.Field) -> Binding<String> {

@@ -246,6 +246,7 @@
 		684F6017CF23B82D8F696159 /* LanguageDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85ABE851B5CCFC3FBFC8591 /* LanguageDetectionTests.swift */; };
 		6896BC5559FFE5093EE00AA6 /* FileTreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A9343C36100629E2F39BDF /* FileTreeManager.swift */; };
 		68AF2FA88B3D062B2F31F9F8 /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613E348B1C944564A269BD31 /* ThemeStore.swift */; };
+		690165398B6915CB2591816B /* ModelPickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED234B6F128987D24A658F /* ModelPickerViewController.swift */; };
 		69586F910669C1E535DCBEA7 /* ThemedControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC04BC71763BEEC723F0791 /* ThemedControlsTests.swift */; };
 		6977E8701F7260E6B1882CF3 /* SystemWindowSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C6E0E9EF8CC1D3E7E865B5 /* SystemWindowSettingsWindowController.swift */; };
 		697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */; };
@@ -397,6 +398,7 @@
 		BCFFAF18B8C07481D44518DC /* MCPSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F0C1AE564F98FA8F54A978 /* MCPSettingsTests.swift */; };
 		BECE6DC61CB433F9731CAC5F /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77597ACD52332EF3CEE84240 /* DiscoveryView.swift */; };
 		BFA5C197382FA80A40BFFD08 /* AppFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69AFB996C8722DACDFC54FE8 /* AppFeature.swift */; };
+		C10193E52BD1A11E9F3A5798 /* ModelPickerItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28E4DA0475CA3E52B78F13FF /* ModelPickerItemTests.swift */; };
 		C11053238E8577DC055EE906 /* BuiltInThemesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A8381DE26F5F48257D8634 /* BuiltInThemesTests.swift */; };
 		C189C5C11880978EDB21437E /* NestedSplitFocusable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59B23E29429EC45A9A4C7770 /* NestedSplitFocusable.swift */; };
 		C1D2CB4E9259BD1C02B2A879 /* LLMProvidersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2783245881A0C4CACD86139E /* LLMProvidersView.swift */; };
@@ -1045,6 +1047,7 @@
 		2783245881A0C4CACD86139E /* LLMProvidersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvidersView.swift; sourceTree = "<group>"; };
 		27ECB0B3683D7B48A177ACC2 /* SettingsStoreWindowStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreWindowStateStorage.swift; sourceTree = "<group>"; };
 		282A18DC936C06444C296EAC /* FileTreeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeConfig.swift; sourceTree = "<group>"; };
+		28E4DA0475CA3E52B78F13FF /* ModelPickerItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerItemTests.swift; sourceTree = "<group>"; };
 		2951B18E81A33463286D9EE4 /* FileSystemWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemWatcher.swift; sourceTree = "<group>"; };
 		2AC870990D2D1C5B720CEE15 /* PersistedWindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedWindowState.swift; sourceTree = "<group>"; };
 		2B5F739C92019334CA50561D /* SystemWindowAXHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowAXHelper.swift; sourceTree = "<group>"; };
@@ -1209,6 +1212,7 @@
 		86AADA6CE6B185B5BA934378 /* AIChatContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatContext.swift; sourceTree = "<group>"; };
 		86FEFB54F5560AB6533F4379 /* NotesCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCommands.swift; sourceTree = "<group>"; };
 		88CC81802D37F9BE7A21B1E7 /* AIPluginDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginDescriptor.swift; sourceTree = "<group>"; };
+		88ED234B6F128987D24A658F /* ModelPickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerViewController.swift; sourceTree = "<group>"; };
 		896AEE008F661A1C4FAA1A23 /* ChoiceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceViewModel.swift; sourceTree = "<group>"; };
 		8B07B6ADDBA75DF064352068 /* TypingIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingIndicatorView.swift; sourceTree = "<group>"; };
 		8B0E71540AA3ACF6A4B46F74 /* LogProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogProvider.swift; sourceTree = "<group>"; };
@@ -2185,6 +2189,7 @@
 				01DA1274B94A6E335F136DF5 /* AIProviderMigrationTests.swift */,
 				DD7610008818461A7BFD0669 /* AIRequestBuilderTests.swift */,
 				02A0409594B91B8612E5DFA9 /* LLMProvidersListViewModelTests.swift */,
+				28E4DA0475CA3E52B78F13FF /* ModelPickerItemTests.swift */,
 				F22810CE993AF42226F22BA1 /* PluginLoadFailuresPanelTests.swift */,
 				D0904313AC1BEE6662DBB5BC /* ProviderPickerTests.swift */,
 				352356572860CD9B9F8BCFF2 /* SingleConfigurationChatConfigProviderTests.swift */,
@@ -2349,6 +2354,7 @@
 				D11DC671245ACFEC3DFDF0AC /* AISettingsViewPanelController.swift */,
 				A848D138A330A2134BADBE42 /* LLMProvidersListViewModel.swift */,
 				2783245881A0C4CACD86139E /* LLMProvidersView.swift */,
+				88ED234B6F128987D24A658F /* ModelPickerViewController.swift */,
 				5F2D8CD502813330AE5AEC77 /* PluginLoadFailuresPanel.swift */,
 				7B7939675F83E77AF61D9C68 /* ProviderPickerViewController.swift */,
 			);
@@ -2902,7 +2908,7 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		"TEMP_15D08F64-F66E-4CEF-A2E8-FFBEA3D194C0" /* Settings */ = {
+		"TEMP_4C531BEF-962E-4C00-9D70-6AC103FC47AC" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -3748,6 +3754,7 @@
 				D5D46A51F6A59D4F968051F2 /* MainActorScriptCommand.swift in Sources */,
 				B59602DDBDB81AC8822E9707 /* MenuContribution.swift in Sources */,
 				4004C018806AB8BAB1BFB855 /* MessageBubbleView.swift in Sources */,
+				690165398B6915CB2591816B /* ModelPickerViewController.swift in Sources */,
 				A39BB9F6BAA6D4F2515CAB77 /* NSView+AccessibilityID.swift in Sources */,
 				AC22C6128D76B4644279C2ED /* NestedContentRegistry.swift in Sources */,
 				C189C5C11880978EDB21437E /* NestedSplitFocusable.swift in Sources */,
@@ -4065,6 +4072,7 @@
 				FE81ACB84A253707AC826A57 /* MockScreen.swift in Sources */,
 				B603C69C4E1A61D03BBE5A57 /* MockScreenProvider.swift in Sources */,
 				D411D7719098EA518850AA29 /* MockStorage.swift in Sources */,
+				C10193E52BD1A11E9F3A5798 /* ModelPickerItemTests.swift in Sources */,
 				0C9DB16E6B2C8C9A7A64E984 /* PerIDWindowControllerTests.swift in Sources */,
 				145D9A43D78CF7CF3A0A6E59 /* PlaceholderTests.swift in Sources */,
 				0C094A9A567FD8F7696CF4F2 /* PluginLoadFailuresPanelTests.swift in Sources */,
