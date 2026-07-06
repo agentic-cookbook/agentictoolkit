@@ -22,10 +22,12 @@ struct AIProviderConfigurationTests {
         let cfg = AIProviderConfiguration(name: "X", pluginIdentifier: "p", templateId: "t")
         UserSettings.aiProviderConfigurations.value = [cfg]
         UserSettings.selectedAIProviderConfigurationId.value = cfg.id.uuidString
+        // Restore a clean state for other tests in this target, even if an expectation below fails.
+        defer {
+            UserSettings.aiProviderConfigurations.value = []
+            UserSettings.selectedAIProviderConfigurationId.value = ""
+        }
         #expect(UserSettings.aiProviderConfigurations.value == [cfg])
         #expect(UserSettings.selectedAIProviderConfigurationId.value == cfg.id.uuidString)
-        // Restore a clean state for other tests in this target.
-        UserSettings.aiProviderConfigurations.value = []
-        UserSettings.selectedAIProviderConfigurationId.value = ""
     }
 }
