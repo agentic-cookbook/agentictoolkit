@@ -16,6 +16,7 @@ public final class AIPluginsCoordinator: AppFeature {
     public init(appName: String, additionalSearchPaths: [URL] = []) {
         self.pluginManager = .init(appName: appName, additionalSearchPaths: additionalSearchPaths)
         self.pluginManager.discoverPlugins()
+        AIProviderMigration.runIfNeeded(pluginManager: self.pluginManager)
     }
 
     public func settingsPanel() -> AIPanelViewController {
