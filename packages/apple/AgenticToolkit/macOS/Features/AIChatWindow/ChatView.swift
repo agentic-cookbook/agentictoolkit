@@ -181,6 +181,22 @@ public final class ChatView: NSView, NSTextFieldDelegate {
                 hStack.spacing = 0
                 transcriptStack.addArrangedSubview(hStack)
                 hStack.widthAnchor.constraint(equalTo: transcriptStack.widthAnchor, constant: -32).isActive = true
+            } else if message.role == .notice {
+                // Center status lines (e.g. "Model changed to …") between the two
+                // conversational columns.
+                let leading = NSView()
+                let trailing = NSView()
+                for spacer in [leading, trailing] {
+                    spacer.translatesAutoresizingMaskIntoConstraints = false
+                    spacer.setContentHuggingPriority(.init(1), for: .horizontal)
+                }
+                let hStack = NSStackView(views: [leading, bubble, trailing])
+                hStack.orientation = .horizontal
+                hStack.alignment = .top
+                hStack.spacing = 0
+                leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
+                transcriptStack.addArrangedSubview(hStack)
+                hStack.widthAnchor.constraint(equalTo: transcriptStack.widthAnchor, constant: -32).isActive = true
             } else {
                 transcriptStack.addArrangedSubview(bubble)
             }

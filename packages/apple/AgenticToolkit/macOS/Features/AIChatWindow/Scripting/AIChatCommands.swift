@@ -56,6 +56,7 @@ public final class GetChatMessagesCommand: MainActorScriptCommand, @unchecked Se
             case .user:      role = "user"
             case .assistant: role = "assistant"
             case .error:     role = "error"
+            case .notice:    role = "notice"
             }
             return "\(role): \(msg.text)"
         }

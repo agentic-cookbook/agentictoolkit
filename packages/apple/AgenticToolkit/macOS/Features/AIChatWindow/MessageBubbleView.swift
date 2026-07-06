@@ -30,6 +30,9 @@ public final class MessageBubbleView: NSView {
         case .error:
             bgColor = NSColor.systemRed.withAlphaComponent(0.08)
             fgColor = .systemRed
+        case .notice:
+            bgColor = NSColor.secondaryLabelColor.withAlphaComponent(0.10)
+            fgColor = .secondaryLabelColor
         }
         layer?.backgroundColor = bgColor.cgColor
 

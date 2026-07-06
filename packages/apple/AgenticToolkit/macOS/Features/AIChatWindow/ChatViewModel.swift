@@ -64,6 +64,14 @@ public final class ChatViewModel: ObservableObject {
         isTyping = false
     }
 
+    /// Appends a centered notice that the model changed. Only shown once a
+    /// conversation is under way, so switching the model before chatting stays
+    /// silent. The notice is never sent back to the model as history.
+    public func noteModelChanged(to model: String) {
+        guard !messages.isEmpty else { return }
+        messages.append(ChatMessage(role: .notice, text: "Model changed to \(model)"))
+    }
+
     // MARK: - Queue Processing
 
     private func processQueue() {
@@ -81,12 +89,7 @@ public final class ChatViewModel: ObservableObject {
         _ = queue.removeFirst()
         isTyping = true
 
-        let initialHistory: [ChatBackendMessage] = messages
-            .filter { $0.role != .error }
-            .map { msg in
-                let role: ChatBackendMessage.Role = msg.role == .user ? .user : .assistant
-                return ChatBackendMessage(role: role, content: msg.text)
-            }
+        let initialHistory = Self.backendHistory(from: messages)
 
         Task { [weak self] in
             guard let self else { return }
@@ -145,7 +148,7 @@ public final class ChatViewModel: ObservableObject {
         } catch {
             Self.logger.error("Chat error: \(error.localizedDescription, privacy: .public)")
             isTyping = false
-            appendError("Sorry, something went wrong. Let's try again.")
+            appendError(Self.userFacingMessage(for: error))
             drainQueue()
         }
     }
@@ -200,6 +203,27 @@ public final class ChatViewModel: ObservableObject {
     private func appendError(_ text: String) {
         isTyping = false
         messages.append(ChatMessage(role: .error, text: text))
+    }
+
+    /// The conversation to send the backend: user/assistant turns only. Error and
+    /// notice lines are UI-only and never fed back to the model.
+    static func backendHistory(from messages: [ChatMessage]) -> [ChatBackendMessage] {
+        messages
+            .filter { $0.role != .error && $0.role != .notice }
+            .map { msg in
+                let role: ChatBackendMessage.Role = msg.role == .user ? .user : .assistant
+                return ChatBackendMessage(role: role, content: msg.text)
+            }
+    }
+
+    /// Turns a thrown backend error into a message that names what actually went
+    /// wrong (HTTP status text, "model not found", etc.) instead of a generic
+    /// apology. `LocalizedError` conformers (the transport + plugin errors) carry
+    /// the useful text in `errorDescription`.
+    static func userFacingMessage(for error: Error) -> String {
+        let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Request failed." : "Request failed: \(trimmed)"
     }
 }
 
