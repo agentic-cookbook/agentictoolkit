@@ -245,6 +245,15 @@ public final class AIPluginManager {
         loadedPlugins[identifier]
     }
 
+    #if DEBUG
+    /// Test-only: inject a descriptor without an on-disk bundle so store/resolver
+    /// tests need no `.aiplugin` fixtures. `loadPlugin` still fails for it (no
+    /// binary), which resolver/store tests don't exercise.
+    public func registerForTesting(_ descriptor: AIPluginDescriptor) {
+        records.append(Record(descriptor: descriptor, bundleURL: URL(fileURLWithPath: "/dev/null")))
+    }
+    #endif
+
     // MARK: - Internal record
 
     /// Pairs a discovered descriptor with the bundle URL the manager needs for
