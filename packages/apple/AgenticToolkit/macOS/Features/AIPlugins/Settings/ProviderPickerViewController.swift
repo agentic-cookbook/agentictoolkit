@@ -36,11 +36,12 @@ public enum ProviderPickerFilter {
 
 /// Modal provider picker (presented via ``ProviderPicker/present(over:rows:onChoose:)``).
 ///
-/// A focused filter field on top; a two-column table (provider name /
-/// configuration type) over a draggable split from a provider-info pane;
-/// Cancel / Choose below. Fully keyboard-driven: up/down move the selection and
-/// mirror it into the filter field, Return chooses, Escape cancels. Themed via
-/// the toolkit palette and user-resizable.
+/// A focused filter field on top; below it a draggable vertical split with a
+/// three-column table (Provider / LLM / Config Type, sized to fit content) on the
+/// left and a provider-details pane on the right; Cancel / Choose below. Fully
+/// keyboard-driven: up/down move the selection and mirror it into the filter
+/// field, Return chooses, Escape cancels. Themed via the toolkit palette; shown
+/// as an app-modal resizable window.
 @MainActor
 public final class ProviderPickerViewController: NSViewController, Themeable {
 
@@ -49,6 +50,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     private let allRows: [ProviderPickerRow]
     private var filteredRows: [ProviderPickerRow]
+
+    /// Column widths fitted to the content (measured once from `allRows`).
+    private let columnWidths: [NSUserInterfaceItemIdentifier: CGFloat]
+    /// Natural width of the table (sum of fitted columns), used to size the window
+    /// and place the initial split divider.
+    private let tableWidth: CGFloat
+    /// The window's initial content size. Not `preferredContentSize`: setting that on
+    /// a window's contentViewController pins the window's min == max size, defeating
+    /// `.resizable`.
+    public let initialContentSize: NSSize
 
     private let searchField = NSSearchField()
     private let tableView = NSTableView()
@@ -70,15 +81,47 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public init(rows: [ProviderPickerRow]) {
         self.allRows = rows
         self.filteredRows = rows
-        super.init(nibName: nil, bundle: nil)
+        let widths = Self.fittedColumnWidths(for: rows)
+        self.columnWidths = widths
+        let tableW = (widths[Self.providerColumnID] ?? 120)
+            + (widths[Self.llmColumnID] ?? 90)
+            + (widths[Self.typeColumnID] ?? 120)
+            + 6 /* intercell */ + 16 /* vertical scroller */ + 8 /* slack */
+        self.tableWidth = tableW
+        let infoWidth: CGFloat = 340
+        let width = 16 + tableW + 8 /* divider gap */ + infoWidth + 16
         let rowCount = max(rows.count, 1)
-        let listHeight = min(CGFloat(rowCount) * 24 + 26 /* header + pad */, 420)
-        let height = 16 + 26 /* search */ + 8 + listHeight + 8 + 230 /* info */ + 10 + 32 /* buttons */ + 16
-        self.preferredContentSize = NSSize(width: 760, height: height)
+        let contentHeight = min(CGFloat(rowCount) * 24 + 26 /* header + pad */, 420)
+        let height = 16 + 26 /* search */ + 8 + max(contentHeight, 340) + 10 + 32 /* buttons */ + 16
+        self.initialContentSize = NSSize(width: width, height: height)
+        super.init(nibName: nil, bundle: nil)
     }
 
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    /// The font the table cells render in (must match `fittedColumnWidths`).
+    private static let cellFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+
+    /// Measures each column's widest value (and its header) to fit content + padding.
+    private static func fittedColumnWidths(for rows: [ProviderPickerRow])
+        -> [NSUserInterfaceItemIdentifier: CGFloat] {
+        let headerFont = NSFont.boldSystemFont(ofSize: 11)
+        func measure(_ string: String, _ withFont: NSFont) -> CGFloat {
+            (string as NSString).size(withAttributes: [.font: withFont]).width
+        }
+        func fit(_ title: String, _ values: [String]) -> CGFloat {
+            let widest = values.map { measure($0, cellFont) }.max() ?? 0
+            // Generous padding: cell insets + breathing room + room to spare when the
+            // vertical scroller appears and eats into the last column.
+            return ceil(max(measure(title, headerFont), widest)) + 46
+        }
+        return [
+            providerColumnID: fit("Provider", rows.map(\.provider)),
+            llmColumnID: fit("LLM", rows.map(\.llm)),
+            typeColumnID: fit("Config Type", rows.map(\.configType))
+        ]
+    }
 
     // MARK: - View tree
 
@@ -125,9 +168,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     public override func viewDidLayout() {
         super.viewDidLayout()
-        if !didSetInitialSplit, splitView.bounds.height > 200 {
+        // Wait until the split is actually wide enough before placing the divider,
+        // so an early layout pass (window not yet at full width) doesn't clamp it.
+        if !didSetInitialSplit, splitView.bounds.width >= tableWidth + 240 {
             didSetInitialSplit = true
-            splitView.setPosition(splitView.bounds.height - 230, ofDividerAt: 0)
+            splitView.setPosition(tableWidth, ofDividerAt: 0)   // table fits its columns; info gets the rest
         }
     }
 
@@ -171,24 +216,27 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         tableView.delegate = self
         tableView.target = self
         tableView.doubleAction = #selector(chooseAction)
+        // Columns keep their content-fitted widths; never auto-squeezed (which
+        // clipped the longest Config Type value).
+        tableView.columnAutoresizingStyle = .noColumnAutoresizing
 
         let providerColumn = NSTableColumn(identifier: Self.providerColumnID)
         providerColumn.title = "Provider"
-        providerColumn.width = 220
-        providerColumn.minWidth = 120
+        providerColumn.width = columnWidths[Self.providerColumnID] ?? 200
+        providerColumn.minWidth = 60
         providerColumn.resizingMask = .userResizingMask
 
         let llmColumn = NSTableColumn(identifier: Self.llmColumnID)
         llmColumn.title = "LLM"
-        llmColumn.width = 160
-        llmColumn.minWidth = 90
+        llmColumn.width = columnWidths[Self.llmColumnID] ?? 140
+        llmColumn.minWidth = 50
         llmColumn.resizingMask = .userResizingMask
 
         let typeColumn = NSTableColumn(identifier: Self.typeColumnID)
         typeColumn.title = "Config Type"
-        typeColumn.width = 300
-        typeColumn.minWidth = 120
-        typeColumn.resizingMask = .autoresizingMask
+        typeColumn.width = columnWidths[Self.typeColumnID] ?? 200
+        typeColumn.minWidth = 80
+        typeColumn.resizingMask = .userResizingMask
 
         tableView.addTableColumn(providerColumn)
         tableView.addTableColumn(llmColumn)
@@ -217,11 +265,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     }
 
     private func configureSplit() {
-        splitView.isVertical = false          // horizontal divider → top/bottom panes
+        splitView.isVertical = true           // vertical divider → left/right panes
         splitView.dividerStyle = .thin
         splitView.delegate = self
-        splitView.addArrangedSubview(tableScroll)
-        splitView.addArrangedSubview(infoScroll)
+        splitView.addArrangedSubview(tableScroll)   // left: provider table
+        splitView.addArrangedSubview(infoScroll)    // right: details
     }
 
     private func configureButtons() {
@@ -370,13 +418,18 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     // MARK: - Actions
 
     @objc private func chooseAction() {
+        guard completion != nil else { return }
         let row = tableView.selectedRow
         guard row >= 0, row < filteredRows.count else { return }
-        completion?(filteredRows[row].available)
+        let done = completion
+        completion = nil
+        done?(filteredRows[row].available)
     }
 
     @objc private func cancelAction() {
-        completion?(nil)
+        guard let done = completion else { return }
+        completion = nil
+        done(nil)
     }
 
     public override func cancelOperation(_ sender: Any?) {
@@ -444,7 +497,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
             let field = NSTextField(labelWithString: "")
             field.translatesAutoresizingMaskIntoConstraints = false
             field.lineBreakMode = .byTruncatingTail
-            field.font = .systemFont(ofSize: NSFont.systemFontSize)
+            field.font = Self.cellFont
             view.addSubview(field)
             view.textField = field
             NSLayoutConstraint.activate([
@@ -492,20 +545,30 @@ extension ProviderPickerViewController: NSSplitViewDelegate {
     public func splitView(_ splitView: NSSplitView,
                           constrainMinCoordinate proposedMin: CGFloat,
                           ofSubviewAt dividerIndex: Int) -> CGFloat {
-        120   // minimum table height
+        tableWidth   // never shrink the table narrower than its fitted columns
     }
 
     public func splitView(_ splitView: NSSplitView,
                           constrainMaxCoordinate proposedMax: CGFloat,
                           ofSubviewAt dividerIndex: Int) -> CGFloat {
-        max(120, splitView.bounds.height - 80)   // keep at least 80pt for the info pane
+        max(200, splitView.bounds.width - 240)   // keep at least 240pt for the details pane
+    }
+}
+
+// MARK: - Window delegate (close = cancel)
+
+extension ProviderPickerViewController: NSWindowDelegate {
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        cancelAction()   // routes through completion → dismiss; don't let AppKit also close
+        return false
     }
 }
 
 // MARK: - Presenter
 
-/// Presents ``ProviderPickerViewController`` as a resizable sheet over a parent
-/// window and reports the chosen template.
+/// Presents ``ProviderPickerViewController`` as an app-modal, **resizable** window
+/// centered over a parent and reports the chosen template. A titled resizable
+/// window is used (not a sheet) because sheets don't accept user resizing.
 @MainActor
 public enum ProviderPicker {
     public static func present(
@@ -517,13 +580,23 @@ public enum ProviderPicker {
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .resizable]
         window.title = "Add a Provider"
-        window.setContentSize(controller.preferredContentSize)
-        window.minSize = NSSize(width: 480, height: 360)
-        controller.completion = { [weak parent, weak window] result in
-            guard let window else { return }
-            parent?.endSheet(window)
-            if let result { onChoose(result) }
+        window.delegate = controller
+        window.setContentSize(controller.initialContentSize)
+        window.contentMinSize = NSSize(width: max(520, controller.initialContentSize.width - 100), height: 300)
+        window.contentMaxSize = NSSize(width: 4000, height: 4000)
+        // Center over the parent window.
+        let size = window.frame.size
+        window.setFrameOrigin(NSPoint(
+            x: parent.frame.midX - size.width / 2,
+            y: parent.frame.midY - size.height / 2))
+
+        var chosen: AIPluginManager.AvailableProviderTemplate?
+        controller.completion = { [weak window] result in
+            chosen = result
+            window?.orderOut(nil)
+            NSApp.stopModal()
         }
-        parent.beginSheet(window)
+        NSApp.runModal(for: window)
+        if let chosen { onChoose(chosen) }
     }
 }
