@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { Input, fieldShellClass } from "./input"
 import { RemovableChip } from "./removable-chip"
+import { Badge } from "./badge"
 import { cn } from "../lib/utils"
 
 export interface RecipientInputProps {
@@ -20,6 +21,12 @@ export interface RecipientInputProps {
    * existing recipients; the input below it adds new ones.
    */
   separateInput?: boolean
+  /**
+   * Read-only: show the recipients as static (non-removable) chips with no entry field. For callers
+   * whose recipients are FIXED (e.g. seeded from a selection the backend keys off), so an editable
+   * field would present edits the server silently drops. `onChange` never fires in this mode.
+   */
+  readOnly?: boolean
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -34,6 +41,7 @@ export function RecipientInput({
   disabled = false,
   className,
   separateInput = false,
+  readOnly = false,
 }: RecipientInputProps): React.ReactElement {
   const [text, setText] = React.useState("")
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -82,10 +90,17 @@ export function RecipientInput({
     }
   }
 
-  /** Chips shared by both rendering modes. */
+  /** Chips shared by both rendering modes. Read-only chips drop the ✕ remove affordance. */
   function renderChips(): React.ReactNode {
     return value.map((v, i) => {
       const invalid = !isValid(v)
+      if (readOnly) {
+        return (
+          <Badge key={`${i}:${v}`} variant={invalid ? "error" : "neutral"} aria-invalid={invalid || undefined}>
+            {v}
+          </Badge>
+        )
+      }
       return (
         <RemovableChip
           key={`${i}:${v}`}
@@ -120,21 +135,24 @@ export function RecipientInput({
             renderChips()
           )}
         </div>
-        {/* Separate text entry — the Input primitive with this control's tighter metrics. */}
-        <Input
-          value={text}
-          onChange={onChangeText}
-          onKeyDown={onKeyDown}
-          onBlur={() => {
-            add(text)
-            setText("")
-          }}
-          placeholder={placeholder ?? defaultPlaceholder}
-          disabled={disabled}
-          aria-label={`Add to ${ariaLabel}`}
-          inputMode={kind === "email" ? "email" : kind === "phone" ? "tel" : "text"}
-          className="h-auto px-2 py-1.5"
-        />
+        {/* Separate text entry — the Input primitive with this control's tighter metrics. Omitted in
+            read-only mode (recipients are fixed). */}
+        {!readOnly && (
+          <Input
+            value={text}
+            onChange={onChangeText}
+            onKeyDown={onKeyDown}
+            onBlur={() => {
+              add(text)
+              setText("")
+            }}
+            placeholder={placeholder ?? defaultPlaceholder}
+            disabled={disabled}
+            aria-label={`Add to ${ariaLabel}`}
+            inputMode={kind === "email" ? "email" : kind === "phone" ? "tel" : "text"}
+            className="h-auto px-2 py-1.5"
+          />
+        )}
       </div>
     )
   }
@@ -155,21 +173,23 @@ export function RecipientInput({
       )}
     >
       {renderChips()}
-      <input
-        value={text}
-        onChange={onChangeText}
-        onKeyDown={onKeyDown}
-        onBlur={(e) => {
-          if (containerRef.current?.contains(e.relatedTarget as Node)) return
-          add(text)
-          setText("")
-        }}
-        placeholder={value.length === 0 ? placeholder : undefined}
-        disabled={disabled}
-        aria-label={`Add to ${ariaLabel}`}
-        inputMode={kind === "email" ? "email" : kind === "phone" ? "tel" : "text"}
-        className="min-w-[8ch] flex-1 bg-transparent text-sm text-apt-text outline-none placeholder:text-apt-text-dim"
-      />
+      {!readOnly && (
+        <input
+          value={text}
+          onChange={onChangeText}
+          onKeyDown={onKeyDown}
+          onBlur={(e) => {
+            if (containerRef.current?.contains(e.relatedTarget as Node)) return
+            add(text)
+            setText("")
+          }}
+          placeholder={value.length === 0 ? placeholder : undefined}
+          disabled={disabled}
+          aria-label={`Add to ${ariaLabel}`}
+          inputMode={kind === "email" ? "email" : kind === "phone" ? "tel" : "text"}
+          className="min-w-[8ch] flex-1 bg-transparent text-sm text-apt-text outline-none placeholder:text-apt-text-dim"
+        />
+      )}
     </div>
   )
 }

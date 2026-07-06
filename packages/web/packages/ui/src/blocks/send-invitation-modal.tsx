@@ -55,12 +55,9 @@ export function SendInvitationModal({
   const [smsNote, setSmsNote] = React.useState("")
   const [confirming, setConfirming] = React.useState(false)
 
-  // Dirty = any recipients or notes present (seeded recipients count as content).
-  const dirty =
-    emailRecipients.length > 0 ||
-    smsRecipients.length > 0 ||
-    emailNote !== "" ||
-    smsNote !== ""
+  // Recipients are read-only (seeded from the selected pending users, which the backend keys the
+  // invite off), so only an entered note makes the form "dirty" enough to warrant a discard prompt.
+  const dirty = emailNote !== "" || smsNote !== ""
 
   const canSend =
     (hasEmail && emailRecipients.length > 0) ||
@@ -115,6 +112,7 @@ export function SendInvitationModal({
                     value={smsRecipients}
                     onChange={setSmsRecipients}
                     separateInput
+                    readOnly
                   />
                 </Field>
                 <Field label="Note (optional)">
@@ -134,6 +132,7 @@ export function SendInvitationModal({
                     value={emailRecipients}
                     onChange={setEmailRecipients}
                     separateInput
+                    readOnly
                   />
                 </Field>
                 <Field label="Note (optional)">
