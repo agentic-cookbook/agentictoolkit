@@ -8,6 +8,7 @@ import AgenticToolkitCore
 struct LLMProvidersView: View {
 
     @ObservedObject var viewModel: LLMProvidersListViewModel
+    @State private var showingProviderPicker = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -40,7 +41,11 @@ struct LLMProvidersView: View {
 
             Divider()
             HStack(spacing: 2) {
-                addMenu
+                Button {
+                    showingProviderPicker = true
+                } label: { Image(systemName: "plus") }
+                    .buttonStyle(.borderless)
+                    .help("Add a provider")
                 Button {
                     if let id = viewModel.selectedId { viewModel.remove(id) }
                 } label: { Image(systemName: "minus") }
@@ -51,19 +56,9 @@ struct LLMProvidersView: View {
             }
             .padding(6)
         }
-    }
-
-    private var addMenu: some View {
-        Menu {
-            ForEach(Array(viewModel.availableTemplates.enumerated()), id: \.offset) { _, available in
-                Button(available.template.displayName) { viewModel.add(available) }
-            }
-        } label: {
-            Image(systemName: "plus")
+        .sheet(isPresented: $showingProviderPicker) {
+            ProviderPickerSheet(viewModel: viewModel, isPresented: $showingProviderPicker)
         }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .help("Add a provider")
     }
 
     @ViewBuilder
@@ -83,6 +78,60 @@ struct LLMProvidersView: View {
         viewModel.pluginManager
             .template(pluginIdentifier: config.pluginIdentifier, templateId: config.templateId)?
             .displayName ?? config.templateId
+    }
+}
+
+/// Modal provider picker presented from the `+` control: pick a provider
+/// template and it creates a new, unconfigured configuration in the list, then
+/// dismisses. Templates are grouped into sections by the plugin that serves them.
+struct ProviderPickerSheet: View {
+
+    @ObservedObject var viewModel: LLMProvidersListViewModel
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Add a Provider").font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            List {
+                ForEach(viewModel.availableTemplateGroups) { group in
+                    Section(group.pluginName) {
+                        ForEach(group.templates, id: \.template.id) { available in
+                            Button {
+                                viewModel.add(available)
+                                isPresented = false
+                            } label: {
+                                HStack {
+                                    Text(available.template.displayName)
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .listStyle(.inset)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel") { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .frame(width: 380, height: 460)
     }
 }
 
