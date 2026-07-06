@@ -88,11 +88,22 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             + (widths[Self.typeColumnID] ?? 120)
             + 6 /* intercell */ + 16 /* vertical scroller */ + 8 /* slack */
         self.tableWidth = tableW
-        let infoWidth: CGFloat = 340
+
+        let infoWidth: CGFloat = 400
+        // Height for the table to show every row without scrolling.
+        let tableHeight = CGFloat(max(rows.count, 1)) * 24 + 28 /* header */ + 4
+        // Height for the tallest details pane (measured at infoWidth) without scrolling.
+        let palette = ThemePaletteObserver.currentPalette
+        let textWidth = infoWidth - 26 /* text-container insets + line padding */
+        let detailsHeight = rows.map { row in
+            Self.attributedInfo(for: row, palette: palette).boundingRect(
+                with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]).height
+        }.max() ?? 0
+        let paneHeight = max(tableHeight, ceil(detailsHeight) + 20 /* text insets */)
+
         let width = 16 + tableW + 8 /* divider gap */ + infoWidth + 16
-        let rowCount = max(rows.count, 1)
-        let contentHeight = min(CGFloat(rowCount) * 24 + 26 /* header + pad */, 420)
-        let height = 16 + 26 /* search */ + 8 + max(contentHeight, 340) + 10 + 32 /* buttons */ + 16
+        let height = 16 + 26 /* search */ + 8 + paneHeight + 10 + 32 /* buttons */ + 16
         self.initialContentSize = NSSize(width: width, height: height)
         super.init(nibName: nil, bundle: nil)
     }
@@ -447,6 +458,12 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         infoTextView.backgroundColor = palette.surfaceColor
         infoScroll.backgroundColor = palette.surfaceColor
 
+        // The default (Choose) button shows via its opaque accent fill, but a normal
+        // button's bezel is semi-transparent and vanishes against the themed dark
+        // background — give Cancel an opaque, theme-derived bezel so it stays visible.
+        cancelButton.bezelColor = palette.nsColor(.elevatedSurface)
+        cancelButton.contentTintColor = palette.primaryTextColor
+
         updateInfo(for: currentRow())
         tableView.reloadData()
     }
@@ -571,6 +588,9 @@ extension ProviderPickerViewController: NSWindowDelegate {
 /// window is used (not a sheet) because sheets don't accept user resizing.
 @MainActor
 public enum ProviderPicker {
+    /// Key under which the window's frame (size + location) persists across launches.
+    private static let frameAutosaveName = NSWindow.FrameAutosaveName("ProviderPickerWindow")
+
     public static func present(
         over parent: NSWindow,
         rows: [ProviderPickerRow],
@@ -581,14 +601,24 @@ public enum ProviderPicker {
         window.styleMask = [.titled, .closable, .resizable]
         window.title = "Add a Provider"
         window.delegate = controller
-        window.setContentSize(controller.initialContentSize)
-        window.contentMinSize = NSSize(width: max(520, controller.initialContentSize.width - 100), height: 300)
+        // Force a STANDARD dark/light appearance (matched to the theme's background)
+        // so standard AppKit controls render with proper contrast — a custom theme
+        // appearance draws the non-default Cancel button's bezel invisibly.
+        let background = ThemePaletteObserver.currentPalette.windowBackgroundColor
+        let isDark = (background.usingColorSpace(.sRGB)?.brightnessComponent ?? 0.5) < 0.5
+        window.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        window.contentMinSize = NSSize(width: 520, height: 320)
         window.contentMaxSize = NSSize(width: 4000, height: 4000)
-        // Center over the parent window.
-        let size = window.frame.size
-        window.setFrameOrigin(NSPoint(
-            x: parent.frame.midX - size.width / 2,
-            y: parent.frame.midY - size.height / 2))
+        window.setContentSize(controller.initialContentSize)
+
+        // Restore the user's saved size + location; first time, center over the parent.
+        if !window.setFrameUsingName(frameAutosaveName) {
+            let size = window.frame.size
+            window.setFrameOrigin(NSPoint(
+                x: parent.frame.midX - size.width / 2,
+                y: parent.frame.midY - size.height / 2))
+        }
+        window.setFrameAutosaveName(frameAutosaveName)   // persist future moves/resizes
 
         var chosen: AIPluginManager.AvailableProviderTemplate?
         controller.completion = { [weak window] result in
