@@ -2,11 +2,9 @@ import Foundation
 import AIPluginKit
 import AgenticToolkitCore
 
-/// Default `ChatConfigProvider` backed by `PluginConfigStore`: it reports the
-/// globally-selected plugin and resolves that plugin's model and field values
-/// from persisted settings, using `AIPluginManager`'s descriptors to find the
-/// selected plugin. Hosts with no bespoke selection UI use this directly so the
-/// chat backend tracks the settings the user edits in the AI settings panel.
+/// Default `ChatConfigProvider`: reports the summaries-active configuration
+/// (`UserSettings.selectedAIProviderConfigurationId`) resolved to its plugin,
+/// model, and values. Empty selection == no provider (the daemon's Default path).
 @MainActor
 public final class PluginChatConfigProvider: ChatConfigProvider {
 
@@ -16,25 +14,15 @@ public final class PluginChatConfigProvider: ChatConfigProvider {
         self.pluginManager = pluginManager
     }
 
-    public var selectedPluginIdentifier: String {
-        PluginConfigStore.selectedPluginSetting().currentValue
+    private var resolved: AIProviderResolver.Resolved? {
+        let id = UserSettings.selectedAIProviderConfigurationId.value
+        guard !id.isEmpty, let uuid = UUID(uuidString: id),
+              let config = UserSettings.aiProviderConfigurations.value.first(where: { $0.id == uuid })
+        else { return nil }
+        return AIProviderResolver.resolve(config, manager: pluginManager)
     }
 
-    public var selectedModel: String {
-        guard let descriptor = selectedDescriptor else { return "" }
-        return PluginConfigStore.selectedModel(for: descriptor)
-    }
-
-    public var pluginConfigValues: [String: String] {
-        guard let descriptor = selectedDescriptor else { return [:] }
-        return PluginConfigStore.configValues(for: descriptor)
-    }
-
-    /// The descriptor matching the currently-selected plugin, if any is selected
-    /// and still discovered.
-    private var selectedDescriptor: AIPluginDescriptor? {
-        let identifier = selectedPluginIdentifier
-        guard !identifier.isEmpty else { return nil }
-        return pluginManager.descriptors.first { $0.identifier == identifier }
-    }
+    public var selectedPluginIdentifier: String { resolved?.pluginIdentifier ?? "" }
+    public var selectedModel: String { resolved?.model ?? "" }
+    public var pluginConfigValues: [String: String] { resolved?.values ?? [:] }
 }
