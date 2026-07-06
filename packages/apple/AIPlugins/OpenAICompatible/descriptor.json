@@ -1,12 +1,24 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "identifier": "com.agentictoolkit.plugin.openai-compatible",
-  "displayName": "Custom (OpenAI-compatible)",
+  "displayName": "OpenAI-compatible",
   "version": "1.0",
   "models": [],
   "defaultModel": null,
   "fields": [
-    { "key": "baseURL", "label": "Base URL", "kind": "text", "placeholder": "https://localhost:1234" },
+    { "key": "baseURL", "label": "Base URL", "kind": "text", "placeholder": "https://api.example.com/v1" },
     { "key": "apiKey", "label": "API Key", "kind": "secret" }
+  ],
+  "templates": [
+    { "id": "cerebras", "displayName": "Cerebras", "defaultValues": { "baseURL": "https://api.cerebras.ai/v1" }, "models": ["llama3.1-70b", "llama3.1-8b"], "defaultModel": "llama3.1-70b", "secretRequired": true },
+    { "id": "deepseek", "displayName": "DeepSeek", "defaultValues": { "baseURL": "https://api.deepseek.com/v1" }, "models": ["deepseek-chat", "deepseek-reasoner"], "defaultModel": "deepseek-chat", "secretRequired": true },
+    { "id": "fireworks", "displayName": "Fireworks", "defaultValues": { "baseURL": "https://api.fireworks.ai/inference/v1" }, "models": ["accounts/fireworks/models/llama-v3p1-70b-instruct", "accounts/fireworks/models/mixtral-8x7b-instruct"], "defaultModel": "accounts/fireworks/models/llama-v3p1-70b-instruct", "secretRequired": true },
+    { "id": "groq", "displayName": "Groq", "defaultValues": { "baseURL": "https://api.groq.com/openai/v1" }, "models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"], "defaultModel": "llama-3.3-70b-versatile", "secretRequired": true },
+    { "id": "mistral", "displayName": "Mistral", "defaultValues": { "baseURL": "https://api.mistral.ai/v1" }, "models": ["mistral-large-latest", "mistral-small-latest"], "defaultModel": "mistral-large-latest", "secretRequired": true },
+    { "id": "ollama", "displayName": "Ollama (local)", "defaultValues": { "baseURL": "http://localhost:11434/v1" }, "models": ["llama3.2", "qwen2.5"], "defaultModel": "llama3.2", "secretRequired": false },
+    { "id": "openrouter", "displayName": "OpenRouter", "defaultValues": { "baseURL": "https://openrouter.ai/api/v1" }, "models": ["openrouter/auto", "anthropic/claude-3.5-sonnet"], "defaultModel": "openrouter/auto", "secretRequired": true },
+    { "id": "together", "displayName": "Together", "defaultValues": { "baseURL": "https://api.together.xyz/v1" }, "models": ["meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"], "defaultModel": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "secretRequired": true },
+    { "id": "xai", "displayName": "xAI", "defaultValues": { "baseURL": "https://api.x.ai/v1" }, "models": ["grok-2-latest", "grok-2-mini"], "defaultModel": "grok-2-latest", "secretRequired": true },
+    { "id": "custom", "displayName": "Custom (OpenAI-compatible)", "defaultValues": { "baseURL": "" }, "models": [], "defaultModel": null, "secretRequired": false }
   ]
 }

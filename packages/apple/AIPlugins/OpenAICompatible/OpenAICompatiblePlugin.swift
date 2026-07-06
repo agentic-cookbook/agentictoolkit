@@ -12,14 +12,13 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
     public override init() { super.init() }
 
     public func buildRequest(_ context: AIChatContext) throws -> AIRequestSpec {
-        guard let apiKey = context.config.apiKey, !apiKey.isEmpty else {
-            throw PluginError.missingAPIKey
-        }
         guard let baseURL = context.config.baseURL?.trimmingCharacters(in: .whitespacesAndNewlines),
               !baseURL.isEmpty else {
             throw PluginError.missingBaseURL
         }
-        guard let url = URL(string: baseURL)?.appendingPathComponent("v1/chat/completions") else {
+        // The base URL is already versioned (e.g. .../v1), matching how each
+        // template ships it, so only the endpoint path is appended.
+        guard let url = URL(string: baseURL)?.appendingPathComponent("chat/completions") else {
             throw PluginError.invalidURL
         }
 
@@ -40,13 +39,16 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
         ]
         if !context.model.isEmpty { body["model"] = context.model }
 
+        var headers = ["content-type": "application/json"]
+        // Keyless providers (Ollama) send no Authorization header.
+        if let apiKey = context.config.apiKey, !apiKey.isEmpty {
+            headers["Authorization"] = "Bearer \(apiKey)"
+        }
+
         return .http(
             method: .post,
             url: url,
-            headers: [
-                "Authorization": "Bearer \(apiKey)",
-                "content-type": "application/json"
-            ],
+            headers: headers,
             body: try JSONSerialization.data(withJSONObject: body)
         )
     }

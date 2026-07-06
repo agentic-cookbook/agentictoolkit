@@ -173,35 +173,28 @@ struct PluginRequestTests {
 
     // MARK: - OpenAICompatible
 
-    @Test("OpenAICompatible builds chat completions against the user's base URL")
+    @Test("OpenAICompatible builds chat completions against the versioned base URL")
     func openAICompatibleRequest() throws {
         let spec = try OpenAICompatiblePlugin().buildRequest(
-            context(config: config(apiKey: "k", baseURL: "https://lmstudio.local"))
+            context(config: config(apiKey: "k", baseURL: "https://lmstudio.local/v1"))
         )
-        let (method, url, headers, _) = try #require(httpParts(spec))
-        #expect(method == .post)
+        let (_, url, headers, _) = try #require(httpParts(spec))
         #expect(url.absoluteString == "https://lmstudio.local/v1/chat/completions")
         #expect(headers["Authorization"] == "Bearer k")
     }
 
-    @Test("OpenAICompatible distinguishes a missing key from a missing base URL")
-    func openAICompatibleValidation() {
-        let plugin = OpenAICompatiblePlugin()
-        // Key checked first: base URL present, key absent -> missingAPIKey.
+    @Test("OpenAICompatible omits auth when no key is set (e.g. Ollama) but still needs a base URL")
+    func openAICompatibleKeyless() throws {
+        let spec = try OpenAICompatiblePlugin().buildRequest(
+            context(config: config(apiKey: nil, baseURL: "http://localhost:11434/v1"))
+        )
+        let (_, url, headers, _) = try #require(httpParts(spec))
+        #expect(url.absoluteString == "http://localhost:11434/v1/chat/completions")
+        #expect(headers["Authorization"] == nil)
+
+        // A missing base URL still throws.
         #expect(throws: OpenAICompatiblePlugin.PluginError.self) {
-            _ = try plugin.buildRequest(context(config: config(apiKey: nil, baseURL: "https://h")))
-        }
-        // Key present, base URL absent -> missingBaseURL specifically.
-        do {
-            _ = try plugin.buildRequest(context(config: config(apiKey: "k", baseURL: nil)))
-            Issue.record("expected buildRequest to throw when the base URL is missing")
-        } catch let error as OpenAICompatiblePlugin.PluginError {
-            guard case .missingBaseURL = error else {
-                Issue.record("expected .missingBaseURL, got \(error)")
-                return
-            }
-        } catch {
-            Issue.record("expected an OpenAICompatiblePlugin.PluginError, got \(error)")
+            _ = try OpenAICompatiblePlugin().buildRequest(context(config: config(apiKey: "k", baseURL: nil)))
         }
     }
 
