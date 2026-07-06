@@ -73,6 +73,59 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         }
     }
 
+    // MARK: - Scripted / testable selection
+
+    /// The names of the configured providers, in sidebar order.
+    public var configurationNames: [String] {
+        panels.compactMap { $0.descriptor.title }
+    }
+
+    /// Selects the provider configuration with the given name (its sidebar title),
+    /// driving both the list highlight and the detail editor. Enables scripted /
+    /// UI-test navigation of the inner Providers list, which — being a custom
+    /// themed table — doesn't reliably respond to synthetic clicks. Returns false
+    /// when no configuration has that name.
+    @discardableResult
+    public func selectConfiguration(named name: String) -> Bool {
+        guard let index = panels.firstIndex(where: { $0.descriptor.title == name }) else { return false }
+        selectPanel(at: index)
+        return true
+    }
+
+    /// The test-chat view model of the currently-selected configuration (nil if
+    /// none is selected). Lets automation drive the embedded chat, whose text
+    /// field — nested in a hosted SwiftUI view — doesn't take synthetic input.
+    var selectedChatViewModel: ChatViewModel? {
+        guard let id = viewModel.selectedId else { return nil }
+        return panels.compactMap { $0 as? ProviderConfigPanelViewController }
+            .first { $0.config.id == id }?.chatSession.viewModel
+    }
+
+    /// Sends a message through the selected configuration's test chat. Returns
+    /// false when no configuration is selected.
+    @discardableResult
+    public func sendTestMessage(_ text: String) -> Bool {
+        guard let viewModel = selectedChatViewModel else { return false }
+        viewModel.sendMessage(text)
+        return true
+    }
+
+    /// The selected configuration's test-chat transcript as newline-separated
+    /// `role: text` lines (empty when nothing is selected).
+    public func testChatTranscript() -> String {
+        guard let viewModel = selectedChatViewModel else { return "" }
+        return viewModel.messages.map { message in
+            let role: String
+            switch message.role {
+            case .user: role = "user"
+            case .assistant: role = "assistant"
+            case .error: role = "error"
+            case .notice: role = "notice"
+            }
+            return "\(role): \(message.text)"
+        }.joined(separator: "\n")
+    }
+
     /// Re-reads the sidebar row titles from the existing panels after an in-place
     /// rename, without recreating them, then keeps the selected row highlighted.
     private func refreshRows() {
@@ -168,6 +221,9 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
 private final class ProviderConfigPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     let config: AIProviderConfiguration
+    /// The chat test session for this configuration, owned here so it's reachable
+    /// for scripted tests (see `AIPanelViewController.selectedChatViewModel`).
+    let chatSession: ChatSession
     private let viewModel: LLMProvidersListViewModel
     private let onRenamed: () -> Void
     private var nameObserver: AnyCancellable?
@@ -178,6 +234,7 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
 
     init(config: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, onRenamed: @escaping () -> Void) {
         self.config = config
+        self.chatSession = ChatSession(configuration: config, pluginManager: viewModel.pluginManager)
         self.viewModel = viewModel
         self.onRenamed = onRenamed
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
@@ -201,7 +258,8 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
     }
 
     override func loadView() {
-        let hosting = NSHostingView(rootView: LLMProviderEditorView(configuration: config, viewModel: viewModel))
+        let editor = LLMProviderEditorView(configuration: config, viewModel: viewModel, chat: chatSession)
+        let hosting = NSHostingView(rootView: editor)
         hosting.translatesAutoresizingMaskIntoConstraints = false
         self.view = hosting
     }

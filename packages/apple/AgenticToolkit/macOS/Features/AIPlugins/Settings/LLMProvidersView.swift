@@ -9,9 +9,10 @@ struct LLMProviderEditorView: View {
 
     let configuration: AIProviderConfiguration
     @ObservedObject var viewModel: LLMProvidersListViewModel
-    /// The chat test + its backend, retained for this editor so model changes can
-    /// post a notice into the live transcript.
-    @StateObject private var chat: ChatSession
+    /// The chat test + its backend, owned by the hosting view controller so the
+    /// same session is reachable for scripted tests; model changes post a notice
+    /// into its live transcript.
+    let chat: ChatSession
     @State private var name: String
     /// The displayed model, mirrored into view state so picking one updates the
     /// label immediately (the underlying store is not SwiftUI-observable).
@@ -21,18 +22,16 @@ struct LLMProviderEditorView: View {
     /// empty falls back to the template's static list.
     @State private var fetchedModels: [String] = []
 
-    init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel) {
+    init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, chat: ChatSession) {
         self.configuration = configuration
         self.viewModel = viewModel
+        self.chat = chat
         _name = State(initialValue: configuration.name)
         let template = viewModel.pluginManager.template(
             pluginIdentifier: configuration.pluginIdentifier, templateId: configuration.templateId
         )
         let model = template.map { AIProviderConfigStore.selectedModel(config: configuration, template: $0) }
         _currentModel = State(initialValue: model ?? "")
-        _chat = StateObject(wrappedValue: ChatSession(
-            configuration: configuration, pluginManager: viewModel.pluginManager
-        ))
     }
 
     private var template: AIPluginDescriptor.ProviderTemplate? {

@@ -33,5 +33,18 @@ extension ComposableSettings {
             get { viewController?.panels ?? [] }
             set { viewController?.setPanels(newValue) }
         }
+
+        /// Unlike the menubar HUD windows — which deliberately order-front without
+        /// activating the app — a settings window is opened to be *used* right
+        /// away. Shown from an `LSUIElement` / menubar context, the base
+        /// `showWindow()` leaves it visible on top but **non-key**, so its sidebar
+        /// selection and text fields don't respond until the user clicks the
+        /// window first. Activate the app and make the window key so it's
+        /// immediately interactive (and drivable by UI automation).
+        open override func showWindow() {
+            super.showWindow()
+            NSApp.activate(ignoringOtherApps: true)
+            window?.makeKeyAndOrderFront(nil)
+        }
     }
 }
