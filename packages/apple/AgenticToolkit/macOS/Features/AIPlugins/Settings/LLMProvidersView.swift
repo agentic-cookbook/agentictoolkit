@@ -3,80 +3,6 @@ import AppKit
 import AIPluginKit
 import AgenticToolkitCore
 
-/// The LLM Providers settings panel body: a list of configured providers with a
-/// `+` provider menu and `−` remove, beside an editor for the selected row.
-struct LLMProvidersView: View {
-
-    @ObservedObject var viewModel: LLMProvidersListViewModel
-
-    var body: some View {
-        HStack(spacing: 0) {
-            listColumn
-                .frame(width: 240)
-            Divider()
-            detailColumn
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-        .frame(minWidth: 640, minHeight: 380, alignment: .topLeading)
-    }
-
-    private var listColumn: some View {
-        VStack(spacing: 0) {
-            List(selection: Binding(
-                get: { viewModel.selectedId },
-                set: { viewModel.selectedId = $0 }
-            )) {
-                ForEach(viewModel.configurations) { config in
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(config.name)
-                        Text(providerLabel(config))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .tag(config.id)
-                }
-            }
-            .listStyle(.inset)
-
-            Divider()
-            HStack(spacing: 2) {
-                Button {
-                    viewModel.onRequestAddProvider?()
-                } label: { Image(systemName: "plus") }
-                    .buttonStyle(.borderless)
-                    .help("Add a provider")
-                Button {
-                    if let id = viewModel.selectedId { viewModel.remove(id) }
-                } label: { Image(systemName: "minus") }
-                    .buttonStyle(.borderless)
-                    .disabled(viewModel.selectedId == nil)
-                    .help("Remove the selected provider")
-                Spacer()
-            }
-            .padding(6)
-        }
-    }
-
-    @ViewBuilder
-    private var detailColumn: some View {
-        if let id = viewModel.selectedId, let config = viewModel.configuration(for: id) {
-            LLMProviderEditorView(configuration: config, viewModel: viewModel)
-                .id(config.id)
-                .padding(20)
-        } else {
-            Text("Select or add a provider.")
-                .foregroundStyle(.secondary)
-                .padding(20)
-        }
-    }
-
-    private func providerLabel(_ config: AIProviderConfiguration) -> String {
-        viewModel.pluginManager
-            .template(pluginIdentifier: config.pluginIdentifier, templateId: config.templateId)?
-            .displayName ?? config.templateId
-    }
-}
-
 /// Editor for one configuration: rename, model, per-template fields, and a live
 /// chat test pinned to this configuration.
 struct LLMProviderEditorView: View {
@@ -103,8 +29,30 @@ struct LLMProviderEditorView: View {
             .fields(for: template) ?? (template.fields ?? [])
     }
 
+    /// The provider identity shown as the detail-pane title (distinct from the
+    /// user's editable Name below), e.g. "Anthropic API".
+    private var title: String { template?.displayName ?? configuration.name }
+
+    /// Provider · LLM · Config Type, e.g. "Anthropic · Claude · API Key".
+    private var subtitle: String {
+        guard let template else { return configuration.templateId }
+        var parts = [template.resolvedProvider]
+        if !template.resolvedLLM.isEmpty { parts.append(template.resolvedLLM) }
+        parts.append(template.resolvedConfigType)
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.title2)
+                    .bold()
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             Form {
                 TextField("Name", text: $name)
                     .onSubmit {
@@ -132,7 +80,11 @@ struct LLMProviderEditorView: View {
             Text("Test").font(.headline)
             ChatTestView(configuration: configuration, pluginManager: viewModel.pluginManager)
                 .frame(minHeight: 160)
+
+            Spacer(minLength: 0)
         }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func fieldBinding(_ field: AIPluginDescriptor.Field) -> Binding<String> {
