@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog"
-import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem } from "./topic-detail"
+import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -72,6 +72,9 @@ export interface TopicLevel {
   /** Fixed rail width in px for THIS level (default 240 / FULL_RAIL). Widen a level
    *  whose rows must show on one line (e.g. long API paths). Covered style. */
   width?: number
+  /** An optional leading control rendered ABOVE this level's rows (below its title header) — e.g. a
+   *  search/filter bar for a searchable list. Rendered by the level's rail; omit for a plain list. */
+  railSlot?: RailSlot
 }
 
 /** The top bar: a breadcrumb trail (leading root, then each selected level, then any
@@ -654,6 +657,7 @@ function MinimizedStack({
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
+              railSlot={level.railSlot}
               collapsed={isCollapsed(level)}
               onToggle={
                 manualCollapse
@@ -946,6 +950,7 @@ function CoveredStack({
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
+              railSlot={level.railSlot}
               // Covered lists never shrink to an icon strip (no toggle) — but the trailing-border
               // handle DOES resize the rail: drag it to widen/narrow the column.
               collapsed={false}
