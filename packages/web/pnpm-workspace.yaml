@@ -1,6 +1,5 @@
 packages:
   - './packages/ui'
-  - './packages/olylo'
   - './packages/themes'
   - './packages/markdown'
   - './packages/search'
