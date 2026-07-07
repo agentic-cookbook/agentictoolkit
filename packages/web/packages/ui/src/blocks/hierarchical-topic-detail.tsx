@@ -706,8 +706,19 @@ function CoveredStack({
   children,
 }: StackProps) {
   const minPx = minDetailPx(minDetailWidth)
-  // Per-level rail width (default FULL_RAIL); a level may set a wider `width`.
-  const railWidth = (l: TopicLevel) => l.width ?? FULL_RAIL
+  // Per-level rail width: a DRAGGED width (the trailing-border handle) wins, else the level's own
+  // `width`, else FULL_RAIL. The covered style has no icon strip, so a rail resizes FREELY within a
+  // readable range (widening a rail to read long rows is the point) — unlike the minimized style,
+  // which snaps a narrow drag to an icon strip and caps at FULL_RAIL.
+  const MIN_DRAG_RAIL = 160
+  const MAX_DRAG_RAIL = 640
+  const [widths, setWidths] = useState<Record<string, number>>({})
+  // True mid-drag, so the left/width transitions are suppressed (the rail tracks the pointer 1:1
+  // instead of easing) and restored on release.
+  const [dragging, setDragging] = useState(false)
+  const railWidth = (l: TopicLevel) => widths[l.id] ?? l.width ?? FULL_RAIL
+  const onResizeLevel = (level: TopicLevel, w: number) =>
+    setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState(0)
   // Lists the USER manually covered (by id) — persists across resizes; the auto layer may add more
@@ -885,7 +896,9 @@ function CoveredStack({
               zIndex: zLifted ? 50 : i + 1,
             }}
             className={cn(
-              "absolute top-0 bottom-0 grid overflow-hidden transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
+              "absolute top-0 bottom-0 grid overflow-hidden",
+              !dragging &&
+                "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
               // Shadows ride the WRAPPER (its own box-shadow isn't clipped by its overflow, unlike a
               // child's): a RIGHT shadow while revealed so the lifted list floats over its neighbours
               // (fades out as it wipes shut), else a LEFT shadow when the list under this one is covered
@@ -915,10 +928,13 @@ function CoveredStack({
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
-              // Covered lists never shrink to an icon strip; the toggle/resize are inert here.
+              // Covered lists never shrink to an icon strip (no toggle) — but the trailing-border
+              // handle DOES resize the rail: drag it to widen/narrow the column.
               collapsed={false}
               onToggle={() => {}}
-              onResize={() => {}}
+              onResize={(w) => onResizeLevel(level, w)}
+              onResizeStart={() => setDragging(true)}
+              onResizeEnd={() => setDragging(false)}
               showToggle={false}
               // The cover toggle covers/uncovers THIS list's PARENT (the list to its left).
               leftControl={i >= 1 ? coverControl(i - 1) : undefined}
@@ -940,7 +956,8 @@ function CoveredStack({
         key="__detail__"
         style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
-          "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+          "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
+          !dragging && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
