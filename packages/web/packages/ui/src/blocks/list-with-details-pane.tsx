@@ -167,7 +167,13 @@ export function ListWithDetailsPane<T>({
         {actions.map((action) => (
           <React.Fragment key={action.id}>
             {action.dividerBefore && (
-              <div className="mx-1 h-5 w-px bg-apt-border" aria-hidden />
+              // A real toolbar separator (ARIA toolbar pattern) so AT users
+              // perceive the grouping the divider marks, not a decorative rule.
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                className="mx-1 h-5 w-px bg-apt-border"
+              />
             )}
             <Button
               size="sm"
