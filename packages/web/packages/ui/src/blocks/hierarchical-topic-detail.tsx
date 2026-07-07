@@ -399,10 +399,14 @@ function useSelectionConnectors(
         const labelEl = sel.querySelector("[data-htd-label]")
         const iconEl = sel.querySelector("[data-htd-icon]")
         const end = labelEl ?? iconEl
-        // A deletable row reserves a right-justified trash button (sibling of the row button); the
-        // connector breaks around it so the gold line never crosses the button.
+        // A deletable row's trash button is a sibling of the row button; the connector breaks around
+        // it — but ONLY while the trash is actually REVEALED (the row is hovered, or the trash has
+        // keyboard focus), not merely because the slot is reserved. The stack re-measures on pointer /
+        // focus activity (see the container handlers), so the gap opens and closes with the button.
         const delEl = sel.parentElement?.querySelector("[data-htd-delete]") ?? null
-        const delRect = delEl ? delEl.getBoundingClientRect() : null
+        const delShown =
+          !!delEl && ((sel.parentElement?.matches(":hover") ?? false) || delEl.matches(":focus-visible"))
+        const delRect = delShown && delEl ? delEl.getBoundingClientRect() : null
         return {
           y: r.top + r.height / 2 - crect.top,
           rightX: (end ? end.getBoundingClientRect().right : r.right) - crect.left,
@@ -617,7 +621,13 @@ function MinimizedStack({
   return (
     <div
       ref={containerRef}
+      // `onScroll` is the connector re-measure trigger; fire it on pointer / focus movement too so
+      // the gap around a row's trash button tracks the button's hover / keyboard-focus reveal.
       onScrollCapture={onScroll}
+      onPointerOver={onScroll}
+      onPointerOut={onScroll}
+      onFocus={onScroll}
+      onBlur={onScroll}
       style={{ "--cols": cols } as CSSProperties}
       className={cn(
         // Drill-down applies at EVERY width (it IS the small-screen layout): the lists are grid
@@ -883,7 +893,13 @@ function CoveredStack({
     // accessibility CSS zeroes the duration under reduce-motion).
     <div
       ref={containerRef}
+      // `onScroll` is the connector re-measure trigger; fire it on pointer / focus movement too so
+      // the gap around a row's trash button tracks the button's hover / keyboard-focus reveal.
       onScrollCapture={onScroll}
+      onPointerOver={onScroll}
+      onPointerOut={onScroll}
+      onFocus={onScroll}
+      onBlur={onScroll}
       className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
     >
       {rendered.map((level, i) => {

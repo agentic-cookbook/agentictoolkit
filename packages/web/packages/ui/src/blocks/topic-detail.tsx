@@ -267,7 +267,7 @@ function TopicList({
                         setPendingDelete(item)
                       }}
                       className={cn(
-                        "absolute top-1/2 right-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded",
+                        "absolute top-1/2 right-[3px] z-10 flex size-[19px] -translate-y-1/2 items-center justify-center rounded",
                         "bg-apt-nav text-apt-text-dim opacity-0 outline-none transition-opacity",
                         "hover:text-apt-red focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-apt-red/40 group-hover/htd-row:opacity-100",
                       )}
