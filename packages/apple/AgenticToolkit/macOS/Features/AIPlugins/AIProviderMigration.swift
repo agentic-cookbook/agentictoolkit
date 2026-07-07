@@ -44,20 +44,30 @@ public enum AIProviderMigration {
         var plan = Plan()
         for descriptor in descriptors {
             let values = oldValues(descriptor)
-            let hasSecret = descriptor.fields.contains { $0.isSecret && !(values[$0.key] ?? "").isEmpty }
-            let isSelected = !legacySelected.isEmpty && descriptor.identifier == legacySelected
-            guard hasSecret || isSelected else { continue }
 
             let templateId = legacyTemplateId[descriptor.identifier]
             let templates = descriptor.resolvedTemplates
             guard let template = templates.first(where: { $0.id == templateId }) ?? templates.first
             else { continue }
+            let fields = descriptor.fields(for: template)
+
+            let hasSecret = fields.contains { $0.isSecret && !(values[$0.key] ?? "").isEmpty }
+            let isSelected = !legacySelected.isEmpty && descriptor.identifier == legacySelected
+            // Also carry forward a keyless-but-configured provider (e.g. a local
+            // OpenAI-compatible endpoint with a custom baseURL and no API key): a
+            // non-secret field set to a non-empty, non-default value means the user
+            // configured it, so dropping it would silently lose their setup.
+            let hasCustomField = fields.contains { field in
+                guard !field.isSecret else { return false }
+                let value = values[field.key] ?? ""
+                return !value.isEmpty && value != (template.defaultValues[field.key] ?? "")
+            }
+            guard hasSecret || isSelected || hasCustomField else { continue }
 
             let name = uniqueName(descriptor.displayName, in: plan.configurations)
             let config = AIProviderConfiguration(
                 name: name, pluginIdentifier: descriptor.identifier, templateId: template.id
             )
-            let fields = descriptor.fields(for: template)
             for field in fields {
                 let value = values[field.key] ?? template.defaultValues[field.key] ?? ""
                 if !value.isEmpty {

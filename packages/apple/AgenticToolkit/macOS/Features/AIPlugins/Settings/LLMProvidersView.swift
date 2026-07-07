@@ -21,6 +21,9 @@ struct LLMProviderEditorView: View {
     /// Models the provider's `/models` endpoint actually serves, when reachable;
     /// empty falls back to the template's static list.
     @State private var fetchedModels: [String] = []
+    /// The base URL `fetchedModels` was fetched for, so a repeat appear/open with an
+    /// unchanged endpoint skips the network.
+    @State private var fetchedBaseURL: String?
 
     init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, chat: ChatSession) {
         self.configuration = configuration
@@ -108,7 +111,6 @@ struct LLMProviderEditorView: View {
     /// keyboard-navigable model picker.
     @ViewBuilder
     private func modelRow(_ template: AIPluginDescriptor.ProviderTemplate) -> some View {
-        let binding = modelBinding(template)
         let resolved = currentModel.isEmpty ? template.resolvedDefaultModel : currentModel
         LabeledContent("Model") {
             VStack(alignment: .leading, spacing: 4) {
@@ -128,7 +130,7 @@ struct LLMProviderEditorView: View {
                     ModelPickerHost(
                         items: modelItems(template),
                         selected: resolved,
-                        onSelect: { selectModel($0, template: template, binding: binding) },
+                        onSelect: { selectModel($0, template: template) },
                         onDismiss: { showModelPicker = false }
                     )
                     .frame(width: 380, height: modelPickerHeight(template))
@@ -158,13 +160,11 @@ struct LLMProviderEditorView: View {
 
     /// Commits a model choice: persist it, refresh the label, and — if a chat is
     /// under way — post a "Model changed to …" notice into the transcript.
-    private func selectModel(
-        _ model: String,
-        template: AIPluginDescriptor.ProviderTemplate,
-        binding: Binding<String>
-    ) {
+    /// `currentModel` (@State) is the single source of truth for display; the store
+    /// write is the sole persistence side effect.
+    private func selectModel(_ model: String, template: AIPluginDescriptor.ProviderTemplate) {
         let previous = currentModel.isEmpty ? template.resolvedDefaultModel : currentModel
-        binding.wrappedValue = model
+        AIProviderConfigStore.modelSetting(config: configuration.id, template: template).value = model
         currentModel = model
         if model != previous { chat.viewModel.noteModelChanged(to: model) }
         showModelPicker = false
@@ -189,31 +189,37 @@ struct LLMProviderEditorView: View {
         return min(16 + 24 + 8 + CGFloat(rows) * 56 + 12, 440)
     }
 
+    /// Only OpenAI-shaped endpoints serve `GET {baseURL}/models`; other providers
+    /// (Anthropic, Google, local CLI) have static model lists, so probing them would
+    /// just fire a doomed request. Gate live fetching on the plugin identity.
+    private var supportsLiveModels: Bool {
+        let id = configuration.pluginIdentifier
+        return id.hasSuffix(".openai-compatible") || id.hasSuffix(".openai")
+    }
+
     /// Best-effort fetch of the provider's live model list from its `/models`
-    /// endpoint. Silent no-op when there's no base URL or the host is unreachable.
+    /// endpoint. No-op when the provider isn't OpenAI-shaped, has no base URL, or was
+    /// already fetched for this exact base URL (avoids re-hitting the network on
+    /// every editor appear + picker open).
     @MainActor
     private func refreshModels() async {
-        guard let template else { return }
+        guard supportsLiveModels, let template else { return }
         let values = AIProviderConfigStore.configValues(
             for: configuration, template: template, fields: fields
         )
         let baseURL = values["baseURL"] ?? ""
         guard !baseURL.isEmpty else { return }
+        guard baseURL != fetchedBaseURL || fetchedModels.isEmpty else { return }
         let models = await OpenAIModelCatalog.fetch(baseURL: baseURL, apiKey: values["apiKey"])
-        if !models.isEmpty { fetchedModels = models }
+        if !models.isEmpty {
+            fetchedModels = models
+            fetchedBaseURL = baseURL
+        }
     }
 
     private func fieldBinding(_ field: AIPluginDescriptor.Field) -> Binding<String> {
         let setting = AIProviderConfigStore.fieldSetting(config: configuration.id, field: field)
         return Binding(get: { setting.currentValue }, set: { setting.value = $0 })
-    }
-
-    private func modelBinding(_ template: AIPluginDescriptor.ProviderTemplate) -> Binding<String> {
-        let setting = AIProviderConfigStore.modelSetting(config: configuration.id, template: template)
-        return Binding(
-            get: { let stored = setting.currentValue; return stored.isEmpty ? template.resolvedDefaultModel : stored },
-            set: { setting.value = $0 }
-        )
     }
 }
 

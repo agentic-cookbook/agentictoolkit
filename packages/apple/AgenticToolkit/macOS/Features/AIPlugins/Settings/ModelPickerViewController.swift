@@ -88,9 +88,9 @@ public final class ModelPickerViewController: NSViewController, Themeable {
     public var onSelect: ((String) -> Void)?
     public var onDismiss: (() -> Void)?
 
-    private let allItems: [ModelPickerItem]
+    private var allItems: [ModelPickerItem]
     private var filtered: [ModelPickerItem]
-    private let initialSelection: String
+    private var initialSelection: String
 
     private let searchField = NSSearchField()
     private let tableView = NSTableView()
@@ -182,6 +182,17 @@ public final class ModelPickerViewController: NSViewController, Themeable {
             NSEvent.removeMonitor(escapeMonitor)
             self.escapeMonitor = nil
         }
+    }
+
+    /// Replaces the model list (and current selection) after presentation — e.g.
+    /// when a live `/models` fetch resolves while the popover is already open.
+    /// Re-applies the active filter and keeps the selection visible.
+    public func update(items: [ModelPickerItem], selected: String) {
+        guard isViewLoaded, items != allItems || selected != initialSelection else { return }
+        allItems = items
+        initialSelection = selected
+        applyFilter()
+        selectRow(filtered.firstIndex(where: { $0.id == selected }) ?? 0)
     }
 
     // MARK: - Selection / filtering
@@ -289,5 +300,7 @@ struct ModelPickerHost: NSViewControllerRepresentable {
     func updateNSViewController(_ controller: ModelPickerViewController, context: Context) {
         controller.onSelect = onSelect
         controller.onDismiss = onDismiss
+        // Forward a model list that arrived after the popover opened (async fetch).
+        controller.update(items: items, selected: selected)
     }
 }

@@ -25,7 +25,7 @@ struct SingleConfigChatConfigProviderTests {
         let cfg = AIProviderConfiguration(name: "Groq", pluginIdentifier: "com.x.oc", templateId: "groq")
         AIProviderConfigStore.seed(config: cfg, template: template, fields: template.fields!)
         defer {
-            AIProviderConfigStore.clearStoredValues(config: cfg, fields: template.fields!, template: template)
+            AIProviderConfigStore.clearStoredValues(config: cfg, fields: template.fields!)
         }
         AIProviderConfigStore.fieldSetting(config: cfg.id, field: template.fields![1]).value = "sk"
 

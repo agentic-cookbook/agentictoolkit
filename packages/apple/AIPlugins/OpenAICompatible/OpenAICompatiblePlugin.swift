@@ -16,9 +16,12 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
               !baseURL.isEmpty else {
             throw PluginError.missingBaseURL
         }
-        // The base URL is already versioned (e.g. .../v1), matching how each
-        // template ships it, so only the endpoint path is appended.
-        guard let url = URL(string: baseURL)?.appendingPathComponent("chat/completions") else {
+        // Templates ship a versioned base URL (e.g. .../v1). Tolerate a base URL that
+        // ISN'T versioned too — earlier builds appended "v1/chat/completions" to a
+        // bare host, so a migrated/hand-entered base URL may lack the version segment;
+        // append it here rather than 404ing on `.../chat/completions`.
+        let endpoint = Self.isVersioned(baseURL) ? "chat/completions" : "v1/chat/completions"
+        guard let url = URL(string: baseURL)?.appendingPathComponent(endpoint) else {
             throw PluginError.invalidURL
         }
 
@@ -40,8 +43,12 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
         if !context.model.isEmpty { body["model"] = context.model }
 
         var headers = ["content-type": "application/json"]
-        // Keyless providers (Ollama) send no Authorization header.
-        if let apiKey = context.config.apiKey, !apiKey.isEmpty {
+        // A present `apiKey` (even empty) means the template ships an apiKey field, so
+        // a key is expected — fail fast if it's blank rather than firing an
+        // unauthenticated request that just 401s. Keyless templates (Ollama) omit the
+        // apiKey field entirely, so `apiKey` is nil and no Authorization is sent.
+        if let apiKey = context.config.apiKey {
+            guard !apiKey.isEmpty else { throw PluginError.missingAPIKey }
             headers["Authorization"] = "Bearer \(apiKey)"
         }
 
@@ -51,6 +58,15 @@ public final class OpenAICompatiblePlugin: NSObject, AIPlugin, @unchecked Sendab
             headers: headers,
             body: try JSONSerialization.data(withJSONObject: body)
         )
+    }
+
+    /// Whether the base URL's last path segment looks like an API version (e.g.
+    /// "v1", "v1beta") — a `v` followed by a digit — so the caller knows not to
+    /// append its own version segment.
+    static func isVersioned(_ baseURL: String) -> Bool {
+        let trimmed = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        guard let last = trimmed.split(separator: "/").last, last.first == "v" else { return false }
+        return last.dropFirst().first?.isNumber == true
     }
 
     public func makeDecoder() -> any AIStreamDecoder { ChatReplyDecoder() }

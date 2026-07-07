@@ -17,8 +17,13 @@ public enum AIProviderResolver {
 
     public static func resolve(_ config: AIProviderConfiguration, manager: AIPluginManager) -> Resolved? {
         guard let descriptor = manager.descriptor(for: config.pluginIdentifier) else { return nil }
-        let templates = descriptor.resolvedTemplates
-        guard let template = templates.first(where: { $0.id == config.templateId }) ?? templates.first else {
+        // Match the configuration's template strictly. Falling back to the first
+        // template when the id no longer resolves (e.g. a plugin update renamed or
+        // removed it) would silently bind the user's saved credentials/model to an
+        // UNRELATED provider — wrong baseURL/authMode/model — and push that to the
+        // daemon as if unchanged. Fail closed instead (mirroring
+        // `AIPluginManager.template(pluginIdentifier:templateId:)`).
+        guard let template = descriptor.resolvedTemplates.first(where: { $0.id == config.templateId }) else {
             return nil
         }
         let fields = descriptor.fields(for: template)

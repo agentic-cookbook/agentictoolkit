@@ -62,12 +62,19 @@ final class LLMProvidersListViewModel: ObservableObject {
     func remove(_ id: UUID) {
         guard let index = configurations.firstIndex(where: { $0.id == id }) else { return }
         let config = configurations[index]
+        // Clear the config's stored fields/secrets/model even when its template no
+        // longer resolves (plugin uninstalled or template renamed): fall back to the
+        // descriptor's shared field list so the Keychain API key is still removed,
+        // honoring the delete confirmation's "including any API key" promise.
+        let fields: [AIPluginDescriptor.Field]
         if let template = pluginManager.template(
             pluginIdentifier: config.pluginIdentifier, templateId: config.templateId
         ) {
-            let fields = resolvedFields(pluginIdentifier: config.pluginIdentifier, template: template)
-            AIProviderConfigStore.clearStoredValues(config: config, fields: fields, template: template)
+            fields = resolvedFields(pluginIdentifier: config.pluginIdentifier, template: template)
+        } else {
+            fields = pluginManager.descriptor(for: config.pluginIdentifier)?.fields ?? []
         }
+        AIProviderConfigStore.clearStoredValues(config: config, fields: fields)
         configurations.remove(at: index)
         persist()
         if selectedId == id { selectedId = configurations.first?.id }

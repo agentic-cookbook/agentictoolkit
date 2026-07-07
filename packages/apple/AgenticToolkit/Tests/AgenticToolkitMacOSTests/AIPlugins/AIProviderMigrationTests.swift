@@ -36,6 +36,26 @@ struct AIProviderMigrationTests {
         #expect(plan.fieldWrites.contains { $0.fieldKey == "apiKey" && $0.value == "sk-openai" && $0.isSecret })
     }
 
+    @Test("A keyless-but-configured, non-selected plugin is carried over (not dropped)")
+    func migratesKeylessConfigured() {
+        // OpenAI-compatible-style: a non-secret baseURL field, no API key, and NOT
+        // the selected plugin — previously skipped and permanently lost.
+        let openaiCompatible = AIPluginDescriptor(
+            schemaVersion: 3, identifier: "com.agentictoolkit.plugin.openai-compatible",
+            displayName: "OpenAI-compatible", version: "1.0",
+            fields: [.init(key: "baseURL", label: "Base URL", kind: .text)],
+            templates: [.init(id: "custom", displayName: "Custom",
+                              defaultValues: ["baseURL": ""], models: [], defaultModel: nil,
+                              fields: [.init(key: "baseURL", label: "Base URL", kind: .text)])]
+        )
+        let plan = AIProviderMigration.plan(
+            descriptors: [openaiCompatible], legacySelected: "",
+            oldValues: { _ in ["baseURL": "http://localhost:1234", "model": ""] }
+        )
+        #expect(plan.configurations.count == 1)
+        #expect(plan.fieldWrites.contains { $0.fieldKey == "baseURL" && $0.value == "http://localhost:1234" })
+    }
+
     @Test("An unconfigured, non-selected plugin produces nothing")
     func skipsEmpty() {
         let google = descriptor("com.agentictoolkit.plugin.google", "Google (Gemini)", templateId: "gemini")

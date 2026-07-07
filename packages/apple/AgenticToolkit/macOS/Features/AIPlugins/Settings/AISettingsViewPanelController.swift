@@ -17,6 +17,9 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     private let viewModel: LLMProvidersListViewModel
     private var addRemoveControl: NSSegmentedControl?
     private var selectionObserver: AnyCancellable?
+    /// Plugin binaries that failed to load, surfaced as a trailing panel so a bad
+    /// signature / ABI mismatch isn't silently invisible until a chat send fails.
+    private var loadFailures: [PluginLoadFailure] = []
 
     public init(pluginManager: AIPluginManager) {
         self.pluginManager = pluginManager
@@ -37,6 +40,11 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         super.viewDidLoad()
         listViewController.setFooterView(makeFooter())
 
+        // Load the plugin binaries so dlopen failures (bad signature, ABI mismatch)
+        // become visible here instead of only surfacing as a generic error when a
+        // chat/summary send later fails.
+        loadFailures = pluginManager.loadAllPlugins().failures
+
         viewModel.onRequestAddProvider = { [weak self] in
             guard let self, let window = self.view.window else { return }
             ProviderPicker.present(over: window, rows: self.viewModel.pickerRows) { [weak self] available in
@@ -54,30 +62,43 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         }
     }
 
-    /// Rebuilds one detail panel per configuration and selects `selectID`. Called
-    /// on load and after any structural change (add / remove).
+    /// Rebuilds the detail panels to match the configurations list and selects
+    /// `selectID`. Called on load and after any structural change (add / remove).
+    ///
+    /// Existing panels are REUSED by configuration id — only genuinely new
+    /// configurations get a fresh panel. Rebuilding every panel would recreate each
+    /// one's `ChatSession`, silently wiping the live test-chat transcript of
+    /// configurations that weren't even touched by the add/remove.
     private func rebuildPanels(selecting selectID: UUID?) {
         let configs = viewModel.configurations
-        let panels = configs.map { config in
-            ProviderConfigPanelViewController(
+        let existing = Dictionary(
+            panels.compactMap { ($0 as? ProviderConfigPanelViewController).map { ($0.config.id, $0) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var rebuilt: [any ComposableSettingsPanel] = configs.map { config in
+            existing[config.id] ?? ProviderConfigPanelViewController(
                 config: config,
                 viewModel: viewModel,
                 onRenamed: { [weak self] in self?.refreshRows() }
             )
         }
-        setPanels(panels)
+        if !loadFailures.isEmpty {
+            rebuilt.append(PluginLoadFailuresPanel(failures: loadFailures))
+        }
+        setPanels(rebuilt)
         if let index = configs.firstIndex(where: { $0.id == selectID }) {
             selectPanel(at: index)
-        } else if !panels.isEmpty {
+        } else if !rebuilt.isEmpty {
             selectPanel(at: 0)
         }
     }
 
     // MARK: - Scripted / testable selection
 
-    /// The names of the configured providers, in sidebar order.
+    /// The names of the configured providers, in sidebar order (excludes the
+    /// trailing plugin-load-failures panel, which isn't a provider configuration).
     public var configurationNames: [String] {
-        panels.compactMap { $0.descriptor.title }
+        panels.compactMap { ($0 as? ProviderConfigPanelViewController)?.descriptor.title }
     }
 
     /// Selects the provider configuration with the given name (its sidebar title),

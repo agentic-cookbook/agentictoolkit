@@ -38,8 +38,14 @@ public enum AIProviderConfigStore {
     }
 
     /// The `AIPluginConfig` bag for one configuration: the template's default
-    /// values (baseURL, authMode, …) overlaid with any edited field values (empty
-    /// edits don't clobber a default), plus the resolved `model`.
+    /// values (baseURL, authMode, …) overlaid with any edited field values, plus
+    /// the resolved `model`.
+    ///
+    /// Empty non-secret edits don't clobber a template default. Secret fields, by
+    /// contrast, are included **even when empty** — secrets never have a default to
+    /// clobber, and their presence-with-empty-value lets a plugin distinguish "this
+    /// template requires a key and it's blank" (fail fast) from "this is a keyless
+    /// template with no secret field at all".
     public static func configValues(
         for config: AIProviderConfiguration,
         template: AIPluginDescriptor.ProviderTemplate,
@@ -48,7 +54,7 @@ public enum AIProviderConfigStore {
         var values = template.defaultValues
         for field in fields {
             let stored = fieldSetting(config: config.id, field: field).currentValue
-            if !stored.isEmpty { values[field.key] = stored }
+            if field.isSecret || !stored.isEmpty { values[field.key] = stored }
         }
         values["model"] = selectedModel(config: config, template: template)
         return values
@@ -71,14 +77,18 @@ public enum AIProviderConfigStore {
 
     /// Clear a removed configuration's stored field values, secrets, and model by
     /// resetting them to empty (secrets set to "" are effectively deleted).
+    ///
+    /// Takes no template: the model key is configuration-scoped, so removal works
+    /// even when the configuration's template no longer resolves (plugin uninstalled
+    /// or template renamed) — the caller passes whatever field list it can still
+    /// find so the Keychain secret is cleared regardless.
     public static func clearStoredValues(
         config: AIProviderConfiguration,
-        fields: [AIPluginDescriptor.Field],
-        template: AIPluginDescriptor.ProviderTemplate
+        fields: [AIPluginDescriptor.Field]
     ) {
         for field in fields {
             fieldSetting(config: config.id, field: field).value = ""
         }
-        modelSetting(config: config.id, template: template).value = ""
+        UserSetting<String>(modelKey(config: config.id), default: "").value = ""
     }
 }
