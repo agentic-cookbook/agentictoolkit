@@ -398,6 +398,7 @@ function useSelectionConnectors(
         const end = labelEl ?? iconEl
         return {
           y: r.top + r.height / 2 - crect.top,
+          bottom: r.bottom - crect.top - 2, // the underline baseline, just under the row's text
           rightX: (end ? end.getBoundingClientRect().right : r.right) - crect.left,
           iconLeft: (iconEl ? iconEl.getBoundingClientRect().left : r.left) - crect.left,
           left: r.left - crect.left,
@@ -410,9 +411,10 @@ function useSelectionConnectors(
         if (!p || !c) continue
         if (p.rightX < 0 || c.left > crect.width) continue // an endpoint drilled off-screen
         const boundary = c.left // the child column's current left edge (the bend)
-        const startX = Math.min(p.rightX + 6, boundary - 4) // just past the parent's visible content
         const endX = Math.max(c.iconLeft - 6, boundary + 2) // just before the child's icon
-        next.push(`M ${startX} ${p.y} L ${boundary} ${p.y} L ${boundary} ${c.y} L ${endX} ${c.y}`)
+        // Underline the whole selected parent row (its full width), then bend at the child column's
+        // left edge and drop to the child row — the elbow to the child is unchanged.
+        next.push(`M ${p.left} ${p.bottom} L ${boundary} ${p.bottom} L ${boundary} ${c.y} L ${endX} ${c.y}`)
       }
       setConnectors((prev) =>
         prev.length === next.length && prev.every((d, k) => d === next[k]) ? prev : next,

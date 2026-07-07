@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.5.0
+version: 1.6.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: '2026-07-04'
+modified: '2026-07-07'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -177,9 +177,10 @@ In the stack, selection is shown **without** the topic-detail gold left-bar (`se
 - the **root** list's selected row carries a leading **gold dash** in front of `[icon] [name]` (with extra
   leading padding), and
 - each **child** list's selected row is joined to its selected **parent** row by a gold **elbow connector**
-  — a line from the end of the parent row (its label end, or its icon's right edge when the parent is
-  covered) to just before the child row's icon. The connectors are measured entirely from the DOM and
-  re-tracked across the cover/uncover slide, so they stay attached for covered/peeking lists too.
+  — the selected parent row is **underlined across its full width** (an icon-strip's width when the parent
+  is covered), then the line bends at the child column's edge down to just before the child row's icon. The
+  connectors are measured entirely from the DOM and re-tracked across the cover/uncover slide, so they stay
+  attached for covered/peeking lists too.
 
 Standalone `TopicDetail` (the single two-pane primitive, used by [[focused-topic-detail]] and the showcase)
 keeps the classic **`selectionStyle="bar"`** gold left-border — the dash/connector markers are a property of
@@ -497,6 +498,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.6.0 | 2026-07-07 | Mike Fullerton | Reworked where the parent→child **elbow connector** starts. Instead of a stub beginning at the end of the selected parent row's label, the selected parent row is now **underlined across its full width** (just under the row text) and the line bends at the child column's edge down to the child row — the elbow to the child is unchanged. `useSelectionConnectors` now anchors the path at the row's left edge + bottom (`p.left` / new `p.bottom`) rather than the label's right edge + vertical centre. |
 | 1.5.0 | 2026-07-04 | Mike Fullerton | Reworked the covered-list disclosure + the New affordance. **Reveal:** replaced the per-row / per-header `RevealPortal` popover with an **animated whole-list reveal** — a covered list's wrapper is `overflow-hidden` clipped to a 40px peek (rows are always full, so only the leading icon shows) and, on hover (`CoveredStack`'s `hoverId`), its `width` WIPES open to the full rail above its neighbours (lingering z-lift via `zLiftId` so the wipe-shut stays over the child, + drop-shadow), disclosed only while the pointer is inside it and closed (wipes back to the peek) on row-select; there is no aria-current duplication (it is the real rail, not a copy). The reveal is **pointer-driven only** — a focus reveal was dropped because a covered row keeps focus after a click, which left the list disclosed and jammed the auto-cover as the window shrank. Replaced `must-reveal-covered-row-on-hover`/`-on-focus`/`must-reveal-covered-title`/`must-close-reveal-robustly` with `must-reveal-covered-list-on-hover`/`must-disclose-reveal-only-while-inside`/`must-close-reveal-on-select`. **New:** the "New …" affordance moved from a reserved leading `railSlot` row to a compact **`+` right-justified in the list header** (`onNew`/`newLabel`/`newActive`), so the first topic moves up to a proportional top padding; first-row alignment now comes from the uniform titled header (updated `may-offer-new-topic-button`, `must-align-first-row`, `must-render-undisclosed-icon-strip`). Migrated all hierarchical `TopicLevel` consumers off `railSlot`; `railSlot` remains on the standalone `TopicDetail` for a genuinely custom leading row (FocusedTopicDetail's PopupMenu, editor-section's list header), rendered only when supplied. |
 | 1.0.0 | 2026-06-30 | Mike Fullerton | Initial draft — full hierarchical view contract (deep linking, one breadcrumb + help, alignment, resizable/disclosable rails, auto-disclosure, help-config). |
 | 1.1.0 | 2026-06-30 | Mike Fullerton | Implemented animated disclosure, drag-resize with snap, window-gated auto-disclosure, detail min-width + horizontal scroll, centered detail title bar + per-pane help, breadcrumb help button, and the site-config help store. Remaining: 5th-level deep linking + shell-rail auto-disclosure. |
