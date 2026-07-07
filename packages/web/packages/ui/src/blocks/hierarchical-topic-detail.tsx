@@ -396,11 +396,17 @@ function useSelectionConnectors(
         const labelEl = sel.querySelector("[data-htd-label]")
         const iconEl = sel.querySelector("[data-htd-icon]")
         const end = labelEl ?? iconEl
+        // A deletable row reserves a right-justified trash button (sibling of the row button); the
+        // connector breaks around it so the gold line never crosses the button.
+        const delEl = sel.parentElement?.querySelector("[data-htd-delete]") ?? null
+        const delRect = delEl ? delEl.getBoundingClientRect() : null
         return {
           y: r.top + r.height / 2 - crect.top,
           rightX: (end ? end.getBoundingClientRect().right : r.right) - crect.left,
           iconLeft: (iconEl ? iconEl.getBoundingClientRect().left : r.left) - crect.left,
           left: r.left - crect.left,
+          delLeft: delRect ? delRect.left - crect.left : null,
+          delRight: delRect ? delRect.right - crect.left : null,
         }
       }
       const next: string[] = []
@@ -412,7 +418,19 @@ function useSelectionConnectors(
         const boundary = c.left // the child column's current left edge (the bend)
         const startX = Math.min(p.rightX + 6, boundary - 4) // just past the parent's visible content
         const endX = Math.max(c.iconLeft - 6, boundary + 2) // just before the child's icon
-        next.push(`M ${startX} ${p.y} L ${boundary} ${p.y} L ${boundary} ${c.y} L ${endX} ${c.y}`)
+        // The elbow after the parent's horizontal run: to the child column's edge (the bend), down/up
+        // to the child row, then in to just before its icon.
+        const elbow = `L ${boundary} ${p.y} L ${boundary} ${c.y} L ${endX} ${c.y}`
+        // Break the horizontal run around a deletable parent row's trash button, so the line never
+        // crosses it (the overlay paints above the rail, so this gap — not occlusion — is the break).
+        if (p.delLeft != null && p.delRight != null && p.delRight > startX && p.delLeft < boundary) {
+          const gapL = Math.max(p.delLeft - 4, startX)
+          const gapR = Math.min(p.delRight + 4, boundary)
+          if (gapL > startX + 0.5) next.push(`M ${startX} ${p.y} L ${gapL} ${p.y}`)
+          next.push(`M ${gapR} ${p.y} ${elbow}`)
+        } else {
+          next.push(`M ${startX} ${p.y} ${elbow}`)
+        }
       }
       setConnectors((prev) =>
         prev.length === next.length && prev.every((d, k) => d === next[k]) ? prev : next,

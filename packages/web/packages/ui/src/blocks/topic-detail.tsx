@@ -2,8 +2,9 @@
 
 import { Fragment, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react"
 
-import { Circle, Plus } from "lucide-react"
+import { Circle, Plus, Trash2 } from "lucide-react"
 
+import { AlertModal } from "../components/alert-modal"
 import { CollapseToggle } from "../components/collapse-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/tooltip"
 import { cn } from "../lib/utils"
@@ -34,6 +35,15 @@ export interface TopicDetailItem {
   /** Trailing accessory pinned to the row's right edge (e.g. a warn Badge or a
    *  count). Hidden in icon-only modes (collapsed / covered), like the label. */
   trailing?: ReactNode
+  /** Enable a right-justified trash button on this row, revealed on hover (and keyboard focus).
+   *  Clicking it opens a confirmation dialog; ON CONFIRM this runs (may be async — the dialog shows
+   *  a spinner until it settles). Only rendered in the expanded list, never the collapsed/covered
+   *  icon strips. In the hierarchical stack the selection connector line breaks around the button. */
+  onDelete?: () => void | Promise<void>
+  /** Accessible name for the trash button and the confirm dialog's subject. Defaults to `label`. */
+  deleteLabel?: string
+  /** Confirmation body copy. Defaults to a generic "can't be undone" warning. */
+  deleteConfirm?: ReactNode
 }
 
 /** A leading rail row rendered ABOVE the topics (e.g. a custom list header, or a PopupMenu control in
@@ -95,11 +105,40 @@ function TopicList({
   // `covered` keeps it LEFT-aligned so the icon stays inside the peek.
   const iconOnly = !!collapsed || covered
 
+  // Row delete: a row's hover-revealed trash button opens this confirm; ON CONFIRM the item's
+  // (possibly async) onDelete runs, with a spinner shown until it settles. Reuses the shared
+  // AlertModal so the prompt matches every other destructive confirm on the platform.
+  const [pendingDelete, setPendingDelete] = useState<TopicDetailItem | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  // Retain the last target through the dialog's close animation so its title doesn't blank out.
+  const lastDeleteRef = useRef<TopicDetailItem | null>(null)
+  if (pendingDelete) lastDeleteRef.current = pendingDelete
+  const deleteTarget = pendingDelete ?? lastDeleteRef.current
+  const runDelete = async () => {
+    if (!pendingDelete?.onDelete) {
+      setPendingDelete(null)
+      return
+    }
+    try {
+      setDeleting(true)
+      await pendingDelete.onDelete()
+      setPendingDelete(null)
+    } catch {
+      // Leave the dialog open (no longer busy) so the user can retry or cancel; the consumer's
+      // onDelete owns surfacing the failure.
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const itemButton = (item: TopicDetailItem, active: boolean) => {
     const hideLabel = iconOnly
     const centered = !!collapsed
     // Every row is guaranteed a leading icon so the icon-only strip never shows a blank slot.
     const icon = item.icon || FALLBACK_ICON
+    // A deletable expanded row reserves extra right padding so the label never runs under the
+    // hover-revealed trash button (and the rail width accounts for it).
+    const deletable = !!item.onDelete && !hideLabel
     return (
       <button
         type="button"
@@ -121,7 +160,10 @@ function TopicList({
           "[&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
           centered
             ? "justify-center py-1.5"
-            : "gap-2 pt-1 pr-3 pb-0.5 pl-4 text-left font-mono text-[0.8rem] tracking-[0.02em]",
+            : cn(
+                "gap-2 pt-1 pb-0.5 pl-4 text-left font-mono text-[0.8rem] tracking-[0.02em]",
+                deletable ? "pr-9" : "pr-3",
+              ),
           item.disabled
             ? "cursor-default text-apt-text-dim"
             : active
@@ -195,6 +237,7 @@ function TopicList({
         {items.map((item) => {
           const active = item.id === selectedId
           const button = itemButton(item, active)
+          const deletable = !!item.onDelete && !iconOnly
           return (
             <Fragment key={item.id}>
               <li>
@@ -207,6 +250,31 @@ function TopicList({
                       {item.label}
                     </TooltipContent>
                   </Tooltip>
+                ) : deletable ? (
+                  // The row and its hover-revealed trash render as SIBLINGS (a button cannot nest in
+                  // the row button). The trash carries `data-htd-delete` so the hierarchical stack's
+                  // connector overlay breaks the selection line around it (a computed gap — the
+                  // overlay paints above the rail, so occlusion is not possible).
+                  <div className="group/htd-row relative">
+                    {button}
+                    <button
+                      type="button"
+                      data-htd-delete
+                      aria-label={`Delete ${item.deleteLabel ?? item.label}`}
+                      title={`Delete ${item.deleteLabel ?? item.label}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPendingDelete(item)
+                      }}
+                      className={cn(
+                        "absolute top-1/2 right-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded",
+                        "bg-apt-nav text-apt-text-dim opacity-0 outline-none transition-opacity",
+                        "hover:text-apt-red focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-apt-red/40 group-hover/htd-row:opacity-100",
+                      )}
+                    >
+                      <Trash2 size={14} aria-hidden />
+                    </button>
+                  </div>
                 ) : (
                   button
                 )}
@@ -222,6 +290,22 @@ function TopicList({
           )
         })}
       </ul>
+      {/* One confirm dialog per list; the target row is captured on trash-click. Destructive =
+          red action, keyboard shortcuts off, initial focus on Cancel — so a delete is never a
+          one-keystroke accident. `busy` shows a spinner and blocks dismissal during an async delete. */}
+      <AlertModal
+        open={pendingDelete != null}
+        destructive
+        title={`Delete ${deleteTarget?.deleteLabel ?? deleteTarget?.label ?? ""}?`}
+        description={deleteTarget?.deleteConfirm ?? "This action can't be undone."}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        busy={deleting}
+        onConfirm={runDelete}
+        onCancel={() => {
+          if (!deleting) setPendingDelete(null)
+        }}
+      />
     </TooltipProvider>
   )
 }

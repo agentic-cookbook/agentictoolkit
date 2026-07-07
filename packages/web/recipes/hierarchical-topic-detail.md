@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.5.0
+version: 1.6.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: '2026-07-04'
+modified: '2026-07-07'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -231,6 +231,9 @@ the hierarchical stack, not the primitive.
 - **must-render-icon-name-rows**: Each topic row MUST render as `[icon] [name]`.
 - **must-fix-list-width**: A topic list MUST be a fixed width — slightly wider than its widest topic — with consistent leading and trailing padding.
 - **may-offer-new-topic-button**: A topic list MAY carry a "new topic" (`onNew`) create affordance, rendered as a compact **`+` button right-justified in the list header** (NOT a leading row); activating it MUST start a create (open a modal / a blank leaf). The `+` carries its `newLabel` as its accessible name + tooltip, and MAY tint gold (`newActive`) while a create is in progress.
+- **may-delete-row**: A topic row MAY declare `onDelete` to expose a **right-justified trash button, revealed only on hover (and keyboard focus)**; the list's fixed width MUST account for it (the row reserves trailing space so the label never runs under the button). It is NOT shown on the collapsed / covered icon strips.
+- **must-confirm-row-delete**: Activating a row's trash button MUST open a confirmation before anything is destroyed — a destructive [[alert-and-dialog]] modal (red action, keyboard shortcuts off, initial focus on Cancel). `onDelete` runs ONLY on confirm; it MAY be async, and the dialog MUST show a busy spinner (and block dismissal) until it settles.
+- **must-break-connector-around-delete**: In the stack, the selection connector line MUST break (leave a gap) around a selected parent row's trash button rather than crossing it — the overlay paints above the rail, so the break is a computed gap in the path, not occlusion.
 - **must-offer-disclosure-toggle**: A topic list MUST offer a disclosure toggle at its upper right; disclosing/undisclosing MUST be animated (subject to **must-respect-reduced-motion**).
 - **must-render-undisclosed-icon-strip**: An undisclosed topic list MUST render as a vertical list of the topics' icons; the header `+` collapses with the header (reachable via the whole-list reveal when covered).
 - **must-fill-list-vertically**: A topic list MUST fill the available vertical space (pinned to its container's height) and MUST scroll only when its items overflow.
@@ -497,6 +500,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.6.0 | 2026-07-07 | Mike Fullerton | Added an optional per-row **delete** affordance. A `TopicDetailItem` may set `onDelete` (+ `deleteLabel` / `deleteConfirm`) to get a **right-justified trash button revealed only on hover** (row reserves trailing width so the label never runs under it, never on icon strips); activating it opens a **destructive confirmation** (shared `AlertModal` — red action, keyboard off, focus on Cancel, busy spinner for async deletes) and `onDelete` runs only on confirm. In the stack the **selection connector breaks around the button** (a computed gap in the SVG path — the overlay paints above the rail, so occlusion isn't possible). New requirements `may-delete-row`, `must-confirm-row-delete`, `must-break-connector-around-delete`. |
 | 1.5.0 | 2026-07-04 | Mike Fullerton | Reworked the covered-list disclosure + the New affordance. **Reveal:** replaced the per-row / per-header `RevealPortal` popover with an **animated whole-list reveal** — a covered list's wrapper is `overflow-hidden` clipped to a 40px peek (rows are always full, so only the leading icon shows) and, on hover (`CoveredStack`'s `hoverId`), its `width` WIPES open to the full rail above its neighbours (lingering z-lift via `zLiftId` so the wipe-shut stays over the child, + drop-shadow), disclosed only while the pointer is inside it and closed (wipes back to the peek) on row-select; there is no aria-current duplication (it is the real rail, not a copy). The reveal is **pointer-driven only** — a focus reveal was dropped because a covered row keeps focus after a click, which left the list disclosed and jammed the auto-cover as the window shrank. Replaced `must-reveal-covered-row-on-hover`/`-on-focus`/`must-reveal-covered-title`/`must-close-reveal-robustly` with `must-reveal-covered-list-on-hover`/`must-disclose-reveal-only-while-inside`/`must-close-reveal-on-select`. **New:** the "New …" affordance moved from a reserved leading `railSlot` row to a compact **`+` right-justified in the list header** (`onNew`/`newLabel`/`newActive`), so the first topic moves up to a proportional top padding; first-row alignment now comes from the uniform titled header (updated `may-offer-new-topic-button`, `must-align-first-row`, `must-render-undisclosed-icon-strip`). Migrated all hierarchical `TopicLevel` consumers off `railSlot`; `railSlot` remains on the standalone `TopicDetail` for a genuinely custom leading row (FocusedTopicDetail's PopupMenu, editor-section's list header), rendered only when supplied. |
 | 1.0.0 | 2026-06-30 | Mike Fullerton | Initial draft — full hierarchical view contract (deep linking, one breadcrumb + help, alignment, resizable/disclosable rails, auto-disclosure, help-config). |
 | 1.1.0 | 2026-06-30 | Mike Fullerton | Implemented animated disclosure, drag-resize with snap, window-gated auto-disclosure, detail min-width + horizontal scroll, centered detail title bar + per-pane help, breadcrumb help button, and the site-config help store. Remaining: 5th-level deep linking + shell-rail auto-disclosure. |
