@@ -164,7 +164,7 @@ export function DataTable<T>({
             data-focused={focused || undefined}
             onMouseDown={selectable ? (e) => e.preventDefault() : undefined}
             onClick={selectable ? (e) => onRowClick(e, id) : undefined}
-            className={cn("grid border-t border-apt-border text-sm text-apt-text",
+            className={cn("group/icc grid border-t border-apt-border text-sm text-apt-text",
               selectable && "cursor-pointer",
               selected ? "bg-apt-gold/15" : "hover:bg-apt-surface-2")}
             style={{ gridTemplateColumns: template }}>

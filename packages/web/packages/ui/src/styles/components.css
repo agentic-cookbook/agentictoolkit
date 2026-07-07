@@ -7,6 +7,19 @@
  * site gets it through the one import it already has.
  */
 
+/* Tailwind sources: this package registers its OWN component sources, so every
+ * consumer app that imports this stylesheet scans them — no consumer-side
+ * @source needed. The paths are relative to THIS file and therefore travel with
+ * the package: they resolve identically through a dev pnpm `link:` symlink and
+ * a materialized prod copy. `src` covers `next dev` (the `development` export
+ * condition serves src); `dist` covers prod builds, where `files` ships only
+ * `dist` + `src/styles` and the src globs simply match nothing. */
+@source "../components/**/*.tsx";
+@source "../blocks/**/*.{ts,tsx}";
+@source "../hooks/**/*.{ts,tsx}";
+@source "../lib/**/*.ts";
+@source "../../dist/**/*.js";
+
 /* Avatar primitive */
 .adh-avatar {
   position: relative;
