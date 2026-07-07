@@ -37,24 +37,48 @@ export function ResizableSplit({
 
   const clamp = (r: number): number => Math.min(maxRatio, Math.max(minRatio, r))
 
-  const [ratio, setRatio] = React.useState<number>(() => {
-    if (storageKey && typeof window !== "undefined") {
+  // Start from the default so the server and the first client render agree — reading
+  // localStorage during render caused an SSR hydration mismatch. The persisted ratio
+  // is loaded post-mount in the effect below.
+  const [ratio, setRatio] = React.useState<number>(() => clamp(defaultRatio))
+  // Latest ratio tracked outside React state so a drag can persist ONCE on release
+  // without threading the value through the pointerup event.
+  const latest = React.useRef<number>(clamp(defaultRatio))
+
+  // Load any persisted ratio after mount. Guarded: window.localStorage throws in
+  // sandboxed iframes / disabled-storage contexts, where we keep the default.
+  React.useEffect(() => {
+    if (!storageKey) return
+    try {
       const raw = window.localStorage.getItem(storageKey)
       const n = raw ? Number(raw) : NaN
-      if (!Number.isNaN(n)) return clamp(n)
+      if (!Number.isNaN(n)) {
+        const v = clamp(n)
+        latest.current = v
+        setRatio(v)
+      }
+    } catch {
+      // storage unavailable — keep the default ratio
     }
-    return clamp(defaultRatio)
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clamp bounds are effectively constant
+  }, [storageKey])
 
   const [internalCollapsed, setInternalCollapsed] = React.useState(false)
   const isCollapsed = collapsed ?? internalCollapsed
 
+  function persist(): void {
+    if (!storageKey) return
+    try {
+      window.localStorage.setItem(storageKey, String(latest.current))
+    } catch {
+      // storage unavailable — skip persistence
+    }
+  }
+
   function updateRatio(next: number): void {
     const c = clamp(next)
-    setRatio(c)
-    if (storageKey && typeof window !== "undefined") {
-      window.localStorage.setItem(storageKey, String(c))
-    }
+    latest.current = c
+    setRatio(c) // live update only; persistence happens on drag-release / keyboard step
   }
 
   function setCollapsed(next: boolean): void {
@@ -84,15 +108,18 @@ export function ResizableSplit({
   function onPointerUp(e: React.PointerEvent): void {
     dragging.current = false
     ;(e.target as HTMLElement).releasePointerCapture?.(e.pointerId)
+    persist() // persist once, on release — not per pointermove
   }
 
   function onHandleKey(e: React.KeyboardEvent): void {
     if (e.key === "ArrowUp") {
       e.preventDefault()
       updateRatio(ratio - 0.03)
+      persist()
     } else if (e.key === "ArrowDown") {
       e.preventDefault()
       updateRatio(ratio + 0.03)
+      persist()
     }
   }
 

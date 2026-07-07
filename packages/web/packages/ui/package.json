@@ -26,6 +26,11 @@
       "development": "./src/lib/utils.ts",
       "import": "./dist/lib/utils.js"
     },
+    "./lib/step-index": {
+      "types": "./dist/lib/step-index.d.ts",
+      "development": "./src/lib/step-index.ts",
+      "import": "./dist/lib/step-index.js"
+    },
     "./lib/search-params": {
       "types": "./dist/lib/search-params.d.ts",
       "development": "./src/lib/search-params.ts",
