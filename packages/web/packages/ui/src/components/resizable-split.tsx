@@ -131,11 +131,13 @@ export function ResizableSplit({
       >
         {top}
       </div>
-      {/* Divider: a thin 5px visual line, but a TALLER (12px) transparent grab zone
-          so it's easy to drag. The chevron toggles collapse; its `stopPropagation`
-          keeps it from hijacking a drag started on the strip. */}
+      {/* Divider: a 1px seam so the bottom of `top` and the top of `bottom` are
+          CONNECTED (no gap). A TALLER (12px) transparent overlay centered on the
+          seam carries the drag so it stays easy to grab; `z-10` lifts the whole
+          divider above both panes so the entire grab band is clickable. The chevron
+          toggles collapse (the `moved` guard stops a drag from also toggling). */}
       <div
-        className="group relative flex h-3 shrink-0 items-center justify-center"
+        className="group relative z-10 h-px shrink-0"
         role="separator"
         aria-orientation="horizontal"
         aria-valuenow={Math.round(ratio * 100)}
@@ -143,12 +145,17 @@ export function ResizableSplit({
         aria-valuemax={Math.round(maxRatio * 100)}
         tabIndex={0}
         onKeyDown={onHandleKey}
-        style={{ cursor: isCollapsed ? "default" : "row-resize" }}
-        onPointerDown={isCollapsed ? undefined : onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[5px] -translate-y-1/2 bg-apt-border group-hover:bg-apt-border-strong" />
+        {/* the seam line itself (fills the 1px divider), highlights on hover */}
+        <div className="pointer-events-none absolute inset-0 bg-apt-border group-hover:bg-apt-border-strong" />
+        {/* transparent grab zone, centered on the seam */}
+        <div
+          className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2"
+          style={{ cursor: isCollapsed ? "default" : "row-resize" }}
+          onPointerDown={isCollapsed ? undefined : onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        />
         <button
           type="button"
           aria-label={bottomLabel}
@@ -158,7 +165,7 @@ export function ResizableSplit({
             if (moved.current) return
             setCollapsed(!isCollapsed)
           }}
-          className="relative rounded bg-apt-surface px-1 text-apt-text-muted hover:text-apt-text"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-apt-surface px-1 text-apt-text-muted hover:text-apt-text"
         >
           {isCollapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         </button>
