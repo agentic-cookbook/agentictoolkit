@@ -96,7 +96,7 @@ public final class ModelPickerViewController: NSViewController, Themeable {
     private let tableView = NSTableView()
     private let scrollView = NSScrollView()
     private var themeObserver: ThemePaletteObserver?
-    private var escapeMonitor: Any?
+    private let keyboard = PickerKeyboardController()
 
     private static let rowHeight: CGFloat = 56
     private static let cellID = NSUserInterfaceItemIdentifier("model.cell")
@@ -169,19 +169,15 @@ public final class ModelPickerViewController: NSViewController, Themeable {
     public override func viewDidAppear() {
         super.viewDidAppear()
         view.window?.makeFirstResponder(searchField)
-        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, event.window === self.view.window, event.keyCode == 53 else { return event }
-            self.onDismiss?()
-            return nil
-        }
+        keyboard.onMoveSelection = { [weak self] delta in self?.moveSelection(by: delta) }
+        keyboard.onChoose = { [weak self] in self?.chooseSelected() }
+        keyboard.onCancel = { [weak self] in self?.onDismiss?() }
+        keyboard.startEscapeMonitor(for: view.window)
     }
 
     public override func viewWillDisappear() {
         super.viewWillDisappear()
-        if let escapeMonitor {
-            NSEvent.removeMonitor(escapeMonitor)
-            self.escapeMonitor = nil
-        }
+        keyboard.stopEscapeMonitor()
     }
 
     /// Replaces the model list (and current selection) after presentation — e.g.
@@ -218,10 +214,6 @@ public final class ModelPickerViewController: NSViewController, Themeable {
 
     @objc private func rowClicked() {
         chooseSelected()
-    }
-
-    public override func cancelOperation(_ sender: Any?) {
-        onDismiss?()
     }
 
     private func applyFilter() {
@@ -271,13 +263,7 @@ extension ModelPickerViewController: NSSearchFieldDelegate {
 
     public func control(_ control: NSControl, textView: NSTextView,
                         doCommandBy commandSelector: Selector) -> Bool {
-        switch commandSelector {
-        case #selector(NSResponder.moveDown(_:)): moveSelection(by: 1); return true
-        case #selector(NSResponder.moveUp(_:)): moveSelection(by: -1); return true
-        case #selector(NSResponder.insertNewline(_:)): chooseSelected(); return true
-        case #selector(NSResponder.cancelOperation(_:)): onDismiss?(); return true
-        default: return false
-        }
+        keyboard.handle(commandSelector)
     }
 }
 

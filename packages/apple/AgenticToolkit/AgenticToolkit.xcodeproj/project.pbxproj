@@ -247,6 +247,7 @@
 		684F6017CF23B82D8F696159 /* LanguageDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85ABE851B5CCFC3FBFC8591 /* LanguageDetectionTests.swift */; };
 		6896BC5559FFE5093EE00AA6 /* FileTreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A9343C36100629E2F39BDF /* FileTreeManager.swift */; };
 		68AF2FA88B3D062B2F31F9F8 /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613E348B1C944564A269BD31 /* ThemeStore.swift */; };
+		68E5AABD3AE353705371E2A0 /* PickerKeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */; };
 		690165398B6915CB2591816B /* ModelPickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED234B6F128987D24A658F /* ModelPickerViewController.swift */; };
 		69586F910669C1E535DCBEA7 /* ThemedControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC04BC71763BEEC723F0791 /* ThemedControlsTests.swift */; };
 		6977E8701F7260E6B1882CF3 /* SystemWindowSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C6E0E9EF8CC1D3E7E865B5 /* SystemWindowSettingsWindowController.swift */; };
@@ -1283,6 +1284,7 @@
 		AD2039D9DCA0CE40BB3ACC5D /* LogBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogBufferTests.swift; sourceTree = "<group>"; };
 		ADAB544F96065D5F0FD8AF55 /* NotesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesWindowController.swift; sourceTree = "<group>"; };
 		AE176E76A4DCA8EB707F7E28 /* ThemedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedViews.swift; sourceTree = "<group>"; };
+		B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerKeyboardController.swift; sourceTree = "<group>"; };
 		B1448079A7768C5DAEB521D1 /* ThemeStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStoreTests.swift; sourceTree = "<group>"; };
 		B1B799587637B5B9D60F9F14 /* SystemWindowMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowMatcherTests.swift; sourceTree = "<group>"; };
 		B244EC19F79775430B3CCBA1 /* SQLiteHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteHelpers.swift; sourceTree = "<group>"; };
@@ -2370,6 +2372,7 @@
 				A848D138A330A2134BADBE42 /* LLMProvidersListViewModel.swift */,
 				2783245881A0C4CACD86139E /* LLMProvidersView.swift */,
 				88ED234B6F128987D24A658F /* ModelPickerViewController.swift */,
+				B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */,
 				5F2D8CD502813330AE5AEC77 /* PluginLoadFailuresPanel.swift */,
 				7B7939675F83E77AF61D9C68 /* ProviderPickerViewController.swift */,
 			);
@@ -2925,7 +2928,7 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		"TEMP_6E12C9CC-0711-4CF8-99FC-0F289AE29A9B" /* Settings */ = {
+		"TEMP_EA056376-439C-4E7B-A10D-F2B35A456A5D" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -3794,6 +3797,7 @@
 				2E090ACB0081583A1FD67DB8 /* PermissionWalkthroughWindowController.swift in Sources */,
 				A45DA85AFB35BAC1E1B72BE4 /* PermissionsSettingsPanelViewController.swift in Sources */,
 				3A9F7E9837216316A434A162 /* PersistedWindowState.swift in Sources */,
+				68E5AABD3AE353705371E2A0 /* PickerKeyboardController.swift in Sources */,
 				A3806439651B46D066ABA298 /* PluginChatConfigProvider.swift in Sources */,
 				CF5F8B36BB5A87FDC65EFD88 /* PluginConfigStore.swift in Sources */,
 				8F411DCA533FDCFB8B6D0AB7 /* PluginLoadFailuresPanel.swift in Sources */,

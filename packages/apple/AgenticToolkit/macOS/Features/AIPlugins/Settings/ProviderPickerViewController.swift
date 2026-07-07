@@ -72,7 +72,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     private var themeObserver: ThemePaletteObserver?
     private var didSetInitialSplit = false
-    private var escapeMonitor: Any?
+    private let keyboard = PickerKeyboardController()
+
+    /// Frame-persistence key, shared with the presenter, so the picker window's
+    /// size + location go through the app's `WindowManager` like every other window.
+    static let windowID = "provider-picker"
 
     private static let providerColumnID = NSUserInterfaceItemIdentifier("provider.provider")
     private static let llmColumnID = NSUserInterfaceItemIdentifier("provider.llm")
@@ -190,21 +194,15 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public override func viewDidAppear() {
         super.viewDidAppear()
         view.window?.makeFirstResponder(searchField)
-        // NSSearchField swallows Escape (to clear itself) before it reaches the
-        // Cancel button's key equivalent, so catch it at the window here.
-        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, event.window === self.view.window, event.keyCode == 53 else { return event }
-            self.cancelAction()
-            return nil
-        }
+        keyboard.onMoveSelection = { [weak self] delta in self?.moveSelection(by: delta) }
+        keyboard.onChoose = { [weak self] in self?.chooseAction() }
+        keyboard.onCancel = { [weak self] in self?.cancelAction() }
+        keyboard.startEscapeMonitor(for: view.window)
     }
 
     public override func viewWillDisappear() {
         super.viewWillDisappear()
-        if let escapeMonitor {
-            NSEvent.removeMonitor(escapeMonitor)
-            self.escapeMonitor = nil
-        }
+        keyboard.stopEscapeMonitor()
     }
 
     // MARK: - Subview configuration
@@ -287,7 +285,8 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         cancelButton.title = "Cancel"
         cancelButton.bezelStyle = .rounded
         cancelButton.setButtonType(.momentaryPushIn)
-        cancelButton.keyEquivalent = "\u{1b}"          // Escape
+        // Escape is handled once, via PickerKeyboardController's window monitor — the
+        // search field would swallow a Cancel key-equivalent anyway.
         cancelButton.target = self
         cancelButton.action = #selector(cancelAction)
 
@@ -443,10 +442,6 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         done(nil)
     }
 
-    public override func cancelOperation(_ sender: Any?) {
-        cancelAction()
-    }
-
     // MARK: - Theme
 
     public func applyTheme(_ palette: SemanticPalette) {
@@ -540,18 +535,7 @@ extension ProviderPickerViewController: NSSearchFieldDelegate {
 
     public func control(_ control: NSControl, textView: NSTextView,
                         doCommandBy commandSelector: Selector) -> Bool {
-        switch commandSelector {
-        case #selector(NSResponder.moveDown(_:)):
-            moveSelection(by: 1); return true
-        case #selector(NSResponder.moveUp(_:)):
-            moveSelection(by: -1); return true
-        case #selector(NSResponder.insertNewline(_:)):
-            chooseAction(); return true
-        case #selector(NSResponder.cancelOperation(_:)):
-            cancelAction(); return true
-        default:
-            return false
-        }
+        keyboard.handle(commandSelector)
     }
 }
 
@@ -579,6 +563,16 @@ extension ProviderPickerViewController: NSWindowDelegate {
         cancelAction()   // routes through completion → dismiss; don't let AppKit also close
         return false
     }
+
+    // Persist size + location through the shared frame manager (like every other
+    // window), rather than AppKit's raw frame autosave.
+    public func windowDidMove(_ notification: Notification) { persistFrame(notification) }
+    public func windowDidResize(_ notification: Notification) { persistFrame(notification) }
+
+    private func persistFrame(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        WindowManager.shared.frames.saveFrame(for: window, id: Self.windowID)
+    }
 }
 
 // MARK: - Presenter
@@ -588,8 +582,6 @@ extension ProviderPickerViewController: NSWindowDelegate {
 /// window is used (not a sheet) because sheets don't accept user resizing.
 @MainActor
 public enum ProviderPicker {
-    /// Key under which the window's frame (size + location) persists across launches.
-    private static let frameAutosaveName = NSWindow.FrameAutosaveName("ProviderPickerWindow")
 
     public static func present(
         over parent: NSWindow,
@@ -611,14 +603,15 @@ public enum ProviderPicker {
         window.contentMaxSize = NSSize(width: 4000, height: 4000)
         window.setContentSize(controller.initialContentSize)
 
-        // Restore the user's saved size + location; first time, center over the parent.
-        if !window.setFrameUsingName(frameAutosaveName) {
+        // Restore the user's saved size + location via the shared frame manager (the
+        // controller's window delegate saves future moves/resizes). First time,
+        // center over the parent.
+        if !WindowManager.shared.frames.restoreFrame(for: window, id: ProviderPickerViewController.windowID) {
             let size = window.frame.size
             window.setFrameOrigin(NSPoint(
                 x: parent.frame.midX - size.width / 2,
                 y: parent.frame.midY - size.height / 2))
         }
-        window.setFrameAutosaveName(frameAutosaveName)   // persist future moves/resizes
 
         var chosen: AIPluginManager.AvailableProviderTemplate?
         controller.completion = { [weak window] result in
