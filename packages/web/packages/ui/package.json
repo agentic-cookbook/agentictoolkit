@@ -66,6 +66,11 @@
       "development": "./src/lib/invitations-endpoints.ts",
       "import": "./dist/lib/invitations-endpoints.js"
     },
+    "./lib/navigation-guard": {
+      "types": "./dist/lib/navigation-guard.d.ts",
+      "development": "./src/lib/navigation-guard.ts",
+      "import": "./dist/lib/navigation-guard.js"
+    },
     "./hooks/useIsomorphicLayoutEffect": {
       "types": "./dist/hooks/useIsomorphicLayoutEffect.d.ts",
       "development": "./src/hooks/useIsomorphicLayoutEffect.ts",
@@ -90,6 +95,11 @@
       "types": "./dist/hooks/useDualModeSelection.d.ts",
       "development": "./src/hooks/useDualModeSelection.ts",
       "import": "./dist/hooks/useDualModeSelection.js"
+    },
+    "./hooks/useInlineDrafts": {
+      "types": "./dist/hooks/useInlineDrafts.d.ts",
+      "development": "./src/hooks/useInlineDrafts.ts",
+      "import": "./dist/hooks/useInlineDrafts.js"
     },
     "./styles/globals.css": "./src/styles/globals.css",
     "./styles/components.css": "./src/styles/components.css",

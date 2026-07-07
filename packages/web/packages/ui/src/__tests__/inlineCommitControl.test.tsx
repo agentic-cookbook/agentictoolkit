@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import {
@@ -63,10 +64,23 @@ describe('InlineCommitControl', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 
-  it('busy disables the pair', () => {
-    render(<InlineCommitControl dirty busy onCommit={vi.fn()} onCancel={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeDisabled()
+  it('busy soft-disables the pair (aria-disabled, clicks are no-ops) but keeps them focusable', () => {
+    const onCommit = vi.fn()
+    const onCancel = vi.fn()
+    render(<InlineCommitControl dirty busy onCommit={onCommit} onCancel={onCancel} />)
+    const save = screen.getByRole('button', { name: 'Save changes' })
+    const discard = screen.getByRole('button', { name: 'Discard changes' })
+    // aria-disabled (not the `disabled` attribute) so the button stays in the
+    // tab order and keyboard focus survives the in-flight commit.
+    expect(save).toHaveAttribute('aria-disabled', 'true')
+    expect(discard).toHaveAttribute('aria-disabled', 'true')
+    expect(save).not.toBeDisabled()
+    fireEvent.click(save)
+    fireEvent.click(discard)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onCancel).not.toHaveBeenCalled()
+    // The group announces the in-flight state to assistive tech.
+    expect(save.closest('[role="group"]')).toHaveAttribute('aria-busy', 'true')
   })
 
   it('exports the deleting content class (dim + strikethrough)', () => {
@@ -95,5 +109,29 @@ describe('InlineEditableText', () => {
     expect(onCommitEdit).toHaveBeenCalledTimes(1)
     fireEvent.keyDown(input, { key: 'Escape' })
     expect(onCancelEdit).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs a consumer onKeyDown first and lets it suppress the Enter/Escape routing', () => {
+    const onCommitEdit = vi.fn()
+    const onKeyDown = vi.fn((e: React.KeyboardEvent) => e.preventDefault())
+    render(
+      <InlineEditableText
+        value="beta"
+        onChange={vi.fn()}
+        onCommitEdit={onCommitEdit}
+        onKeyDown={onKeyDown}
+        aria-label="Flag key"
+      />,
+    )
+    fireEvent.keyDown(screen.getByLabelText('Flag key'), { key: 'Enter' })
+    expect(onKeyDown).toHaveBeenCalledTimes(1)
+    expect(onCommitEdit).not.toHaveBeenCalled() // suppressed by preventDefault
+  })
+
+  it('applies the mono variant class for identifier-style fields', () => {
+    render(
+      <InlineEditableText value="beta" onChange={vi.fn()} variant="mono" aria-label="Flag key" />,
+    )
+    expect(screen.getByLabelText('Flag key')).toHaveClass('font-mono')
   })
 })

@@ -4,6 +4,7 @@ import * as React from "react"
 import { ChevronUp, ChevronDown } from "lucide-react"
 
 import { cn } from "../lib/utils"
+import { inlineCommitHoverScopeClass } from "./inline-commit-control"
 
 export interface DataTableColumn<T> {
   key: string
@@ -164,7 +165,7 @@ export function DataTable<T>({
             data-focused={focused || undefined}
             onMouseDown={selectable ? (e) => e.preventDefault() : undefined}
             onClick={selectable ? (e) => onRowClick(e, id) : undefined}
-            className={cn("group/icc grid border-t border-apt-border text-sm text-apt-text",
+            className={cn(inlineCommitHoverScopeClass, "grid border-t border-apt-border text-sm text-apt-text",
               selectable && "cursor-pointer",
               selected ? "bg-apt-gold/15" : "hover:bg-apt-surface-2")}
             style={{ gridTemplateColumns: template }}>

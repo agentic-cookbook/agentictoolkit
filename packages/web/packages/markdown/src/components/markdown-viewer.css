@@ -13,6 +13,17 @@
  * Import once per host app:  import '@adh-shared/markdown/styles'
  */
 
+/* Tailwind sources: this package's chrome (MarkdownViewer/Renderer/ThemeSwitcher)
+ * styles with apt-* utilities, so it registers its OWN component sources here —
+ * every consumer app that imports this stylesheet scans them, no consumer-side
+ * @source needed (mirrors @adh-shared/ui's components.css). Paths are relative to
+ * THIS file and travel with the package: they resolve identically through a dev
+ * pnpm `link:` symlink and a materialized prod copy. `src` covers `next dev` (the
+ * `development` export condition serves src); `dist` covers prod builds, where
+ * `files` ships only `dist` + this stylesheet and the src glob matches nothing. */
+@source "../components/**/*.tsx";
+@source "../../dist/**/*.js";
+
 /* ── Content root (the themed reading surface) ─────────────────────────────── */
 
 .adh-mv-content {

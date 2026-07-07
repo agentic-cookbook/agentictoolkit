@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { UnsavedChangesGuard } from '../components/unsaved-changes-guard'
+import { confirmNavigation, GUARDED_NAV_ATTR } from '../lib/navigation-guard'
 
 function renderWithLink(when: boolean, onNavigate = vi.fn()) {
   const utils = render(
@@ -12,7 +13,7 @@ function renderWithLink(when: boolean, onNavigate = vi.fn()) {
   return { ...utils, onNavigate, link: screen.getByText('Elsewhere') }
 }
 
-describe('UnsavedChangesGuard', () => {
+describe('UnsavedChangesGuard — link interception', () => {
   it('inactive guard leaves link clicks alone', () => {
     const { link } = renderWithLink(false)
     const ev = fireEvent.click(link)
@@ -47,6 +48,67 @@ describe('UnsavedChangesGuard', () => {
     const { link } = renderWithLink(true)
     fireEvent.click(link, { metaKey: true })
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('same-page links (no path change) are not intercepted', () => {
+    // Anchor resolving to the current pathname+search destroys no state.
+    render(
+      <div>
+        <a href={window.location.pathname + window.location.search}>Here</a>
+        <UnsavedChangesGuard when />
+      </div>,
+    )
+    const ev = fireEvent.click(screen.getByText('Here'))
+    expect(ev).toBe(true) // not defaultPrevented
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('anchors that opt out via GUARDED_NAV_ATTR are left to their own handler', () => {
+    render(
+      <div>
+        <a href="/elsewhere" {...{ [GUARDED_NAV_ATTR]: '' }}>
+          Guarded
+        </a>
+        <UnsavedChangesGuard when />
+      </div>,
+    )
+    const ev = fireEvent.click(screen.getByText('Guarded'))
+    expect(ev).toBe(true) // not intercepted here — its handler consults confirmNavigation()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+})
+
+describe('UnsavedChangesGuard — programmatic navigation registry', () => {
+  it('with no guard mounted, confirmNavigation resolves true', async () => {
+    await expect(confirmNavigation()).resolves.toBe(true)
+  })
+
+  it('a mounted guard makes confirmNavigation raise the confirm; Discard resolves true', async () => {
+    render(<UnsavedChangesGuard when />)
+    let resolved: boolean | undefined
+    void confirmNavigation().then((ok) => {
+      resolved = ok
+    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Discard' }))
+    await waitFor(() => expect(resolved).toBe(true))
+  })
+
+  it('Stay resolves the programmatic guard false and blocks the navigation', async () => {
+    render(<UnsavedChangesGuard when />)
+    let resolved: boolean | undefined
+    void confirmNavigation().then((ok) => {
+      resolved = ok
+    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Stay' }))
+    await waitFor(() => expect(resolved).toBe(false))
+  })
+})
+
+describe('UnsavedChangesGuard — history and unload', () => {
+  it('a Back press (popstate) while dirty raises the confirm', () => {
+    render(<UnsavedChangesGuard when />)
+    fireEvent.popState(window)
+    expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
   it('registers/unregisters beforeunload with the when flag', () => {
