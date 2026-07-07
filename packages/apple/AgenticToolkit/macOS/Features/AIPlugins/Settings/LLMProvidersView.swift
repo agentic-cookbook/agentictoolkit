@@ -45,8 +45,9 @@ struct LLMProviderEditorView: View {
 
     private var fields: [AIPluginDescriptor.Field] {
         guard let template else { return [] }
-        return viewModel.pluginManager.descriptor(for: configuration.pluginIdentifier)?
-            .fields(for: template) ?? (template.fields ?? [])
+        return viewModel.pluginManager.fields(
+            pluginIdentifier: configuration.pluginIdentifier, template: template
+        )
     }
 
     /// The provider identity shown as the detail-pane title (distinct from the

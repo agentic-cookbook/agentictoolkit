@@ -23,3 +23,16 @@ public struct ChatMessage: Identifiable, Equatable {
         self.timestamp = timestamp
     }
 }
+
+extension ChatMessage.Role {
+    /// The lowercase label the AppleScript transcript commands use for this role.
+    /// One source of truth so the two scripting call sites can't drift apart.
+    public var scriptingLabel: String {
+        switch self {
+        case .user: return "user"
+        case .assistant: return "assistant"
+        case .error: return "error"
+        case .notice: return "notice"
+        }
+    }
+}

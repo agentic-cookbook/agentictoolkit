@@ -40,6 +40,15 @@ public final class AIPluginManager {
         descriptor(for: pluginIdentifier)?.resolvedTemplates.first { $0.id == templateId }
     }
 
+    /// The fields to render/seed for a configuration: the plugin descriptor's
+    /// per-template fields, else the template's own, else none. One source of truth
+    /// for the editor, the list view model, and first-run seeding.
+    public func fields(
+        pluginIdentifier: String, template: AIPluginDescriptor.ProviderTemplate
+    ) -> [AIPluginDescriptor.Field] {
+        descriptor(for: pluginIdentifier)?.fields(for: template) ?? (template.fields ?? [])
+    }
+
     /// Internal storage pairing each descriptor with the bundle it came from.
     private var records: [Record] = []
 

@@ -17,6 +17,9 @@ public final class AIPluginsCoordinator: AppFeature {
         self.pluginManager = .init(appName: appName, additionalSearchPaths: additionalSearchPaths)
         self.pluginManager.discoverPlugins()
         AIProviderMigration.runIfNeeded(pluginManager: self.pluginManager)
+        // Seed a default provider when nothing migrated, so every coordinator-based
+        // host opens the LLM Providers panel populated (not empty). Idempotent.
+        AIProviderDefaults.seedIfNeeded(pluginManager: self.pluginManager)
     }
 
     public func settingsPanel() -> AIPanelViewController {

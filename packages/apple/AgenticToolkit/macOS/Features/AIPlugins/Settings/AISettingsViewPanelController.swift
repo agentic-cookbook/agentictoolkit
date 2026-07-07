@@ -135,16 +135,7 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     /// `role: text` lines (empty when nothing is selected).
     public func testChatTranscript() -> String {
         guard let viewModel = selectedChatViewModel else { return "" }
-        return viewModel.messages.map { message in
-            let role: String
-            switch message.role {
-            case .user: role = "user"
-            case .assistant: role = "assistant"
-            case .error: role = "error"
-            case .notice: role = "notice"
-            }
-            return "\(role): \(message.text)"
-        }.joined(separator: "\n")
+        return viewModel.messages.map { "\($0.role.scriptingLabel): \($0.text)" }.joined(separator: "\n")
     }
 
     /// Re-reads the sidebar row titles from the existing panels after an in-place

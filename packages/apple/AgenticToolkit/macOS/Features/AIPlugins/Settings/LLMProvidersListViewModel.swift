@@ -93,11 +93,9 @@ final class LLMProvidersListViewModel: ObservableObject {
 
     /// A name not already used by another configuration, appending " 2", " 3", ….
     func uniqueName(_ base: String, excluding id: UUID? = nil) -> String {
-        let taken = Set(configurations.filter { $0.id != id }.map(\.name))
-        if !taken.contains(base) { return base }
-        var suffix = 2
-        while taken.contains("\(base) \(suffix)") { suffix += 1 }
-        return "\(base) \(suffix)"
+        AIProviderConfiguration.uniqueName(
+            base, avoiding: Set(configurations.filter { $0.id != id }.map(\.name))
+        )
     }
 
     func configuration(for id: UUID) -> AIProviderConfiguration? {
@@ -108,7 +106,7 @@ final class LLMProvidersListViewModel: ObservableObject {
         pluginIdentifier: String,
         template: AIPluginDescriptor.ProviderTemplate
     ) -> [AIPluginDescriptor.Field] {
-        pluginManager.descriptor(for: pluginIdentifier)?.fields(for: template) ?? (template.fields ?? [])
+        pluginManager.fields(pluginIdentifier: pluginIdentifier, template: template)
     }
 
     private func persist() {

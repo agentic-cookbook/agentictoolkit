@@ -64,7 +64,9 @@ public enum AIProviderMigration {
             }
             guard hasSecret || isSelected || hasCustomField else { continue }
 
-            let name = uniqueName(descriptor.displayName, in: plan.configurations)
+            let name = AIProviderConfiguration.uniqueName(
+                descriptor.displayName, avoiding: Set(plan.configurations.map(\.name))
+            )
             let config = AIProviderConfiguration(
                 name: name, pluginIdentifier: descriptor.identifier, templateId: template.id
             )
@@ -113,11 +115,4 @@ public enum AIProviderMigration {
         UserSettings.aiProvidersMigrated.value = true
     }
 
-    private static func uniqueName(_ base: String, in existing: [AIProviderConfiguration]) -> String {
-        let taken = Set(existing.map(\.name))
-        if !taken.contains(base) { return base }
-        var suffix = 2
-        while taken.contains("\(base) \(suffix)") { suffix += 1 }
-        return "\(base) \(suffix)"
-    }
 }

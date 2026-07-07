@@ -34,8 +34,7 @@ public enum AIProviderDefaults {
             pluginIdentifier: available.pluginIdentifier,
             templateId: template.id
         )
-        let fields = pluginManager.descriptor(for: available.pluginIdentifier)?
-            .fields(for: template) ?? (template.fields ?? [])
+        let fields = pluginManager.fields(pluginIdentifier: available.pluginIdentifier, template: template)
         AIProviderConfigStore.seed(config: config, template: template, fields: fields)
         UserSettings.aiProviderConfigurations.value = [config]
     }

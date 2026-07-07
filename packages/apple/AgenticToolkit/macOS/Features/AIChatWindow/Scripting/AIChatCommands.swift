@@ -50,16 +50,7 @@ public final class SendChatMessageCommand: MainActorScriptCommand, @unchecked Se
 public final class GetChatMessagesCommand: MainActorScriptCommand, @unchecked Sendable {
     public override func performMain() -> Any? {
         guard let viewModel = coordinator?.viewModel else { return [] }
-        return viewModel.messages.map { msg -> String in
-            let role: String
-            switch msg.role {
-            case .user:      role = "user"
-            case .assistant: role = "assistant"
-            case .error:     role = "error"
-            case .notice:    role = "notice"
-            }
-            return "\(role): \(msg.text)"
-        }
+        return viewModel.messages.map { "\($0.role.scriptingLabel): \($0.text)" }
     }
 }
 
