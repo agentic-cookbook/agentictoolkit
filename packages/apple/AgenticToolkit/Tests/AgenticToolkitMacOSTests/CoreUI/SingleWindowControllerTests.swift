@@ -150,10 +150,11 @@ final class SingleWindowControllerTests: XCTestCase {
         // must correspond to the spec's default position, not the pre-
         // restore default NSWindow frame. Read the raw persisted state via
         // the shared storage.
-        if let saved = WindowManager.shared.frames.storage.loadState(for: id) {
-            XCTAssertEqual(saved.width, 800, accuracy: 2.0,
+        if let saved = WindowManager.shared.frames.storage.loadState(for: id),
+           let placement = saved.placements.values.max(by: { $0.savedAt < $1.savedAt }) {
+            XCTAssertEqual(placement.width, 800, accuracy: 2.0,
                 "saved width must reflect spec default, not pre-restore NSWindow default")
-            XCTAssertEqual(saved.height, 500, accuracy: 2.0,
+            XCTAssertEqual(placement.height, 500, accuracy: 2.0,
                 "saved height must reflect spec default, not pre-restore NSWindow default")
         }
         // And the live window frame must match the spec — proving the

@@ -256,4 +256,201 @@ final class FrameCalculatorTests: XCTestCase {
         XCTAssertEqual(frame.origin.x, 1342, accuracy: 1)
         XCTAssertEqual(frame.origin.y, 663, accuracy: 1)
     }
+
+    // MARK: - Top-left offset (user-POV: y grows downward)
+
+    func testTopLeftOffsetAtScreenTopLeftIsZero() {
+        // Menu-bar inset screen: visible top is y=1055 in macOS coords.
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1055)
+        let window = NSRect(x: 0, y: 1055 - 300, width: 500, height: 300)
+        let offset = FrameCalculator.topLeftOffset(windowFrame: window, screenVisibleFrame: visible)
+        XCTAssertEqual(offset.x, 0)
+        XCTAssertEqual(offset.y, 0)
+    }
+
+    func testTopLeftOffsetMeasuresDownFromVisibleTop() {
+        let visible = NSRect(x: 100, y: 50, width: 1920, height: 1000)
+        // Window top-left 60pt right of and 40pt below the visible top-left.
+        let window = NSRect(x: 160, y: 50 + 1000 - 40 - 300, width: 500, height: 300)
+        let offset = FrameCalculator.topLeftOffset(windowFrame: window, screenVisibleFrame: visible)
+        XCTAssertEqual(offset.x, 60)
+        XCTAssertEqual(offset.y, 40)
+    }
+
+    func testTopLeftOffsetRoundTrip() {
+        let visible = NSRect(x: -800, y: 200, width: 2560, height: 1400)
+        let original = NSRect(x: -300, y: 700, width: 640, height: 420)
+        let offset = FrameCalculator.topLeftOffset(windowFrame: original, screenVisibleFrame: visible)
+        let rebuilt = FrameCalculator.frame(
+            topLeftOffset: offset, size: original.size, screenVisibleFrame: visible
+        )
+        XCTAssertEqual(rebuilt, original)
+    }
+
+    func testTopLeftAnchorSurvivesHeightChange() {
+        // The drift bug's root: growing height with a fixed top edge must
+        // not change the persisted anchor.
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let short = NSRect(x: 250, y: 800 - 260, width: 500, height: 260)
+        let tall = NSRect(x: 250, y: 800 - 420, width: 500, height: 420)
+        XCTAssertEqual(
+            FrameCalculator.topLeftOffset(windowFrame: short, screenVisibleFrame: visible),
+            FrameCalculator.topLeftOffset(windowFrame: tall, screenVisibleFrame: visible)
+        )
+    }
+
+    // MARK: - Relative position (0,0 = top-left … 1,1 = bottom-right)
+
+    func testRelativePositionCorners() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let size = NSSize(width: 600, height: 480)
+
+        let topLeft = NSRect(x: 0, y: 1080 - 480, width: 600, height: 480)
+        XCTAssertEqual(
+            FrameCalculator.relativePosition(windowFrame: topLeft, screenVisibleFrame: visible),
+            CGPoint(x: 0, y: 0)
+        )
+
+        let bottomRight = NSRect(x: 1920 - 600, y: 0, width: size.width, height: size.height)
+        XCTAssertEqual(
+            FrameCalculator.relativePosition(windowFrame: bottomRight, screenVisibleFrame: visible),
+            CGPoint(x: 1, y: 1)
+        )
+
+        let bottomLeft = NSRect(x: 0, y: 0, width: 600, height: 480)
+        XCTAssertEqual(
+            FrameCalculator.relativePosition(windowFrame: bottomLeft, screenVisibleFrame: visible),
+            CGPoint(x: 0, y: 1)
+        )
+
+        let centered = NSRect(x: 660, y: 300, width: 600, height: 480)
+        XCTAssertEqual(
+            FrameCalculator.relativePosition(windowFrame: centered, screenVisibleFrame: visible),
+            CGPoint(x: 0.5, y: 0.5)
+        )
+    }
+
+    func testRelativePositionClampsOffscreenTo0And1() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let hangingOff = NSRect(x: -200, y: -300, width: 600, height: 480)
+        let position = FrameCalculator.relativePosition(windowFrame: hangingOff, screenVisibleFrame: visible)
+        XCTAssertEqual(position.x, 0)
+        XCTAssertEqual(position.y, 1)
+    }
+
+    func testRelativePositionCenteredWhenNoTravel() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let fullSize = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let position = FrameCalculator.relativePosition(windowFrame: fullSize, screenVisibleFrame: visible)
+        XCTAssertEqual(position, CGPoint(x: 0.5, y: 0.5))
+    }
+
+    func testFrameFromRelativePositionRoundTrip() {
+        let visible = NSRect(x: 100, y: 70, width: 1920, height: 985)
+        let original = NSRect(x: 500, y: 300, width: 640, height: 400)
+        let relative = FrameCalculator.relativePosition(windowFrame: original, screenVisibleFrame: visible)
+        let rebuilt = FrameCalculator.frame(
+            relativePosition: relative,
+            size: original.size,
+            screenVisibleFrame: visible,
+            minSize: NSSize(width: 100, height: 100)
+        )
+        XCTAssertEqual(rebuilt.origin.x, original.origin.x, accuracy: 0.001)
+        XCTAssertEqual(rebuilt.origin.y, original.origin.y, accuracy: 0.001)
+    }
+
+    func testFrameFromRelativePositionClampsSizeToScreen() {
+        let visible = NSRect(x: 0, y: 0, width: 800, height: 600)
+        let frame = FrameCalculator.frame(
+            relativePosition: CGPoint(x: 0.5, y: 0.5),
+            size: NSSize(width: 1200, height: 900),
+            screenVisibleFrame: visible,
+            minSize: NSSize(width: 100, height: 100)
+        )
+        XCTAssertEqual(frame.size, NSSize(width: 800, height: 600))
+    }
+
+    // MARK: - Content-hugging growth (top-left fixed, grows down + right)
+
+    private let hugMinSize = NSSize(width: 200, height: 100)
+
+    func testContentHuggingGrowsDownAndRight() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let current = NSRect(x: 250, y: 800 - 260, width: 500, height: 260)
+        for policy in [WindowSpec.OverflowPolicy.scrollContent, .moveToDisclose] {
+            let grown = FrameCalculator.contentHuggingFrame(
+                currentFrame: current,
+                desiredFrameSize: NSSize(width: 560, height: 420),
+                screenVisibleFrame: visible,
+                policy: policy,
+                minSize: hugMinSize
+            )
+            XCTAssertEqual(grown.minX, 250, "left edge stays fixed (\(policy))")
+            XCTAssertEqual(grown.maxY, 800, "top edge stays fixed (\(policy))")
+            XCTAssertEqual(grown.size, NSSize(width: 560, height: 420))
+        }
+    }
+
+    func testContentHuggingScrollContentStopsAtScreenEdge() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        // Anchored 300pt from the right edge and 200pt above the bottom.
+        let current = NSRect(x: 1620, y: 200 - 150, width: 200, height: 150)
+        let grown = FrameCalculator.contentHuggingFrame(
+            currentFrame: current,
+            desiredFrameSize: NSSize(width: 800, height: 600),
+            screenVisibleFrame: visible,
+            policy: .scrollContent,
+            minSize: hugMinSize
+        )
+        XCTAssertEqual(grown.minX, 1620, "window must not move")
+        XCTAssertEqual(grown.maxY, 200, "window must not move")
+        XCTAssertEqual(grown.width, 300, "growth stops at the right edge")
+        XCTAssertEqual(grown.height, 200, "growth stops at the bottom edge")
+    }
+
+    func testContentHuggingScrollContentKeepsMinSizeWhenNoRoom() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        // Anchor so close to the corner that even minSize overhangs.
+        let current = NSRect(x: 1820, y: 50 - 40, width: 90, height: 40)
+        let grown = FrameCalculator.contentHuggingFrame(
+            currentFrame: current,
+            desiredFrameSize: NSSize(width: 800, height: 600),
+            screenVisibleFrame: visible,
+            policy: .scrollContent,
+            minSize: hugMinSize
+        )
+        XCTAssertEqual(grown.size, hugMinSize, "never collapse below minSize")
+        XCTAssertEqual(grown.minX, 1820)
+        XCTAssertEqual(grown.maxY, 50)
+    }
+
+    func testContentHuggingMoveToDiscloseMovesMinimally() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        // Same anchor as the scroll test: desired 800×600 overflows by 500
+        // right and 400 down.
+        let current = NSRect(x: 1620, y: 200 - 150, width: 200, height: 150)
+        let grown = FrameCalculator.contentHuggingFrame(
+            currentFrame: current,
+            desiredFrameSize: NSSize(width: 800, height: 600),
+            screenVisibleFrame: visible,
+            policy: .moveToDisclose,
+            minSize: hugMinSize
+        )
+        XCTAssertEqual(grown.size, NSSize(width: 800, height: 600), "size is kept")
+        XCTAssertEqual(grown.minX, 1920 - 800, "moved left just enough to disclose")
+        XCTAssertEqual(grown.minY, 0, "moved up just enough to disclose")
+    }
+
+    func testContentHuggingMoveToDiscloseDoesNotMoveWhenItFits() {
+        let visible = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let current = NSRect(x: 250, y: 800 - 260, width: 500, height: 260)
+        let grown = FrameCalculator.contentHuggingFrame(
+            currentFrame: current,
+            desiredFrameSize: NSSize(width: 500, height: 260),
+            screenVisibleFrame: visible,
+            policy: .moveToDisclose,
+            minSize: hugMinSize
+        )
+        XCTAssertEqual(grown, current)
+    }
 }

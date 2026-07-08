@@ -17,7 +17,7 @@ import AgenticToolkitCore
 @MainActor
 public final class WindowManager {
 
-    public static let shared = WindowManager()
+    public static let shared = WindowManager(screenManager: .shared)
 
     /// Frame persistence + screen-change handling.
     public let frames: WindowFrameManager
@@ -56,9 +56,14 @@ public final class WindowManager {
 
     public init(
         screenProvider: ScreenProvider = RealScreenProvider(),
-        storage: WindowStateStorage = SettingsStoreWindowStateStorage(settings: UserSettings.shared)
+        storage: WindowStateStorage = SettingsStoreWindowStateStorage(settings: UserSettings.shared),
+        screenManager: ScreenManager? = nil
     ) {
-        self.frames = WindowFrameManager(screenProvider: screenProvider, storage: storage)
+        self.frames = WindowFrameManager(
+            screenProvider: screenProvider,
+            storage: storage,
+            screenManager: screenManager
+        )
         applyRecentDocumentCountFromSettings()
         // Mirror future setting changes through to AppKit.
         recentCountCancellable = UserSettings.recentWindowsCount.$currentValue

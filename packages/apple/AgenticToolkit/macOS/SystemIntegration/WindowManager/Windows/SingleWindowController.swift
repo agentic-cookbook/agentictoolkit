@@ -164,6 +164,36 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         window?.isVisible ?? false
     }
 
+    /// Resizes the window to hug `contentSize`, keeping the visual top-left
+    /// corner fixed so growth extends down and to the right. When the
+    /// desired size would push past the screen edge, the spec's
+    /// `overflowPolicy` decides: stop at the edge and let the content
+    /// scroll, or keep the size and move the window minimally until fully
+    /// disclosed. Content-hugging windows call this instead of hand-rolled
+    /// `setFrame` math; the resulting resize persists through the normal
+    /// delegate hooks (harmless — the top-left anchor is unchanged unless
+    /// the policy moved the window, which is a real position change).
+    public func fitWindow(toContentSize contentSize: NSSize) {
+        guard let window, contentSize.width > 0, contentSize.height > 0 else { return }
+        let frameSize = window.frameRect(
+            forContentRect: NSRect(origin: .zero, size: contentSize)
+        ).size
+        let frames = WindowManager.shared.frames
+        guard let screen = WindowFrameManager.bestScreen(
+            for: window, among: frames.screenProvider.screens
+        ) else { return }
+        let spec = windowSpec
+        let target = FrameCalculator.contentHuggingFrame(
+            currentFrame: window.frame,
+            desiredFrameSize: frameSize,
+            screenVisibleFrame: screen.visibleFrame,
+            policy: spec?.overflowPolicy ?? .scrollContent,
+            minSize: spec?.minSize ?? window.minSize
+        )
+        guard target != window.frame else { return }
+        window.setFrame(target, display: true, animate: false)
+    }
+
     /// If the spec opts in to visibility persistence and the last saved
     /// state was `true`, show the window. Invoked for every registered
     /// controller by `WindowManager.shared.restoreOnLaunch()`; hosts should

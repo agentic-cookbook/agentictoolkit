@@ -10,6 +10,7 @@ public struct RealScreenInfo: ScreenInfo {
 
     public var frame: NSRect { screen.frame }
     public var visibleFrame: NSRect { screen.visibleFrame }
+    public var backingScaleFactor: CGFloat { screen.backingScaleFactor }
 
     public var fingerprint: ScreenFingerprint {
         ScreenFingerprint.from(screen)
