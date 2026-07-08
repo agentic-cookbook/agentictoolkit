@@ -1,18 +1,46 @@
 'use client'
 
-import { AuthHttpError } from './client'
-
 /** Structured context attached to a reported error — scalars only (no PII / bodies / ids). */
 export type ErrorContext = Record<string, string | number | boolean | null | undefined>
 
+type Reporter = (error: unknown, context?: ErrorContext) => void
+
+// Injected by the host once its error SDK is live; null = console-only (no host
+// wired, pre-init, or SSR). Explicit indirection — the same registered-reporter
+// pattern @adh-shared/adh's report-error uses — rather than importing a telemetry
+// SDK here, so this package stays a dependency-free leaf.
+let reporter: Reporter | null = null
+
 /**
- * Report a CAUGHT auth error — but only when it's unexpected. An
- * {@link AuthHttpError} with a 4xx status is an expected user/flow error (wrong
- * password, stale exchange code, email already taken, capability rejection) and
- * is dropped to avoid noise; network errors (not an AuthHttpError) and 5xx
- * backend failures are logged. Fail-safe: never throws.
+ * Wire the host's error reporter (e.g. Sentry → GlitchTip). The host calls this
+ * once at client bootstrap; pass null to unregister. Until a host registers one,
+ * {@link reportUnexpectedAuthError} logs to the console only.
+ */
+export function setAuthErrorReporter(fn: Reporter | null): void {
+  reporter = fn
+}
+
+/**
+ * Report a CAUGHT auth error — but only when it's unexpected. A status-carrying
+ * HTTP error (e.g. an {@link import('./client').AuthHttpError} thrown by
+ * `authedJson` on a non-ok response) with a 4xx status is an expected user/flow
+ * error (wrong password, stale exchange code, email already taken, capability
+ * rejection) and is dropped to avoid noise; network errors (no numeric `status`)
+ * and 5xx backend failures are reported. Fail-safe: never throws.
+ *
+ * Duck-types a numeric `.status` carried by an `Error` (the same shape as the
+ * host's `httpStatus` helper) rather than `instanceof` one AuthHttpError class:
+ * TWO distinct AuthHttpError classes coexist when a host layers its own auth
+ * client atop this package, and both must be recognized. After the gate the
+ * error goes to the host-injected reporter (if any) AND the console.
  */
 export function reportUnexpectedAuthError(err: unknown, context?: ErrorContext): void {
-  if (err instanceof AuthHttpError && err.status < 500) return
+  const status = err instanceof Error ? (err as { status?: unknown }).status : undefined
+  if (typeof status === 'number' && status < 500) return
+  try {
+    reporter?.(err, context)
+  } catch {
+    /* a telemetry failure must never break the caller */
+  }
   console.error(err, context)
 }

@@ -37,7 +37,11 @@ export function writeTokens(tokens: AuthTokens): void {
 
 export function clearTokens(): void {
   if (typeof window === 'undefined') return
-  window.localStorage.removeItem(authConfig().storageKey)
+  const { storageKey } = authConfig()
+  window.localStorage.removeItem(storageKey)
+  // The cached identity dies with the session — never leave a `:user` blob behind
+  // a dropped token (parity with @adh-shared/auth's copy, which caches one there).
+  window.localStorage.removeItem(`${storageKey}:user`)
 }
 
 export function readAccessToken(): string | null {

@@ -130,8 +130,8 @@ export function ResourceExplorer<T>({
   const explicitAll = !promoteTopics && all === true;
   const loaded = items !== null;
   const knownId = requestedId !== undefined && (items ?? []).some((i) => getId(i) === requestedId);
-  // Bare base path (no id, not explicit /all): render "All" while the effect below
-  // resumes the last-focused entity (or settles on All). Never "All" in promoteTopics.
+  // Bare base path (no id, not explicit /all): render the "All" landing. There is no
+  // resume / last-id tracking (see below) — the user picks an entity. Never "All" in promoteTopics.
   const bare = !explicitAll && requestedId === undefined;
   const isAll =
     !promoteTopics &&
