@@ -592,7 +592,6 @@ public enum ProviderPicker {
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .resizable]
         window.title = "Add a Provider"
-        window.delegate = controller
         // Force a STANDARD dark/light appearance (matched to the theme's background)
         // so standard AppKit controls render with proper contrast — a custom theme
         // appearance draws the non-default Cancel button's bezel invisibly.
@@ -612,6 +611,13 @@ public enum ProviderPicker {
                 x: parent.frame.midX - size.width / 2,
                 y: parent.frame.midY - size.height / 2))
         }
+
+        // Attach the delegate only AFTER the programmatic setContentSize + restore.
+        // The delegate persists windowDidResize/Move through the frame manager, so
+        // attaching it earlier would let the setContentSize above save the initial
+        // content-fit size and clobber the user's saved frame before restoreFrame
+        // reads it — the window would forget its size/position every reopen.
+        window.delegate = controller
 
         var chosen: AIPluginManager.AvailableProviderTemplate?
         controller.completion = { [weak window] result in
