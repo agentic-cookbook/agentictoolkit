@@ -298,6 +298,45 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
         XCTAssertNotEqual(window.frame.origin.x, staleAbsoluteX, accuracy: 1)
     }
 
+    // MARK: - Oversize clamp
+
+    /// A window saved LARGER than the screen it later restores onto must come
+    /// back clamped to fit — the size guard survives the save → relaunch round
+    /// trip under the per-screen-set model. (The proportional suite covered this
+    /// end-to-end via `testRestorationWhenScreenShrinksMakesWindowTooLarge`,
+    /// which the rewrite dropped.)
+    func testOversizeSavedWindowIsClampedToShrunkenScreenOnRelaunch() {
+        let storage = MockStorage()
+        let setStorage = MockScreenSetStorage()
+
+        // Session 1: a large window on a large display.
+        let (frames1, _, _) = makeFrames(
+            screens: [Self.builtin(width: 2560, height: 1440)],
+            storage: storage, setStorage: setStorage
+        )
+        let window1 = makeWindow(frame: NSRect(x: 400, y: 300, width: 1200, height: 900))
+        frames1.saveFrame(for: window1, id: "test")
+
+        // Session 2: the SAME display returns much smaller (same UUID → same set
+        // id, lower resolution). Restore must clamp the window to the new screen
+        // instead of restoring a 1200×900 frame that overflows an 800×600 area.
+        let small = Self.builtin(width: 800, height: 600)
+        let (frames2, _, _) = makeFrames(screens: [small], storage: storage, setStorage: setStorage)
+        let window2 = makeWindow()
+        XCTAssertTrue(frames2.restoreFrame(for: window2, id: "test"))
+
+        // Size clamped to the (shrunken) visible frame …
+        XCTAssertEqual(window2.frame.width, small.visibleFrame.width, accuracy: 1,
+            "an oversize saved width must clamp to the restored screen")
+        XCTAssertEqual(window2.frame.height, small.visibleFrame.height, accuracy: 1,
+            "an oversize saved height must clamp to the restored screen")
+        // … and the whole window is on-screen (no edge hanging off).
+        XCTAssertGreaterThanOrEqual(window2.frame.minX, small.visibleFrame.minX - 0.5)
+        XCTAssertGreaterThanOrEqual(window2.frame.minY, small.visibleFrame.minY - 0.5)
+        XCTAssertLessThanOrEqual(window2.frame.maxX, small.visibleFrame.maxX + 0.5)
+        XCTAssertLessThanOrEqual(window2.frame.maxY, small.visibleFrame.maxY + 0.5)
+    }
+
     // MARK: - v1 migration
 
     func testLegacyV1StateMigratesToPlacementOnRestore() throws {
