@@ -11,11 +11,11 @@ import AgenticToolkitCore
 public enum AIProviderConfigStore {
 
     public static func fieldKey(config id: UUID, field key: String) -> String {
-        "aiplugin.config.\(id.uuidString).field.\(key)"
+        AIProviderConfigKeys.fieldKey(config: id, field: key)
     }
 
     public static func modelKey(config id: UUID) -> String {
-        "aiplugin.config.\(id.uuidString).model"
+        AIProviderConfigKeys.modelKey(config: id)
     }
 
     public static func fieldSetting(config id: UUID, field: AIPluginDescriptor.Field) -> UserSetting<String> {
