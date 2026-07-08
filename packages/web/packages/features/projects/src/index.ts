@@ -7,3 +7,6 @@
 // feature entry (the host passes `basePath` — `/<slug>/projects` in the hub,
 // `/home` on the projects site).
 export { ProjectsFeature } from "./ProjectsFeature";
+
+// The /home Projects URL grammar, owned here so both hosts parse it identically.
+export { parseProjectsPath, type ProjectsPathSelection } from "./parse-path";
