@@ -4,11 +4,28 @@
 // FTD persistence, the resource-list cache). Feature domains ship on subpaths
 // (e.g. `@agentic-toolkit/data/projects`).
 
-// Authed HTTP transport + the status predicate the resource views read.
-export { authedJson, authedRequest, isConflict } from "./http";
+// Authed HTTP transport + the status-error helpers the resource views read: the
+// raw `httpStatus` extractor, the 404/403/409/503 predicates, the friendly
+// message fallback, and the conflict rethrow. A host (the hub) re-exports these
+// rather than keeping a byte-identical copy.
+export {
+  authedJson,
+  authedRequest,
+  httpStatus,
+  isNotFound,
+  isConflict,
+  isForbidden,
+  isServiceUnavailable,
+  errMsg,
+  rethrowConflict,
+} from "./http";
 
 // Request/response shaping shared by the CRUD clients.
 export { compact, enc, narrow, scopeByOwner, sortByText } from "./client-helpers";
+
+// Host-injectable runtime config (the FTD storage-key prefix, default "adh").
+export { configureData, dataConfig } from "./config";
+export type { DataRuntimeConfig } from "./config";
 
 // The current access token's tenant (its own React hook for consumers).
 export { decodeJwtClaims, tenantIdFromToken, useTenantId } from "./tenant";

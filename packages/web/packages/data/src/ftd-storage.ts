@@ -1,12 +1,17 @@
 // Per-collection FTD UI persistence — the last-focused entity and the All-view
 // mode, keyed by a resource `basePath` (e.g. "/ecosystems"). Centralizes the
-// `adh:ftd:{basePath}:{name}` key scheme and the storage-failure guards (private
-// mode / quota) so the call sites (ResourceTab, ResourceLanding, the per-tab
-// delete handlers) can't drift apart. See FTD spec §7–§8.
+// `{prefix}:ftd:{basePath}:{name}` key scheme and the storage-failure guards
+// (private mode / quota) so the call sites (ResourceTab, ResourceLanding, the
+// per-tab delete handlers) can't drift apart. The `{prefix}` defaults to "adh"
+// and is host-configurable via configureData({ storageKeyPrefix }) so a non-adh
+// host can namespace its stored view state. See FTD spec §7–§8.
+
+import { dataConfig } from "./config";
 
 export type ViewMode = "cards" | "list";
 
-const key = (basePath: string, name: string): string => `adh:ftd:${basePath}:${name}`;
+const key = (basePath: string, name: string): string =>
+  `${dataConfig().storageKeyPrefix}:ftd:${basePath}:${name}`;
 
 /** The last-focused entity id for a collection, or null (missing/unreadable). */
 export function readLastId(basePath: string): string | null {

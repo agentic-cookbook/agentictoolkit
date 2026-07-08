@@ -19,7 +19,7 @@ export {
  *  atop this package (so TWO distinct AuthHttpError classes coexist), and the
  *  predicates below must recognize both. Anchored on Error so arbitrary
  *  `{status}` shapes don't match. */
-function httpStatus(err: unknown): number | undefined {
+export function httpStatus(err: unknown): number | undefined {
   if (!(err instanceof Error)) return undefined;
   const status = (err as { status?: unknown }).status;
   return typeof status === "number" ? status : undefined;

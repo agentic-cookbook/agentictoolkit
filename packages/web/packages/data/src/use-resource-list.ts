@@ -33,6 +33,13 @@ export interface ResourceList<T> {
  * refresh. Replaces the per-tab copy-pasted `let cache; useState(() => cache);
  * useEffect(fetch)` blocks with one place. Seeding from the cache is
  * stale-while-revalidate — the effect below always refetches.
+ *
+ * @param load Fetch the rows. MUST be referentially stable — a module-scope
+ *   function (e.g. `projectsApi.list`) or a `useCallback`. It is a dependency of
+ *   the fetch effect, and a NEW identity intentionally triggers a refetch (the
+ *   refetch-on-identity-change API — e.g. swapping the fetcher when a filter
+ *   changes). An inline closure recreated every render is therefore a bug: it
+ *   would re-run the effect on every render and loop.
  */
 export function useResourceList<T>(
   cacheKey: string,

@@ -4,6 +4,9 @@ import { useMemo } from "react";
 import { readAccessToken } from "@agentic-toolkit/auth/client";
 
 interface JwtClaims {
+  /** The adh backend mints `ecosystem_id` — the real tenant claim; `tenant_id`
+   *  / `project_id` are accepted as fallbacks for a host that mints those. */
+  ecosystem_id?: string;
   tenant_id?: string;
   project_id?: string;
 }
@@ -24,7 +27,10 @@ export function decodeJwtClaims(token: string): JwtClaims | null {
 export function tenantIdFromToken(token: string | null): string | null {
   if (!token) return null;
   const claims = decodeJwtClaims(token);
-  return claims?.tenant_id ?? claims?.project_id ?? null;
+  // `ecosystem_id` is what the adh backend actually mints; `tenant_id` /
+  // `project_id` are fallbacks for a differently-claimed host. Reading the wrong
+  // claim first made this null for every real token (a no-op scope guard).
+  return claims?.ecosystem_id ?? claims?.tenant_id ?? claims?.project_id ?? null;
 }
 
 /** The tenant of the CURRENT access token. Features render behind a host auth
@@ -32,5 +38,8 @@ export function tenantIdFromToken(token: string | null): string | null {
 export function useTenantId(): string | null {
   // Token writes re-render the tree via the host AuthProvider; reading at
   // render keeps this hook provider-independent (no toolkit context needed).
-  return useMemo(() => tenantIdFromToken(readAccessToken()), [readAccessToken()]);
+  // Read localStorage ONCE per render, then memoise the decode on that token
+  // (the previous `[readAccessToken()]` dep re-read storage every render).
+  const token = readAccessToken();
+  return useMemo(() => tenantIdFromToken(token), [token]);
 }
