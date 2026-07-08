@@ -1,0 +1,77 @@
+"use client";
+
+import { useEffect, useRef, type ReactNode } from "react";
+import { ButtonBar } from "./master-detail/MasterDetailLayout";
+import type { MasterDetailForm } from "./master-detail/useMasterDetailForm";
+
+/**
+ * The shared single-record Settings pane (the active ecosystem/service/team). It
+ * binds the form to the active record — via a ref guard so a list refresh (e.g.
+ * the service Connect action) doesn't re-select and clobber unsaved edits — then
+ * renders the gold feature title, the master/detail button bar (no "New …", since
+ * creation happens through the sidebar popup dialog), and the entity detail (or an
+ * empty state). `extraActions` slots a per-entity control above the form.
+ */
+export function RecordSettingsPane<TItem, TInput>({
+  form,
+  activeId,
+  items,
+  getId,
+  title,
+  help,
+  trailing,
+  loadError,
+  emptyLabel,
+  extraActions,
+  renderDetail,
+}: {
+  form: MasterDetailForm<TItem, TInput>;
+  activeId?: string;
+  items: TItem[] | null;
+  getId: (item: TItem) => string;
+  title?: ReactNode;
+  help?: ReactNode;
+  /** Optional trailing affordance on the button bar (e.g. an <ApiButton> for the active record). */
+  trailing?: ReactNode;
+  loadError?: string | null;
+  emptyLabel: string;
+  /** Optional control rendered above the form (e.g. a Connect button). */
+  extraActions?: ReactNode;
+  /** The entity detail form; called with the non-null draft only while editing. */
+  renderDetail: (draft: TInput) => ReactNode;
+}) {
+  const { select } = form;
+  const boundIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (
+      activeId &&
+      activeId !== boundIdRef.current &&
+      items?.some((i) => getId(i) === activeId)
+    ) {
+      boundIdRef.current = activeId;
+      select(activeId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, items]);
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* The centered title + help live in the bar itself; New lives in the resource view's
+          rail and Delete in the entity pane's Danger section, so this bar keeps just Cancel/Save. */}
+      <ButtonBar actions={form.actions} showCreate={false} showDelete={false} title={title} trailing={trailing} help={help} />
+      <section className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
+        {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
+        {form.editing && form.draft ? (
+          <>
+            {extraActions}
+            {renderDetail(form.draft)}
+          </>
+        ) : (
+          <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-apt-border p-8 text-center text-sm text-apt-text-muted">
+            {emptyLabel}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
