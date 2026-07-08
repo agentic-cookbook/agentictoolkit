@@ -32,6 +32,13 @@ public final class WindowFrameManager {
 
     fileprivate var windowSpecs: [String: WindowSpec] = [:]
 
+    /// In-memory write-through cache of each window's persisted state, keyed by
+    /// window id. Populated on restore/save so `saveFrame` — which fires on
+    /// every move/resize tick — can mutate the placements dict without a
+    /// UserDefaults read + JSON decode each time. Safe because this process is
+    /// the sole writer of a given id's state.
+    private var stateCache: [String: PersistedWindowState] = [:]
+
     /// Source of live windows for screen-change repositioning. Injectable so
     /// tests can supply windows without relying on `NSApp` enumeration.
     var windowLister: @MainActor () -> [NSWindow] = { NSApp?.windows ?? [] }
@@ -39,14 +46,23 @@ public final class WindowFrameManager {
     public init(
         screenProvider: ScreenProvider = RealScreenProvider(),
         storage: WindowStateStorage = UserDefaultsWindowStateStorage(),
-        screenManager: ScreenManager? = nil
+        screenManager: ScreenManager
     ) {
         self.screenProvider = screenProvider
         self.storage = storage
-        self.screenManager = screenManager ?? ScreenManager(screenProvider: screenProvider)
+        self.screenManager = screenManager
         self.screenManager.addObserver { [weak self] change in
             self?.handleScreenChange(change)
         }
+    }
+
+    /// Reads a window's persisted state, preferring the in-memory cache to
+    /// avoid a repeated UserDefaults fetch + JSON decode on hot paths.
+    private func cachedState(for id: String) -> PersistedWindowState? {
+        if let cached = stateCache[id] { return cached }
+        let loaded = storage.loadState(for: id)
+        stateCache[id] = loaded
+        return loaded
     }
 
     /// Re-arms screen-change observation (delegated to `ScreenManager`,
@@ -80,7 +96,7 @@ public final class WindowFrameManager {
 
         window.minSize = spec.minSize
 
-        guard spec.persistsFrame, let saved = storage.loadState(for: id) else {
+        guard spec.persistsFrame, let saved = cachedState(for: id) else {
             applyDefaultPosition(to: window, spec: spec)
             return false
         }
@@ -95,54 +111,29 @@ public final class WindowFrameManager {
         screenManager.touchCurrentSet()
         let setID = screenManager.currentSetID
 
-        // 1. Placement saved for this exact screen set → replay the absolute
-        //    top-left offset on the screen it was saved on. If that screen's
-        //    resolution changed since the save (match below `.exact`), the
-        //    literal offset no longer applies — use the relative position,
-        //    same as a live resolution-change event.
+        // 1. Placement saved for this exact screen set. `resolvedFrame` picks
+        //    the anchor by match quality: an exact screen match replays the
+        //    literal top-left offset; a resolution/identity change uses the
+        //    saved relative position instead.
         if let placement = saved.placements[setID] {
-            let match = ScreenMatcher.findBestMatch(for: placement.screenFingerprint, among: screens)
-            let screen = match?.screen ?? screenProvider.mainScreen ?? screens[0]
-            let size = NSSize(width: placement.width, height: placement.height)
-            let frame: NSRect
-            if match?.quality == .exact {
-                frame = FrameCalculator.frame(
-                    topLeftOffset: CGPoint(x: placement.topLeftX, y: placement.topLeftY),
-                    size: size,
-                    screenVisibleFrame: screen.visibleFrame
-                )
-            } else {
-                frame = FrameCalculator.frame(
-                    relativePosition: CGPoint(x: placement.relativeX, y: placement.relativeY),
-                    size: size,
-                    screenVisibleFrame: screen.visibleFrame,
-                    minSize: spec.minSize
-                )
-            }
-            let validated = FrameCalculator.validateFrame(
-                frame, screenVisibleFrame: screen.visibleFrame, minSize: spec.minSize
-            )
-            window.setFrame(validated, display: true)
-            let quality = match?.quality.rawValue ?? 0
-            logger.debug("WindowFrameManager: restored '\(id, privacy: .public)' quality=\(quality)")
+            let resolved = resolvedFrame(for: placement, spec: spec, among: screens)
+            window.setFrame(resolved.frame, display: true)
+            // Non-exact means the screen changed since the save, so we
+            // restored via relative position and the stored offset/size/
+            // fingerprint are stale — re-save so the placement tracks the new
+            // resolution and future restores hit the exact fast path. The
+            // delegate isn't wired during `loadWindow`, so this explicit save
+            // is required (nothing else fires it here).
+            if !resolved.isExact { saveFrame(for: window, id: id) }
+            logger.debug("WindowFrameManager: restored '\(id, privacy: .public)' exact=\(resolved.isExact)")
             return true
         }
 
         // 2. Unknown screen set for this window → most recent placement's
         //    relative position on the main screen, then save it under the
         //    new set so the position is established immediately.
-        if let fallback = saved.placements.values.max(by: { $0.savedAt < $1.savedAt }) {
-            let screen = screenProvider.mainScreen ?? screens[0]
-            let frame = FrameCalculator.frame(
-                relativePosition: CGPoint(x: fallback.relativeX, y: fallback.relativeY),
-                size: NSSize(width: fallback.width, height: fallback.height),
-                screenVisibleFrame: screen.visibleFrame,
-                minSize: spec.minSize
-            )
-            let validated = FrameCalculator.validateFrame(
-                frame, screenVisibleFrame: screen.visibleFrame, minSize: spec.minSize
-            )
-            window.setFrame(validated, display: true)
+        if let resolved = relativeFallbackFrame(from: saved.placements, spec: spec, among: screens) {
+            window.setFrame(resolved.frame, display: true)
             saveFrame(for: window, id: id)
             logger.debug("WindowFrameManager: placed '\(id, privacy: .public)' in new set '\(setID, privacy: .public)'")
             return true
@@ -197,11 +188,11 @@ public final class WindowFrameManager {
             windowFrame: window.frame, screenVisibleFrame: visible
         )
 
-        // Rebuild the state from the existing placements (not the loaded
-        // struct) so a decoded legacy record is consumed by the first save.
-        var state = PersistedWindowState(
-            placements: storage.loadState(for: id)?.placements ?? [:]
-        )
+        // Rebuild from the cached (or loaded) placements — not the struct — so
+        // a decoded legacy record is consumed by the first save, and the
+        // per-tick UserDefaults read + JSON decode is avoided on the hot path.
+        let existing = stateCache[id] ?? storage.loadState(for: id)
+        var state = PersistedWindowState(placements: existing?.placements ?? [:])
         state.placements[setID] = WindowPlacement(
             screenFingerprint: screen.fingerprint,
             topLeftX: topLeft.x,
@@ -221,6 +212,7 @@ public final class WindowFrameManager {
             key == setID || liveSets.contains(key) || placement.savedAt > cutoff
         }
 
+        stateCache[id] = state
         storage.saveState(state, for: id)
     }
 
@@ -229,6 +221,7 @@ public final class WindowFrameManager {
     /// Clears saved state for a window and applies its default position.
     public func resetFrame(for window: NSWindow, id: String) {
         storage.removeState(for: id)
+        stateCache[id] = nil
         if let spec = windowSpecs[id] {
             applyDefaultPosition(to: window, spec: spec)
         } else {
@@ -241,11 +234,13 @@ public final class WindowFrameManager {
         for id in windowSpecs.keys {
             storage.removeState(for: id)
         }
+        stateCache.removeAll()
     }
 
     /// Clears saved state for a single window.
     public func clearSavedState(for id: String) {
         storage.removeState(for: id)
+        stateCache[id] = nil
     }
 
     // MARK: - Visibility persistence
@@ -315,81 +310,39 @@ public final class WindowFrameManager {
         let screens = screenProvider.screens
         guard !screens.isEmpty else { return }
         let setID = screenManager.currentSetID
+        // Snapshot the live windows once (keyed by id), not once per spec.
+        let windowsByID = managedWindowsByID()
 
         for (id, spec) in windowSpecs {
             // Include non-visible (loaded but hidden) windows: their frame
             // was restored under the old geometry, and re-showing them would
             // otherwise use a stale position.
-            guard let window = managedWindow(for: id) else { continue }
-            let placement = spec.persistsFrame
-                ? storage.loadState(for: id)?.placements[setID]
-                : nil
+            guard let window = windowsByID[id] else { continue }
+            // One decode per window (cached), reused for both the current-set
+            // lookup and the unknown-set fallback below.
+            let state = spec.persistsFrame ? cachedState(for: id) : nil
 
-            switch change {
-            case .resolutionChanged:
-                if let placement {
-                    // The screen's dimensions changed under the window: put
-                    // it back at its saved *relative* position.
-                    let screen = Self.screen(for: placement, among: screens)
-                        ?? Self.bestScreen(for: window, among: screens)
-                    guard let screen else { continue }
-                    let frame = FrameCalculator.frame(
-                        relativePosition: CGPoint(x: placement.relativeX, y: placement.relativeY),
-                        size: NSSize(width: placement.width, height: placement.height),
-                        screenVisibleFrame: screen.visibleFrame,
-                        minSize: spec.minSize
-                    )
-                    apply(frame, to: window, on: screen, spec: spec, id: id)
-                } else {
-                    reclamp(window, spec: spec, among: screens, id: id)
-                }
-
-            case .arrangementChanged:
-                if let placement {
-                    // Screens moved in desktop space; the offset is relative
-                    // to its screen's visible frame, so the window follows.
-                    let screen = Self.screen(for: placement, among: screens)
-                        ?? Self.bestScreen(for: window, among: screens)
-                    guard let screen else { continue }
-                    let frame = FrameCalculator.frame(
-                        topLeftOffset: CGPoint(x: placement.topLeftX, y: placement.topLeftY),
-                        size: NSSize(width: placement.width, height: placement.height),
-                        screenVisibleFrame: screen.visibleFrame
-                    )
-                    apply(frame, to: window, on: screen, spec: spec, id: id)
-                } else {
-                    reclamp(window, spec: spec, among: screens, id: id)
-                }
-
-            case .screenSetChanged:
-                if let placement {
-                    // The new set is one this window already has a placement
-                    // in (e.g. the user docked at a known location).
-                    let screen = Self.screen(for: placement, among: screens)
-                        ?? screenProvider.mainScreen ?? screens[0]
-                    let frame = FrameCalculator.frame(
-                        topLeftOffset: CGPoint(x: placement.topLeftX, y: placement.topLeftY),
-                        size: NSSize(width: placement.width, height: placement.height),
-                        screenVisibleFrame: screen.visibleFrame
-                    )
-                    apply(frame, to: window, on: screen, spec: spec, id: id)
-                } else if spec.persistsFrame,
-                          let saved = storage.loadState(for: id),
-                          let fallback = saved.placements.values.max(by: { $0.savedAt < $1.savedAt }) {
-                    // Never seen this set: relative position on the main
-                    // screen, then save to establish the new set's placement.
-                    let screen = screenProvider.mainScreen ?? screens[0]
-                    let frame = FrameCalculator.frame(
-                        relativePosition: CGPoint(x: fallback.relativeX, y: fallback.relativeY),
-                        size: NSSize(width: fallback.width, height: fallback.height),
-                        screenVisibleFrame: screen.visibleFrame,
-                        minSize: spec.minSize
-                    )
-                    apply(frame, to: window, on: screen, spec: spec, id: id)
-                    saveFrame(for: window, id: id)
-                } else {
-                    reclamp(window, spec: spec, among: screens, id: id)
-                }
+            if let placement = state?.placements[setID] {
+                // Known placement for the current set. `resolvedFrame` applies
+                // the right anchor by match quality: exact → replay the
+                // absolute offset (arrangement move, or same-resolution
+                // re-dock); resolution/identity change → relative position.
+                // This single path covers resolutionChanged, arrangementChanged,
+                // and a re-dock at an already-known set — including the case
+                // (previously mishandled) where a known set's screen came back
+                // at a new resolution.
+                let resolved = resolvedFrame(for: placement, spec: spec, among: screens)
+                apply(resolved.frame, to: window, on: resolved.screen, spec: spec, id: id)
+            } else if case .screenSetChanged = change,
+                      let state,
+                      let resolved = relativeFallbackFrame(from: state.placements, spec: spec, among: screens) {
+                // Docked at a never-seen location: seed from the most-recent
+                // placement's relative position, then persist under the new set.
+                apply(resolved.frame, to: window, on: resolved.screen, spec: spec, id: id)
+                saveFrame(for: window, id: id)
+            } else {
+                // No usable placement → just keep the window fully on-screen.
+                reclamp(window, spec: spec, among: screens, id: id)
             }
         }
     }
@@ -411,19 +364,78 @@ public final class WindowFrameManager {
         apply(window.frame, to: window, on: screen, spec: spec, id: id)
     }
 
-    /// The live window tagged for `id`, visible or not. nil in headless
-    /// contexts (no NSApp) or when the window was never created.
-    private func managedWindow(for id: String) -> NSWindow? {
-        let wmID = "wm_\(id)"
-        return windowLister().first { $0.identifier?.rawValue == wmID }
+    /// Live managed windows keyed by their `id` (the `wm_<id>` identifier tag),
+    /// visible or not. Empty in headless contexts (no NSApp). Built once per
+    /// screen-change event so repositioning is O(windows), not O(specs×windows).
+    private func managedWindowsByID() -> [String: NSWindow] {
+        var map: [String: NSWindow] = [:]
+        for window in windowLister() {
+            guard let raw = window.identifier?.rawValue, raw.hasPrefix("wm_") else { continue }
+            map[String(raw.dropFirst("wm_".count))] = window
+        }
+        return map
+    }
+
+    // MARK: - Placement resolution
+
+    /// Builds the frame for a saved placement on the current screens, honoring
+    /// match quality: an **exact** screen match (same display, same resolution)
+    /// replays the literal top-left offset; anything less (resolution changed,
+    /// name-only, or main-only match) uses the saved **relative** position,
+    /// since the absolute offset no longer maps onto the new geometry. Returns
+    /// the validated frame, the target screen, and whether the match was exact
+    /// (so callers can decide whether to re-persist). Requires `screens`
+    /// non-empty (every caller guards this).
+    private func resolvedFrame(
+        for placement: WindowPlacement, spec: WindowSpec, among screens: [ScreenInfo]
+    ) -> (frame: NSRect, screen: ScreenInfo, isExact: Bool) {
+        let match = ScreenMatcher.findBestMatch(for: placement.screenFingerprint, among: screens)
+        let screen = match?.screen ?? screenProvider.mainScreen ?? screens[0]
+        let size = NSSize(width: placement.width, height: placement.height)
+        let isExact = match?.quality == .exact
+        let raw: NSRect
+        if isExact {
+            raw = FrameCalculator.frame(
+                topLeftOffset: CGPoint(x: placement.topLeftX, y: placement.topLeftY),
+                size: size,
+                screenVisibleFrame: screen.visibleFrame
+            )
+        } else {
+            raw = FrameCalculator.frame(
+                relativePosition: CGPoint(x: placement.relativeX, y: placement.relativeY),
+                size: size,
+                screenVisibleFrame: screen.visibleFrame,
+                minSize: spec.minSize
+            )
+        }
+        let validated = FrameCalculator.validateFrame(
+            raw, screenVisibleFrame: screen.visibleFrame, minSize: spec.minSize
+        )
+        return (validated, screen, isExact)
+    }
+
+    /// Builds a frame from the most-recently-saved placement's relative
+    /// position on the main screen — the fallback for a screen set this window
+    /// has never been placed in. Returns nil when there are no placements to
+    /// fall back to. Requires `screens` non-empty.
+    private func relativeFallbackFrame(
+        from placements: [String: WindowPlacement], spec: WindowSpec, among screens: [ScreenInfo]
+    ) -> (frame: NSRect, screen: ScreenInfo)? {
+        guard let fallback = placements.values.max(by: { $0.savedAt < $1.savedAt }) else { return nil }
+        let screen = screenProvider.mainScreen ?? screens[0]
+        let raw = FrameCalculator.frame(
+            relativePosition: CGPoint(x: fallback.relativeX, y: fallback.relativeY),
+            size: NSSize(width: fallback.width, height: fallback.height),
+            screenVisibleFrame: screen.visibleFrame,
+            minSize: spec.minSize
+        )
+        let validated = FrameCalculator.validateFrame(
+            raw, screenVisibleFrame: screen.visibleFrame, minSize: spec.minSize
+        )
+        return (validated, screen)
     }
 
     // MARK: - Screen Helpers
-
-    /// The current screen a placement's saved screen resolves to.
-    private static func screen(for placement: WindowPlacement, among screens: [ScreenInfo]) -> ScreenInfo? {
-        ScreenMatcher.findBestMatch(for: placement.screenFingerprint, among: screens)?.screen
-    }
 
     /// Returns the screen containing the largest portion of the window.
     public static func bestScreen(for window: NSWindow, among screens: [ScreenInfo]) -> ScreenInfo? {

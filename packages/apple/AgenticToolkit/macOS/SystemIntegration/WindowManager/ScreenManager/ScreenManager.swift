@@ -27,6 +27,10 @@ public final class ScreenManager {
 
     /// Every known screen set, most recently seen first. Persisted.
     public private(set) var knownSets: [ScreenSet] = []
+    /// Ids of every known set. Maintained alongside `knownSets` so hot callers
+    /// (`WindowFrameManager.saveFrame`, on every drag tick) read it in O(1)
+    /// instead of rebuilding a `Set` from `knownSets` each time.
+    public private(set) var knownSetIDs: Set<String> = []
     /// Identity of the set of screens attached right now.
     public private(set) var currentSetID: String
     /// Latest per-screen snapshots, kept to diff against on change events.
@@ -55,6 +59,7 @@ public final class ScreenManager {
         self.currentSnapshots = snapshots
         self.currentSetID = ScreenSet.identity(of: snapshots)
         self.knownSets = Self.pruned(storage.loadSets(), olderThan: maxSetAge, now: now())
+        self.knownSetIDs = Set(knownSets.map(\.id))
         upsertCurrentSet(persist: true)
         startObservingScreenChanges()
     }
@@ -62,10 +67,6 @@ public final class ScreenManager {
     /// The persisted record for the screens attached right now.
     public var currentSet: ScreenSet? {
         knownSets.first { $0.id == currentSetID }
-    }
-
-    public var knownSetIDs: Set<String> {
-        Set(knownSets.map(\.id))
     }
 
     // MARK: - Observers
@@ -86,9 +87,16 @@ public final class ScreenManager {
     // MARK: - Change handling
 
     /// Starts observing screen change notifications. Called automatically by
-    /// `init`; idempotent (`addObserver` replaces the previous registration
-    /// for the same selector/name pair), so hosts may re-arm safely.
+    /// `init`; safe to call again to re-arm. Genuinely idempotent: selector-
+    /// based `addObserver` does NOT replace a prior registration (it adds a
+    /// second one that would double-fire), so we remove any existing
+    /// registration for this notification first.
     public func startObservingScreenChanges() {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screensDidChangeNotification),
@@ -130,24 +138,28 @@ public final class ScreenManager {
             return .screenSetChanged(previousSetID: oldID, currentSetID: newID)
         }
 
-        // Same membership: pair screens up by identity and compare geometry.
-        let oldByIdentity = Dictionary(old.map { ($0.identityComponent, $0) }, uniquingKeysWith: { first, _ in first })
-        var resized = false
-        var moved = false
-        for screen in new {
-            guard let previous = oldByIdentity[screen.identityComponent] else { continue }
-            if previous.frame.size != screen.frame.size
-                || previous.visibleFrame.size != screen.visibleFrame.size {
-                resized = true
-            }
-            if previous.frame.origin != screen.frame.origin
-                || previous.visibleFrame.origin != screen.visibleFrame.origin {
-                moved = true
-            }
-        }
-        if resized { return .resolutionChanged }
-        if moved { return .arrangementChanged }
+        // Same membership. Compare geometry as unordered *multisets* rather
+        // than pairing screens by identity — two indistinguishable displays
+        // (identical UUID-less monitors) would collide on an identity key and
+        // mis-pair, producing spurious classifications. Multisets sidestep
+        // pairing entirely: a change in the collection of sizes is a
+        // resolution change; sizes unchanged but the collection of origins
+        // differs is an arrangement change.
+        let oldSizes = multiset(old.map { sizeKey($0.frame.size) } + old.map { sizeKey($0.visibleFrame.size) })
+        let newSizes = multiset(new.map { sizeKey($0.frame.size) } + new.map { sizeKey($0.visibleFrame.size) })
+        if oldSizes != newSizes { return .resolutionChanged }
+
+        let oldOrigins = multiset(old.map { pointKey($0.frame.origin) } + old.map { pointKey($0.visibleFrame.origin) })
+        let newOrigins = multiset(new.map { pointKey($0.frame.origin) } + new.map { pointKey($0.visibleFrame.origin) })
+        if oldOrigins != newOrigins { return .arrangementChanged }
+
         return nil
+    }
+
+    private static func sizeKey(_ size: CGSize) -> String { "\(size.width)x\(size.height)" }
+    private static func pointKey(_ point: CGPoint) -> String { "\(point.x),\(point.y)" }
+    private static func multiset(_ keys: [String]) -> [String: Int] {
+        Dictionary(keys.map { ($0, 1) }, uniquingKeysWith: +)
     }
 
     // MARK: - Set bookkeeping
@@ -173,6 +185,9 @@ public final class ScreenManager {
     private func upsertCurrentSet(persist: Bool) {
         let timestamp = now()
         if let index = knownSets.firstIndex(where: { $0.id == currentSetID }) {
+            // Membership unchanged — only bump lastSeen/snapshots. This is the
+            // hot path (every drag tick via `touchCurrentSet`); it does no
+            // sort, prune, or Set rebuild.
             knownSets[index].screens = currentSnapshots
             knownSets[index].lastSeen = timestamp
         } else {
@@ -182,10 +197,15 @@ public final class ScreenManager {
                 firstSeen: timestamp,
                 lastSeen: timestamp
             ))
+            knownSetIDs.insert(currentSetID)
         }
-        knownSets = Self.pruned(knownSets, olderThan: maxSetAge, now: timestamp)
-        knownSets.sort { $0.lastSeen > $1.lastSeen }
+        // Prune + sort only when we're about to persist — nothing between
+        // persists depends on aged-out sets (6-month scale) or array order.
         if persist {
+            let before = knownSets.count
+            knownSets = Self.pruned(knownSets, olderThan: maxSetAge, now: timestamp)
+            if knownSets.count != before { knownSetIDs = Set(knownSets.map(\.id)) }
+            knownSets.sort { $0.lastSeen > $1.lastSeen }
             storage.saveSets(knownSets)
         }
     }

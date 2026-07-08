@@ -138,6 +138,44 @@ final class ScreenManagerTests: XCTestCase {
         ))
     }
 
+    /// A pure resolution change on a UUID-less display must classify as a
+    /// resolution change — not a screen-set change. Set identity is
+    /// resolution-independent (name only for UUID-less screens), so the set id
+    /// is unchanged and the geometry diff reaches `.resolutionChanged`.
+    func testUUIDLessScreenResolutionChangeIsResolutionChange() {
+        let before = [ScreenSnapshot(MockScreen(
+            frame: NSRect(x: 0, y: 0, width: 1920, height: 1080),
+            uuid: nil, name: "Dock HDMI", isMain: true
+        ))]
+        let after = [ScreenSnapshot(MockScreen(
+            frame: NSRect(x: 0, y: 0, width: 2560, height: 1440),
+            uuid: nil, name: "Dock HDMI", isMain: true
+        ))]
+        XCTAssertEqual(ScreenSet.identity(of: before), ScreenSet.identity(of: after),
+            "a UUID-less screen's set identity must not depend on resolution")
+        XCTAssertEqual(ScreenManager.classifyChange(from: before, to: after), .resolutionChanged)
+    }
+
+    /// Two indistinguishable UUID-less monitors (same name + resolution) must
+    /// not confuse classification. Multiset geometry comparison sidesteps the
+    /// identity-key mispairing that previously reported spurious changes.
+    func testDuplicateIdenticalScreensUnchangedClassifiesNil() {
+        let first = MockScreen(frame: NSRect(x: 0, y: 0, width: 1920, height: 1080), uuid: nil, name: "Twin")
+        let second = MockScreen(frame: NSRect(x: 1920, y: 0, width: 1920, height: 1080), uuid: nil, name: "Twin")
+        let snapshots = [first, second].map { ScreenSnapshot($0) }
+        XCTAssertNil(ScreenManager.classifyChange(from: snapshots, to: snapshots),
+            "identical unchanged duplicates must not report a spurious change")
+    }
+
+    func testDuplicateIdenticalScreensOneMovesClassifiesArrangement() {
+        let first = MockScreen(frame: NSRect(x: 0, y: 0, width: 1920, height: 1080), uuid: nil, name: "Twin")
+        let second = MockScreen(frame: NSRect(x: 1920, y: 0, width: 1920, height: 1080), uuid: nil, name: "Twin")
+        let before = [first, second].map { ScreenSnapshot($0) }
+        let secondMoved = MockScreen(frame: NSRect(x: 3840, y: 0, width: 1920, height: 1080), uuid: nil, name: "Twin")
+        let after = [first, secondMoved].map { ScreenSnapshot($0) }
+        XCTAssertEqual(ScreenManager.classifyChange(from: before, to: after), .arrangementChanged)
+    }
+
     // MARK: - Live change processing
 
     func testProcessScreenChangeUpdatesSetAndNotifiesObserver() {

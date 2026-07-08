@@ -207,6 +207,97 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
         XCTAssertEqual(windowD.frame, dockedFrame)
     }
 
+    /// After a resolution change on the same screen set, restore places the
+    /// window by relative position (finding the match is non-exact) AND
+    /// re-saves, so the placement's fingerprint tracks the new resolution and
+    /// the next restore hits the exact fast path.
+    func testNonExactRestoreReSavesPlacementWithNewResolution() {
+        let storage = MockStorage()
+        let setStorage = MockScreenSetStorage()
+
+        let (frames1, _, _) = makeFrames(screens: [Self.builtin()], storage: storage, setStorage: setStorage)
+        let window1 = makeWindow(frame: NSRect(x: 300, y: 500, width: 600, height: 300))
+        frames1.saveFrame(for: window1, id: "test")
+        let firstSavedAt = storage.loadState(for: "test")!.placements.values.first!.savedAt
+
+        // Same UUID (same set id) at a higher resolution → non-exact match.
+        let (frames2, _, _) = makeFrames(screens: [Self.builtin(width: 2560, height: 1440)],
+            storage: storage, setStorage: setStorage
+        )
+        let window2 = makeWindow()
+        XCTAssertTrue(frames2.restoreFrame(for: window2, id: "test"))
+
+        let updated = storage.loadState(for: "test")!.placements.values.first!
+        XCTAssertEqual(updated.screenFingerprint.resolutionWidth, 2560,
+            "re-save must record the new resolution so next restore is exact")
+        XCTAssertEqual(updated.screenFingerprint.resolutionHeight, 1440)
+        XCTAssertGreaterThanOrEqual(updated.savedAt, firstSavedAt)
+    }
+
+    /// Re-docking at a KNOWN screen set whose screen came back at a different
+    /// resolution (arriving as a screen-set change, not a resolution change)
+    /// must re-place by the saved *relative* position — not replay the stale
+    /// absolute offset sized for the old resolution. This is the quality gate
+    /// the live screen-set-changed path previously skipped.
+    func testRedockAtKnownSetWithChangedResolutionUsesRelativePosition() {
+        let storage = MockStorage()
+        let setStorage = MockScreenSetStorage()
+        let ext2560 = MockScreen(
+            frame: NSRect(x: 0, y: 0, width: 2560, height: 1440),
+            uuid: "EXT", name: "Ext", isMain: true
+        )
+        let ext1920 = MockScreen(
+            frame: NSRect(x: 0, y: 0, width: 1920, height: 1080),
+            uuid: "EXT", name: "Ext", isMain: true
+        )
+
+        let (frames, provider, screenManager) = makeFrames(
+            screens: [ext2560], storage: storage, setStorage: setStorage
+        )
+        let window = makeWindow(frame: NSRect(x: 200, y: 900, width: 600, height: 480))
+        window.identifier = NSUserInterfaceItemIdentifier("wm_test")
+        frames.windowLister = { [window] }
+        frames.saveFrame(for: window, id: "test")
+        let extSetID = screenManager.currentSetID
+        let placement = storage.loadState(for: "test")!.placements[extSetID]!
+
+        // Undock to a differently-sized built-in only (screen-set change away
+        // from EXT). Distinct size so the re-dock below must actively move the
+        // window, rather than it already sitting at the right relative spot.
+        let builtin = Self.builtin(width: 1440, height: 900)
+        provider.screens = [builtin]
+        provider.mainScreen = builtin
+        screenManager.processScreenChange()
+
+        // Re-dock: EXT returns as the only screen, but now at 1920x1080. Same
+        // UUID → same set id, so this is a screen-set change back into EXT.
+        provider.screens = [ext1920]
+        provider.mainScreen = ext1920
+        screenManager.processScreenChange()
+
+        XCTAssertEqual(screenManager.currentSetID, extSetID, "same UUID → same set id")
+
+        let expected = FrameCalculator.validateFrame(
+            FrameCalculator.frame(
+                relativePosition: CGPoint(x: placement.relativeX, y: placement.relativeY),
+                size: NSSize(width: placement.width, height: placement.height),
+                screenVisibleFrame: ext1920.visibleFrame,
+                minSize: Self.spec.minSize
+            ),
+            screenVisibleFrame: ext1920.visibleFrame,
+            minSize: Self.spec.minSize
+        )
+        // NSWindow pixel-aligns the frame, so compare with a 1pt tolerance.
+        XCTAssertEqual(window.frame.origin.x, expected.origin.x, accuracy: 1,
+            "must use relative position on the resized screen, not the stale absolute offset")
+        XCTAssertEqual(window.frame.origin.y, expected.origin.y, accuracy: 1)
+        XCTAssertEqual(window.frame.size, expected.size)
+        // The stale absolute-offset replay (the bug) would have put the window
+        // ~66pt to the right; prove we're not there.
+        let staleAbsoluteX = ext1920.visibleFrame.minX + placement.topLeftX
+        XCTAssertNotEqual(window.frame.origin.x, staleAbsoluteX, accuracy: 1)
+    }
+
     // MARK: - v1 migration
 
     func testLegacyV1StateMigratesToPlacementOnRestore() throws {
@@ -248,6 +339,14 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
         let migrated = storage.loadState(for: "test")!
         XCTAssertNil(migrated.legacy)
         XCTAssertNotNil(migrated.placements[screenManager.currentSetID])
+    }
+
+    func testEmptyOrMalformedJSONDecodesToEmptyPlacementsInsteadOfThrowing() throws {
+        for json in ["{}", "{\"placements\": null}", "{\"unrelated\": 1}"] {
+            let decoded = try JSONDecoder().decode(PersistedWindowState.self, from: Data(json.utf8))
+            XCTAssertTrue(decoded.placements.isEmpty, "\(json) should decode to empty placements")
+            XCTAssertNil(decoded.legacy, "\(json) is not a legacy record")
+        }
     }
 
     func testV2StateSurvivesJSONRoundTrip() throws {

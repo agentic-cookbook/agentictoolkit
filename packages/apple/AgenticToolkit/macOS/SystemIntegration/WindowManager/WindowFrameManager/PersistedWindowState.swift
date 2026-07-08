@@ -78,9 +78,18 @@ public struct PersistedWindowState: Codable, Sendable {
         if let placements = try container.decodeIfPresent([String: WindowPlacement].self, forKey: .placements) {
             self.placements = placements
             self.legacy = nil
-        } else {
+        } else if let legacy = try? LegacyPersistedWindowState(from: decoder) {
+            // A genuine v1 blob (proportional origin + fingerprint).
             self.placements = [:]
-            self.legacy = try LegacyPersistedWindowState(from: decoder)
+            self.legacy = legacy
+        } else {
+            // Neither a v2 `placements` key nor a decodable v1 record — e.g.
+            // `{}`, `{"placements": null}`, or an externally corrupted blob.
+            // Degrade to empty state rather than throwing, so every decode
+            // call site (not just the `try?`-wrapped storage backends) starts
+            // fresh instead of failing.
+            self.placements = [:]
+            self.legacy = nil
         }
     }
 

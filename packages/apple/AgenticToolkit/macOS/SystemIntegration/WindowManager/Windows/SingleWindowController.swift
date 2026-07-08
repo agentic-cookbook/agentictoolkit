@@ -173,11 +173,20 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     /// `setFrame` math; the resulting resize persists through the normal
     /// delegate hooks (harmless — the top-left anchor is unchanged unless
     /// the policy moved the window, which is a real position change).
+    ///
+    /// This is for **non-resizable, content-hugging** windows that own both
+    /// dimensions. Resizable list windows that only auto-fit *height* (and let
+    /// the user own width) use `NSWindow.fitHeight(toContentHeight:)` instead —
+    /// a deliberately separate, simpler mechanism, not a duplicate.
     public func fitWindow(toContentSize contentSize: NSSize) {
         guard let window, contentSize.width > 0, contentSize.height > 0 else { return }
         let frameSize = window.frameRect(
             forContentRect: NSRect(origin: .zero, size: contentSize)
         ).size
+        // Common case on repeated content refits (poll ticks): the fitted size
+        // hasn't changed, so a top-left-anchored fit is a no-op. Bail before
+        // the screen scan + geometry math rather than after.
+        if frameSize == window.frame.size { return }
         let frames = WindowManager.shared.frames
         guard let screen = WindowFrameManager.bestScreen(
             for: window, among: frames.screenProvider.screens

@@ -59,10 +59,15 @@ public final class WindowManager {
         storage: WindowStateStorage = SettingsStoreWindowStateStorage(settings: UserSettings.shared),
         screenManager: ScreenManager? = nil
     ) {
+        // Exactly one ScreenManager owns the persisted screen-set list and the
+        // screen-change observer. Production shares `.shared`; tests inject an
+        // isolated one. Never let this default to a fresh orphan — a second
+        // ScreenManager on the same persistence key would clobber the real
+        // one's state and double-register the notification observer.
         self.frames = WindowFrameManager(
             screenProvider: screenProvider,
             storage: storage,
-            screenManager: screenManager
+            screenManager: screenManager ?? .shared
         )
         applyRecentDocumentCountFromSettings()
         // Mirror future setting changes through to AppKit.
