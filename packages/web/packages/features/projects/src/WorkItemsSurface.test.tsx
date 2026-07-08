@@ -1,0 +1,426 @@
+// @vitest-environment jsdom
+//
+// Component test for WorkItemsSurface — the 4e work-items view switcher. The surface
+// loads the shared query ONCE (items + statuses + participants) and owns the two
+// shared concerns: the WorkItemEditor (opened from any view via onOpenItem / the New
+// action) and the optimistic-with-revert status move (BoardView calls onMove). The
+// hub's vitest config is node-only, so this file opts into jsdom via the docblock.
+// The api-client boundaries are mocked, so the load-once + switch + editor + move
+// wiring is exercised, not the transport. A stateful `leaf` harness makes the
+// switcher deep-link the active view the way ResourceExplorer's URL leaf would.
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useState } from "react";
+import { render, screen, fireEvent, waitFor, cleanup, within, act } from "@testing-library/react";
+
+// The three former hub modules (@/api/{projects,project-work-items,project-activity}) now ship in
+// ONE domain barrel (@agentic-toolkit/data/projects), so their stubs merge into a single mock: the
+// work-items + projects clients the surface reads, plus the activity client the edit-mode editor's
+// Activity section loads on mount (an empty keyset page keeps it quiet without touching the network).
+vi.mock("@agentic-toolkit/data/projects", () => ({
+  projectWorkItemsApi: {
+    listForProject: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    get: vi.fn(),
+  },
+  projectsApi: {
+    statuses: { list: vi.fn() },
+    participants: { list: vi.fn() },
+  },
+  projectActivityApi: {
+    workItemActivity: vi.fn().mockResolvedValue({ rows: [], nextBefore: null }),
+    addComment: vi.fn(),
+  },
+}));
+
+import { WorkItemsSurface } from "./WorkItemsSurface";
+import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
+import {
+  projectsApi,
+  type ProjectStatus,
+  type ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
+import type { TopicLeaf } from "@agentic-toolkit/resource";
+
+const listForProject = vi.mocked(projectWorkItemsApi.listForProject);
+const create = vi.mocked(projectWorkItemsApi.create);
+const update = vi.mocked(projectWorkItemsApi.update);
+const get = vi.mocked(projectWorkItemsApi.get);
+const statusesList = vi.mocked(projectsApi.statuses.list);
+const participantsList = vi.mocked(projectsApi.participants.list);
+
+function status(over: Partial<ProjectStatus>): ProjectStatus {
+  return {
+    id: "s",
+    projectId: "p1",
+    key: "k",
+    label: "L",
+    category: "todo",
+    position: 0,
+    createdAt: "2026-07-03T00:00:00Z",
+    ...over,
+  };
+}
+
+function item(over: Partial<WorkItem>): WorkItem {
+  return {
+    id: "w",
+    projectId: "p1",
+    title: "T",
+    description: "",
+    statusId: "s1",
+    assigneeKind: null,
+    assigneeId: null,
+    priority: 0,
+    startDate: null,
+    dueDate: null,
+    labels: [],
+    parentId: null,
+    position: 0,
+    createdAt: "2026-07-03T00:00:00Z",
+    updatedAt: "2026-07-03T00:00:00Z",
+    ...over,
+  };
+}
+
+const TODO_COL = status({ id: "s1", key: "todo", label: "To do", category: "todo", position: 0 });
+const DOING = status({ id: "s2", key: "doing", label: "In progress", category: "in_progress", position: 1 });
+const DONE = status({ id: "s3", key: "done", label: "Done", category: "done", position: 2 });
+
+const PARTICIPANT: ProjectParticipant = {
+  id: "pp1",
+  projectId: "p1",
+  participantKind: "customer",
+  participantId: "cust-1",
+  role: "member",
+  addedBy: null,
+  addedAt: "2026-07-03T00:00:00Z",
+};
+
+// w1 in To do (High, assigned to the participant), w2 in In progress.
+const W1 = item({
+  id: "w1",
+  title: "Design the landing page",
+  statusId: "s1",
+  priority: 3,
+  assigneeKind: "customer",
+  assigneeId: "cust-1",
+  dueDate: "2026-08-01",
+});
+const W2 = item({ id: "w2", title: "Write the copy", statusId: "s2", priority: 1 });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  listForProject.mockResolvedValue([structuredClone(W1), structuredClone(W2)]);
+  statusesList.mockResolvedValue([DONE, TODO_COL, DOING].map((s) => structuredClone(s))); // unsorted
+  participantsList.mockResolvedValue([structuredClone(PARTICIPANT)]);
+  create.mockImplementation((_projectId, input) =>
+    Promise.resolve({ ...structuredClone(W1), ...input, id: "w3" } as WorkItem),
+  );
+  update.mockImplementation((id, patch) =>
+    Promise.resolve({ ...structuredClone(W1), id, ...patch } as WorkItem),
+  );
+  // A failed move's catch reconciles against the server's authoritative row. Default: the
+  // server never actually changed the item (no PATCH persisted), so `get` returns it unmoved —
+  // the correct baseline for every failed-move test below unless a test overrides it.
+  get.mockImplementation((id: string) =>
+    Promise.resolve(
+      id === W1.id ? structuredClone(W1) : id === W2.id ? structuredClone(W2) : null,
+    ),
+  );
+});
+
+// The hub vitest config has no global afterEach — tear down each render explicitly.
+afterEach(cleanup);
+
+// A stateful leaf so the switcher deep-links the active view (as ResourceExplorer's URL
+// leaf would); `onSelectSpy` records the chosen view id.
+function Harness({ onSelectSpy }: { onSelectSpy?: (leafId: string | null) => void }) {
+  const [leafId, setLeafId] = useState<string | null>(null);
+  const leaf: TopicLeaf = {
+    leafId,
+    onSelect: (id) => {
+      onSelectSpy?.(id);
+      setLeafId(id);
+    },
+  };
+  return <WorkItemsSurface projectId="p1" title="Work Items" leaf={leaf} />;
+}
+
+describe("WorkItemsSurface", () => {
+  it("renders the view switcher and defaults to the List view", async () => {
+    render(<Harness />);
+
+    // Switcher options are present…
+    expect(screen.getByRole("button", { name: "List view" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Board view" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Table view" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Timeline view" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Calendar view" })).not.toBeNull();
+
+    // …and the default view is the List (the DataTable), not the Board.
+    await screen.findByText("Design the landing page");
+    expect(screen.getByRole("grid", { name: "Work items" })).not.toBeNull();
+    expect(screen.queryByRole("list", { name: "Board columns" })).toBeNull();
+  });
+
+  it("switches to the Board view via the switcher, calling leaf.onSelect('board')", async () => {
+    const onSelectSpy = vi.fn();
+    render(<Harness onSelectSpy={onSelectSpy} />);
+    await screen.findByText("Design the landing page");
+
+    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+
+    expect(onSelectSpy).toHaveBeenCalledWith("board");
+
+    // The Board columns are now rendered (in position order), the List grid gone.
+    const cols = await screen.findAllByRole("listitem");
+    expect(cols.map((c) => c.getAttribute("aria-label"))).toEqual([
+      "To do",
+      "In progress",
+      "Done",
+    ]);
+    expect(screen.queryByRole("grid", { name: "Work items" })).toBeNull();
+  });
+
+  it("loads the shared query only ONCE across a view switch", async () => {
+    render(<Harness />);
+    await screen.findByText("Design the landing page");
+
+    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    await screen.findByRole("listitem", { name: "To do" });
+
+    // The load is owned by the surface and keyed on projectId, so switching the
+    // VIEW does not re-fetch: exactly one listForProject across the switch.
+    expect(listForProject).toHaveBeenCalledTimes(1);
+    expect(listForProject).toHaveBeenCalledWith("p1");
+  });
+
+  it("opens the shared editor in create mode from New work item and creates the item", async () => {
+    render(<Harness />);
+    await screen.findByText("Design the landing page");
+
+    fireEvent.click(screen.getByRole("button", { name: /new work item/i }));
+
+    fireEvent.change(await screen.findByLabelText("Title"), {
+      target: { value: "Ship the beta" },
+    });
+    fireEvent.change(screen.getByLabelText("Assignee"), {
+      target: { value: "customer:cust-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create work item" }));
+
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({
+          title: "Ship the beta",
+          assigneeKind: "customer",
+          assigneeId: "cust-1",
+        }),
+      ),
+    );
+  });
+
+  it("opens the shared editor from a List row and clears the assignee via update(null, null)", async () => {
+    render(<Harness />);
+
+    // Selecting a row opens the shared editor in edit mode for that item.
+    fireEvent.click(await screen.findByText("Design the landing page"));
+
+    fireEvent.change(await screen.findByLabelText("Assignee"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(
+        "w1",
+        expect.objectContaining({ assigneeKind: null, assigneeId: null }),
+      ),
+    );
+  });
+
+  it("moves a card to another status (optimistic) and repaints it under the new column", async () => {
+    render(<Harness />);
+    await screen.findByText("Design the landing page");
+    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    await screen.findByRole("listitem", { name: "To do" });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
+      target: { value: "s2" },
+    });
+
+    await waitFor(() => expect(update).toHaveBeenCalledWith("w1", { statusId: "s2" }));
+
+    // The shared items updated, so the card now sits under In progress…
+    within(screen.getByRole("listitem", { name: "In progress" })).getByText(
+      "Design the landing page",
+    );
+    // …and no longer under To do.
+    expect(
+      within(screen.getByRole("listitem", { name: "To do" })).queryByText(
+        "Design the landing page",
+      ),
+    ).toBeNull();
+  });
+
+  it("reverts the card and shows an error when the move fails", async () => {
+    update.mockRejectedValueOnce(new Error("boom"));
+    render(<Harness />);
+    await screen.findByText("Design the landing page");
+    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    await screen.findByRole("listitem", { name: "To do" });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
+      target: { value: "s2" },
+    });
+
+    await waitFor(() => expect(update).toHaveBeenCalledWith("w1", { statusId: "s2" }));
+
+    // Reverted to the source column…
+    await waitFor(() =>
+      within(screen.getByRole("listitem", { name: "To do" })).getByText(
+        "Design the landing page",
+      ),
+    );
+    // …no longer under In progress…
+    expect(
+      within(screen.getByRole("listitem", { name: "In progress" })).queryByText(
+        "Design the landing page",
+      ),
+    ).toBeNull();
+    // …and the failure surfaces inline.
+    await screen.findByText("boom");
+  });
+
+  it("a stale FAILED move never clobbers a newer move on the same card", async () => {
+    // update #1 (the first move) will REJECT; update #2 (the newer move) will RESOLVE.
+    let rejectMove1!: (e: Error) => void;
+    let resolveMove2!: () => void;
+    let calls = 0;
+    update.mockImplementation((id, patch) => {
+      calls += 1;
+      if (calls === 1) {
+        return new Promise<WorkItem>((_res, rej) => {
+          rejectMove1 = rej;
+        });
+      }
+      return new Promise<WorkItem>((res) => {
+        resolveMove2 = () => res({ ...structuredClone(W1), id, ...patch } as WorkItem);
+      });
+    });
+
+    render(<Harness />);
+    await screen.findByText("Design the landing page");
+    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    await screen.findByRole("listitem", { name: "To do" });
+
+    const combo = () => screen.getByRole("combobox", { name: "Move Design the landing page" });
+
+    // Move 1: To do → In progress (update #1 in flight).
+    fireEvent.change(combo(), { target: { value: "s2" } });
+    await waitFor(() =>
+      within(screen.getByRole("listitem", { name: "In progress" })).getByText(
+        "Design the landing page",
+      ),
+    );
+
+    // Move 2: In progress → Done (update #2 in flight), BEFORE move 1 has settled.
+    fireEvent.change(combo(), { target: { value: "s3" } });
+    await waitFor(() =>
+      within(screen.getByRole("listitem", { name: "Done" })).getByText(
+        "Design the landing page",
+      ),
+    );
+
+    // The STALE move 1 now fails. Its guarded revert must be a NO-OP — the card sits at
+    // the newer target (Done), not move 1's target (In progress), so it is not reverted.
+    await act(async () => {
+      rejectMove1(new Error("stale boom"));
+    });
+    within(screen.getByRole("listitem", { name: "Done" })).getByText("Design the landing page");
+    expect(
+      within(screen.getByRole("listitem", { name: "To do" })).queryByText(
+        "Design the landing page",
+      ),
+    ).toBeNull();
+
+    // Move 2 then resolves and reconciles cleanly — the card stays under Done.
+    await act(async () => {
+      resolveMove2();
+    });
+    within(screen.getByRole("listitem", { name: "Done" })).getByText("Design the landing page");
+  });
+
+  it("a both-failed overlapping move reconciles to the server's true status, not the stale intermediate", async () => {
+    // update #1 (move A→B) and update #2 (move B→C) BOTH reject.
+    let rejectMove1!: (e: Error) => void;
+    let rejectMove2!: (e: Error) => void;
+    let calls = 0;
+    update.mockImplementation(() => {
+      calls += 1;
+      if (calls === 1) {
+        return new Promise<WorkItem>((_res, rej) => {
+          rejectMove1 = rej;
+        });
+      }
+      return new Promise<WorkItem>((_res, rej) => {
+        rejectMove2 = rej;
+      });
+    });
+    // The server's authoritative row for the card never actually moved (both PATCHes
+    // failed) — get() keeps returning the original To-do row throughout.
+    get.mockResolvedValue(structuredClone(W1));
+
+    render(<Harness />);
+    await screen.findByText("Design the landing page");
+    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    await screen.findByRole("listitem", { name: "To do" });
+
+    const combo = () => screen.getByRole("combobox", { name: "Move Design the landing page" });
+
+    // Move 1: To do → In progress (update #1 in flight).
+    fireEvent.change(combo(), { target: { value: "s2" } });
+    await waitFor(() =>
+      within(screen.getByRole("listitem", { name: "In progress" })).getByText(
+        "Design the landing page",
+      ),
+    );
+
+    // Move 2: In progress → Done (update #2 in flight), BEFORE move 1 has settled.
+    fireEvent.change(combo(), { target: { value: "s3" } });
+    await waitFor(() =>
+      within(screen.getByRole("listitem", { name: "Done" })).getByText(
+        "Design the landing page",
+      ),
+    );
+
+    // The STALE move 1 fails first. Its guarded reconcile is a no-op — the card no longer
+    // sits at move 1's target ("In progress") — so it stays at Done for now.
+    await act(async () => {
+      rejectMove1(new Error("move1 failed"));
+    });
+    within(screen.getByRole("listitem", { name: "Done" })).getByText("Design the landing page");
+
+    // Move 2 (the newer move) ALSO fails. Both PATCHes are now settled and BOTH failed, so
+    // the card must land on the SERVER's true status (To do) — NOT move 1's stale
+    // intermediate optimistic value ("In progress"), which the server never persisted.
+    await act(async () => {
+      rejectMove2(new Error("move2 failed"));
+    });
+    await waitFor(() =>
+      within(screen.getByRole("listitem", { name: "To do" })).getByText(
+        "Design the landing page",
+      ),
+    );
+    expect(
+      within(screen.getByRole("listitem", { name: "In progress" })).queryByText(
+        "Design the landing page",
+      ),
+    ).toBeNull();
+    expect(
+      within(screen.getByRole("listitem", { name: "Done" })).queryByText(
+        "Design the landing page",
+      ),
+    ).toBeNull();
+  });
+});
