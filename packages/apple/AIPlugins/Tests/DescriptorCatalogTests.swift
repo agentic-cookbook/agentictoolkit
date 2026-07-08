@@ -35,7 +35,21 @@ struct DescriptorCatalogTests {
         #expect(descriptor.fields(for: template).isEmpty)
     }
 
-    // Paste the exact JSON written to disk in Step 3 into these three constants.
+    @Test("OpenAI-compatible xAI template advertises the current Grok models with a fixed base URL")
+    func openAICompatibleXAITemplate() throws {
+        let descriptor = try decode(Self.openAICompatibleXAIJSON)
+        #expect(descriptor.schemaVersion == 3)
+        let xai = try #require(descriptor.resolvedTemplates.first { $0.id == "xai" })
+        #expect(xai.resolvedDefaultModel == "grok-4.5")
+        #expect(xai.models == [
+            "grok-4.5", "grok-4.3",
+            "grok-4.20-0309-reasoning", "grok-4.20-0309-non-reasoning", "grok-4.20-multi-agent-0309"
+        ])
+        #expect(xai.defaultValues["baseURL"] == "https://api.x.ai/v1")
+        #expect(xai.secretRequired == true)
+    }
+
+    // Paste the exact JSON written to disk into these constants.
     static let openAIJSON = #"""
     {
       "schemaVersion": 3,
@@ -100,6 +114,39 @@ struct DescriptorCatalogTests {
           "defaultModel": "sonnet",
           "secretRequired": false,
           "fields": []
+        }
+      ]
+    }
+    """#
+    // A minimal OpenAI-compatible descriptor carrying just the xAI template,
+    // mirroring the model list and fixed base URL shipped in
+    // OpenAICompatible/descriptor.json (pretty-printed here to satisfy
+    // line-length linting, like the constants above).
+    static let openAICompatibleXAIJSON = #"""
+    {
+      "schemaVersion": 3,
+      "identifier": "com.agentictoolkit.plugin.openai-compatible",
+      "displayName": "OpenAI-compatible",
+      "version": "1.0",
+      "models": [],
+      "defaultModel": null,
+      "fields": [
+        { "key": "baseURL", "label": "Base URL", "kind": "text" },
+        { "key": "apiKey", "label": "API Key", "kind": "secret" }
+      ],
+      "templates": [
+        {
+          "id": "xai",
+          "displayName": "xAI",
+          "defaultValues": { "baseURL": "https://api.x.ai/v1" },
+          "models": [
+            "grok-4.5", "grok-4.3",
+            "grok-4.20-0309-reasoning",
+            "grok-4.20-0309-non-reasoning",
+            "grok-4.20-multi-agent-0309"
+          ],
+          "defaultModel": "grok-4.5",
+          "secretRequired": true
         }
       ]
     }
