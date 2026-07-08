@@ -2,11 +2,8 @@
 
 import { AuthHttpError } from './client'
 
-/** Structured context attached to a reported auth error — e.g. the calling hook
- *  or dialog (`{ source: 'useResourceList' }`). */
-export interface ErrorContext {
-  source?: string
-}
+/** Structured context attached to a reported error — scalars only (no PII / bodies / ids). */
+export type ErrorContext = Record<string, string | number | boolean | null | undefined>
 
 /**
  * Report a CAUGHT auth error — but only when it's unexpected. An
