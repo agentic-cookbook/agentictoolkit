@@ -6,6 +6,9 @@
 export { PersonasSection } from "./PersonasSection";
 export { ServicesSection } from "./ServicesSection";
 export { PersonaEditor } from "./PersonaEditor";
+// User Settings "Assistants" panel — per-user consent (Layer-2 may_act 'user') for the
+// personas an owner has let act on the caller's behalf; a host mounts it standalone.
+export { AssistantsPanel } from "./AssistantsPanel";
 
 import type { ComponentProps } from "react";
 import type { PersonasSection } from "./PersonasSection";
