@@ -1,0 +1,183 @@
+// Wire types for the integrations domain — package-local mirrors of the OpenAPI-generated
+// request/response shapes the hub previously imported as `RequestBody`/`SuccessBody` from
+// `@adh-shared/api-types` (for /integrations/*). These carry full backend-schema fidelity
+// (not just the fields today's call sites touch) so the toolkit stays decoupled from the
+// hub's generated types without narrowing what a caller can rely on.
+
+/** A provider catalog entry (from GET /integrations/providers). */
+export interface ProviderCatalogEntryRow {
+  providerId: string;
+  displayName: string;
+  authMethod: "oauth" | "oauth_instance" | "plaid_link" | "api_key" | "app_password";
+  serviceTypes: string[];
+  /** read | write | auth */
+  capabilities: string[];
+  /** Default minimum sync interval (ms) */
+  defaultPollIntervalMs: number;
+  /** For api_key providers: declarative config/credential fields, rendered + validated
+   *  identically at ecosystem and user scope (absent for OAuth-style providers). */
+  configFields?: {
+    key: string;
+    label: string;
+    secret: boolean;
+    required: boolean;
+    placeholder?: string;
+  }[];
+}
+
+/** A stored, secret-masked provider config for an ecosystem. */
+export interface MaskedProviderConfigRow {
+  id: string;
+  /** Ecosystem id (the RLS owner) */
+  ecosystemId: string;
+  providerId: string;
+  /** Non-secret config: clientId, scopes, URLs, endpoints, credentialStyle */
+  config: Record<string, unknown>;
+  /** Whether a client secret is stored (the value is never returned) */
+  hasSecret: boolean;
+  updatedBy?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** The PUT (upsert) body for a provider config — a blank/absent `clientSecret`
+ *  preserves the stored secret. */
+export interface ProviderConfigInputBody {
+  clientId?: string;
+  scopes?: string[];
+  authUrl?: string;
+  tokenUrl?: string;
+  userinfoUrl?: string;
+  validateUrl?: string;
+  credentialStyle?: "form_body" | "basic_auth";
+  endpoints?: Record<string, string>;
+  /** Blank/absent preserves the existing secret */
+  clientSecret?: string;
+  /** api_key providers: the provider's declared config fields, keyed by field key (the one
+   *  secret is split into the encrypted slot; a blank/absent secret preserves the stored one). */
+  fields?: Record<string, string>;
+  /** api_key providers: false pauses the provider without deleting its secret. */
+  enabled?: boolean;
+}
+
+/** A caller's own connection (linked account), secrets redacted. */
+export interface SafeConnectionRow {
+  id: string;
+  /** Provider slug (e.g. google-calendar, github) */
+  provider: string;
+  /** Service within the provider (e.g. calendar) */
+  serviceType: string;
+  /** active | error | revoked | pending */
+  status: string;
+  displayName: string;
+  username: string;
+  /** Provider-side account id */
+  externalAccountId: string;
+  /** Last successful sync (null = never) */
+  lastSyncAt?: string | null;
+  /** Last recorded sync error */
+  lastError?: string | null;
+  createdAt: string;
+  /** Caller-tunable sync settings (gmailLabelIds / redditSubreddits / …) — non-secret,
+   *  returned so settings forms can prefill instead of blind-overwriting. */
+  syncSettings?: Record<string, unknown> | null;
+}
+
+/** The polymorphic connect body — a discriminated union keyed by `type` (= the provider's
+ *  auth method). Every variant requires `ecosystemId`: the client names the target
+ *  ecosystem, and the backend authorizes the caller against it (403 otherwise) before
+ *  persisting the connection under it. */
+export type ConnectRequestBody =
+  | {
+      type: "oauth";
+      providerId: string;
+      serviceType: string;
+      /** Target ecosystem id (the caller must manage it) */
+      ecosystemId: string;
+      /** OAuth authorization code */
+      code: string;
+      redirectUri: string;
+      /** The HMAC-signed state returned by the auth-url endpoint (CSRF) */
+      state: string;
+    }
+  | {
+      type: "api_key";
+      providerId: string;
+      serviceType: string;
+      ecosystemId: string;
+      /** The provider's declared config fields (configFields), keyed by field key; validated
+       *  + split into the secret vs non-secret config against the spec. */
+      fields: Record<string, string>;
+    }
+  | {
+      type: "app_password";
+      providerId: string;
+      serviceType: string;
+      ecosystemId: string;
+      identifier: string;
+      password: string;
+      instanceUrl?: string;
+    }
+  | {
+      type: "plaid_link";
+      providerId: string;
+      serviceType: string;
+      ecosystemId: string;
+      publicToken: string;
+    }
+  | {
+      type: "oauth_instance";
+      providerId: string;
+      serviceType: string;
+      ecosystemId: string;
+      code: string;
+      state: string;
+    };
+
+/** `{ url, state }` — the OAuth authorize URL + the round-trip CSRF state. */
+export interface AuthUrlResultRow {
+  url: string;
+  state: string;
+}
+
+/** Body for register-instance (self-hosted OAuth, e.g. Mastodon). */
+export interface RegisterInstanceBodyType {
+  /** Target ecosystem id (the caller must manage it) */
+  ecosystemId: string;
+  instanceUrl: string;
+  redirectUri: string;
+  serviceType?: string;
+}
+
+/** `{ state, authorizeUrl, clientId }` from register-instance. */
+export interface RegisterInstanceResultRow {
+  state: string;
+  authorizeUrl: string;
+  clientId: string;
+}
+
+/** Body for the Plaid link-token mint. */
+export interface LinkTokenBodyType {
+  /** Target ecosystem id (the caller must manage it) */
+  ecosystemId: string;
+  /** Defaults to the provider primary service type */
+  serviceType?: string;
+}
+
+/** Per-connection sync settings the worker reads (gmail/reddit today). */
+export interface SyncSettingsBodyType {
+  /** Gmail label ids to sync (default INBOX). */
+  gmailLabelIds?: string[];
+  /** Days of history to sync (default 30, max 366). */
+  gmailWindowDays?: number;
+  /** Subreddits to watch (name or r/name; max 50). */
+  redditSubreddits?: string[];
+  /** Keywords to match within watched subreddits (max 50). */
+  redditKeywords?: string[];
+}
+
+/** `{ ok, syncSettings }` returned by the settings PATCH. */
+export interface SyncSettingsResultRow {
+  ok: boolean;
+  syncSettings: Record<string, unknown>;
+}

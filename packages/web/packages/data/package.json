@@ -6,12 +6,62 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist.",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "development": "./src/index.ts", "import": "./dist/index.js" },
-    "./projects": { "types": "./dist/projects/index.d.ts", "development": "./src/projects/index.ts", "import": "./dist/projects/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./projects": {
+      "types": "./dist/projects/index.d.ts",
+      "development": "./src/projects/index.ts",
+      "import": "./dist/projects/index.js"
+    },
+    "./teams": {
+      "types": "./dist/teams/index.d.ts",
+      "development": "./src/teams/index.ts",
+      "import": "./dist/teams/index.js"
+    },
+    "./ecosystems": {
+      "types": "./dist/ecosystems/index.d.ts",
+      "development": "./src/ecosystems/index.ts",
+      "import": "./dist/ecosystems/index.js"
+    },
+    "./monitored-sites": {
+      "types": "./dist/monitored-sites/index.d.ts",
+      "development": "./src/monitored-sites/index.ts",
+      "import": "./dist/monitored-sites/index.js"
+    },
+    "./markdown": {
+      "types": "./dist/markdown/index.d.ts",
+      "development": "./src/markdown/index.ts",
+      "import": "./dist/markdown/index.js"
+    },
+    "./personas": {
+      "types": "./dist/personas/index.d.ts",
+      "development": "./src/personas/index.ts",
+      "import": "./dist/personas/index.js"
+    },
+    "./security": {
+      "types": "./dist/security/index.d.ts",
+      "development": "./src/security/index.ts",
+      "import": "./dist/security/index.js"
+    },
+    "./integrations": {
+      "types": "./dist/integrations/index.d.ts",
+      "development": "./src/integrations/index.ts",
+      "import": "./dist/integrations/index.js"
+    },
+    "./invitations": {
+      "types": "./dist/invitations/index.d.ts",
+      "development": "./src/invitations/index.ts",
+      "import": "./dist/invitations/index.js"
+    }
   },
   "scripts": {
     "build": "tsup && pnpm run build:types",
@@ -21,9 +71,16 @@
     "lint": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": { "@agentic-toolkit/auth": "workspace:*" },
-  "peerDependencies": { "react": "^19.0.0" },
+  "dependencies": {
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "react": "^19.0.0"
+  },
   "devDependencies": {
+    "@tanstack/react-query": "^5.62.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",

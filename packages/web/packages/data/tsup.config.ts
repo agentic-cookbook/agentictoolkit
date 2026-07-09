@@ -2,7 +2,18 @@ import { defineConfig } from 'tsup'
 import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/projects/index.ts'],
+  entry: [
+    'src/index.ts',
+    'src/projects/index.ts',
+    'src/teams/index.ts',
+    'src/ecosystems/index.ts',
+    'src/monitored-sites/index.ts',
+    'src/markdown/index.ts',
+    'src/personas/index.ts',
+    'src/security/index.ts',
+    'src/integrations/index.ts',
+    'src/invitations/index.ts',
+  ],
   outDir: 'dist',
   format: ['esm'],
   target: 'es2022',

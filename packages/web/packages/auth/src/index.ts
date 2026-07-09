@@ -25,3 +25,15 @@ export type { ProviderLinkHandlerProps } from './ProviderLinkHandler'
 export { providerLabel, oauthErrorMessage, accountExistsLinkBody, accountExistsTitle } from './labels'
 export { AuthHttpError, setAuthRetryMarker } from './client'
 export { reportUnexpectedAuthError, reportAuthError, setAuthErrorReporter } from './report'
+export {
+  getMfaStatus,
+  enrollTotp,
+  confirmTotp,
+  removeTotp,
+  listWebauthn,
+  registerWebauthn,
+  removeWebauthn,
+  regenerateRecoveryCodes,
+  setPreferredMethod,
+} from './account-security'
+export type { MfaStatus, WebauthnCredential, PreferredMethod, TotpEnrollment } from './account-security'
