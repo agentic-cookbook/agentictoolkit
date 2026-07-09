@@ -1,4 +1,4 @@
-import { cn } from "../lib/utils";
+import { cn } from "../lib/utils"
 
 /**
  * The platform's one inline error line — a small red, `role="alert"` paragraph.
@@ -12,12 +12,12 @@ export function ErrorText({
   error,
   className,
 }: {
-  error: string | null | undefined;
-  className?: string;
+  error: string | null | undefined
+  className?: string
 }) {
   return error ? (
     <p role="alert" className={cn("text-sm text-apt-red", className)}>
       {error}
     </p>
-  ) : null;
+  ) : null
 }

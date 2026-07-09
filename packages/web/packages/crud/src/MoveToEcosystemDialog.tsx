@@ -5,7 +5,7 @@ import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
 import { Select } from '@agentic-toolkit/ui/components/select'
 import { authedJson } from '@agentic-toolkit/auth/client'
 import { errorMessage } from '@agentic-toolkit/ui/lib/errors'
-import { ErrorText } from './ErrorText'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import type { CrudTableMeta } from './types'
 
 /** Minimal shape of GET /api/ecosystem/ecosystems — the manageable set the admin can move into. */

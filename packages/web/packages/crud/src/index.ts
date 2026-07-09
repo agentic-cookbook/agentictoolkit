@@ -25,7 +25,7 @@ export {
 export type { EditableMode, EditableOverrides } from './editability'
 export { CRUD_TABLES } from './generated/table-metadata'
 export { CRUD_SCHEMAS } from './schemas'
-export { ErrorText } from './ErrorText'
+export { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 export { useAction } from '@agentic-toolkit/ui/hooks/useAction'
 export type { ActionState } from '@agentic-toolkit/ui/hooks/useAction'
 export { rowKey } from './useCrudResource'

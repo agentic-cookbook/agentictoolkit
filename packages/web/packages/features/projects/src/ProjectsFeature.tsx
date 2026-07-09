@@ -2,6 +2,7 @@
 
 import { type ReactElement } from "react";
 import { FolderKanban, ListTodo, Activity } from "lucide-react";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -97,7 +98,7 @@ function ProjectForm({
             rows={3}
           />
         </div>
-        {error && <p className="text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} />
       </CardContent>
     </Card>
   );

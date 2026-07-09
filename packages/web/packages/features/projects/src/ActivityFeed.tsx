@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { Button } from "@agentic-toolkit/ui/components/button";
@@ -183,7 +184,7 @@ export function ActivityFeed({
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
 
       {loading ? (
         <p className="text-sm text-apt-text-muted">Loading…</p>

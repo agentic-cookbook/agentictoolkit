@@ -9,6 +9,7 @@ import {
   type ReactElement,
 } from "react";
 import { Trash2 } from "lucide-react";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
@@ -320,7 +321,7 @@ export function ProjectOverviewPane({
                   placeholder="Board accent color"
                 />
               </Field>
-              {saveError && <p className="text-sm text-apt-red">{saveError}</p>}
+              <ErrorText error={saveError} />
               <div className="flex items-center gap-2">
                 <Button onClick={() => void save()} disabled={!canSave}>
                   {saving ? "Saving…" : "Save changes"}
@@ -370,11 +371,9 @@ export function ProjectOverviewPane({
                   Add
                 </Button>
               </div>
-              {addError && <p className="text-sm text-apt-red">{addError}</p>}
+              <ErrorText error={addError} />
 
-              {participantsError && (
-                <p className="text-sm text-apt-red">{participantsError}</p>
-              )}
+              <ErrorText error={participantsError} />
               {participants === null ? (
                 <p className="text-sm text-apt-text-muted">Loading…</p>
               ) : participants.length === 0 ? (

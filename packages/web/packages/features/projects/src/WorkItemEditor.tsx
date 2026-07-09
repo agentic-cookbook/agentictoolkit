@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -117,7 +118,7 @@ function ItemActivitySection({ workItemId }: { workItemId: string }): ReactEleme
           {posting ? "Posting…" : "Comment"}
         </Button>
       </div>
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
       <ActivityFeed key={refreshKey} load={load} />
     </div>
   );
@@ -321,7 +322,7 @@ export function WorkItemEditor({
         </Select>
       </Field>
 
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
 
       <div className="flex items-center gap-2">
         <Button variant="ghost" onClick={onCancel} disabled={saving}>

@@ -315,7 +315,7 @@ export function TeamMembersPane({
             <div className="flex flex-col gap-3 border-t border-apt-border pt-6">
               {personas === null ? (
                 <p className="text-sm text-apt-text-muted">Loading personas…</p>
-              ) : personasError !== null ? (
+              ) : personasError ? (
                 <ErrorText error={personasError} />
               ) : personas.length === 0 ? (
                 <p className="text-sm text-apt-text-muted">You have no personas to add.</p>

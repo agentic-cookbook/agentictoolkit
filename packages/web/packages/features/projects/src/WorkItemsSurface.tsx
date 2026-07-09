@@ -21,6 +21,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@agentic-toolkit/ui/components/toggle-group";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
@@ -265,8 +266,8 @@ export function WorkItemsSurface({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <FeatureTitle title={title} />
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 px-6 py-4">
-        {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
-        {moveError && <p className="text-sm text-apt-red">{moveError}</p>}
+        <ErrorText error={loadError} />
+        <ErrorText error={moveError} />
 
         {showEditor ? (
           <div className="min-h-0 flex-1 overflow-y-auto">

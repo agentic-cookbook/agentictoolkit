@@ -2,7 +2,7 @@
 
 import { Button } from '@agentic-toolkit/ui/components/button'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
-import { ErrorText } from './ErrorText'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { rowKey } from './useCrudResource'
 import type { CrudColumn, CrudRow, CrudTableMeta } from './types'
 import { cn } from '@agentic-toolkit/ui/lib/utils'
