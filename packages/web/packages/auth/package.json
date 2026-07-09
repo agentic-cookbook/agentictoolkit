@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/auth",
   "version": "0.1.0",
-  "description": "Shared authentication for Agentic Developer Hub sites \u2014 capabilities-based AuthProvider, Bearer HTTP client with refresh, and a shared LoginCard.",
+  "description": "Shared authentication for Agentic Developer Hub sites — capabilities-based AuthProvider with SSO/MFA, Bearer HTTP client with CAS refresh, auth gates, login/signup cards, and the BFF proxy.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,18 +12,27 @@
   "files": [
     "dist"
   ],
+  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Matches the sibling @agentic-toolkit/data pattern.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
     "./client": {
       "types": "./dist/client.d.ts",
+      "development": "./src/client.ts",
       "import": "./dist/client.js"
     },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
+      "development": "./src/ui/index.ts",
       "import": "./dist/ui/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "development": "./src/server/index.ts",
+      "import": "./dist/server/index.js"
     },
     "./styles.css": "./dist/styles/auth.css"
   },
@@ -36,6 +45,10 @@
     "lint": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@agentic-toolkit/ui": "workspace:*",
+    "@simplewebauthn/browser": "^13.3.0"
+  },
   "peerDependencies": {
     "next": ">=15.0.0",
     "react": "^19.0.0",
@@ -44,6 +57,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/node": "^24.0.0",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",

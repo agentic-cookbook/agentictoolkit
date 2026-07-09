@@ -37,6 +37,16 @@ export function setAuthErrorReporter(fn: Reporter | null): void {
 export function reportUnexpectedAuthError(err: unknown, context?: ErrorContext): void {
   const status = err instanceof Error ? (err as { status?: unknown }).status : undefined
   if (typeof status === 'number' && status < 500) return
+  reportAuthError(err, context)
+}
+
+/**
+ * Report a CAUGHT auth error UNCONDITIONALLY — for call sites that have already
+ * decided the error is worth reporting (a network failure with no HTTP status,
+ * a caller-gated 5xx, an unexpected throw from a click handler). Same sink as
+ * {@link reportUnexpectedAuthError} without the status gate. Fail-safe: never throws.
+ */
+export function reportAuthError(err: unknown, context?: ErrorContext): void {
   try {
     reporter?.(err, context)
   } catch {

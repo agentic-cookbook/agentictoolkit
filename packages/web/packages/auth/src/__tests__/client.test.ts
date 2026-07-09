@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { configureAuth } from '../config'
 import { writeTokens } from '../tokens'
 import { invalidateRefresh } from '../refresh'
-import { authedJson, extractErrorMessage } from '../client'
+import { authedJson, exchangeSsoCode, extractErrorMessage, AuthHttpError } from '../client'
 
 beforeEach(() => {
   localStorage.clear()
@@ -21,6 +21,71 @@ describe('extractErrorMessage', () => {
     expect(extractErrorMessage({ title: 'T' }, 'fb')).toBe('T')
     expect(extractErrorMessage({}, 'fb')).toBe('fb')
     expect(extractErrorMessage(null, 'fb')).toBe('fb')
+  })
+})
+
+describe('exchangeSsoCode', () => {
+  const session = {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      token: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'a@b.com', name: 'A' },
+    }),
+  } as Response
+
+  it('retries once after a network-level failure, then succeeds', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn()
+        // The request never completed (connection drop / offline blip) — the
+        // one-time code was never consumed, so a retry can still redeem it.
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce(session)
+      vi.stubGlobal('fetch', fetchMock)
+
+      const promise = exchangeSsoCode('code-1')
+      await vi.runAllTimersAsync()
+      const { tokens, user } = await promise
+
+      expect(tokens.accessToken).toBe('access-token')
+      expect(user.id).toBe('u1')
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('gives up after one retry when the network stays down', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const promise = exchangeSsoCode('code-1')
+      // Attach the rejection expectation BEFORE advancing timers so the
+      // rejection is never unhandled.
+      const outcome = expect(promise).rejects.toThrow('Failed to fetch')
+      await vi.runAllTimersAsync()
+      await outcome
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does NOT retry an HTTP error (the code is spent — a re-POST cannot help)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { message: 'invalid or expired exchange code' } }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(exchangeSsoCode('code-1')).rejects.toThrow('invalid or expired exchange code')
+    await expect(exchangeSsoCode('code-1')).rejects.toBeInstanceOf(AuthHttpError)
+    expect(fetchMock).toHaveBeenCalledTimes(2) // once per call above — no internal retry
   })
 })
 

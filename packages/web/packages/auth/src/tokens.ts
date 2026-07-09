@@ -1,7 +1,27 @@
 'use client'
 
-import type { AuthTokens } from './types'
+import type { AuthTokens, AuthUser } from './types'
 import { authConfig } from './config'
+
+/** Where the cached user identity lives — a sibling of the tokens key, so it's
+ *  per-site and cleared in lockstep with the tokens (see clearTokens). */
+function userKey(): string {
+  return `${authConfig().storageKey}:user`
+}
+
+/** Read + JSON-parse a localStorage key. Returns null off-browser (SSR), when
+ *  the key is absent, or when the value won't parse. The single home for the
+ *  storage-read contract that the tokens and cached-user blobs both share. */
+function readJson<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+  const raw = window.localStorage.getItem(key)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
 
 export interface BackendTokenFields {
   token?: string
@@ -20,14 +40,7 @@ export function tokensFromResponse(data: BackendTokenFields): AuthTokens {
 }
 
 export function readTokens(): AuthTokens | null {
-  if (typeof window === 'undefined') return null
-  const raw = window.localStorage.getItem(authConfig().storageKey)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as AuthTokens
-  } catch {
-    return null
-  }
+  return readJson<AuthTokens>(authConfig().storageKey)
 }
 
 export function writeTokens(tokens: AuthTokens): void {
@@ -37,13 +50,29 @@ export function writeTokens(tokens: AuthTokens): void {
 
 export function clearTokens(): void {
   if (typeof window === 'undefined') return
-  const { storageKey } = authConfig()
-  window.localStorage.removeItem(storageKey)
-  // The cached identity dies with the session — never leave a `:user` blob behind
-  // a dropped token (parity with @adh-shared/auth's copy, which caches one there).
-  window.localStorage.removeItem(`${storageKey}:user`)
+  window.localStorage.removeItem(authConfig().storageKey)
+  // The cached identity dies with the session — never leave a user blob behind a
+  // dropped token (it'd be inert, since readUser is gated on tokens, but stale).
+  window.localStorage.removeItem(userKey())
 }
 
 export function readAccessToken(): string | null {
   return readTokens()?.accessToken ?? null
+}
+
+/** The last user the backend confirmed for this session, cached so a returning
+ *  visitor's signed-in UI can render from it immediately while /api/auth/me
+ *  revalidates in the background. Only meaningful alongside readTokens(). */
+export function readUser(): AuthUser | null {
+  const user = readJson<AuthUser>(userKey())
+  // Fail-fast on a malformed / old-schema blob (truncated write, hand-edit): a
+  // wrong shape would feed bad identity straight into the optimistic render, so
+  // treat it as absent and let the authoritative /api/auth/me bootstrap fill it.
+  if (!user || typeof user.id !== 'string' || !Array.isArray(user.capabilities)) return null
+  return user
+}
+
+export function writeUser(user: AuthUser): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(userKey(), JSON.stringify(user))
 }

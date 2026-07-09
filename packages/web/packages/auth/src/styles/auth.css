@@ -1,6 +1,13 @@
 /* Shared login card. Themed via CSS custom properties; defaults match the
  * gold-on-dark palette both ADH sites use today. Consumers override any
- * --auth-* variable (e.g. --auth-heading-font) in their globals. */
+ * --auth-* variable (e.g. --auth-heading-font) in their globals.
+ *
+ * DELIBERATELY self-enclosed (standing exception, incl. the raw-hex palette):
+ * the card's buttons/inputs are skinned HERE, not built on @agentic-toolkit/ui
+ * primitives, because the --auth-* variables are a per-site theming contract —
+ * sites override them in their globals — and utility-styled primitives would
+ * fight these rules on specificity and answer to a different token system.
+ * Keep the card's whole skin in this one file. */
 .auth-card {
   --auth-card-bg: #14141a;
   --auth-card-border: #2a2a36;
@@ -142,3 +149,60 @@
 }
 .auth-card__signup-link { color: var(--auth-accent); text-decoration: none; }
 .auth-card__signup-link:hover { opacity: 0.8; }
+
+/* --- Two-factor (MFA) step ------------------------------------------------ */
+.auth-card__mfa { display: flex; flex-direction: column; }
+
+.auth-card__mfa-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--auth-text-muted);
+}
+
+.auth-card__mfa-methods {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--auth-card-border);
+}
+.auth-card__mfa-methods-label {
+  font-size: 0.8125rem;
+  color: var(--auth-text-dim);
+}
+
+.auth-card__mfa-link {
+  padding: 0;
+  margin-top: 1rem;
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  color: var(--auth-accent);
+  text-decoration: none;
+}
+.auth-card__mfa-methods .auth-card__mfa-link { margin-top: 0; }
+.auth-card__mfa-link:hover { opacity: 0.8; }
+.auth-card__mfa-link:disabled { opacity: 0.5; cursor: default; }
+
+/* OIDC server-rendered OTP step: method radios + resend form */
+.auth-card__mfa-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--auth-text);
+}
+.auth-card__mfa-resend {
+  margin-top: 0.75rem;
+}
+
+.auth-card__passkey-link {
+  align-self: center;
+  margin-top: 0.75rem;
+}

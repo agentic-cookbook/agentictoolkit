@@ -11,6 +11,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 describe('refreshAccessToken', () => {
@@ -34,80 +35,67 @@ describe('refreshAccessToken', () => {
     expect(readTokens()?.accessToken).toBe('NEW')
   })
 
-  it('clears tokens and returns null on a non-OK response', async () => {
+  it('clears tokens and returns null on a non-OK response with no concurrent winner', async () => {
     vi.useFakeTimers()
-    try {
-      writeTokens({ accessToken: 'OLD', refreshToken: '' })
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response))
+    writeTokens({ accessToken: 'OLD', refreshToken: '' })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response))
 
-      const p = refreshAccessToken()
-      // Nothing else writes during the loser-race recheck window → it clears.
-      await vi.advanceTimersByTimeAsync(500)
-      const result = await p
+    const p = refreshAccessToken()
+    await vi.advanceTimersByTimeAsync(300) // drain the loser-race wait window
 
-      expect(result).toBeNull()
-      expect(readTokens()).toBeNull()
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(await p).toBeNull()
+    expect(readTokens()).toBeNull()
   })
 
-  // A9(a) — session resurrection. A refresh starts against a valid token; a hub
-  // logout then clears the shared key WITHOUT bumping this module's generation;
-  // the in-flight success must NOT re-write tokens (compare-and-swap fails).
-  it('does not resurrect the session when logout clears tokens mid-refresh', async () => {
+  it('does NOT resurrect the session when logout clears tokens mid-refresh', async () => {
+    // Session-resurrection guard: a 401 kicks off a refresh; the user logs out
+    // (clearTokens) while it is in-flight; the 200 must NOT re-populate storage.
     writeTokens({ accessToken: 'OLD', refreshToken: '' })
     let resolveFetch!: (r: Response) => void
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => new Promise<Response>((r) => { resolveFetch = r })),
+      vi.fn().mockReturnValue(new Promise<Response>((r) => (resolveFetch = r))),
     )
 
-    const p = refreshAccessToken() // captures startAccessToken = 'OLD'
-    clearTokens() // logout mid-flight (shared key cleared; generation untouched)
+    const p = refreshAccessToken()
+    clearTokens() // logout mid-flight
     resolveFetch({ ok: true, json: async () => ({ token: 'NEW' }) } as Response)
 
     expect(await p).toBeNull()
-    expect(readTokens()).toBeNull() // 'NEW' was NOT written back
+    expect(readTokens()).toBeNull()
   })
 
-  // A9(a) — a concurrent refresher / fresh login wrote a DIFFERENT token mid-flight;
-  // this success must adopt that token, not clobber it with its own.
-  it('adopts a token written by a concurrent writer instead of clobbering it', async () => {
+  it('adopts a concurrently-written token on success instead of clobbering it', async () => {
+    // Another refresher / a fresh login wrote a new token while this refresh was
+    // in-flight; the winner's token must be adopted, not overwritten by ours.
     writeTokens({ accessToken: 'OLD', refreshToken: '' })
     let resolveFetch!: (r: Response) => void
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => new Promise<Response>((r) => { resolveFetch = r })),
+      vi.fn().mockReturnValue(new Promise<Response>((r) => (resolveFetch = r))),
     )
 
-    const p = refreshAccessToken() // captures startAccessToken = 'OLD'
-    writeTokens({ accessToken: 'NEWER', refreshToken: '' }) // another writer wins
-    resolveFetch({ ok: true, json: async () => ({ token: 'NEW' }) } as Response)
+    const p = refreshAccessToken()
+    writeTokens({ accessToken: 'WINNER', refreshToken: '' }) // a concurrent winner
+    resolveFetch({ ok: true, json: async () => ({ token: 'MINE' }) } as Response)
 
-    expect(await p).toBe('NEWER')
-    expect(readTokens()?.accessToken).toBe('NEWER') // not clobbered by 'NEW'
+    expect(await p).toBe('WINNER')
+    expect(readTokens()?.accessToken).toBe('WINNER')
   })
 
-  // A9(b) — failure-path loser race: the winner's writeTokens lands DURING the
-  // recheck delay after our 401; adopt it instead of clearing a valid session.
-  it('adopts a delayed winner token on the failure path instead of clearing', async () => {
+  it('failure path: waits for a delayed concurrent winner and adopts it before clearing', async () => {
+    // Loser-race window: the loser 401s first, but the winner's writeTokens has not
+    // landed yet. The loser must wait, re-read, and adopt the winner — not clear.
     vi.useFakeTimers()
-    try {
-      writeTokens({ accessToken: 'OLD', refreshToken: '' })
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response))
+    writeTokens({ accessToken: 'OLD', refreshToken: '' })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response))
 
-      const p = refreshAccessToken()
-      // Let the 401 + the immediate re-check run and reach the recheck delay.
-      await vi.advanceTimersByTimeAsync(0)
-      // The winner's write lands during the wait window.
-      writeTokens({ accessToken: 'WINNER', refreshToken: '' })
-      await vi.advanceTimersByTimeAsync(300)
+    const p = refreshAccessToken()
+    await vi.advanceTimersByTimeAsync(0) // flush fetch + first (immediate) re-check → parked in the wait
+    writeTokens({ accessToken: 'WINNER', refreshToken: '' }) // winner lands DURING the wait
+    await vi.advanceTimersByTimeAsync(300)
 
-      expect(await p).toBe('WINNER')
-      expect(readTokens()?.accessToken).toBe('WINNER') // not cleared
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(await p).toBe('WINNER')
+    expect(readTokens()?.accessToken).toBe('WINNER')
   })
 })

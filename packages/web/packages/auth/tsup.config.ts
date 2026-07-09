@@ -6,6 +6,7 @@ export default defineConfig({
     index: 'src/index.ts',
     client: 'src/client.ts',
     'ui/index': 'src/ui/index.ts',
+    'server/index': 'src/server/index.ts',
   },
   outDir: 'dist',
   format: ['esm'],
@@ -15,7 +16,15 @@ export default defineConfig({
   clean: true,
   dts: false,
   bundle: true,
-  splitting: false,
+  // Code-split so modules shared across entries (notably `context.tsx`, which
+  // creates the AuthContext, and `refresh.ts`/`config.ts`, whose module state —
+  // the single-flight refresh promise, the generation counter, the runtime
+  // config — must exist exactly ONCE) collapse into shared chunks that every
+  // entry imports. Without splitting, `index` and `client` each bundle their
+  // own copy: a useAuth() under /ui can't see the AuthProvider's context, and
+  // invalidateRefresh() from the provider can't cancel a refresh started via
+  // the client entry.
+  splitting: true,
   outExtension: () => ({ js: '.js' }),
   external: [
     'react',

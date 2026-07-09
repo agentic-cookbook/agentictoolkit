@@ -1,5 +1,6 @@
 'use client'
 
+import { reportAuthError } from './report'
 import { authConfig } from './config'
 import { clearTokens, readTokens, tokensFromResponse, writeTokens, type BackendTokenFields } from './tokens'
 
@@ -10,18 +11,19 @@ let inFlight: Promise<string | null> | null = null
 // can't clobber the tokens that login just adopted, nor clear them on logout.
 let generation = 0
 
+// How long a losing concurrent refresh waits — after its own rotated-cookie 401 —
+// for the winning refresher's writeTokens to land before it gives up and clears the
+// session. Two uncoordinated single-flight mutexes (this copy + the toolkit twin)
+// can race over one rotated refresh cookie; without this window the loser can
+// clearTokens() a still-valid session the winner is about to (or just did) refresh.
+const LOSER_RECHECK_DELAY_MS = 300
+
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
 export function invalidateRefresh(): void {
   generation += 1
   inFlight = null
 }
-
-// How long the LOSER of a concurrent refresh waits for the winner's writeTokens
-// to land before giving up and clearing tokens. Narrows the window where the
-// rotated-refresh-cookie 401 handed to the losing refresher would log out a
-// session the winner just refreshed.
-const RACE_RECHECK_MS = 300
-
-const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function refreshAccessToken(): Promise<string | null> {
   if (inFlight) return inFlight
@@ -43,14 +45,15 @@ async function doRefresh(startGen: number): Promise<string | null> {
       body: '{}',
     })
     if (!res.ok) {
-      // First, immediate attempt: a concurrent refresher may ALREADY have written
-      // a fresh token — adopt it rather than clearing a now-valid session.
+      // A concurrent winner may already have written a fresh token — adopt it
+      // rather than clearing a session it just renewed.
       const current = readTokens()
       if (current && current.accessToken !== startAccessToken) return current.accessToken
-      // Loser-race window: the WINNER's writeTokens can land shortly AFTER our
-      // rotated-cookie 401. Wait briefly and re-read ONCE more before clearing,
-      // adopting a token that changed; only clear if it is still unchanged.
-      await delay(RACE_RECHECK_MS)
+      // Loser-race window: the winning refresher may still be in-flight (its
+      // writeTokens hasn't landed yet). Wait briefly and re-read once more before
+      // clearing, so a losing 401 doesn't wipe a session the winner is about to
+      // refresh. Only clear if the token is STILL the one this refresh started from.
+      await delay(LOSER_RECHECK_DELAY_MS)
       const after = readTokens()
       if (after && after.accessToken !== startAccessToken) return after.accessToken
       if (startGen === generation) clearTokens()
@@ -58,20 +61,19 @@ async function doRefresh(startGen: number): Promise<string | null> {
     }
     const next = tokensFromResponse((await res.json()) as BackendTokenFields)
     if (startGen !== generation) return null
-    // Compare-and-swap: only claim the write if the stored token is STILL the one
-    // this refresh started from. A hub logout clears the shared key WITHOUT bumping
-    // our generation, so without this a success landing after logout would
-    // resurrect the session. If storage was cleared (current === null → not equal)
-    // skip the write and return null; if a concurrent refresher / fresh login wrote
-    // a DIFFERENT token, adopt it instead of clobbering.
-    const current = readTokens()?.accessToken ?? null
-    if (current === startAccessToken) {
-      writeTokens(next)
-      return next.accessToken
-    }
-    return current
+    // Session-resurrection guard: only adopt `next` if storage STILL holds the
+    // token this refresh started from. If logout cleared it mid-refresh, writing
+    // would resurrect the session — skip and return null. If another refresher /
+    // a fresh login replaced it, adopt THAT token instead of clobbering it.
+    const currentAccess = readTokens()?.accessToken ?? null
+    if (currentAccess !== startAccessToken) return currentAccess
+    writeTokens(next)
+    return next.accessToken
   } catch (err) {
-    console.error('Token refresh failed', err)
+    // Only a network/parse error reaches here — a non-ok HTTP response (incl. an
+    // expired-token 401) is handled above without throwing — so this is an
+    // unexpected failure worth reporting, not routine session expiry.
+    reportAuthError(err, { feature: 'auth', step: 'tokenRefresh' })
     if (startGen === generation) clearTokens()
     return null
   }
