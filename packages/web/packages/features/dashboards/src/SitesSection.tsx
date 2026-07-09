@@ -44,12 +44,15 @@ export function SitesSection({
   groups,
   onChanged,
   leaf,
+  reservedSlugs,
 }: {
   sites: SiteView[] | null;
   groups: SiteGroupView[];
   onChanged: () => Promise<void>;
   /** Deep-linkable site selection (`…/dashboards/sites/<siteId>`); omit for internal. */
   leaf?: TopicLeaf;
+  /** The HOST's reserved slug words (its URL-namespace protection) — rejected on save. */
+  reservedSlugs?: ReadonlySet<string>;
 }) {
   const renderRecordAffordance = useRecordAffordance();
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
@@ -71,6 +74,7 @@ export function SitesSection({
       siteValidate(
         draft,
         others.filter((o) => o.groupId === draft.groupId).map((o) => o.slug),
+        reservedSlugs,
       ),
     differs: siteDiffers,
     normalize: siteNormalize,
@@ -137,6 +141,7 @@ export function SitesSection({
             siteValidate(
               d,
               (sites ?? []).filter((s) => s.groupId === d.groupId).map((s) => s.slug),
+              reservedSlugs,
             )
           }
           create={(d) => createSite({ name: d.name, slug: d.slug, groupId: d.groupId })}

@@ -17,6 +17,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { StackLevels, ToolbarPortal, useRailHost, useRecordAffordance } from "@agentic-toolkit/resource";
+import { fmtDate } from "./format";
 import {
   api,
   type UserService,
@@ -27,12 +28,6 @@ import {
 } from "@agentic-toolkit/data/personas";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function fmt(ts: string | null | undefined): string {
-  if (!ts) return "—";
-  const d = new Date(ts);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
 
 function fmtNum(n: number | undefined): string {
   if (n === undefined || n === null) return "—";
@@ -470,7 +465,7 @@ function ServiceEditor({
             trailing={
               liveService.lastConnectedAt ? (
                 <span className="font-mono text-[0.65rem] text-apt-text-dim">
-                  Last: {fmt(liveService.lastConnectedAt)}
+                  Last: {fmtDate(liveService.lastConnectedAt)}
                 </span>
               ) : undefined
             }
@@ -500,7 +495,7 @@ function ServiceEditor({
             trailing={
               liveService.modelsFetchedAt ? (
                 <span className="font-mono text-[0.65rem] text-apt-text-dim">
-                  Fetched: {fmt(liveService.modelsFetchedAt)}
+                  Fetched: {fmtDate(liveService.modelsFetchedAt)}
                 </span>
               ) : undefined
             }

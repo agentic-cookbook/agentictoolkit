@@ -12,7 +12,9 @@ export type {
   RenderTopicPaneCtx,
 } from "./EcosystemsFeature";
 
-export { parseEcosystemsPath } from "./parse-path";
+// The URL grammar lives at the SERVER-SAFE ./parse subpath ONLY — deliberately NOT
+// re-exported here: this barrel's dist is a "use client" module, so an RSC page that
+// imported the parse helper from it would throw in prod (render-only client refs).
 export type { EcosystemsPathSelection } from "./parse-path";
 
 // The opt-in per-ecosystem capability gate — also consumed standalone by the hub's

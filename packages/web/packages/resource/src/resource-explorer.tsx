@@ -16,7 +16,7 @@ import {
 } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ResourceLanding } from "./resource-landing";
-import { StackLevels, useRailHost } from "./rail-host";
+import { StackLevels } from "./rail-host";
 import { RailHostBoundary } from "./standalone-rail-host";
 
 /** The deep-linkable LEAF inside a topic (e.g. the selected application within the
@@ -119,7 +119,10 @@ export function ResourceExplorer<T>({
   /** The "All" card-landing config — required for the classic list-first arrangement; omit in
    *  `promoteTopics` mode, which has no "All" landing (the resource list moves into a topic). */
   landing?: ResourceLandingConfig<T>;
-  newLabel: string;
+  /** The "New …" affordance label. Omit to SUPPRESS creation entirely (rail `+` and
+   *  dialog) — for a host state where a create could never succeed (e.g. an unscoped
+   *  feature-site mount awaiting the platform scoping decision). */
+  newLabel?: string;
   /** The "New …" dialog; call onCreated(newId) to switch to the created resource. Optional in
    *  `promoteTopics` mode, where the "New" affordance lives on the promoted resource-list topic
    *  (which owns its own dialog) rather than on a top-level rail. */
@@ -161,7 +164,7 @@ export function ResourceExplorer<T>({
         ? `${label} (${getLabel(active)})`
         : `${label} (${getLabel(active)} ${nameSuffix})`;
 
-  const newButtonLabel = newLabel.replace(/…+$/, "").trim();
+  const newButtonLabel = newLabel?.replace(/…+$/, "").trim();
 
   // No resume / no last-id tracking: nothing is auto-selected. A bare base path shows the "All"
   // landing (every entity as a card); the user picks an entity (and then a topic) themselves.
@@ -190,8 +193,9 @@ export function ResourceExplorer<T>({
     onSelect: (id) => router.push(`${basePath}/${id}`, { scroll: false }),
     onClear: () => router.push(basePath, { scroll: false }),
     emptyLabel: landing?.emptyLabel ?? "",
-    // "New …" is a right-justified `+` in the resource list header.
-    onNew: () => setNewOpen(true),
+    // "New …" is a right-justified `+` in the resource list header — absent entirely
+    // when the host suppressed creation (newLabel omitted).
+    onNew: newLabel != null ? () => setNewOpen(true) : undefined,
     newLabel: newButtonLabel,
   };
   const topicLevel: TopicLevel = {
@@ -215,7 +219,6 @@ export function ResourceExplorer<T>({
   // levels into the host's one merged HierarchicalTopicDetail (the breadcrumb tail — workspace ▸
   // feature ▸ entity ▸ topic — is derived from these levels). Standalone (no host — e.g. a feature
   // site's /home, or /home/persona-services), render an own HTD below.
-  const chrome = useRailHost();
 
   // The deep-linkable leaf inside the active topic (the 5th level): its id lives in the
   // URL after `<id>/<topic>`, and selecting one re-routes there. A master/detail topic

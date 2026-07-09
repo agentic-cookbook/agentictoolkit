@@ -1,0 +1,35 @@
+# The web workspace's own gate — this repo is a shared submodule consumed by more
+# than one host repo, so its suites must run AT THE SOURCE on every push/PR, not
+# only inside a consumer's CI at whatever pinned SHA it happens to hold.
+name: web-tests
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/web/**", ".github/workflows/web-tests.yml"]
+  pull_request:
+    paths: ["packages/web/**", ".github/workflows/web-tests.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: packages/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Per-package vitest suites (the root `test` script is the same recursive run).
+      # Deliberately NOT `lint`: the dormant layout/content/controls packages carry
+      # pre-existing type rot (they're excluded from every consumer's build filters),
+      # and per-package tsc resolves sibling DIST types that a fresh checkout hasn't
+      # built — gate types in consumers (which build first) until that's untangled.
+      - run: pnpm -r --if-present run test

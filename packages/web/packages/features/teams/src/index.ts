@@ -10,4 +10,6 @@ export { TeamsFeature } from "./TeamsFeature";
 
 // The Teams URL grammar, owned here so a host can't drift its parsing away from
 // what the feature expects.
-export { parseTeamsPath, type TeamsPathSelection } from "./parse-path";
+// The URL grammar lives at the SERVER-SAFE ./parse subpath ONLY — deliberately NOT
+// re-exported here: this barrel's dist is a "use client" module, so an RSC page that
+// imported the parse helper from it would throw in prod (render-only client refs).

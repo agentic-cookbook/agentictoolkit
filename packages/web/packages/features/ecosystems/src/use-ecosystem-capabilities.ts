@@ -8,12 +8,11 @@
 // "The ecosystem the hub currently views": when the caller knows it (EcosystemsFeature
 // passes the selected ecosystem's id), we read that one directly. Off a
 // selected-ecosystem context — a standalone `/<slug>/messaging` route, which carries
-// no ecosystem in its URL — we resolve the ecosystem tied to the current workspace
-// `[slug]` segment (its own slug, else the workspace's default/primary ecosystem),
-// NOT an arbitrary alphabetical `list()[0]` (which also hides default ecosystems).
+// no ecosystem in its URL — the HOST passes its workspace slug and we resolve that
+// workspace's default/primary ecosystem, NOT an arbitrary alphabetical `list()[0]`
+// (which also hides default ecosystems).
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
 import { useAuth } from "@agentic-toolkit/auth";
 import { ecosystemsApi } from "@agentic-toolkit/data/ecosystems";
 
@@ -31,15 +30,20 @@ export interface EcosystemCapabilities {
 
 /**
  * The opt-in capabilities of an ecosystem. Pass the id the caller already holds (the
- * Ecosystems feature's selected ecosystem); omit it to gate off the ecosystem tied to the
- * current workspace `[slug]` segment. Only fetches for a signed-in user — the
+ * Ecosystems feature's selected ecosystem); or pass `workspaceSlug` (the host's route
+ * slug — like every other seam on this branch, supplied by the host rather than read
+ * from useParams here, so a host without a [slug] route — or with an unrelated [slug]
+ * param — fails visibly at the seam instead of silently resolving a foreign slug) to
+ * gate off that workspace's primary ecosystem. Only fetches for a signed-in user — the
  * capability read is authed, so it stays idle on public/logged-out surfaces.
  */
-export function useEcosystemCapabilities(ecosystemId?: string): EcosystemCapabilities {
+export function useEcosystemCapabilities(
+  ecosystemId?: string,
+  workspaceSlug?: string,
+): EcosystemCapabilities {
   const { user } = useAuth();
   const signedIn = user != null;
-  const params = useParams<{ slug?: string }>();
-  const slug = params?.slug;
+  const slug = workspaceSlug;
 
   // Resolve the fallback "current" ecosystem only when no explicit id is supplied,
   // from the current workspace slug (react-query dedupes concurrent readers).
@@ -65,6 +69,8 @@ export function useEcosystemCapabilities(ecosystemId?: string): EcosystemCapabil
 }
 
 /** True when the (explicit or primary) ecosystem has the messaging feature enabled. */
-export function useHasMessaging(ecosystemId?: string): boolean {
-  return useEcosystemCapabilities(ecosystemId).capabilities.includes(MESSAGING_CAPABILITY);
+export function useHasMessaging(ecosystemId?: string, workspaceSlug?: string): boolean {
+  return useEcosystemCapabilities(ecosystemId, workspaceSlug).capabilities.includes(
+    MESSAGING_CAPABILITY,
+  );
 }

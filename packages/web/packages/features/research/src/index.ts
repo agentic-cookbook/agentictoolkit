@@ -5,7 +5,9 @@
 export { ResearchFeature } from "./ResearchFeature";
 
 // The /research URL grammar, owned here so both hosts parse it identically.
-export { parseResearchPath, type ResearchPathSelection } from "./parse-path";
+// The URL grammar lives at the SERVER-SAFE ./parse subpath ONLY — deliberately NOT
+// re-exported here: this barrel's dist is a "use client" module, so an RSC page that
+// imported the parse helper from it would throw in prod (render-only client refs).
 
 // The embedded pane, exported for the hub's ecosystem topic-rail usage
 // (`renderFeaturePanel("research")` in feature-panels.tsx), which renders it

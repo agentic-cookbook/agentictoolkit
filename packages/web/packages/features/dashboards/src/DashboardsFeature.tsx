@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layers, Globe } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 
@@ -34,6 +34,7 @@ export function DashboardsFeature({
   basePath,
   section,
   rowId,
+  reservedSlugs,
 }: {
   /** The feature's URL base (drives the routes): the hub route passes `/<slug>/dashboards`.
    *  Supplied by the host rather than derived here, so the same feature mounts under either
@@ -43,31 +44,44 @@ export function DashboardsFeature({
   section?: string;
   /** The selected group/site row id (second path segment), or undefined for none. */
   rowId?: string;
+  /** The HOST's reserved slug words, as an ARRAY (this prop crosses the RSC boundary from
+   *  server route pages, so it must be serializable — a Set is not). The pre-extraction
+   *  hub bound its list implicitly via its validateSlug wrapper. */
+  reservedSlugs?: readonly string[];
 }) {
   // The hook stays unconditional (rules of hooks); its pushes are only reachable when
   // basePath is set — the embedded mode below never builds URL-driven selections.
   const { pushSegment, pushNested } = useBasePathRoute(basePath ?? "");
+  // Set once per identity; the sections take the Set the validators consume.
+  const reserved = useMemo(
+    () => (reservedSlugs ? new Set(reservedSlugs) : undefined),
+    [reservedSlugs],
+  );
   const [groups, setGroups] = useState<SiteGroupView[] | null>(null);
   const [sites, setSites] = useState<SiteView[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // One error slot PER loader: the two loads run concurrently, so a shared slot let one
+  // loader's success wipe the other's failure — leaving that section's list on a permanent
+  // unexplained "Loading…" (its items stay null) with no message.
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [sitesError, setSitesError] = useState<string | null>(null);
 
   const refreshGroups = useCallback(async () => {
     try {
       setGroups(await listGroups());
-      setLoadError(null);
+      setGroupsError(null);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "site-monitoring", step: "load" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load groups.");
+      setGroupsError(err instanceof Error ? err.message : "Failed to load groups.");
     }
   }, []);
 
   const refreshSites = useCallback(async () => {
     try {
       setSites(await listSites());
-      setLoadError(null);
+      setSitesError(null);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "site-monitoring", step: "load" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load sites.");
+      setSitesError(err instanceof Error ? err.message : "Failed to load sites.");
     }
   }, []);
 
@@ -90,7 +104,9 @@ export function DashboardsFeature({
   // as rail-host publications; on a bare feature site (no hub shell) the boundary self-hosts.
   return (
     <RailHostBoundary>
-      {loadError && <p className="px-6 pt-4 text-sm text-apt-red">{loadError}</p>}
+      {(groupsError ?? sitesError) && (
+        <p className="px-6 pt-4 text-sm text-apt-red">{groupsError ?? sitesError}</p>
+      )}
       <StackGroupDetail
         levelId="dashboards-sections"
         title="Dashboards"
@@ -107,6 +123,7 @@ export function DashboardsFeature({
               <GroupsSection
                 groups={groups}
                 leaf={leaf}
+                reservedSlugs={reserved}
                 onChanged={async () => {
                   await refreshGroups();
                   // A deleted group is stripped from site membership, so refresh sites too to keep
@@ -121,7 +138,7 @@ export function DashboardsFeature({
             label: "Sites",
             icon: <Globe size={16} aria-hidden />,
             render: () => (
-              <SitesSection sites={sites} groups={groups ?? []} leaf={leaf} onChanged={refreshSites} />
+              <SitesSection sites={sites} groups={groups ?? []} leaf={leaf} reservedSlugs={reserved} onChanged={refreshSites} />
             ),
           },
         ]}

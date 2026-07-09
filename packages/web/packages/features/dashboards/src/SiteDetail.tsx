@@ -26,10 +26,14 @@ export function siteToInput(s: SiteView): SiteDraft {
 }
 
 /** Returns an error message, or null when the draft is valid. */
-export function siteValidate(draft: SiteDraft, takenSlugs: string[]): string | null {
+export function siteValidate(
+  draft: SiteDraft,
+  takenSlugs: string[],
+  reserved?: ReadonlySet<string>,
+): string | null {
   if (!draft.name.trim()) return "Site name is required.";
   const slug = draft.slug.trim();
-  const slugError = validateSlug(slug);
+  const slugError = validateSlug(slug, reserved);
   if (slugError) return slugError;
   if (takenSlugs.includes(slug)) return `Slug "${slug}" is already in use.`;
   if (!draft.groupId) return "Select a group for this site.";

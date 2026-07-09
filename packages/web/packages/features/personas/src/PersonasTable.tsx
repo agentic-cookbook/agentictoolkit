@@ -2,11 +2,7 @@
 
 import type { Persona } from "@agentic-toolkit/data/personas";
 
-function fmt(ts: string | null | undefined): string {
-  if (!ts) return "—";
-  const d = new Date(ts);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
+import { fmtDate } from "./format";
 
 /**
  * The "All personas" landing: a compact index table (Name / Slug / Service /
@@ -54,7 +50,7 @@ export function PersonasTable({
                 <td className="px-3 py-2 font-mono text-xs text-apt-text-muted">{p.slug}</td>
                 <td className="px-3 py-2 text-apt-text-muted">{p.serviceName ?? "—"}</td>
                 <td className="px-3 py-2 font-mono text-xs text-apt-text-muted">{p.model ?? "—"}</td>
-                <td className="px-3 py-2 font-mono text-xs text-apt-text-dim">{fmt(p.updatedAt)}</td>
+                <td className="px-3 py-2 font-mono text-xs text-apt-text-dim">{fmtDate(p.updatedAt)}</td>
                 <td className="px-3 py-2 text-right">
                   {profileUrlFor && (
                     <a

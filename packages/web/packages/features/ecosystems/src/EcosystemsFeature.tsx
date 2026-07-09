@@ -213,8 +213,8 @@ export function EcosystemsFeature({
 }: EcosystemsFeatureProps): ReactElement {
   const router = useRouter();
   // Feature links are workspace-relative: <basePath>/... The host-supplied slug stays
-  // constant while navigating within this workspace (so the FTD cache/last-id keys are
-  // stable and don't re-flash), and switching workspaces re-scopes all three.
+  // constant while navigating within this workspace (so the FTD cache/last-id keys stay
+  // stable and don't re-flash), and switching workspaces re-scopes the whole rail.
   const slug = workspaceSlug;
   const { items: ecosystems, reload, error } = useResourceList(
     basePath,
@@ -296,9 +296,17 @@ export function EcosystemsFeature({
   // dirty; reset every time the dialog opens so the default (child-of-scoped) is never sticky.
   const [createTopLevel, setCreateTopLevel] = useState(false);
 
+  // The ONE way the create dialog opens — the explicit flag makes each site's intent
+  // (top-level vs child-of-scoped) true by construction instead of relying on scopedId
+  // happening to be undefined on some paths (the drift a review round caught).
+  const openCreateDialog = (topLevel: boolean) => {
+    setCreateTopLevel(topLevel);
+    setNewOpen(true);
+  };
+
   // Opt-in capability gate: hide capability-marked topics (e.g. Messaging) unless the
   // SCOPED ecosystem has enabled them (default off). Non-gated topics always show.
-  const { capabilities } = useEcosystemCapabilities(scopedId);
+  const { capabilities } = useEcosystemCapabilities(scopedId, workspaceSlug);
   const visibleTopics = topicsConfig.filter(
     (t) => t.capability == null || capabilities.includes(t.capability),
   );
@@ -356,10 +364,7 @@ export function EcosystemsFeature({
           <ChildEcosystemsLevel
             items={children}
             basePath={basePath}
-            onNew={() => {
-              setCreateTopLevel(false);
-              setNewOpen(true);
-            }}
+            onNew={() => openCreateDialog(false)}
           />
         );
       }
@@ -431,6 +436,20 @@ export function EcosystemsFeature({
     />
   );
 
+  // A slugged host whose ONE default-resolution request failed (retry: false): without a
+  // defined surface the promoted rail holds "Loading…" forever with dead topic clicks. A
+  // reload retries the lookup; deep-linked /<ecoId> paths never hit this (slug unused).
+  if (workspaceSlug != null && activeEcoId == null && defaultIdQuery.isError) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+        <EmptyState
+          title="Couldn't load this workspace"
+          description="The workspace's default ecosystem didn't resolve — reload the page to retry."
+        />
+      </div>
+    );
+  }
+
   // A slug-less host (a feature-site mount): default resolution is disabled (§2), so a bare
   // path renders a DEFINED unscoped state — the ecosystem card landing — never
   // ResourceExplorer's promoted "Loading…" hold. Cards route to <basePath>/<id>, the
@@ -438,6 +457,15 @@ export function EcosystemsFeature({
   // list() hides a hidden default ecosystem, so a tenant whose only ecosystem is that
   // default sees the empty label — accepted until §2 decides site-mount scoping.
   if (workspaceSlug == null && activeEcoId == null) {
+    if (error != null && ecosystems == null) {
+      // The list failed before anything arrived: a bare landing would sit on "Loading…"
+      // forever — the exact dead surface this unscoped state exists to prevent.
+      return (
+        <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+          <EmptyState title="Couldn't load ecosystems" description={error} />
+        </div>
+      );
+    }
     return (
       <>
         <ResourceLanding
@@ -451,10 +479,7 @@ export function EcosystemsFeature({
           getSublabel={(e) => e.identifier}
           cardHref={(e) => `${basePath}/${e.id}`}
           renderMeta={() => null}
-          onNew={() => {
-            setCreateTopLevel(false);
-            setNewOpen(true);
-          }}
+          onNew={() => openCreateDialog(true)}
           newLabel="New Ecosystem"
         />
         {createDialog}
@@ -471,7 +496,7 @@ export function EcosystemsFeature({
             title="No ecosystems yet"
             description="Create your first ecosystem to get started."
             action={
-              <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => openCreateDialog(true)}>
                 <Plus size={16} aria-hidden />
                 New Ecosystem
               </Button>

@@ -8,12 +8,16 @@ export const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 
 /** Best-effort conversion of free text into a candidate slug. */
 export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
+  return (
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .slice(0, 40)
+      // AFTER the cut: truncation at 40 can land on a hyphen, and a candidate with a
+      // leading/trailing hyphen fails SLUG_REGEX (and any backend slug rules).
+      .replace(/^-+|-+$/g, "")
+  );
 }
 
 /** Returns a human-readable error for an invalid slug, or `null` if valid.

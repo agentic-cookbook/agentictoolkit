@@ -39,11 +39,14 @@ export function GroupsSection({
   groups,
   onChanged,
   leaf,
+  reservedSlugs,
 }: {
   groups: SiteGroupView[] | null;
   onChanged: () => Promise<void>;
   /** Deep-linkable group selection (`…/dashboards/groups/<groupId>`); omit for internal. */
   leaf?: TopicLeaf;
+  /** The HOST's reserved slug words (its URL-namespace protection) — rejected on save. */
+  reservedSlugs?: ReadonlySet<string>;
 }) {
   const renderRecordAffordance = useRecordAffordance();
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
@@ -56,7 +59,7 @@ export function GroupsSection({
     urlSelection,
     blank: groupBlank,
     toInput: groupToInput,
-    validate: (draft, others) => groupValidate(draft, others.map((o) => o.slug)),
+    validate: (draft, others) => groupValidate(draft, others.map((o) => o.slug), reservedSlugs),
     differs: groupDiffers,
     normalize: groupNormalize,
     create: (input) =>
@@ -119,7 +122,7 @@ export function GroupsSection({
           ariaLabel="New group"
           heading="New group"
           blank={groupBlank}
-          validate={(d) => groupValidate(d, (groups ?? []).map((g) => g.slug))}
+          validate={(d) => groupValidate(d, (groups ?? []).map((g) => g.slug), reservedSlugs)}
           create={(d) =>
             createGroup({
               name: d.name,

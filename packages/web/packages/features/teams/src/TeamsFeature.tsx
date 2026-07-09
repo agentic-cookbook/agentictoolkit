@@ -26,7 +26,7 @@ import { TeamDetail, teamBlank, teamValidate } from "./TeamDetail";
  */
 export function TeamsFeature({
   basePath,
-  workspaceSlug,
+  workspaceSlug: slug,
   all,
   activeTeamId,
   activeTopic,
@@ -65,19 +65,24 @@ export function TeamsFeature({
   // package doesn't depend on @tanstack/react-query (not a declared dependency here), so
   // it's a plain per-mount fetch instead — a small, easily-reversible loss of that one
   // cross-tab cache hit, not a behavior change to the Teams feature itself.
-  const slug = workspaceSlug;
   const [ecosystemId, setEcosystemId] = useState<string | undefined>(undefined);
+  // The lookup's terminal non-success states get DEFINED surfaces (never an eternal
+  // unlabeled spinner, which reads as an outage): "failed" = the fetch errored (no retry,
+  // matching the pre-move `retry: false`); "none" = the slug resolved to a workspace with
+  // no primary ecosystem (a first-run tenant).
+  const [lookup, setLookup] = useState<"pending" | "resolved" | "failed" | "none">("pending");
   useEffect(() => {
     if (slug == null) return;
     let alive = true;
     ecosystemsApi
       .ecosystemIdForSlug(slug)
       .then((id) => {
-        if (alive) setEcosystemId(id ?? undefined);
+        if (!alive) return;
+        setEcosystemId(id ?? undefined);
+        setLookup(id != null ? "resolved" : "none");
       })
       .catch(() => {
-        // Best-effort: leave ecosystemId unset — the list stays in its Loading state
-        // (mirrors the pre-move lookup's `retry: false`, no crash/toast on failure).
+        if (alive) setLookup("failed");
       });
     return () => {
       alive = false;
@@ -93,12 +98,16 @@ export function TeamsFeature({
     () =>
       ecosystemId
         ? teamsApi.list(ecosystemId)
-        : slug != null
+        : slug != null && lookup === "pending"
           ? new Promise<Team[]>(() => {}) // slug resolving: leave items = null (Loading…)
-          : Promise.resolve<Team[]>([]), // unscoped host: defined empty state (see landing)
-    [ecosystemId, slug],
+          : Promise.resolve<Team[]>([]), // unscoped / failed / no-ecosystem: defined empty state
+    [ecosystemId, slug, lookup],
   );
   const { items: teams, reload, error } = useResourceList(basePath, load);
+  // Creation can only ever succeed where an ecosystem can resolve: a slugged host whose
+  // lookup hasn't terminally failed. (While "pending" the list itself is still Loading,
+  // so the affordance is unreachable anyway.)
+  const canCreate = slug != null && lookup !== "failed" && lookup !== "none";
 
   // Member counts for the "All" landing cards (one request, grouped per team). Decorative
   // — failures are ignored — and refetched whenever the team list reloads (create/delete).
@@ -177,14 +186,21 @@ export function TeamsFeature({
       nameSuffix="Team"
       itemIcon={<UsersRound size={16} aria-hidden />}
       topics={topics}
-      newLabel="New Team…"
+      // Creation is suppressed whenever it could never succeed on this host: an unscoped
+      // site mount (§2 pending) or a workspace whose ecosystem failed to resolve / doesn't
+      // exist — otherwise the rail offers a dialog whose create is permanently rejected.
+      newLabel={canCreate ? "New Team…" : undefined}
       landing={{
         title: "All teams",
         help: "Pick a team to manage its settings, members, and permissions.",
         emptyLabel:
           slug == null
             ? "Teams aren't available on this site yet — open them from your hub workspace."
-            : "No teams yet.",
+            : lookup === "failed"
+              ? "Couldn't load this workspace — reload the page to retry."
+              : lookup === "none"
+                ? "This workspace has no ecosystem to hold teams yet."
+                : "No teams yet.",
         getSublabel: (t) => t.identifier,
         renderMeta: (t) => {
           const n = memberCounts.get(t.id) ?? 0;
@@ -195,16 +211,18 @@ export function TeamsFeature({
           );
         },
       }}
-      renderDialog={(onClose, onCreated) => (
+      renderDialog={canCreate ? (onClose, onCreated) => (
         <CreateResourceDialog
           ariaLabel="New team"
           heading="New team"
           blank={teamBlank}
           validate={(d) => teamValidate(d, (teams ?? []).map((t) => t.identifier))}
           create={(d) => {
-            // Guarded for safety — the dialog only opens after the list (hence the
-            // ecosystem) has resolved, so this rejection is effectively unreachable.
-            if (!ecosystemId) return Promise.reject(new Error("Workspace is still loading."));
+            // Guarded for safety — the create affordance only renders on a host whose
+            // ecosystem can resolve (canCreate), so this rejection covers the narrow
+            // window before that resolution completes.
+            if (!ecosystemId)
+              return Promise.reject(new Error("The workspace hasn't finished loading — try again."));
             return teamsApi.create(
               { displayName: d.displayName.trim(), identifier: d.identifier.trim() },
               ecosystemId,
@@ -216,7 +234,7 @@ export function TeamsFeature({
             <TeamDetail draft={draft} onChange={onChange} error={error} />
           )}
         />
-      )}
+      ) : undefined}
     />
   );
 }

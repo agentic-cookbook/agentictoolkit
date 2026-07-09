@@ -21,11 +21,17 @@ export function groupToInput(g: SiteGroupView): GroupDraft {
   return { name: g.name, slug: g.slug, retentionDays: String(g.retentionDays) };
 }
 
-/** Returns an error message, or null when the draft is valid. */
-export function groupValidate(draft: GroupDraft, takenSlugs: string[]): string | null {
+/** Returns an error message, or null when the draft is valid. `reserved` is the HOST's
+ *  reserved-word set (the hub passes its route-namespace list) — the pre-extraction hub
+ *  version bound it implicitly via the host's validateSlug wrapper. */
+export function groupValidate(
+  draft: GroupDraft,
+  takenSlugs: string[],
+  reserved?: ReadonlySet<string>,
+): string | null {
   if (!draft.name.trim()) return "Group name is required.";
   const slug = draft.slug.trim();
-  const slugError = validateSlug(slug);
+  const slugError = validateSlug(slug, reserved);
   if (slugError) return slugError;
   if (takenSlugs.includes(slug)) return `Slug "${slug}" is already in use.`;
   const days = parseInt(draft.retentionDays, 10);
