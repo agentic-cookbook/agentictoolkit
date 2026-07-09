@@ -1,7 +1,8 @@
-// The Personas URL grammar — the ONE authoritative parse of a personas route's path segments
-// into PersonasFeature's selection props. A host (the hub's /[slug]/personas/[[...topic]] route,
-// or a feature site's own catch-all) calls this instead of re-deriving the same
-// `[personaId, subTab]` destructure, so a grammar change can't drift a host's parse.
+// The SITE-ENTRY Personas URL grammar — the authoritative parse for hosts that mount
+// PersonasFeature directly (the personabuilder site's /home catch-all): two segments,
+// persona then editor sub-tab. NOTE the hub does NOT use this module: its grouped
+// /[slug]/personas route is a THREE-level grammar (member ▸ entity ▸ sub-tab) owned by
+// PersonasGroupRoute — changing this parse changes site mounts only.
 
 /** The selection PersonasFeature renders, parsed from a route's path segments. Maps 1:1 onto
  *  PersonasFeature's props (the host supplies `basePath`). */

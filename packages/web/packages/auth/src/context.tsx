@@ -31,7 +31,11 @@ import {
  *  matching the 'local' branch of the adh registry's detectEnv so the silent-SSO
  *  skip below behaves identically whether a host consumes this package directly
  *  or through the @adh-shared/auth shim. */
-function isLocalHostname(hostname: string): boolean {
+/** The local-development hostname rule gating the silent-SSO skip. EXPORTED so the adh
+ *  monorepo's parity test can pin it against @adh-shared/adh's detectEnv 'local' branch —
+ *  the two are deliberate mirrors (this package can't import the host registry), and an
+ *  unpinned mirror is how environment-dependent login loops slip in. */
+export function isLocalHostname(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/:\d+$/, '')
   return (
     host === 'localhost' ||

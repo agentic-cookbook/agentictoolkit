@@ -113,6 +113,10 @@ export function TeamsFeature({
   // — failures are ignored — and refetched whenever the team list reloads (create/delete).
   const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
   useEffect(() => {
+    // Only when there are cards to decorate: an unscoped host (list withheld pending §2)
+    // or an empty tenant must not issue the cross-team counts read — the list's scoping
+    // posture and this sibling fetch should agree.
+    if (teams == null || teams.length === 0) return;
     let live = true;
     teamMembersApi
       .counts()

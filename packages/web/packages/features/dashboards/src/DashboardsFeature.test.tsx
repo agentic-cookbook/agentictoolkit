@@ -25,8 +25,9 @@ import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 
 // DashboardsFeature uses next/navigation's useRouter internally (via useBasePathRoute); a stub is
 // enough (selection is prop-driven, not click-driven, in these assertions).
+const routerPush = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push: routerPush, replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
 vi.mock("@agentic-toolkit/data/monitored-sites", () => ({
@@ -254,5 +255,20 @@ describe("DashboardsFeature", () => {
         groupId: "g1",
       }),
     );
+  });
+});
+
+describe("DashboardsFeature embedded mode (no basePath)", () => {
+  it("selects Groups IN PLACE — no router navigation away from the host surface", async () => {
+    render(
+      <Harness>
+        <DashboardsFeature />
+      </Harness>,
+    );
+    // The section picker publishes into the host rail; picking Groups must stay internal
+    // (the pre-extraction SiteMonitoringTab contract the ecosystem rail depends on).
+    fireEvent.click(await screen.findByRole("button", { name: "Groups" }));
+    expect(await screen.findByText("Core APIs")).toBeTruthy();
+    expect(routerPush).not.toHaveBeenCalled();
   });
 });

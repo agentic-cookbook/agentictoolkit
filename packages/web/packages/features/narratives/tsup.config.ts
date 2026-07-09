@@ -2,7 +2,9 @@ import { defineConfig } from 'tsup'
 import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  // parse-path is its OWN entry (see the sibling features): directive-free, callable
+  // from RSC hosts.
+  entry: ['src/index.ts', 'src/parse-path.ts'],
   outDir: 'dist',
   format: ['esm'],
   target: 'es2022',
