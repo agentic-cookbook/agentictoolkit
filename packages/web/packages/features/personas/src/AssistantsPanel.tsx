@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ErrorText, useAction } from "@agentic-toolkit/crud";
+import { useAction } from "@agentic-toolkit/crud";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Button } from "@agentic-toolkit/ui/components/button";

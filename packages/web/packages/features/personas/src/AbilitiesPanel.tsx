@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useMemo } from "react";
-import { ErrorText, useAction } from "@agentic-toolkit/crud";
+import { useAction } from "@agentic-toolkit/crud";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { Switch } from "@agentic-toolkit/ui/components/switch";

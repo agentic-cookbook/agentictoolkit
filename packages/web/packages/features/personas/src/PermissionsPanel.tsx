@@ -1,6 +1,7 @@
 "use client";
 
-import { ErrorText, useAction } from "@agentic-toolkit/crud";
+import { useAction } from "@agentic-toolkit/crud";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { Button } from "@agentic-toolkit/ui/components/button";

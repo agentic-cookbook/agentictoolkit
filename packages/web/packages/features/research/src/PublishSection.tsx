@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Check, Copy, Globe } from "lucide-react";
 
-import { ErrorText, useAction } from "@agentic-toolkit/crud";
+import { useAction } from "@agentic-toolkit/crud";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
