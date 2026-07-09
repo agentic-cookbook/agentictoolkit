@@ -350,11 +350,6 @@ export function EcosystemsFeature({
           />
         );
       }
-      if (t.id === "applications" || t.id === "integrations") {
-        // Top-level (non-grouped) host-owned config topics: thread the URL leaf so a
-        // selected entity deep-links (/ecosystems/<id>/<topic>/<entityId>).
-        return renderTopicPane(t.id, { ecosystemId: ecoId, title: titleFor(t.label), leaf });
-      }
       if (t.id === "child-ecosystems") {
         // The ecosystems THIS one owns — `children` is server-scoped to owner_id = the scoped
         // ecosystem (its child namespace), so it shows only genuine children, not the tenant-wide
@@ -387,8 +382,17 @@ export function EcosystemsFeature({
           />
         );
       }
-      // The rest (Communities / Messaging / Research / Dashboards) reuse the feature's own content.
-      return renderFeaturePanel(t.id);
+      // Everything else is host-owned. First chance goes to the host's renderTopicPane —
+      // its top-level config panes (Applications / Integrations / Auth / Sign-in apps /
+      // whatever it adds next) — with the URL leaf threaded so a selected entity
+      // deep-links (/ecosystems/<id>/<topic>/<entityId>). Topics the host doesn't claim
+      // (it returns null) are its workspace features (Billing / Communities / Messaging /
+      // Research / Dashboards) → renderFeaturePanel. Dispatching on the host's answer
+      // instead of a topic-id list here means the host can add a config topic without a
+      // toolkit change (and can't have one silently fall through, the Phase-2 port bug
+      // that blanked Auth / Sign-in apps).
+      const pane = renderTopicPane(t.id, { ecosystemId: ecoId, title: titleFor(t.label), leaf });
+      return pane ?? renderFeaturePanel(t.id);
     },
   }));
 
