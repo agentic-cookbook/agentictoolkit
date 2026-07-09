@@ -19,6 +19,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { DetailFooter, MasterDetailLayout, useRecordAffordance } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 /**
  * Topic/details list of a single site's endpoints: pick an endpoint on the
@@ -52,7 +53,7 @@ export function EndpointsEditor({ siteId }: { siteId: string }) {
 
   return (
     <>
-      {loadError && <p className="mb-3 text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} className="mb-3" />
 
       <div className="mb-3 flex justify-end">
         {renderRecordAffordance?.({
@@ -299,7 +300,7 @@ function EndpointDetail({
             </div>
           </div>
 
-          {error && <p className="text-sm text-apt-red">{error}</p>}
+          <ErrorText error={error} />
         </CardContent>
       </Card>
 

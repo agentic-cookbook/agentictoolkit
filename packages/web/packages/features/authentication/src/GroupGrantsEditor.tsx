@@ -10,6 +10,7 @@ import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { PermissionToggles } from "@agentic-toolkit/ui/components/permission-toggles";
 import type { Crud } from "@agentic-toolkit/ui/components/crud";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -217,7 +218,7 @@ export function GroupGrantsEditor({
         </Button>
       </div>
 
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
     </FieldGroup>
   );
 }

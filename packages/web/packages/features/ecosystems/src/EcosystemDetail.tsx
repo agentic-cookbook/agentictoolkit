@@ -8,6 +8,7 @@ import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { DetailSection } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { Ecosystem, EcosystemInput } from "@agentic-toolkit/data/ecosystems";
 
 export function ecoBlank(): EcosystemInput {
@@ -127,7 +128,7 @@ export function EcosystemDetail({
             onChange={(v) => set("domain", v)}
           />
 
-          {error && <p className="text-sm text-apt-red">{error}</p>}
+          <ErrorText error={error} />
         </CardContent>
       </Card>
   );

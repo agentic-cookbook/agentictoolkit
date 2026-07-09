@@ -6,6 +6,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { HierarchicalTopicDetail, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { StackLevels, useRailHost } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api, type Persona, type UserService } from "@agentic-toolkit/data/personas";
 import { PersonaEditor } from "./PersonaEditor";
 import { PersonasTable } from "./PersonasTable";
@@ -167,7 +168,7 @@ export function PersonasSection({
       />
     ) : (
       <>
-        {error && <p className="px-6 pt-4 text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} className="px-6 pt-4" />
         <PersonasTable personas={rows} onSelect={(id) => selectPersona(id)} profileUrlFor={profileUrlFor} />
       </>
     );

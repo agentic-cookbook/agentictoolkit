@@ -6,6 +6,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 
 import type { SiteGroupView, SiteView } from "@agentic-toolkit/data/monitored-sites";
 import { listGroups, listSites } from "@agentic-toolkit/data/monitored-sites";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   RailHostBoundary,
   StackGroupDetail,
@@ -105,7 +106,7 @@ export function DashboardsFeature({
   return (
     <RailHostBoundary>
       {(groupsError ?? sitesError) && (
-        <p className="px-6 pt-4 text-sm text-apt-red">{groupsError ?? sitesError}</p>
+        <ErrorText error={groupsError ?? sitesError} className="px-6 pt-4" />
       )}
       <StackGroupDetail
         levelId="dashboards-sections"

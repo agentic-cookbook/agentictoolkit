@@ -9,6 +9,7 @@ import { EntityChooser } from "@agentic-toolkit/ui/components/entity-chooser";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { ResearchInput } from "./research-model";
 
 // Strip a filename's extension for a derived title (e.g. "notes.md" → "notes").
@@ -144,7 +145,7 @@ export function ResearchDetail({
           }
         />
 
-        {error && <p className="text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} />
       </CardContent>
     </Card>
   );

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { DetailSection } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 export interface GroupDraft {
   name: string;
@@ -95,7 +96,7 @@ export function GroupDetail({
             />
           </div>
 
-          {error && <p className="text-sm text-apt-red">{error}</p>}
+          <ErrorText error={error} />
         </CardContent>
       </Card>
   );

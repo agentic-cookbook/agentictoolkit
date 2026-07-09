@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { CRUD_TABLES, CrudDataView, useExitGuardChannel } from "@agentic-toolkit/crud";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
 import {
   StackGroupDetail,
@@ -584,7 +585,7 @@ export function PersonaEditor({
         showCreate={false}
         showDelete={false}
       />
-      {error && <p className="px-6 pt-2 text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} className="px-6 pt-2" />
       {/* The persona's API, on every facet: the item read once saved, the create POST while new. */}
       <div className="flex justify-end px-6 pt-2">
         {persona

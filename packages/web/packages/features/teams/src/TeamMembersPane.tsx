@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Bot, Trash2, UserRound } from "lucide-react";
 
 import { teamMembersApi, type TeamMember } from "@agentic-toolkit/data/teams";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api as personaApi, type Persona } from "@agentic-toolkit/data/personas";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
@@ -276,8 +277,8 @@ export function TeamMembersPane({
             })}
           </div>
         )}
-        {error && <p className="text-sm text-apt-red">{error}</p>}
-        {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
+        <ErrorText error={error} />
+        <ErrorText error={loadError} />
         {creating ? (
           // The create leaf: add an existing customer by email, OR one of the caller's personas.
           <div className="flex max-w-md flex-col gap-6">
@@ -315,7 +316,7 @@ export function TeamMembersPane({
               {personas === null ? (
                 <p className="text-sm text-apt-text-muted">Loading personas…</p>
               ) : personasError !== null ? (
-                <p className="text-sm text-apt-red">{personasError}</p>
+                <ErrorText error={personasError} />
               ) : personas.length === 0 ? (
                 <p className="text-sm text-apt-text-muted">You have no personas to add.</p>
               ) : (

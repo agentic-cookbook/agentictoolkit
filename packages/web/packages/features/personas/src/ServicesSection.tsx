@@ -17,6 +17,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { StackLevels, ToolbarPortal, useRailHost, useRecordAffordance } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { fmtDate } from "./format";
 import {
   api,
@@ -384,7 +385,7 @@ function ServiceEditor({
         />
       </ToolbarPortal>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
-        {formError && <p className="text-sm text-apt-red">{formError}</p>}
+        <ErrorText error={formError} />
 
         {/* Template picker — create flow only */}
         {isNew && templates.length > 0 && (
@@ -479,7 +480,7 @@ function ServiceEditor({
                 {connecting ? "Connecting…" : "Connect"}
               </Button>
               {liveService.connectStatus === "failed" && liveService.connectError && (
-                <p className="text-sm text-apt-red">{liveService.connectError}</p>
+                <ErrorText error={liveService.connectError} />
               )}
               {liveService.connectStatus === "connected" && (
                 <p className="text-sm text-apt-green">Connected successfully.</p>
@@ -641,7 +642,7 @@ export function ServicesSection({
       />
     ) : (
       <>
-        {error && <p className="px-6 pt-4 text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} className="px-6 pt-4" />
         <ServicesTable services={rows} onSelect={(id) => selectService(id)} />
       </>
     );

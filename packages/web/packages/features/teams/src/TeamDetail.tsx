@@ -7,6 +7,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import type { Team, TeamInput } from "@agentic-toolkit/data/teams";
 import { validateTeamIdentifier } from "@agentic-toolkit/data/teams";
 import { DetailSection } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 export function teamBlank(): TeamInput {
   return { displayName: "", identifier: "" };
@@ -80,7 +81,7 @@ export function TeamDetail({
           </p>
         </div>
 
-        {error && <p className="text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} />
       </CardContent>
     </Card>
   );

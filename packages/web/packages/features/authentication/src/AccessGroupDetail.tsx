@@ -10,6 +10,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { DetailSection } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { GroupGrantsEditor } from "./GroupGrantsEditor";
 import { GroupMembersEditor } from "./GroupMembersEditor";
 import {
@@ -116,7 +117,7 @@ export function AccessGroupDetail({
           </Field>
 
           {/* Form-level error (bucket OR name) — not bound to a single field. */}
-          {error && <p className="text-sm text-apt-red">{error}</p>}
+          <ErrorText error={error} />
         </CardContent>
       </Card>
 
@@ -125,7 +126,7 @@ export function AccessGroupDetail({
           Save this access list, then add its members and grants.
         </p>
       ) : !groupId ? null : loadError ? (
-        <p className="text-sm text-apt-red">{loadError}</p>
+        <ErrorText error={loadError} />
       ) : detail === null ? (
         <p className="text-sm text-apt-text-muted">Loading…</p>
       ) : (

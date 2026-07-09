@@ -8,6 +8,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   ButtonBar,
   useMasterDetailForm,
@@ -226,7 +227,7 @@ export function AccessPane({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {loadError && <p className="px-6 pt-4 text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} className="px-6 pt-4" />
       <ButtonBar
         actions={form.actions}
         showCreate={false}

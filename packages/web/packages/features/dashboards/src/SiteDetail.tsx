@@ -8,6 +8,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { DetailSection } from "@agentic-toolkit/resource";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { EndpointsEditor } from "./EndpointsEditor";
 
 export interface SiteDraft {
@@ -105,7 +106,7 @@ export function SiteFields({
           )}
         </div>
 
-        {error && <p className="text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} />
       </CardContent>
     </Card>
   );
