@@ -215,6 +215,25 @@ struct PluginRequestTests {
 
     // MARK: - ClaudeLocal
 
+    @Test("ClaudeLocal assembles the claude -p flags without a --max-turns cap")
+    func claudeLocalArguments() {
+        // Pure argument assembly, asserted directly so the exact flag set is
+        // covered on every machine — including CI runners without the `claude`
+        // binary, where `buildRequest` throws `.notFound` before building args
+        // and the transport test below can only exercise the absent-CLI path.
+        let args = ClaudeLocalPlugin.commandArguments(model: "claude-opus-4-7", systemPrompt: "be terse")
+        #expect(Array(args.prefix(3)) == ["-p", "--output-format", "text"])
+        // `--model`/`--system-prompt` each carry their value in the next slot.
+        #expect(zip(args, args.dropFirst()).contains { $0 == "--model" && $1 == "claude-opus-4-7" })
+        #expect(zip(args, args.dropFirst()).contains { $0 == "--system-prompt" && $1 == "be terse" })
+        // Deliberately omitted: a one-shot `-p` can otherwise exit "Reached max turns".
+        #expect(!args.contains("--max-turns"))
+        // No model and no system prompt → just the base flags.
+        #expect(ClaudeLocalPlugin.commandArguments(model: "", systemPrompt: nil)
+                == ["-p", "--output-format", "text"])
+        #expect(ClaudeLocalPlugin.commandArguments(model: "", systemPrompt: "") == ["-p", "--output-format", "text"])
+    }
+
     @Test("ClaudeLocal describes a claude -p subprocess, or reports the CLI is absent")
     func claudeLocalCommand() throws {
         let plugin = ClaudeLocalPlugin()
@@ -227,11 +246,9 @@ struct PluginRequestTests {
             let spec = try plugin.buildRequest(ctx)
             let (executableURL, arguments, stdin, environment) = try #require(commandParts(spec))
             #expect(executableURL.lastPathComponent == "claude")
-            #expect(Array(arguments.prefix(3)) == ["-p", "--output-format", "text"])
-            // The plugin deliberately omits `--max-turns` (a one-shot `-p` can
-            // otherwise exit with "Reached max turns"); guard that it stays off.
-            #expect(!arguments.contains("--max-turns"))
-            #expect(arguments.contains("--model"))
+            // buildRequest wires in the pure argument list verbatim (its exact
+            // contents are asserted unconditionally in claudeLocalArguments).
+            #expect(arguments == ClaudeLocalPlugin.commandArguments(model: "claude-opus-4-7", systemPrompt: nil))
             #expect(stdin == Data("Hello".utf8))
             #expect(environment["PATH"]?.contains("/.local/bin") == true)
         } catch let error as ClaudeLocalPlugin.PluginError {

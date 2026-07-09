@@ -15,16 +15,6 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
             throw PluginError.notFound
         }
 
-        var arguments = ["-p", "--output-format", "text"]
-        if !context.model.isEmpty { arguments += ["--model", context.model] }
-        if let systemPrompt = context.systemPrompt, !systemPrompt.isEmpty {
-            arguments += ["--system-prompt", systemPrompt]
-        }
-        // No `--max-turns` cap: the current Claude CLI intermittently exits
-        // non-zero with "Error: Reached max turns (1)" — sometimes returning no
-        // reply at all — even for a one-shot `-p` answer, which surfaces in chat
-        // as a generic failure. Let the CLI use its own turn budget for print mode.
-
         let prompt = Self.buildPrompt(messages: context.messages)
 
         var environment = ProcessInfo.processInfo.environment
@@ -34,10 +24,28 @@ public final class ClaudeLocalPlugin: NSObject, AIPlugin, @unchecked Sendable {
 
         return .command(
             executableURL: URL(fileURLWithPath: claudePath),
-            arguments: arguments,
+            arguments: Self.commandArguments(model: context.model, systemPrompt: context.systemPrompt),
             stdin: Data(prompt.utf8),
             environment: environment
         )
+    }
+
+    /// The `claude -p` flag list for one chat turn. Pure and independent of
+    /// whether the CLI is installed, so the exact argument set is unit-testable
+    /// on every machine — not only ones with the binary, where `buildRequest`
+    /// would otherwise throw `.notFound` before assembling any arguments.
+    ///
+    /// Deliberately no `--max-turns` cap: the current Claude CLI intermittently
+    /// exits non-zero with "Error: Reached max turns (1)" — sometimes returning
+    /// no reply at all — even for a one-shot `-p` answer, which surfaces in chat
+    /// as a generic failure. Let the CLI use its own turn budget for print mode.
+    static func commandArguments(model: String, systemPrompt: String?) -> [String] {
+        var arguments = ["-p", "--output-format", "text"]
+        if !model.isEmpty { arguments += ["--model", model] }
+        if let systemPrompt, !systemPrompt.isEmpty {
+            arguments += ["--system-prompt", systemPrompt]
+        }
+        return arguments
     }
 
     public func makeDecoder() -> any AIStreamDecoder { PlainTextDecoder() }
