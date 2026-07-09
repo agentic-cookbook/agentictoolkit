@@ -132,10 +132,14 @@ export function ResizableSplit({
         {top}
       </div>
       {/* Divider: a 1px seam so the bottom of `top` and the top of `bottom` are
-          CONNECTED (no gap). A TALLER (12px) transparent overlay centered on the
-          seam carries the drag so it stays easy to grab; `z-10` lifts the whole
-          divider above both panes so the entire grab band is clickable. The chevron
-          toggles collapse (the `moved` guard stops a drag from also toggling). */}
+          CONNECTED (no gap) — dragging it moves that shared boundary. A generous
+          (24px) transparent overlay centered on the seam carries the drag, so
+          grabbing NEAR the boundary (the bottom of `top` / the top of `bottom`),
+          not just the hairline, starts the resize; `z-10` lifts the whole divider
+          above both panes so the entire band is grabbable. A visible grip pill
+          advertises that the seam is draggable (a bare 1px line reads as inert);
+          the collapse chevron sits at the right so it never covers the grip. The
+          `moved` guard stops a drag from also toggling collapse. */}
       <div
         className="group relative z-10 h-px shrink-0"
         role="separator"
@@ -148,9 +152,11 @@ export function ResizableSplit({
       >
         {/* the seam line itself (fills the 1px divider), highlights on hover */}
         <div className="pointer-events-none absolute inset-0 bg-apt-border group-hover:bg-apt-border-strong" />
-        {/* transparent grab zone, centered on the seam */}
+        {/* visible drag grip — a short centered bar signalling the seam is draggable */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-1 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-apt-border-strong opacity-70 group-hover:opacity-100" />
+        {/* generous transparent grab band, centered on the seam */}
         <div
-          className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2"
+          className="absolute inset-x-0 top-1/2 h-6 -translate-y-1/2"
           style={{ cursor: isCollapsed ? "default" : "row-resize" }}
           onPointerDown={isCollapsed ? undefined : onPointerDown}
           onPointerMove={onPointerMove}
@@ -165,7 +171,7 @@ export function ResizableSplit({
             if (moved.current) return
             setCollapsed(!isCollapsed)
           }}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-apt-surface px-1 text-apt-text-muted hover:text-apt-text"
+          className="absolute right-1 top-1/2 -translate-y-1/2 rounded bg-apt-surface px-1 text-apt-text-muted hover:text-apt-text"
         >
           {isCollapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         </button>
