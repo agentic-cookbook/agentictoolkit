@@ -228,7 +228,9 @@ struct PluginRequestTests {
             let (executableURL, arguments, stdin, environment) = try #require(commandParts(spec))
             #expect(executableURL.lastPathComponent == "claude")
             #expect(Array(arguments.prefix(3)) == ["-p", "--output-format", "text"])
-            #expect(arguments.contains("--max-turns"))
+            // The plugin deliberately omits `--max-turns` (a one-shot `-p` can
+            // otherwise exit with "Reached max turns"); guard that it stays off.
+            #expect(!arguments.contains("--max-turns"))
             #expect(arguments.contains("--model"))
             #expect(stdin == Data("Hello".utf8))
             #expect(environment["PATH"]?.contains("/.local/bin") == true)
