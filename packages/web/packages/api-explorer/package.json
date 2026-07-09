@@ -11,7 +11,8 @@
   ],
   "files": [
     "dist",
-    "src/styles/api-explorer.css"
+    "src/styles/api-explorer.css",
+    "sources.css"
   ],
   "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod skips it → dist. Mirrors the @agentic-toolkit/ui + @agentic-toolkit/auth convention. `./generated/endpoints.generated` is a deliberate subpath export kept OFF the main barrel (see src/index.ts) — it exists only so the monorepo's drift test (websites/shared/api-explorer's src/__tests__/endpoints.test.ts, which stays monorepo-side to read openapi.json) can import the generated maps directly.",
   "exports": {
@@ -25,7 +26,8 @@
       "types": "./dist/generated/endpoints.generated.d.ts",
       "development": "./src/generated/endpoints.generated.ts",
       "import": "./dist/generated/endpoints.generated.js"
-    }
+    },
+    "./sources.css": "./sources.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types",

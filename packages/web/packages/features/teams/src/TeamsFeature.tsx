@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Settings, Users, Shield, UsersRound } from "lucide-react";
 import { teamsApi, teamMembersApi, type Team } from "@agentic-toolkit/data/teams";
 import { ecosystemsApi } from "@agentic-toolkit/data/ecosystems";
@@ -26,6 +26,7 @@ import { TeamDetail, teamBlank, teamValidate } from "./TeamDetail";
  */
 export function TeamsFeature({
   basePath,
+  workspaceSlug,
   all,
   activeTeamId,
   activeTopic,
@@ -36,6 +37,13 @@ export function TeamsFeature({
    *  so the same feature mounts under whatever workspace-relative base the host
    *  chooses. */
   basePath: string;
+  /** The workspace slug whose (primary) ecosystem scopes the Teams list — the hub
+   *  passes its route slug. Like basePath, supplied by the host rather than read
+   *  from useParams here, so a host without a [slug] route (a feature site) fails
+   *  visibly at the prop seam instead of silently deriving undefined. Absent ⇒ the
+   *  list stays in its Loading state (the platform-wide ecosystem-scoping decision
+   *  for site mounts — feature-platform-phase2 §2 — is still open). */
+  workspaceSlug?: string;
   all?: boolean;
   activeTeamId?: string;
   activeTopic?: string;
@@ -49,15 +57,15 @@ export function TeamsFeature({
   const router = useRouter();
 
   // The Teams list is scoped to the workspace's (primary) ecosystem — the owner of its
-  // participant team and of any team created here. `slug` is read ONLY for this
-  // data-scoping lookup (never for basePath/URL derivation, which the host now supplies
+  // participant team and of any team created here. `workspaceSlug` is used ONLY for this
+  // data-scoping lookup (never for basePath/URL derivation, which the host supplies
   // directly) — resolve slug -> ecosystem id the same way the sibling Ecosystem feature
   // does. NOTE: the pre-move TeamsTab shared this lookup's result via a react-query
   // queryKey with the (still hub-side, unmigrated) Ecosystem tab's warm cache; this
   // package doesn't depend on @tanstack/react-query (not a declared dependency here), so
   // it's a plain per-mount fetch instead — a small, easily-reversible loss of that one
   // cross-tab cache hit, not a behavior change to the Teams feature itself.
-  const { slug } = useParams<{ slug: string }>();
+  const slug = workspaceSlug;
   const [ecosystemId, setEcosystemId] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (slug == null) return;
