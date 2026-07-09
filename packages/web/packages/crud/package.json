@@ -1,0 +1,54 @@
+{
+  "name": "@agentic-toolkit/crud",
+  "version": "0.1.0",
+  "description": "Generic table CRUD for agentic-web-toolkit consumers — spec-generated table metadata, an authed REST hook over the backend's generic CRUD API, and metadata-driven list/form components.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Self-degrading if the bundler ignores it. See @agentic-toolkit/adh for the full rationale.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/api-explorer": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^16.2.9",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vite": "^6",
+    "vitest": "^4.1.4"
+  }
+}

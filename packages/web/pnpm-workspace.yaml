@@ -8,6 +8,8 @@ packages:
   - './packages/content'
   - './packages/controls'
   - './packages/auth'
+  - './packages/api-explorer'
+  - './packages/crud'
   - './packages/data'
   - './packages/resource'
   - './packages/adh'

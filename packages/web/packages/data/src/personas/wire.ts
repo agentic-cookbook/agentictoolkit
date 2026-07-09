@@ -96,3 +96,154 @@ export interface UserToolListRow {
 export interface SetAllowedBody {
   allowed: string[];
 }
+
+/* ── Me / public profile / persona CRUD (GET rows + request bodies) ──────── */
+
+/** The authenticated user record, exactly as `GET /auth/me` returns it (and
+ *  `PATCH /auth/me` echoes back) — the customer.customers identity + effective
+ *  capabilities. There is no separate `githubLogin`: GitHub is just one auth
+ *  method behind the shared OAuth flow, not a field on the profile. */
+export interface MeRow {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl: string;
+  slug: string | null;
+  /** Whether the public profile card is visible at /public/users/:slug */
+  publicProfileEnabled: boolean;
+  capabilities: string[];
+}
+
+/** `PATCH /auth/me` body — update the caller's own profile (name, slug, avatar,
+ *  public-profile toggle). */
+export interface MePatchBody {
+  name?: string;
+  slug?: string;
+  avatarUrl?: string;
+  publicProfileEnabled?: boolean;
+}
+
+/** One social link on a public profile card. */
+export interface PublicSocialLinkRow {
+  platform: string;
+  url: string;
+  handle: string;
+}
+
+/** One mailing address on a public profile card. */
+export interface PublicAddressRow {
+  label: string;
+  line1: string;
+  line2: string;
+  city: string;
+  region: string;
+  postalCode: string;
+  country: string;
+}
+
+/** The owner byline embedded in a public persona (or persona summary) — null
+ *  when the owning user has no public profile. */
+export interface PublicOwnerRow {
+  slug: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+/** A public persona as it appears in a public profile card's `personas` list —
+ *  a narrower projection than {@link PublicPersonaRow} (no prompt/voice/etc.). */
+export interface PublicPersonaSummaryRow {
+  slug: string;
+  name: string;
+  description: string | null;
+  visibility: "public";
+  createdAt: string;
+  owner: PublicOwnerRow | null;
+}
+
+/** Backend row for `GET /public/users/{slug}` — a public profile card + its
+ *  public personas summary list. */
+export interface PublicUserRow {
+  slug: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  socialLinks: PublicSocialLinkRow[];
+  emails: string[];
+  phones: string[];
+  addresses: PublicAddressRow[];
+  personas: PublicPersonaSummaryRow[];
+}
+
+/** Backend row for `GET /persona/service-templates` (a plain catalog table). */
+export interface ServiceTemplateRow {
+  id: string;
+  providerKind: string;
+  name: string;
+  baseUrl: string;
+  documentationUrl: string | null;
+  statusUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Backend row for `GET /persona/services` (and a single service, redacted —
+ *  never the raw apiKey). `models` is a jsonb column the spec types loosely
+ *  (string | object per entry); the personas client's `ModelInfo` recovers the
+ *  structured shape client-side. */
+export interface ServiceRow {
+  id: string;
+  templateId?: string | null;
+  providerKind: string;
+  name: string;
+  baseUrl: string;
+  hasApiKey: boolean;
+  connectStatus: string;
+  connectError?: string | null;
+  lastConnectedAt?: string | null;
+  documentationUrl?: string | null;
+  statusUrl?: string | null;
+  models: (string | Record<string, unknown>)[];
+  modelsFetchedAt?: string | null;
+}
+
+/** Backend row for `GET /persona/personas` (and a single persona). */
+export interface PersonaRow {
+  id: string;
+  userId: string | null;
+  ownerKind: string;
+  ownerId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  visibility: string;
+  model: string;
+  serviceId: string | null;
+  appId: string | null;
+  avatarAttachmentId: string | null;
+  modelPrompt: string;
+  voice: string | null;
+  character: string | null;
+  examples: string | null;
+  createdAt: string;
+  updatedAt: string;
+  ownedEcosystemId?: string | null;
+}
+
+/** Backend row for `GET /public/personas/{slug}` and `GET
+ *  /public/users/{ownerSlug}/personas/{personaSlug}` — same public-persona shape
+ *  either route. */
+export interface PublicPersonaRow {
+  slug: string;
+  name: string;
+  description: string | null;
+  modelPrompt: string;
+  provider: string | null;
+  model: string;
+  avatarUrl: string | null;
+  voice: string | null;
+  character: string | null;
+  examples: string | null;
+  visibility: "public" | "unlisted";
+  createdAt: string;
+  owner: PublicOwnerRow | null;
+}

@@ -1,0 +1,166 @@
+'use client'
+
+import { useState, type SubmitEvent } from 'react'
+import { Button } from '@agentic-toolkit/ui/components/button'
+import { Field } from '@agentic-toolkit/ui/blocks/field'
+import { CrudFieldInput, isJsonColumn } from './CrudFieldInput'
+import { ErrorText } from './ErrorText'
+import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
+import type { CrudColumn, CrudRow, CrudTableMeta } from './types'
+import { fieldCaptionClass } from '@agentic-toolkit/ui/lib/typography'
+
+/** The columns a client may set — everything the create body accepts. */
+export function writableColumns(meta: CrudTableMeta): CrudColumn[] {
+  return meta.columns.filter((c) => !c.serverManaged)
+}
+
+/** Editing buffer: writable columns as text; booleans as booleans, except an
+ *  untouched checkbox on CREATE stays `undefined` (omitted from the payload so
+ *  the DB column default applies — the spec doesn't carry defaults, so sending
+ *  `false` would silently override a default-true column). */
+export type CrudDraft = Record<string, string | boolean | undefined>
+
+export type CrudFormMode = 'create' | 'edit'
+
+export function toDraft(meta: CrudTableMeta, initial?: CrudRow): CrudDraft {
+  const draft: CrudDraft = {}
+  for (const column of writableColumns(meta)) {
+    const value = initial?.[column.name]
+    if (column.type === 'boolean') {
+      draft[column.name] = initial ? value === true : undefined
+    } else if (isJsonColumn(column)) {
+      draft[column.name] = value == null ? '' : JSON.stringify(value, null, 2)
+    } else {
+      draft[column.name] = value == null ? '' : String(value)
+    }
+  }
+  return draft
+}
+
+/** Coerce the draft into a request payload. On CREATE, empty/untouched
+ *  optional fields are OMITTED (so backend column defaults apply). On EDIT —
+ *  the backend's PUT is a partial update — an emptied optional column must
+ *  SEND something or the old value silently survives: `null` where nullable,
+ *  `''` for plain strings (spec-valid — no minLength on generic-CRUD bodies);
+ *  other types can't represent "cleared", so omission is the honest option.
+ *  Empty required fields and malformed numbers/JSON throw with a field-named
+ *  message the form shows inline. */
+export function buildPayload(meta: CrudTableMeta, draft: CrudDraft, mode: CrudFormMode): CrudRow {
+  const payload: CrudRow = {}
+  for (const column of writableColumns(meta)) {
+    // createOnly columns (client-supplied rdids) are stripped from PUT by the
+    // backend — sending them would silently no-op, so skip them on edit before
+    // ANY validation (the required throw must never fire for them).
+    if (mode === 'edit' && column.createOnly) continue
+    const value = draft[column.name]
+    if (column.type === 'boolean') {
+      if (value === undefined) {
+        // untouched on create: let the DB default decide (false if required)
+        if (column.required) payload[column.name] = false
+        continue
+      }
+      payload[column.name] = value === true
+      continue
+    }
+    const text = typeof value === 'string' ? value.trim() : ''
+    if (text === '') {
+      if (column.required) throw new Error(`${column.name} is required`)
+      if (mode === 'edit') {
+        if (column.nullable) payload[column.name] = null
+        else if (column.type === 'string' && !column.enum) payload[column.name] = ''
+      }
+      continue
+    }
+    if (column.type === 'integer' || column.type === 'number') {
+      const num = Number(text)
+      // isFinite, not !isNaN: Number('1e999') is Infinity, which
+      // JSON.stringify would silently serialize as null.
+      if (!Number.isFinite(num)) throw new Error(`${column.name} must be a number`)
+      if (column.type === 'integer' && !Number.isInteger(num)) {
+        throw new Error(`${column.name} must be an integer`)
+      }
+      payload[column.name] = num
+    } else if (isJsonColumn(column)) {
+      try {
+        payload[column.name] = JSON.parse(text)
+      } catch {
+        throw new Error(`${column.name} must be valid JSON`)
+      }
+    } else {
+      payload[column.name] = text
+    }
+  }
+  return payload
+}
+
+export interface CrudRecordFormProps {
+  meta: CrudTableMeta
+  /** Editing this row; absent = creating. */
+  initial?: CrudRow
+  onSubmit: (values: CrudRow) => Promise<void>
+  onCancel: () => void
+}
+
+/** Create/edit form generated from the table metadata: enum → select,
+ *  boolean → checkbox, number → numeric input, object/array/unknown → JSON
+ *  textarea, everything else → text input. */
+export function CrudRecordForm({ meta, initial, onSubmit, onCancel }: CrudRecordFormProps) {
+  const mode: CrudFormMode = initial ? 'edit' : 'create'
+  const [draft, setDraft] = useState<CrudDraft>(() => toDraft(meta, initial))
+  const { busy: saving, error, run } = useAction()
+
+  function handleSubmit(event: SubmitEvent) {
+    event.preventDefault()
+    void run(async () => {
+      await onSubmit(buildPayload(meta, draft, mode))
+    })
+  }
+
+  const setField = (name: string, value: string | boolean) =>
+    setDraft((prev) => ({ ...prev, [name]: value }))
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {writableColumns(meta).map((column) => {
+        const label = column.required ? `${column.name} *` : column.name
+        // createOnly columns can't change on edit (the backend strips them
+        // from PUT) — show the seeded value, disabled, not a doomed edit.
+        const disabled = mode === 'edit' && column.createOnly === true
+        const control = (
+          <CrudFieldInput
+            column={column}
+            value={draft[column.name]}
+            disabled={disabled}
+            onChange={(value) => setField(column.name, value)}
+          />
+        )
+        // Boolean rides inline with its caption; everything else stacks in a Field
+        // (JSON columns flag their encoding via the hint).
+        if (column.type === 'boolean') {
+          return (
+            <label key={column.name} className="flex items-center gap-2">
+              {control}
+              <span className={fieldCaptionClass}>
+                {label}
+              </span>
+            </label>
+          )
+        }
+        return (
+          <Field key={column.name} label={label} hint={isJsonColumn(column) ? 'JSON' : undefined}>
+            {control}
+          </Field>
+        )
+      })}
+      <ErrorText error={error} />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+    </form>
+  )
+}

@@ -1,0 +1,177 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { Button } from '@agentic-toolkit/ui/components/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@agentic-toolkit/ui/components/dialog'
+import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
+import { SectionHeader } from '@agentic-toolkit/ui/blocks/section-header'
+import { railLinkVariants } from '@agentic-toolkit/ui/lib/nav-rail'
+import { cn } from '@agentic-toolkit/ui/lib/utils'
+import { CrudRecordForm } from './CrudRecordForm'
+import { CrudTable } from './CrudTable'
+import { ErrorText } from './ErrorText'
+import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
+import { rowKey, useCrudResource } from './useCrudResource'
+import type { CrudRow, CrudTableMeta } from './types'
+
+type Editing = { mode: 'create' } | { mode: 'edit'; row: CrudRow } | null
+
+export interface CrudTablePageProps {
+  /** Feature title, e.g. 'Storage'. */
+  title: string
+  /** The tables this feature edits; must be non-empty. */
+  tables: CrudTableMeta[]
+  /** URL table segment (CrudTableMeta.table) of the active table; a bare
+   *  route falls back to the first table, an unknown segment renders a
+   *  notice (and marks no table current). */
+  activeTable?: string
+  /** The feature's route, e.g. '/storage' — table links are `${baseHref}/<table>`. */
+  baseHref: string
+}
+
+/** A feature's placeholder workspace: a rail of the tables it edits and a
+ *  metadata-driven CRUD surface for the active one. */
+export function CrudTablePage({ title, tables, activeTable, baseHref }: CrudTablePageProps) {
+  const requested = activeTable === undefined ? undefined : tables.find((t) => t.table === activeTable)
+  // A bare route falls back to the first table; an EXPLICIT unknown segment
+  // must not (silently editing a different table than the URL names) — it
+  // renders a notice instead, and nothing data-bearing mounts (no authed
+  // fetch for a table the user didn't ask for).
+  const unknownTable = activeTable !== undefined && requested === undefined
+  const meta = unknownTable ? undefined : (requested ?? tables[0]!)
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6 md:flex-row md:gap-6">
+      <nav aria-label={`${title} tables`} className="shrink-0 md:w-56">
+        <ul className="flex flex-row flex-wrap gap-1 md:flex-col">
+          {tables.map((table) => (
+            <li key={table.key}>
+              <Link
+                href={`${baseHref}/${table.table}`}
+                aria-current={table.key === meta?.key ? 'page' : undefined}
+                // The shared nav-rail grammar (matches the details-page rail),
+                // with mono for the code-like table segment names.
+                className={cn(railLinkVariants({ active: table.key === meta?.key }), 'font-mono')}
+              >
+                {table.table}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <SectionHeader title={title} eyebrow={meta?.key} />
+        {meta ? (
+          // Keyed per table so a rail switch is a fresh mount (first-load
+          // spinner, dialog/edit state reset) instead of a stale carry-over.
+          <CrudTableSurface key={meta.key} meta={meta} />
+        ) : (
+          <p className="py-8 text-center font-mono text-sm text-apt-text-dim" role="status">
+            Unknown table “{activeTable}” — pick one from the list.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** The data-bearing half: owns the resource hook and the dialog state, so the
+ *  unknown-table notice never mounts it (rules of hooks keep it a separate
+ *  component, not a branch). */
+function CrudTableSurface({ meta }: { meta: CrudTableMeta }) {
+  const resource = useCrudResource(meta)
+  const [editing, setEditing] = useState<Editing>(null)
+  const [deleting, setDeleting] = useState<CrudRow | null>(null)
+
+  async function submit(values: CrudRow) {
+    if (editing?.mode === 'edit') await resource.update(editing.row, values)
+    else await resource.create(values)
+    setEditing(null)
+  }
+
+  return (
+    <>
+      <CrudTable
+        meta={meta}
+        rows={resource.rows}
+        loading={resource.loading}
+        error={resource.error}
+        onNew={() => setEditing({ mode: 'create' })}
+        onEdit={(row) => setEditing({ mode: 'edit', row })}
+        onDelete={(row) => setDeleting(row)}
+      />
+
+      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editing?.mode === 'edit' ? `Edit ${meta.table} row` : `New ${meta.table} row`}
+            </DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <CrudRecordForm
+              // Remount per session so the draft resets between rows/modes
+              // (keyed by primary key — rows can hold multi-KB jsonb columns).
+              key={editing.mode === 'edit' ? rowKey(meta, editing.row) : 'create'}
+              meta={meta}
+              initial={editing.mode === 'edit' ? editing.row : undefined}
+              onSubmit={submit}
+              onCancel={() => setEditing(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <DeleteConfirm
+        // Keyed per target row (and reset when closed) so each open is a fresh
+        // mount — otherwise this now-always-mounted component's useAction error
+        // from a failed delete would linger and show on the NEXT row's confirm.
+        key={deleting ? rowKey(meta, deleting) : 'closed'}
+        open={deleting !== null}
+        table={meta.table}
+        onConfirm={async () => {
+          if (deleting) await resource.remove(deleting)
+          setDeleting(null)
+        }}
+        onCancel={() => setDeleting(null)}
+      />
+    </>
+  )
+}
+
+/** The platform delete-confirm (shared AlertModal), with the mutation error
+ *  surfaced in the description. */
+function DeleteConfirm({
+  open,
+  table,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean
+  table: string
+  onConfirm: () => Promise<void>
+  onCancel: () => void
+}) {
+  const { busy, error, run } = useAction()
+  return (
+    <AlertModal
+      open={open}
+      title={`Delete ${table} row?`}
+      description={
+        error ? <ErrorText error={error} /> : 'This permanently deletes the row.'
+      }
+      destructive
+      confirmLabel="Delete"
+      cancelLabel="Cancel"
+      busy={busy}
+      onConfirm={() => void run(onConfirm)}
+      onCancel={onCancel}
+    />
+  )
+}

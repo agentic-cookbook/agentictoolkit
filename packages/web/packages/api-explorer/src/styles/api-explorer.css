@@ -1,0 +1,34 @@
+/* @agentic-toolkit/api-explorer — code-block theming.
+ *
+ * Shiki emits `<pre class="shiki">` whose token <span>s carry --shiki-light /
+ * --shiki-dark CSS variables (created with defaultColor:false), and the <pre>
+ * carries --shiki-light-bg / --shiki-dark-bg. We pick the variant off the app's
+ * `.dark` class — the same signal Tailwind's `dark:` variant uses — so code
+ * follows the theme with no re-highlight. Only these var()-based rules need raw
+ * CSS; everything else in the panel is apt-* utilities. */
+
+.adh-api-code pre.shiki {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-apt-border);
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  tab-size: 2;
+  background-color: var(--shiki-light-bg);
+}
+
+.adh-api-code pre.shiki,
+.adh-api-code pre.shiki span {
+  color: var(--shiki-light);
+}
+
+.dark .adh-api-code pre.shiki {
+  background-color: var(--shiki-dark-bg);
+}
+
+.dark .adh-api-code pre.shiki,
+.dark .adh-api-code pre.shiki span {
+  color: var(--shiki-dark);
+}

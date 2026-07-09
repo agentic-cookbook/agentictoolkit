@@ -33,6 +33,15 @@ export type { RailHostRegistry, RegisteredLevels, PaneExitGuard } from "./rail-h
 export { RecordAffordanceContext, useRecordAffordance } from "./record-affordance";
 export type { RecordAffordanceProps, RecordAffordanceRenderer } from "./record-affordance";
 
+// A grouping rail level whose members render as the deeper content of the ONE
+// merged stack (navigation groups and tabbed editors alike).
+export { StackGroupDetail } from "./group-topic-detail";
+export type { GroupTopicItem } from "./group-topic-detail";
+
+// URL push helpers for a feature mounted at an explicit basePath (the port of
+// the hub's useFeatureRoute with the base made a parameter).
+export { useBasePathRoute } from "./use-base-path-route";
+
 // The master/detail substrate: the two-pane layout + its parts, the leaf editor, the
 // list-as-rail-level bridge, and the editing state machine.
 export {
