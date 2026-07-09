@@ -6,11 +6,20 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "sources.css"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "development": "./src/index.ts", "import": "./dist/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
     "./sources.css": "./sources.css"
   },
   "scripts": {
@@ -41,8 +50,8 @@
     "esbuild-plugin-preserve-directives": "^0.0.11",
     "jsdom": "^29.0.2",
     "next": "^15.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.4"
