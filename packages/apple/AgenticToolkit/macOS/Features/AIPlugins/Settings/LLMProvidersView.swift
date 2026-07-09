@@ -172,9 +172,22 @@ struct LLMProviderEditorView: View {
     }
 
     /// Models to offer: the provider's live list when reachable, else the
-    /// template's static list.
+    /// template's static list — always including the active selection so a model
+    /// dropped from the list (e.g. one retired since it was chosen) stays visible
+    /// and re-selectable rather than vanishing from the picker.
     private func availableModels(_ template: AIPluginDescriptor.ProviderTemplate) -> [String] {
-        fetchedModels.isEmpty ? template.models : fetchedModels
+        let listed = fetchedModels.isEmpty ? template.models : fetchedModels
+        let current = currentModel.isEmpty ? template.resolvedDefaultModel : currentModel
+        return Self.offeredModels(listed: listed, current: current)
+    }
+
+    /// Picker contents: `listed` plus `current` when it isn't already present, so a
+    /// since-retired stored selection stays visible/re-selectable instead of
+    /// silently absent. An empty `current` (no default) adds nothing. Pure so the
+    /// picker's fallback behaviour is unit-testable without a live view.
+    nonisolated static func offeredModels(listed: [String], current: String) -> [String] {
+        guard !current.isEmpty, !listed.contains(current) else { return listed }
+        return listed + [current]
     }
 
     private func modelItems(_ template: AIPluginDescriptor.ProviderTemplate) -> [ModelPickerItem] {

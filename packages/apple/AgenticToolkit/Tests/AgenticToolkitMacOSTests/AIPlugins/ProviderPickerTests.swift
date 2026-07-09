@@ -87,4 +87,19 @@ struct ProviderPickerTests {
         // Within Anthropic, config type sorts "API Key" before "Subscription Token".
         #expect(rows.map(\.configType) == ["API Key", "Subscription Token", "API Key"])
     }
+
+    @Test("Model picker keeps the active selection visible even when it's no longer listed")
+    func offeredModelsKeepsRetiredSelection() {
+        let listed = ["grok-4.5", "grok-4.3"]
+        // A selection dropped from the list (e.g. a model retired since it was chosen)
+        // is appended, not lost — so the user can still see and change it.
+        #expect(LLMProviderEditorView.offeredModels(listed: listed, current: "grok-2-latest")
+                == ["grok-4.5", "grok-4.3", "grok-2-latest"])
+        // A current model already in the list isn't duplicated.
+        #expect(LLMProviderEditorView.offeredModels(listed: listed, current: "grok-4.5") == listed)
+        // An empty current selection (no resolvable default) adds nothing.
+        #expect(LLMProviderEditorView.offeredModels(listed: listed, current: "") == listed)
+        // An empty list falls back to just the active selection.
+        #expect(LLMProviderEditorView.offeredModels(listed: [], current: "grok-4.5") == ["grok-4.5"])
+    }
 }
