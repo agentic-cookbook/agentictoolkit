@@ -4,6 +4,7 @@ import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 export default defineConfig({
   entry: [
     'src/index.ts',
+    'src/query/index.tsx',
     'src/projects/index.ts',
     'src/teams/index.ts',
     'src/ecosystems/index.ts',

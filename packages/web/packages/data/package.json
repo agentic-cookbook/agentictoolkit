@@ -17,6 +17,11 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
+    "./query": {
+      "types": "./dist/query/index.d.ts",
+      "development": "./src/query/index.tsx",
+      "import": "./dist/query/index.js"
+    },
     "./projects": {
       "types": "./dist/projects/index.d.ts",
       "development": "./src/projects/index.ts",
@@ -73,14 +78,13 @@
   },
   "dependencies": {
     "@agentic-toolkit/auth": "workspace:*",
-    "@agentic-toolkit/ui": "workspace:*"
+    "@agentic-toolkit/ui": "workspace:*",
+    "@tanstack/react-query": "^5.62.0"
   },
   "peerDependencies": {
-    "@tanstack/react-query": "^5.62.0",
     "react": "^19.0.0"
   },
   "devDependencies": {
-    "@tanstack/react-query": "^5.62.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",
