@@ -7,6 +7,7 @@ export const RDID_TYPE_TO_ENTITY_TYPE = {
   storage: 'bucket',
   app: 'application',
   persona: 'persona',
+  token: 'token',
 } as const;
 
 export type RdidType = keyof typeof RDID_TYPE_TO_ENTITY_TYPE;

@@ -60,6 +60,7 @@ export const MEMBER_TYPE_LABEL: Record<MemberType, string> = {
   organization: "Organization",
   persona: "Persona",
   app: "Application",
+  token: "Token",
 };
 
 // Derived from the label record (Record<MemberType,…> fails to compile if the

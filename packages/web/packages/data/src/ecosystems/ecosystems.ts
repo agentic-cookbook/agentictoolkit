@@ -47,6 +47,17 @@ export interface EcosystemInput {
   domain: string;
 }
 
+/** The explicit per-ecosystem auth policy (backend `ecosystem.auth_settings`), served by
+ *  the bespoke /ecosystem/auth-settings route (not generic CRUD → hand-declared, like
+ *  `capabilities` below, rather than sourced from the OpenAPI spec). */
+export type SignupMode = "open" | "invite_only" | "closed";
+export interface AuthSettings {
+  signupMode: SignupMode;
+  loginEnabled: boolean;
+  /** null = all configured providers. */
+  allowedProviders: string[] | null;
+}
+
 const BASE = "/api/ecosystem/ecosystems";
 
 export function toEcosystem(r: EcosystemRow): Ecosystem {
@@ -216,5 +227,21 @@ export const ecosystemsApi = {
     );
     // Coerce a malformed/empty response to [] — react-query rejects an undefined queryFn result.
     return res.capabilities ?? [];
+  },
+
+  /** The explicit per-ecosystem AUTH POLICY governing this ecosystem's vended customer
+   *  realm. Absent server-side ⇒ documented defaults (invite_only + login enabled); the
+   *  route always returns a full object. `id` is the ecosystem's rdid (or uuid). */
+  async authSettings(id: string): Promise<AuthSettings> {
+    return authedJson<AuthSettings>(`/api/ecosystem/auth-settings/${enc(id)}`);
+  },
+
+  /** Update the auth policy (partial patch; `compact` drops undefined keys but preserves an
+   *  explicit `allowedProviders: null` = "all providers"). Returns the effective policy. */
+  async updateAuthSettings(id: string, patch: Partial<AuthSettings>): Promise<AuthSettings> {
+    return authedJson<AuthSettings>(`/api/ecosystem/auth-settings/${enc(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(compact(patch)),
+    });
   },
 };

@@ -34,7 +34,7 @@ export interface MintTokenBody {
 
 // --- Bucket access lists (/bucket/access-groups, /bucket/buckets/{bucketId}/access-groups) --
 
-export type MemberType = "user" | "organization" | "persona" | "app";
+export type MemberType = "user" | "organization" | "persona" | "app" | "token";
 export type GrantTargetType = "bucket" | "bucket_type" | "row";
 
 export interface AccessGroupRow {
