@@ -122,6 +122,11 @@
       "types": "./dist/lib/slug.d.ts",
       "development": "./src/lib/slug.ts",
       "import": "./dist/lib/slug.js"
+    },
+    "./lib/rdid": {
+      "types": "./dist/lib/rdid.d.ts",
+      "development": "./src/lib/rdid.ts",
+      "import": "./dist/lib/rdid.js"
     }
   },
   "scripts": {
