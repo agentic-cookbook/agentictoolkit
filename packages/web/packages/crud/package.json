@@ -18,7 +18,12 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
-    "./sources.css": "./sources.css"
+    "./sources.css": "./sources.css",
+    "./generated/table-metadata": {
+      "types": "./dist/generated/table-metadata.d.ts",
+      "development": "./src/generated/table-metadata.ts",
+      "import": "./dist/generated/table-metadata.js"
+    }
   },
   "scripts": {
     "build": "tsup && pnpm run build:types",

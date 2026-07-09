@@ -86,13 +86,17 @@ export function TeamsFeature({
 
   // Hold the master list in its Loading state until the ecosystem resolves, so it never
   // fetches (and briefly flashes) the un-scoped set. Once resolved, `load` changes identity
-  // and useResourceList refetches the scoped list.
+  // and useResourceList refetches the scoped list. A host with NO workspace context at all
+  // (a feature-site mount, §2 pending) gets a DEFINED empty state instead of an eternal
+  // spinner — an unexplained permanent "Loading…" reads as an outage, not a pending decision.
   const load = useCallback(
     () =>
       ecosystemId
         ? teamsApi.list(ecosystemId)
-        : new Promise<Team[]>(() => {}), // unresolved: leave items = null (Loading…)
-    [ecosystemId],
+        : slug != null
+          ? new Promise<Team[]>(() => {}) // slug resolving: leave items = null (Loading…)
+          : Promise.resolve<Team[]>([]), // unscoped host: defined empty state (see landing)
+    [ecosystemId, slug],
   );
   const { items: teams, reload, error } = useResourceList(basePath, load);
 
@@ -177,7 +181,10 @@ export function TeamsFeature({
       landing={{
         title: "All teams",
         help: "Pick a team to manage its settings, members, and permissions.",
-        emptyLabel: "No teams yet.",
+        emptyLabel:
+          slug == null
+            ? "Teams aren't available on this site yet — open them from your hub workspace."
+            : "No teams yet.",
         getSublabel: (t) => t.identifier,
         renderMeta: (t) => {
           const n = memberCounts.get(t.id) ?? 0;

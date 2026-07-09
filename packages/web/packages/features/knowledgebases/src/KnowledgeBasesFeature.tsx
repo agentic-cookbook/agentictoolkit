@@ -1,6 +1,7 @@
 "use client";
 
 import type { CrudTableMeta } from "@agentic-toolkit/crud";
+import { RailHostBoundary } from "@agentic-toolkit/resource";
 import { KnowledgeBasesPane } from "./KnowledgeBasesPane";
 
 /**
@@ -25,5 +26,11 @@ export function KnowledgeBasesFeature({
   /** Names the target ecosystem on every CRUD verb — see {@link KnowledgeBasesPane}. */
   scopeEcosystemId?: string;
 }) {
-  return <KnowledgeBasesPane tables={tables} scopeEcosystemId={scopeEcosystemId} />;
+  // RailHostBoundary: the pane's tables rail exists only as a rail-host publication;
+  // on a bare feature site (no hub shell) the boundary self-hosts it.
+  return (
+    <RailHostBoundary>
+      <KnowledgeBasesPane tables={tables} scopeEcosystemId={scopeEcosystemId} />
+    </RailHostBoundary>
+  );
 }

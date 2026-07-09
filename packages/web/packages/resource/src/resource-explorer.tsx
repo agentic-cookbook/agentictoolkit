@@ -16,14 +16,8 @@ import {
 } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ResourceLanding } from "./resource-landing";
-import {
-  RailHostContext,
-  StackLevels,
-  useRailHost,
-  type PaneExitGuard,
-  type RailHostRegistry,
-  type RegisteredLevels,
-} from "./rail-host";
+import { StackLevels, useRailHost } from "./rail-host";
+import { RailHostBoundary } from "./standalone-rail-host";
 
 /** The deep-linkable LEAF inside a topic (e.g. the selected application within the
  *  Applications topic): the id lives in the URL, and `onSelect` re-routes to it. Topics
@@ -295,7 +289,7 @@ export function ResourceExplorer<T>({
 
   // Inside the host: publish the levels and render the leaf content as its detail — the host owns
   // the one merged HTD. StackLevels advances the depth so a deeper view (a group member, a
-  // master/detail list) lands after these. Standalone: become our OWN host (StandaloneRailHost)
+  // master/detail list) lands after these. Standalone: become our OWN host (RailHostBoundary)
   // and publish through the SAME StackLevels path, so a topic pane's publishers — the master/detail
   // list level AND, crucially, its leaf editor's unsaved-work guard — reach the HTD exactly as they
   // do in the hub shell (without a host they silently no-op and edits are discarded unprompted).
@@ -305,81 +299,5 @@ export function ResourceExplorer<T>({
       {dialog}
     </>
   );
-  if (chrome) return published;
-  return <StandaloneRailHost>{published}</StandaloneRailHost>;
-}
-
-/**
- * The standalone rail host: when ResourceExplorer renders OUTSIDE a host (a feature site's /home),
- * it provides its OWN {@link RailHostContext} so the topic panes' publishers work exactly as they
- * do inside the hub shell — the master/detail lists register as deeper rail levels, and the leaf
- * editor's unsaved-work guard flows into the one HTD's exit gate (so Back / breadcrumb-up / re-click
- * prompts Save/Discard/Cancel instead of silently discarding). Mirrors the hub's
- * WorkspaceChromeProvider semantics (local registry + composite guard + depth-merged stack), trimmed
- * to the standalone case: no toolbar slot, no shell workspace/feature levels, no breadcrumb.
- */
-function StandaloneRailHost({ children }: { children: ReactNode }): ReactElement {
-  const [registry, setRegistry] = useState<ReadonlyMap<string, RegisteredLevels>>(new Map());
-  const [guards, setGuards] = useState<ReadonlyMap<string, PaneExitGuard>>(new Map());
-
-  const registerLevels = useCallback((id: string, entry: RegisteredLevels) => {
-    setRegistry((prev) => {
-      const next = new Map(prev);
-      next.set(id, entry);
-      return next;
-    });
-  }, []);
-  const unregisterLevels = useCallback((id: string) => {
-    setRegistry((prev) => {
-      if (!prev.has(id)) return prev;
-      const next = new Map(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-  // Register/replace or (guard === null) withdraw one publisher's guard — the withdraw path is how a
-  // guard clears when its editor unmounts (useRailExitGuard's cleanup), mirroring the hub host.
-  const registerExitGuard = useCallback((id: string, guard: PaneExitGuard | null) => {
-    setGuards((prev) => {
-      if (guard === null && !prev.has(id)) return prev;
-      const next = new Map(prev);
-      if (guard === null) next.delete(id);
-      else next.set(id, guard);
-      return next;
-    });
-  }, []);
-
-  // The one guard the HTD consults: dirty when ANY publisher is dirty; save() persists every dirty
-  // publisher (all must succeed before the gated navigation proceeds).
-  const exitGuard = useMemo<PaneExitGuard | null>(() => {
-    if (guards.size === 0) return null;
-    const all = [...guards.values()];
-    return {
-      isDirty: () => all.some((g) => g.isDirty()),
-      save: async () => {
-        for (const g of all) {
-          if (g.isDirty() && !(await g.save())) return false;
-        }
-        return true;
-      },
-    };
-  }, [guards]);
-
-  const mergedLevels = useMemo(
-    () => [...registry.values()].sort((a, b) => a.depth - b.depth).flatMap((e) => e.levels),
-    [registry],
-  );
-
-  const host = useMemo<RailHostRegistry>(
-    () => ({ registerLevels, unregisterLevels, registerExitGuard, toolbarSlot: null }),
-    [registerLevels, unregisterLevels, registerExitGuard],
-  );
-
-  return (
-    <RailHostContext.Provider value={host}>
-      <HierarchicalTopicDetail levels={mergedLevels} showBreadcrumb={false} exitGuard={exitGuard}>
-        {children}
-      </HierarchicalTopicDetail>
-    </RailHostContext.Provider>
-  );
+  return <RailHostBoundary>{published}</RailHostBoundary>;
 }

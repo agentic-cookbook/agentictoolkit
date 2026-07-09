@@ -12,6 +12,13 @@
 export { ResourceExplorer } from "./resource-explorer";
 export type { ResourceTopic, TopicLeaf, ResourceLandingConfig } from "./resource-explorer";
 
+// The host-or-standalone boundary every feature ENTRY wraps its published content in:
+// pass-through under an existing rail host (the hub shell), a self-hosted rail + exit
+// guards on a bare feature site. ResourceExplorer routes through it internally; the
+// publisher-only feature entries (research/dashboards/knowledgebases/personas) wrap
+// explicitly — without it their rails/guards silently no-op standalone.
+export { RailHostBoundary, StandaloneRailHost } from "./standalone-rail-host";
+
 // The "All" card/list landing, the "New …" dialog, and the single-record settings pane.
 export { ResourceLanding } from "./resource-landing";
 export { CreateResourceDialog } from "./create-resource-dialog";

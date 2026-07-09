@@ -68,18 +68,17 @@ export function ResearchPane({
     /** Route to a document (null clears back to the list). */
     onSelectDoc: (id: string | null) => void;
   };
-  /** The public-URL slug to publish under (a host-side profile field, not part of the plain
-   *  `@agentic-toolkit/auth` user shape). When the host supplies it (the hub's `ResearchFeature`
-   *  wiring resolves the signed-in user's own `slug` field first) it takes precedence; when omitted
-   *  — the embedded ecosystem topic-rail usage renders this pane with no props — this falls back to
-   *  slugifying the signed-in user's display name. */
+  /** Host OVERRIDE for the public-URL slug to publish under. Normally unnecessary: the
+   *  signed-in user's backend-persisted profile slug (typed on the auth user shape, returned
+   *  by GET /auth/me) is used directly below; a host only passes this to publish under a
+   *  different namespace. */
   userSlug?: string;
 } = {}) {
   const { user } = useAuth();
-  // The slug is backend-persisted (Settings → Profile writes it via PATCH /auth/me), so a
-  // host-supplied `userSlug` (which can see that profile field) is authoritative; fall back to a
-  // slugified name when the host doesn't supply one. The public research URL is built from it.
-  const userSlug = userSlugProp ?? slugify(user?.name ?? "");
+  // The slug is backend-persisted (Settings → Profile writes it via PATCH /auth/me) and rides
+  // the auth user, so it is authoritative here; the prop is an explicit host override, and a
+  // slugified display name is the last-resort fallback for users who predate profile slugs.
+  const userSlug = userSlugProp ?? user?.slug ?? slugify(user?.name ?? "");
 
   // ── Data ────────────────────────────────────────────────────────────────
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);

@@ -10,14 +10,6 @@ export { PersonaEditor } from "./PersonaEditor";
 // personas an owner has let act on the caller's behalf; a host mounts it standalone.
 export { AssistantsPanel } from "./AssistantsPanel";
 
-import type { ComponentProps } from "react";
-import type { PersonasSection } from "./PersonasSection";
-import type { ServicesSection } from "./ServicesSection";
-import type { PersonaEditor } from "./PersonaEditor";
-export type PersonasSectionProps = ComponentProps<typeof PersonasSection>;
-export type ServicesSectionProps = ComponentProps<typeof ServicesSection>;
-export type PersonaEditorProps = ComponentProps<typeof PersonaEditor>;
-
 // The site entry: a thin, host-agnostic wrapper that drives PersonasSection's urlSelection from an
 // explicit basePath — a feature site mounts this directly, no host-side glue needed.
 export { PersonasFeature } from "./PersonasFeature";
@@ -25,8 +17,6 @@ export { PersonasFeature } from "./PersonasFeature";
 // The Personas URL grammar, owned here so every host parses it identically.
 export { parsePersonasPath, type PersonasPathSelection } from "./parse-path";
 
-// The tool-provenance labelling shared by this feature's Abilities facet and a host's own
-// per-user consent view (e.g. the hub settings AssistantsPanel) — kept as a small standalone
-// module (agent-tool-source.ts) so a host can depend on just the labelling without the rest of
-// the feature, re-exported here as the package's public surface for it.
-export { BUILT_IN, sourceLabel, groupBySource } from "./agent-tool-source";
+// The tool-provenance labelling (agent-tool-source.ts) is INTERNAL: its two consumers —
+// the Abilities facet and the AssistantsPanel consent view — both live in this package now,
+// so nothing outside imports the labelling directly.

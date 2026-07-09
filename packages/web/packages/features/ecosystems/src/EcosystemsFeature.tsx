@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, Database } from "lucide-react";
+import { Settings, Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, Database } from "lucide-react";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import {
   ResourceExplorer,
+  ResourceLanding,
   CreateResourceDialog,
   StackGroupDetail,
   useStackLevel,
@@ -47,17 +48,42 @@ export interface RenderTopicPaneCtx {
   leaf?: TopicLeaf;
 }
 
+/**
+ * The topic rows for the two topics this package renders ENTIRELY in-package (the entity
+ * Settings pane and the Child Ecosystems rail). The package is the SSoT for what it renders:
+ * a host composing only these (a feature-site mount) spreads them instead of hand-copying
+ * ids/labels/icons that would silently drift; the hub builds its fuller rail from its own
+ * ECOSYSTEM_TOPICS catalog, where these two ids appear with the same meaning.
+ */
+export const IN_PACKAGE_TOPICS: EcosystemsTopicConfig[] = [
+  { id: "settings", label: "Settings", icon: <Settings size={16} aria-hidden />, dividerAfter: false },
+  {
+    id: "child-ecosystems",
+    label: "Child Ecosystems",
+    icon: <Boxes size={16} aria-hidden />,
+    dividerAfter: false,
+  },
+];
+
 export interface EcosystemsFeatureProps {
   basePath: string;
+  /** The workspace slug whose (primary) ecosystem the feature opens on when the URL names
+   *  none — the hub passes its route slug. Like basePath, supplied by the host rather than
+   *  read from useParams here, so a host without a [slug] route (a feature site) fails
+   *  visibly at the prop seam instead of silently deriving undefined. Absent ⇒ default-
+   *  ecosystem resolution is disabled (the platform-wide ecosystem-scoping decision for
+   *  site mounts — feature-platform-phase2 §2 — is still open) and a bare path renders the
+   *  ecosystem card landing instead; deep-linked /<ecoId> paths never consult it. */
+  workspaceSlug?: string;
   /** The ecosystem-scoped topic rail (host SSoT: settings/topics.ts's ECOSYSTEM_TOPICS). */
   topics: EcosystemsTopicConfig[];
   /** Render a non-ecosystems workspace feature's own content for a topic/group-member this
    *  feature reuses verbatim (Communities / Messaging / Research / Dashboards / All Data) —
    *  the host's `renderFeaturePanel` from feature-panels.tsx. */
-  renderFeaturePanel: (feature: string, opts?: { subLeaf?: TopicLeaf }) => ReactNode;
+  renderFeaturePanel?: (feature: string, opts?: { subLeaf?: TopicLeaf }) => ReactNode;
   /** Render a host-owned settings pane this feature composes but doesn't own: the topic ids
    *  "applications" | "integrations", and the group-member ids "buckets" | "access" | "users". */
-  renderTopicPane: (topicId: string, ctx: RenderTopicPaneCtx) => ReactNode;
+  renderTopicPane?: (topicId: string, ctx: RenderTopicPaneCtx) => ReactNode;
   /** Contextual help lookup (the hub's helpFor), keyed `ecosystems/<topic>`. Only consulted for
    *  this feature's OWN pane (Settings) — renderTopicPane resolves help for host-owned panes
    *  itself. Omit to render no help. */
@@ -172,9 +198,13 @@ function groupMembers(
  */
 export function EcosystemsFeature({
   basePath,
+  workspaceSlug,
   topics: topicsConfig,
-  renderFeaturePanel,
-  renderTopicPane,
+  // A minimal host (a feature-site mount whose topics are only the in-package rows)
+  // injects neither renderer; the no-op defaults keep those topic ids unrenderable
+  // rather than crashing, exactly like a host passing explicit stubs.
+  renderFeaturePanel = () => null,
+  renderTopicPane = () => null,
   helpFor,
   activeTopic,
   activeEcoId,
@@ -182,10 +212,10 @@ export function EcosystemsFeature({
   activeMemberEntityId,
 }: EcosystemsFeatureProps): ReactElement {
   const router = useRouter();
-  // Feature links are workspace-relative: <basePath>/... The slug stays constant while
-  // navigating within this workspace (so the FTD cache/last-id keys are stable and don't
-  // re-flash), and switching workspaces re-scopes all three.
-  const { slug } = useParams<{ slug: string }>();
+  // Feature links are workspace-relative: <basePath>/... The host-supplied slug stays
+  // constant while navigating within this workspace (so the FTD cache/last-id keys are
+  // stable and don't re-flash), and switching workspaces re-scopes all three.
+  const slug = workspaceSlug;
   const { items: ecosystems, reload, error } = useResourceList(
     basePath,
     ecosystemsApi.list,
@@ -196,7 +226,8 @@ export function EcosystemsFeature({
   // standalone /messaging route uses); react-query dedupes concurrent readers.
   const defaultIdQuery = useQuery({
     queryKey: ["ecosystem-id-for-slug", slug],
-    queryFn: () => ecosystemsApi.ecosystemIdForSlug(slug),
+    // enabled gates on slug != null, so the assertion can't be reached with undefined.
+    queryFn: () => ecosystemsApi.ecosystemIdForSlug(slug as string),
     enabled: slug != null && activeEcoId == null,
     retry: false,
   });
@@ -399,6 +430,37 @@ export function EcosystemsFeature({
       )}
     />
   );
+
+  // A slug-less host (a feature-site mount): default resolution is disabled (§2), so a bare
+  // path renders a DEFINED unscoped state — the ecosystem card landing — never
+  // ResourceExplorer's promoted "Loading…" hold. Cards route to <basePath>/<id>, the
+  // slug-independent deep-link path; New creates top-level (scopedId is undefined here).
+  // list() hides a hidden default ecosystem, so a tenant whose only ecosystem is that
+  // default sees the empty label — accepted until §2 decides site-mount scoping.
+  if (workspaceSlug == null && activeEcoId == null) {
+    return (
+      <>
+        <ResourceLanding
+          items={ecosystems}
+          title="Ecosystems"
+          help="Open an ecosystem to manage its settings and child ecosystems."
+          emptyLabel="No ecosystems yet."
+          basePath={basePath}
+          getId={(e) => e.id}
+          getLabel={(e) => e.name}
+          getSublabel={(e) => e.identifier}
+          cardHref={(e) => `${basePath}/${e.id}`}
+          renderMeta={() => null}
+          onNew={() => {
+            setCreateTopLevel(false);
+            setNewOpen(true);
+          }}
+          newLabel="New Ecosystem"
+        />
+        {createDialog}
+      </>
+    );
+  }
 
   // First run: no ecosystems at all. Offer a create instead of ResourceExplorer's perpetual "Loading…".
   if (noEcosystems) {

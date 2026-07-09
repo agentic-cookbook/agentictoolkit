@@ -69,3 +69,26 @@ export interface EndpointCreateBody {
   checkIntervalSeconds?: number;
   isActive?: boolean;
 }
+
+/** `POST /monitoring/site-groups` body (the fields this client sends). */
+export interface GroupCreateBody {
+  name: string;
+  slug: string;
+  retentionDays?: number;
+}
+
+/** `PUT /monitoring/site-groups/{id}` body (all-optional partial update). */
+export interface GroupPutBody {
+  name?: string;
+  slug?: string;
+  retentionDays?: number;
+}
+
+/** `PUT /monitoring/endpoints/{id}` body (the fields this client sends). */
+export interface EndpointPutBody {
+  url?: string;
+  kind?: string;
+  expectedStatus?: number;
+  checkIntervalSeconds?: number;
+  isActive?: boolean;
+}

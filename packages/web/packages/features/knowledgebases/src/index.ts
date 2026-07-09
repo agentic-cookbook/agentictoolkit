@@ -4,6 +4,10 @@
 // `basePath` + the `tables` it resolved from its own catalogs) and the URL parse both hosts share.
 export { KnowledgeBasesFeature } from "./KnowledgeBasesFeature";
 
+// The persona-memory table rule. ALSO exported at the server-safe ./tables subpath —
+// RSC pages must import it from there (this barrel's dist is a "use client" module).
+export { personaMemoryTables } from "./tables";
+
 // The /home Knowledge Bases URL grammar, owned here so both hosts parse it identically.
 export { parseKnowledgeBasesPath, type KnowledgeBasesPathSelection } from "./parse-path";
 

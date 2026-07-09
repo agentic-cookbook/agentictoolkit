@@ -2,7 +2,10 @@ import { defineConfig } from 'tsup'
 import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  // parse-path is its OWN entry: the barrel dist hoists 'use client' (whole-file
+  // client module), which would make the parse helpers uncallable from an RSC page.
+  // A separate directive-free chunk keeps the URL grammar server-safe (./parse).
+  entry: ['src/index.ts', 'src/parse-path.ts'],
   outDir: 'dist',
   format: ['esm'],
   target: 'es2022',

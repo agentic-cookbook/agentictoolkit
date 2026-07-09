@@ -20,7 +20,17 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
-    "./sources.css": "./sources.css"
+    "./sources.css": "./sources.css",
+    "./parse": {
+      "types": "./dist/parse-path.d.ts",
+      "development": "./src/parse-path.ts",
+      "import": "./dist/parse-path.js"
+    },
+    "./tables": {
+      "types": "./dist/tables.d.ts",
+      "development": "./src/tables.ts",
+      "import": "./dist/tables.js"
+    }
   },
   "scripts": {
     "build": "tsup && pnpm run build:types",

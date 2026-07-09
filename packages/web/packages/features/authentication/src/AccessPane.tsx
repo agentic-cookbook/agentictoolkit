@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { KeyRound } from "lucide-react";
@@ -84,7 +84,15 @@ export function AccessPane({
   const [loadError, setLoadError] = useState<string | null>(null);
   const renderRecordAffordance = useRecordAffordance();
 
+  // Latest-wins guards: both loaders re-run when their inputs change identity (ecosystemId,
+  // or a host passing a fresh directory closure per render) AND are called imperatively
+  // after mutations — a generation stamp makes any overlapped older response a no-op
+  // instead of racing its stale result into state.
+  const refreshGen = useRef(0);
+  const principalsGen = useRef(0);
+
   const refresh = useCallback(async () => {
+    const gen = ++refreshGen.current;
     setLoadError(null);
     try {
       // Two calls, not 1+N: the ecosystem's buckets (for names + the type picker) and
@@ -104,20 +112,24 @@ export function AccessPane({
       const items: AccessItem[] = allGroups
         .filter((group) => nameByBucket.has(group.bucketId))
         .map((group) => ({ group, bucketName: nameByBucket.get(group.bucketId) as string }));
+      if (gen !== refreshGen.current) return; // superseded by a newer load
       setBuckets(refs);
       setItems(sortItems(items));
     } catch (err) {
+      if (gen !== refreshGen.current) return;
       reportUnexpectedAuthError(err, { feature: "bucket-access", step: "load-access" });
       setLoadError(err instanceof Error ? err.message : "Failed to load access lists.");
     }
   }, [ecosystemId]);
 
   const loadPrincipals = useCallback(async () => {
+    const gen = ++principalsGen.current;
     try {
       const [users, apps] = await Promise.all([
         usersDirectory(ecosystemId),
         applicationsDirectory(ecosystemId),
       ]);
+      if (gen !== principalsGen.current) return; // superseded by a newer load
       setPrincipals({
         users: users.map((u) => ({ id: u.id, label: u.displayName || u.email })),
         apps: apps.map((a) => ({ id: a.id, label: a.name })),

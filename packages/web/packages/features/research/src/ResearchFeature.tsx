@@ -1,6 +1,6 @@
 "use client";
 
-import { useBasePathRoute } from "@agentic-toolkit/resource";
+import { RailHostBoundary, useBasePathRoute } from "@agentic-toolkit/resource";
 import { ResearchPane } from "./ResearchPane";
 
 /**
@@ -28,13 +28,17 @@ export function ResearchFeature({
   userSlug?: string;
 }) {
   const { pushSegment } = useBasePathRoute(basePath);
+  // RailHostBoundary: the pane's document list + exit guard exist only as rail-host
+  // publications; on a bare feature site (no hub shell) the boundary self-hosts them.
   return (
-    <ResearchPane
-      userSlug={userSlug}
-      urlSelection={{
-        docId,
-        onSelectDoc: pushSegment,
-      }}
-    />
+    <RailHostBoundary>
+      <ResearchPane
+        userSlug={userSlug}
+        urlSelection={{
+          docId,
+          onSelectDoc: pushSegment,
+        }}
+      />
+    </RailHostBoundary>
   );
 }

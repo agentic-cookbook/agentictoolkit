@@ -14,6 +14,10 @@ export interface AuthUser {
   email: string
   name: string
   avatarUrl: string
+  /** The user's public profile slug — backend-persisted (PATCH /auth/me) and returned by
+   *  GET /auth/me since the customer identity gained public profiles; optional so user
+   *  objects cached in storage before this field was typed stay valid. */
+  slug?: string | null
   capabilities: string[]
   authMethods: UserAuthMethod[]
   attributes: UserAttribute[]

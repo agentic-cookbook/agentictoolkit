@@ -25,9 +25,12 @@ import type {
   GroupRow,
   SiteRow,
   EndpointRow,
+  GroupCreateBody,
+  GroupPutBody,
   SiteCreateBody,
   SitePutBody,
   EndpointCreateBody,
+  EndpointPutBody,
 } from "./wire";
 
 export interface SiteGroupView {
@@ -159,7 +162,7 @@ export async function createGroup(body: CreateGroupBody): Promise<SiteGroupView>
         name: body.name,
         slug: body.slug,
         retentionDays: body.retentionDays,
-      } satisfies CreateGroupBody),
+      } satisfies GroupCreateBody),
     ),
   });
   return toGroup(row);
@@ -170,7 +173,7 @@ export async function updateGroup(id: string, body: UpdateGroupBody): Promise<Si
     name: body.name,
     slug: body.slug,
     retentionDays: body.retentionDays,
-  } satisfies UpdateGroupBody);
+  } satisfies GroupPutBody);
   const row = await authedJson<GroupRow>(`${GROUPS}/${enc(id)}`, {
     method: "PUT",
     body: JSON.stringify(patch),
@@ -272,7 +275,7 @@ export async function updateEndpoint(
     expectedStatus: body.expectedStatus,
     checkIntervalSeconds: body.checkIntervalSeconds,
     isActive: body.isActive,
-  } satisfies UpdateEndpointBody);
+  } satisfies EndpointPutBody);
   const row = await authedJson<EndpointRow>(`${ENDPOINTS}/${enc(id)}`, {
     method: "PUT",
     body: JSON.stringify(patch),

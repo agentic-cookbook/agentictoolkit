@@ -20,17 +20,12 @@ export interface AcceptResultRow {
   ecosystemName?: string;
 }
 
-/** The authenticated user record embedded in a fresh register/login result. */
-export interface UserRow {
-  id: string;
-  email: string;
-  name: string;
-  avatarUrl: string;
-  slug: string | null;
-  /** Whether the public profile card is visible at /public/users/:slug */
-  publicProfileEnabled: boolean;
-  capabilities: string[];
-}
+/** The authenticated user record embedded in a fresh register/login result — the SAME
+ *  backend customer record GET /auth/me returns, so it re-uses that mirror (one wire
+ *  representation; a backend field change is fixed in one place). */
+import type { MeRow } from "../personas/wire";
+
+export type UserRow = MeRow;
 
 /** The 201 response from POST /auth/register — token + refreshToken + user, plus the
  *  invite-registration-specific verification/conflict flags. */

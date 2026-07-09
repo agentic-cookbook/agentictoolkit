@@ -6,12 +6,26 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "sources.css"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "development": "./src/index.ts", "import": "./dist/index.js" },
-    "./sources.css": "./sources.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./sources.css": "./sources.css",
+    "./parse": {
+      "types": "./dist/parse-path.d.ts",
+      "development": "./src/parse-path.ts",
+      "import": "./dist/parse-path.js"
+    }
   },
   "scripts": {
     "build": "tsup && pnpm run build:types",

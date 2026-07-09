@@ -5,7 +5,7 @@
 // this feature reuses but doesn't own (Applications / Integrations / Buckets / Access /
 // Users) — see EcosystemsFeature's prop doc comments.
 
-export { EcosystemsFeature } from "./EcosystemsFeature";
+export { EcosystemsFeature, IN_PACKAGE_TOPICS } from "./EcosystemsFeature";
 export type {
   EcosystemsFeatureProps,
   EcosystemsTopicConfig,

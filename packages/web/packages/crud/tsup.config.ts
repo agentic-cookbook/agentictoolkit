@@ -4,6 +4,11 @@ import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
+    // The generated catalog is its OWN entry: the barrel dist hoists 'use client'
+    // (whole-file client module), which would make CRUD_TABLES an un-dereferenceable
+    // client reference in an RSC page. This chunk is plain data, directive-free
+    // (./generated/table-metadata) — mirrors api-explorer's generated subpath.
+    'generated/table-metadata': 'src/generated/table-metadata.ts',
   },
   outDir: 'dist',
   format: ['esm'],

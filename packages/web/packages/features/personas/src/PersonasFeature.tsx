@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useBasePathRoute } from "@agentic-toolkit/resource";
+import { RailHostBoundary, useBasePathRoute } from "@agentic-toolkit/resource";
 import type { Persona } from "@agentic-toolkit/data/personas";
 import { PersonasSection } from "./PersonasSection";
 
@@ -39,17 +39,22 @@ export function PersonasFeature({
   renderKnowledgeBases?: (scopeEcosystemId: string) => ReactNode;
 }) {
   const { pushSegment, pushNested } = useBasePathRoute(basePath);
+  // RailHostBoundary: standalone, PersonasSection's own-HTD fallback renders the persona
+  // list, but PersonaEditor's facet tabs + exit guards exist only as rail-host publications
+  // — the boundary self-hosts them so the editor is whole on a bare feature site.
   return (
-    <PersonasSection
-      urlSelection={{
-        personaId,
-        subtab: subTab,
-        onSelectPersona: pushSegment,
-        onSelectSubtab: (subtab) => pushNested(personaId, subtab),
-      }}
-      renderChatPane={renderChatPane}
-      profileUrlFor={profileUrlFor}
-      renderKnowledgeBases={renderKnowledgeBases}
-    />
+    <RailHostBoundary>
+      <PersonasSection
+        urlSelection={{
+          personaId,
+          subtab: subTab,
+          onSelectPersona: pushSegment,
+          onSelectSubtab: (subtab) => pushNested(personaId, subtab),
+        }}
+        renderChatPane={renderChatPane}
+        profileUrlFor={profileUrlFor}
+        renderKnowledgeBases={renderKnowledgeBases}
+      />
+    </RailHostBoundary>
   );
 }
