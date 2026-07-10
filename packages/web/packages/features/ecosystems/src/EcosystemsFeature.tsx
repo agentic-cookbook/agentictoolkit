@@ -267,8 +267,12 @@ export function EcosystemsFeature({
     retry: false,
   });
   const defaultId = defaultIdQuery.data ?? undefined;
-  // The scoped ecosystem: the URL id, else the resolved workspace default.
-  const scopedId = activeEcoId ?? defaultId ?? undefined;
+  // The scoped ecosystem: the URL id, else the resolved workspace default. listFirst NEVER
+  // falls back to the default — its bare path is the list. Guarded on the VALUE (not just the
+  // query's `enabled`): other consumers (useEcosystemCapabilities) share the query key, so a
+  // disabled query can still surface their cached resolution — which then merges the workspace
+  // default into the owned list as a phantom row (hit on hub-testing, 2026-07-10).
+  const scopedId = activeEcoId ?? (listFirst ? undefined : defaultId);
 
   // The scoped ecosystem's row may be a hidden default — `list()` omits isDefault ecosystems, so
   // the id the feature opens on (via the isDefault fallback) can be absent from `ecosystems`. Fetch
