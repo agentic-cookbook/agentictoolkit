@@ -616,10 +616,9 @@ export function PersonaEditor({
       title={isNew ? "New persona" : draft.name || "Persona"}
       items={topics}
       leafHeader={leafHeader}
-      autoSelectFirst
       // URL-drive the sub-tab only for a saved persona (a draft has no id to address, so it selects
-      // sub-tabs in local state). With no sub-tab in the URL, autoSelectFirst shows Identity without
-      // a redirect (the bare /<slug>/personas/<id> URL renders the first tab).
+      // sub-tabs in local state). With no sub-tab in the URL nothing opens — the bare
+      // /<slug>/personas/<id> URL shows the topics unselected (never auto-select a topic).
       urlSelection={
         onSubtabChange
           ? { selectedId: activeSubtab ?? null, onSelect: onSubtabChange }

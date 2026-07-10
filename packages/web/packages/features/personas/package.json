@@ -13,7 +13,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR); prod skips it \u2192 dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -41,6 +41,7 @@
     "@agentic-toolkit/data": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
+    "@tanstack/react-query": "^5.62.0",
     "lucide-react": "^1.16.0"
   },
   "peerDependencies": {

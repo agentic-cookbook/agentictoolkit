@@ -96,13 +96,19 @@ function renderEditor(subtab?: string) {
 afterEach(cleanup);
 
 describe("PersonaEditor facet framing", () => {
-  it("shows the Identity section first, not a facet panel", () => {
+  it("opens with NO facet selected — selecting an item never auto-selects a topic", () => {
     renderEditor();
-    // Identity's Name input (placeholder "Bob") is the first, auto-selected facet…
-    expect(screen.getByPlaceholderText("Bob")).not.toBeNull();
-    // …so no leaf panel is mounted yet.
+    // Spec: nothing opens until the user picks a topic — no Identity form, no leaf panel.
+    expect(screen.queryByPlaceholderText("Bob")).toBeNull();
     expect(screen.queryByTestId("abilities")).toBeNull();
     expect(screen.queryByTestId("permissions")).toBeNull();
+    expect(screen.getByText("Select a topic.")).not.toBeNull();
+  });
+
+  it("shows the Identity section when explicitly selected", () => {
+    renderEditor("identity");
+    expect(screen.getByPlaceholderText("Bob")).not.toBeNull();
+    expect(screen.queryByTestId("abilities")).toBeNull();
   });
 
   it("Personality groups Character, Voice and Examples", () => {

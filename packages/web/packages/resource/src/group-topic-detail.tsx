@@ -27,19 +27,18 @@ export interface GroupTopicItem {
  * AFTER this group rail in the SAME stack, never as a separate nested rail. `leafHeader` renders
  * once above the active member's content, in the leaf (e.g. an editor's Save/Cancel bar).
  *
- * By default there is NO auto-selection: choosing this group shows its members UNSELECTED — picking
- * a member is an explicit act, never a cascade into the child rail (until then the leaf shows
- * `emptyHint`). This is the rule for NAVIGATION groups. An editor whose "members" are its own tabs
- * (the persona editor) may opt into `autoSelectFirst` to open on its first tab. Selection is local;
- * key the instance by group id at the call site.
+ * There is NEVER auto-selection: choosing this group (or the entity that owns it) shows its members
+ * UNSELECTED — picking a member is an explicit act, never a cascade into the child rail (until then
+ * the leaf shows `emptyHint`). This holds for editors exactly like navigation groups (spec:
+ * selecting an item in a hierarchical topic/detail view never automatically selects a topic).
+ * Selection is local; key the instance by group id at the call site.
  */
 export function StackGroupDetail({
   items,
   levelId,
   title,
   leafHeader,
-  emptyHint = "Select an item to view it.",
-  autoSelectFirst = false,
+  emptyHint = "Select a topic.",
   urlSelection,
   renderSubLeaf,
 }: {
@@ -53,44 +52,30 @@ export function StackGroupDetail({
   leafHeader?: ReactNode;
   /** Shown in the leaf until a member is chosen (no auto-selection into the child rail). */
   emptyHint?: ReactNode;
-  /** Open with the first member selected — for an editor showing its first tab (persona editor),
-   *  NOT for navigation groups. Default false: a group choice cascades into nothing. */
-  autoSelectFirst?: boolean;
   /** Opt-in URL-driven selection (a deep-linkable sub-tab / section). When provided, the active
    *  member lives in the URL instead of internal state — reads come from `selectedId` and every
    *  select/clear routes through `onSelect` so the caller can push the segment (mirrors
    *  {@link useMasterDetailForm}'s `urlSelection`). Omit for the legacy internal-selection
-   *  behavior. With `autoSelectFirst` and `selectedId` null (no sub-tab in the URL), the first
-   *  member still SHOWS but no redirect is pushed to it — the first tab renders at the bare URL. */
+   *  behavior. */
   urlSelection?: { selectedId: string | null; onSelect: (id: string | null) => void };
   /** Builds the deep-linkable sub-leaf for the ACTIVE member (the URL segment after it), so the
    *  member's inner entity is itself deep-linkable (…/<group>/<member>/<entity>). Omit for the
    *  legacy behavior — the member's inner selection stays local ({@link LOCAL_SUBLEAF}). */
   renderSubLeaf?: (memberId: string) => TopicLeaf;
 }) {
-  // Navigation groups start unselected and onClear returns to that state; an editor (autoSelectFirst)
-  // opens on — and clears back to — its first tab. Never a navigation cascade into the child rail.
-  const defaultId = autoSelectFirst ? items[0]?.id ?? null : null;
-  // Selection lives in the URL when `urlSelection` is given (deep-linkable), else in internal state
-  // (seeded with `defaultId` so an editor opens on its first tab) — the shared dual-mode toggle.
-  // `url` is kept for the one mode-specific spot: onClear routes to null (URL) vs. defaultId (local).
-  const url = urlSelection;
-  const { selectedId: selected, select: setSelected } = useDualModeSelection(url, {
-    defaultSelectedId: defaultId,
-  });
-  // Selected item if present; else (nothing selected, or a stale id no longer in `items`) fall back
-  // to the first item for an editor (autoSelectFirst) or to nothing for a navigation group.
-  const found = selected != null ? items.find((i) => i.id === selected) ?? null : null;
-  const active = found ?? (autoSelectFirst ? items[0] ?? null : null);
+  // Every group starts unselected and onClear returns to that state — never a cascade into the
+  // child rail. Selection lives in the URL when `urlSelection` is given (deep-linkable), else in
+  // internal state — the shared dual-mode toggle.
+  const { selectedId: selected, select: setSelected } = useDualModeSelection(urlSelection);
+  // Selected item if present; else (nothing selected, or a stale id no longer in `items`) nothing.
+  const active = selected != null ? items.find((i) => i.id === selected) ?? null : null;
   const level: TopicLevel = {
     id: levelId,
     title,
     items: items.map((i) => ({ id: i.id, label: i.label, icon: i.icon })),
     selectedId: active?.id ?? null,
     onSelect: setSelected,
-    // Internal: clear back to the default (first tab for an editor, nothing for a nav group). URL:
-    // clear the segment (route to null) — `active` still shows the first tab with NO redirect.
-    onClear: () => setSelected(url ? null : defaultId),
+    onClear: () => setSelected(null),
   };
   return (
     <StackLevels levels={[level]}>

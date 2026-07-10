@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { HierarchicalTopicDetail, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
@@ -62,9 +63,30 @@ export function PersonasSection({
    *  {@link PersonaEditor}. */
   renderKnowledgeBases?: (scopeEcosystemId: string) => ReactNode;
 }) {
-  const [personas, setPersonas] = useState<Persona[] | null>(null);
-  const [services, setServices] = useState<UserService[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  // Data rides the toolkit's shared react-query cache, NOT local state: Next remounts the page
+  // subtree on every param navigation, so local state would restart from null on each persona/topic
+  // click and the whole list "blinks" through Loading…. The cache survives the remount, so a
+  // reselect renders instantly; invalidation (reload, below) still refreshes after writes.
+  const queryClient = useQueryClient();
+  const personasQuery = useQuery({
+    queryKey: ["personas", workspaceSlug ?? null],
+    queryFn: () => api.personas.list(workspaceSlug ? { workspace: workspaceSlug } : undefined),
+  });
+  const servicesQuery = useQuery({
+    queryKey: ["persona-services"],
+    queryFn: () => api.services.list(),
+  });
+  const services = servicesQuery.data ?? [];
+  // Surface load failures once settled (after retry), matching the old catch-and-report.
+  const loadError = personasQuery.error ?? servicesQuery.error ?? null;
+  useEffect(() => {
+    if (loadError) reportUnexpectedAuthError(loadError, { feature: "personas", step: "list" });
+  }, [loadError]);
+  const error = loadError
+    ? loadError instanceof Error
+      ? loadError.message
+      : "Failed to load personas."
+    : null;
   // `creating` (a new draft, no id yet) stays LOCAL in both modes — a draft has no URL/id to address,
   // so we never route on create (matches useMasterDetailForm.create). The OPEN persona's id lives in
   // the URL (URL-driven) or internal state (embedded), via useDualModeSelection below.
@@ -84,26 +106,14 @@ export function PersonasSection({
     select(id);
   };
 
-  const reload = useCallback(async () => {
-    try {
-      const [ps, ss] = await Promise.all([
-        api.personas.list(workspaceSlug ? { workspace: workspaceSlug } : undefined),
-        api.services.list(),
-      ]);
-      setPersonas(ps);
-      setServices(ss);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "personas", step: "list" });
-      setError(err instanceof Error ? err.message : "Failed to load personas.");
-      setPersonas([]);
-    }
-  }, [workspaceSlug]);
+  // After a write: invalidate EVERY personas variant (all workspace scopes — a create/save can
+  // affect other workspaces' lists too) plus the services list; active queries refetch immediately.
+  const reload = () => {
+    void queryClient.invalidateQueries({ queryKey: ["personas"] });
+    void queryClient.invalidateQueries({ queryKey: ["persona-services"] });
+  };
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const rows = personas ?? [];
+  const rows = personasQuery.data ?? [];
   const items: TopicDetailItem[] = rows.map((p) => ({
     id: p.id,
     label: p.name,
@@ -142,7 +152,7 @@ export function PersonasSection({
   const railHost = useRailHost();
 
   const content =
-    personas === null ? (
+    personasQuery.isPending ? (
       <p className="p-6 text-sm text-apt-text-muted">Loading…</p>
     ) : creating ? (
       // A new draft has no id/URL yet; sub-tabs select in local state (no subtab props). On save,
@@ -154,7 +164,7 @@ export function PersonasSection({
         workspaceSlug={workspaceSlug}
         onSaved={(saved) => {
           selectPersona(saved.id);
-          void reload();
+          reload();
         }}
         onCancel={() => setCreating(false)}
         renderChatPane={renderChatPane}
@@ -167,11 +177,11 @@ export function PersonasSection({
         persona={openPersona}
         services={services}
         workspaceSlug={workspaceSlug}
-        // Sub-tabs are URL-driven + deep-linkable only when this section is URL-driven; embedded, the
-        // editor keeps its own internal tab selection (autoSelectFirst), unchanged.
+        // Sub-tabs are URL-driven + deep-linkable only when this section is URL-driven; embedded,
+        // the editor keeps its own internal tab selection (opening unselected), unchanged.
         activeSubtab={urlSelection?.subtab}
         onSubtabChange={urlSelection?.onSelectSubtab}
-        onSaved={() => void reload()}
+        onSaved={() => reload()}
         onCancel={() => selectPersona(null)}
         renderChatPane={renderChatPane}
         profileUrlFor={profileUrlFor}
