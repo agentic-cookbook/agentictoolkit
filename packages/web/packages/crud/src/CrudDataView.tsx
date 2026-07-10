@@ -18,7 +18,6 @@ import { Checkbox } from '@agentic-toolkit/ui/components/checkbox'
 import { useAuth, isAdmin } from '@agentic-toolkit/auth'
 import { ApiButton } from '@agentic-toolkit/api-explorer'
 import { MoveToEcosystemDialog } from './MoveToEcosystemDialog'
-import { CollapseToggle } from '@agentic-toolkit/ui/components/collapse-toggle'
 import { ResizableSplit } from '@agentic-toolkit/ui/components/resizable-split'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
 import { CrudFieldInput } from './CrudFieldInput'
@@ -365,6 +364,21 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
         // Persists the divider position across mounts (component state + localStorage).
         storageKey="crud-data-view-split"
         bottomLabel="Row details"
+        // The divider is the detail pane's header bar: the active row's identity
+        // lives here (was RowDetails' bespoke header) and the bar's disclosure
+        // replaces the pane's own CollapseToggle.
+        header={
+          baseline ? (
+            <>
+              <span className={fieldCaptionClass}>{isDraftActive ? 'New row' : 'Row'}</span>
+              <span className="ml-2 truncate font-mono text-xs text-apt-text">
+                {isDraftActive ? '(unsaved)' : (activeRow ? rowKey(meta, activeRow) : null) || '(no primary key)'}
+              </span>
+            </>
+          ) : (
+            'Row details'
+          )
+        }
         top={
           <RowList
             meta={meta}
@@ -386,7 +400,6 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
             meta={meta}
             baseline={baseline}
             mode={isDraftActive ? 'create' : 'edit'}
-            rowLabel={isDraftActive ? null : activeRow ? rowKey(meta, activeRow) : null}
             edits={activeKey != null ? edits[activeKey] : undefined}
             onEdit={(name, value) => {
               if (activeKey != null) setEdit(activeKey, name, value)
@@ -743,25 +756,21 @@ interface RowDetailsProps {
   baseline: CrudDraft | null
   /** 'create' for an unsaved draft (createOnly columns editable), else 'edit'. */
   mode: EditableMode
-  /** An existing row's primary key for the header, or null for a new draft. */
-  rowLabel: string | null
   /** Dirty edits for the active row (col → value), or undefined when clean. */
   edits: CrudDraft | undefined
   onEdit: (name: string, value: string | boolean) => void
 }
 
 /**
- * The bottom pane: the active row as a column:value list. Editable columns (per
- * {@link isColumnEditable} in the active mode) render the shared
+ * The bottom pane BODY: the active row as a column:value list. Editable columns
+ * (per {@link isColumnEditable} in the active mode) render the shared
  * {@link CrudFieldInput} — its `<label htmlFor>` naming the column — writing into
  * the parent's per-row dirty-edits buffer; relational / locked columns render as
  * plain, visibly read-only text. Server-managed columns are hidden here (they stay
- * in the top row list). A top-right disclosure collapses the body, leaving the row
- * identity visible.
+ * in the top row list). The row identity + the collapse disclosure live on the
+ * split's header bar (CrudDataView passes them), not here.
  */
-function RowDetails({ meta, baseline, mode, rowLabel, edits, onEdit }: RowDetailsProps) {
-  // Disclosure starts open; the row identity header stays visible when collapsed.
-  const [open, setOpen] = useState(true)
+function RowDetails({ meta, baseline, mode, edits, onEdit }: RowDetailsProps) {
   const bodyId = useId()
 
   if (!baseline) {
@@ -772,68 +781,35 @@ function RowDetails({ meta, baseline, mode, rowLabel, edits, onEdit }: RowDetail
     )
   }
   const columns = meta.columns.filter((column) => !isColumnHidden(column))
-  const heading = mode === 'create' ? 'New row' : 'Row'
-  const identity = mode === 'create' ? '(unsaved)' : rowLabel || '(no primary key)'
 
   return (
     <div className="flex min-w-0 flex-col">
-      {/* Header: row identity on the left, the vertical disclosure toggle pinned
-          top-right (mirrors the topic-list rail's CollapseToggle placement). */}
-      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className={fieldCaptionClass}>
-            {heading}
-          </span>
-          <span className="truncate font-mono text-sm text-apt-text" title={identity}>
-            {identity}
-          </span>
-        </div>
-        <CollapseToggle
-          collapsed={!open}
-          onToggle={() => setOpen((value) => !value)}
-          label="row details"
-          controls={bodyId}
-        />
-      </div>
-      {/* Vertical disclosure: a one-row grid whose track animates 1fr ⇄ 0fr with
-          the inner cell clipped, so the column:value list slides closed/open. The
-          global data-reduce-motion CSS zeroes the duration (matches topic-detail). */}
-      <div
-        id={bodyId}
-        className={
-          'grid transition-[grid-template-rows] duration-200 ease-out ' +
-          (open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')
-        }
-      >
-        <div className="min-h-0 overflow-hidden">
-          <dl className="flex flex-col gap-2.5 px-4 pb-4">
-            {columns.map((column) => {
-              const editable = isColumnEditable(meta, column, mode)
-              const value = edits?.[column.name] ?? baseline[column.name]
-              const fieldId = `${bodyId}-${column.name}`
-              return (
-                <div key={column.name} className="flex min-w-0 flex-col gap-1">
-                  <dt className={fieldCaptionClass}>
-                    {editable ? <label htmlFor={fieldId}>{column.name}</label> : column.name}
-                  </dt>
-                  <dd className="min-w-0">
-                    {editable ? (
-                      <CrudFieldInput
-                        id={fieldId}
-                        column={column}
-                        value={value}
-                        onChange={(next) => onEdit(column.name, next)}
-                      />
-                    ) : (
-                      <ReadOnlyValue value={value} />
-                    )}
-                  </dd>
-                </div>
-              )
-            })}
-          </dl>
-        </div>
-      </div>
+      <dl className="flex flex-col gap-2.5 px-4 py-4">
+        {columns.map((column) => {
+          const editable = isColumnEditable(meta, column, mode)
+          const value = edits?.[column.name] ?? baseline[column.name]
+          const fieldId = `${bodyId}-${column.name}`
+          return (
+            <div key={column.name} className="flex min-w-0 flex-col gap-1">
+              <dt className={fieldCaptionClass}>
+                {editable ? <label htmlFor={fieldId}>{column.name}</label> : column.name}
+              </dt>
+              <dd className="min-w-0">
+                {editable ? (
+                  <CrudFieldInput
+                    id={fieldId}
+                    column={column}
+                    value={value}
+                    onChange={(next) => onEdit(column.name, next)}
+                  />
+                ) : (
+                  <ReadOnlyValue value={value} />
+                )}
+              </dd>
+            </div>
+          )
+        })}
+      </dl>
     </div>
   )
 }
