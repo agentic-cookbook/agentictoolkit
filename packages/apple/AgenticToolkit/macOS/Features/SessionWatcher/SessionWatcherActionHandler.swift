@@ -168,10 +168,11 @@ extension SessionWatcher {
 
             if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.googlecode.iterm2") != nil {
                 logger.debug("openTerminal: using iTerm2")
+                let escapedPath = TerminalTextInjector.escape(expandedPath)
                 let script = """
                 tell application id "com.googlecode.iterm2"
                     activate
-                    create window with default profile command "cd \(shellEscape(expandedPath)) && exec $SHELL -l"
+                    create window with default profile command "cd \(escapedPath) && exec $SHELL -l"
                 end tell
             """
                 var error: NSDictionary?
@@ -199,7 +200,7 @@ extension SessionWatcher {
             let script = """
             tell application "Terminal"
                 activate
-                do script "cd \(shellEscape(path))"
+                do script "cd \(TerminalTextInjector.escape(path))"
             end tell
         """
             var error: NSDictionary?
@@ -381,10 +382,14 @@ extension SessionWatcher {
             // surfaces an Automation permission error if denied.
             if session.termProgram == "iTerm.app" {
                 // Strongest signal: the recorded TERM_SESSION_ID maps directly to an
-                // iTerm session `id` — precise, and doesn't need a live pid.
+                // iTerm session `id` — precise, and doesn't need a live pid. That env
+                // var is "<window/tab/pane>:<uuid>"; iTerm's `id of session` is the
+                // uuid (an id without ":" is used whole).
                 if !session.termSessionId.isEmpty {
                     log.append("  iTerm session-id strategy: \(session.termSessionId)")
-                    switch activateITermBySessionId(session.termSessionId) {
+                    let uuid = session.termSessionId.split(separator: ":").last.map(String.init)
+                        ?? session.termSessionId
+                    switch activateITerm(target: .iTermSession(uuid: uuid)) {
                     case .activated:
                         log.append("  iTerm session-id activation succeeded")
                         return .success
@@ -395,9 +400,9 @@ extension SessionWatcher {
                         log.append("  iTerm session-id activation: no match")
                     }
                 }
-                if session.pid > 0, let tty = ttyForPid(session.pid) {
+                if session.pid > 0, let tty = TerminalTextInjector.ttyForPid(session.pid) {
                     log.append("  iTerm TTY strategy: pid=\(session.pid) tty=\(tty)")
-                    switch activateITermByTTY(tty: tty) {
+                    switch activateITerm(target: .iTermTTY(tty: tty)) {
                     case .activated:
                         log.append("  iTerm TTY activation succeeded")
                         return .success
@@ -701,114 +706,39 @@ extension SessionWatcher {
             return .success
         }
 
-        // MARK: - iTerm2 TTY Activation
+        // MARK: - iTerm2 Pane Activation
 
-        /// Gets the controlling-terminal device path for a process ID.
-        ///
-        /// Uses `proc_pidinfo` (a direct libproc syscall) instead of forking `ps`:
-        /// no subprocess, near-instant, and safe to call on the main thread (the
-        /// old `ps` + `waitUntilExit` blocked the caller for the lifetime of a fork).
-        private func ttyForPid(_ pid: Int32) -> String? {
-            guard pid > 0 else { return nil }
-            var info = proc_bsdinfo()
-            let size = Int32(MemoryLayout<proc_bsdinfo>.size)
-            let result = withUnsafeMutablePointer(to: &info) { pointer in
-                proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, pointer, size)
-            }
-            guard result == size, info.e_tdev != 0 else { return nil }
-            let device = dev_t(Int32(bitPattern: info.e_tdev))
-            guard let name = devname(device, S_IFCHR) else { return nil }
-            return "/dev/" + String(cString: name)
-        }
-
-        /// Outcome of attempting to activate an iTerm2 tab by TTY.
+        /// Outcome of attempting to activate an iTerm2 tab/pane.
         private enum ITermActivation {
             case activated
             case notFound
             case permissionDenied(SessionWatcherActionError)
         }
 
-        /// Activates the iTerm2 tab whose session is on the given TTY.
+        /// Activates the iTerm2 tab/pane matching `target`, via the shared
+        /// `TerminalTextInjector` script builder (`text: nil` → select-and-raise only).
         ///
         /// Driving iTerm2 via AppleScript needs Automation permission; a denial
         /// surfaces as `errAEEventNotPermitted` (-1743), which we map to a
         /// `.permissionDenied` error (pointing at the Automation pane) rather than
         /// swallowing it as a generic miss — that swallowing was why a missing
         /// Automation grant looked like a failed Accessibility check.
-        private func activateITermByTTY(tty: String) -> ITermActivation {
-            let devTTY = tty.hasPrefix("/dev/") ? tty : "/dev/\(tty)"
-            // Address iTerm2 by bundle id (not the name "iTerm"/"iTerm2", which has
-            // varied across versions) and iterate *all* sessions of each tab so a
-            // split-pane or background session on the target TTY still matches.
-            let script = """
-        tell application id "com.googlecode.iterm2"
-            repeat with w in windows
-                repeat with t in tabs of w
-                    repeat with s in sessions of t
-                        if tty of s is "\(shellEscape(devTTY))" then
-                            select s
-                            select t
-                            activate
-                            return "found"
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-            return "not_found"
-        end tell
-        """
-            var error: NSDictionary?
-            guard let appleScript = NSAppleScript(source: script) else { return .notFound }
-            let result = appleScript.executeAndReturnError(&error)
-            if let error {
-                if let permError = appleScriptPermissionError(
-                    error, appName: "iTerm2", bundleID: "com.googlecode.iterm2"
-                ) {
-                    return .permissionDenied(permError)
-                }
+        private func activateITerm(target: TerminalTextInjector.Target) -> ITermActivation {
+            let script = TerminalTextInjector.script(for: target, text: nil)
+            // Click actions arrive on the main actor; NSAppleScript must run there.
+            let result = MainActor.assumeIsolated {
+                TerminalTextInjector.run(script: script, target: target)
+            }
+            switch result {
+            case .success:
+                return .activated
+            case .failure(.permissionDenied(let message, let permission)):
+                // swiftlint:disable:next line_length
+                logger.error("AppleScript permission denied for \(target.app.name, privacy: .public): \(message, privacy: .public)")
+                return .permissionDenied(.permissionDenied(message, requiredPermission: permission))
+            case .failure:
                 return .notFound
             }
-            return result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) == "found"
-                ? .activated : .notFound
-        }
-
-        /// Activates the iTerm2 tab/pane whose session `id` matches the session's
-        /// `TERM_SESSION_ID`. That env var is "<window/tab/pane>:<uuid>"; iTerm's
-        /// `id of session` is the uuid. More robust than the TTY path (it doesn't
-        /// depend on a live pid and survives pane moves). Needs Automation permission.
-        private func activateITermBySessionId(_ termSessionId: String) -> ITermActivation {
-            let uuid = termSessionId.split(separator: ":").last.map(String.init) ?? termSessionId
-            guard !uuid.isEmpty else { return .notFound }
-            let script = """
-        tell application id "com.googlecode.iterm2"
-            repeat with w in windows
-                repeat with t in tabs of w
-                    repeat with s in sessions of t
-                        if id of s is "\(shellEscape(uuid))" then
-                            select s
-                            select t
-                            activate
-                            return "found"
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-            return "not_found"
-        end tell
-        """
-            var error: NSDictionary?
-            guard let appleScript = NSAppleScript(source: script) else { return .notFound }
-            let result = appleScript.executeAndReturnError(&error)
-            if let error {
-                if let permError = appleScriptPermissionError(
-                    error, appName: "iTerm2", bundleID: "com.googlecode.iterm2"
-                ) {
-                    return .permissionDenied(permError)
-                }
-                return .notFound
-            }
-            return result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) == "found"
-                ? .activated : .notFound
         }
 
         // MARK: - Helpers
@@ -823,14 +753,6 @@ extension SessionWatcher {
 
         private func posixShellEscape(_ string: String) -> String {
             return "'" + string.replacingOccurrences(of: "'", with: "'\\''") + "'"
-        }
-
-        private func shellEscape(_ string: String) -> String {
-            var escaped = string
-            escaped = escaped.replacingOccurrences(of: "\\", with: "\\\\")
-            escaped = escaped.replacingOccurrences(of: "\"", with: "\\\"")
-            escaped = escaped.filter { !$0.isNewline && $0 != "\r" && $0 != "\0" }
-            return escaped
         }
 
         /// Checks an AppleScript error dictionary for authorization/permission failures.

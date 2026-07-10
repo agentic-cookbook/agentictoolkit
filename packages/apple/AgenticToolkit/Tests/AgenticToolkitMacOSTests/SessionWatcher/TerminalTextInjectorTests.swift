@@ -1,0 +1,100 @@
+import XCTest
+@testable import AgenticToolkitMacOS
+
+/// The pure pane-resolution + AppleScript-building used to inject text into (or select)
+/// a live terminal pane. Covers the risky string assembly and escaping without driving a
+/// real terminal (only `inject`/`run` execute AppleScript, which has no unit-testable
+/// surface).
+final class TerminalTextInjectorTests: XCTestCase {
+
+    // MARK: - isSupported
+
+    func testSupportedTerminals() {
+        XCTAssertTrue(TerminalTextInjector.isSupported(termProgram: "iTerm.app"))
+        XCTAssertTrue(TerminalTextInjector.isSupported(termProgram: "Apple_Terminal"))
+        XCTAssertFalse(TerminalTextInjector.isSupported(termProgram: "WarpTerminal"))
+        XCTAssertFalse(TerminalTextInjector.isSupported(termProgram: ""))
+    }
+
+    // MARK: - resolveTarget
+
+    func testResolvesITermBySessionUUID() {
+        let target = TerminalTextInjector.resolveTarget(
+            termProgram: "iTerm.app", termSessionId: "w0t1p0:ABC-123", pid: 0
+        )
+        XCTAssertEqual(target, .iTermSession(uuid: "ABC-123"), "iTerm prefers its session id (no live pid needed)")
+    }
+
+    func testITermWithoutSessionIdAndDeadPidIsUnresolvable() {
+        // pid 0 → ttyForPid returns nil → nothing precise to target.
+        XCTAssertNil(TerminalTextInjector.resolveTarget(termProgram: "iTerm.app", termSessionId: "", pid: 0))
+    }
+
+    func testTerminalWithoutLivePidIsUnresolvable() {
+        XCTAssertNil(TerminalTextInjector.resolveTarget(termProgram: "Apple_Terminal", termSessionId: "", pid: 0))
+    }
+
+    func testUnsupportedTerminalHasNoTarget() {
+        XCTAssertNil(TerminalTextInjector.resolveTarget(termProgram: "WarpTerminal", termSessionId: "x:y", pid: 4242))
+    }
+
+    // MARK: - script (inject)
+
+    func testITermScriptWritesTextToMatchedSession() {
+        let script = TerminalTextInjector.script(for: .iTermSession(uuid: "ABC"), text: "/compact")
+        XCTAssertTrue(script.contains("com.googlecode.iterm2"))
+        XCTAssertTrue(script.contains("id of s is \"ABC\""))
+        XCTAssertTrue(script.contains("write text \"/compact\""))
+        XCTAssertTrue(script.contains("return \"not_found\""), "falls through to a miss signal")
+    }
+
+    func testITermTTYScriptMatchesByTTY() {
+        let script = TerminalTextInjector.script(for: .iTermTTY(tty: "/dev/ttys003"), text: "/compact")
+        XCTAssertTrue(script.contains("tty of s is \"/dev/ttys003\""))
+        XCTAssertTrue(script.contains("write text \"/compact\""))
+    }
+
+    func testTerminalScriptRunsDoScriptInMatchedTab() {
+        let script = TerminalTextInjector.script(for: .terminalTTY(tty: "ttys004"), text: "/compact")
+        XCTAssertTrue(script.contains("tell application \"Terminal\""))
+        XCTAssertTrue(script.contains("tty of t is \"/dev/ttys004\""), "a bare tty gets the /dev/ prefix")
+        XCTAssertTrue(script.contains("do script \"/compact\" in t"))
+    }
+
+    func testScriptEscapesInjectedText() {
+        let script = TerminalTextInjector.script(for: .iTermSession(uuid: "x"), text: #"say "hi""#)
+        XCTAssertTrue(script.contains(#"write text "say \"hi\"""#), script)
+    }
+
+    // MARK: - script (select-only, text: nil — the click-action variant)
+
+    func testITermSelectOnlyScriptOmitsWriteText() {
+        let script = TerminalTextInjector.script(for: .iTermSession(uuid: "ABC"), text: nil)
+        XCTAssertTrue(script.contains("id of s is \"ABC\""))
+        XCTAssertTrue(script.contains("select s"))
+        XCTAssertTrue(script.contains("activate"))
+        XCTAssertFalse(script.contains("write text"), "select-only must never type into the pane")
+    }
+
+    func testTerminalSelectOnlyScriptOmitsDoScript() {
+        let script = TerminalTextInjector.script(for: .terminalTTY(tty: "ttys004"), text: nil)
+        XCTAssertTrue(script.contains("tty of t is \"/dev/ttys004\""))
+        XCTAssertTrue(script.contains("set selected tab of w to t"))
+        XCTAssertFalse(script.contains("do script"), "select-only must never run anything in the tab")
+    }
+
+    // MARK: - escape / normalizeTTY
+
+    func testEscapeQuotesAndBackslashes() {
+        XCTAssertEqual(TerminalTextInjector.escape(#"a"b\c"#), #"a\"b\\c"#)
+    }
+
+    func testEscapeStripsControlCharacters() {
+        XCTAssertEqual(TerminalTextInjector.escape("a\nb\rc"), "abc")
+    }
+
+    func testNormalizeTTYAddsDevPrefix() {
+        XCTAssertEqual(TerminalTextInjector.normalizeTTY("ttys001"), "/dev/ttys001")
+        XCTAssertEqual(TerminalTextInjector.normalizeTTY("/dev/ttys001"), "/dev/ttys001")
+    }
+}

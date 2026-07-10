@@ -256,6 +256,9 @@ targets:
       - target: AIPluginKit
         embed: true
         codeSign: true
+      - target: AgenticToolkitCore
+        embed: true
+        codeSign: true
 
   AgenticToolkitPermissionsTests:
     type: bundle.unit-test
