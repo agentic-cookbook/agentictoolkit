@@ -61,6 +61,7 @@ function errorText(err: unknown, fallback: string): string {
 export function ResearchPane({
   urlSelection,
   userSlug: userSlugProp,
+  workspaceSlug,
 }: {
   urlSelection?: {
     /** The open document's id, from the URL path segment (`/<slug>/research/<docId>`). */
@@ -73,6 +74,9 @@ export function ResearchPane({
    *  by GET /auth/me) is used directly below; a host only passes this to publish under a
    *  different namespace. */
   userSlug?: string;
+  /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`), so an org
+   *  workspace shows the ORG'S documents and creates org-owned ones. Omitted: the caller's. */
+  workspaceSlug?: string;
 } = {}) {
   const { user } = useAuth();
   // The slug is backend-persisted (Settings → Profile writes it via PATCH /auth/me) and rides
@@ -88,23 +92,26 @@ export function ResearchPane({
   const [universe, setUniverse] = useState<ResearchSummary[]>([]);
   const [listError, setListError] = useState<string | null>(null);
 
-  const loadList = useCallback(async (f: FilterState) => {
-    try {
-      setDocs(await markdownApi.list(f));
-      setListError(null);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "research-pane", step: "list" });
-      setListError(errorText(err, "Failed to load documents."));
-    }
-  }, []);
+  const loadList = useCallback(
+    async (f: FilterState) => {
+      try {
+        setDocs(await markdownApi.list(f, { workspace: workspaceSlug }));
+        setListError(null);
+      } catch (err) {
+        reportUnexpectedAuthError(err, { feature: "research-pane", step: "list" });
+        setListError(errorText(err, "Failed to load documents."));
+      }
+    },
+    [workspaceSlug],
+  );
 
   const loadUniverse = useCallback(async () => {
     try {
-      setUniverse(await markdownApi.list({}));
+      setUniverse(await markdownApi.list({}, { workspace: workspaceSlug }));
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "research-pane", step: "universe" });
     }
-  }, []);
+  }, [workspaceSlug]);
 
   // The account's existing categories + tags — the editor's autocomplete/browse source
   // (distinct from the filter rail, which lists only what's present on the loaded docs).
@@ -176,30 +183,33 @@ export function ResearchPane({
   // Load a document's body into the form (or clear it when id is null). Token-guarded so an
   // out-of-order fetch can't clobber a newer selection. Shared by the embedded `select` (which
   // loads synchronously on click) and the URL-driven effect (deep-link / reload / Back).
-  const loadBody = useCallback(async (id: string | null) => {
-    const token = ++selectToken.current;
-    loadedIdRef.current = id; // the form is now bound to `id` (see the URL-sync effect guard)
-    setSelectedDoc(null);
-    setDraft(null);
-    setFormError(null);
-    if (id == null) {
-      setLoadingDoc(false);
-      return;
-    }
-    setLoadingDoc(true);
-    try {
-      const full = await markdownApi.get(id);
-      if (selectToken.current !== token) return; // a newer selection won
-      setSelectedDoc(full);
-      setDraft(researchToInput(full));
-    } catch (err) {
-      if (selectToken.current !== token) return;
-      reportUnexpectedAuthError(err, { feature: "research-pane", step: "open" });
-      setFormError(errorText(err, "Failed to open the document."));
-    } finally {
-      if (selectToken.current === token) setLoadingDoc(false);
-    }
-  }, []);
+  const loadBody = useCallback(
+    async (id: string | null) => {
+      const token = ++selectToken.current;
+      loadedIdRef.current = id; // the form is now bound to `id` (see the URL-sync effect guard)
+      setSelectedDoc(null);
+      setDraft(null);
+      setFormError(null);
+      if (id == null) {
+        setLoadingDoc(false);
+        return;
+      }
+      setLoadingDoc(true);
+      try {
+        const full = await markdownApi.get(id, { workspace: workspaceSlug });
+        if (selectToken.current !== token) return; // a newer selection won
+        setSelectedDoc(full);
+        setDraft(researchToInput(full));
+      } catch (err) {
+        if (selectToken.current !== token) return;
+        reportUnexpectedAuthError(err, { feature: "research-pane", step: "open" });
+        setFormError(errorText(err, "Failed to open the document."));
+      } finally {
+        if (selectToken.current === token) setLoadingDoc(false);
+      }
+    },
+    [workspaceSlug],
+  );
 
   const select = useCallback(
     async (id: string) => {
@@ -270,7 +280,9 @@ export function ResearchPane({
     setFormError(null);
     try {
       if (creating) {
-        const created = await markdownApi.create(toCreateBody(input));
+        const created = await markdownApi.create(toCreateBody(input), {
+          workspace: workspaceSlug,
+        });
         await refresh();
         setCreating(false);
         // Open the created doc: URL-driven navigates to /research/<id>, embedded sets local state.
@@ -280,7 +292,9 @@ export function ResearchPane({
         setSelectedDoc(created);
         setDraft(researchToInput(created));
       } else if (selectedId) {
-        const updated = await markdownApi.update(selectedId, toUpdateBody(input));
+        const updated = await markdownApi.update(selectedId, toUpdateBody(input), {
+          workspace: workspaceSlug,
+        });
         await refresh();
         setSelectedDoc(updated);
         setDraft(researchToInput(updated));
@@ -307,7 +321,7 @@ export function ResearchPane({
     if (!selectedId) return;
     setDeleting(true);
     try {
-      await markdownApi.remove(selectedId);
+      await markdownApi.remove(selectedId, { workspace: workspaceSlug });
       setPendingDelete(false);
       openDoc(null);
       setSelectedDoc(null);
@@ -431,6 +445,7 @@ export function ResearchPane({
                     key={selectedDoc.id}
                     doc={selectedDoc}
                     userSlug={userSlug}
+                    workspaceSlug={workspaceSlug}
                     onChanged={onPublishChanged}
                   />
                 )}

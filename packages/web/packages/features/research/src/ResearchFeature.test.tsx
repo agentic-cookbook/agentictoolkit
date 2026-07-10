@@ -178,7 +178,11 @@ describe("ResearchFeature", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(create).toHaveBeenCalledWith({ content: "# Hello research" }),
+      expect(create).toHaveBeenCalledWith(
+        { content: "# Hello research" },
+        // No workspaceSlug prop in this harness → creator-owned (workspace undefined).
+        { workspace: undefined },
+      ),
     );
   });
 
@@ -192,6 +196,6 @@ describe("ResearchFeature", () => {
     expect(await screen.findByDisplayValue("Federated learning notes")).not.toBeNull();
     const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
     expect(body.value).toBe("# Federated learning\n\nSome notes.");
-    await waitFor(() => expect(get).toHaveBeenCalledWith("doc-1"));
+    await waitFor(() => expect(get).toHaveBeenCalledWith("doc-1", { workspace: undefined }));
   });
 });

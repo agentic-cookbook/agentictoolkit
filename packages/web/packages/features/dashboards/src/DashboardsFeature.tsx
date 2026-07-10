@@ -36,6 +36,7 @@ export function DashboardsFeature({
   section,
   rowId,
   reservedSlugs,
+  workspaceSlug,
 }: {
   /** The feature's URL base (drives the routes): the hub route passes `/<slug>/dashboards`.
    *  Supplied by the host rather than derived here, so the same feature mounts under either
@@ -49,6 +50,10 @@ export function DashboardsFeature({
    *  server route pages, so it must be serializable — a Set is not). The pre-extraction
    *  hub bound its list implicitly via its validateSlug wrapper. */
   reservedSlugs?: readonly string[];
+  /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`), so an org
+   *  workspace shows the ORG'S monitored sites and creates org-owned ones. Omitted: the
+   *  caller's own. */
+  workspaceSlug?: string;
 }) {
   // The hook stays unconditional (rules of hooks); its pushes are only reachable when
   // basePath is set — the embedded mode below never builds URL-driven selections.
@@ -68,23 +73,23 @@ export function DashboardsFeature({
 
   const refreshGroups = useCallback(async () => {
     try {
-      setGroups(await listGroups());
+      setGroups(await listGroups({ workspace: workspaceSlug }));
       setGroupsError(null);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "site-monitoring", step: "load" });
       setGroupsError(err instanceof Error ? err.message : "Failed to load groups.");
     }
-  }, []);
+  }, [workspaceSlug]);
 
   const refreshSites = useCallback(async () => {
     try {
-      setSites(await listSites());
+      setSites(await listSites({ workspace: workspaceSlug }));
       setSitesError(null);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "site-monitoring", step: "load" });
       setSitesError(err instanceof Error ? err.message : "Failed to load sites.");
     }
-  }, []);
+  }, [workspaceSlug]);
 
   useEffect(() => {
     void refreshGroups();
@@ -125,6 +130,7 @@ export function DashboardsFeature({
                 groups={groups}
                 leaf={leaf}
                 reservedSlugs={reserved}
+                workspaceSlug={workspaceSlug}
                 onChanged={async () => {
                   await refreshGroups();
                   // A deleted group is stripped from site membership, so refresh sites too to keep
@@ -139,7 +145,14 @@ export function DashboardsFeature({
             label: "Sites",
             icon: <Globe size={16} aria-hidden />,
             render: () => (
-              <SitesSection sites={sites} groups={groups ?? []} leaf={leaf} reservedSlugs={reserved} onChanged={refreshSites} />
+              <SitesSection
+                sites={sites}
+                groups={groups ?? []}
+                leaf={leaf}
+                reservedSlugs={reserved}
+                workspaceSlug={workspaceSlug}
+                onChanged={refreshSites}
+              />
             ),
           },
         ]}

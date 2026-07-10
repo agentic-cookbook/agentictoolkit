@@ -35,10 +35,14 @@ function publicUrl(slug: string, route: string): string {
 export function PublishSection({
   doc,
   userSlug,
+  workspaceSlug,
   onChanged,
 }: {
   doc: ResearchDocument;
   userSlug: string;
+  /** Pins publish/unpublish to the WORKSPACE'S owning principal (backend `?workspace=`),
+   *  so org-owned docs other members created resolve. */
+  workspaceSlug?: string;
   onChanged: (updated: ResearchDocument) => void | Promise<void>;
 }) {
   const [route, setRoute] = useState(doc.publicRoute ?? "");
@@ -50,14 +54,14 @@ export function PublishSection({
 
   function publish(): void {
     void run(async () => {
-      const updated = await markdownApi.publish(doc.id, trimmed);
+      const updated = await markdownApi.publish(doc.id, trimmed, { workspace: workspaceSlug });
       await onChanged(updated);
     });
   }
 
   function unpublish(): void {
     void run(async () => {
-      const updated = await markdownApi.unpublish(doc.id);
+      const updated = await markdownApi.unpublish(doc.id, { workspace: workspaceSlug });
       await onChanged(updated);
     });
   }

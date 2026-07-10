@@ -48,3 +48,13 @@ export function scopeByOwner<T>(
 export function sortByText<T>(rows: T[], key: (row: T) => string): T[] {
   return [...rows].sort((a, b) => key(a).localeCompare(key(b)));
 }
+
+/**
+ * Query-string for the backend's `?workspace=<slug>` owner scoping (personas,
+ * projects, tokens, monitored sites, markdown …): the verified slug pins every
+ * op to the WORKSPACE'S owning principal. Empty string when no workspace is
+ * given, so callers can interpolate it unconditionally.
+ */
+export function workspaceQuery(opts?: { workspace?: string }): string {
+  return opts?.workspace ? `?workspace=${encodeURIComponent(opts.workspace)}` : "";
+}

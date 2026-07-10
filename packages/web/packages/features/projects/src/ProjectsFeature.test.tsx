@@ -160,7 +160,11 @@ describe("ProjectsFeature", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(create).toHaveBeenCalledWith({ name: "Mobile app", description: undefined }),
+      expect(create).toHaveBeenCalledWith(
+        { name: "Mobile app", description: undefined },
+        // No workspaceSlug prop in this harness → creator-owned (workspace undefined).
+        { workspace: undefined },
+      ),
     );
   });
 

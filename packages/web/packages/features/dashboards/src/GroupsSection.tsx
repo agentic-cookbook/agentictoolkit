@@ -40,6 +40,7 @@ export function GroupsSection({
   onChanged,
   leaf,
   reservedSlugs,
+  workspaceSlug,
 }: {
   groups: SiteGroupView[] | null;
   onChanged: () => Promise<void>;
@@ -47,7 +48,10 @@ export function GroupsSection({
   leaf?: TopicLeaf;
   /** The HOST's reserved slug words (its URL-namespace protection) — rejected on save. */
   reservedSlugs?: ReadonlySet<string>;
+  /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`). */
+  workspaceSlug?: string;
 }) {
+  const ws = { workspace: workspaceSlug };
   const renderRecordAffordance = useRecordAffordance();
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
   // "New group" is a POPUP (like New Ecosystem / New site), not an inline blank form.
@@ -63,18 +67,25 @@ export function GroupsSection({
     differs: groupDiffers,
     normalize: groupNormalize,
     create: (input) =>
-      createGroup({
-        name: input.name,
-        slug: input.slug,
-        retentionDays: parseInt(input.retentionDays, 10),
-      }),
+      createGroup(
+        {
+          name: input.name,
+          slug: input.slug,
+          retentionDays: parseInt(input.retentionDays, 10),
+        },
+        ws,
+      ),
     update: (id, input) =>
-      updateGroup(id, {
-        name: input.name,
-        slug: input.slug,
-        retentionDays: parseInt(input.retentionDays, 10),
-      }),
-    remove: (g) => deleteGroup(g.id),
+      updateGroup(
+        id,
+        {
+          name: input.name,
+          slug: input.slug,
+          retentionDays: parseInt(input.retentionDays, 10),
+        },
+        ws,
+      ),
+    remove: (g) => deleteGroup(g.id, ws),
     confirmDelete: (g) =>
       `Delete group "${g.name}"? Its sites and their endpoints will be deleted too.`,
     refresh: onChanged,
@@ -124,11 +135,14 @@ export function GroupsSection({
           blank={groupBlank}
           validate={(d) => groupValidate(d, (groups ?? []).map((g) => g.slug), reservedSlugs)}
           create={(d) =>
-            createGroup({
-              name: d.name,
-              slug: d.slug,
-              retentionDays: parseInt(d.retentionDays, 10),
-            })
+            createGroup(
+              {
+                name: d.name,
+                slug: d.slug,
+                retentionDays: parseInt(d.retentionDays, 10),
+              },
+              ws,
+            )
           }
           onClose={() => setNewOpen(false)}
           onCreated={(group) => {

@@ -11,6 +11,7 @@
 //         /api/persona/personas (list/create), /api/persona/personas/{id}
 //         (update/delete).
 import { authedJson, authedRequest, isNotFound } from "../http";
+import { workspaceQuery } from "../client-helpers";
 import { identifiersApi } from "../ecosystems/identifiers";
 import type {
   MeRow,
@@ -58,10 +59,6 @@ async function personaExistsAt(id: string, opts?: { workspace?: string }): Promi
     if (isNotFound(err)) return false;
     throw err;
   }
-}
-
-function workspaceQuery(opts?: { workspace?: string }): string {
-  return opts?.workspace ? `?workspace=${encodeURIComponent(opts.workspace)}` : "";
 }
 
 export const api = {

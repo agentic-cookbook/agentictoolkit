@@ -27,7 +27,14 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
  * (own CRUD), so each persists via its own Save/Delete rather than the parent
  * site's footer.
  */
-export function EndpointsEditor({ siteId }: { siteId: string }) {
+export function EndpointsEditor({
+  siteId,
+  workspaceSlug,
+}: {
+  siteId: string;
+  /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`). */
+  workspaceSlug?: string;
+}) {
   const renderRecordAffordance = useRecordAffordance();
   const [endpoints, setEndpoints] = useState<EndpointView[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -36,12 +43,12 @@ export function EndpointsEditor({ siteId }: { siteId: string }) {
 
   const refresh = useCallback(async () => {
     try {
-      setEndpoints(await listEndpoints(siteId));
+      setEndpoints(await listEndpoints(siteId, { workspace: workspaceSlug }));
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "endpoints-editor", step: "load" });
       setLoadError(err instanceof Error ? err.message : "Failed to load endpoints.");
     }
-  }, [siteId]);
+  }, [siteId, workspaceSlug]);
 
   useEffect(() => {
     void refresh();
@@ -86,6 +93,7 @@ export function EndpointsEditor({ siteId }: { siteId: string }) {
           <EndpointDetail
             key={creating ? "__new__" : selected!.id}
             siteId={siteId}
+            workspaceSlug={workspaceSlug}
             initial={creating ? null : selected}
             onSaved={async (id) => {
               await refresh();
@@ -145,12 +153,14 @@ function toDraft(e: EndpointView): Draft {
 
 function EndpointDetail({
   siteId,
+  workspaceSlug,
   initial,
   onSaved,
   onDeleted,
   onCancel,
 }: {
   siteId: string;
+  workspaceSlug?: string;
   initial: EndpointView | null;
   onSaved: (id: string) => Promise<void>;
   onDeleted: () => Promise<void>;
@@ -201,8 +211,8 @@ function EndpointDetail({
         isActive: draft.isActive,
       };
       const saved = initial
-        ? await updateEndpoint(initial.id, payload)
-        : await createEndpoint(siteId, payload);
+        ? await updateEndpoint(initial.id, payload, { workspace: workspaceSlug })
+        : await createEndpoint(siteId, payload, { workspace: workspaceSlug });
       await onSaved(saved.id);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "endpoints-editor", step: "save" });
@@ -222,7 +232,7 @@ function EndpointDetail({
     if (!confirm("Delete this endpoint?")) return;
     setDeleting(true);
     try {
-      await deleteEndpoint(initial.id);
+      await deleteEndpoint(initial.id, { workspace: workspaceSlug });
       await onDeleted();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "endpoints-editor", step: "delete" });

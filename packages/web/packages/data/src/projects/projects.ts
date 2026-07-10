@@ -12,7 +12,7 @@
 // the teams.ts + team-members.ts split.
 
 import { authedJson, authedRequest } from "../http";
-import { compact, enc, sortByText } from "../client-helpers";
+import { compact, enc, sortByText, workspaceQuery } from "../client-helpers";
 import type {
   ProjectRow,
   ProjectStatusRow,
@@ -113,8 +113,13 @@ export function toProjectParticipant(r: ProjectParticipantRow): ProjectParticipa
 /* ── Client ───────────────────────────────────────────────────────────── */
 
 export const projectsApi = {
-  async list(): Promise<Project[]> {
-    const rows = await authedJson<ProjectRow[]>(BASE);
+  // `workspace` pins list/create to the WORKSPACE'S owning principal (backend
+  // `?workspace=<slug>`): list returns only projects that principal OWNS, and
+  // create stamps that principal as the owner (so an org workspace's new project
+  // is org-owned). Without it, list falls back to ownership REACH (owned +
+  // participating) and create stamps the caller.
+  async list(opts?: { workspace?: string }): Promise<Project[]> {
+    const rows = await authedJson<ProjectRow[]>(`${BASE}${workspaceQuery(opts)}`);
     return sortByText(rows.map(toProject), (p) => p.name);
   },
 
@@ -127,17 +132,20 @@ export const projectsApi = {
     }
   },
 
-  async create(input: {
-    name: string;
-    description?: string;
-    color?: string;
-  }): Promise<Project> {
+  async create(
+    input: {
+      name: string;
+      description?: string;
+      color?: string;
+    },
+    opts?: { workspace?: string },
+  ): Promise<Project> {
     const body: ProjectCreateBody = {
       name: input.name,
       ...compact({ description: input.description, color: input.color }),
     };
     return toProject(
-      await authedJson<ProjectRow>(BASE, {
+      await authedJson<ProjectRow>(`${BASE}${workspaceQuery(opts)}`, {
         method: "POST",
         body: JSON.stringify(body),
       }),

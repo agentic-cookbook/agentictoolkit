@@ -123,6 +123,7 @@ export function SiteDetail({
   onChange,
   groups,
   siteId,
+  workspaceSlug,
   error,
 }: {
   title: string;
@@ -131,6 +132,8 @@ export function SiteDetail({
   groups: SiteGroupView[];
   /** Persisted site id, or null when creating (endpoints unavailable until saved). */
   siteId: string | null;
+  /** Pins the endpoints sub-CRUD to the WORKSPACE'S owning principal (backend `?workspace=`). */
+  workspaceSlug?: string;
   error?: string | null;
 }) {
   return (
@@ -141,7 +144,7 @@ export function SiteDetail({
 
       <DetailSection title="Endpoints">
         {siteId ? (
-          <EndpointsEditor siteId={siteId} />
+          <EndpointsEditor siteId={siteId} workspaceSlug={workspaceSlug} />
         ) : (
           <EmptyState className="min-h-0 px-4 py-6" title="Save the site first, then add endpoints to probe." />
         )}

@@ -13,14 +13,18 @@
 // belongs to exactly one site (same cascade). Deleting a group deletes its sites
 // and their endpoints at the DB level; deleting a site deletes its endpoints.
 //
-// SCOPING: `site_groups` is owner-scoped server-side (user_id), so listGroups()
-// returns only mine. `sites`/`endpoints` are NOT owner-scoped server-side and
-// there are no list filter params, so listSites() filters to MY groups and
-// listEndpoints() filters by siteId here. Columns the UI doesn't model
-// (description, displayOrder, timeoutMs, …) are left to their server defaults.
+// SCOPING: the whole chain is owner-scoped server-side (site_groups by the
+// caller's user_id; sites/endpoints INHERIT user_id + owner from their parent at
+// create/reparent). An optional `workspace` on every op pins it to the
+// WORKSPACE'S owning principal instead (backend `?workspace=<slug>`): list
+// returns only that principal's rows, create stamps it as the owner, and item
+// update/delete resolve org-owned rows other members created. The client-side
+// narrowing in listSites()/listEndpoints() stays as defense-in-depth. Columns
+// the UI doesn't model (description, displayOrder, timeoutMs, …) are left to
+// their server defaults.
 
 import { authedJson, authedRequest } from "../http";
-import { compact, enc, sortByText } from "../client-helpers";
+import { compact, enc, sortByText, workspaceQuery } from "../client-helpers";
 import type {
   GroupRow,
   SiteRow,
@@ -149,13 +153,16 @@ export function toEndpoint(r: EndpointRow): EndpointView {
 
 // --- groups -----------------------------------------------------------------
 
-export async function listGroups(): Promise<SiteGroupView[]> {
-  const rows = await authedJson<GroupRow[]>(GROUPS);
+export async function listGroups(opts?: { workspace?: string }): Promise<SiteGroupView[]> {
+  const rows = await authedJson<GroupRow[]>(`${GROUPS}${workspaceQuery(opts)}`);
   return sortByText(rows.map(toGroup), (g) => g.name);
 }
 
-export async function createGroup(body: CreateGroupBody): Promise<SiteGroupView> {
-  const row = await authedJson<GroupRow>(GROUPS, {
+export async function createGroup(
+  body: CreateGroupBody,
+  opts?: { workspace?: string },
+): Promise<SiteGroupView> {
+  const row = await authedJson<GroupRow>(`${GROUPS}${workspaceQuery(opts)}`, {
     method: "POST",
     body: JSON.stringify(
       compact({
@@ -168,32 +175,36 @@ export async function createGroup(body: CreateGroupBody): Promise<SiteGroupView>
   return toGroup(row);
 }
 
-export async function updateGroup(id: string, body: UpdateGroupBody): Promise<SiteGroupView> {
+export async function updateGroup(
+  id: string,
+  body: UpdateGroupBody,
+  opts?: { workspace?: string },
+): Promise<SiteGroupView> {
   const patch = compact({
     name: body.name,
     slug: body.slug,
     retentionDays: body.retentionDays,
   } satisfies GroupPutBody);
-  const row = await authedJson<GroupRow>(`${GROUPS}/${enc(id)}`, {
+  const row = await authedJson<GroupRow>(`${GROUPS}/${enc(id)}${workspaceQuery(opts)}`, {
     method: "PUT",
     body: JSON.stringify(patch),
   });
   return toGroup(row);
 }
 
-export function deleteGroup(id: string): Promise<void> {
+export function deleteGroup(id: string, opts?: { workspace?: string }): Promise<void> {
   // FK ON DELETE CASCADE removes the group's sites and their endpoints.
-  return authedRequest(`${GROUPS}/${enc(id)}`, { method: "DELETE" });
+  return authedRequest(`${GROUPS}/${enc(id)}${workspaceQuery(opts)}`, { method: "DELETE" });
 }
 
 // --- sites ------------------------------------------------------------------
 
-export async function listSites(): Promise<SiteView[]> {
-  // `sites` is not owner-scoped server-side, so restrict to MY groups (the only
-  // ones listGroups returns) to keep the view coherent with the rest of the UI.
+export async function listSites(opts?: { workspace?: string }): Promise<SiteView[]> {
+  // Server-side owner scope covers both lists; the group narrowing stays as
+  // defense-in-depth so the view can't drift from the groups rail.
   const [groups, rows] = await Promise.all([
-    authedJson<GroupRow[]>(GROUPS),
-    authedJson<SiteRow[]>(SITES),
+    authedJson<GroupRow[]>(`${GROUPS}${workspaceQuery(opts)}`),
+    authedJson<SiteRow[]>(`${SITES}${workspaceQuery(opts)}`),
   ]);
   const mine = new Set(groups.map((g) => g.id));
   return sortByText(
@@ -202,43 +213,55 @@ export async function listSites(): Promise<SiteView[]> {
   );
 }
 
-export async function createSite(body: CreateSiteBody): Promise<SiteView> {
+export async function createSite(
+  body: CreateSiteBody,
+  opts?: { workspace?: string },
+): Promise<SiteView> {
   const fields: SiteCreateBody = {
     name: body.name,
     slug: body.slug,
     siteGroupId: body.groupId,
   };
-  const row = await authedJson<SiteRow>(SITES, {
+  const row = await authedJson<SiteRow>(`${SITES}${workspaceQuery(opts)}`, {
     method: "POST",
     body: JSON.stringify(fields),
   });
   return toSite(row);
 }
 
-export async function updateSite(id: string, body: UpdateSiteBody): Promise<SiteView> {
+export async function updateSite(
+  id: string,
+  body: UpdateSiteBody,
+  opts?: { workspace?: string },
+): Promise<SiteView> {
   const patch = compact({
     name: body.name,
     slug: body.slug,
     siteGroupId: body.groupId,
   } satisfies SitePutBody);
-  const row = await authedJson<SiteRow>(`${SITES}/${enc(id)}`, {
+  const row = await authedJson<SiteRow>(`${SITES}/${enc(id)}${workspaceQuery(opts)}`, {
     method: "PUT",
     body: JSON.stringify(patch),
   });
   return toSite(row);
 }
 
-export function deleteSite(id: string): Promise<void> {
+export function deleteSite(id: string, opts?: { workspace?: string }): Promise<void> {
   // FK ON DELETE CASCADE removes the site's endpoints.
-  return authedRequest(`${SITES}/${enc(id)}`, { method: "DELETE" });
+  return authedRequest(`${SITES}/${enc(id)}${workspaceQuery(opts)}`, { method: "DELETE" });
 }
 
 // --- endpoints --------------------------------------------------------------
 
-export async function listEndpoints(siteId: string): Promise<EndpointView[]> {
+export async function listEndpoints(
+  siteId: string,
+  opts?: { workspace?: string },
+): Promise<EndpointView[]> {
   // Server-side equality filter on the siteId column; the client filter stays as
   // a defense-in-depth narrowing (harmless once the server already scoped).
-  const rows = await authedJson<EndpointRow[]>(`${ENDPOINTS}?siteId=${enc(siteId)}`);
+  const qs = new URLSearchParams({ siteId });
+  if (opts?.workspace) qs.set("workspace", opts.workspace);
+  const rows = await authedJson<EndpointRow[]>(`${ENDPOINTS}?${qs}`);
   return sortByText(
     rows.map(toEndpoint).filter((e) => e.siteId === siteId),
     (e) => e.url,
@@ -248,8 +271,9 @@ export async function listEndpoints(siteId: string): Promise<EndpointView[]> {
 export async function createEndpoint(
   siteId: string,
   body: CreateEndpointBody,
+  opts?: { workspace?: string },
 ): Promise<EndpointView> {
-  const row = await authedJson<EndpointRow>(ENDPOINTS, {
+  const row = await authedJson<EndpointRow>(`${ENDPOINTS}${workspaceQuery(opts)}`, {
     method: "POST",
     body: JSON.stringify(
       compact({
@@ -268,6 +292,7 @@ export async function createEndpoint(
 export async function updateEndpoint(
   id: string,
   body: UpdateEndpointBody,
+  opts?: { workspace?: string },
 ): Promise<EndpointView> {
   const patch = compact({
     url: body.url,
@@ -276,13 +301,13 @@ export async function updateEndpoint(
     checkIntervalSeconds: body.checkIntervalSeconds,
     isActive: body.isActive,
   } satisfies EndpointPutBody);
-  const row = await authedJson<EndpointRow>(`${ENDPOINTS}/${enc(id)}`, {
+  const row = await authedJson<EndpointRow>(`${ENDPOINTS}/${enc(id)}${workspaceQuery(opts)}`, {
     method: "PUT",
     body: JSON.stringify(patch),
   });
   return toEndpoint(row);
 }
 
-export function deleteEndpoint(id: string): Promise<void> {
-  return authedRequest(`${ENDPOINTS}/${enc(id)}`, { method: "DELETE" });
+export function deleteEndpoint(id: string, opts?: { workspace?: string }): Promise<void> {
+  return authedRequest(`${ENDPOINTS}/${enc(id)}${workspaceQuery(opts)}`, { method: "DELETE" });
 }

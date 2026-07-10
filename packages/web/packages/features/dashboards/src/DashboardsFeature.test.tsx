@@ -218,11 +218,15 @@ describe("DashboardsFeature", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(createGroupMock).toHaveBeenCalledWith({
-        name: "Payments",
-        slug: "payments",
-        retentionDays: 30,
-      }),
+      expect(createGroupMock).toHaveBeenCalledWith(
+        {
+          name: "Payments",
+          slug: "payments",
+          retentionDays: 30,
+        },
+        // No workspaceSlug prop in this harness → creator-owned (workspace undefined).
+        { workspace: undefined },
+      ),
     );
   });
 
@@ -249,11 +253,14 @@ describe("DashboardsFeature", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(createSiteMock).toHaveBeenCalledWith({
-        name: "Docs Site",
-        slug: "docs-site",
-        groupId: "g1",
-      }),
+      expect(createSiteMock).toHaveBeenCalledWith(
+        {
+          name: "Docs Site",
+          slug: "docs-site",
+          groupId: "g1",
+        },
+        { workspace: undefined },
+      ),
     );
   });
 });

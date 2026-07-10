@@ -45,6 +45,7 @@ export function SitesSection({
   onChanged,
   leaf,
   reservedSlugs,
+  workspaceSlug,
 }: {
   sites: SiteView[] | null;
   groups: SiteGroupView[];
@@ -53,7 +54,10 @@ export function SitesSection({
   leaf?: TopicLeaf;
   /** The HOST's reserved slug words (its URL-namespace protection) — rejected on save. */
   reservedSlugs?: ReadonlySet<string>;
+  /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`). */
+  workspaceSlug?: string;
 }) {
+  const ws = { workspace: workspaceSlug };
   const renderRecordAffordance = useRecordAffordance();
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
   // "New site" is a POPUP (like New Ecosystem), not an inline blank form: the dialog enables Save on
@@ -79,10 +83,10 @@ export function SitesSection({
     differs: siteDiffers,
     normalize: siteNormalize,
     create: (input) =>
-      createSite({ name: input.name, slug: input.slug, groupId: input.groupId }),
+      createSite({ name: input.name, slug: input.slug, groupId: input.groupId }, ws),
     update: (id, input) =>
-      updateSite(id, { name: input.name, slug: input.slug, groupId: input.groupId }),
-    remove: (s) => deleteSite(s.id),
+      updateSite(id, { name: input.name, slug: input.slug, groupId: input.groupId }, ws),
+    remove: (s) => deleteSite(s.id, ws),
     confirmDelete: (s) => `Delete site "${s.name}" and all its endpoints?`,
     refresh: onChanged,
     createLabel: "New site",
@@ -126,6 +130,7 @@ export function SitesSection({
             onChange={form.onChange}
             groups={groups}
             siteId={form.selected?.id ?? null}
+            workspaceSlug={workspaceSlug}
             error={form.error}
           />
         )}
@@ -144,7 +149,7 @@ export function SitesSection({
               reservedSlugs,
             )
           }
-          create={(d) => createSite({ name: d.name, slug: d.slug, groupId: d.groupId })}
+          create={(d) => createSite({ name: d.name, slug: d.slug, groupId: d.groupId }, ws)}
           onClose={() => setNewOpen(false)}
           onCreated={(site) => {
             setNewOpen(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement } from "react";
+import { useCallback, type ReactElement } from "react";
 import { FolderKanban, ListTodo, Activity } from "lucide-react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
@@ -112,6 +112,7 @@ export function ProjectsFeature({
   activeProjectId,
   activeTopic,
   activeLeafId,
+  workspaceSlug,
 }: {
   /** The feature's URL base (drives the routes + the list cache key): the hub passes
    *  `/<slug>/projects`, the projects site passes `/home`. Supplied by the host route
@@ -121,8 +122,16 @@ export function ProjectsFeature({
   activeProjectId?: string;
   activeTopic?: string;
   activeLeafId?: string;
+  /** Pins list/create to the WORKSPACE'S owning principal (backend `?workspace=`),
+   *  so an org workspace shows the ORG'S projects and creates org-owned ones.
+   *  Omitted: the caller's ownership reach (owned + participating). */
+  workspaceSlug?: string;
 }): ReactElement {
-  const { items: projects } = useResourceList(basePath, projectsApi.list);
+  const loadProjects = useCallback(
+    () => projectsApi.list({ workspace: workspaceSlug }),
+    [workspaceSlug],
+  );
+  const { items: projects } = useResourceList(basePath, loadProjects);
 
   // Entity-first topics (FTD): the project Overview, then Work Items (the view
   // switcher) and Activity — all real panes.
@@ -195,10 +204,13 @@ export function ProjectsFeature({
           blank={projectBlank}
           validate={projectValidate}
           create={(d) =>
-            projectsApi.create({
-              name: d.name.trim(),
-              description: d.description.trim() || undefined,
-            })
+            projectsApi.create(
+              {
+                name: d.name.trim(),
+                description: d.description.trim() || undefined,
+              },
+              { workspace: workspaceSlug },
+            )
           }
           onClose={onClose}
           onCreated={(project) => onCreated(project.id)}

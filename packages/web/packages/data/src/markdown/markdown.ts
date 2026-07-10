@@ -7,7 +7,7 @@
 // the toolkit can't import that hub-only package directly, so a backend contract
 // change is only caught by keeping wire.ts in sync, not by the build.
 import { authedJson, authedRequest, isConflict } from "../http";
-import { enc } from "../client-helpers";
+import { enc, workspaceQuery } from "../client-helpers";
 import type {
   MarkdownDocumentRow,
   MarkdownDocumentSummaryRow,
@@ -41,7 +41,7 @@ const BASE = "/api/content/markdown";
 // shows everything at once (no pagination UI). 200 is the backend's page cap.
 const PAGE_SIZE = 200;
 
-function listQuery(filters: ResearchFilters): string {
+function listQuery(filters: ResearchFilters, opts?: { workspace?: string }): string {
   const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
   const q = filters.q?.trim();
   if (q) params.set("q", q);
@@ -49,6 +49,7 @@ function listQuery(filters: ResearchFilters): string {
   if (category) params.set("category", category);
   const tag = filters.tag?.trim();
   if (tag) params.set("tag", tag);
+  if (opts?.workspace) params.set("workspace", opts.workspace);
   return params.toString();
 }
 
@@ -64,52 +65,75 @@ export function withTags<T extends { tags: string[] }>(doc: T): T {
 }
 
 export const markdownApi = {
-  /** List/search the caller's documents (metadata only), most-recent first. */
-  async list(filters: ResearchFilters = {}): Promise<ResearchSummary[]> {
+  // `workspace` on every op pins it to the WORKSPACE'S owning principal (backend
+  // `?workspace=<slug>`): list returns only documents that principal OWNS, create
+  // stamps it as the owner, and item ops resolve org-owned docs other members
+  // created. Without it, ops fall back to the caller's own documents.
+  /** List/search the workspace's documents (metadata only), most-recent first. */
+  async list(
+    filters: ResearchFilters = {},
+    opts?: { workspace?: string },
+  ): Promise<ResearchSummary[]> {
     const res = await authedJson<MarkdownListResponse>(
-      `${BASE}?${listQuery(filters)}`,
+      `${BASE}?${listQuery(filters, opts)}`,
     );
     return res.items.map(withTags);
   },
 
   /** Fetch one document WITH its body (the master list omits the body). */
-  async get(id: string): Promise<ResearchDocument> {
-    return withTags(await authedJson<ResearchDocument>(`${BASE}/${enc(id)}`));
+  async get(id: string, opts?: { workspace?: string }): Promise<ResearchDocument> {
+    return withTags(
+      await authedJson<ResearchDocument>(`${BASE}/${enc(id)}${workspaceQuery(opts)}`),
+    );
   },
 
-  async create(body: CreateMarkdownBody): Promise<ResearchDocument> {
+  async create(
+    body: CreateMarkdownBody,
+    opts?: { workspace?: string },
+  ): Promise<ResearchDocument> {
     return withTags(
-      await authedJson<ResearchDocument>(BASE, {
+      await authedJson<ResearchDocument>(`${BASE}${workspaceQuery(opts)}`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
     );
   },
 
-  async update(id: string, body: UpdateMarkdownBody): Promise<ResearchDocument> {
+  async update(
+    id: string,
+    body: UpdateMarkdownBody,
+    opts?: { workspace?: string },
+  ): Promise<ResearchDocument> {
     return withTags(
-      await authedJson<ResearchDocument>(`${BASE}/${enc(id)}`, {
+      await authedJson<ResearchDocument>(`${BASE}/${enc(id)}${workspaceQuery(opts)}`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
     );
   },
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, opts?: { workspace?: string }): Promise<void> {
     // 204 No Content — authedRequest, not authedJson (nothing to parse).
-    await authedRequest(`${BASE}/${enc(id)}`, { method: "DELETE" });
+    await authedRequest(`${BASE}/${enc(id)}${workspaceQuery(opts)}`, { method: "DELETE" });
   },
 
   /** Publish under an author-defined public route. The route is unique per
    *  author: a clash with another of the caller's live papers is a 409, mapped
    *  to a friendly message the form surfaces inline. */
-  async publish(id: string, route: string): Promise<ResearchDocument> {
+  async publish(
+    id: string,
+    route: string,
+    opts?: { workspace?: string },
+  ): Promise<ResearchDocument> {
     try {
       return withTags(
-        await authedJson<ResearchDocument>(`${BASE}/${enc(id)}/publish`, {
-          method: "POST",
-          body: JSON.stringify({ route } satisfies MarkdownPublishBody),
-        }),
+        await authedJson<ResearchDocument>(
+          `${BASE}/${enc(id)}/publish${workspaceQuery(opts)}`,
+          {
+            method: "POST",
+            body: JSON.stringify({ route } satisfies MarkdownPublishBody),
+          },
+        ),
       );
     } catch (err) {
       if (isConflict(err)) {
@@ -120,9 +144,11 @@ export const markdownApi = {
   },
 
   /** Revert to a private draft and free the public route. */
-  async unpublish(id: string): Promise<ResearchDocument> {
+  async unpublish(id: string, opts?: { workspace?: string }): Promise<ResearchDocument> {
     return withTags(
-      await authedJson<ResearchDocument>(`${BASE}/${enc(id)}/unpublish`, { method: "POST" }),
+      await authedJson<ResearchDocument>(`${BASE}/${enc(id)}/unpublish${workspaceQuery(opts)}`, {
+        method: "POST",
+      }),
     );
   },
 
