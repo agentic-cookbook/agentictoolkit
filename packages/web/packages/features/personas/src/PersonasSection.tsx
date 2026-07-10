@@ -31,10 +31,16 @@ import { PersonasTable } from "./PersonasTable";
  */
 export function PersonasSection({
   urlSelection,
+  workspaceSlug,
   renderChatPane,
   profileUrlFor,
   renderKnowledgeBases,
 }: {
+  /** The workspace whose personas this section shows. Resolved server-side to the workspace's
+   *  OWNING principal (`?workspace=`): the list holds only personas that principal owns, and a
+   *  persona created here is owned BY that principal (an org workspace's persona is org-owned).
+   *  Omit for the caller's own creator-scoped personas (the pre-workspace behavior). */
+  workspaceSlug?: string;
   urlSelection?: {
     /** The open persona's id, from the first URL path segment (`/<slug>/personas/<id>`). */
     personaId?: string;
@@ -80,7 +86,10 @@ export function PersonasSection({
 
   const reload = useCallback(async () => {
     try {
-      const [ps, ss] = await Promise.all([api.personas.list(), api.services.list()]);
+      const [ps, ss] = await Promise.all([
+        api.personas.list(workspaceSlug ? { workspace: workspaceSlug } : undefined),
+        api.services.list(),
+      ]);
       setPersonas(ps);
       setServices(ss);
     } catch (err) {
@@ -88,7 +97,7 @@ export function PersonasSection({
       setError(err instanceof Error ? err.message : "Failed to load personas.");
       setPersonas([]);
     }
-  }, []);
+  }, [workspaceSlug]);
 
   useEffect(() => {
     void reload();
@@ -142,6 +151,7 @@ export function PersonasSection({
         key="__new__"
         persona={null}
         services={services}
+        workspaceSlug={workspaceSlug}
         onSaved={(saved) => {
           selectPersona(saved.id);
           void reload();
@@ -156,6 +166,7 @@ export function PersonasSection({
         key={openPersona.id}
         persona={openPersona}
         services={services}
+        workspaceSlug={workspaceSlug}
         // Sub-tabs are URL-driven + deep-linkable only when this section is URL-driven; embedded, the
         // editor keeps its own internal tab selection (autoSelectFirst), unchanged.
         activeSubtab={urlSelection?.subtab}

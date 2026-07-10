@@ -206,6 +206,7 @@ function toBody(d: PersonaDraft): PersonaBody {
 export function PersonaEditor({
   persona,
   services,
+  workspaceSlug,
   onSaved,
   onCancel,
   activeSubtab,
@@ -216,6 +217,10 @@ export function PersonaEditor({
 }: {
   /** The persona to edit, or null to create a new one. */
   persona: Persona | null;
+  /** The workspace whose principal will OWN a newly-created persona (threaded to create as
+   *  `?workspace=` — see PersonasSection). Omit and the creator owns it. Saves of an existing
+   *  persona are unaffected. */
+  workspaceSlug?: string;
   /** The caller's services (for the service/model selects). */
   services: UserService[];
   onSaved: (saved: Persona) => void;
@@ -276,7 +281,7 @@ export function PersonaEditor({
     try {
       const body = toBody(draft);
       const saved = isNew
-        ? await api.personas.create(body)
+        ? await api.personas.create(body, workspaceSlug ? { workspace: workspaceSlug } : undefined)
         : await api.personas.update(persona.id, body);
       onSaved(saved);
     } catch (err) {

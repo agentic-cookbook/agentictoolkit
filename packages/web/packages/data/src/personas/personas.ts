@@ -58,6 +58,10 @@ async function personaExistsAt(id: string): Promise<boolean> {
   }
 }
 
+function workspaceQuery(opts?: { workspace?: string }): string {
+  return opts?.workspace ? `?workspace=${encodeURIComponent(opts.workspace)}` : "";
+}
+
 export const api = {
   me: meRequest,
   patchMe,
@@ -97,9 +101,18 @@ export const api = {
       }),
   },
   personas: {
-    list: () => authedJson<Persona[]>("/api/persona/personas"),
-    create: (body: PersonaBody) =>
-      authedJson<Persona>("/api/persona/personas", { method: "POST", body: JSON.stringify(body) }),
+    // `workspace` scopes list/create to the WORKSPACE'S owning principal (backend
+    // `?workspace=<slug>`): list returns only personas that principal OWNS (owner_kind +
+    // owner_id — never the caller-reachable set), and create stamps that principal as the
+    // owner (so an org workspace's new persona is org-owned). Omit for the caller's own
+    // creator-scoped rows (the pre-workspace behavior).
+    list: (opts?: { workspace?: string }) =>
+      authedJson<Persona[]>(`/api/persona/personas${workspaceQuery(opts)}`),
+    create: (body: PersonaBody, opts?: { workspace?: string }) =>
+      authedJson<Persona>(`/api/persona/personas${workspaceQuery(opts)}`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     // Persona rdids are DERIVED — `persona.<owner-slug>.<slug>` — and the slug is the only
     // user-editable segment (the leaf), so editing it is a LEAF-SWAP of the rdid. Mirrors
     // ecosystemsApi.update(): PUT the fields under the current id first, THEN rename the rdid if
