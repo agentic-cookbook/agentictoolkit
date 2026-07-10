@@ -85,6 +85,19 @@ export const ecosystemsApi = {
     );
   },
 
+  /** The ecosystems a WORKSPACE directly OWNS (`owner_id` = the workspace's principal —
+   *  the caller's customer for a personal workspace, an org they belong to for an org
+   *  workspace) — the hub's Products list. Ownership, not access: scoped server-side
+   *  (`?workspace=`), never admin-widened, and the principal's auto-provisioned
+   *  `<ns>.default` infrastructure row is excluded server-side too. */
+  async listForWorkspace(workspaceSlug: string): Promise<Ecosystem[]> {
+    const rows = await authedJson<EcosystemRow[]>(`${BASE}?workspace=${enc(workspaceSlug)}`);
+    return sortByText(
+      rows.filter((r) => !r.isDefault).map(toEcosystem),
+      (e) => e.name,
+    );
+  },
+
   /** The CHILD ecosystems of `parentId` (an ecosystem rdid/uuid): the ecosystems whose owner IS
    *  that ecosystem — the "Child Ecosystems" view. Scoped server-side (`?parent=`), so admins get
    *  the same node-scoped set here rather than every ecosystem. Hides the structural default

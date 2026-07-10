@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, Database } from "lucide-react";
@@ -99,6 +99,17 @@ export interface EcosystemsFeatureProps {
    *  title, create dialog, empty states, breadcrumb name suffix) while this package
    *  keeps owning the ecosystem machinery. Defaults to Ecosystem / Ecosystems. */
   labels?: { singular?: string; plural?: string };
+  /** LIST-FIRST presentation (the hub's Products feature). Requires `workspaceSlug`.
+   *  Two coupled changes from the default arrangement:
+   *  - The items are the ecosystems the WORKSPACE directly OWNS
+   *    (ecosystemsApi.listForWorkspace — ownership, never the admin-widened
+   *    manageable set), not the caller-manageable list.
+   *  - The list is rail level 0 of ONE hierarchical topic-detail stack (classic
+   *    ResourceExplorer, like Teams/Projects) — topics of the selected entity are the
+   *    next level — instead of opening on the workspace default's topics with the
+   *    list tucked into a Child Ecosystems topic. Creation is TOP-LEVEL (owner = the
+   *    caller) from the list header's "+". */
+  listFirst?: boolean;
 }
 
 /** Prefix `word` with its indefinite article — copy like "Open a product" /
@@ -221,6 +232,7 @@ export function EcosystemsFeature({
   activeLeafId,
   activeMemberEntityId,
   labels,
+  listFirst = false,
 }: EcosystemsFeatureProps): ReactElement {
   const router = useRouter();
   // The presented noun (see the `labels` prop doc) — every user-facing string below
@@ -233,19 +245,25 @@ export function EcosystemsFeature({
   // constant while navigating within this workspace (so the FTD cache/last-id keys stay
   // stable and don't re-flash), and switching workspaces re-scopes the whole rail.
   const slug = workspaceSlug;
-  const { items: ecosystems, reload, error } = useResourceList(
-    basePath,
-    ecosystemsApi.list,
+  // listFirst: OWNERSHIP scope (the workspace's own ecosystems) — else the caller's
+  // manageable set. useCallback keeps the fetcher referentially stable per scope
+  // (useResourceList refetches on identity change).
+  const load = useCallback(
+    () =>
+      listFirst && slug != null ? ecosystemsApi.listForWorkspace(slug) : ecosystemsApi.list(),
+    [listFirst, slug],
   );
+  const { items: ecosystems, reload, error } = useResourceList(basePath, load);
 
   // Ecosystems opens on the workspace's DEFAULT (primary) ecosystem when the URL names none —
   // its topics, not a list. Resolve that id from the workspace slug (the same resolver the
-  // standalone /messaging route uses); react-query dedupes concurrent readers.
+  // standalone /messaging route uses); react-query dedupes concurrent readers. listFirst
+  // never opens on the default — its bare path is the list — so the lookup is disabled there.
   const defaultIdQuery = useQuery({
     queryKey: ["ecosystem-id-for-slug", slug],
     // enabled gates on slug != null, so the assertion can't be reached with undefined.
     queryFn: () => ecosystemsApi.ecosystemIdForSlug(slug as string),
-    enabled: slug != null && activeEcoId == null,
+    enabled: slug != null && activeEcoId == null && !listFirst,
     retry: false,
   });
   const defaultId = defaultIdQuery.data ?? undefined;
@@ -275,10 +293,12 @@ export function EcosystemsFeature({
   // The CHILD ecosystems of the scoped ecosystem — fetched server-scoped to owner_id = scopedId
   // (the ecosystems in the namespace it owns), NOT the caller's whole manageable set. This is what
   // the Child Ecosystems topic lists; it re-fetches when the rail re-scopes to a different ecosystem.
+  const hasChildTopic = topicsConfig.some((t) => t.id === "child-ecosystems");
   const childrenQuery = useQuery({
     queryKey: ["ecosystem-children", scopedId],
     queryFn: () => ecosystemsApi.listChildren(scopedId as string),
-    enabled: scopedId != null,
+    // Only fetched when a Child Ecosystems topic will actually render the result.
+    enabled: scopedId != null && hasChildTopic,
     retry: false,
   });
   const children = childrenQuery.data ?? null;
@@ -298,7 +318,9 @@ export function EcosystemsFeature({
 
   // A tenant with genuinely NO ecosystems — not even a hidden default (the resolver settled with no
   // id AND the list loaded empty). Offer a first-run create instead of a perpetual "Loading…".
+  // listFirst has a real empty state on its landing, so the takeover never applies there.
   const noEcosystems =
+    !listFirst &&
     activeEcoId == null &&
     defaultIdQuery.isSuccess &&
     defaultId == null &&
@@ -461,7 +483,7 @@ export function EcosystemsFeature({
   // A slugged host whose ONE default-resolution request failed (retry: false): without a
   // defined surface the promoted rail holds "Loading…" forever with dead topic clicks. A
   // reload retries the lookup; deep-linked /<ecoId> paths never hit this (slug unused).
-  if (workspaceSlug != null && activeEcoId == null && defaultIdQuery.isError) {
+  if (!listFirst && workspaceSlug != null && activeEcoId == null && defaultIdQuery.isError) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center p-6">
         <EmptyState
@@ -527,6 +549,56 @@ export function EcosystemsFeature({
         </div>
         {createDialog}
       </>
+    );
+  }
+
+  // LIST-FIRST (the hub's Products): the OWNED list is rail level 0 of the ONE
+  // hierarchical topic-detail stack (classic ResourceExplorer, like Teams/Projects);
+  // the selected entity's topics are the next level. Creation lives on the list
+  // header's "+" via renderDialog and is always TOP-LEVEL (owner = the caller) —
+  // never child-of-scoped, which is a Child Ecosystems affordance.
+  if (listFirst) {
+    return (
+      <ResourceExplorer
+        activeId={activeEcoId}
+        activeTopic={activeTopic}
+        activeLeafId={activeLeafId}
+        activeMemberEntityId={activeMemberEntityId}
+        basePath={basePath}
+        items={scopedItems}
+        getId={(e) => e.id}
+        getLabel={(e) => e.name}
+        nameSuffix={singular}
+        itemIcon={<Network size={16} aria-hidden />}
+        topics={topics}
+        newLabel={`New ${singular}…`}
+        landing={{
+          title: plural,
+          help: `Open ${an(lowerSingular)} to manage it, or create a new one.`,
+          emptyLabel: `No ${lowerPlural} yet.`,
+          getSublabel: (e) => e.identifier,
+          renderMeta: () => null,
+        }}
+        renderDialog={(onClose, onCreated) => (
+          <CreateResourceDialog
+            ariaLabel={`New ${lowerSingular}`}
+            heading={`New ${lowerSingular}`}
+            blank={ecoBlank}
+            validate={(d) => ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier))}
+            create={(d) => ecosystemsApi.create(ecoNormalize(d))}
+            onClose={onClose}
+            onCreated={async (eco) => {
+              // Refresh BEFORE navigating so the created id is a known row (an unknown
+              // id would bounce the explorer back to the landing).
+              await reload();
+              onCreated(eco.id);
+            }}
+            renderForm={(draft, onChange, error) => (
+              <EcosystemDetail draft={draft} onChange={onChange} error={error} />
+            )}
+          />
+        )}
+      />
     );
   }
 
