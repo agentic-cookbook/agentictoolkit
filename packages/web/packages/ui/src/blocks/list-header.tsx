@@ -16,6 +16,9 @@ export interface ListHeaderSearch {
   label?: string
   /** Placeholder shown when empty. Default `"Filter…"`. */
   placeholder?: string
+  /** Ref to the underlying `<input>`, for imperative focus — hosts that keep
+   *  the pane mounted across visits can't rely on autoFocus re-firing. */
+  inputRef?: React.Ref<HTMLInputElement>
 }
 
 export interface ListHeaderProps {
@@ -55,6 +58,7 @@ export function ListHeader({
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
           />
           <Input
+            ref={search.inputRef}
             type="search"
             value={search.value}
             aria-label={search.label ?? "Filter"}

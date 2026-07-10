@@ -110,7 +110,7 @@ region (`role="search"`, `<select>` rows under the field) for full search pages;
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `title` | `React.ReactNode` | — | Left-aligned name of the list. |
-| `search` | `{ value, onChange, label?, placeholder? }` | — | The controlled filter field. |
+| `search` | `{ value, onChange, label?, placeholder?, inputRef? }` | — | The controlled filter field. `inputRef` reaches the underlying `<input>` for imperative focus (hosts that keep the pane mounted across visits, where autoFocus can't re-fire). |
 | `actions` | `React.ReactNode` | — | Right-aligned actions. |
 | `ariaLabel` | `string` | — | Accessible name for the bar (required). |
 | `className` | `string` | — | Extra classes on the strip. |
