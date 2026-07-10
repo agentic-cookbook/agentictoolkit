@@ -4,3 +4,4 @@
 export * from "./ecosystems";
 export * from "./identifiers";
 export * from "./ecosystem-invitations";
+export * from "./use-workspace-default-ecosystem";

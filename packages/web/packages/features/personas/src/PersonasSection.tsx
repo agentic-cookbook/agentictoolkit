@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { readTokenSubject } from "@agentic-toolkit/data";
 import { HierarchicalTopicDetail, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { StackLevels, useRailHost } from "@agentic-toolkit/resource";
@@ -67,13 +68,20 @@ export function PersonasSection({
   // subtree on every param navigation, so local state would restart from null on each persona/topic
   // click and the whole list "blinks" through Loading…. The cache survives the remount, so a
   // reselect renders instantly; invalidation (reload, below) still refreshes after writes.
+  //
+  // Keys carry the signed-in principal (the access token's `sub`, read at render): the cache
+  // outlives an identity change (nothing clears the shared QueryClient on auth swap — e.g.
+  // tokens replaced by another tab), so an unscoped key could serve the PREVIOUS account's
+  // personas as "fresh" on the next remount. Same tenant scoping useResourceList applies to
+  // its module cache.
+  const tenant = readTokenSubject();
   const queryClient = useQueryClient();
   const personasQuery = useQuery({
-    queryKey: ["personas", workspaceSlug ?? null],
-    queryFn: () => api.personas.list(workspaceSlug ? { workspace: workspaceSlug } : undefined),
+    queryKey: ["personas", tenant, workspaceSlug ?? null],
+    queryFn: () => api.personas.list({ workspace: workspaceSlug }),
   });
   const servicesQuery = useQuery({
-    queryKey: ["persona-services"],
+    queryKey: ["persona-services", tenant],
     queryFn: () => api.services.list(),
   });
   const services = servicesQuery.data ?? [];

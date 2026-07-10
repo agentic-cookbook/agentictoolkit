@@ -14,9 +14,7 @@ import {
   ecoNormalize,
 } from "./EcosystemDetail";
 
-/** Prefix `word` with its indefinite article (same one-line rule as EcosystemsFeature's —
- *  kept local; importing it back from there would cycle). */
-const an = (word: string): string => (/^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`);
+import { an } from "./lib/an";
 
 /** Settings editor for the active ecosystem (identifier, name, region, domain). */
 export function EcosystemSettingsPane({

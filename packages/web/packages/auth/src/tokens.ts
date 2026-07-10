@@ -60,6 +60,26 @@ export function readAccessToken(): string | null {
   return readTokens()?.accessToken ?? null
 }
 
+/** The current access token's `sub` claim — the signed-in principal — or null when
+ *  signed out / the token is malformed. Parsed locally WITHOUT verification: this is
+ *  identity for CACHE SCOPING (keying react-query data to the tenant so an account
+ *  switch in another tab can never serve the previous account's rows), never for
+ *  authorization. Provider-agnostic: it reads the same storage `authedJson` sends
+ *  from, so it works under any host's auth context. */
+export function readTokenSubject(): string | null {
+  const token = readAccessToken()
+  const payload = token?.split('.')[1]
+  if (!payload) return null
+  try {
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      sub?: unknown
+    }
+    return typeof claims.sub === 'string' ? claims.sub : null
+  } catch {
+    return null
+  }
+}
+
 /** The last user the backend confirmed for this session, cached so a returning
  *  visitor's signed-in UI can render from it immediately while /api/auth/me
  *  revalidates in the background. Only meaningful alongside readTokens(). */

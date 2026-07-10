@@ -10,6 +10,7 @@ export {
   readErrorMessage,
   tokensFromResponse,
   readAccessToken,
+  readTokenSubject,
   type BackendTokenFields,
 } from "@agentic-toolkit/auth/client";
 

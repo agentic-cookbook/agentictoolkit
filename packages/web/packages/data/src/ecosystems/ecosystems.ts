@@ -37,6 +37,10 @@ export interface Ecosystem {
   domain: string;
   createdAt: string;
   updatedAt: string;
+  /** Workspace-scoped lists only: whether the caller may manage this ecosystem's
+   *  contents (the org-admin bar). Absent (undefined) outside `?workspace=` mode,
+   *  where every listed ecosystem is manageable by construction. */
+  canManage?: boolean;
 }
 
 export interface EcosystemInput {
@@ -70,6 +74,7 @@ export function toEcosystem(r: EcosystemRow): Ecosystem {
     domain: r.primaryDomain ?? "",
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    ...(r.canManage !== undefined ? { canManage: r.canManage } : {}),
   };
 }
 
@@ -88,26 +93,34 @@ export const ecosystemsApi = {
   /** The ecosystems a WORKSPACE directly OWNS (`owner_id` = the workspace's principal —
    *  the caller's customer for a personal workspace, an org they belong to for an org
    *  workspace) — the hub's Products list. Ownership, not access: scoped server-side
-   *  (`?workspace=`), never admin-widened, and the principal's auto-provisioned
-   *  `<ns>.default` infrastructure row is excluded server-side too. */
+   *  (`?workspace=`), never admin-widened; the server also excludes both the structural
+   *  defaults AND the principal's auto-provisioned infrastructure row, so no client
+   *  filter is needed (unlike the unscoped {@link list}). Rows carry `canManage`. */
   async listForWorkspace(workspaceSlug: string): Promise<Ecosystem[]> {
     const rows = await authedJson<EcosystemRow[]>(`${BASE}?workspace=${enc(workspaceSlug)}`);
-    return sortByText(
-      rows.filter((r) => !r.isDefault).map(toEcosystem),
-      (e) => e.name,
+    return sortByText(rows.map(toEcosystem), (e) => e.name);
+  },
+
+  /** The WORKSPACE's default (account-infrastructure) ecosystem id — the auto-provisioned
+   *  own ecosystem the workspace-level Storage/Integrations panes scope to. Resolved
+   *  server-side by OWNERSHIP (`?workspace=` + `infrastructure=true`), membership-gated —
+   *  never the caller's own default, which is a different principal's ecosystem on an
+   *  org workspace. `null` when the workspace has no infrastructure row (never
+   *  `undefined`, which react-query rejects as query data). */
+  async workspaceDefaultEcosystemId(workspaceSlug: string): Promise<string | null> {
+    const rows = await authedJson<EcosystemRow[]>(
+      `${BASE}?workspace=${enc(workspaceSlug)}&infrastructure=true`,
     );
+    return rows[0]?.id ?? null;
   },
 
   /** The CHILD ecosystems of `parentId` (an ecosystem rdid/uuid): the ecosystems whose owner IS
-   *  that ecosystem — the "Child Ecosystems" view. Scoped server-side (`?parent=`), so admins get
-   *  the same node-scoped set here rather than every ecosystem. Hides the structural default
-   *  ecosystems, exactly like {@link list}. */
+   *  that ecosystem — the "Child Ecosystems" view. Scoped server-side (`?parent=`, which also
+   *  excludes the structural defaults), so admins get the same node-scoped set here rather
+   *  than every ecosystem. */
   async listChildren(parentId: string): Promise<Ecosystem[]> {
     const rows = await authedJson<EcosystemRow[]>(`${BASE}?parent=${enc(parentId)}`);
-    return sortByText(
-      rows.filter((r) => !r.isDefault).map(toEcosystem),
-      (e) => e.name,
-    );
+    return sortByText(rows.map(toEcosystem), (e) => e.name);
   },
 
   async get(id: string): Promise<Ecosystem | null> {
@@ -124,10 +137,16 @@ export const ecosystemsApi = {
     }
   },
 
-  /** Create an ecosystem. Pass `parent` (an ecosystem rdid/uuid) to create it as a CHILD of that
-   *  ecosystem (owner = the parent, landed in the parent's child namespace); omit it for a
-   *  top-level, developer-owned ecosystem. */
-  async create(input: EcosystemInput, parent?: string): Promise<Ecosystem> {
+  /** Create an ecosystem. Pass `parent` (an ecosystem rdid/uuid) to create it as a CHILD of
+   *  that ecosystem (owner = the parent, landed in the parent's child namespace); pass
+   *  `workspace` (a workspace slug) to stamp the WORKSPACE's principal as owner (the org for
+   *  an org workspace — membership-gated server-side), so the product shows up in that
+   *  workspace's list instead of the creator's personal one; omit both for a top-level,
+   *  developer-owned ecosystem. `parent` wins when both are given (they never are today). */
+  async create(
+    input: EcosystemInput,
+    opts?: { parent?: string; workspace?: string },
+  ): Promise<Ecosystem> {
     // No pre-read for duplicates: the backend's unique rdid + unique slug are the
     // real guards (and a pre-read can't see a soft-deleted row still holding the
     // key). Catch the 409 and surface a friendly, entity-named message instead.
@@ -142,13 +161,15 @@ export const ecosystemsApi = {
         region: input.region,
         primaryDomain: input.domain,
       };
-      const row = await authedJson<EcosystemRow>(
-        parent ? `${BASE}?parent=${enc(parent)}` : BASE,
-        {
-          method: "POST",
-          body: JSON.stringify(body),
-        },
-      );
+      const url = opts?.parent
+        ? `${BASE}?parent=${enc(opts.parent)}`
+        : opts?.workspace
+          ? `${BASE}?workspace=${enc(opts.workspace)}`
+          : BASE;
+      const row = await authedJson<EcosystemRow>(url, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
       return toEcosystem(row);
     } catch (err) {
       rethrowConflict(

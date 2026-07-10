@@ -280,9 +280,12 @@ export function PersonaEditor({
     setError(null);
     try {
       const body = toBody(draft);
+      // The workspace scope rides every write (workspaceQuery no-ops when absent):
+      // update under an org workspace needs it so a member can save personas OTHER
+      // members created for the org (the item ownership scope replaces the creator pin).
       const saved = isNew
-        ? await api.personas.create(body, workspaceSlug ? { workspace: workspaceSlug } : undefined)
-        : await api.personas.update(persona.id, body);
+        ? await api.personas.create(body, { workspace: workspaceSlug })
+        : await api.personas.update(persona.id, body, { workspace: workspaceSlug });
       onSaved(saved);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "personas", step: "save" });

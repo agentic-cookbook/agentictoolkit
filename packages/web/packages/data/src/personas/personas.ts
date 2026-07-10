@@ -47,10 +47,12 @@ function slugAvailable(slug: string): Promise<SlugAvailability> {
 
 /** True if a persona currently resolves at `id` (rdid or uuid) — used only to disambiguate a 404
  *  during `personas.update`'s rename-recovery check below (mirrors ecosystemsApi.get's role in
- *  ecosystems.ts's update()). */
-async function personaExistsAt(id: string): Promise<boolean> {
+ *  ecosystems.ts's update()). Takes the same workspace scope as the update: without it, an
+ *  org-owned persona another member created 404s here too (creator pin) and the recovery
+ *  misdiagnoses. */
+async function personaExistsAt(id: string, opts?: { workspace?: string }): Promise<boolean> {
   try {
-    await authedJson<Persona>(`/api/persona/personas/${id}`);
+    await authedJson<Persona>(`/api/persona/personas/${id}${workspaceQuery(opts)}`);
     return true;
   } catch (err) {
     if (isNotFound(err)) return false;
@@ -101,10 +103,12 @@ export const api = {
       }),
   },
   personas: {
-    // `workspace` scopes list/create to the WORKSPACE'S owning principal (backend
+    // `workspace` scopes EVERY op to the WORKSPACE'S owning principal (backend
     // `?workspace=<slug>`): list returns only personas that principal OWNS (owner_kind +
-    // owner_id — never the caller-reachable set), and create stamps that principal as the
-    // owner (so an org workspace's new persona is org-owned). Omit for the caller's own
+    // owner_id — never the caller-reachable set), create stamps that principal as the
+    // owner (so an org workspace's new persona is org-owned), and item update/delete
+    // swap the non-creator pin for the same ownership scope — so any org member can
+    // edit rows other members created for the org. Omit for the caller's own
     // creator-scoped rows (the pre-workspace behavior).
     list: (opts?: { workspace?: string }) =>
       authedJson<Persona[]>(`/api/persona/personas${workspaceQuery(opts)}`),
@@ -119,11 +123,15 @@ export const api = {
     // the slug changed. Renaming LAST keeps the entity consistent on a failure: a failed PUT
     // changes nothing; a failed rename leaves the already-updated fields under the original id,
     // so a retry is safe.
-    update: async (id: string, body: PersonaBody): Promise<Persona> => {
+    update: async (
+      id: string,
+      body: PersonaBody,
+      opts?: { workspace?: string },
+    ): Promise<Persona> => {
       const newRdid = `${id.split(".").slice(0, -1).join(".")}.${body.slug}`;
       let row: Persona;
       try {
-        row = await authedJson<Persona>(`/api/persona/personas/${id}`, {
+        row = await authedJson<Persona>(`/api/persona/personas/${id}${workspaceQuery(opts)}`, {
           method: "PUT",
           body: JSON.stringify(body),
         });
@@ -133,11 +141,14 @@ export const api = {
         // lost (the old id no longer resolves) — recover by re-PUTting under the new id; or the
         // persona was genuinely deleted — nothing to recover. Disambiguate by checking whether
         // the new id now resolves to a real persona.
-        if (newRdid !== id && isNotFound(err) && (await personaExistsAt(newRdid))) {
-          row = await authedJson<Persona>(`/api/persona/personas/${newRdid}`, {
-            method: "PUT",
-            body: JSON.stringify(body),
-          });
+        if (newRdid !== id && isNotFound(err) && (await personaExistsAt(newRdid, opts))) {
+          row = await authedJson<Persona>(
+            `/api/persona/personas/${newRdid}${workspaceQuery(opts)}`,
+            {
+              method: "PUT",
+              body: JSON.stringify(body),
+            },
+          );
           return { ...row, id: newRdid };
         }
         throw err;
@@ -150,8 +161,8 @@ export const api = {
       }
       return row;
     },
-    delete: (id: string) =>
-      authedRequest(`/api/persona/personas/${id}`, { method: "DELETE" }),
+    delete: (id: string, opts?: { workspace?: string }) =>
+      authedRequest(`/api/persona/personas/${id}${workspaceQuery(opts)}`, { method: "DELETE" }),
     // Owner-scoped slug lookup. Generic CRUD's list is already confined to the
     // caller's own rows (ecosystem_id + user_id) and supports an equality filter via
     // `?slug=`, so the first match IS the caller's persona with that slug. There is

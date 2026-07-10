@@ -18,6 +18,10 @@ export interface EcosystemRow {
   isDefault: boolean;
   /** the ecosystem's own slug — used to resolve a workspace's ecosystem by slug. */
   slug: string;
+  /** `?workspace=` mode only: whether the CALLER may manage this ecosystem's contents
+   *  (the org-admin bar). The list itself is membership-gated, so a plain org member
+   *  sees org products they cannot open — the UI uses this to present that honestly. */
+  canManage?: boolean;
 }
 
 /** `POST /ecosystem/ecosystems` body. */

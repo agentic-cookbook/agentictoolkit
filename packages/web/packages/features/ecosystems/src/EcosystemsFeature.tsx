@@ -23,6 +23,7 @@ import { EcosystemSettingsPane } from "./EcosystemSettingsPane";
 import { EcosystemDetail, ecoBlank, ecoValidate, ecoNormalize } from "./EcosystemDetail";
 import { EcoRequestsPane, EcoPendingUsersPane, EcoInvitesPane } from "./EcosystemInvitationPanes";
 import { useEcosystemCapabilities } from "./use-ecosystem-capabilities";
+import { an } from "./lib/an";
 
 /** The host's ecosystem-scoped topic rail config (the hub's `ECOSYSTEM_TOPICS` SSoT),
  *  with the icon already resolved by the host from its own icon registry (FEATURE_META
@@ -111,10 +112,6 @@ export interface EcosystemsFeatureProps {
    *    caller) from the list header's "+". */
   listFirst?: boolean;
 }
-
-/** Prefix `word` with its indefinite article — copy like "Open a product" /
- *  "an ecosystem" stays grammatical for any host-supplied noun. */
-const an = (word: string): string => (/^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`);
 
 /** The topic groups whose detail pane is a nested topic→detail sub-rail — the single source for
  *  both the membership check and the per-group members map below. */
@@ -279,8 +276,12 @@ export function EcosystemsFeature({
   // it directly ONLY when it's missing, and merge it in; otherwise EcosystemSettingsPane can't bind
   // (Settings shows its empty state), the Delete section vanishes, and the topic titles lose the
   // ecosystem name. Existing deep-links whose id IS in the list skip this fetch entirely.
+  // NEVER in listFirst: its list is the workspace's OWNED set, and merging a deep-linked id the
+  // caller merely manages (their personal ecosystem, another org's) would render a foreign row in
+  // the workspace's Products rail — the ownership invariant. An unknown id there simply bounces
+  // to the landing (ResourceExplorer's behavior for ids outside `items`).
   const scopedMissing =
-    scopedId != null && ecosystems !== null && !ecosystems.some((e) => e.id === scopedId);
+    !listFirst && scopedId != null && ecosystems !== null && !ecosystems.some((e) => e.id === scopedId);
   const scopedEcoQuery = useQuery({
     queryKey: ["ecosystem", scopedId],
     queryFn: () => ecosystemsApi.get(scopedId as string),
@@ -354,12 +355,28 @@ export function EcosystemsFeature({
     (t) => t.capability == null || capabilities.includes(t.capability),
   );
 
+  // Workspace-scoped lists are MEMBERSHIP-gated, but managing an ecosystem's contents is
+  // owner-level control (the org-admin bar) — so a plain org member can see an org product
+  // they may not open. `canManage === false` (only ever set in `?workspace=` mode) turns
+  // every topic pane into one honest notice instead of a wall of per-pane 403s.
+  const canManageScoped = (ecoId: string | undefined): boolean =>
+    ecoId == null || scopedItems?.find((e) => e.id === ecoId)?.canManage !== false;
+  const notManageablePane = (
+    <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+      <EmptyState
+        title={`You don't have admin access to this ${lowerSingular}`}
+        description={`Viewing ${an(lowerSingular)}'s contents needs organization admin access — ask one of the organization's admins.`}
+      />
+    </div>
+  );
+
   const topics: ResourceTopic[] = visibleTopics.map((t) => ({
     id: t.id,
     label: t.label,
     icon: t.icon,
     dividerAfter: t.dividerAfter,
     render: (ecoId, titleFor, leaf, subLeafFor) => {
+      if (!canManageScoped(ecoId)) return notManageablePane;
       if (t.id === "settings") {
         return (
           <EcosystemSettingsPane
@@ -440,20 +457,30 @@ export function EcosystemsFeature({
     },
   }));
 
+  // The create-dialog identity (label/heading/blank/validate) — ONE definition shared by the
+  // feature-owned dialog below and the listFirst header-"+" dialog, so the two can't drift.
+  const dialogCommon = {
+    ariaLabel: `New ${lowerSingular}`,
+    heading: `New ${lowerSingular}`,
+    blank: ecoBlank,
+    validate: (d: Parameters<typeof ecoValidate>[0]) =>
+      ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier)),
+  };
+
   // The create dialog is owned here (not by ResourceExplorer's promoted level) and shared by both
   // the Child Ecosystems "New Ecosystem" affordance and the first-run empty state below.
   const createDialog = newOpen && (
     <CreateResourceDialog
-      ariaLabel={`New ${lowerSingular}`}
-      heading={`New ${lowerSingular}`}
-      blank={ecoBlank}
-      validate={(d) => ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier))}
+      {...dialogCommon}
       // Parent = the scoped ecosystem, so "New Ecosystem" from Child Ecosystems creates a CHILD of
       // it (owner = it) by default. The "top-level" toggle (below) opts out → a parentless ecosystem
       // owned by the caller. On first-run (no scoped ecosystem) `scopedId` is undefined → always a
       // top-level create, and the toggle is hidden (there is no parent to opt out of).
       create={(d) =>
-        ecosystemsApi.create(ecoNormalize(d), createTopLevel ? undefined : scopedId)
+        ecosystemsApi.create(
+          ecoNormalize(d),
+          createTopLevel || scopedId == null ? undefined : { parent: scopedId },
+        )
       }
       onClose={() => setNewOpen(false)}
       onCreated={(eco) => {
@@ -559,50 +586,67 @@ export function EcosystemsFeature({
   // LIST-FIRST (the hub's Products): the OWNED list is rail level 0 of the ONE
   // hierarchical topic-detail stack (classic ResourceExplorer, like Teams/Projects);
   // the selected entity's topics are the next level. Creation lives on the list
-  // header's "+" via renderDialog and is always TOP-LEVEL (owner = the caller) —
-  // never child-of-scoped, which is a Child Ecosystems affordance.
+  // header's "+" via renderDialog and stamps the WORKSPACE's principal as owner
+  // (`?workspace=` — the org for an org workspace, so the product lands in THIS list;
+  // never child-of-scoped, which is a Child Ecosystems affordance).
   if (listFirst) {
+    if (error != null && ecosystems == null) {
+      // The list failed before anything arrived: the landing would sit on "Loading…"
+      // forever (nothing in this branch reads `error` otherwise) — surface it instead.
+      return (
+        <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+          <EmptyState title={`Couldn't load ${lowerPlural}`} description={error} />
+        </div>
+      );
+    }
     return (
-      <ResourceExplorer
-        activeId={activeEcoId}
-        activeTopic={activeTopic}
-        activeLeafId={activeLeafId}
-        activeMemberEntityId={activeMemberEntityId}
-        basePath={basePath}
-        items={scopedItems}
-        getId={(e) => e.id}
-        getLabel={(e) => e.name}
-        nameSuffix={singular}
-        itemIcon={<Network size={16} aria-hidden />}
-        topics={topics}
-        newLabel={`New ${singular}…`}
-        landing={{
-          title: plural,
-          help: `Open ${an(lowerSingular)} to manage it, or create a new one.`,
-          emptyLabel: `No ${lowerPlural} yet.`,
-          getSublabel: (e) => e.identifier,
-          renderMeta: () => null,
-        }}
-        renderDialog={(onClose, onCreated) => (
-          <CreateResourceDialog
-            ariaLabel={`New ${lowerSingular}`}
-            heading={`New ${lowerSingular}`}
-            blank={ecoBlank}
-            validate={(d) => ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier))}
-            create={(d) => ecosystemsApi.create(ecoNormalize(d))}
-            onClose={onClose}
-            onCreated={async (eco) => {
-              // Refresh BEFORE navigating so the created id is a known row (an unknown
-              // id would bounce the explorer back to the landing).
-              await reload();
-              onCreated(eco.id);
-            }}
-            renderForm={(draft, onChange, error) => (
-              <EcosystemDetail draft={draft} onChange={onChange} error={error} />
-            )}
-          />
-        )}
-      />
+      <>
+        <ResourceExplorer
+          activeId={activeEcoId}
+          activeTopic={activeTopic}
+          activeLeafId={activeLeafId}
+          activeMemberEntityId={activeMemberEntityId}
+          basePath={basePath}
+          items={scopedItems}
+          getId={(e) => e.id}
+          getLabel={(e) => e.name}
+          nameSuffix={singular}
+          itemIcon={<Network size={16} aria-hidden />}
+          topics={topics}
+          newLabel={`New ${singular}…`}
+          landing={{
+            title: plural,
+            help: `Open ${an(lowerSingular)} to manage it, or create a new one.`,
+            emptyLabel: `No ${lowerPlural} yet.`,
+            getSublabel: (e) => e.identifier,
+            renderMeta: () => null,
+          }}
+          renderDialog={(onClose, onCreated) => (
+            <CreateResourceDialog
+              {...dialogCommon}
+              create={(d) =>
+                ecosystemsApi.create(
+                  ecoNormalize(d),
+                  slug != null ? { workspace: slug } : undefined,
+                )
+              }
+              onClose={onClose}
+              onCreated={async (eco) => {
+                // Refresh BEFORE navigating so the created id is a known row (an unknown
+                // id would bounce the explorer back to the landing).
+                await reload();
+                onCreated(eco.id);
+              }}
+              renderForm={(draft, onChange, error) => (
+                <EcosystemDetail draft={draft} onChange={onChange} error={error} />
+              )}
+            />
+          )}
+        />
+        {/* The Child Ecosystems topic's "New" opens the feature-owned dialog — render it
+            here too so that affordance works if a host's topic rail includes the topic. */}
+        {createDialog}
+      </>
     );
   }
 

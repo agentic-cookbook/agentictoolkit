@@ -20,13 +20,23 @@ export function setAuthErrorReporter(fn: Reporter | null): void {
   reporter = fn
 }
 
+// Per-signature throttle for reportUnexpectedAuthError. During an outage the SAME
+// failure recurs on every react-query focus/remount refetch (an errored query is
+// always stale), each attempt throwing a FRESH Error object — so effects keyed on
+// error identity re-report, unbounded, exactly when telemetry volume hurts most.
+// One report per (message + context) per window is the signal; the repeats are not.
+const REPORT_DEDUPE_WINDOW_MS = 60_000
+const lastReportAt = new Map<string, number>()
+
 /**
  * Report a CAUGHT auth error — but only when it's unexpected. A status-carrying
  * HTTP error (e.g. an {@link import('./client').AuthHttpError} thrown by
  * `authedJson` on a non-ok response) with a 4xx status is an expected user/flow
  * error (wrong password, stale exchange code, email already taken, capability
  * rejection) and is dropped to avoid noise; network errors (no numeric `status`)
- * and 5xx backend failures are reported. Fail-safe: never throws.
+ * and 5xx backend failures are reported — deduped to one report per identical
+ * (message + context) signature per minute, so an outage under react-query's
+ * focus/remount refetches can't flood the reporter. Fail-safe: never throws.
  *
  * Duck-types a numeric `.status` carried by an `Error` (the same shape as the
  * host's `httpStatus` helper) rather than `instanceof` one AuthHttpError class:
@@ -37,6 +47,11 @@ export function setAuthErrorReporter(fn: Reporter | null): void {
 export function reportUnexpectedAuthError(err: unknown, context?: ErrorContext): void {
   const status = err instanceof Error ? (err as { status?: unknown }).status : undefined
   if (typeof status === 'number' && status < 500) return
+  const signature = `${err instanceof Error ? err.message : String(err)}|${JSON.stringify(context ?? null)}`
+  const now = Date.now()
+  const last = lastReportAt.get(signature)
+  if (last !== undefined && now - last < REPORT_DEDUPE_WINDOW_MS) return
+  lastReportAt.set(signature, now)
   reportAuthError(err, context)
 }
 
