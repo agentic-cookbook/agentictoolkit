@@ -61,6 +61,26 @@ describe('ResizableSplit', () => {
       fireEvent.click(screen.getByRole('button', { name: 'copy' }))
       expect(onAction).toHaveBeenCalled()
     })
+    it('still toggles on a chevron click AFTER a bar drag (stale moved flag)', () => {
+      // jsdom has no pointer-capture; stub it so the drag handlers run.
+      ;(Element.prototype as unknown as { setPointerCapture: () => void }).setPointerCapture = vi.fn()
+      ;(Element.prototype as unknown as { releasePointerCapture: () => void }).releasePointerCapture = vi.fn()
+      const onCol = vi.fn()
+      render(
+        <ResizableSplit top={<div>T</div>} bottom={<div>B</div>} header="Details" bottomLabel="Details" collapsed={false} onCollapsedChange={onCol} />,
+      )
+      const sep = screen.getByRole('separator')
+      // Drag the bar (moves past the 3px threshold, ends elsewhere).
+      fireEvent.pointerDown(sep, { clientY: 100, pointerId: 1 })
+      fireEvent.pointerMove(sep, { clientY: 140, pointerId: 1 })
+      fireEvent.pointerUp(sep, { clientY: 140, pointerId: 1 })
+      // A subsequent plain chevron press+click must still toggle.
+      const chevron = screen.getByRole('button', { name: 'Details' })
+      fireEvent.pointerDown(chevron, { clientY: 140, pointerId: 2 })
+      fireEvent.click(chevron)
+      expect(onCol).toHaveBeenCalledWith(true)
+    })
+
     it('expand-from-collapsed animates by default and skips animation under reduce-motion "on"', () => {
       document.documentElement.dataset.reduceMotion = 'on'
       const onCol = vi.fn()

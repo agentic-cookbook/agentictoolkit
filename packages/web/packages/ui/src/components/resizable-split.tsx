@@ -178,6 +178,10 @@ export function ResizableSplit({
    *  interactive controls (chevron, header actions). */
   function onBarPointerDown(e: React.PointerEvent): void {
     if (isCollapsed) return
+    // Any fresh press clears the drag-passed-over flag — including presses on the
+    // chevron, which early-return below and would otherwise inherit a stale
+    // `moved` from the PREVIOUS drag and have their click swallowed.
+    moved.current = false
     if ((e.target as HTMLElement).closest("button, a, input, select, textarea, [data-no-drag]")) return
     onPointerDown(e)
   }

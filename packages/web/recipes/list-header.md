@@ -110,7 +110,7 @@ region (`role="search"`, `<select>` rows under the field) for full search pages;
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `title` | `React.ReactNode` | — | Left-aligned name of the list. |
-| `search` | `{ value, onChange, label?, placeholder?, inputRef? }` | — | The controlled filter field. `inputRef` reaches the underlying `<input>` for imperative focus (hosts that keep the pane mounted across visits, where autoFocus can't re-fire). |
+| `search` | `{ value, onChange, label?, placeholder?, autoFocus? }` | — | The controlled filter field. `autoFocus` focuses the field whenever its `<input>` attaches — it re-fires on every remount (unlike the native attribute), while re-renders never steal focus (stable ref identity). |
 | `actions` | `React.ReactNode` | — | Right-aligned actions. |
 | `ariaLabel` | `string` | — | Accessible name for the bar (required). |
 | `className` | `string` | — | Extra classes on the strip. |

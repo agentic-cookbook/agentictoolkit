@@ -20,6 +20,16 @@ describe('ListHeader', () => {
     expect(screen.getByRole('button', { name: '+ New site' })).toBeTruthy()
   })
 
+  it('focuses the filter field on attach when autoFocus is set', () => {
+    render(
+      <ListHeader
+        ariaLabel="Sites actions"
+        search={{ value: '', onChange: vi.fn(), autoFocus: true }}
+      />,
+    )
+    expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Filter' }))
+  })
+
   it('omits the filter field when no search is supplied (action-only header)', () => {
     render(<ListHeader ariaLabel="Groups actions" title="Groups" actions={<button type="button">+ New group</button>} />)
     expect(screen.queryByRole('searchbox')).toBeNull()

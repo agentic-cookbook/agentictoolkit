@@ -11,7 +11,8 @@ import { Button } from "../components/button"
  * state and computes the can* flags; the bar just renders them.
  */
 export interface ButtonBarActions {
-  onCreate: () => void
+  /** Optional: omit (with `showCreate={false}`) for panes that don't create here. */
+  onCreate?: () => void
   createLabel?: string
   onCancel: () => void
   canCancel: boolean
@@ -129,7 +130,7 @@ function EditingActions({
   } = actions
   return (
     <>
-      {showCreate && (
+      {showCreate && onCreate && (
         <>
           <Button variant="ghost" size="sm" onClick={onCreate}>
             <Plus data-icon="inline-start" />
@@ -143,7 +144,7 @@ function EditingActions({
           variant="destructive-ghost"
           size="sm"
           onClick={onDelete}
-          disabled={!canDelete}
+          disabled={!canDelete || saving}
         >
           <Trash2 data-icon="inline-start" />
           Delete
