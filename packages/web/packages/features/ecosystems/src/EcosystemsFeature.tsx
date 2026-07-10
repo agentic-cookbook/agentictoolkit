@@ -93,7 +93,17 @@ export interface EcosystemsFeatureProps {
   activeLeafId?: string;
   /** The 5th URL segment: the deep-linkable inner entity of an open GROUP member. */
   activeMemberEntityId?: string;
+  /** The entity NOUN this feature presents (capitalized) — a host that surfaces
+   *  ecosystems under its own concept (the hub's Products feature passes
+   *  { singular: "Product", plural: "Products" }) renames every affordance (landing
+   *  title, create dialog, empty states, breadcrumb name suffix) while this package
+   *  keeps owning the ecosystem machinery. Defaults to Ecosystem / Ecosystems. */
+  labels?: { singular?: string; plural?: string };
 }
+
+/** Prefix `word` with its indefinite article — copy like "Open a product" /
+ *  "an ecosystem" stays grammatical for any host-supplied noun. */
+const an = (word: string): string => (/^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`);
 
 /** The topic groups whose detail pane is a nested topic→detail sub-rail — the single source for
  *  both the membership check and the per-group members map below. */
@@ -210,8 +220,15 @@ export function EcosystemsFeature({
   activeEcoId,
   activeLeafId,
   activeMemberEntityId,
+  labels,
 }: EcosystemsFeatureProps): ReactElement {
   const router = useRouter();
+  // The presented noun (see the `labels` prop doc) — every user-facing string below
+  // derives from these four forms so a renaming host can't miss a surface.
+  const singular = labels?.singular ?? "Ecosystem";
+  const plural = labels?.plural ?? "Ecosystems";
+  const lowerSingular = singular.toLowerCase();
+  const lowerPlural = plural.toLowerCase();
   // Feature links are workspace-relative: <basePath>/... The host-supplied slug stays
   // constant while navigating within this workspace (so the FTD cache/last-id keys stay
   // stable and don't re-flash), and switching workspaces re-scopes the whole rail.
@@ -320,6 +337,7 @@ export function EcosystemsFeature({
       if (t.id === "settings") {
         return (
           <EcosystemSettingsPane
+            noun={singular}
             ecosystemId={ecoId}
             items={scopedItems}
             refresh={reload}
@@ -400,8 +418,8 @@ export function EcosystemsFeature({
   // the Child Ecosystems "New Ecosystem" affordance and the first-run empty state below.
   const createDialog = newOpen && (
     <CreateResourceDialog
-      ariaLabel="New ecosystem"
-      heading="New ecosystem"
+      ariaLabel={`New ${lowerSingular}`}
+      heading={`New ${lowerSingular}`}
       blank={ecoBlank}
       validate={(d) => ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier))}
       // Parent = the scoped ecosystem, so "New Ecosystem" from Child Ecosystems creates a CHILD of
@@ -431,7 +449,7 @@ export function EcosystemsFeature({
                 htmlFor="new-eco-toplevel"
                 className="min-w-0 flex-1 text-sm text-apt-text-muted"
               >
-                Create as a top-level ecosystem (owned by you), not a child of the current one
+                Create as a top-level {lowerSingular} (owned by you), not a child of the current one
               </label>
             </div>
           )}
@@ -466,7 +484,7 @@ export function EcosystemsFeature({
       // forever — the exact dead surface this unscoped state exists to prevent.
       return (
         <div className="flex min-h-0 flex-1 items-center justify-center p-6">
-          <EmptyState title="Couldn't load ecosystems" description={error} />
+          <EmptyState title={`Couldn't load ${lowerPlural}`} description={error} />
         </div>
       );
     }
@@ -474,9 +492,9 @@ export function EcosystemsFeature({
       <>
         <ResourceLanding
           items={ecosystems}
-          title="Ecosystems"
-          help="Open an ecosystem to manage its settings and child ecosystems."
-          emptyLabel="No ecosystems yet."
+          title={plural}
+          help={`Open ${an(lowerSingular)} to manage it, or create a new one.`}
+          emptyLabel={`No ${lowerPlural} yet.`}
           basePath={basePath}
           getId={(e) => e.id}
           getLabel={(e) => e.name}
@@ -484,7 +502,7 @@ export function EcosystemsFeature({
           cardHref={(e) => `${basePath}/${e.id}`}
           renderMeta={() => null}
           onNew={() => openCreateDialog(true)}
-          newLabel="New Ecosystem"
+          newLabel={`New ${singular}`}
         />
         {createDialog}
       </>
@@ -497,12 +515,12 @@ export function EcosystemsFeature({
       <>
         <div className="flex min-h-0 flex-1 items-center justify-center p-6">
           <EmptyState
-            title="No ecosystems yet"
-            description="Create your first ecosystem to get started."
+            title={`No ${lowerPlural} yet`}
+            description={`Create your first ${lowerSingular} to get started.`}
             action={
               <Button variant="outline" size="sm" onClick={() => openCreateDialog(true)}>
                 <Plus size={16} aria-hidden />
-                New Ecosystem
+                New {singular}
               </Button>
             }
           />
@@ -525,10 +543,10 @@ export function EcosystemsFeature({
         items={scopedItems}
         getId={(e) => e.id}
         getLabel={(e) => e.name}
-        nameSuffix="Ecosystem"
+        nameSuffix={singular}
         itemIcon={<Network size={16} aria-hidden />}
         topics={topics}
-        newLabel="New Ecosystem…"
+        newLabel={`New ${singular}…`}
       />
       {createDialog}
     </>

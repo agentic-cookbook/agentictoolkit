@@ -14,8 +14,13 @@ import {
   ecoNormalize,
 } from "./EcosystemDetail";
 
+/** Prefix `word` with its indefinite article (same one-line rule as EcosystemsFeature's —
+ *  kept local; importing it back from there would cycle). */
+const an = (word: string): string => (/^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`);
+
 /** Settings editor for the active ecosystem (identifier, name, region, domain). */
 export function EcosystemSettingsPane({
+  noun = "Ecosystem",
   ecosystemId,
   items,
   refresh,
@@ -25,6 +30,8 @@ export function EcosystemSettingsPane({
   onDelete,
   onRenamed,
 }: {
+  /** The presented entity noun (capitalized) — see EcosystemsFeature's `labels` prop. */
+  noun?: string;
   ecosystemId?: string;
   /** The ecosystems list, owned by the parent feature (shared with the selector). */
   items: Ecosystem[] | null;
@@ -59,7 +66,7 @@ export function EcosystemSettingsPane({
     },
     // Delete is owned by the Danger-zone DeleteEntitySection (onDelete), not the hook.
     refresh,
-    createLabel: "New ecosystem",
+    createLabel: `New ${noun.toLowerCase()}`,
   });
 
   const active = items?.find((e) => e.id === ecosystemId);
@@ -75,13 +82,13 @@ export function EcosystemSettingsPane({
       trailing={renderRecordAffordance?.({
         path: "/ecosystem/ecosystems/{id}",
         pathValues: { id: ecosystemId },
-        title: "Ecosystem API",
+        title: `${noun} API`,
       })}
       loadError={loadError}
       emptyLabel={
         items === null
           ? "Loading…"
-          : "Select an ecosystem in the sidebar, or create a new one."
+          : `Select ${an(noun.toLowerCase())} in the sidebar, or create a new one.`
       }
       renderDetail={(draft) => (
         <div className="flex flex-col gap-6">
@@ -96,7 +103,7 @@ export function EcosystemSettingsPane({
           />
           {!form.creating && active && onDelete && (
             <DeleteEntitySection
-              entityNoun="Ecosystem"
+              entityNoun={noun}
               confirmValue={active.identifier}
               childEntities="applications, buckets, and users"
               onConfirm={onDelete}
