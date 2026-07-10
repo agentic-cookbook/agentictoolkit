@@ -342,6 +342,7 @@ export function TopicRail({
   covered = false,
   isRoot = false,
   selectionStyle = "bar",
+  headerSlot,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -393,6 +394,10 @@ export function TopicRail({
   isRoot?: boolean
   /** Selected-row marking: `"bar"` (classic gold bar; default) or `"marker"` (dash + connector). */
   selectionStyle?: "bar" | "marker"
+  /** Full-width row between the titled header and the list — the hook for the shared
+   *  `ListHeader` (filter + actions) when an entity list lives inside the stack.
+   *  Hidden while the rail is collapsed to an icon strip. */
+  headerSlot?: ReactNode
 }) {
   const asideRef = useRef<HTMLElement>(null)
   const listId = useId()
@@ -523,6 +528,12 @@ export function TopicRail({
           {showToggle && <span className={cn(newButton && "max-md:hidden")}>{collapseToggle}</span>}
         </div>
       ) : null}
+      {/* The shared list-header hook (filter + actions) for entity lists hosted in the
+          stack — full-width under the titled header, above the rows. Hidden when the
+          rail is collapsed to an icon strip (no room for a filter field). */}
+      {headerSlot !== undefined && !collapsed && (
+        <div className="shrink-0 border-b border-apt-border">{headerSlot}</div>
+      )}
       <div
         id={listId}
         className={cn(

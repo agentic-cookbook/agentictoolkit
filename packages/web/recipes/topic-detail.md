@@ -3,7 +3,7 @@ id: 8fa7aaae-df62-44ea-b10c-182f3094ed9f
 title: Topic Detail
 domain: agenticdeveloperhub://recipes/topic-detail
 type: ingredient
-version: 1.2.0
+version: 1.3.0
 status: draft
 language: en
 created: '2026-06-26'
@@ -106,7 +106,9 @@ rows use `role="separator"`. The collapse/expand controls carry `aria-label`
 ## Configuration
 
 Props: `items: TopicDetailItem[]`, `selectedId`, `onSelect`, `emptyLabel?`,
-`railSlot?: RailSlot`, `railSlotActive?`, `panePadding?` (true), `collapsed?`,
+`railSlot?: RailSlot`, `railSlotActive?`, `headerSlot?: ReactNode` (a pinned
+full-width strip between the titled header and the rows — non-scrolling, hidden
+while collapsed; hosts the shared ListHeader), `panePadding?` (true), `collapsed?`,
 `onCollapsedChange?`, `defaultCollapsed?` (false), `children`. The rail is always
 collapsible — there is no opt-in flag; the leading slot is always reserved (empty
 when there is no `railSlot`). `TopicDetailItem`: `{ id, label, sublabel?, icon?,
@@ -140,6 +142,7 @@ None — a presentational block. Callers own any selection telemetry.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.3.0 | 2026-07-10 | Mike Fullerton | TopicRail `headerSlot`: pinned strip under the titled header for the shared ListHeader (filter + actions). |
 | 1.0.0 | 2026-06-26 | Mike Fullerton | Initial draft |
 | 1.1.0 | 2026-06-30 | Mike Fullerton | Collapse-aware `railSlot` render-prop (→ `+` when undisclosed); always-reserved leading slot (first-row alignment); controllable collapse (`collapsed`/`onCollapsedChange`/`defaultCollapsed`). |
 | 1.2.0 | 2026-07-03 | Mike Fullerton | `spacerAfter` on `TopicDetailItem`: a flexible spacer after the item pins the following items to the rail's bottom edge (e.g. a bottom Settings), in the full rail and the collapsed/covered icon strips alike. New requirement `must-render-spacer-after`. |

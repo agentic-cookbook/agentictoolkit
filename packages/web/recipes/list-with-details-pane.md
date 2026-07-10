@@ -3,15 +3,15 @@ id: 6acd3c5f-7bb5-4d6d-8c8d-141e1909cf73
 title: "ListWithDetailsPane"
 domain: agenticdeveloperhub://recipes/list-with-details-pane
 type: recipe
-version: 1.0.0
+version: 2.0.0
 status: draft
 language: en
 created: 2026-06-26
-modified: 2026-06-26
+modified: 2026-07-10
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "A master/detail block: a filter+actions toolbar over a multi-select DataTable over a resizable details pane reflecting the single selected row."
+summary: "A master/detail block: a shared ListHeader (filter + actions) over a multi-select DataTable over a details pane whose divider is its always-visible header bar; list and details are peers."
 platforms:
   - typescript
   - web
@@ -21,6 +21,7 @@ tags:
   - layout
   - selection
 ingredients:
+  - agenticdeveloperhub://recipes/list-header
   - agenticdeveloperhub://recipes/data-table
   - agenticdeveloperhub://recipes/resizable-split
   - agenticdeveloperhub://recipes/alert-and-dialog
@@ -33,22 +34,25 @@ references: []
 
 ## Overview
 
-A master/detail block in `@adh-shared/ui`: a toolbar (filter + actions + delete)
-over a `DataTable`, over a resizable details pane. It composes `DataTable` +
-`ResizableSplit` + `AlertModal` + `Button`/`Input`. It is the base for every
-"Invitations" topic view (sub-project 4) and is reusable platform-wide.
+A master/detail block in `@agentic-toolkit/ui`: the shared `ListHeader`
+(filter + actions + delete) over a `DataTable`, over a details pane. The list
+and the details pane are PEERS in the column — the details never overlays the
+list — and the divider between them renders as the details pane's always-visible
+header bar (`ResizableSplit`'s header-bar variant, titled by `detailsLabel`). It
+composes `ListHeader` + `DataTable` + `ResizableSplit` + `AlertModal` + `Button`.
 
-It owns the selection state and filter; it renders rows in a `DataTable`, a
-toolbar with a left filter box and right-justified action buttons (custom +
-Delete), and a bottom details pane that reflects the single selected row. It is
-generic over row type `T`.
+It owns the selection state and filter; it renders rows in a `DataTable`
+(clicking a row selects it; ↑/↓ move the selection — DataTable's keyboard nav),
+and a bottom details pane that reflects the single selected row. It is generic
+over row type `T`.
 
 ## Ingredients
 
 | Name | Domain | Role | Required | Configuration |
 |---|---|---|---|---|
 | DataTable | agenticdeveloperhub://recipes/data-table | Renders filtered, multi-select rows | yes | `columns`, `rows`, `getRowId`, selection, `loading`, `emptyLabel` |
-| ResizableSplit | agenticdeveloperhub://recipes/resizable-split | Top/bottom split: table on top, draggable + collapsible details pane below | yes | `storageKey` forwarded from props |
+| ListHeader | agenticdeveloperhub://recipes/list-header | The filter + actions bar above the table | yes | `search` from `filterText`/`onFilterTextChange`; `actions` from `actions` + Delete |
+| ResizableSplit | agenticdeveloperhub://recipes/resizable-split | Top/bottom split: table on top, details below its header-bar divider (`header={detailsLabel}`) | yes | `storageKey` forwarded from props |
 | AlertAndDialog | agenticdeveloperhub://recipes/alert-and-dialog | Destructive confirm shown before delete | yes | `destructive` tone; copy from `deleteConfirm` |
 
 Composed shared primitives without their own recipe domains: `Button` (toolbar
@@ -75,15 +79,23 @@ actions + Delete), `Input` (filter box), and `Separator` (`dividerBefore`).
   "Select a single row to see details." when more than 1 row is selected.
 - **must-render-divider-before-action**: A `ListAction` with `dividerBefore: true`
   MUST render a `Separator` immediately before its button in the toolbar.
+- **must-use-list-header**: The toolbar MUST be the shared `ListHeader` (filter
+  field left, actions right) so every list header on the platform matches.
+- **must-render-details-header-bar**: The split's divider MUST render as the
+  details pane's header bar (`ResizableSplit` `header={detailsLabel}`, default
+  `"Details"`): always visible, drag anywhere on it, disclosure chevron far
+  right, animated collapse, reveal-to-fit on expand.
+- **keyboard-moves-selection**: With the table focused, ↑/↓ MUST move the
+  selection (DataTable's keyboard navigation).
 
 ## Layout
 
 ```
-┌ toolbar (role=toolbar) ─────────────────────────────────────────────┐
-│ [ filter… ]                              [ …actions… ] | [ Delete ]  │
+┌ ListHeader ─────────────────────────────────────────────────────────┐
+│ [ 🔍 filter… ]                           [ …actions… ] | [ Delete ]  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  DataTable (filtered, multi-select)                        ▲ top     │
-├──────────────── drag divider · ⌄ collapse ──────────────────────────┤
+├ Details ──────── (drag anywhere on the bar) ─────────────────── ⌄ ──┤
 │  details:                                                  ▼ bottom  │
 │    0 selected → emptyDetail ("Select a row to see details.")         │
 │    1 selected → renderDetail(row)                                    │
@@ -91,9 +103,8 @@ actions + Delete), `Input` (filter box), and `Separator` (`dividerBefore`).
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-- Toolbar: `role="toolbar"`, recessed strip (`border-b border-apt-border
-  bg-apt-bg px-3 py-2 flex items-center gap-2`); filter `Input` (`max-w-xs`);
-  spacer `flex-1`; actions right-aligned.
+- Toolbar: the shared `ListHeader` (recessed ButtonBar strip); filter `Input`
+  with search icon (`max-w-xs`); spacer `flex-1`; actions right-aligned.
 - Details pane: `p-4 text-sm text-apt-text`; hints in `apt-text-muted`.
 - The bottom pane is draggable + collapsible (disclosure) per `ResizableSplit`.
 - No raw hex; no `!important`.
@@ -203,4 +214,5 @@ buttons have labels and their `disabled` reflects the selection. The delete
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 2.0.0 | 2026-07-10 | Mike Fullerton | Toolbar extracted into the shared ListHeader; divider renders as the details pane's always-visible header bar (`detailsLabel`); list/details peer layout + keyboard selection made explicit. |
 | 1.0.0 | 2026-06-26 | Mike Fullerton | Initial conversion from legacy UI spec. |

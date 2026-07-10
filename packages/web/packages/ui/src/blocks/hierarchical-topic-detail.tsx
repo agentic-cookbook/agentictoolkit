@@ -72,9 +72,13 @@ export interface TopicLevel {
   /** Fixed rail width in px for THIS level (default 240 / FULL_RAIL). Widen a level
    *  whose rows must show on one line (e.g. long API paths). Covered style. */
   width?: number
-  /** An optional leading control rendered ABOVE this level's rows (below its title header) — e.g. a
-   *  search/filter bar for a searchable list. Rendered by the level's rail; omit for a plain list. */
+  /** An optional leading ROW above this level's topics (scrolls with them, can carry
+   *  the selection bar) — e.g. a "New…" affordance. Omit for a plain list. */
   railSlot?: RailSlot
+  /** A pinned full-width strip between this level's title header and its rows (does
+   *  NOT scroll with them) — the hook for the shared `ListHeader` (filter field +
+   *  actions) when an entity list lives inside the stack. */
+  headerSlot?: ReactNode
 }
 
 /** The top bar: a breadcrumb trail (leading root, then each selected level, then any
@@ -668,6 +672,7 @@ function MinimizedStack({
               newLabel={level.newLabel}
               newActive={level.newActive}
               railSlot={level.railSlot}
+              headerSlot={level.headerSlot}
               collapsed={isCollapsed(level)}
               onToggle={
                 manualCollapse
@@ -967,6 +972,7 @@ function CoveredStack({
               newLabel={level.newLabel}
               newActive={level.newActive}
               railSlot={level.railSlot}
+              headerSlot={level.headerSlot}
               // Covered lists never shrink to an icon strip (no toggle) — but the trailing-border
               // handle DOES resize the rail: drag it to widen/narrow the column.
               collapsed={false}

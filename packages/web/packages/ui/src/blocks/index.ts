@@ -19,6 +19,7 @@ export { InfoPanel, INFO_PANEL_HEADER_HEIGHT, type InfoPanelProps } from "./info
 export { StatCard, type StatCardProps, type StatCardStat } from "./stat-card"
 export { StatList, StatListRow, type StatListProps, type StatListRowProps } from "./stat-list"
 export { DeleteEntitySection, type DeleteEntitySectionProps } from "./delete-entity-section"
+export { ListHeader, type ListHeaderProps, type ListHeaderSearch } from "./list-header"
 export { ListWithDetailsPane, type ListWithDetailsPaneProps, type ListAction } from "./list-with-details-pane"
 export { SendInvitationModal, type SendInvitationModalProps, type SendInvitationPayload } from "./send-invitation-modal"
 export { AddUsersModal, type AddUsersModalProps, type DraftUser } from "./add-users-modal"

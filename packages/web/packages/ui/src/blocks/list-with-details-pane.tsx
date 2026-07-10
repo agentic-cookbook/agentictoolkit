@@ -7,8 +7,7 @@ import { DataTable, type DataTableColumn } from "../components/data-table"
 import { ResizableSplit } from "../components/resizable-split"
 import { AlertModal } from "../components/alert-modal"
 import { Button } from "../components/button"
-import { Input } from "../components/input"
-import { ButtonBar } from "./button-bar"
+import { ListHeader } from "./list-header"
 import { cn } from "../lib/utils"
 
 export interface ListAction {
@@ -44,6 +43,8 @@ export interface ListWithDetailsPaneProps<T> {
   paramKey?: string
   loading?: boolean
   emptyLabel?: string
+  /** Title on the details pane's header bar (and the disclosure's a11y label). */
+  detailsLabel?: string
   ariaLabel: string
   className?: string
 }
@@ -65,6 +66,7 @@ export function ListWithDetailsPane<T>({
   paramKey,
   loading,
   emptyLabel,
+  detailsLabel = "Details",
   ariaLabel,
   className,
 }: ListWithDetailsPaneProps<T>): React.ReactElement {
@@ -152,55 +154,56 @@ export function ListWithDetailsPane<T>({
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      {/* Toolbar — the shared ButtonBar shell (recessed strip), hosting the
-          filter (left) + ghost selection-actions and a ghost-red Delete (right),
-          so it matches every other button bar on the platform. */}
-      <ButtonBar ariaLabel={`${ariaLabel} actions`}>
-        <Input
-          value={filterValue}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={filterPlaceholder}
-          aria-label="Filter"
-          className="max-w-xs"
-        />
-        <div className="flex-1" />
-        {actions.map((action) => (
-          <React.Fragment key={action.id}>
-            {action.dividerBefore && (
-              // A real toolbar separator (ARIA toolbar pattern) so AT users
-              // perceive the grouping the divider marks, not a decorative rule.
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                className="mx-1 h-5 w-px bg-apt-border"
-              />
+      {/* The shared list header (recessed ButtonBar strip): filter field left,
+          ghost selection-actions and a ghost-red Delete right, so it matches
+          every other list header on the platform. */}
+      <ListHeader
+        ariaLabel={`${ariaLabel} actions`}
+        search={{ value: filterValue, onChange: setQuery, placeholder: filterPlaceholder }}
+        actions={
+          <>
+            {actions.map((action) => (
+              <React.Fragment key={action.id}>
+                {action.dividerBefore && (
+                  // A real toolbar separator (ARIA toolbar pattern) so AT users
+                  // perceive the grouping the divider marks, not a decorative rule.
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    className="mx-1 h-5 w-px bg-apt-border"
+                  />
+                )}
+                <Button
+                  size="sm"
+                  variant={action.variant ?? "ghost"}
+                  disabled={action.requiresSelection === true && selectedArr.length === 0}
+                  onClick={() => action.onClick(selectedArr)}
+                >
+                  {action.label}
+                </Button>
+              </React.Fragment>
+            ))}
+            {onDelete && (
+              <Button
+                size="sm"
+                variant="destructive-ghost"
+                disabled={selectedArr.length === 0}
+                onClick={() => setConfirming(true)}
+              >
+                <Trash2 data-icon="inline-start" />
+                Delete
+              </Button>
             )}
-            <Button
-              size="sm"
-              variant={action.variant ?? "ghost"}
-              disabled={action.requiresSelection === true && selectedArr.length === 0}
-              onClick={() => action.onClick(selectedArr)}
-            >
-              {action.label}
-            </Button>
-          </React.Fragment>
-        ))}
-        {onDelete && (
-          <Button
-            size="sm"
-            variant="destructive-ghost"
-            disabled={selectedArr.length === 0}
-            onClick={() => setConfirming(true)}
-          >
-            <Trash2 data-icon="inline-start" />
-            Delete
-          </Button>
-        )}
-      </ButtonBar>
+          </>
+        }
+      />
 
-      {/* Table + details split */}
+      {/* Table + details split — list and details are PEERS in the column; the
+          divider renders as the details pane's always-visible header bar. */}
       <ResizableSplit
         storageKey={storageKey}
+        header={detailsLabel}
+        bottomLabel={detailsLabel}
         top={
           <DataTable<T>
             columns={columns}
