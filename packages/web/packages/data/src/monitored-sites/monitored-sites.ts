@@ -200,17 +200,13 @@ export function deleteGroup(id: string, opts?: { workspace?: string }): Promise<
 // --- sites ------------------------------------------------------------------
 
 export async function listSites(opts?: { workspace?: string }): Promise<SiteView[]> {
-  // Server-side owner scope covers both lists; the group narrowing stays as
-  // defense-in-depth so the view can't drift from the groups rail.
-  const [groups, rows] = await Promise.all([
-    authedJson<GroupRow[]>(`${GROUPS}${workspaceQuery(opts)}`),
-    authedJson<SiteRow[]>(`${SITES}${workspaceQuery(opts)}`),
-  ]);
-  const mine = new Set(groups.map((g) => g.id));
-  return sortByText(
-    rows.map(toSite).filter((s) => mine.has(s.groupId)),
-    (s) => s.name,
-  );
+  // The server owner-scopes `sites` identically to `site_groups` now (both carry the same
+  // owner columns and honor `?workspace=`), so a single request suffices. The old code also
+  // fetched the groups list and intersected on membership — a second GROUPS round-trip AND a
+  // silent-hiding bug: generic-CRUD lists cap at 500, so a >500-group workspace dropped sites
+  // whose group fell past the cap even though the server still monitors them.
+  const rows = await authedJson<SiteRow[]>(`${SITES}${workspaceQuery(opts)}`);
+  return sortByText(rows.map(toSite), (s) => s.name);
 }
 
 export async function createSite(

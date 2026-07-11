@@ -107,11 +107,17 @@ export const ecosystemsApi = {
    *  never the caller's own default, which is a different principal's ecosystem on an
    *  org workspace. `null` when the workspace has no infrastructure row (never
    *  `undefined`, which react-query rejects as query data). */
-  async workspaceDefaultEcosystemId(workspaceSlug: string): Promise<string | null> {
+  async workspaceDefaultEcosystemId(
+    workspaceSlug: string,
+  ): Promise<{ id: string; canManage: boolean } | null> {
     const rows = await authedJson<EcosystemRow[]>(
       `${BASE}?workspace=${enc(workspaceSlug)}&infrastructure=true`,
     );
-    return rows[0]?.id ?? null;
+    const row = rows[0];
+    // `canManage` is annotated by the workspace-mode list: a member can READ the org's infra
+    // ecosystem (membership-gated) but only an org admin can MANAGE its contents — the host uses
+    // this to show an honest "ask an admin" notice instead of a wall of per-pane 403s.
+    return row ? { id: row.id, canManage: row.canManage !== false } : null;
   },
 
   /** The CHILD ecosystems of `parentId` (an ecosystem rdid/uuid): the ecosystems whose owner IS

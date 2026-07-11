@@ -24,6 +24,10 @@ import { ecosystemsApi } from "./ecosystems";
  */
 export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined): {
   ecosystemId?: string;
+  /** True unless the caller can only VIEW (not manage) the workspace's infrastructure ecosystem
+   *  — a plain org member. Defaults to true while loading / when there is no infra row, so a
+   *  host only gates when the resolution definitively says the caller can't manage. */
+  canManage: boolean;
   isError: boolean;
 } {
   const query = useQuery({
@@ -33,5 +37,9 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
     enabled: workspaceSlug != null,
     retry: false,
   });
-  return { ecosystemId: query.data ?? undefined, isError: query.isError };
+  return {
+    ecosystemId: query.data?.id ?? undefined,
+    canManage: query.data?.canManage ?? true,
+    isError: query.isError,
+  };
 }
