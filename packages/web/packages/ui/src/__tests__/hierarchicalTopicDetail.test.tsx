@@ -129,6 +129,42 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(boxLeft(1)).toBe('40px')
   })
 
+  it('keeps the selection connectors above the revealed branch', () => {
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    enter(col(0))
+
+    // The branch lifts over the detail; the connector overlay must lift with it. When it didn't, the
+    // revealed lists painted over the gold chain and the selection you were following disappeared the
+    // moment you opened the branch.
+    const overlay = document.querySelector('[data-htd-connectors]')
+    if (!(overlay instanceof SVGElement)) throw new Error('no connector overlay')
+    const overlayZ = Number(overlay.style.zIndex)
+    const columnZ = [0, 1, 2].map((i) => Number(col(i).style.zIndex))
+    expect(overlayZ).toBeGreaterThan(Math.max(...columnZ))
+  })
+
+  it('gives the open branch an edge on BOTH sides — leading and trailing', () => {
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    enter(col(1)) // open the branch at the MIDDLE list: a peek sits behind it, the detail ahead of it
+
+    // Leading edge: the peek's own border is clipped away with its rail, so this shadow is the only
+    // boundary between the opened list and the icon strip behind it (it used to be dropped on reveal,
+    // and the list visibly lost its border).
+    expect(col(1).style.boxShadow).toContain('-10px')
+    // Trailing edge: the last member shadows the detail the branch now floats over.
+    expect(col(2).style.boxShadow).toContain('8px')
+    // A member INSIDE the group needs neither — its neighbours abut it, separated by rail borders.
+    expect(col(2).style.boxShadow).not.toContain('-10px')
+  })
+
   it('re-roots the branch when the pointer enters a different covered list', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>

@@ -397,6 +397,16 @@ export function HierarchicalTopicDetail({
 // FULL_RAIL / COLLAPSED_RAIL are imported from topic-detail (the one authoritative home).
 const COVERED_PEEK = 40
 
+// The z-floor of a hover-revealed branch: its members lift to REVEAL_Z + i so the whole cascade
+// floats over the detail. The connector overlay rides just above the highest member (see below), so
+// the gold selection chain still crosses the branch it links.
+const REVEAL_Z = 50
+
+// The card edges of the covered stack — the boundary a clipped peek's own `border-r` cannot draw.
+// (Colour via a CSS var so the no-raw-hex colour checker stays clean.)
+const SHADOW_RIGHT = "8px 0 24px -6px var(--color-shadow)"
+const SHADOW_LEFT = "-10px 0 22px -8px var(--color-shadow)"
+
 /** Parse `minDetailWidth` (a CSS length) to px for the fit math. Handles the units that make sense
  *  for a fixed minimum — `rem`/`em` (×16, the app's root size) and `px`. Viewport/percent units
  *  (`vw`/`%`/`vh`/`ch`) can't be resolved to a fixed px here, so they fall back to a sane default
@@ -628,11 +638,21 @@ function useSelectionConnectors(
   return { connectors, onScroll: () => measureRef.current() }
 }
 
-/** The SVG overlay that draws the measured connector paths above the columns (pointer-transparent). */
-function SelectionConnectorOverlay({ paths }: { paths: string[] }) {
+/**
+ * The SVG overlay that draws the measured connector paths above the columns (pointer-transparent).
+ * `zIndex` must beat EVERY column it crosses: the default clears the ordinary stack, but a covered
+ * stack whose hover-revealed branch is z-lifted over the detail has to lift the overlay with it —
+ * otherwise the branch paints over its own connectors and the selection chain vanishes on hover.
+ */
+function SelectionConnectorOverlay({ paths, zIndex = 30 }: { paths: string[]; zIndex?: number }) {
   if (paths.length === 0) return null
   return (
-    <svg aria-hidden className="pointer-events-none absolute inset-0 z-30 h-full w-full overflow-visible">
+    <svg
+      aria-hidden
+      data-htd-connectors
+      style={{ zIndex }}
+      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+    >
       {paths.map((d, i) => (
         <path
           key={i}
@@ -1167,9 +1187,13 @@ function CoveredStack({
         // on close the lift LINGERS (zLiftId trails hoverId) so the wipe-shut happens over the UI
         // instead of behind it. The members keep their relative order (left → right) inside the lift.
         const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
-        // The group floats as ONE card: only its trailing edge casts a shadow (over the detail it
-        // covers); its members abut each other and are separated by their own rail borders.
+        // The group floats as ONE card over the UI, so BOTH its outer edges are edges: its trailing
+        // edge shadows the detail it covers, and its LEADING edge shadows the peek stack it slid out
+        // of (a peek's own `border-r` is clipped away with the rest of its rail, so that shadow IS
+        // the boundary — without it the opened list bleeds into the icon strip behind it). Members
+        // inside the group abut each other and are separated by their own rail borders.
         const groupTrailing = revealed && i === rendered.length - 1
+        const groupLeading = revealed && i === hoverIndex && i > 0
         return (
           <div
             key={level.id}
@@ -1191,20 +1215,29 @@ function CoveredStack({
               left: leftOf(i),
               width: boxWidth(i),
               gridTemplateColumns: `${railWidth(level)}px`,
-              zIndex: zLifted ? 50 + i : i + 1,
+              zIndex: zLifted ? REVEAL_Z + i : i + 1,
+              // Shadows ride the WRAPPER (its own box-shadow isn't clipped by its overflow, unlike a
+              // child's). They compose — a one-list group is both the leading and the trailing edge of
+              // its card — which is why this is an inline `boxShadow` and not two utility classes
+              // (the second would just overwrite the first).
+              boxShadow:
+                [
+                  groupTrailing && SHADOW_RIGHT,
+                  (groupLeading || (parentCovered && !revealed)) && SHADOW_LEFT,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || undefined,
             }}
             className={cn(
               "absolute top-0 bottom-0 grid overflow-hidden",
               offscreen && "pointer-events-none",
               animate &&
                 "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
-              // Shadows ride the WRAPPER (its own box-shadow isn't clipped by its overflow, unlike a
-              // child's): a RIGHT shadow off the open branch's trailing edge so it floats over the
-              // detail (fading as it wipes shut), else a LEFT shadow when the list under this one is
-              // covered so the peek stack reads as layered cards. The two are mutually exclusive.
-              groupTrailing
-                ? "shadow-[8px_0_24px_-6px_var(--color-shadow)]"
-                : parentCovered && !revealed && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
+              // The rail's own `bg-apt-nav` is 96% opaque — right for a nav sitting on the page, wrong
+              // for a branch FLOATING over the detail, which ghosts the detail's text through it. A
+              // lifted member gets the page background under its rail, so the card is opaque while it
+              // floats and composites exactly as it does at rest.
+              zLifted && "bg-apt-bg",
             )}
           >
             <TopicRail
@@ -1255,8 +1288,14 @@ function CoveredStack({
         )
       })}
       {/* Selection connectors: gold elbows linking each selected parent row to its selected child
-          row, drawn above the lists (so they bridge the list boundary) but pointer-transparent. */}
-      <SelectionConnectorOverlay paths={connectors} />
+          row, drawn above the lists (so they bridge the list boundary) but pointer-transparent. While
+          a branch is z-lifted (hover reveal, and the lingering lift as it wipes shut) the overlay
+          rides above the whole lift — the chain is exactly what you are reading when you open the
+          branch, so the branch must never paint over it. */}
+      <SelectionConnectorOverlay
+        paths={connectors}
+        zIndex={zFrom >= 0 ? REVEAL_Z + rendered.length : undefined}
+      />
       {/* The detail (leaf) pane — rightmost, highest z-index, fills to the container's right edge
           down to `minDetailWidth`. Its top-left carries the cover toggle for the frontier list. The
           left shadow turns on when its parent (the frontier list) is covered, so the overlap reads
