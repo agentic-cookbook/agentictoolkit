@@ -11,8 +11,8 @@ export {
   APPEARANCE_DEFAULTS,
   APPEARANCE_STORAGE_KEY,
   APPEARANCE_PREPAINT_SCRIPT,
-  LIGHT_MODE_ALLOWED,
   applyAppearance,
+  normalizeAppearance,
   readStoredAppearance,
   type AppearancePrefs,
   type ColorModePref,
@@ -23,5 +23,7 @@ export {
 } from './appearance'
 export {
   useAppearancePreferences,
+  adoptAppearance,
+  resetAppearance,
   type UseAppearancePreferences,
 } from './appearance-store'

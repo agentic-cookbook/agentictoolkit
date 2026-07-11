@@ -40,17 +40,6 @@ export const APPEARANCE_DEFAULTS: AppearancePrefs = {
   underlineLinks: false,
 }
 
-/**
- * Light mode is a preview gated to the same environments as the in-app theme
- * picker (local / staging / testing). In production the color scheme is locked
- * to dark regardless of the stored (or `auto`) preference — production ships no
- * theme picker, so it must never get stuck in the light palette. Build-inlined
- * by each consuming site via `NEXT_PUBLIC_DEPLOYMENT_ENV`; absent ⇒ locked dark.
- */
-const LIGHT_MODE_ENVS = new Set(["local", "staging", "testing"])
-export const LIGHT_MODE_ALLOWED = LIGHT_MODE_ENVS.has(
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV ?? "",
-)
 
 /**
  * The enum prefs and the value that means "leave the attribute off" (so the
@@ -112,13 +101,29 @@ export function writeStoredAppearance(prefs: AppearancePrefs): void {
   }
 }
 
+/** Drop this browser's cached prefs — see `resetAppearance` (sign-out): the cache belongs to
+ *  whoever was signed in, so it must not outlive their session on a shared browser. */
+export function clearStoredAppearance(): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.removeItem(APPEARANCE_STORAGE_KEY)
+  } catch {
+    /* ignore (private mode) */
+  }
+}
+
 /**
  * Apply the preferences to a document element. Non-default values set a `data-*`
  * attribute (or the `dark` class for color mode); default/"auto" values remove
  * it so the matching `@media` query governs. `systemPrefersDark` is passed in so
  * both the hook and the pre-paint script can resolve `auto` color mode without
- * each re-reading matchMedia. When light mode isn't allowed (production), the
- * scheme is forced dark.
+ * each re-reading matchMedia.
+ *
+ * Colour mode is honoured in EVERY environment, production included. It used to be
+ * pinned dark outside local/staging/testing, back when light was an unfinished
+ * preview and only the hub could even express a preference; now every site reads
+ * the signed-in user's saved mode (and the OS setting when signed out), so a
+ * production lock would mean the setting silently did nothing where it matters most.
  */
 export function applyAppearance(
   el: HTMLElement,
@@ -126,7 +131,7 @@ export function applyAppearance(
   systemPrefersDark: boolean,
 ): void {
   const wantDark = prefs.colorMode === "auto" ? systemPrefersDark : prefs.colorMode === "dark"
-  el.classList.toggle("dark", LIGHT_MODE_ALLOWED ? wantDark : true)
+  el.classList.toggle("dark", wantDark)
   el.dataset.colorMode = prefs.colorMode
 
   for (const key of Object.keys(ENUM_PREF_DEFAULTS) as (keyof typeof ENUM_PREF_DEFAULTS)[]) {
@@ -160,13 +165,19 @@ const PREPAINT_ATTR_LINES = [
  *
  * The attribute statements are generated from ENUM_PREF_DEFAULTS / BOOL_PREFS,
  * the same lists applyAppearance iterates, so the two stay in lock-step.
+ *
+ * What it reads is a CACHE, not the truth: localStorage holds whatever this browser
+ * last saw, so a returning signed-in user repaints in their own colour mode with no
+ * flash. The truth arrives moments later from the server (AppearanceSync), which
+ * corrects the document if they differ — and clears the cache on sign-out, so the
+ * next visitor to this browser starts from the OS setting rather than inheriting a
+ * stranger's theme. With no cache at all, `colorMode` is absent ⇒ `auto` ⇒ the OS.
  */
 export const APPEARANCE_PREPAINT_SCRIPT = `(function(){try{
 var el=document.documentElement;
 var raw=localStorage.getItem(${JSON.stringify(APPEARANCE_STORAGE_KEY)});
 var p=raw&&typeof JSON.parse(raw)==="object"?JSON.parse(raw):{};
-var allowLight=${JSON.stringify(LIGHT_MODE_ALLOWED)};
-var dark=!allowLight?true:(p.colorMode==="light"?false:p.colorMode==="dark"?true:matchMedia("(prefers-color-scheme: dark)").matches);
+var dark=p.colorMode==="light"?false:p.colorMode==="dark"?true:matchMedia("(prefers-color-scheme: dark)").matches;
 el.classList.toggle("dark",dark);
 el.dataset.colorMode=p.colorMode||"auto";
 function s(k,v){if(v==null){delete el.dataset[k];}else{el.dataset[k]=v;}}
