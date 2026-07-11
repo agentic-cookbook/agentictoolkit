@@ -7,6 +7,7 @@ import {
   Brain,
   Drama,
   IdCard,
+  KeyRound,
   ShieldCheck,
   SlidersHorizontal,
   Target,
@@ -30,6 +31,7 @@ import { rdidPrefix, validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { PersonaAvatarField } from "./PersonaAvatarField";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { PermissionsPanel } from "./PermissionsPanel";
+import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import {
   api,
   toPersonaDraft,
@@ -515,6 +517,33 @@ export function PersonaEditor({
           </div>
         ) : (
           <SaveFirstNotice>Save this persona first to configure its permissions.</SaveFirstNotice>
+        ),
+    },
+    {
+      id: "access",
+      label: "Access",
+      icon: <KeyRound size={16} aria-hidden />,
+      // WHO may reach this persona — the per-item share panel (restriction mode +
+      // item-scoped role assignments + the effective-permission explainer;
+      // docs/workspace-roles-permissions.md). Distinct from Permissions above, which is
+      // what the persona itself may DO. Needs a saved persona + a workspace context.
+      render: () =>
+        persona && workspaceSlug ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <ItemAccessPanel
+              workspaceSlug={workspaceSlug}
+              feature="personas"
+              itemId={persona.id}
+              itemLabel={persona.name || persona.slug}
+              subjectsDirectory={workspaceSubjectsDirectory}
+            />
+          </div>
+        ) : (
+          <SaveFirstNotice>
+            {persona
+              ? "Open this persona from a workspace to manage who can access it."
+              : "Save this persona first to manage who can access it."}
+          </SaveFirstNotice>
         ),
     },
     {

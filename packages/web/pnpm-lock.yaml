@@ -708,6 +708,9 @@ importers:
       '@agentic-toolkit/resource':
         specifier: workspace:*
         version: link:../../resource
+      '@agentic-toolkit/teams':
+        specifier: workspace:*
+        version: link:../teams
       '@agentic-toolkit/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -766,6 +769,9 @@ importers:
       '@agentic-toolkit/resource':
         specifier: workspace:*
         version: link:../../resource
+      '@agentic-toolkit/teams':
+        specifier: workspace:*
+        version: link:../teams
       '@agentic-toolkit/ui':
         specifier: workspace:*
         version: link:../../ui

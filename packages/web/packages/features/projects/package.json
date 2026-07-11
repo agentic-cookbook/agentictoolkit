@@ -38,6 +38,7 @@
   "dependencies": {
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/teams": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "lucide-react": "^1.16.0"

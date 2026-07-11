@@ -2,7 +2,7 @@
 
 import { useCallback, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { FolderKanban, ListTodo, Activity, Building2, User } from "lucide-react";
+import { FolderKanban, ListTodo, Activity, Building2, KeyRound, User } from "lucide-react";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
@@ -14,6 +14,7 @@ import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
 import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
 import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
+import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import { WorkItemsSurface } from "./WorkItemsSurface";
 import { ProjectActivityPane } from "./ProjectActivityPane";
@@ -230,6 +231,26 @@ export function ProjectsFeature({
       render: (projectId, titleFor) =>
         projectId ? (
           <ProjectActivityPane projectId={projectId} title={titleFor("Activity")} />
+        ) : null,
+    },
+    {
+      id: "access",
+      label: "Access",
+      icon: <KeyRound size={16} aria-hidden />,
+      // The per-item share panel (docs/workspace-roles-permissions.md): restriction
+      // mode + item-scoped role assignments + the effective-permission explainer.
+      // Needs the owning workspace (scopeSlug) — on a workspaces-led site a project
+      // is only ever rendered under a selected workspace, so both are defined here.
+      render: (projectId, titleFor) =>
+        projectId && scopeSlug ? (
+          <ItemAccessPanel
+            workspaceSlug={scopeSlug}
+            feature="projects"
+            itemId={projectId}
+            itemLabel={(projects ?? []).find((p) => p.id === projectId)?.name}
+            title={titleFor("Access")}
+            subjectsDirectory={workspaceSubjectsDirectory}
+          />
         ) : null,
     },
   ];
