@@ -1620,6 +1620,12 @@ function NarrowStack({
           <TopicRail
             title={level.title}
             isRoot={i === 0}
+            // The pane IS the screen here, so the rail must FILL it. Left to itself the rail sizes to
+            // its rows — right in the wide stack, where each list is a stretched grid cell, but in a
+            // flex pane it leaves everything under the last row transparent: you see straight through
+            // to the parallaxed pane behind it and then to the page. Its trailing border goes too —
+            // at full width it is a hairline down the edge of the screen, separating nothing.
+            className="min-h-0 flex-1 border-r-0"
             // No connector overlay in this layout (there is never a parent list on screen to connect
             // FROM), so selection falls back to the primitive's own gold bar — visible again when Back
             // pops you onto the parent list.

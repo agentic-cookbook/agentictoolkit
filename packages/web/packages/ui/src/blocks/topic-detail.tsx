@@ -357,6 +357,7 @@ export function TopicRail({
   isRoot = false,
   selectionStyle = "bar",
   headerSlot,
+  className,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -394,6 +395,11 @@ export function TopicRail({
   /** Cast a subtle LEFT drop-shadow on this rail (the "covered" style uses it on a child whose
    *  parent is covered, so the stack reads as physically layered). Default off. */
   coveredShadow?: boolean
+  /** Extra classes on the rail root. The rail sizes to its ROWS by default, which is right in a grid
+   *  cell (the hierarchical stack's columns stretch it) and wrong in a flex pane that IS the whole
+   *  screen — there it must be told to fill (`flex-1`), or the page shows through under the last row.
+   *  Also the seam for dropping the trailing border when the rail spans the full width. */
+  className?: string
   /** Show the desktop collapse toggle (the minimized style's `«` icon-strip toggle). Default
    *  true; the covered style passes false and supplies its own `leftControl` instead. */
   showToggle?: boolean
@@ -493,6 +499,7 @@ export function TopicRail({
       className={cn(
         "relative flex min-h-0 flex-col border-r border-apt-border bg-apt-nav",
         coveredShadow && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
+        className,
       )}
     >
       {/* Drag handle on the trailing border (desktop): resize the column; the parent snaps to
