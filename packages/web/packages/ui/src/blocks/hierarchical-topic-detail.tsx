@@ -1250,12 +1250,11 @@ function CoveredStack({
               selectionStyle="marker"
               items={level.items}
               selectedId={level.selectedId}
-              // Selecting a row also drops the hover reveal, so the list animates closed (back to its
-              // peek) on click instead of lingering disclosed under the pointer.
-              onSelect={(id) => {
-                setHoverId(null)
-                railOnSelect(level, attemptExit)(id)
-              }}
+              // Selecting does NOT close the branch: the pointer is still inside it, and collapsing
+              // under the cursor yanks the rows away mid-gesture — you cannot pick a parent and then
+              // pick its child, which is the whole point of revealing the branch. The reveal is
+              // pointer-scoped, so it collapses when (and only when) the pointer leaves it.
+              onSelect={railOnSelect(level, attemptExit)}
               emptyLabel={level.emptyLabel ?? "Nothing here yet."}
               onNew={level.onNew}
               newLabel={level.newLabel}

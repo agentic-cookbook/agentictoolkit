@@ -113,6 +113,35 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(boxWidth(1)).toBe('240px')
   })
 
+  it('stays open when a row inside it is selected — only leaving collapses it', () => {
+    const selectEco = vi.fn()
+    render(
+      <HierarchicalTopicDetail
+        levels={levelsFor({
+          region: 'us',
+          eco: 'core',
+          topic: 'apps',
+          onSelect: { ecosystems: selectEco },
+        })}
+      >
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    enter(col(0))
+
+    // Pick a row in a revealed list. The pointer is still inside the branch, so it must stay open —
+    // collapsing under the cursor yanks the rows away mid-gesture, and you could never pick a parent
+    // and then go on to pick its child, which is what the branch is open for.
+    fireEvent.click(screen.getByRole('button', { name: /Temporal/ }))
+    expect(selectEco).toHaveBeenCalledWith('temporal')
+    expect(boxWidth(0)).toBe('240px')
+    expect(boxWidth(1)).toBe('240px')
+
+    // It closes on the pointer leaving the branch, and only then.
+    leave(col(1), screen.getByText('detail'))
+    expect(boxWidth(0)).toBe('40px')
+  })
+
   it('collapses back to the previous state when the pointer leaves the whole branch', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
