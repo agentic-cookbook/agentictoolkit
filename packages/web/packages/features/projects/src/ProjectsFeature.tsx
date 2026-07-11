@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, type ReactElement } from "react";
-import { FolderKanban, ListTodo, Activity } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FolderKanban, ListTodo, Activity, Building2, User } from "lucide-react";
+import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { projectsApi } from "@agentic-toolkit/data/projects";
-import { useResourceList } from "@agentic-toolkit/data";
+import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
+import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
+import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import { WorkItemsSurface } from "./WorkItemsSurface";
@@ -113,6 +116,7 @@ export function ProjectsFeature({
   activeTopic,
   activeLeafId,
   workspaceSlug,
+  showWorkspaces = false,
 }: {
   /** The feature's URL base (drives the routes + the list cache key): the hub passes
    *  `/<slug>/projects`, the projects site passes `/home`. Supplied by the host route
@@ -126,12 +130,66 @@ export function ProjectsFeature({
    *  so an org workspace shows the ORG'S projects and creates org-owned ones.
    *  Omitted: the caller's ownership reach (owned + participating). */
   workspaceSlug?: string;
+  /** Lead the stack with a WORKSPACES list (the caller's personal workspace + their orgs), which
+   *  scopes the project list under it. This is how a feature SITE gets the scope the hub gets from
+   *  its `/<slug>/…` route: there the workspace is a path segment and the shell already renders the
+   *  rail, so the hub leaves this false and passes `workspaceSlug` straight from the URL. With it
+   *  on, the workspace is the FIRST segment under `basePath` (`/home/<slug>/<project>/<topic>`). */
+  showWorkspaces?: boolean;
 }): ReactElement {
-  const loadProjects = useCallback(
-    () => projectsApi.list({ workspace: workspaceSlug }),
-    [workspaceSlug],
+  const router = useRouter();
+
+  // The workspaces list — only fetched by a host that shows it (the hub's shell already owns one,
+  // and would otherwise pay for a list it never renders). The `load` identity is what drives the
+  // fetch, so gating it here (rather than the hook call) keeps the hook order unconditional.
+  const loadWorkspaces = useCallback(
+    () => (showWorkspaces ? workspacesApi.list() : Promise.resolve([])),
+    [showWorkspaces],
   );
-  const { items: projects } = useResourceList(basePath, loadProjects);
+  const { items: workspaces } = useResourceList(`${basePath}::workspaces`, loadWorkspaces);
+
+  // An unknown workspace slug (a stale link, or the old `/home/all` grammar) falls back to NO
+  // selection once the list has loaded — the same `knownId` rule the resource list uses — rather
+  // than scoping the projects to a workspace the backend will 404. While the list is still loading
+  // the slug is taken at face value, so a deep link doesn't flash the "select a workspace" hint.
+  const knownWorkspace =
+    workspaces === null || workspaces.some((w) => w.slug === workspaceSlug);
+  const activeWorkspace = knownWorkspace ? workspaceSlug : undefined;
+
+  // The principal every project read/write is pinned to. On a workspaces-led site that is the
+  // SELECTED workspace (nothing is listed until one is chosen); on the hub it is the route's slug.
+  const scopeSlug = showWorkspaces ? activeWorkspace : workspaceSlug;
+  const scopePending = showWorkspaces && !scopeSlug;
+
+  const loadProjects = useCallback(
+    () => (scopePending ? Promise.resolve([] as Project[]) : projectsApi.list({ workspace: scopeSlug })),
+    [scopeSlug, scopePending],
+  );
+  // The projects live UNDER the workspace, so the workspace is part of their URL base — and of the
+  // list's cache key, so switching workspace can never show the previous one's projects.
+  const projectsBase = showWorkspaces && scopeSlug ? `${basePath}/${scopeSlug}` : basePath;
+  const { items: projects, reload } = useResourceList(projectsBase, loadProjects);
+
+  const workspaceLevel: TopicLevel | null = showWorkspaces
+    ? {
+        id: "workspace",
+        title: "Workspaces",
+        items: (workspaces ?? []).map((w) => ({
+          id: w.slug,
+          label: w.name,
+          icon:
+            w.kind === "organization" ? (
+              <Building2 size={16} aria-hidden />
+            ) : (
+              <User size={16} aria-hidden />
+            ),
+        })),
+        selectedId: activeWorkspace ?? null,
+        onSelect: (slug) => router.push(`${basePath}/${slug}`, { scroll: false }),
+        onClear: () => router.push(basePath, { scroll: false }),
+        emptyLabel: workspaces === null ? "Loading…" : "No workspaces.",
+      }
+    : null;
 
   // Entity-first topics (FTD): the project Overview, then Work Items (the view
   // switcher) and Activity — all real panes.
@@ -182,8 +240,13 @@ export function ProjectsFeature({
       activeId={activeProjectId}
       activeTopic={activeTopic}
       activeLeafId={activeLeafId}
-      basePath={basePath}
+      basePath={projectsBase}
       items={projects}
+      reload={reload}
+      leadingLevels={workspaceLevel ? [workspaceLevel] : undefined}
+      leadingPlaceholder={
+        <EmptyState title="Select a workspace to see its projects." />
+      }
       getId={(p) => p.id}
       getLabel={(p) => p.name}
       nameSuffix="Project"
@@ -209,7 +272,7 @@ export function ProjectsFeature({
                 name: d.name.trim(),
                 description: d.description.trim() || undefined,
               },
-              { workspace: workspaceSlug },
+              { workspace: scopeSlug },
             )
           }
           onClose={onClose}

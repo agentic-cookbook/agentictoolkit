@@ -10,26 +10,21 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Plus,
   List,
   LayoutGrid,
   Table,
   GanttChartSquare,
   CalendarDays,
 } from "lucide-react";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@agentic-toolkit/ui/components/toggle-group";
+import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Button } from "@agentic-toolkit/ui/components/button";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   projectsApi,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
-import { FeatureTitle, type TopicLeaf } from "@agentic-toolkit/resource";
+import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 import { WorkItemEditor } from "./WorkItemEditor";
 import { ListView } from "./views/ListView";
 import { BoardView } from "./views/BoardView";
@@ -43,17 +38,24 @@ import { CalendarView } from "./views/CalendarView";
  * project's work items (+ statuses + participants) ONCE, holds the items in state,
  * and owns the two shared concerns so every view stays in sync:
  *
- *  - the WorkItemEditor: any view calls `onOpenItem(id)` (or the "New work item"
- *    action) and the surface swaps the active view for the editor; a save reloads
- *    the shared items so List and Board repaint together;
+ *  - the WorkItemEditor: any view calls `onOpenItem(id)` (or the header `+`) and the
+ *    surface swaps the active view for the editor; a save reloads the shared items
+ *    so List and Board repaint together;
  *  - the status move: `onMove(itemId, statusId)` does the optimistic-with-revert
  *    PATCH on the shared items (lifted from the old ProjectBoardPane), so a Board
  *    move is instantly reflected in the List too.
  *
- * The active view is the deep-linkable leaf (`leaf.leafId ?? "list"`); a segmented
- * ToggleGroup switches it via `leaf.onSelect(view)`. This replaces 4d's separate
- * Work Items (list) and Board topics with one topic that hosts both as views.
- * Renders inline (publishes no stack level), mirroring the sibling project panes.
+ * The views are a "Work Items" TOPIC LIST — a level of the one hierarchical stack,
+ * published via {@link useStackLevel} — not a tab bar inside the leaf. A nested tab
+ * shell in a detail pane is exactly the "bolted-on arrangement" the one-stack rule
+ * forbids (see the hierarchical-topic-detail recipe: "every list anywhere is a level
+ * of the single stack; the deepest pane is only ever a detail"). The active view is
+ * the deep-linkable leaf segment, so the URL grammar is unchanged
+ * (…/<project>/work-items/<view>); picking a view is just that level's selection.
+ *
+ * Per the stack's no-auto-select rule, landing on Work Items selects NO view: the
+ * list shows with nothing focused and the detail holds an empty hint until the user
+ * picks one.
  */
 
 /* ── View catalog ─────────────────────────────────────────────────────────── */
@@ -69,8 +71,12 @@ const VIEWS = [
 type ViewId = (typeof VIEWS)[number]["id"];
 const VIEW_IDS = VIEWS.map((v) => v.id) as readonly string[];
 
-function asViewId(value: string | null): ViewId {
-  return value !== null && VIEW_IDS.includes(value) ? (value as ViewId) : "list";
+/** The rows of the "Work Items" level — module scope, so their identity is stable. */
+const VIEW_ITEMS = VIEWS.map(({ id, label, icon }) => ({ id, label, icon }));
+
+/** The URL's leaf segment as a view id, or null when it names none (no auto-select). */
+function asViewId(value: string | null): ViewId | null {
+  return value !== null && VIEW_IDS.includes(value) ? (value as ViewId) : null;
 }
 
 /* ── Surface ──────────────────────────────────────────────────────────────── */
@@ -221,6 +227,22 @@ export function WorkItemsSurface({
 
   const view = asViewId(leaf.leafId);
 
+  // The views ARE a topic list — one level of the enclosing hierarchical stack, published here so
+  // the frame renders it as a rail alongside its siblings. Selecting a row re-routes to that view's
+  // leaf segment (`onSelect`), re-clicking it clears back to the bare topic (`onClear`); the header
+  // `+` starts a new work item, exactly like every other list's create affordance.
+  useStackLevel({
+    id: "work-items-view",
+    title: "Work Items",
+    items: VIEW_ITEMS,
+    selectedId: view,
+    onSelect: (id) => leaf.onSelect(id),
+    onClear: () => leaf.onSelect(null),
+    onNew: startCreate,
+    newLabel: "New work item",
+    newActive: creating,
+  });
+
   const activeView: ReactNode = useMemo(() => {
     if (items === null) {
       return <p className="text-sm text-apt-text-muted">Loading…</p>;
@@ -283,36 +305,16 @@ export function WorkItemsSurface({
               onCancel={closeEditor}
             />
           </div>
+        ) : view === null ? (
+          // No view chosen yet — the stack never auto-selects, so the leaf holds the hint until the
+          // user picks one from the Work Items list.
+          <EmptyState title="Select a view to see this project's work items." />
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <ToggleGroup
-                aria-label="Work items view"
-                value={[view]}
-                onValueChange={(next: string[]) => {
-                  const v = next[0];
-                  // Single-select: ignore the empty array from re-clicking the active item.
-                  if (v && VIEW_IDS.includes(v)) leaf.onSelect(v);
-                }}
-              >
-                {VIEWS.map(({ id, label, icon }) => (
-                  <ToggleGroupItem key={id} value={id} aria-label={`${label} view`} title={label}>
-                    {icon}
-                    <span>{label}</span>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-apt-text-muted">
-                  {items === null
-                    ? ""
-                    : `${items.length} work item${items.length === 1 ? "" : "s"}`}
-                </span>
-                <Button size="sm" onClick={startCreate}>
-                  <Plus data-icon="inline-start" />
-                  New work item
-                </Button>
-              </div>
+            <div className="flex items-center justify-end">
+              <span className="text-sm text-apt-text-muted">
+                {items === null ? "" : `${items.length} work item${items.length === 1 ? "" : "s"}`}
+              </span>
             </div>
             {activeView}
           </>
