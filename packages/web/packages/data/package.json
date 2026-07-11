@@ -66,6 +66,11 @@
       "types": "./dist/invitations/index.d.ts",
       "development": "./src/invitations/index.ts",
       "import": "./dist/invitations/index.js"
+    },
+    "./access": {
+      "types": "./dist/access/index.d.ts",
+      "development": "./src/access/index.ts",
+      "import": "./dist/access/index.js"
     }
   },
   "scripts": {

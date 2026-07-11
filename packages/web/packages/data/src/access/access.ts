@@ -1,0 +1,134 @@
+// Workspace roles & permissions API client — the gated /access surface
+// (docs/workspace-roles-permissions.md). Every call names the workspace by slug
+// (`?workspace=`): a personal workspace's customer slug or an org slug. Reads answer
+// 404 to non-members; role definition is admin-only; assignments/restriction need the
+// M verb at the target scope (the server enforces no-escalation).
+
+import { authedJson, authedRequest } from "../http";
+import { enc } from "../client-helpers";
+import type {
+  AccessAssignmentRow,
+  AccessGrantRow,
+  AccessRoleRow,
+  EffectiveAccessRow,
+} from "./wire";
+
+export type { AccessAssignmentRow, AccessGrantRow, AccessRoleRow, EffectiveAccessRow };
+
+const BASE = "/api/access";
+
+/** The v1 feature areas the roles matrix edits (backend lib/feature-areas.ts). */
+export const ACCESS_FEATURES: ReadonlyArray<{ key: string; label: string }> = [
+  { key: "projects", label: "Projects" },
+  { key: "personas", label: "Personas" },
+];
+
+export interface AccessRoleInput {
+  slug: string;
+  name: string;
+  description?: string;
+  defaultFor?: "" | "customer" | "persona";
+  grants: AccessGrantRow[];
+}
+
+export interface AccessAssignmentInput {
+  subjectKind: "customer" | "persona" | "team";
+  subjectId: string;
+  /** Provide feature+itemId together to scope the grant to one item; omit both for workspace-wide. */
+  feature?: string;
+  itemId?: string;
+  roleId: string;
+}
+
+export const accessApi = {
+  async listRoles(workspace: string): Promise<AccessRoleRow[]> {
+    const body = await authedJson<{ roles: AccessRoleRow[] }>(
+      `${BASE}/roles?workspace=${enc(workspace)}`,
+    );
+    return body.roles;
+  },
+
+  async createRole(workspace: string, input: AccessRoleInput): Promise<AccessRoleRow> {
+    const body = await authedJson<{ role: AccessRoleRow }>(
+      `${BASE}/roles?workspace=${enc(workspace)}`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    return body.role;
+  },
+
+  async updateRole(
+    workspace: string,
+    id: string,
+    patch: Partial<Omit<AccessRoleInput, "slug">>,
+  ): Promise<AccessRoleRow> {
+    const body = await authedJson<{ role: AccessRoleRow }>(
+      `${BASE}/roles/${enc(id)}?workspace=${enc(workspace)}`,
+      { method: "PATCH", body: JSON.stringify(patch) },
+    );
+    return body.role;
+  },
+
+  async deleteRole(workspace: string, id: string): Promise<void> {
+    await authedRequest(`${BASE}/roles/${enc(id)}?workspace=${enc(workspace)}`, {
+      method: "DELETE",
+    });
+  },
+
+  /** Workspace-wide listing needs workspace admin; item-scoped needs M on that item.
+   *  `restricted` is present on item-scoped listings. */
+  async listAssignments(
+    workspace: string,
+    scope?: { feature: string; itemId: string },
+  ): Promise<{ assignments: AccessAssignmentRow[]; restricted?: boolean }> {
+    const q = scope
+      ? `&feature=${enc(scope.feature)}&itemId=${enc(scope.itemId)}`
+      : "";
+    return authedJson<{ assignments: AccessAssignmentRow[]; restricted?: boolean }>(
+      `${BASE}/assignments?workspace=${enc(workspace)}${q}`,
+    );
+  },
+
+  /** Grant (or replace) — one role per subject per scope. */
+  async putAssignment(
+    workspace: string,
+    input: AccessAssignmentInput,
+  ): Promise<AccessAssignmentRow> {
+    const body = await authedJson<{ assignment: AccessAssignmentRow }>(
+      `${BASE}/assignments?workspace=${enc(workspace)}`,
+      { method: "PUT", body: JSON.stringify(input) },
+    );
+    return body.assignment;
+  },
+
+  async deleteAssignment(workspace: string, id: string): Promise<void> {
+    await authedRequest(`${BASE}/assignments/${enc(id)}?workspace=${enc(workspace)}`, {
+      method: "DELETE",
+    });
+  },
+
+  async restrictItem(workspace: string, feature: string, itemId: string): Promise<void> {
+    await authedJson(`${BASE}/items/restrict?workspace=${enc(workspace)}`, {
+      method: "POST",
+      body: JSON.stringify({ feature, itemId }),
+    });
+  },
+
+  async restoreItem(workspace: string, feature: string, itemId: string): Promise<void> {
+    await authedJson(`${BASE}/items/restore?workspace=${enc(workspace)}`, {
+      method: "POST",
+      body: JSON.stringify({ feature, itemId }),
+    });
+  },
+
+  /** The effective-permission explainer for one subject (requires M at the scope). */
+  async effective(
+    workspace: string,
+    q: { feature: string; subjectKind: "customer" | "persona"; subjectId: string; itemId?: string },
+  ): Promise<EffectiveAccessRow> {
+    const itemQ = q.itemId ? `&itemId=${enc(q.itemId)}` : "";
+    return authedJson<EffectiveAccessRow>(
+      `${BASE}/effective?workspace=${enc(workspace)}&feature=${enc(q.feature)}` +
+        `&subjectKind=${q.subjectKind}&subjectId=${enc(q.subjectId)}${itemQ}`,
+    );
+  },
+};
