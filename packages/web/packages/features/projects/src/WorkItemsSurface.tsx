@@ -24,6 +24,7 @@ import {
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
+import { useResourceList } from "@agentic-toolkit/data";
 import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 import { WorkItemEditor } from "./WorkItemEditor";
 import { ListView } from "./views/ListView";
@@ -90,10 +91,6 @@ export function WorkItemsSurface({
   title: string;
   leaf: TopicLeaf;
 }): ReactElement {
-  const [items, setItems] = useState<WorkItem[] | null>(null);
-  const [statuses, setStatuses] = useState<ProjectStatus[]>([]);
-  const [participants, setParticipants] = useState<ProjectParticipant[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   // The open editor is internal state (the leaf now carries the VIEW): `creating`
   // for a new item, else `selectedId` for the item being edited.
@@ -108,39 +105,39 @@ export function WorkItemsSurface({
     };
   }, []);
 
-  // Load the items + the pickers' options together, ONCE per project. ResourceExplorer
-  // keys the topic pane by project id, so a project switch remounts this with fresh
-  // state (items null → "Loading…"); switching the VIEW does NOT reload — the
-  // shared query is loaded once and every view reads the same items. `alive` drops
-  // a response that resolves after unmount.
-  useEffect(() => {
-    let alive = true;
-    Promise.all([
-      projectWorkItemsApi.listForProject(projectId),
-      projectsApi.statuses.list(projectId).catch(() => [] as ProjectStatus[]),
-      projectsApi.participants.list(projectId).catch(() => [] as ProjectParticipant[]),
-    ])
-      .then(([its, ss, ps]) => {
-        if (!alive) return;
-        setItems(its);
-        setStatuses(ss);
-        setParticipants(ps);
-      })
-      .catch((e) => {
-        if (!alive) return;
-        setItems([]);
-        setLoadError(e instanceof Error ? e.message : "Failed to load work items.");
-      });
-    return () => {
-      alive = false;
-    };
-  }, [projectId]);
-
-  // Refresh just the list after a write (create/edit), so all views repaint.
-  const reload = useCallback(async () => {
-    const its = await projectWorkItemsApi.listForProject(projectId);
-    if (mounted.current) setItems(its);
-  }, [projectId]);
+  // The items + the pickers' options, each behind the shared tenant-scoped cache. That cache lives
+  // at module scope, so it SURVIVES the remount the router performs on every navigation inside the
+  // feature's catch-all route — the pane seeds from it and repaints instantly instead of blanking
+  // to "Loading…" and re-reading all three lists on every click. Switching the VIEW is one of those
+  // navigations, and it must not reload: every view reads the same items.
+  const loadItems = useCallback(
+    () => projectWorkItemsApi.listForProject(projectId),
+    [projectId],
+  );
+  const loadStatuses = useCallback(
+    () => projectsApi.statuses.list(projectId).catch(() => [] as ProjectStatus[]),
+    [projectId],
+  );
+  const loadParticipants = useCallback(
+    () => projectsApi.participants.list(projectId).catch(() => [] as ProjectParticipant[]),
+    [projectId],
+  );
+  const {
+    items,
+    setItems,
+    reload,
+    error: loadError,
+  } = useResourceList<WorkItem>(`project:${projectId}:work-items`, loadItems);
+  const { items: statusRows } = useResourceList<ProjectStatus>(
+    `project:${projectId}:statuses`,
+    loadStatuses,
+  );
+  const { items: participantRows } = useResourceList<ProjectParticipant>(
+    `project:${projectId}:participants`,
+    loadParticipants,
+  );
+  const statuses = statusRows ?? [];
+  const participants = participantRows ?? [];
 
   // Move a card to another status: optimistic (repaint immediately), then settle
   // per-item and GUARDED so overlapping moves on the SAME card never clobber each
@@ -215,7 +212,9 @@ export function WorkItemsSurface({
     setSelectedId(null);
   };
 
-  // A saved create/edit reloads the shared items and returns to the active view.
+  // A saved create/edit reloads the shared items and returns to the active view. `reload()` always
+  // hits the network (it bypasses the cache's freshness window), so the item just written is in the
+  // list rather than being hidden behind a still-fresh pre-write snapshot.
   const onSaved = useCallback(async () => {
     setCreating(false);
     setSelectedId(null);

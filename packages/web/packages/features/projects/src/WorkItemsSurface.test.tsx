@@ -40,7 +40,7 @@ import {
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
-import type { TopicLeaf } from "@agentic-toolkit/resource";
+import { RailHostBoundary, type TopicLeaf } from "@agentic-toolkit/resource";
 
 const listForProject = vi.mocked(projectWorkItemsApi.listForProject);
 const create = vi.mocked(projectWorkItemsApi.create);
@@ -133,10 +133,23 @@ beforeEach(() => {
 // The hub vitest config has no global afterEach — tear down each render explicitly.
 afterEach(cleanup);
 
-// A stateful leaf so the switcher deep-links the active view (as ResourceExplorer's URL
-// leaf would); `onSelectSpy` records the chosen view id.
-function Harness({ onSelectSpy }: { onSelectSpy?: (leafId: string | null) => void }) {
-  const [leafId, setLeafId] = useState<string | null>(null);
+// The five views are a "Work Items" LEVEL published into the enclosing hierarchical stack, so the
+// harness mounts a RailHostBoundary — which, with no host above it, becomes the same standalone host a
+// feature site gives the feature — so the
+// level renders as a real rail whose rows are the views. A stateful leaf deep-links the active view
+// the way ResourceExplorer's URL leaf would; `onSelectSpy` records the chosen view id.
+//
+// `view` seeds that leaf. It defaults to "list" because most tests below are about the editor and
+// the optimistic move and just need SOME view on screen — the stack itself never auto-selects one
+// (the first test asserts exactly that).
+function Harness({
+  onSelectSpy,
+  view = "list",
+}: {
+  onSelectSpy?: (leafId: string | null) => void;
+  view?: string | null;
+}) {
+  const [leafId, setLeafId] = useState<string | null>(view);
   const leaf: TopicLeaf = {
     leafId,
     onSelect: (id) => {
@@ -144,37 +157,42 @@ function Harness({ onSelectSpy }: { onSelectSpy?: (leafId: string | null) => voi
       setLeafId(id);
     },
   };
-  return <WorkItemsSurface projectId="p1" title="Work Items" leaf={leaf} />;
+  return (
+    <RailHostBoundary>
+      <WorkItemsSurface projectId="p1" title="Work Items" leaf={leaf} />
+    </RailHostBoundary>
+  );
 }
 
 describe("WorkItemsSurface", () => {
-  it("renders the view switcher and defaults to the List view", async () => {
-    render(<Harness />);
+  it("publishes the five views as a topic list and auto-selects none of them", async () => {
+    render(<Harness view={null} />);
 
-    // Switcher options are present…
-    expect(screen.getByRole("button", { name: "List view" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Board view" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Table view" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Timeline view" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Calendar view" })).not.toBeNull();
+    // The views are rows of a published rail — a LEVEL of the one stack — not a tab bar in the leaf.
+    const rail = await screen.findByRole("complementary", { name: "Topic list" });
+    for (const label of ["List", "Board", "Table", "Timeline", "Calendar"]) {
+      expect(within(rail).getByRole("button", { name: label })).not.toBeNull();
+    }
 
-    // …and the default view is the List (the DataTable), not the Board.
-    await screen.findByText("Design the landing page");
-    expect(screen.getByRole("grid", { name: "Work items" })).not.toBeNull();
+    // The stack never auto-selects: no view is open, so the leaf holds the hint — not the List.
+    expect(await screen.findByText(/select a view/i)).not.toBeNull();
+    expect(screen.queryByRole("grid", { name: "Work items" })).toBeNull();
     expect(screen.queryByRole("list", { name: "Board columns" })).toBeNull();
   });
 
-  it("switches to the Board view via the switcher, calling leaf.onSelect('board')", async () => {
+  it("switches to the Board view from the rail row, calling leaf.onSelect('board')", async () => {
     const onSelectSpy = vi.fn();
     render(<Harness onSelectSpy={onSelectSpy} />);
     await screen.findByText("Design the landing page");
 
-    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
 
     expect(onSelectSpy).toHaveBeenCalledWith("board");
 
-    // The Board columns are now rendered (in position order), the List grid gone.
-    const cols = await screen.findAllByRole("listitem");
+    // The Board columns are now rendered (in position order), the List grid gone. Scoped to the
+    // board: the rail's own rows are <li>s too, so an unscoped listitem query would sweep them in.
+    const board = await screen.findByRole("list", { name: "Board columns" });
+    const cols = within(board).getAllByRole("listitem");
     expect(cols.map((c) => c.getAttribute("aria-label"))).toEqual([
       "To do",
       "In progress",
@@ -187,11 +205,11 @@ describe("WorkItemsSurface", () => {
     render(<Harness />);
     await screen.findByText("Design the landing page");
 
-    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     await screen.findByRole("listitem", { name: "To do" });
 
-    // The load is owned by the surface and keyed on projectId, so switching the
-    // VIEW does not re-fetch: exactly one listForProject across the switch.
+    // The items are owned by the surface and keyed on projectId, so switching the VIEW does not
+    // re-fetch: exactly one listForProject across the switch.
     expect(listForProject).toHaveBeenCalledTimes(1);
     expect(listForProject).toHaveBeenCalledWith("p1");
   });
@@ -242,7 +260,7 @@ describe("WorkItemsSurface", () => {
   it("moves a card to another status (optimistic) and repaints it under the new column", async () => {
     render(<Harness />);
     await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     await screen.findByRole("listitem", { name: "To do" });
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
@@ -267,7 +285,7 @@ describe("WorkItemsSurface", () => {
     update.mockRejectedValueOnce(new Error("boom"));
     render(<Harness />);
     await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     await screen.findByRole("listitem", { name: "To do" });
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
@@ -311,7 +329,7 @@ describe("WorkItemsSurface", () => {
 
     render(<Harness />);
     await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     await screen.findByRole("listitem", { name: "To do" });
 
     const combo = () => screen.getByRole("combobox", { name: "Move Design the landing page" });
@@ -373,7 +391,7 @@ describe("WorkItemsSurface", () => {
 
     render(<Harness />);
     await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
     await screen.findByRole("listitem", { name: "To do" });
 
     const combo = () => screen.getByRole("combobox", { name: "Move Design the landing page" });

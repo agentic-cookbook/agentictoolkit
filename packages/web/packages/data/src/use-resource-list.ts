@@ -10,20 +10,35 @@ import { readLastId, clearLastId } from "./ftd-storage";
 // switch, so without a seed the selector + panes blank to null on each navigation
 // (flashing the popup label). `scope` records the tenant the rows belong to so a
 // different identity (an account switch without a full reload) can never read
-// another tenant's stale rows.
+// another tenant's stale rows. `at` is when the rows were fetched — see FRESH_MS.
 interface CacheBox<T> {
   scope: string | null;
   rows: T[] | null;
+  at: number;
 }
 const caches = new Map<string, CacheBox<unknown>>();
 
+// NOTE — why there is no "skip the fetch if the cache is fresh" window here.
+//
+// Next 16 REMOUNTS the page subtree on a same-segment param navigation, and a feature's whole URL
+// grammar (`/home/<ws>/<project>/<topic>/<leaf>`) lives on ONE catch-all segment — so every click
+// tears the feature down and rebuilds it, and each mount re-reads. A staleness window would make
+// those re-reads free, but it would also mean a list that STARTS failing keeps serving its last
+// good rows for the length of the window, so a broken backend shows no error. That trade is not
+// ours to make for every feature on the platform, and it is not needed for the flicker: the CACHE
+// SEED below is what stops it. `items` is non-null on the first render after a remount, so the view
+// repaints immediately from cache and the re-read settles behind it, invisibly. Keep it that way —
+// the seed fixes what the user sees; the fetch keeps the data honest.
 export interface ResourceList<T> {
   /** The rows (null = still loading), seeded from the tenant-scoped cache. */
   items: T[] | null;
-  /** Re-fetch the list (e.g. after a create/delete) and update the cache. */
+  /** Re-fetch the list (e.g. after a create/delete) and update the cache. Always hits the network. */
   reload: () => Promise<void>;
   /** The last load error, or null. */
   error: string | null;
+  /** Replace the rows locally — an optimistic update — writing through to the cache so the value
+   *  survives the remount too. Takes the next rows or an updater, like a React setter. */
+  setItems: (next: T[] | null | ((prev: T[] | null) => T[] | null)) => void;
 }
 
 /**
@@ -46,44 +61,65 @@ export function useResourceList<T>(
   load: () => Promise<T[]>,
 ): ResourceList<T> {
   const tenantId = useTenantId();
-  const [items, setItems] = useState<T[] | null>(() => {
-    // Only seed from the cache when it belongs to the current tenant.
+  // Only ever read the cache for the CURRENT tenant — an account switch without a full reload must
+  // never surface another tenant's rows.
+  const cached = useCallback((): CacheBox<T> | null => {
     const box = caches.get(cacheKey) as CacheBox<T> | undefined;
-    return box && box.scope === tenantId ? box.rows : null;
-  });
+    return box && box.scope === tenantId ? box : null;
+  }, [cacheKey, tenantId]);
+
+  const [items, setItemsState] = useState<T[] | null>(() => cached()?.rows ?? null);
   const [error, setError] = useState<string | null>(null);
 
   const store = useCallback(
-    (rows: T[]) => {
-      caches.set(cacheKey, { scope: tenantId, rows });
+    (rows: T[] | null) => {
+      caches.set(cacheKey, { scope: tenantId, rows, at: Date.now() });
     },
     [cacheKey, tenantId],
   );
 
+  // An optimistic local write, mirrored into the cache so it survives the page remount that a
+  // navigation triggers (otherwise the next mount would seed from pre-write rows and the update
+  // would appear to roll itself back).
+  const setItems = useCallback<ResourceList<T>["setItems"]>(
+    (next) => {
+      setItemsState((prev) => {
+        const rows = typeof next === "function" ? next(prev) : next;
+        caches.set(cacheKey, { scope: tenantId, rows, at: cached()?.at ?? Date.now() });
+        return rows;
+      });
+    },
+    [cacheKey, tenantId, cached],
+  );
+
+  const fetchRows = useCallback(async () => {
+    const rows = await load();
+    store(rows);
+    return rows;
+  }, [load, store]);
+
   const reload = useCallback(async () => {
     try {
-      const rows = await load();
-      store(rows);
+      const rows = await fetchRows();
       setError(null);
-      setItems(rows);
+      setItemsState(rows);
     } catch (e) {
       reportUnexpectedAuthError(e, { feature: "resource-list", step: "reload", basePath: cacheKey });
       setError(e instanceof Error ? e.message : "Failed to load.");
       throw e;
     }
-  }, [load, store, cacheKey]);
+  }, [fetchRows, cacheKey]);
 
-  // Refetch on mount and whenever the tenant changes (so an account switch can't
-  // leave another tenant's rows on screen). The cache only ever seeds the first
-  // paint; this is the authoritative read.
+  // Refetch on mount and whenever the tenant changes (so an account switch can't leave another
+  // tenant's rows on screen). The cache seeds the first paint (see the note above — that seed is
+  // what stops the remount flicker); this is the authoritative read that settles behind it.
   useEffect(() => {
     let alive = true;
-    load()
+    fetchRows()
       .then((rows) => {
-        store(rows);
         if (alive) {
           setError(null);
-          setItems(rows);
+          setItemsState(rows);
         }
       })
       .catch((e) => {
@@ -93,9 +129,9 @@ export function useResourceList<T>(
     return () => {
       alive = false;
     };
-  }, [load, store, cacheKey]);
+  }, [fetchRows, cacheKey]);
 
-  return { items, reload, error };
+  return { items, reload, error, setItems };
 }
 
 /** Minimal slice of the Next router this module needs. */
