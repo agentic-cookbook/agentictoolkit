@@ -3,7 +3,7 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.9.0
+version: 1.9.1
 status: draft
 language: en
 created: '2026-06-30'
@@ -64,15 +64,37 @@ route so the switcher never disappears.
 
 ### One stack, no sublists
 
-There is a **single** hierarchical topic/detail stack. **Every list anywhere is a
-level of it**, and the deepest pane is only ever a **detail** (a form/content),
-**never a list**. The in-pane "master/detail" pattern (a list + editor inside one
-pane) is **dismantled**: each such list (Applications, Buckets, Access, Users, Team
+There is a **single** hierarchical topic/detail stack. **Every NAVIGATION list is a
+level of it**, and the deepest pane is only ever a **detail**. The in-pane
+"master/detail" pattern (a list you navigate + the editor it opens, inside one pane) is
+**dismantled**: each such list (Applications, Buckets, Access, Users, Team
 Members, Personas, Persona Services) is a **stack level**, and its editor is the
 **leaf detail**. The deep-link selection (e.g. `…/applications/<appId>`) is just that
 level's `selectedId`. App code only **declares** the stack (the `levels` data) — it
 never nests views or writes selection logic. Terminology: **stack / topic list (a
 level) / detail (the leaf)** — not "rail" / "sublist".
+
+#### Navigation vs. display — the line this rule actually draws
+
+The rule bans a second **navigator**, not a second *list*. The distinction is what the
+list is FOR:
+
+- **Navigation** — you pick a row to go *somewhere*: the row becomes the selection, the
+  URL grows a segment, and the pane beside it becomes that record's detail. That is the
+  stack's whole job, and duplicating it inside the leaf is what "no sublists" forbids.
+  Such a list MUST be a level.
+- **Display** — the pane is *showing you data*, and a list is one of the ordinary shapes
+  data comes in (beside a board, a table, a timeline, a calendar, a chart). A display is
+  **content**, and content is exactly what a detail pane holds. A display MAY be a list;
+  it MAY carry its own details pane and edit its rows in place. None of that is
+  navigation: the stack doesn't move, no level is selected, the URL doesn't grow.
+
+So "the deepest pane is a detail" is a statement about the pane's ROLE, not its shape — a
+detail is content, and content may perfectly well *render* as a list. Work Items is the
+worked example: its five views (List / Board / Table / Timeline / Calendar) are five
+DISPLAYS of one collection, and the List one is a [[list-with-details-pane]] with in-place
+row editing. Nothing about it navigates. What WOULD violate the rule is a rail inside the
+leaf that you drill *through* to reach a record — that record's list belongs in the stack.
 
 ### onSelect / onClear — pure-intent selection
 
@@ -326,7 +348,8 @@ the hierarchical stack, not the primitive.
 - **must-split-select-clear**: A level MUST expose `onSelect(id)` (select this level, clear descendants) and `onClear()` (clear this level + everything below) as PURE navigation; the package decides WHEN each fires.
 - **must-own-unselection**: A click on the already-selected row MUST clear that level (`onClear`); a click on any other row MUST select it (`onSelect`). Consumers MUST NOT write toggle logic.
 - **must-not-auto-select**: The view MUST NOT auto-select anything — landing on a level with no selection shows the list with nothing focused (no resume of a last id, no coerced first item); only the deepest pane that IS selected renders a detail.
-- **must-be-one-stack**: Every list anywhere MUST be a level of the single stack; the deepest pane MUST be a detail (form/content), never a list. An in-pane master/detail MUST be dismantled into a published list level + a leaf editor.
+- **must-be-one-stack**: Every NAVIGATION list MUST be a level of the single stack — a list is "navigation" when picking a row is how you REACH a record (the row becomes the selection, the URL grows a segment, and the pane beside it becomes that record's detail). An in-pane master/detail of that kind MUST be dismantled into a published list level + a leaf editor. There MUST be exactly one navigator.
+- **may-display-content-as-a-list**: A detail pane holds CONTENT, and content MAY render as a list — a list is one of the ordinary shapes data comes in, beside a board, a table, a timeline, a calendar or a chart. A display MAY carry its own details pane and MAY edit its rows in place ([[list-with-details-pane]] + [[inline-commit-control]]), because none of that is navigation: the stack does not move, no level is selected, and the URL does not grow. "The deepest pane is a detail" constrains the pane's ROLE, not its shape.
 
 ### Whole hierarchy — disclosure + off-screen drill-down
 
@@ -448,6 +471,7 @@ the hierarchical stack, not the primitive.
 | T22 | must-guard-unsaved-on-exit | edit the leaf editor (dirty), then press Back | a Save / Discard / Cancel modal opens; Discard proceeds, Cancel keeps editing, Save persists then proceeds |
 | T23 | must-not-hide-frontier-choosing-list | narrow `/<slug>/home` (workspace selected, no feature) | the features list (the frontier) stays visible; only the workspaces list may slide off |
 | T24 | must-be-one-stack | open a dismantled topic (Applications) | the apps are a published list level (not an in-pane sublist); the editor is the leaf detail |
+| T24a | may-display-content-as-a-list | open Work Items ▸ List (a list-with-details display) | the rows render, a row selection fills the details pane and edits in place — and the STACK does not move: no level's selection changed, no new rail appeared, the URL is unchanged |
 | T25 | must-default-to-covered, must-peek-covered-parent | render ≥3 covered levels, deepest selected | parents peek as ~40px icon strips under the child; child + detail take the room |
 | T26 | must-reveal-covered-list-on-hover, must-disclose-reveal-only-while-inside | hover a covered list's peek | the WHOLE list (full rows + header + `+`) lifts above its neighbours; moving the pointer out drops it back to the peek |
 | T27 | must-pure-select-from-reveal | click a row in the revealed list | that row becomes selected, deeper lists clear, its detail shows; clicking the already-selected row does nothing |
@@ -622,6 +646,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.9.1 | 2026-07-11 | Mike Fullerton | Clarify what "one stack, no sublists" actually bans: a second **navigator**, not a second *list*. The rule was written as "every list anywhere is a level; the deepest pane is never a list", which reads as forbidding a detail pane from ever RENDERING a list — and it was misread that way. The line is what the list is FOR. **Navigation** (picking a row is how you reach a record: the selection moves, the URL grows a segment, the pane beside it becomes that record's detail) is the stack's job and MUST be a level. **Display** (the pane is showing you data, and a list is one of the shapes data comes in — beside a board, table, timeline, calendar, chart) is CONTENT, which is exactly what a detail pane holds; it may be a list, may carry its own details pane, and may edit its rows in place, because the stack never moves. "The deepest pane is a detail" constrains the pane's ROLE, not its shape. New requirement `may-display-content-as-a-list`; `must-be-one-stack` re-scoped to navigation lists; vector T24a. |
 | 1.9.0 | 2026-07-11 | Mike Fullerton | **Create is a MODAL — the stack's create metaphor**, stated outright instead of left as an option. `may-offer-new-topic-button` previously allowed "a modal / a blank leaf"; the blank leaf is now a defect. The reason is structural, not stylistic: the detail pane always shows a real, SELECTED record, and a record with no id has nothing for the stack to hold — no row to focus, no crumb to name it, no id for the deep link — so handing it the detail strands the rest of the view. The modal doesn't touch the stack at all: nothing is selected or cleared and the pane behind it keeps showing what was open, until save returns an id and the owning list selects it (so the detail that opens is the record's real one). New requirements `must-create-in-modal` and `must-scope-create-modal-to-placement` (the modal asks only for what brings the record into existence and places it — a title and its column/parent — never the full editor; the rest belongs to the detail that opens on save). Test vectors T11 (rewritten), T11a, T11b. Applied to Work Items: the `+` opened a blank WorkItemEditor in the leaf; it now opens a `NewWorkItemDialog` (shared `CreateResourceDialog`) and `WorkItemEditor` is edit-only. |
 | 1.8.0 | 2026-07-11 | Mike Fullerton | **Auto-hide + the authoritative auto-collapse rules + motion split.** Added `autoHideTopics` (default **on**): only the leaf-most list is disclosed and every parent is hidden by its child even when there is room — the hub's workspace `/home` opts out (`autoHideTopics={false}`). The ROOT list's header gains a left-justified STATE toggle for it, and **⌘/Ctrl-click** on any `«`/`»` now applies that action to EVERY list. Disclosure is specified as three layers that may only ever hide more, never disclose (pin → auto-hide → width pressure). Wrote down the auto-collapse rules that were previously only implied: the detail HOLDS `minDetailWidth` while the lists yield (hide leftmost-first, then go off-screen), the off-screen shift is **quantised to whole lists** (was a continuous shift that parked a list half off the edge), and growing re-runs the same rules in reverse but only re-discloses when auto-hide is off. Finally, **structural changes now land in place**: selecting a topic re-lays-out instantly instead of animating the detail pane in from the left edge (only width-driven changes — resize, cover toggle, hover reveal, drag — still animate). New requirements `must-default-to-auto-hide`, `must-offer-auto-hide-toggle`, `must-layer-hide-intent`, `must-toggle-all-on-modifier-click`, `must-keep-detail-at-minimum-while-lists-yield`, `must-shift-off-screen-by-whole-lists`, `must-reverse-on-grow`, `must-land-structure-changes-in-place`, `must-animate-width-changes`; test vectors T33–T39. |
 | 1.7.0 | 2026-07-10 | Mike Fullerton | `TopicLevel.headerSlot`: pinned non-scrolling strip for the shared ListHeader (filter + actions) on entity-list levels. |
