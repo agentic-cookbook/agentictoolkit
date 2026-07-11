@@ -171,8 +171,8 @@ export function TeamsFeature({
       id: "permissions",
       label: "Permissions",
       icon: <Shield size={16} aria-hidden />,
-      render: (_teamId, titleFor) => (
-        <TeamPermissionsPane title={titleFor("Permissions")} />
+      render: (_teamId, titleFor, leaf) => (
+        <TeamPermissionsPane workspaceSlug={slug} title={titleFor("Permissions")} leaf={leaf} />
       ),
     },
   ];
