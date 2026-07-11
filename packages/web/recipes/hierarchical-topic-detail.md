@@ -3,7 +3,7 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.9.1
+version: 1.10.0
 status: draft
 language: en
 created: '2026-06-30'
@@ -11,7 +11,7 @@ modified: '2026-07-11'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: Deep-linkable stack of collapsible/coverable topic lists under one breadcrumb — covered parents peek and reveal the whole list on hover, a header "+" create affordance, dash/connector selection markers, min-width detail.
+summary: Deep-linkable stack of collapsible/coverable topic lists under one breadcrumb — covered parents peek and reveal the whole branch (that list AND its children) on hover, a header "+" create affordance, dash/connector selection markers, min-width detail, and a narrow (iOS navigation-controller) mode when only a detail fits.
 platforms:
 - typescript
 - web
@@ -229,19 +229,69 @@ The frame supports two `disclosureStyle`s for how parent lists yield room to the
   (the one being chosen from, with no selection yet) is never covered. When even the peeks + the child +
   the detail minimum don't fit, covered lists drill off-screen exactly as in `minimized`.
 
-### Whole-list reveal for covered lists
+### Whole-branch reveal for covered lists
 
 Because a covered list shows only icons, the frame makes it **reachable without permanently uncovering
-it**: hovering a covered/peeking list **re-layers the entire list** — the real rail, full width, with
-uncovered rows **and** its titled header (title, cover `«`/`»`, and the New `+`) — **above its
-neighbours** (a lifted card with a drop-shadow). It is disclosed **only while the pointer stays inside
-it**; the moment the pointer leaves — or you **click a row** — it animates back to its peek. The reveal
-is **pointer-driven only** (not focus): a covered row keeps focus after a click, so a focus reveal would
-leave the list disclosed and jam the auto-cover as the window shrinks — covered rows stay keyboard-
-operable via their `aria-label`. The reveal is the real rail (not a copy), so it is fully
-**interactive**: clicking a row is a **pure select** of that item (it only *changes* the selection, never
-unselects, and does nothing if the row is already selected), and its header `+`/`«` work in place. There
-is **no per-row or per-header popover** — the whole list is revealed at once.
+it**: hovering a covered/peeking list opens **that list and its children** — the whole **branch** —
+chained side by side at full width, **floating over the detail** (a lifted card with a drop-shadow off
+its trailing edge). Each revealed list is the real rail: full-width rows **and** its titled header
+(title, cover `«`/`»`, the New `+`).
+
+The unit is the **branch**, not the one list. Revealing the hovered list alone shows you the rows you
+are choosing between but *not what choosing one would show you* — its children are still covered behind
+it, so the reveal answers half the question and you have to commit to a click to see the rest. Opening
+the branch shows the ancestry as it will look, which is what the peek was hiding in the first place.
+
+The branch opens **in place**: it starts where the hovered list already sits and lays its members out
+end to end, so nothing underneath moves — the detail keeps its geometry and is simply overlapped, and
+the whole cascade animates straight back to the layout it came from when it closes. It stays open while
+the pointer is anywhere **inside the branch** (walking from the hovered list into one of its revealed
+children must NOT collapse it — that is the whole point); it closes the moment the pointer leaves every
+member of it, or you **click a row**. Entering a *different* covered list re-roots the branch there.
+
+The reveal is **pointer-driven only** (not focus): a covered row keeps focus after a click, so a focus
+reveal would leave the branch open and jam the auto-cover as the window shrinks — covered rows stay
+keyboard-operable via their `aria-label`. Because the revealed lists are the real rails (not copies)
+they are fully **interactive**: clicking a row is a **pure select** of that item (it only *changes* the
+selection, never unselects, and does nothing if the row is already selected), and the headers' `+`/`«`
+work in place. There is **no per-row or per-header popover** — the branch is revealed at once.
+
+### Wide and narrow modes — the stack becomes a navigation controller
+
+The frame has two **layout modes**, chosen automatically (`layoutMode="auto"`):
+
+- **wide** — everything above: the lists sit beside the detail, cover/peek/reveal as room runs out, and
+  drill off-screen at the end. This is the layout the whole recipe describes.
+- **narrow** — **only a detail fits**: the container can't hold one topic list beside a `minDetailWidth`
+  detail. The side-by-side model has nothing left to trade — peeks, cover toggles and the hover reveal
+  are all pointer affordances spending room that no longer exists (and on a phone there is no pointer at
+  all). So the view stops being a row of columns and becomes a **navigation stack**, exactly Apple's
+  `UINavigationController`: **one FULL-WIDTH pane at a time**.
+
+Narrow mode is entered when the container is narrower than one topic list plus the detail's minimum, OR
+when the browser is a **phone** (an iOS / Android phone user agent) at any width. Tablets and desktops
+are decided by width alone — a narrow *window* on a big screen behaves exactly like a phone, and a wide
+one doesn't. `layoutMode="wide" | "narrow"` forces one (a showcase, a test).
+
+In narrow mode:
+
+```
+[ Workspaces ]  →  [ Features ]  →  [ Entities ]  →  [ detail ]
+      ‹ Back            ‹ Back           ‹ Back
+```
+
+- The visible pane is the deepest one the selection reaches: the **frontier list** while it is still
+  being chosen from, the **detail** once every level is selected. A landing placeholder is never shown —
+  on a phone you are looking at the list you are choosing from, not a pane telling you to choose.
+- **Selecting pushes** the next pane in from the right edge; the pane behind it parallaxes left (as iOS
+  does) and is `inert` + `aria-hidden`, so only the visible pane is reachable by pointer, keyboard or AT.
+- **Back** (top-left of every pane but the root) **pops**: it clears exactly the deepest selected level
+  — the same `onClear` the breadcrumb and the wide layout's Back use, so the unsaved-work guard applies
+  identically. Repeated Back walks to the root.
+- Selection in a list falls back to the primitive's gold **bar** (`selectionStyle="bar"`): the marker
+  system's connectors need a parent list on screen to connect FROM, and in narrow mode there is never one.
+- The breadcrumb still spans the top — it is the one thing that shows the whole trail when only one pane
+  is visible.
 
 ### Create is a modal — the stack's create metaphor
 
@@ -289,7 +339,7 @@ the hierarchical stack, not the primitive.
 
 | Name | Domain | Role | Required | Configuration |
 |---|---|---|---|---|
-| Topic Detail | agenticdeveloperhub://recipes/topic-detail | One rail per hierarchy level (icon+name rows, optional left-aligned `title`, controllable collapse/cover, header `+` create affordance, `selectionStyle` bar/marker, whole-list hover/focus reveal when covered). | yes | `title`, `items`, `selectedId`, `onSelect`, `onNew`/`newLabel`/`newActive`, `collapsed`/`onCollapsedChange`, `covered`, `isRoot`, `selectionStyle`, `panePadding={false}`. |
+| Topic Detail | agenticdeveloperhub://recipes/topic-detail | One rail per hierarchy level (icon+name rows, optional left-aligned `title`, controllable collapse/cover, header `+` create affordance, `selectionStyle` bar/marker, whole-branch hover reveal when covered, full-width pane in narrow mode). | yes | `title`, `items`, `selectedId`, `onSelect`, `onNew`/`newLabel`/`newActive`, `collapsed`/`onCollapsedChange`, `covered`, `isRoot`, `selectionStyle`, `panePadding={false}`. |
 | Resizable Split | agenticdeveloperhub://recipes/resizable-split | Drag-to-resize the boundary between a topic list and the rest, with snap-to-undisclose / snap-to-full. | yes | Per-rail draggable divider; min/max + snap thresholds. |
 | Disclosure | agenticdeveloperhub://recipes/disclosure | The animated disclosure (collapse/expand) of a topic list to/from its icon strip. | yes | Upper-right toggle; animated unless reduced-motion. |
 | Alert & Dialog | agenticdeveloperhub://recipes/alert-and-dialog | The modal opened by a list's "new topic" button to create an item, AND the 3-action Save/Discard/Cancel unsaved-work prompt the package raises before a drill-down Back / breadcrumb-up discards a dirty leaf. | yes | New-item modal (returns the created id); the package's `UnsavedChangesModal` (driven by `exitGuard`). |
@@ -337,7 +387,7 @@ the hierarchical stack, not the primitive.
 - **must-confirm-row-delete**: Activating a row's trash button MUST open a confirmation before anything is destroyed — a destructive [[alert-and-dialog]] modal (red action, keyboard shortcuts off, initial focus on Cancel). `onDelete` runs ONLY on confirm; it MAY be async, and the dialog MUST show a busy spinner (and block dismissal) until it settles.
 - **must-break-connector-around-delete**: In the stack, the selection connector line MUST break (leave a gap) around a selected parent row's trash button rather than crossing it — the overlay paints above the rail, so the break is a computed gap in the path, not occlusion.
 - **must-offer-disclosure-toggle**: A topic list MUST offer a disclosure toggle at its upper right; disclosing/undisclosing MUST be animated (subject to **must-respect-reduced-motion**).
-- **must-render-undisclosed-icon-strip**: An undisclosed topic list MUST render as a vertical list of the topics' icons; the header `+` collapses with the header (reachable via the whole-list reveal when covered).
+- **must-render-undisclosed-icon-strip**: An undisclosed topic list MUST render as a vertical list of the topics' icons; the header `+` collapses with the header (reachable via the whole-branch reveal when covered).
 - **must-fill-list-vertically**: A topic list MUST fill the available vertical space (pinned to its container's height) and MUST scroll only when its items overflow.
 - **must-resize-by-drag**: A topic list MUST be horizontally resizable by dragging its trailing border.
 - **must-snap-undisclosed-when-narrow**: If dragged narrower than 1/3 of its full width, a topic list MUST animate to undisclosed.
@@ -385,18 +435,28 @@ the hierarchical stack, not the primitive.
 - **must-peek-covered-parent**: In the `covered` style, a covered parent list MUST stay partially visible as a fixed ~40 px icon-strip peek at its left edge (a stacked-card overlap), not disappear entirely; child lists overlap their parents with increasing z-index and the detail is topmost.
 - **must-cover-automatically**: A list MUST be covered automatically when there is not room to show it in full alongside the child lists and the detail at its minimum; the **frontier** choosing list (nothing selected yet) MUST NOT be covered, and MUST NOT be slid off-screen by the detail's minimum-width shift — an unselected frontier's detail is a landing placeholder that enforces NO minimum, so the choosing list always keeps its place.
 - **must-allow-manual-cover**: The user MUST be able to manually cover/uncover a list via its `«`/`»` toggle; a manually-covered list MUST stay covered across resizes (user intent wins), and the auto layer MUST NOT uncover a list the user covered.
-- **must-reveal-covered-list-on-hover**: Hovering a covered (peeking) list MUST reveal the WHOLE list — the real rail at full width, with uncovered `[icon] [name]` rows AND its titled header (title, cover `«`/`»`, New `+`) — above its neighbours (a lifted card with a drop-shadow). The reveal MUST be ANIMATED: the list wipes open from its 40px peek to full width (and back), subject to **must-respect-reduced-motion**. There MUST be no per-row or per-header popover copy. The reveal is POINTER-driven only: it MUST NOT be triggered by focus, because a covered row keeps focus after a click and a focus reveal would leave the list disclosed — jamming the auto-cover as the window shrinks. (Covered rows stay keyboard-operable via their `aria-label`.)
-- **must-disclose-reveal-only-while-inside**: The revealed list MUST stay disclosed ONLY while the pointer is inside it; the moment the pointer leaves its box it MUST return (animate back) to its peek.
-- **must-close-reveal-on-select**: Selecting a row in the revealed list MUST also drop the reveal, so the list animates closed (back to its peek) on click rather than lingering disclosed under the pointer.
-- **must-pure-select-from-reveal**: Clicking a row in the revealed list MUST be a PURE select of that item — it changes the selection only (it MUST NOT unselect, and MUST do nothing if the row is already selected), removing the deeper lists and showing the chosen item's detail.
+- **must-reveal-covered-branch-on-hover**: Hovering a covered (peeking) list MUST reveal the WHOLE BRANCH — that list AND every list below it (its children) — as real rails at full width, with uncovered `[icon] [name]` rows AND their titled headers (title, cover `«`/`»`, New `+`), chained side by side and floating ABOVE the detail (a lifted card with a drop-shadow off the branch's trailing edge). Revealing the hovered list ALONE is a defect: its children stay covered behind it, so the reveal shows what you are choosing between but not what choosing would show you. The reveal MUST be ANIMATED: the branch wipes open from the 40px peek to full width (and back), subject to **must-respect-reduced-motion**. There MUST be no per-row or per-header popover copy. The reveal is POINTER-driven only: it MUST NOT be triggered by focus, because a covered row keeps focus after a click and a focus reveal would leave the branch open — jamming the auto-cover as the window shrinks. (Covered rows stay keyboard-operable via their `aria-label`.)
+- **must-open-branch-in-place**: The branch MUST open IN PLACE — starting at the left edge the hovered list already occupies, laying its members out end to end. Nothing underneath may move: the detail keeps its geometry and is simply overlapped, so closing the branch animates it straight back to the layout it came from (the state it was in before the hover), with no re-layout of the rest of the view.
+- **must-keep-branch-open-while-inside-it**: The revealed branch MUST stay open while the pointer is inside ANY of its members — moving from the hovered list into one of its revealed children MUST NOT collapse it. It MUST close (animate back to the previous state) only once the pointer has left every member of the branch. Entering a DIFFERENT covered list MUST re-root the branch at that list.
+- **must-close-reveal-on-select**: Selecting a row in the revealed branch MUST also drop the reveal, so it closes (back to the peeks) on click rather than lingering open under the pointer.
+- **must-pure-select-from-reveal**: Clicking a row in a revealed list MUST be a PURE select of that item — it changes the selection only (it MUST NOT unselect, and MUST do nothing if the row is already selected), removing the deeper lists and showing the chosen item's detail.
 - **may-title-each-list**: A level MAY carry a `title`; when present it MUST render left-aligned (aligned with the row text) with a divider beneath it, the disclosure toggle in a fixed leading control slot.
 - **must-mark-selection-without-bar**: In the stack (`selectionStyle="marker"`) the selected row MUST NOT use the topic-detail gold left-bar; the root's selected row MUST show a leading gold dash, and each child's selected row MUST be joined to its selected parent row by a gold elbow connector.
 - **must-keep-connectors-attached-when-covered**: The selection connectors MUST stay attached to the correct rows when lists are covered/peeking and across the cover/uncover slide (measured from the DOM, re-tracked through the transition).
 - **must-keep-bar-for-standalone**: The standalone `TopicDetail` primitive MUST keep `selectionStyle="bar"` (the gold left-border); the dash/connector markers are a property of the hierarchical stack only.
 
+### Narrow mode — the stack as a navigation controller
+
+- **must-switch-to-narrow-when-only-a-detail-fits**: The frame MUST switch to the NARROW layout when only a details view can fit — the container is narrower than one topic list plus `minDetailWidth` — or when the browser is a phone (an iOS / Android phone user agent) at ANY width. Tablets and desktops are decided by width alone, so a narrow WINDOW behaves exactly like a phone and a wide one does not. The mode MUST be resolved before paint (no flash of the wide layout), and `layoutMode="wide" | "narrow"` MUST force one.
+- **must-show-one-full-width-pane**: In narrow mode each topic list and the detail MUST be a FULL-WIDTH pane, and exactly ONE of them is visible: the frontier list while it is still being chosen from, the detail once every level is selected. A landing placeholder MUST NOT be shown in place of the list being chosen from. Peeks, cover toggles, the auto-hide toggle, the hover reveal and drag-resize MUST NOT be rendered — they spend room that does not exist.
+- **must-push-and-pop-like-a-navigation-controller**: Selecting MUST PUSH the next pane in from the right edge (animated, subject to **must-respect-reduced-motion**); the pane behind it MUST parallax and be `inert` + `aria-hidden`, so only the visible pane is reachable by pointer, keyboard or AT. A pane that is being pushed MUST animate in rather than appear in place.
+- **must-offer-back-in-narrow**: Every narrow pane except the root MUST carry a top-left **Back** that POPS one pane — clearing exactly the deepest SELECTED level via the same `onClear` the breadcrumb and the wide Back use, so **must-guard-unsaved-on-exit** applies identically. Repeated Back MUST walk up to the root, and a popped pane MUST animate OUT to the right rather than vanish.
+- **must-keep-selection-across-modes**: Switching between wide and narrow (a resize) MUST preserve the selection exactly — the mode is a rendering of the same stack, never a navigation.
+- **must-mark-narrow-selection-with-bar**: In narrow mode a list's selected row MUST use the primitive's gold `selectionStyle="bar"`: the dash/connector markers need a parent list on screen to connect FROM, and narrow mode never has one.
+
 ### General
 
-- **must-respect-reduced-motion**: All animations (disclosure, resize snap, auto-disclosure) MUST be disabled when the user's "reduce animation" preference is set.
+- **must-respect-reduced-motion**: All animations (disclosure, resize snap, auto-disclosure, the narrow push/pop) MUST be disabled when the user's "reduce animation" preference is set.
 - **must-source-help-from-config**: All help content (the breadcrumb help button and every detail-pane help icon) MUST come from a single unified help config in `websites/site-config`, keyed by the route to the detail page + the ui element.
 
 ## Layout
@@ -412,7 +472,20 @@ the hierarchical stack, not the primitive.
 │  «      │  «       │  «       │  «       │ │  horizontal scroll if tiny  │ │
 └─────────┴──────────┴──────────┴──────────┴─┴────────────────────────────┴─┘
   fixed-width, resizable, disclosable topic lists   flexible, min-width detail
-  (narrow → leftmost lists COVER/slide OFF-SCREEN; hover a peek to reveal the whole list)
+  (narrower → leftmost lists COVER/slide OFF-SCREEN; hover a peek to open that list AND its children)
+```
+
+**Narrow mode** (only a detail fits, or a phone) — the same stack as a navigation controller:
+
+```
+┌────────────────────┐   select    ┌────────────────────┐   select    ┌────────────────────┐
+│ wksp ▸ feat        │  ────────▶  │ wksp ▸ feat ▸ ent  │  ────────▶  │ … ▸ ent ▸ topic    │  ← breadcrumb still spans the top
+├────────────────────┤             ├────────────────────┤             ├────────────────────┤
+│ Entities        +  │   ◀────     │ Topics          +  │   ◀────     │ ‹  detail          │
+│ ◻ Ent A            │    Back     │ ‹ ◻ Topic 1        │    Back     │                    │
+│ ◻ Ent B            │             │   ◻ Topic 2        │             │  full width        │
+└────────────────────┘             └────────────────────┘             └────────────────────┘
+   ONE full-width pane: the frontier list, then the detail. Push in from the right, Back pops out.
 ```
 
 - **Top edges** of every rail + the detail pane align on one row under the breadcrumb;
@@ -421,8 +494,10 @@ the hierarchical stack, not the primitive.
 - **Rails**: `bg-apt-nav`, fixed width ≈ widest topic + padding, right divider, a titled **header** with
   a disclosure/cover `«`/`»` control (left) + a left-aligned `title` + a right-justified New **`+`**
   (`onNew`) and a divider beneath. Undisclosed/covered = a `~2.25rem` / 40px icon strip; in the stack
-  selection is the **marker** (root dash + parent→child connectors), not a per-rail bar. Hovering (or
-  focusing) a covered rail reveals the WHOLE list — full rows + header — lifted above its neighbours.
+  selection is the **marker** (root dash + parent→child connectors), not a per-rail bar. Hovering a
+  covered rail reveals the whole BRANCH — that rail AND its children, full rows + headers, chained side
+  by side above the detail. In **narrow** mode a rail is instead the full-width pane (bar selection, a
+  top-left Back, no cover/resize affordances).
 - **Detail pane**: `bg-apt-surface`, flexible width with a minimum (horizontal scroll
   below it), fills height; a centered-title button bar on top with a right-justified
   help icon. Colour only via `apt-*` tokens; no raw hex; no `!important`.
@@ -473,9 +548,11 @@ the hierarchical stack, not the primitive.
 | T24 | must-be-one-stack | open a dismantled topic (Applications) | the apps are a published list level (not an in-pane sublist); the editor is the leaf detail |
 | T24a | may-display-content-as-a-list | open Work Items ▸ List (a list-with-details display) | the rows render, a row selection fills the details pane and edits in place — and the STACK does not move: no level's selection changed, no new rail appeared, the URL is unchanged |
 | T25 | must-default-to-covered, must-peek-covered-parent | render ≥3 covered levels, deepest selected | parents peek as ~40px icon strips under the child; child + detail take the room |
-| T26 | must-reveal-covered-list-on-hover, must-disclose-reveal-only-while-inside | hover a covered list's peek | the WHOLE list (full rows + header + `+`) lifts above its neighbours; moving the pointer out drops it back to the peek |
-| T27 | must-pure-select-from-reveal | click a row in the revealed list | that row becomes selected, deeper lists clear, its detail shows; clicking the already-selected row does nothing |
-| T28 | must-close-reveal-on-select | hover a covered list to reveal it, then click a row | the row is selected AND the list animates closed (back to its peek) instead of lingering disclosed |
+| T26 | must-reveal-covered-branch-on-hover, must-open-branch-in-place | hover a covered list's peek (3 levels, both parents covered) | the hovered list AND every list below it open to full width, chained end to end from where the hovered list sat (lefts `0 / 240 / 480`), lifted above the detail — which does not move |
+| T26a | must-keep-branch-open-while-inside-it | hover the covered root, then move the pointer into its revealed CHILD | the branch stays open (this is the walk the reveal exists for); moving the pointer out of every member closes it back to exactly the peeks it came from |
+| T26b | must-keep-branch-open-while-inside-it | hover the covered root, then move the pointer into a DIFFERENT covered list | the branch re-roots there: the new list + its children open, the lists to its left return to their peeks |
+| T27 | must-pure-select-from-reveal | click a row in a revealed list | that row becomes selected, deeper lists clear, its detail shows; clicking the already-selected row does nothing |
+| T28 | must-close-reveal-on-select | hover a covered list to reveal the branch, then click a row | the row is selected AND the branch closes (back to the peeks) instead of lingering open |
 | T29 | may-title-each-list | render levels with `title` | each list shows its left-aligned title + a divider above the first row |
 | T30 | must-mark-selection-without-bar, must-keep-connectors-attached-when-covered | select root + child in the covered stack | no gold bar; the root selected row has a leading dash; a gold elbow connects the selected parent row to the selected child row, staying attached when the parent is covered |
 | T31 | must-keep-bar-for-standalone | render a standalone `TopicDetail` with a selection | the selected row shows the classic gold left-bar (no dash/connector) |
@@ -487,6 +564,11 @@ the hierarchical stack, not the primitive.
 | T37 | must-land-structure-changes-in-place | select a topic where the detail's left edge moves | the detail is at its final `left`/`width` on the FIRST frame after the click (no 300ms slide) |
 | T38 | must-animate-width-changes | click a `«`/`»` where the detail's left edge moves | the detail's `left` is still mid-flight one frame later (it eases) |
 | T39 | must-reverse-on-grow | with auto-hide OFF, narrow until lists hide/drill off, then widen back | the lists slide back on (specific → general) and re-disclose; with auto-hide ON they slide back on but stay hidden |
+| T40 | must-switch-to-narrow-when-only-a-detail-fits, must-keep-selection-across-modes | with a leaf selected, narrow the window past (one list + `minDetailWidth`) | the frame switches to the navigation stack — the detail is the sole full-width pane — with the SAME selection; widening restores the covered columns unchanged |
+| T41 | must-show-one-full-width-pane | narrow, workspace selected, feature not | the FEATURES list (the frontier) is the whole view at full width — not a landing pane telling you to pick one; the workspaces pane is `inert` + `aria-hidden` behind it, and no peek / cover toggle / auto-hide toggle is rendered |
+| T42 | must-push-and-pop-like-a-navigation-controller | narrow, select a topic | the detail pane animates IN from the right edge (it is still mid-flight one frame after the click, not already in place) and the list behind it parallaxes |
+| T43 | must-offer-back-in-narrow, must-guard-unsaved-on-exit | narrow, detail open, press Back | the deepest selected level is cleared, the detail animates OUT to the right and the list you chose from is the visible pane; a dirty leaf raises Save / Discard / Cancel first. The ROOT pane has no Back |
+| T44 | must-switch-to-narrow-when-only-a-detail-fits | load on an iPhone/Android phone UA at a viewport wide enough for the wide layout | the narrow layout is used anyway (a phone has no pointer for peeks / reveal / drag) |
 
 ## Edge Cases
 
@@ -502,12 +584,39 @@ the hierarchical stack, not the primitive.
   rendered by the shell layout (persist across feature navigation); a feature view must
   not re-render them.
 - **Window too small for any rail:** all rails auto-undisclose to icon strips before the
-  detail pane drops below its min width; below that the detail scrolls horizontally.
+  detail pane drops below its min width; below that the frame switches to **narrow** mode
+  (one full-width pane at a time) rather than crushing or scrolling the detail.
+- **A revealed branch wider than the container:** the branch opens in place and is clipped
+  by the frame's right edge — the hovered list and the children that fit are shown. It is a
+  transient hover, not a layout: the fit rules own the persistent layout, and the branch
+  closes back into it.
 - **Single level:** with one topic list the view is just `[rail] | [detail]` — still a
   valid (degenerate) hierarchy with the same chrome.
 
 ## Platform Notes
 
+- **Wide / narrow + the branch reveal (2026-07-11).** The frame owns ONE measured row (`useContainerWidth`
+  on the wrapper around the stacks, a `useLayoutEffect` + ResizeObserver so the first measurement lands
+  pre-paint) and passes `containerW` down — so the mode decision and the covered stack's fit math read the
+  same number and there is still a single disclosure controller. `narrow = layoutMode === "narrow" ||
+  (auto && (phone || containerW < minDetailPx + FULL_RAIL))`; `usePhoneUserAgent` reads the UA AFTER mount
+  (the server has none — branching the first render on it would be a hydration mismatch) and matches
+  `/iPhone|iPod/` or Android + `Mobile`, so tablets/desktops (and iPadOS, which reports a desktop UA) are
+  decided by width alone. **`NarrowStack`** renders a pane per level PLUS the detail, all
+  `absolute inset-0`, positioned by `translateX`: the top pane at `0`, the ones behind it at `-30%`
+  (the iOS parallax) + `inert`/`aria-hidden`, the ones ahead at `100%`. Panes are rendered for EVERY
+  level (not just the current path) so one exists off-screen to slide IN, and a popped one slides OUT
+  instead of unmounting; `anim` (the position the panes are rendered at) lags `top` by one
+  `requestAnimationFrame`, because a pane that MOUNTS at its final position cannot transition — it must be
+  painted off-screen once, then moved. Back = `levels[deepestSelected].onClear()` through `attemptExit`,
+  the same path as the breadcrumb, so the unsaved guard is shared, not re-implemented.
+  **The branch reveal** in `CoveredStack`: `hoverId` names the reveal's ROOT and the group is
+  `i >= hoverIndex` — revealed members take `railWidth` and chain from `left[hoverIndex]`
+  (`revealLeft[i] = revealLeft[i-1] + railWidth(i-1)`), lifted to `z 50 + i` above the detail. Closing is a
+  property of the GROUP: `onPointerLeave` reads `e.relatedTarget`, finds its `[data-htd-col]` ancestor and
+  KEEPS the branch open when that column is still in the group — a per-list leave handler would collapse
+  the branch the moment the pointer crossed into one of its own children. The z-lift trails on close
+  (`zLiftId`) so the wipe-shut happens over the detail rather than behind it.
 - **Auto-hide + the fit rules (2026-07-11).** The frame OWNS the disclosure intent — `autoHide`
   (seeded from `autoHideTopics`, default true) and `pins: Record<levelId, boolean>` — and passes both
   to whichever stack renders, so the two layouts share one contract and differ only in how a hidden
@@ -526,11 +635,13 @@ the hierarchical stack, not the primitive.
 - **React / Web (TypeScript).** Enclosing frame:
   `websites/shared/ui/src/blocks/hierarchical-topic-detail.tsx`
   (`HierarchicalTopicDetail`, props `levels: TopicLevel[]`, `disclosureStyle?: "covered" |
-  "minimized"` (default `covered`), `autoHideTopics?: boolean` (default `true`), `showBreadcrumb`,
+  "minimized"` (default `covered`), `autoHideTopics?: boolean` (default `true`), `layoutMode?: "auto" |
+  "wide" | "narrow"` (default `auto`), `showBreadcrumb`,
   `rootLabel`, `trailingCrumbs`, `help`,
   `minDetailWidth`, `exitGuard: PaneExitGuard`, `manualCollapse`, `children`). It dispatches to a
+  `NarrowStack` (full-width panes, `translateX` push/pop) when only a detail fits, else a
   `CoveredStack` (absolute, overlapping, `COVERED_PEEK` = 40px) or a `MinimizedStack` (grid columns);
-  it renders each level's `TopicRail` **and** the detail
+  in the wide styles it renders each level's `TopicRail` **and** the detail
   `<section key="__detail__">` as **flat sibling grid columns** (one
   `grid-template-columns` CSS var) — so the leaf has a stable slot (no remount) and ONE
   ResizeObserver drives the whole row. Rail primitive: `topic-detail.tsx` (`TopicRail`
@@ -539,13 +650,14 @@ the hierarchical stack, not the primitive.
   standalone `TopicDetail`'s custom leading row — e.g. FocusedTopicDetail's PopupMenu — rendered only
   when supplied; optional `backSlot` for the drill-down Back; per-rail drag handle with
   snap-to-collapse/full; animated via `md:transition-[grid-template-columns]`).
-  **Covered style:** covered rows render as left-aligned icon strips; hovering/focusing a covered list
-  re-layers the REAL rail full-width above its neighbours (uncovered rows + header) via a raised
-  an animated width **wipe** — the covered wrapper is `overflow-hidden` clipped to a 40px peek (rows are
-  always full, so only the leading icon shows) and its `width` transitions to the full rail on hover
-  (`CoveredStack`'s `hoverId`), lifted above its neighbours with a drop-shadow; the z-lift **lingers**
-  (`zLiftId` trails `hoverId`) so the wipe-shut stays over the child, and a row-select drops the reveal —
-  no portal copy, pointer-driven only (no focus reveal). **Selection markers:** the shared `useSelectionConnectors` hook + `SelectionConnectorOverlay`
+  **Covered style:** a covered list's wrapper is `overflow-hidden` clipped to a 40px peek (its rows are
+  always FULL, so only the leading icon shows). Hovering it opens the whole BRANCH — that list and every
+  list below it — via an animated width **wipe** + a `left` chain (`CoveredStack`'s `hoverId` names the
+  branch's root; members take `railWidth` and chain from the hovered list's own left edge), lifted above
+  the detail with a drop-shadow off the branch's trailing edge; the z-lift **lingers** (`zLiftId` trails
+  `hoverId`) so the wipe-shut happens over the detail, a row-select drops the reveal, and the close is
+  decided from the leave event's `relatedTarget` so the branch survives the pointer walking into its own
+  children — no portal copy, pointer-driven only (no focus reveal). **Selection markers:** the shared `useSelectionConnectors` hook + `SelectionConnectorOverlay`
   SVG (`stroke-apt-gold`) draw the parent→child elbows, measured from the DOM via `data-htd-col` /
   `aria-current="true"` / `data-htd-label` / `data-htd-icon` and re-tracked on a short rAF loop across the
   cover slide (`selectionStyle="marker"` in the stack — root dash + connectors; `"bar"` for standalone).
@@ -626,6 +738,20 @@ the hierarchical stack, not the primitive.
   it is the real rail (not a copy) there is no aria-current duplication and clicking a row is a pure
   select (never a toggle), keeping the covered interaction predictable (simplicity,
   principle-of-least-astonishment).
+- **Reveal the BRANCH, not the list.** Hovering a peek used to lift that one list — and left its children
+  covered behind it, so it told you what you were choosing between but not what choosing would show you.
+  The branch (the list + its children, chained) is the unit the user is actually reading, so the branch is
+  what opens, floating over the detail and closing back into exactly the layout it came from. That makes
+  the close condition a property of the GROUP (the pointer leaving *every* member), not of one list —
+  walking from a list into its own revealed child must not collapse what you are walking through
+  (principle-of-least-astonishment).
+- **Narrow is a MODE, not a breakpoint tweak.** Below one list + a minimum detail, the wide layout has
+  nothing left to trade: peeks, cover toggles, the hover reveal and drag-resize are all pointer
+  affordances spending room that doesn't exist — and on a phone there is no pointer at all. Rather than
+  shrink them, the frame swaps the whole presentation for the platform-native one (`UINavigationController`)
+  while keeping the SAME stack, selections, `onSelect`/`onClear` and unsaved guard underneath. Consumers
+  declare `levels` and get both layouts; nothing about a feature is phone-aware (native-controls,
+  optimize-for-change).
 - **Markers over a bar.** In the stack the selection is shown by a root dash + parent→child elbow
   connectors rather than a per-list left-bar, so the *relationship* between the selected rows reads at a
   glance across covered lists; the standalone primitive keeps its bar. The connector measurement and SVG
@@ -640,12 +766,14 @@ the hierarchical stack, not the primitive.
 | Live demo exists in ui-showcase (`hierarchical-topic-detail`) | passed | demo-exists |
 | One merged stack via context; off-screen drill-down + Back; unsaved guard | passed | implementation |
 | Dismantled master/details (one stack, no sublists); package-owned selection | passed | implementation |
-| Covered disclosure: 40px peek + whole-list hover/focus reveal + header `+` create + per-list titles + dash/connector markers | passed | implementation |
+| Covered disclosure: 40px peek + whole-BRANCH hover reveal + header `+` create + per-list titles + dash/connector markers | passed | implementation |
+| Narrow mode: full-width panes, push/pop + Back, auto-switched by width or phone UA | passed | implementation |
 
 ## Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.10.0 | 2026-07-11 | Mike Fullerton | **The hover reveal opens the BRANCH, and a NARROW (navigation-controller) mode.** (1) Hovering a covered list used to lift that ONE list while its children stayed covered behind it — showing what you were choosing between but not what choosing would show you. It now opens the whole **branch**: the hovered list AND its children, chained side by side at full width, floating over the detail; it opens IN PLACE (nothing underneath moves, so it closes back into exactly the layout it came from), stays open while the pointer is anywhere inside ANY member (walking from a list into its own revealed child no longer collapses it — closing is a property of the group, decided from the leave event's `relatedTarget`), re-roots when the pointer enters a different covered list, and closes on row-select. Replaces `must-reveal-covered-list-on-hover` / `must-disclose-reveal-only-while-inside` with `must-reveal-covered-branch-on-hover`, `must-open-branch-in-place`, `must-keep-branch-open-while-inside-it`; vectors T26, T26a, T26b. (2) New `layoutMode` (`"auto"` default): when only a details view can fit — the container is narrower than one topic list plus `minDetailWidth` — or the browser is a phone (iOS/Android UA; tablets and desktops go by width, so a narrow WINDOW behaves like a phone), the row of columns becomes an iOS `UINavigationController`: ONE full-width pane at a time, the frontier list (never a landing placeholder) then the detail, selecting PUSHES the next pane in from the right, Back POPS it out by clearing the deepest selected level through the same `onClear` + unsaved guard. Peeks, cover toggles, auto-hide and drag-resize are not rendered (they spend room that doesn't exist), and selection falls back to the primitive's gold bar (connectors need a parent list on screen). Everything that exists today is "wide" mode, unchanged. New requirements `must-switch-to-narrow-when-only-a-detail-fits`, `must-show-one-full-width-pane`, `must-push-and-pop-like-a-navigation-controller`, `must-offer-back-in-narrow`, `must-keep-selection-across-modes`, `must-mark-narrow-selection-with-bar`; vectors T40–T44. The frame now owns the ONE row measurement and passes it to whichever stack renders. |
 | 1.9.1 | 2026-07-11 | Mike Fullerton | Clarify what "one stack, no sublists" actually bans: a second **navigator**, not a second *list*. The rule was written as "every list anywhere is a level; the deepest pane is never a list", which reads as forbidding a detail pane from ever RENDERING a list — and it was misread that way. The line is what the list is FOR. **Navigation** (picking a row is how you reach a record: the selection moves, the URL grows a segment, the pane beside it becomes that record's detail) is the stack's job and MUST be a level. **Display** (the pane is showing you data, and a list is one of the shapes data comes in — beside a board, table, timeline, calendar, chart) is CONTENT, which is exactly what a detail pane holds; it may be a list, may carry its own details pane, and may edit its rows in place, because the stack never moves. "The deepest pane is a detail" constrains the pane's ROLE, not its shape. New requirement `may-display-content-as-a-list`; `must-be-one-stack` re-scoped to navigation lists; vector T24a. |
 | 1.9.0 | 2026-07-11 | Mike Fullerton | **Create is a MODAL — the stack's create metaphor**, stated outright instead of left as an option. `may-offer-new-topic-button` previously allowed "a modal / a blank leaf"; the blank leaf is now a defect. The reason is structural, not stylistic: the detail pane always shows a real, SELECTED record, and a record with no id has nothing for the stack to hold — no row to focus, no crumb to name it, no id for the deep link — so handing it the detail strands the rest of the view. The modal doesn't touch the stack at all: nothing is selected or cleared and the pane behind it keeps showing what was open, until save returns an id and the owning list selects it (so the detail that opens is the record's real one). New requirements `must-create-in-modal` and `must-scope-create-modal-to-placement` (the modal asks only for what brings the record into existence and places it — a title and its column/parent — never the full editor; the rest belongs to the detail that opens on save). Test vectors T11 (rewritten), T11a, T11b. Applied to Work Items: the `+` opened a blank WorkItemEditor in the leaf; it now opens a `NewWorkItemDialog` (shared `CreateResourceDialog`) and `WorkItemEditor` is edit-only. |
 | 1.8.0 | 2026-07-11 | Mike Fullerton | **Auto-hide + the authoritative auto-collapse rules + motion split.** Added `autoHideTopics` (default **on**): only the leaf-most list is disclosed and every parent is hidden by its child even when there is room — the hub's workspace `/home` opts out (`autoHideTopics={false}`). The ROOT list's header gains a left-justified STATE toggle for it, and **⌘/Ctrl-click** on any `«`/`»` now applies that action to EVERY list. Disclosure is specified as three layers that may only ever hide more, never disclose (pin → auto-hide → width pressure). Wrote down the auto-collapse rules that were previously only implied: the detail HOLDS `minDetailWidth` while the lists yield (hide leftmost-first, then go off-screen), the off-screen shift is **quantised to whole lists** (was a continuous shift that parked a list half off the edge), and growing re-runs the same rules in reverse but only re-discloses when auto-hide is off. Finally, **structural changes now land in place**: selecting a topic re-lays-out instantly instead of animating the detail pane in from the left edge (only width-driven changes — resize, cover toggle, hover reveal, drag — still animate). New requirements `must-default-to-auto-hide`, `must-offer-auto-hide-toggle`, `must-layer-hide-intent`, `must-toggle-all-on-modifier-click`, `must-keep-detail-at-minimum-while-lists-yield`, `must-shift-off-screen-by-whole-lists`, `must-reverse-on-grow`, `must-land-structure-changes-in-place`, `must-animate-width-changes`; test vectors T33–T39. |
