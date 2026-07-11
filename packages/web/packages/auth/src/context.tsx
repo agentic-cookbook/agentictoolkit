@@ -26,26 +26,6 @@ import {
   stripSsoFragment,
 } from './sso'
 
-/** True for a local-development hostname (localhost / loopback / *.local /
- *  *.localhost). A generic heuristic, not a site-registry lookup — deliberately
- *  matching the 'local' branch of the adh registry's detectEnv so the silent-SSO
- *  skip below behaves identically whether a host consumes this package directly
- *  or through the @adh-shared/auth shim. */
-/** The local-development hostname rule gating the silent-SSO skip. EXPORTED so the adh
- *  monorepo's parity test can pin it against @adh-shared/adh's detectEnv 'local' branch —
- *  the two are deliberate mirrors (this package can't import the host registry), and an
- *  unpinned mirror is how environment-dependent login loops slip in. */
-export function isLocalHostname(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/:\d+$/, '')
-  return (
-    host === 'localhost' ||
-    host.startsWith('127.') ||
-    host === '::1' ||
-    host.endsWith('.local') ||
-    host.endsWith('.localhost')
-  )
-}
-
 export interface AuthContextValue<U extends AuthUser = AuthUser> {
   user: U | null
   isLoading: boolean
@@ -289,27 +269,17 @@ export function AuthProvider<U extends AuthUser = AuthUser>({
         const refreshed = await refreshAccessToken()
         if (cancelled) return
         if (!refreshed) {
-          // No per-site session. If a central session likely exists (readable
-          // hint cookie ⇒ same-apex + signed in) and we haven't checked this tab,
-          // silently restore it so the header reflects the login with no click.
-          // Gated so anonymous / cross-apex / public visitors never redirect. The
+          // No per-site session. If a central session likely exists and we haven't
+          // checked this tab, silently restore it so the header reflects the login
+          // with no click. shouldSilentRestore owns the whole "is a probe worth it"
+          // rule (hint cookie / cross-apex / local host / loop guard) — one home for
+          // it, so the decision can't drift between here and the site switcher. The
           // bounced #code returns to THIS page and is exchanged in place above.
           //
           // This restore is a TOP-LEVEL navigation to the AS (the central session
           // cookie is host-only + SameSite=Lax, so a background fetch/iframe can't
-          // read it) — it briefly yanks the whole page. In LOCAL dev the AS is a
-          // remote host, so that's a remote round-trip on every cold load, usually
-          // while anonymous, for nothing. Skip it locally: the page has already
-          // rendered and the header settles to the login controls (the switcher
-          // still restores on an explicit switch). Prod keeps the silent restore,
-          // where it's a same-region edge round-trip.
-          // Detect the env from the live hostname rather than a build-time
-          // NEXT_PUBLIC_* literal — this shared package is built once and consumed
-          // by every site, so the deployment env is a runtime property of where
-          // it's served, not of how the package was compiled. (Inside a post-mount
-          // effect, so `window` is available.)
-          const isLocalDev = isLocalHostname(window.location.hostname)
-          if (!isLocalDev && silentSso && shouldSilentRestore(initialHash)) {
+          // read it), so it briefly yanks the whole page.
+          if (silentSso && shouldSilentRestore(initialHash)) {
             beginSilentLogin({ clientId })
             return // navigating away; keep isLoading true across the redirect
           }

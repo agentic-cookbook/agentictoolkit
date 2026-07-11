@@ -1,6 +1,7 @@
 'use client'
 
 import { AuthHttpError, extractErrorMessage, extractErrorCode } from './client'
+import { isLocalHostname } from './hostname'
 
 // Client-side entry point for cross-site single sign-on. The browser-facing
 // half of the engine in websites/backend/src/routes/oauthRedirect.ts: a top-level
@@ -172,14 +173,26 @@ function isCrossApex(): boolean {
  *  when we're mid-flow on the callback (`initialHash` captured at render) or have
  *  already checked this tab (which also breaks the login_required → home → re-check
  *  loop). Otherwise:
- *   - SAME-apex sites only when the readable hint says a session likely exists, so
- *     anonymous visitors never redirect;
- *   - CROSS-apex sites (can't read the hint) probe once per tab — the once-checked
- *     guard bounds it to a single silent round-trip. */
+ *   - a readable HINT cookie is positive evidence a central session exists (the site
+ *     shares the AS's apex) ⇒ restore, wherever we're served. The dev.local suite is
+ *     same-apex with its AS, so a suite satellite restores exactly like prod — without
+ *     this, a signed-in developer lands on every satellite with a logged-out header.
+ *   - no hint ⇒ the only option is a BLIND once-per-tab probe, a top-level redirect to
+ *     the AS made on a guess. Worth it for a DEPLOYED cross-apex site (it can't read
+ *     the hint, and every deployed origin is on the AS's return-origin allow-list, so
+ *     the worst case is a silent `#error=login_required` bounce). NOT worth it from a
+ *     local host: an origin that isn't allow-listed (a bare `next dev` on
+ *     localhost:3000) is bounced to the central login page instead of back — the
+ *     "stranded on the hub login page" bug. So locally: hint, or nothing.
+ *
+ *  Locality is read from the live hostname rather than a build-time NEXT_PUBLIC_*
+ *  literal: this package is built once and consumed by every site, so the env is a
+ *  property of where it's served, not of how it was compiled. */
 export function shouldSilentRestore(initialHash: string): boolean {
   if (typeof window === 'undefined') return false
   if (isMidAuthFlow(initialHash) || ssoCheckedThisTab()) return false
-  return ssoHintPresent() || isCrossApex()
+  if (ssoHintPresent()) return true
+  return !isLocalHostname(window.location.hostname) && isCrossApex()
 }
 
 /**

@@ -8,12 +8,14 @@ import { AuthProvider, useAuth } from '../context'
 // central session likely exists — never for anonymous / public visitors.
 
 let savedLocation: PropertyDescriptor | undefined
-function stubLocation(): { origin: string; href: string; hash: string; pathname: string } {
+function stubLocation(
   // status.example.com shares the registrable domain (example.com) with the AS host
   // api.example.com below, so these are SAME-apex (hint-gated, no anonymous probe).
+  origin = 'https://status.example.com',
+): { origin: string; href: string; hash: string; pathname: string } {
   const loc = {
-    origin: 'https://status.example.com',
-    hostname: 'status.example.com',
+    origin,
+    hostname: new URL(origin).hostname,
     href: '',
     hash: '',
     pathname: '/',
@@ -81,6 +83,43 @@ describe('AuthProvider cold-load silent SSO', () => {
     )
 
     // Settles to logged-out without ever navigating away.
+    await waitFor(() => getByText('anon'))
+    expect(loc.href).toBe('')
+  })
+
+  // A dev.local suite satellite is a real cross-site SSO client: it shares the
+  // `dev.local` registrable domain with the suite's AS, so the hint cookie is readable
+  // and the AS allow-lists `https://*.dev.local`. Skipping the restore here is what made
+  // a signed-in developer land on a satellite with a logged-out header.
+  it('restores on a LOCAL dev.local suite host when the hint cookie is present', async () => {
+    setHint(true)
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
+    const loc = stubLocation('https://projects.hub-mybranch.dev.local')
+
+    render(
+      <AuthProvider clientId="adh">
+        <Probe />
+      </AuthProvider>,
+    )
+
+    await waitFor(() => expect(loc.href).not.toBe(''))
+    const url = new URL(loc.href)
+    expect(url.origin + url.pathname).toBe('https://adh-backend.dev.local/oauth/signin/authorize')
+    expect(url.searchParams.get('prompt')).toBe('none')
+  })
+
+  it('does NOT redirect from a LOCAL host with no hint (a bare localhost dev server)', async () => {
+    // No hint ⇒ no evidence of a session, and a localhost origin may not be on the AS
+    // allow-list — a blind probe would strand it on the central login page.
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
+    const loc = stubLocation('http://localhost:3000')
+
+    const { getByText } = render(
+      <AuthProvider clientId="adh">
+        <Probe />
+      </AuthProvider>,
+    )
+
     await waitFor(() => getByText('anon'))
     expect(loc.href).toBe('')
   })

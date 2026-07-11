@@ -12,7 +12,9 @@ function stubLocation(
   pathname = '/dashboard',
   search = '',
 ): { href: string } {
-  const loc = { origin, pathname, search, href: '' }
+  // hostname is derived from the origin, not passed separately, so a test can't
+  // stub a host that contradicts its own origin — the locality rule below reads it.
+  const loc = { origin, hostname: new URL(origin).hostname, pathname, search, href: '' }
   savedLocation = Object.getOwnPropertyDescriptor(window, 'location')
   Object.defineProperty(window, 'location', { configurable: true, value: loc })
   return loc
@@ -54,9 +56,38 @@ describe('shouldSilentRestore', () => {
     expect(shouldSilentRestore('')).toBe(false)
   })
 
-  it('true for a cross-apex site even without a readable hint (probe once)', () => {
-    // jsdom host is localhost; an AS on a different registrable domain ⇒ cross-apex.
+  it('true for a DEPLOYED cross-apex site even without a readable hint (probe once)', () => {
+    // A deployed brand site on its own apex; the AS is on another ⇒ cross-apex, so the
+    // hint is unreadable and the one-per-tab blind probe is the only way to find the
+    // session. Stubbed explicitly rather than relying on jsdom's `localhost`, which is
+    // a LOCAL host and so takes the hint-gated branch below.
+    const loc = stubLocation('https://cookbook.com')
+    expect(loc).toBeTruthy()
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+    expect(shouldSilentRestore('')).toBe(true)
+  })
+
+  // The blind cross-apex probe is a top-level redirect to the AS made on nothing more
+  // than a guess. It pays off only where every origin is on the AS's return-origin
+  // allow-list (the deployed envs). A local host that ISN'T (a bare `next dev` on
+  // localhost:3000) would be bounced to the central login page instead of back — the
+  // historical "stranded on the hub login page" bug. So locally: hint or nothing.
+  it('false on a LOCAL host with no readable hint (never blind-probe from local dev)', () => {
+    const loc = stubLocation('http://localhost:3000')
+    expect(loc).toBeTruthy()
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('true on a LOCAL dev.local suite host when the hint IS readable', () => {
+    // The dev.local suite shares one registrable domain (`dev.local`) with its AS, so
+    // the hint cookie IS readable here — a positive signal that a central session
+    // exists. Restoring it is exactly as safe as in prod, and skipping it is why a
+    // suite satellite used to show a logged-out header to a signed-in developer.
+    setHint(true)
+    const loc = stubLocation('https://projects.hub-mybranch.dev.local')
+    expect(loc).toBeTruthy()
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
     expect(shouldSilentRestore('')).toBe(true)
   })
 
