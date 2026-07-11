@@ -13,7 +13,7 @@
  * from (a raw `pointerenter` doesn't bubble to React's root listener).
  */
 import { useState } from 'react'
-import { act, render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { HierarchicalTopicDetail, type TopicLevel } from '../blocks/hierarchical-topic-detail'
 
@@ -487,5 +487,50 @@ describe('HierarchicalTopicDetail — narrow (navigation-stack) layout', () => {
     )
     expect(screen.queryByRole('button', { name: /cover/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Auto-hide/i })).not.toBeInTheDocument()
+  })
+
+  it('gives every selectable row a trailing disclosure chevron — the pane has no peeking sibling column left to hint that a tap pushes further', () => {
+    render(
+      <HierarchicalTopicDetail layoutMode="narrow" levels={levelsFor({})}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    const row = screen.getByRole('button', { name: 'us-west-1' })
+    expect(row.querySelector('.lucide-chevron-right')).toBeInTheDocument()
+  })
+
+  it('omits the chevron on a disabled row — it has nowhere to disclose', () => {
+    const levels: TopicLevel[] = [
+      {
+        id: 'disabled-row-regions',
+        title: 'Regions',
+        items: [...REGIONS, { id: 'off', label: 'Disabled Region', disabled: true }],
+        selectedId: null,
+        onSelect: () => {},
+        onClear: () => {},
+      },
+    ]
+    render(
+      <HierarchicalTopicDetail layoutMode="narrow" levels={levels}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Disabled Region' }).querySelector('.lucide-chevron-right'),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'us-west-1' }).querySelector('.lucide-chevron-right'),
+    ).toBeInTheDocument()
+  })
+
+  it('the WIDE covered stack does not show the narrow-only chevron — the connector line already shows what a selection leads to', () => {
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    enter(col(0))
+    const row = within(col(1)).getByRole('button', { name: /Core Platform/ })
+    expect(row.querySelector('.lucide-chevron-right')).not.toBeInTheDocument()
   })
 })

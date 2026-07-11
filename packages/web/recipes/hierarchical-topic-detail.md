@@ -3,7 +3,7 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.12.2
+version: 1.12.3
 status: draft
 language: en
 created: '2026-06-30'
@@ -468,6 +468,7 @@ the hierarchical stack, not the primitive.
 - **must-offer-back-in-narrow**: Every narrow pane except the root MUST carry a top-left **Back** that POPS one pane — clearing exactly the deepest SELECTED level via the same `onClear` the breadcrumb and the wide Back use, so **must-guard-unsaved-on-exit** applies identically. Repeated Back MUST walk up to the root, and a popped pane MUST animate OUT to the right rather than vanish.
 - **must-keep-selection-across-modes**: Switching between wide and narrow (a resize) MUST preserve the selection exactly — the mode is a rendering of the same stack, never a navigation.
 - **must-mark-narrow-selection-with-bar**: In narrow mode a list's selected row MUST use the primitive's gold `selectionStyle="bar"`: the dash/connector markers need a parent list on screen to connect FROM, and narrow mode never has one.
+- **must-show-row-disclosure-chevron**: In narrow mode every selectable row MUST carry a trailing chevron (›) marking that picking it pushes another pane in — a full-width pane has no peeking sibling column left to hint at that, so the row itself must say so. A `disabled` row MUST NOT show it (it has nowhere to go). The chevron is narrow-only: the wide/covered stack MUST NOT render it — the selection connector line already shows what a choice leads to there.
 
 ### General
 
@@ -595,6 +596,7 @@ the hierarchical stack, not the primitive.
 | T52 | must-fill-the-pane | narrow, a list with fewer rows than the screen is tall | the list's background covers the full pane (its height equals the pane's); nothing behind it shows through under the last row, and no border runs down the screen edge |
 | T50 | must-slide-panes-ease-in-out | narrow, in the real app (so the selection remounts the subtree): select a row, sampling the incoming pane's x each frame | it travels through intermediate positions from the right edge to 0 — not two samples (start, end) — and the offsets ease in and out (small deltas at both ends, largest in the middle). Back samples the same slide in reverse |
 | T51 | must-slide-panes-ease-in-out, must-respect-reduced-motion | narrow, `prefers-reduced-motion: reduce`, select a row | the panes are at their new places on the first frame: no travel, same layout |
+| T53 | must-show-row-disclosure-chevron | narrow, a pane with an enabled row and a `disabled` row | the enabled row carries a trailing chevron, the disabled one does not; the same rows in the WIDE covered stack carry no chevron at all |
 
 ## Edge Cases
 
@@ -799,6 +801,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.12.3 | 2026-07-11 | Mike Fullerton | **A narrow row needs its own disclosure hint.** A full-width pane has no peeking sibling column beside it to imply that tapping a row pushes another pane in — the wide stack gets that for free from the connector line and the covered peek, narrow mode gets neither. Every selectable row now carries a trailing chevron (`TopicList`'s new `rowDisclosure`, threaded through `TopicRail`, set only by `NarrowStack`); a `disabled` row is excluded (nowhere to go), and the wide/covered stack never sets the flag, so its rows are unchanged. New requirement `must-show-row-disclosure-chevron`; vector T53. |
 | 1.12.2 | 2026-07-11 | Mike Fullerton | **A narrow pane must paint the whole screen.** The rail sizes to its rows — correct in the wide stack, where every list is a stretched grid cell, and wrong in a narrow pane, which is a flex column filling the viewport: everything under the last row was transparent, so you saw through to the parallaxed pane behind it and then to the page. `TopicRail` gains a `className` seam and narrow mode tells it to fill (`flex-1`) and to drop its trailing border, which at full width is a hairline down the edge of the screen separating nothing. New requirement `must-fill-the-pane`; vector T52. |
 | 1.12.1 | 2026-07-11 | Mike Fullerton | **The narrow slide actually plays now, and eases in AND out.** The panes always carried a transform transition and it never ran in the app: pushing a pane means selecting a row means a route change means a REMOUNT, so every pane mounted already at its final transform, with nothing to animate from — the push and pop were silent jumps. The slide's origin (the pane the stack was last painted at) now lives in the surface store with everything else that must outlive the click, so the incoming pane still paints off-screen for one frame and then travels. Easing changed from `ease-out` to **ease-in-out** so both directions leave and reach rest smoothly; `motion-reduce` still drops the transition entirely. New requirement `must-slide-panes-ease-in-out`; vectors T50, T51. |
 | 1.12.0 | 2026-07-11 | Mike Fullerton | **The stack's view state belongs to the surface, not to the mount — and three bugs that were all that one bug.** Selecting a row is a route change, and a route change remounts the page subtree, so every piece of view state the frame held in component state was destroyed by the user's own click: (1) turning auto-hide off and then picking another workspace snapped every list shut with the toggle flipped back on; (2) picking a row inside a revealed branch collapsed the branch under a pointer that had never left it — and since the pointer hadn't moved, nothing would reopen it; (3) a `defaultSelectedId` re-fired after the clear that its own remount caused, so the auto-selected row could not be deselected at all. Auto-hide, pins, the open hover branch and the defaults' arming record now live per SURFACE (keyed by the root list), outside React — new requirement `must-keep-view-state-across-a-selection`; vectors T45–T47. Also: walking the pointer OUTWARD into a shallower peek now GROWS the cascade (the new list joins as its root, pushing the open lists right) instead of collapsing everything one step from the top — `must-grow-the-branch-walking-outward`, T48. And a modal opened from inside the stack MUST portal to the body: rendered in place it stays a descendant of the pane that opened it, which narrow mode marks `inert`, so the create dialog silently refused every keystroke — `must-portal-modals-out-of-the-stack`, T49. |

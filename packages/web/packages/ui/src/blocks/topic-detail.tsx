@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react"
 
-import { Circle, Plus, Trash2 } from "lucide-react"
+import { ChevronRight, Circle, Plus, Trash2 } from "lucide-react"
 
 import { AlertModal } from "../components/alert-modal"
 import { CollapseToggle } from "../components/collapse-toggle"
@@ -87,6 +87,7 @@ function TopicList({
   covered = false,
   isRoot = false,
   selectionStyle = "bar",
+  rowDisclosure = false,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -109,6 +110,11 @@ function TopicList({
    *  TopicDetail and the minimized stack. `"marker"` drops the bar for the dash (root) + the
    *  parent→child connector line (drawn by the covered stack's overlay). */
   selectionStyle?: "bar" | "marker"
+  /** Trailing chevron on every selectable row, signalling that picking it discloses another pane —
+   *  the narrow (nav-stack) layout's only affordance for that, since it has no peeking sibling column
+   *  to hint at what a tap pushes in. Hidden on a `disabled` row (it isn't going anywhere) and in the
+   *  icon-only layouts (no room, and the covered/minimized styles already show that via layering). */
+  rowDisclosure?: boolean
 }) {
   // Icon-only layouts share the no-label row: `collapsed` CENTRES the icon (minimized icon strip);
   // `covered` keeps it LEFT-aligned so the icon stays inside the peek.
@@ -210,8 +216,13 @@ function TopicList({
             )}
           </span>
         )}
-        {!hideLabel && item.trailing && (
-          <span className="ml-auto shrink-0 pl-1.5">{item.trailing}</span>
+        {!hideLabel && (item.trailing || rowDisclosure) && (
+          <span className="ml-auto flex shrink-0 items-center gap-1 pl-1.5">
+            {item.trailing}
+            {rowDisclosure && !item.disabled && (
+              <ChevronRight size={14} aria-hidden className="shrink-0 text-apt-text-dim" />
+            )}
+          </span>
         )}
       </button>
     )
@@ -358,6 +369,7 @@ export function TopicRail({
   selectionStyle = "bar",
   headerSlot,
   className,
+  rowDisclosure = false,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -420,6 +432,9 @@ export function TopicRail({
    *  `ListHeader` (filter + actions) when an entity list lives inside the stack.
    *  Hidden while the rail is collapsed to an icon strip. */
   headerSlot?: ReactNode
+  /** Trailing chevron on every selectable row (narrow/nav-stack mode's disclosure hint — see
+   *  {@link TopicList}'s doc). Default off. */
+  rowDisclosure?: boolean
 }) {
   const asideRef = useRef<HTMLElement>(null)
   const listId = useId()
@@ -577,6 +592,7 @@ export function TopicRail({
           covered={covered}
           isRoot={isRoot}
           selectionStyle={selectionStyle}
+          rowDisclosure={rowDisclosure}
         />
       </div>
       {footer && <div className="shrink-0 border-t border-apt-border p-2">{footer}</div>}

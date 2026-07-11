@@ -1630,6 +1630,10 @@ function NarrowStack({
             // FROM), so selection falls back to the primitive's own gold bar — visible again when Back
             // pops you onto the parent list.
             selectionStyle="bar"
+            // Every row here — the topic lists AND (implicitly, by never reaching this component) not
+            // the leaf detail — pushes the NEXT pane on select; a trailing chevron is the only hint of
+            // that a full-width pane can give (there's no peeking sibling column left to imply it).
+            rowDisclosure
             items={level.items}
             selectedId={level.selectedId}
             onSelect={railOnSelect(level, attemptExit)}
