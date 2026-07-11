@@ -197,6 +197,12 @@ type SurfaceState = {
   autoHide: boolean
   pins: Record<string, boolean>
   hoverId: string | null
+  /** NARROW mode: the pane index the stack was last PAINTED at. The slide animates from here to
+   *  wherever the new selection puts the top pane — and since selecting is a route change that
+   *  remounts everything, a pane would otherwise mount already at its final position with nothing to
+   *  transition FROM, which is why the push and pop never animated in the app. `null` = never painted
+   *  (a fresh load lands where it lands; there is nothing to slide from). */
+  narrowTop: number | null
   /** Per level: the appearance its `defaultSelectedId` has already been applied for (see the frame).
    *  Remembering this is what lets a manual clear stick — and it must outlive the mount for the same
    *  reason everything else here does: clearing the row IS a route change, so a per-instance memory
@@ -355,6 +361,7 @@ export function HierarchicalTopicDetail({
     autoHide: autoHideTopics,
     pins: {},
     hoverId: null,
+    narrowTop: null,
     autoSelected: {},
   }
   const { autoHide, pins, hoverId } = surface
@@ -367,6 +374,7 @@ export function HierarchicalTopicDetail({
         autoHide: autoHideTopics,
         pins: {},
         hoverId: null,
+        narrowTop: null,
         autoSelected: {},
       }
       surfaceStates.set(surfaceKey, update(prev))
@@ -388,6 +396,10 @@ export function HierarchicalTopicDetail({
   )
   const setHoverId = useCallback(
     (id: string | null) => patchSurface((p) => ({ ...p, hoverId: id })),
+    [patchSurface],
+  )
+  const setNarrowTop = useCallback(
+    (i: number) => patchSurface((p) => (p.narrowTop === i ? p : { ...p, narrowTop: i })),
     [patchSurface],
   )
 
@@ -462,6 +474,8 @@ export function HierarchicalTopicDetail({
     setPins,
     hoverId,
     setHoverId,
+    narrowTop: surface.narrowTop,
+    setNarrowTop,
     containerW,
   }
 
@@ -619,6 +633,10 @@ interface StackProps {
    *  yank the branch shut from under a pointer that is still inside it. */
   hoverId: string | null
   setHoverId: (id: string | null) => void
+  /** NARROW mode's animation origin — the pane index last painted (see `SurfaceState.narrowTop`), and
+   *  the setter that records the pane the stack has now settled on. */
+  narrowTop: number | null
+  setNarrowTop: (i: number) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
   children: ReactNode
@@ -1529,19 +1547,31 @@ function NarrowStack({
   deepestSelected,
   detailTitle,
   attemptExit,
+  narrowTop,
+  setNarrowTop,
   children,
 }: StackProps & { levels: TopicLevel[] }) {
   // The top of the navigation stack: the detail (index `levels.length`) once every level is selected,
   // else the frontier list — the one with nothing chosen in it yet.
   const top = firstUnselected === -1 ? levels.length : frontier
   // The position the panes are RENDERED at. It catches up to `top` one frame later, so the pane being
-  // pushed is painted off-screen first and its move to centre is an animation rather than a jump.
-  const [anim, setAnim] = useState(top)
+  // pushed is painted off-screen FIRST and its move to centre is a transition rather than a jump — an
+  // element that mounts at its final transform has nothing to animate from.
+  //
+  // It seeds from the pane the stack was last painted at, which is why this lives in the surface store
+  // (see `SurfaceState.narrowTop`) rather than in this component: pushing a pane means selecting a row
+  // means a route change means a REMOUNT, so a fresh `useState(top)` would start every push already
+  // finished. On a genuinely fresh load there is no previous pane and nothing to slide from, so the
+  // first paint simply lands.
+  const [anim, setAnim] = useState(narrowTop ?? top)
   useLayoutEffect(() => {
-    if (anim === top) return
+    if (anim === top) {
+      setNarrowTop(top) // settled: this is what the next push/pop animates FROM
+      return
+    }
     const id = requestAnimationFrame(() => setAnim(top))
     return () => cancelAnimationFrame(id)
-  }, [anim, top])
+  }, [anim, top, setNarrowTop])
 
   // Back pops one pane: clear the deepest SELECTED level (exit-guarded, like every other clear).
   const onBack = () => attemptExit(() => levels[deepestSelected]?.onClear())
@@ -1565,10 +1595,14 @@ function NarrowStack({
       i === anim ? "translateX(0)" : i < anim ? "translateX(-30%)" : "translateX(100%)",
     zIndex: i + 1,
   })
+  // Every pane — the topic lists AND the detail — slides on the same transition: EASE-IN-OUT, so the
+  // push and the pop both accelerate out of rest and settle back into it rather than snapping to a
+  // stop. `motion-reduce` drops the transition entirely, so with the OS setting on the panes cut
+  // straight to their new places (the layout is identical, only the travel is gone).
   const paneClass = (i: number) =>
     cn(
       "absolute inset-0 flex flex-col",
-      "transition-transform duration-300 ease-out motion-reduce:transition-none",
+      "transition-transform duration-300 ease-in-out motion-reduce:transition-none",
       i !== anim && "pointer-events-none",
     )
 

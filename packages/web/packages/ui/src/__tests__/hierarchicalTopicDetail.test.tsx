@@ -13,7 +13,7 @@
  * from (a raw `pointerenter` doesn't bubble to React's root listener).
  */
 import { useState } from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { HierarchicalTopicDetail, type TopicLevel } from '../blocks/hierarchical-topic-detail'
 
@@ -442,6 +442,41 @@ describe('HierarchicalTopicDetail — narrow (navigation-stack) layout', () => {
     )
     expect(col(0).style.transform).toBe('translateX(0)') // the regions list is the whole view
     expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
+  })
+
+  it('slides the pushed pane in from the right — even though the selection REMOUNTED the stack', async () => {
+    // The panes always carried a transform transition, and it never played in the app: selecting a row
+    // is a route change, the subtree remounts, and a pane that mounts already at its final transform
+    // has nothing to animate FROM. The stack remembers the pane it was last painted at (per surface),
+    // so the new pane still starts off-screen and then travels.
+    const { unmount } = render(
+      <HierarchicalTopicDetail layoutMode="narrow" levels={levelsFor({ region: 'us' }, 'nav')}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(col(1).style.transform).toBe('translateX(0)') // the ecosystems list is the top pane
+
+    unmount()
+    render(
+      // The user picked an ecosystem: same surface, one pane deeper.
+      <HierarchicalTopicDetail
+        layoutMode="narrow"
+        levels={levelsFor({ region: 'us', eco: 'core' }, 'nav')}
+      >
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    // First paint of the remounted stack: still showing the pane it came from, with the incoming one
+    // off the right edge — the frame the transition needs.
+    expect(col(1).style.transform).toBe('translateX(0)')
+    expect(col(2).style.transform).toBe('translateX(100%)')
+
+    // Next frame it travels: the new pane to centre, its parent parallaxing out behind it.
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
+    })
+    expect(col(2).style.transform).toBe('translateX(0)')
+    expect(col(1).style.transform).toBe('translateX(-30%)')
   })
 
   it('has no cover toggles or auto-hide toggle — there is nothing to cover', () => {
