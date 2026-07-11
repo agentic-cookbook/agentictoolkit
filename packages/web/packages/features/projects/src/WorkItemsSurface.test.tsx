@@ -133,6 +133,9 @@ beforeEach(() => {
 // The hub vitest config has no global afterEach — tear down each render explicitly.
 afterEach(cleanup);
 
+/** The List view has loaded: its title cell is an INLINE EDITOR, so the title is an input value. */
+const listLoaded = () => screen.findByDisplayValue("Design the landing page");
+
 // The five views are a "Work Items" LEVEL published into the enclosing hierarchical stack, so the
 // harness mounts a RailHostBoundary — which, with no host above it, becomes the same standalone host a
 // feature site gives the feature — so the
@@ -183,7 +186,7 @@ describe("WorkItemsSurface", () => {
   it("switches to the Board view from the rail row, calling leaf.onSelect('board')", async () => {
     const onSelectSpy = vi.fn();
     render(<Harness onSelectSpy={onSelectSpy} />);
-    await screen.findByText("Design the landing page");
+    await listLoaded();
 
     fireEvent.click(screen.getByRole("button", { name: "Board" }));
 
@@ -203,7 +206,7 @@ describe("WorkItemsSurface", () => {
 
   it("loads the shared query only ONCE across a view switch", async () => {
     render(<Harness />);
-    await screen.findByText("Design the landing page");
+    await listLoaded();
 
     fireEvent.click(screen.getByRole("button", { name: "Board" }));
     await screen.findByRole("listitem", { name: "To do" });
@@ -216,7 +219,7 @@ describe("WorkItemsSurface", () => {
 
   it("creates via a MODAL from the list header's +, then opens the new item's detail", async () => {
     render(<Harness />);
-    await screen.findByText("Design the landing page");
+    await listLoaded();
 
     // The `+` on the Work Items list header opens a modal — the stack's create metaphor. The leaf is
     // NOT swapped for a blank editor: a detail always shows a real, selected record.
@@ -250,14 +253,20 @@ describe("WorkItemsSurface", () => {
     expect(await screen.findByRole("button", { name: "Save changes" })).not.toBeNull();
   });
 
-  it("opens the shared editor from a List row and clears the assignee via update(null, null)", async () => {
+  it("clears the assignee IN PLACE from the List row, committing update(null, null)", async () => {
+    // The List view is a list-with-details and edits rows in place — it no longer hands off to the
+    // editor. Emptying the assignee must still send an EXPLICIT null pair (a clear), not omit it.
     render(<Harness />);
+    await listLoaded();
 
-    // Selecting a row opens the shared editor in edit mode for that item.
-    fireEvent.click(await screen.findByText("Design the landing page"));
-
-    fireEvent.change(await screen.findByLabelText("Assignee"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Assignee — Design the landing page" }),
+      { target: { value: "" } },
+    );
+    // The row went dirty, so its commit pair appeared; ✓ writes the patch.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save changes work item Design the landing page" }),
+    );
 
     await waitFor(() =>
       expect(update).toHaveBeenCalledWith(
@@ -268,9 +277,7 @@ describe("WorkItemsSurface", () => {
   });
 
   it("moves a card to another status (optimistic) and repaints it under the new column", async () => {
-    render(<Harness />);
-    await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    render(<Harness view="board" />);
     await screen.findByRole("listitem", { name: "To do" });
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
@@ -293,9 +300,7 @@ describe("WorkItemsSurface", () => {
 
   it("reverts the card and shows an error when the move fails", async () => {
     update.mockRejectedValueOnce(new Error("boom"));
-    render(<Harness />);
-    await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    render(<Harness view="board" />);
     await screen.findByRole("listitem", { name: "To do" });
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
@@ -337,9 +342,7 @@ describe("WorkItemsSurface", () => {
       });
     });
 
-    render(<Harness />);
-    await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    render(<Harness view="board" />);
     await screen.findByRole("listitem", { name: "To do" });
 
     const combo = () => screen.getByRole("combobox", { name: "Move Design the landing page" });
@@ -399,9 +402,7 @@ describe("WorkItemsSurface", () => {
     // failed) — get() keeps returning the original To-do row throughout.
     get.mockResolvedValue(structuredClone(W1));
 
-    render(<Harness />);
-    await screen.findByText("Design the landing page");
-    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    render(<Harness view="board" />);
     await screen.findByRole("listitem", { name: "To do" });
 
     const combo = () => screen.getByRole("combobox", { name: "Move Design the landing page" });

@@ -248,12 +248,15 @@ export function WorkItemsSurface({
     }
     switch (view) {
       case "list":
+        // The List view is a LIST WITH DETAILS: it edits rows in place and shows the selected
+        // item's whole record below, so it needs no `onOpenItem` — it never hands off to the editor.
         return (
           <ListView
+            projectId={projectId}
             items={items}
             statuses={statuses}
             participants={participants}
-            onOpenItem={onOpenItem}
+            onChanged={reload}
           />
         );
       case "board":

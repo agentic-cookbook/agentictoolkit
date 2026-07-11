@@ -11,8 +11,12 @@ export interface DataTableColumn<T> {
   header: React.ReactNode
   render?: (row: T) => React.ReactNode
   sortable?: boolean
+  /** A FIXED CSS grid track for this column (e.g. `"8rem"`, `"1fr"`). Omit and the column sizes
+   *  itself to its widest cell (`max-content`) — see {@link DataTableProps.autoSizeColumns}. */
   width?: string
   align?: "start" | "end"
+  /** Opt this column out of user resizing (a trailing actions/commit cell has nothing to widen). */
+  resizable?: boolean
 }
 export interface DataTableProps<T> {
   columns: DataTableColumn<T>[]
@@ -29,19 +33,70 @@ export interface DataTableProps<T> {
   loading?: boolean
   ariaLabel: string
   className?: string
+  /** Size every column with no explicit `width` to its WIDEST cell (`max-content`) instead of
+   *  sharing the width equally (`1fr`), and let the user drag a column's trailing border to
+   *  override that. Default false, so existing tables keep their equal-share layout.
+   *
+   *  A trailing filler track absorbs any slack, so content-sized columns sit left-packed rather than
+   *  stretching; when the columns outgrow the table it scrolls horizontally (the cells keep
+   *  `truncate`, so a column dragged NARROWER than its content ellipsises rather than reflowing). */
+  autoSizeColumns?: boolean
+  /** Persist the user's dragged column widths under this key (localStorage), so a table remembers
+   *  its layout across visits. Omit to keep them for the life of the component. */
+  columnWidthsKey?: string
 }
 
 const NO_SELECTION: Set<string> = new Set()
 
+/** The dragged px widths per column key. */
+type ColumnWidths = Record<string, number>
+
+/** A column dragged narrower than this is pointless (the header label would vanish). */
+const MIN_COLUMN_PX = 48
+
+function readWidths(key: string | undefined): ColumnWidths {
+  if (!key || typeof window === "undefined") return {}
+  try {
+    const raw = window.localStorage.getItem(`data-table-cols:${key}`)
+    return raw ? (JSON.parse(raw) as ColumnWidths) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function DataTable<T>({
   columns, rows, getRowId, selectedIds = NO_SELECTION, onSelectionChange,
   sort, onSortChange, emptyLabel = "No items.", loading = false, ariaLabel, className,
+  autoSizeColumns = false, columnWidthsKey,
 }: DataTableProps<T>): React.ReactElement {
   const selectable = onSelectionChange != null
   const baseId = React.useId()
   const anchorRef = React.useRef<string | null>(null)
   const ids = React.useMemo(() => rows.map(getRowId), [rows, getRowId])
   const [focusedId, setFocusedId] = React.useState<string | null>(null)
+
+  // The user's dragged column widths (px), seeded from storage on first render and written back on
+  // every change. A column with no entry falls back to its declared `width`, else the auto size.
+  const [widths, setWidths] = React.useState<ColumnWidths>(() => readWidths(columnWidthsKey))
+  const [dragging, setDragging] = React.useState(false)
+  const setWidth = React.useCallback(
+    (key: string, px: number | null) => {
+      setWidths((prev) => {
+        const next = { ...prev }
+        if (px == null) delete next[key]
+        else next[key] = Math.max(MIN_COLUMN_PX, Math.round(px))
+        if (columnWidthsKey && typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(`data-table-cols:${columnWidthsKey}`, JSON.stringify(next))
+          } catch {
+            // storage full / blocked — the widths still apply for this session
+          }
+        }
+        return next
+      })
+    },
+    [columnWidthsKey],
+  )
 
   function rowDomId(id: string): string {
     return `${baseId}-row-${id}`
@@ -78,6 +133,8 @@ export function DataTable<T>({
   }
 
   function onRowClick(e: React.MouseEvent, id: string): void {
+    // A click that lands on an in-cell control still SELECTS the row (so the details pane follows
+    // the row you are editing) but must not steal the control's own click.
     if (e.shiftKey) range(id)
     else if (e.altKey) addToSelection(id)
     else selectOne(id)
@@ -93,7 +150,21 @@ export function DataTable<T>({
     else selectOne(target)
   }
 
+  /** An event that came from a control INSIDE a cell (an inline editor, a select, a button). The
+   *  grid must keep its hands off those: its Arrow/Space handlers call preventDefault, which would
+   *  swallow a space typed into an inline editor or a native select's keyboard use; and its
+   *  mousedown-preventDefault would stop the control from taking focus at all. This is what lets a
+   *  SELECTABLE table also be inline-editable (row selection drives a details pane while the cells
+   *  stay editable) — previously the two were mutually exclusive. */
+  function fromCellControl(target: EventTarget | null): boolean {
+    return (
+      target instanceof Element &&
+      target.closest("input, textarea, select, button, a, [contenteditable='true']") != null
+    )
+  }
+
   function onKeyDown(e: React.KeyboardEvent): void {
+    if (fromCellControl(e.target)) return
     if (e.key === "ArrowDown") { e.preventDefault(); move(1, e.shiftKey) }
     else if (e.key === "ArrowUp") { e.preventDefault(); move(-1, e.shiftKey) }
     else if (e.key === " ") {
@@ -114,7 +185,77 @@ export function DataTable<T>({
     onSortChange({ key: col.key, dir })
   }
 
-  const template = columns.map((c) => c.width ?? "1fr").join(" ")
+  // AUTO-SIZING, in two pre-paint passes. Every row is its OWN grid (they must be, to carry row
+  // background/selection), so a `max-content` track would size each row independently — the header
+  // to "Title", the body cell to its content — and the columns would not line up. So: render once
+  // with `max-content` (each cell at its natural width), MEASURE the widest cell per column, then
+  // lock that in as an explicit px track shared by every row. `null` means "needs measuring".
+  const gridRef = React.useRef<HTMLDivElement>(null)
+  const [autoWidths, setAutoWidths] = React.useState<ColumnWidths | null>(null)
+  // Re-measure whenever the rows or the columns change (new content ⇒ new natural widths).
+  const sig = `${ids.join("|")}::${columns.map((c) => c.key).join(",")}`
+  const measuredSig = React.useRef<string | null>(null)
+
+  React.useLayoutEffect(() => {
+    if (!autoSizeColumns) return
+    if (measuredSig.current === sig) return
+    // Pass 1 — drop the measured widths so the next layout renders at `max-content`.
+    if (autoWidths !== null) {
+      setAutoWidths(null)
+      return
+    }
+    // Pass 2 — every cell is now at its natural width; take each column's widest.
+    const el = gridRef.current
+    if (!el) return
+    const next: ColumnWidths = {}
+    for (const c of columns) {
+      let max = 0
+      el.querySelectorAll(`[data-col="${c.key}"]`).forEach((cell) => {
+        max = Math.max(max, cell.getBoundingClientRect().width)
+      })
+      next[c.key] = Math.ceil(max)
+    }
+    measuredSig.current = sig
+    setAutoWidths(next)
+  }, [autoSizeColumns, sig, columns, autoWidths])
+
+  // The grid track for each column: a width the USER dragged wins, then the column's declared
+  // `width`, then the measured natural width — falling back to `max-content` for the one measuring
+  // pass, or to an equal `1fr` share when auto-sizing is off.
+  //
+  // In auto-size mode a trailing `minmax(0,1fr)` FILLER track (one more track than there are cells)
+  // soaks up any leftover width, so content-sized columns pack to the left instead of stretching.
+  const trackOf = (c: DataTableColumn<T>): string => {
+    const dragged = widths[c.key]
+    if (dragged != null) return `${dragged}px`
+    if (c.width) return c.width
+    if (!autoSizeColumns) return "1fr"
+    const measured = autoWidths?.[c.key]
+    return measured != null ? `${measured}px` : "max-content"
+  }
+  const template =
+    columns.map(trackOf).join(" ") + (autoSizeColumns ? " minmax(0,1fr)" : "")
+
+  // Drag the trailing border of a header cell: the new width is the pointer's distance from that
+  // cell's left edge. Double-click clears the override, returning the column to its content size.
+  const onColumnDragStart = (e: React.PointerEvent<HTMLDivElement>, key: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const header = e.currentTarget.parentElement
+    if (!header) return
+    const left = header.getBoundingClientRect().left
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDragging(true)
+    const onMove = (ev: PointerEvent) => setWidth(key, ev.clientX - left)
+    const onUp = (ev: PointerEvent) => {
+      setDragging(false)
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      void ev
+    }
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+  }
 
   // In action-list mode (no selection) the container is a plain scrolling table:
   // NO grid keyboard/focus machinery, because its Arrow/Space handlers call
@@ -132,21 +273,33 @@ export function DataTable<T>({
     : { role: "table" as const }
 
   return (
-    <div {...gridProps} aria-label={ariaLabel}
+    <div {...gridProps} ref={gridRef} aria-label={ariaLabel}
       className={cn("overflow-auto rounded-lg border border-apt-border outline-none",
         selectable && "focus-visible:ring-2 focus-visible:ring-apt-gold/25", className)}>
       <div role="row" className="sticky top-0 z-10 grid bg-apt-surface-2 text-xs font-medium text-apt-text-muted"
         style={{ gridTemplateColumns: template }}>
         {columns.map((col) => (
-          <div key={col.key} role="columnheader"
+          <div key={col.key} role="columnheader" data-col={col.key}
             aria-sort={sort?.key === col.key ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
-            className={cn("px-3 py-2", col.align === "end" && "text-right")}>
+            className={cn("relative px-3 py-2", col.align === "end" && "text-right")}>
             {col.sortable && onSortChange ? (
               <button type="button" onClick={() => onHeader(col)} className="inline-flex items-center gap-1 hover:text-apt-text">
                 {col.header}
                 {sort?.key === col.key && (sort.dir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
               </button>
             ) : col.header}
+            {/* Resize handle on the column's TRAILING border (auto-size mode). Drag sets an explicit
+                px width; double-click drops it, so the column springs back to fitting its content. */}
+            {autoSizeColumns && col.resizable !== false && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={`Resize column ${col.key}`}
+                onPointerDown={(e) => onColumnDragStart(e, col.key)}
+                onDoubleClick={() => setWidth(col.key, null)}
+                className="absolute top-0 right-0 z-10 h-full w-1.5 translate-x-1/2 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-apt-gold/40"
+              />
+            )}
           </div>
         ))}
       </div>
@@ -163,14 +316,20 @@ export function DataTable<T>({
             aria-selected={selectable ? selected : undefined}
             data-selected={selected || undefined}
             data-focused={focused || undefined}
-            onMouseDown={selectable ? (e) => e.preventDefault() : undefined}
+            // The preventDefault keeps a row click from stealing focus into the grid — but NOT when
+            // the click is on an in-cell control, which must be allowed to focus itself (an inline
+            // editor you cannot click into is no editor at all).
+            onMouseDown={selectable ? (e) => { if (!fromCellControl(e.target)) e.preventDefault() } : undefined}
             onClick={selectable ? (e) => onRowClick(e, id) : undefined}
             className={cn(inlineCommitHoverScopeClass, "grid border-t border-apt-border text-sm text-apt-text",
               selectable && "cursor-pointer",
               selected ? "bg-apt-gold/15" : "hover:bg-apt-surface-2")}
             style={{ gridTemplateColumns: template }}>
             {columns.map((col) => (
-              <div key={col.key} role={selectable ? "gridcell" : "cell"} className={cn("truncate px-3 py-1.5", col.align === "end" && "text-right")}>
+              // `truncate` (with min-w-0) matters even when a column sizes to its content: the moment
+              // the user DRAGS it narrower than that, the cell must ellipsise rather than reflow and
+              // knock every row out of alignment.
+              <div key={col.key} role={selectable ? "gridcell" : "cell"} data-col={col.key} className={cn("min-w-0 truncate px-3 py-1.5", col.align === "end" && "text-right")}>
                 {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? "")}
               </div>
             ))}

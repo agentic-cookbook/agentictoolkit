@@ -30,14 +30,16 @@ export function participantLabel(p: ProjectParticipant): string {
   return `${p.participantKind} · ${p.participantId}`;
 }
 
-/** Encode an assignee as its composite option value (""=Unassigned). */
-function toOptionValue(v: AssigneeValue | null): string {
+/** Encode an assignee as its composite option value (""=Unassigned). Exported so the list view's
+ *  inline assignee column encodes it exactly the same way — one authoritative codec. */
+export function toOptionValue(v: AssigneeValue | null): string {
   return v ? `${v.assigneeKind}:${v.assigneeId}` : "";
 }
 
 /** Decode a composite option value back to an assignee (""→null). participantId
- *  is opaque and may itself contain ':', so split on the FIRST colon only. */
-function fromOptionValue(raw: string): AssigneeValue | null {
+ *  is opaque and may itself contain ':', so split on the FIRST colon only. Exported alongside
+ *  {@link toOptionValue} so every consumer shares the one codec. */
+export function fromOptionValue(raw: string): AssigneeValue | null {
   if (!raw) return null;
   const idx = raw.indexOf(":");
   if (idx < 0) return null;

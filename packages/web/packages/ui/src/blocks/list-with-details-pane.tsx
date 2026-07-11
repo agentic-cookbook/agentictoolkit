@@ -43,6 +43,12 @@ export interface ListWithDetailsPaneProps<T> {
   paramKey?: string
   loading?: boolean
   emptyLabel?: string
+  /** Size each column to its widest cell and let the user drag a column's trailing border to
+   *  override that (forwarded to {@link DataTable}). */
+  autoSizeColumns?: boolean
+  /** Persist the user's dragged column widths under this key (forwarded to {@link DataTable}).
+   *  Distinct from `storageKey`, which persists only the split-bar position. */
+  columnWidthsKey?: string
   /** Title on the details pane's header bar (and the disclosure's a11y label). */
   detailsLabel?: string
   ariaLabel: string
@@ -66,6 +72,8 @@ export function ListWithDetailsPane<T>({
   paramKey,
   loading,
   emptyLabel,
+  autoSizeColumns,
+  columnWidthsKey,
   detailsLabel = "Details",
   ariaLabel,
   className,
@@ -214,6 +222,8 @@ export function ListWithDetailsPane<T>({
             loading={loading}
             emptyLabel={emptyLabel}
             ariaLabel={ariaLabel}
+            autoSizeColumns={autoSizeColumns}
+            columnWidthsKey={columnWidthsKey}
             className="border-0 rounded-none"
           />
         }
