@@ -83,7 +83,7 @@ function levelsKey(levels: TopicLevel[]): string {
       // "Nothing here yet.", and an error message, so without it a list that resolves from loading
       // to empty/error would keep re-showing the stale "Loading…" (the level never re-registers).
       (l) =>
-        `${l.id}:${l.title ?? ""}:${l.selectedId ?? ""}:${l.emptyLabel ?? ""}:${l.items
+        `${l.id}:${l.title ?? ""}:${l.selectedId ?? ""}:${l.emptyLabel ?? ""}:${l.defaultSelectedId ?? ""}:${l.items
           .map((it) => `${it.id}=${it.label}=${it.sublabel ?? ""}`)
           .join(",")}`,
     )

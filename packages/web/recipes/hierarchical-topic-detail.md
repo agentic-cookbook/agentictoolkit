@@ -3,7 +3,7 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.10.2
+version: 1.11.0
 status: draft
 language: en
 created: '2026-06-30'
@@ -106,6 +106,7 @@ interface TopicLevel {
   title?: string                   // left-aligned list title (divider under it); reveals when covered
   items: TopicDetailItem[]
   selectedId: string | null
+  defaultSelectedId?: string       // OPT-IN landing selection: chosen when this list APPEARS empty
   onSelect: (id: string) => void   // select THIS level (clears descendants). Pure nav: push(`…/<id>`)
   onClear: () => void              // clear THIS level + everything below. Pure nav: push(parentUrl)
   emptyLabel?: string
@@ -119,9 +120,12 @@ The **package** decides which fires — a click on the already-selected row call
 `onClear()`, a click on any other row calls `onSelect(id)`. **Unselection is uniform
 and package-owned**: consumers write no `prev === id ? null : id` toggle. The package
 **never auto-selects** — landing on a level with no selection shows the list with
-nothing focused (no resume, no coerced first item). Breadcrumb up-navigation and the
-drill-down **Back** also clear via `onClear`, so all three deselect paths are one code
-path.
+nothing focused (no resume, no coerced first item) — **unless that level asks it to**,
+via `defaultSelectedId`: the one item to pick when the list appears with nothing chosen
+(Work Items → List). It fires the level's own `onSelect`, so it is a normal selection in
+every respect, and it arms once per appearance, so clearing the row inside a visit
+sticks. Breadcrumb up-navigation and the drill-down **Back** also clear via `onClear`,
+so all three deselect paths are one code path.
 
 ### Small-window drill-down (the refined spec)
 
@@ -397,7 +401,8 @@ the hierarchical stack, not the primitive.
 
 - **must-split-select-clear**: A level MUST expose `onSelect(id)` (select this level, clear descendants) and `onClear()` (clear this level + everything below) as PURE navigation; the package decides WHEN each fires.
 - **must-own-unselection**: A click on the already-selected row MUST clear that level (`onClear`); a click on any other row MUST select it (`onSelect`). Consumers MUST NOT write toggle logic.
-- **must-not-auto-select**: The view MUST NOT auto-select anything — landing on a level with no selection shows the list with nothing focused (no resume of a last id, no coerced first item); only the deepest pane that IS selected renders a detail.
+- **must-not-auto-select**: The view MUST NOT auto-select anything of its own accord — landing on a level with no selection shows the list with nothing focused (no resume of a last id, no coerced first item); only the deepest pane that IS selected renders a detail. The ONE exception is a level that explicitly asks for a landing selection (**may-default-select-a-level**); a level that names none is never chosen for.
+- **may-default-select-a-level**: A level MAY name a `defaultSelectedId` — the item to select the moment that list APPEARS with nothing chosen (i.e. when the parent topic that opens it is picked). It MUST arrive as an ordinary selection, fired through the level's own `onSelect`, so the URL, the breadcrumb, the detail and re-click-to-clear all behave exactly as if the user had clicked the row; the package MUST NOT special-case it afterwards. It MUST arm once per APPEARANCE: clearing the row INSIDE that visit MUST stick (a default that re-fires on every clear makes the row impossible to deselect — a default may choose FOR the user, never argue WITH them), while leaving the parent topic and returning MUST re-apply it. A default naming an item the list does not (yet) have MUST simply not fire — an async list applies it when its rows land, and a stale default MUST NOT select a phantom row. Use it where the answer is all but certain and an empty pane would just ask a question with one sensible answer (Work Items → List); the default for every other level remains **must-not-auto-select**.
 - **must-be-one-stack**: Every NAVIGATION list MUST be a level of the single stack — a list is "navigation" when picking a row is how you REACH a record (the row becomes the selection, the URL grows a segment, and the pane beside it becomes that record's detail). An in-pane master/detail of that kind MUST be dismantled into a published list level + a leaf editor. There MUST be exactly one navigator.
 - **may-display-content-as-a-list**: A detail pane holds CONTENT, and content MAY render as a list — a list is one of the ordinary shapes data comes in, beside a board, a table, a timeline, a calendar or a chart. A display MAY carry its own details pane and MAY edit its rows in place ([[list-with-details-pane]] + [[inline-commit-control]]), because none of that is navigation: the stack does not move, no level is selected, and the URL does not grow. "The deepest pane is a detail" constrains the pane's ROLE, not its shape.
 
@@ -544,6 +549,7 @@ the hierarchical stack, not the primitive.
 | T18 | must-respect-reduced-motion | `prefers-reduced-motion: reduce` | disclosure / resize / drill-down apply with no animation |
 | T19 | must-own-unselection | click the already-selected entity/topic/list row | that level clears + every deeper pane hides (no consumer toggle logic) |
 | T20 | must-not-auto-select | land on `/<slug>/ecosystems` | the entity list shows nothing selected; selecting one shows the topics list with nothing selected (no resume, no first-topic) |
+| T20a | may-default-select-a-level | a level sets `defaultSelectedId` (Work Items → `list`); pick its parent topic | the list appears with that row selected, via the level's own `onSelect` (URL segment, breadcrumb + detail all follow); re-clicking the row clears it and it STAYS clear; leaving the parent topic and re-entering selects it again |
 | T21 | must-show-back-when-drilled, must-back-clears-one-level | drill in at phone width, press Back | Back appears top-left of the leftmost-visible pane; pressing it clears the deepest selected level + re-discloses one parent |
 | T22 | must-guard-unsaved-on-exit | edit the leaf editor (dirty), then press Back | a Save / Discard / Cancel modal opens; Discard proceeds, Cancel keeps editing, Save persists then proceeds |
 | T23 | must-not-hide-frontier-choosing-list | narrow `/<slug>/home` (workspace selected, no feature) | the features list (the frontier) stays visible; only the workspaces list may slide off |
@@ -777,6 +783,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.11.0 | 2026-07-11 | Mike Fullerton | **A level may name a landing selection.** New optional `TopicLevel.defaultSelectedId`: the item to select the moment that list APPEARS with nothing chosen. `must-not-auto-select` stands for every level that doesn't ask — this is the one opt-in exception, for the case where the empty pane just asks a question with a single sensible answer (Work Items → List, its first consumer). It fires the level's own `onSelect`, so it is an ordinary selection (URL, breadcrumb, detail, re-click-to-clear); it arms once per APPEARANCE, so a manual clear inside a visit sticks (a default may choose FOR the user, never argue WITH them) while leaving the parent topic and returning re-applies it; and it never fires for an item the list doesn't have, so an async list applies it when its rows land. New requirement `may-default-select-a-level`; vector T20a. |
 | 1.10.2 | 2026-07-11 | Mike Fullerton | **Only the pointer closes the branch.** Selecting a row used to also drop the reveal (`must-close-reveal-on-select`, inherited from the old single-list reveal) — but with the whole branch open that collapses the lists out from under the cursor mid-gesture, so you could never pick a parent and then pick its child from the list that just re-populated beside it, which is the entire point of revealing the branch. The branch (including a deeper list a new selection adds to it) now stays open until the pointer leaves every member, then animates to the layout the new selection implies. Replaces `must-close-reveal-on-select` with `must-close-branch-only-on-pointer-exit`; T28 rewritten as the two-step walk. |
 | 1.10.1 | 2026-07-11 | Mike Fullerton | **The revealed branch has to be a card, and it must not eat its own connectors.** Three defects of the 1.10.0 reveal, all from the branch's z-lift over the detail: (1) the selection connectors were painted OVER by the very lists they link (the overlay sat at the resting z-order, the lifted branch above it) — the gold chain vanished exactly when you opened the branch to read it; the overlay now rides above the whole lift. (2) A revealed list in the MIDDLE of the stack lost its leading edge: a peek's own trailing border is clipped away with its rail, so the child's left drop-shadow IS that boundary, and the reveal was dropping it — the open branch now shadows on BOTH outer edges (the two compose, so a one-list branch gets both). (3) The rail's nav background is deliberately translucent against the page, which ghosted the detail's text through the floating branch; a lifted member now composites over an opaque page-coloured layer. New requirements `must-float-branch-as-an-opaque-card`, `must-draw-connectors-over-the-revealed-branch`; vectors T26c, T26d. |
 | 1.10.0 | 2026-07-11 | Mike Fullerton | **The hover reveal opens the BRANCH, and a NARROW (navigation-controller) mode.** (1) Hovering a covered list used to lift that ONE list while its children stayed covered behind it — showing what you were choosing between but not what choosing would show you. It now opens the whole **branch**: the hovered list AND its children, chained side by side at full width, floating over the detail; it opens IN PLACE (nothing underneath moves, so it closes back into exactly the layout it came from), stays open while the pointer is anywhere inside ANY member (walking from a list into its own revealed child no longer collapses it — closing is a property of the group, decided from the leave event's `relatedTarget`), re-roots when the pointer enters a different covered list, and closes on row-select. Replaces `must-reveal-covered-list-on-hover` / `must-disclose-reveal-only-while-inside` with `must-reveal-covered-branch-on-hover`, `must-open-branch-in-place`, `must-keep-branch-open-while-inside-it`; vectors T26, T26a, T26b. (2) New `layoutMode` (`"auto"` default): when only a details view can fit — the container is narrower than one topic list plus `minDetailWidth` — or the browser is a phone (iOS/Android UA; tablets and desktops go by width, so a narrow WINDOW behaves like a phone), the row of columns becomes an iOS `UINavigationController`: ONE full-width pane at a time, the frontier list (never a landing placeholder) then the detail, selecting PUSHES the next pane in from the right, Back POPS it out by clearing the deepest selected level through the same `onClear` + unsaved guard. Peeks, cover toggles, auto-hide and drag-resize are not rendered (they spend room that doesn't exist), and selection falls back to the primitive's gold bar (connectors need a parent list on screen). Everything that exists today is "wide" mode, unchanged. New requirements `must-switch-to-narrow-when-only-a-detail-fits`, `must-show-one-full-width-pane`, `must-push-and-pop-like-a-navigation-controller`, `must-offer-back-in-narrow`, `must-keep-selection-across-modes`, `must-mark-narrow-selection-with-bar`; vectors T40–T44. The frame now owns the ONE row measurement and passes it to whichever stack renders. |

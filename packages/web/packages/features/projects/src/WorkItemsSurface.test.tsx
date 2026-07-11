@@ -168,8 +168,9 @@ function Harness({
 }
 
 describe("WorkItemsSurface", () => {
-  it("publishes the five views as a topic list and auto-selects none of them", async () => {
-    render(<Harness view={null} />);
+  it("publishes the five views as a topic list and lands on List", async () => {
+    const onSelectSpy = vi.fn();
+    render(<Harness view={null} onSelectSpy={onSelectSpy} />);
 
     // The views are rows of a published rail — a LEVEL of the one stack — not a tab bar in the leaf.
     const rail = await screen.findByRole("complementary", { name: "Topic list" });
@@ -177,10 +178,16 @@ describe("WorkItemsSurface", () => {
       expect(within(rail).getByRole("button", { name: label })).not.toBeNull();
     }
 
-    // The stack never auto-selects: no view is open, so the leaf holds the hint — not the List.
-    expect(await screen.findByText(/select a view/i)).not.toBeNull();
-    expect(screen.queryByRole("grid", { name: "Work items" })).toBeNull();
-    expect(screen.queryByRole("list", { name: "Board columns" })).toBeNull();
+    // The level names List as its `defaultSelectedId`, so opening Work Items lands there instead of
+    // on a pane asking which view you want. It arrives as a NORMAL selection — the leaf is routed
+    // through `leaf.onSelect`, exactly as if the row had been clicked.
+    expect(onSelectSpy).toHaveBeenCalledWith("list");
+    expect(await screen.findByRole("grid", { name: "Work items" })).not.toBeNull();
+    expect(screen.queryByText(/select a view/i)).toBeNull();
+    expect(within(rail).getByRole("button", { name: "List" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 
   it("switches to the Board view from the rail row, calling leaf.onSelect('board')", async () => {

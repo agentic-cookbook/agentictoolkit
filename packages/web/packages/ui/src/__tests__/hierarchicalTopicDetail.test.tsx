@@ -12,6 +12,7 @@
  * `relatedTarget`, because that is what React's synthetic onPointerEnter/onPointerLeave are built
  * from (a raw `pointerenter` doesn't bubble to React's root listener).
  */
+import { useState } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { HierarchicalTopicDetail, type TopicLevel } from '../blocks/hierarchical-topic-detail'
@@ -207,6 +208,87 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     // The branch starts where the hovered list already sat (list 0 still peeks to its left).
     expect(boxLeft(1)).toBe('40px')
     expect(boxLeft(2)).toBe('280px')
+  })
+})
+
+describe('HierarchicalTopicDetail — a level’s default selection', () => {
+  /** A live 2-level stack (Regions → Topics) whose Topics level names a default. Selection is real
+   *  state here, not a spy, because the whole behaviour is about what happens across re-renders as
+   *  the user drills in, clears, and comes back. */
+  function Stack({ onSelectTopic }: { onSelectTopic: (id: string | null) => void }) {
+    const [region, setRegion] = useState<string | null>(null)
+    const [topic, setTopic] = useState<string | null>(null)
+    const set = (t: string | null) => {
+      setTopic(t)
+      onSelectTopic(t)
+    }
+    const levels: TopicLevel[] = [
+      {
+        id: 'regions',
+        title: 'Regions',
+        items: REGIONS,
+        selectedId: region,
+        onSelect: (id) => {
+          setRegion(id)
+          set(null)
+        },
+        onClear: () => {
+          setRegion(null)
+          set(null)
+        },
+      },
+      {
+        id: 'topics',
+        title: 'Topics',
+        items: TOPICS,
+        selectedId: topic,
+        defaultSelectedId: 'users',
+        onSelect: (id) => set(id),
+        onClear: () => set(null),
+      },
+    ]
+    return (
+      <HierarchicalTopicDetail levels={levels}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>
+    )
+  }
+  const row = (name: RegExp) => screen.getByRole('button', { name })
+
+  it('selects the default the moment the list appears, and not before', () => {
+    const onSelectTopic = vi.fn()
+    render(<Stack onSelectTopic={onSelectTopic} />)
+    // Nothing is chosen for the user until the list that names the default actually appears.
+    expect(onSelectTopic).not.toHaveBeenCalled()
+
+    fireEvent.click(row(/us-west-1/))
+    expect(onSelectTopic).toHaveBeenLastCalledWith('users')
+    expect(row(/Users/)).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('does not fight a manual deselect — the default arms once per visit', () => {
+    const onSelectTopic = vi.fn()
+    render(<Stack onSelectTopic={onSelectTopic} />)
+    fireEvent.click(row(/us-west-1/))
+
+    // Re-click the auto-selected row to clear it. A default that re-fires here makes the row
+    // impossible to deselect — the default may choose FOR the user, never argue WITH them.
+    fireEvent.click(row(/Users/))
+    expect(onSelectTopic).toHaveBeenLastCalledWith(null)
+    expect(row(/Users/)).not.toHaveAttribute('aria-current', 'true')
+  })
+
+  it('re-applies the default on the next visit to the parent topic', () => {
+    const onSelectTopic = vi.fn()
+    render(<Stack onSelectTopic={onSelectTopic} />)
+    fireEvent.click(row(/us-west-1/))
+    fireEvent.click(row(/Users/)) // clear it
+    fireEvent.click(row(/us-west-1/)) // leave the region (re-click deselects) — the list goes away
+    expect(onSelectTopic).toHaveBeenLastCalledWith(null)
+
+    fireEvent.click(row(/eu-central-1/)) // come back in: the list re-appears, so the default re-arms
+    expect(onSelectTopic).toHaveBeenLastCalledWith('users')
+    expect(row(/Users/)).toHaveAttribute('aria-current', 'true')
   })
 })
 

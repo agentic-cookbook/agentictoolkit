@@ -235,6 +235,10 @@ export function WorkItemsSurface({
     title: "Work Items",
     items: VIEW_ITEMS,
     selectedId: view,
+    // Choosing Work Items lands on the List view rather than an empty pane asking which view you
+    // want — the answer is nearly always List, and it stays a normal selection (URL, breadcrumb,
+    // re-click-to-clear all behave as if the row had been clicked).
+    defaultSelectedId: "list",
     onSelect: (id) => leaf.onSelect(id),
     onClear: () => leaf.onSelect(null),
     onNew: () => setNewOpen(true),

@@ -64,9 +64,19 @@ export interface TopicLevel {
   title?: string
   items: TopicDetailItem[]
   selectedId: string | null
+  /** OPT-IN landing selection: the item to select the moment this level APPEARS with nothing chosen
+   *  — i.e. when the parent topic that opens this list is picked (Work Items → List). It fires this
+   *  level's own `onSelect`, so the consumer's state/URL owns the selection exactly as if the row had
+   *  been clicked, and everything downstream (breadcrumb, detail, deep link) follows for free.
+   *
+   *  It arms once per APPEARANCE: a manual deselect INSIDE the same visit sticks (the default must
+   *  never fight the user), while leaving the parent topic and coming back re-applies it. Deliberately
+   *  narrow — selecting a row still NEVER auto-selects anything at a deeper level unless that level
+   *  asks for it here. Omit for the platform default: nothing is chosen for the user. */
+  defaultSelectedId?: string
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
-   *  row), never auto-selecting. */
+   *  row, or this level's `defaultSelectedId` when the list appears). */
   onSelect: (id: string) => void
   /** Clear THIS level and everything below it, keeping ancestors. Pure navigation. The
    *  package calls it for re-click-deselect, breadcrumb up-navigation, and Back. */
@@ -250,6 +260,38 @@ export function HierarchicalTopicDetail({
   // The deepest SELECTED level (whose detail is showing): the frontier if every level is selected,
   // else one above it; -1 when nothing is selected. Back clears exactly this level.
   const deepestSelected = firstUnselected === -1 ? frontier : frontier - 1
+
+  // A level's OPT-IN `defaultSelectedId`: select it for the user the moment the list appears with
+  // nothing chosen. Fired as the level's own `onSelect`, so it is indistinguishable from a click.
+  //
+  // Armed per APPEARANCE, which is the whole subtlety. The arming key is the ancestor selections that
+  // produced this list, remembered per level:
+  //   - the list is not rendered at all (its parent is unselected) → DISARM, so the next visit fires;
+  //   - already fired for this key and the user has since cleared the row → stay disarmed. A default
+  //     that re-fires on every clear makes the row impossible to deselect: the default may choose FOR
+  //     the user, never argue WITH them.
+  // A default naming an item the list doesn't have (yet) is simply not applied — an async list arms
+  // when its rows land, and a stale default never selects a phantom row.
+  const autoSelected = useRef<Record<string, string>>({})
+  useEffect(() => {
+    levels.forEach((level, i) => {
+      const wanted = level.defaultSelectedId
+      if (wanted == null) return
+      if (i > frontier) {
+        delete autoSelected.current[level.id] // the list is gone: re-arm for the next visit
+        return
+      }
+      if (level.selectedId != null) return
+      if (!level.items.some((it) => it.id === wanted)) return
+      const key = `${levels
+        .slice(0, i)
+        .map((l) => l.selectedId ?? "")
+        .join("|")}::${wanted}`
+      if (autoSelected.current[level.id] === key) return // fired for this visit; a manual clear stands
+      autoSelected.current[level.id] = key
+      level.onSelect(wanted)
+    })
+  })
 
   // The unsaved-work gate: every action that would clear a level (Back, re-click-deselect,
   // breadcrumb up-nav, selecting a shallower row) runs through here. Dirty → open the 3-action
