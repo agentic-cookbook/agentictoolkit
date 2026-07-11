@@ -27,6 +27,7 @@ import {
 import { useResourceList } from "@agentic-toolkit/data";
 import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 import { WorkItemEditor } from "./WorkItemEditor";
+import { NewWorkItemDialog } from "./NewWorkItemDialog";
 import { ListView } from "./views/ListView";
 import { BoardView } from "./views/BoardView";
 import { TableView } from "./views/TableView";
@@ -92,10 +93,11 @@ export function WorkItemsSurface({
   leaf: TopicLeaf;
 }): ReactElement {
   const [moveError, setMoveError] = useState<string | null>(null);
-  // The open editor is internal state (the leaf now carries the VIEW): `creating`
-  // for a new item, else `selectedId` for the item being edited.
+  // The open editor is internal state (the leaf carries the VIEW): `selectedId` is the item being
+  // edited. Creating is a MODAL, not a state of this pane — the detail always shows a real,
+  // selected record (see NewWorkItemDialog and the recipe's `must-create-in-modal`).
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -197,39 +199,37 @@ export function WorkItemsSurface({
   );
 
   // Open the shared editor for an item (from any view's row/card click).
-  const onOpenItem = useCallback((id: string) => {
-    setCreating(false);
-    setSelectedId(id);
-  }, []);
+  const onOpenItem = useCallback((id: string) => setSelectedId(id), []);
 
-  const startCreate = () => {
-    setSelectedId(null);
-    setCreating(true);
-  };
+  const closeEditor = () => setSelectedId(null);
 
-  const closeEditor = () => {
-    setCreating(false);
-    setSelectedId(null);
-  };
-
-  // A saved create/edit reloads the shared items and returns to the active view. `reload()` always
-  // hits the network (it bypasses the cache's freshness window), so the item just written is in the
-  // list rather than being hidden behind a still-fresh pre-write snapshot.
+  // A saved edit reloads the shared items and returns to the active view. `reload()` always hits the
+  // network, so the row just written is in the list rather than a pre-write snapshot.
   const onSaved = useCallback(async () => {
-    setCreating(false);
     setSelectedId(null);
     await reload();
   }, [reload]);
 
+  // A create closes the modal, refreshes the views, and OPENS the new item's detail — the record now
+  // exists, so it has a detail to show (the modal only asked for what places it).
+  const onCreated = useCallback(
+    async (created: WorkItem) => {
+      setNewOpen(false);
+      await reload();
+      if (mounted.current) setSelectedId(created.id);
+    },
+    [reload],
+  );
+
   const selected = selectedId ? (items ?? []).find((i) => i.id === selectedId) ?? null : null;
-  const showEditor = creating || selected !== null;
+  const showEditor = selected !== null;
 
   const view = asViewId(leaf.leafId);
 
   // The views ARE a topic list — one level of the enclosing hierarchical stack, published here so
   // the frame renders it as a rail alongside its siblings. Selecting a row re-routes to that view's
   // leaf segment (`onSelect`), re-clicking it clears back to the bare topic (`onClear`); the header
-  // `+` starts a new work item, exactly like every other list's create affordance.
+  // `+` opens the create MODAL, exactly like every other list's create affordance.
   useStackLevel({
     id: "work-items-view",
     title: "Work Items",
@@ -237,9 +237,9 @@ export function WorkItemsSurface({
     selectedId: view,
     onSelect: (id) => leaf.onSelect(id),
     onClear: () => leaf.onSelect(null),
-    onNew: startCreate,
+    onNew: () => setNewOpen(true),
     newLabel: "New work item",
-    newActive: creating,
+    newActive: newOpen,
   });
 
   const activeView: ReactNode = useMemo(() => {
@@ -294,9 +294,9 @@ export function WorkItemsSurface({
           <div className="min-h-0 flex-1 overflow-y-auto">
             <WorkItemEditor
               // Remount per target so the seeded draft is always the right item.
-              key={creating ? "new" : (selected?.id ?? "new")}
+              key={selected.id}
               projectId={projectId}
-              item={creating ? null : selected}
+              item={selected}
               statuses={statuses}
               participants={participants}
               workItems={items ?? []}
@@ -319,6 +319,18 @@ export function WorkItemsSurface({
           </>
         )}
       </section>
+
+      {/* Create is a MODAL over the stack, never a blank leaf: the detail pane always shows a real,
+          selected record. The dialog returns the created item; we refresh the views and open its
+          detail. */}
+      {newOpen && (
+        <NewWorkItemDialog
+          projectId={projectId}
+          statuses={statuses}
+          onClose={() => setNewOpen(false)}
+          onCreated={(created) => void onCreated(created)}
+        />
+      )}
     </div>
   );
 }

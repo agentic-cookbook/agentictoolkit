@@ -3,7 +3,7 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.8.0
+version: 1.9.0
 status: draft
 language: en
 created: '2026-06-30'
@@ -221,6 +221,27 @@ operable via their `aria-label`. The reveal is the real rail (not a copy), so it
 unselects, and does nothing if the row is already selected), and its header `+`/`«` work in place. There
 is **no per-row or per-header popover** — the whole list is revealed at once.
 
+### Create is a modal — the stack's create metaphor
+
+**A create is always a modal over the stack.** The `+` in a list's header opens it; the stack does
+not move while it is open (no level selected or cleared, the breadcrumb unchanged, the pane behind it
+still showing whatever was there). On save the modal returns the created id and the owning list
+**selects** it, so the detail that opens is the new record's real detail. On cancel, nothing changed.
+
+This is not a style preference — it falls out of what the detail pane *is*. **The detail always shows
+a real, SELECTED record.** A record that does not exist yet has nothing for the stack to hold onto:
+nothing is selected, so the frontier list has no focused row and the connectors have no child to
+reach; the breadcrumb has no crumb to name it; and the deep link has no id to carry (a "new" leaf is
+un-linkable — reload the URL and the draft is gone). Handing the detail pane to a not-yet-existing
+record therefore strands every other part of the view. The modal sidesteps all of it by not touching
+the stack at all: the hierarchy stays exactly as it was until there IS an id, and then the normal
+selection path takes over.
+
+It follows that the modal asks only for what **places** the record — a name/title, and the parent it
+lands under (a status column, a group) — not the record's full editor. The rest belongs to the detail
+that opens on save, which is the one place a record's fields are edited. New Project asks for a name
+and a description; New Work Item asks for a title, a description, and the status column.
+
 ### Per-list titles
 
 Each level MAY carry a `title`, rendered **left-aligned** (aligned with the row text, not the toggle) with
@@ -287,7 +308,9 @@ the hierarchical stack, not the primitive.
 
 - **must-render-icon-name-rows**: Each topic row MUST render as `[icon] [name]`.
 - **must-fix-list-width**: A topic list MUST be a fixed width — slightly wider than its widest topic — with consistent leading and trailing padding.
-- **may-offer-new-topic-button**: A topic list MAY carry a "new topic" (`onNew`) create affordance, rendered as a compact **`+` button right-justified in the list header** (NOT a leading row); activating it MUST start a create (open a modal / a blank leaf). The `+` carries its `newLabel` as its accessible name + tooltip, and MAY tint gold (`newActive`) while a create is in progress.
+- **may-offer-new-topic-button**: A topic list MAY carry a "new topic" (`onNew`) create affordance, rendered as a compact **`+` button right-justified in the list header** (NOT a leading row); activating it MUST open the create MODAL (see **must-create-in-modal**). The `+` carries its `newLabel` as its accessible name + tooltip, and MAY tint gold (`newActive`) while the modal is open.
+- **must-create-in-modal**: A create MUST be a **modal over the stack** — never a blank/"new" leaf in the detail pane, and never an inline row in the list. The stack MUST NOT move while the modal is open: no level is selected or cleared, the breadcrumb is unchanged, and the pane behind it keeps showing whatever was open. On save the modal MUST return the created id, and the owning list MUST then select it — so the detail that opens is the new record's REAL detail. On cancel nothing changed. Reuse the shared `CreateResourceDialog` (guarded close: a dirty draft prompts Save / Discard / keep editing; the backdrop is inert).
+- **must-scope-create-modal-to-placement**: The create modal MUST ask only for what brings the record into existence and PLACES it (a name/title, and the parent/status/column it lands in) — not the record's full editor. Everything else belongs to the detail that opens on save. (New Project = name + description; New Work Item = title, description, status.)
 - **may-delete-row**: A topic row MAY declare `onDelete` to expose a **right-justified trash button, revealed only on hover (and keyboard focus)**; the list's fixed width MUST account for it (the row reserves trailing space so the label never runs under the button). It is NOT shown on the collapsed / covered icon strips.
 - **must-confirm-row-delete**: Activating a row's trash button MUST open a confirmation before anything is destroyed — a destructive [[alert-and-dialog]] modal (red action, keyboard shortcuts off, initial focus on Cancel). `onDelete` runs ONLY on confirm; it MAY be async, and the dialog MUST show a busy spinner (and block dismissal) until it settles.
 - **must-break-connector-around-delete**: In the stack, the selection connector line MUST break (leave a gap) around a selected parent row's trash button rather than crossing it — the overlay paints above the rail, so the break is a computed gap in the path, not occlusion.
@@ -409,7 +432,9 @@ the hierarchical stack, not the primitive.
 | T8 | must-render-detail-action-bar, must-render-detail-help-icon | open a leaf editor | the action bar (Save/Cancel/Delete) is the top of the leaf; the breadcrumb help icon opens the view's description |
 | T9 | must-expand-detail-horizontally, must-scroll-horizontally-below-min | shrink viewport below detail min-width | detail keeps min-width and scrolls horizontally (content not crushed) |
 | T10 | must-render-icon-name-rows, must-fix-list-width | render a rail | rows are `[icon] [name]`; fixed width ≈ widest topic + padding |
-| T11 | may-offer-new-topic-button | click a rail header's `+` | a create starts (modal / blank leaf); the `+`'s accessible name is `newLabel`; on save the new item is selected |
+| T11 | may-offer-new-topic-button, must-create-in-modal | click a rail header's `+` | a MODAL opens (the `+`'s accessible name is `newLabel`); the pane behind it still shows what was open and no level's selection changed; on save the new item is selected and ITS detail opens; on cancel nothing changed |
+| T11a | must-create-in-modal | open the create modal, type into it, press Esc / click the backdrop | the draft is not discarded — the guarded close prompts Save / Discard / keep editing |
+| T11b | must-scope-create-modal-to-placement | open "New Work Item" | it asks for title + description + status (what PLACES the record), not the full item editor; assignee/priority/dates/parent live in the detail that opens on save |
 | T12 | must-offer-disclosure-toggle, must-render-undisclosed-icon-strip | click a rail's `«` | rail animates to an icon strip; the header (with its `+`) collapses; active icon keeps the marker |
 | T13 | must-resize-by-drag, must-snap-undisclosed-when-narrow | drag a rail below 1/3 width | rail animates to undisclosed |
 | T14 | must-snap-full-when-wide | drag a rail wider than content+padding | rail animates back to full content width |
@@ -522,10 +547,12 @@ the hierarchical stack, not the primitive.
   CSS (zeroes transition durations). Hub home is gated — verify shared UI on the
   **ui-showcase** (`hierarchical-topic-detail` demo) via Playwright at 375 / 768 / 1440,
   and the hub routes via `e2e/hierarchical-resource.spec.ts` (seeded mock-auth).
-- **Deep-link create caveat:** in URL-driven (`urlSelection`) mode, *create* does not
-  route — a new record has no id, and pushing a leaf-less URL remounts the catch-all
-  route and would drop the in-progress draft — so it keeps the URL put and reports no
-  selection until *save* routes to the created id.
+- **Deep-link create caveat:** a create never routes, because a record with no id has no URL to
+  route TO — pushing a leaf-less URL would remount the catch-all route and drop the draft. This is
+  the same fact that makes **must-create-in-modal** the metaphor: the modal keeps the URL (and the
+  whole stack) put, and only *save* routes, to the created id. (Historically some consumers instead
+  opened a blank "new" leaf in the detail pane and suppressed the route; that is now a defect —
+  a detail shows a real, selected record.)
 - The **resizable-split** ingredient is referenced for the snap thresholds but the drag
   is implemented directly in `TopicDetail` (resizable-split is a vertical ratio split).
 - **SwiftUI / Compose:** not applicable — web-only shared composition.
@@ -595,6 +622,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.9.0 | 2026-07-11 | Mike Fullerton | **Create is a MODAL — the stack's create metaphor**, stated outright instead of left as an option. `may-offer-new-topic-button` previously allowed "a modal / a blank leaf"; the blank leaf is now a defect. The reason is structural, not stylistic: the detail pane always shows a real, SELECTED record, and a record with no id has nothing for the stack to hold — no row to focus, no crumb to name it, no id for the deep link — so handing it the detail strands the rest of the view. The modal doesn't touch the stack at all: nothing is selected or cleared and the pane behind it keeps showing what was open, until save returns an id and the owning list selects it (so the detail that opens is the record's real one). New requirements `must-create-in-modal` and `must-scope-create-modal-to-placement` (the modal asks only for what brings the record into existence and places it — a title and its column/parent — never the full editor; the rest belongs to the detail that opens on save). Test vectors T11 (rewritten), T11a, T11b. Applied to Work Items: the `+` opened a blank WorkItemEditor in the leaf; it now opens a `NewWorkItemDialog` (shared `CreateResourceDialog`) and `WorkItemEditor` is edit-only. |
 | 1.8.0 | 2026-07-11 | Mike Fullerton | **Auto-hide + the authoritative auto-collapse rules + motion split.** Added `autoHideTopics` (default **on**): only the leaf-most list is disclosed and every parent is hidden by its child even when there is room — the hub's workspace `/home` opts out (`autoHideTopics={false}`). The ROOT list's header gains a left-justified STATE toggle for it, and **⌘/Ctrl-click** on any `«`/`»` now applies that action to EVERY list. Disclosure is specified as three layers that may only ever hide more, never disclose (pin → auto-hide → width pressure). Wrote down the auto-collapse rules that were previously only implied: the detail HOLDS `minDetailWidth` while the lists yield (hide leftmost-first, then go off-screen), the off-screen shift is **quantised to whole lists** (was a continuous shift that parked a list half off the edge), and growing re-runs the same rules in reverse but only re-discloses when auto-hide is off. Finally, **structural changes now land in place**: selecting a topic re-lays-out instantly instead of animating the detail pane in from the left edge (only width-driven changes — resize, cover toggle, hover reveal, drag — still animate). New requirements `must-default-to-auto-hide`, `must-offer-auto-hide-toggle`, `must-layer-hide-intent`, `must-toggle-all-on-modifier-click`, `must-keep-detail-at-minimum-while-lists-yield`, `must-shift-off-screen-by-whole-lists`, `must-reverse-on-grow`, `must-land-structure-changes-in-place`, `must-animate-width-changes`; test vectors T33–T39. |
 | 1.7.0 | 2026-07-10 | Mike Fullerton | `TopicLevel.headerSlot`: pinned non-scrolling strip for the shared ListHeader (filter + actions) on entity-list levels. |
 | 1.6.0 | 2026-07-07 | Mike Fullerton | Added an optional per-row **delete** affordance. A `TopicDetailItem` may set `onDelete` (+ `deleteLabel` / `deleteConfirm`) to get a **right-justified trash button revealed only on hover** (row reserves trailing width so the label never runs under it, never on icon strips); activating it opens a **destructive confirmation** (shared `AlertModal` — red action, keyboard off, focus on Cancel, busy spinner for async deletes) and `onDelete` runs only on confirm. In the stack the **selection connector breaks around the button** (a computed gap in the SVG path — the overlay paints above the rail, so occlusion isn't possible). New requirements `may-delete-row`, `must-confirm-row-delete`, `must-break-connector-around-delete`. |

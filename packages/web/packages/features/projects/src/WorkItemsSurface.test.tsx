@@ -214,30 +214,40 @@ describe("WorkItemsSurface", () => {
     expect(listForProject).toHaveBeenCalledWith("p1");
   });
 
-  it("opens the shared editor in create mode from New work item and creates the item", async () => {
+  it("creates via a MODAL from the list header's +, then opens the new item's detail", async () => {
     render(<Harness />);
     await screen.findByText("Design the landing page");
 
+    // The `+` on the Work Items list header opens a modal — the stack's create metaphor. The leaf is
+    // NOT swapped for a blank editor: a detail always shows a real, selected record.
     fireEvent.click(screen.getByRole("button", { name: /new work item/i }));
+    const modal = await screen.findByRole("dialog", { name: "New work item" });
 
-    fireEvent.change(await screen.findByLabelText("Title"), {
+    // The List view is still behind the modal (the leaf was never replaced).
+    expect(screen.getByRole("grid", { name: "Work items" })).not.toBeNull();
+
+    // The modal asks only for what PLACES the record; the rest belongs to its detail.
+    fireEvent.change(within(modal).getByLabelText("Title"), {
       target: { value: "Ship the beta" },
     });
-    fireEvent.change(screen.getByLabelText("Assignee"), {
-      target: { value: "customer:cust-1" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Create work item" }));
+    // The save reloads the list from the server, which now HAS the row (the create persisted it) —
+    // that reload is what puts the new item in the views.
+    listForProject.mockResolvedValue([
+      structuredClone(W1),
+      structuredClone(W2),
+      item({ id: "w3", title: "Ship the beta", statusId: "s1" }),
+    ]);
+    fireEvent.click(within(modal).getByRole("button", { name: /^(Create|Save)$/ }));
 
     await waitFor(() =>
       expect(create).toHaveBeenCalledWith(
         "p1",
-        expect.objectContaining({
-          title: "Ship the beta",
-          assigneeKind: "customer",
-          assigneeId: "cust-1",
-        }),
+        expect.objectContaining({ title: "Ship the beta" }),
       ),
     );
+
+    // The created record now HAS a detail, so it opens — the rest of the fields live there.
+    expect(await screen.findByRole("button", { name: "Save changes" })).not.toBeNull();
   });
 
   it("opens the shared editor from a List row and clears the assignee via update(null, null)", async () => {

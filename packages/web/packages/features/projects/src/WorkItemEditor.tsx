@@ -16,11 +16,12 @@ import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
 import { type BadgeVariant } from "./helpers";
 
 /**
- * The create/edit form over a single work item: title, description, status,
- * assignee (AssigneePicker), priority, start/due dates, and an optional parent.
+ * The EDIT form over a single work item: title, description, status, assignee
+ * (AssigneePicker), priority, start/due dates, an optional parent, and its activity.
  *
- * `item == null` is create mode (→ projectWorkItemsApi.create); otherwise edit
- * mode PATCHes only the changed fields (→ .update). The one subtlety is the
+ * It only ever edits an EXISTING item — creating is a modal ({@link NewWorkItemDialog}), because
+ * in the hierarchical stack the detail pane always shows a real, selected record. It PATCHes
+ * only the changed fields (→ .update). The one subtlety is the
  * assignee clear: dropping an assignee to "Unassigned" sends an explicit
  * `assigneeKind: null, assigneeId: null` — the T1 client keeps explicit null, so
  * the PATCH carries the clear rather than stripping it. Reload-after-write (the
@@ -134,8 +135,8 @@ export function WorkItemEditor({
   onCancel,
 }: {
   projectId: string;
-  /** null = create a new work item; otherwise edit this one. */
-  item: WorkItem | null;
+  /** The item being edited. Creating goes through NewWorkItemDialog, never this editor. */
+  item: WorkItem;
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
   /** the project's work items, for the parent picker (the edited item is excluded). */
@@ -148,24 +149,23 @@ export function WorkItemEditor({
   const renderRecordAffordance = useRecordAffordance();
   // Seeded once from `item`; the pane keys this editor by item id (or "new") so a
   // switch remounts it with fresh state — no derive-from-props effect needed.
-  const [title, setTitle] = useState(item?.title ?? "");
-  const [description, setDescription] = useState(item?.description ?? "");
-  const [statusId, setStatusId] = useState(item?.statusId ?? statuses[0]?.id ?? "");
+  const [title, setTitle] = useState(item.title);
+  const [description, setDescription] = useState(item.description ?? "");
+  const [statusId, setStatusId] = useState(item.statusId ?? statuses[0]?.id ?? "");
   const [assignee, setAssignee] = useState<AssigneeValue | null>(assigneeOf(item));
-  const [priority, setPriority] = useState(item?.priority ?? 0);
-  const [startDate, setStartDate] = useState(item?.startDate ?? "");
-  const [dueDate, setDueDate] = useState(item?.dueDate ?? "");
-  const [parentId, setParentId] = useState(item?.parentId ?? "");
+  const [priority, setPriority] = useState(item.priority);
+  const [startDate, setStartDate] = useState(item.startDate ?? "");
+  const [dueDate, setDueDate] = useState(item.dueDate ?? "");
+  const [parentId, setParentId] = useState(item.parentId ?? "");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isCreate = item === null;
   const canSave = title.trim().length > 0 && !saving;
   // Parent options: every other work item in the project (an item can't parent itself).
   const parentOptions = useMemo(
-    () => workItems.filter((w) => w.id !== item?.id),
-    [workItems, item?.id],
+    () => workItems.filter((w) => w.id !== item.id),
+    [workItems, item.id],
   );
 
   async function save() {
@@ -176,32 +176,13 @@ export function WorkItemEditor({
     setSaving(true);
     setError(null);
     try {
-      let saved: WorkItem;
-      if (isCreate) {
-        saved = await projectWorkItemsApi.create(projectId, {
-          title: title.trim(),
-          description: description.trim() || undefined,
-          statusId: statusId || undefined,
-          ...(assignee
-            ? {
-                assigneeKind: assignee.assigneeKind as WorkItem["assigneeKind"] & string,
-                assigneeId: assignee.assigneeId,
-              }
-            : {}),
-          priority,
-          startDate: startDate || undefined,
-          dueDate: dueDate || undefined,
-          parentId: parentId || undefined,
-        });
-      } else {
-        const patch = buildPatch();
-        // Nothing changed → skip the no-op PATCH (empty body) and adopt the
-        // unchanged item, avoiding a pointless network round-trip.
-        saved =
-          Object.keys(patch).length === 0
-            ? item
-            : await projectWorkItemsApi.update(item.id, patch);
-      }
+      const patch = buildPatch();
+      // Nothing changed → skip the no-op PATCH (empty body) and adopt the
+      // unchanged item, avoiding a pointless network round-trip.
+      const saved =
+        Object.keys(patch).length === 0
+          ? item
+          : await projectWorkItemsApi.update(item.id, patch);
       onSaved(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save work item.");
@@ -329,12 +310,12 @@ export function WorkItemEditor({
           Cancel
         </Button>
         <Button onClick={() => void save()} disabled={!canSave}>
-          {saving ? "Saving…" : isCreate ? "Create work item" : "Save changes"}
+          {saving ? "Saving…" : "Save changes"}
         </Button>
       </div>
 
       {/* Activity + comments live only on a saved item (needs a real id). */}
-      {!isCreate && item && <ItemActivitySection workItemId={item.id} />}
+      <ItemActivitySection workItemId={item.id} />
     </div>
   );
 }

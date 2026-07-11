@@ -170,7 +170,10 @@ function TopicList({
           centered
             ? "justify-center py-1.5"
             : cn(
-                "gap-2 pt-1 pb-0.5 pl-4 text-left font-mono text-[0.8rem] tracking-[0.02em]",
+                // `pl-2` is the leading gap from the list's edge to the row's ICON — half the
+                // original inset, so rows sit closer to the edge and a covered list's 40px peek
+                // shows more of its icon. The root's selection dash below is sized to fit inside it.
+                "gap-2 pt-1 pb-0.5 pl-2 text-left font-mono text-[0.8rem] tracking-[0.02em]",
                 deletable ? "pr-9" : "pr-3",
               ),
           item.disabled
@@ -186,11 +189,13 @@ function TopicList({
               : "cursor-pointer text-apt-text hover:border-l-apt-text",
         )}
       >
-        {/* Root list, marker style: a leading gold dash in front of the selected row's icon. */}
+        {/* Root list, marker style: a leading gold dash in front of the selected row's icon. It
+            lives INSIDE the row's `pl-2` leading gap (2px in, 6px wide → it ends exactly where the
+            icon starts), so halving that gap moved the dash with it rather than under the icon. */}
         {active && isRoot && !centered && selectionStyle === "marker" && (
           <span
             aria-hidden
-            className="absolute top-1/2 left-1 h-0.5 w-2.5 -translate-y-1/2 rounded-full bg-apt-gold"
+            className="absolute top-1/2 left-0.5 h-0.5 w-1.5 -translate-y-1/2 rounded-full bg-apt-gold"
           />
         )}
         {/* Decorative: the label (text or aria-label) is the name, so the icon is hidden from AT. */}
