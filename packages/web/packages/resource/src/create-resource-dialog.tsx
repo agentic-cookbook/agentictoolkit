@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { Button } from "@agentic-toolkit/ui/components/button";
@@ -88,7 +89,15 @@ export function CreateResourceDialog<TInput, TResult>({
     }
   }
 
-  return (
+  // A modal PORTALS to the body. `fixed` took it out of the layout, but it stayed in the tree — and
+  // a modal that is still a descendant of the pane that opened it inherits that pane's fate: the
+  // hierarchical stack marks every pane that is not on top `inert` + `aria-hidden` in narrow mode, so
+  // opening "New …" from a list header rendered a dialog nobody could type into (the form silently
+  // refused every keystroke and Save stayed disabled). It also inherits any ancestor stacking context
+  // or `overflow: hidden`, which a full-screen overlay must not. The body is the only parent that
+  // owns none of that. Rendered only on the client — the server has no `document`, and a modal never
+  // opens during SSR anyway.
+  const overlay = (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-6"
       role="dialog"
@@ -158,4 +167,6 @@ export function CreateResourceDialog<TInput, TResult>({
       </div>
     </div>
   );
+
+  return typeof document === "undefined" ? null : createPortal(overlay, document.body);
 }

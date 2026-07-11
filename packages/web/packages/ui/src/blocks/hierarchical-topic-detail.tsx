@@ -4,13 +4,16 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useReducer,
   useRef,
   useState,
   type CSSProperties,
+  type Dispatch,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
+  type SetStateAction,
 } from "react"
 
 import {
@@ -186,6 +189,38 @@ function TopBar({
   )
 }
 
+/**
+ * What the stack looks like right now, as opposed to what it is showing: the auto-hide toggle, the
+ * per-list `«`/`»` pins, and the list whose branch the pointer currently holds open.
+ */
+type SurfaceState = {
+  autoHide: boolean
+  pins: Record<string, boolean>
+  hoverId: string | null
+  /** Per level: the appearance its `defaultSelectedId` has already been applied for (see the frame).
+   *  Remembering this is what lets a manual clear stick — and it must outlive the mount for the same
+   *  reason everything else here does: clearing the row IS a route change, so a per-instance memory
+   *  would forget it was ever fired and immediately re-select the row the user just cleared. */
+  autoSelected: Record<string, string>
+}
+
+/**
+ * That state per SURFACE, keyed by the stack's root level id — deliberately OUTSIDE React.
+ *
+ * Selecting a row inside the stack is a route change, and a route change REMOUNTS the page subtree
+ * (Next re-creates it on a param nav). Anything the frame held in component state was therefore
+ * destroyed by the user's own click, which produced two bugs that look unrelated and are the same
+ * one: the lists you had just opened all snapped shut with the auto-hide toggle flipped back on
+ * under you, and a revealed branch collapsed the instant you picked a row inside it — with the
+ * pointer still sitting in it, so nothing would reopen it. None of this belongs to a mount: it
+ * belongs to the SURFACE the user is looking at, and it has to outlive the click.
+ *
+ * Module scope gives exactly that lifetime. It does NOT survive a reload, which is the right seam —
+ * a fresh load is a deliberate fresh start, and it keeps the frame free of storage and hydration
+ * concerns. Writes only ever happen in event handlers, so SSR never touches this map.
+ */
+const surfaceStates = new Map<string, SurfaceState>()
+
 export function HierarchicalTopicDetail({
   levels,
   rootLabel,
@@ -261,38 +296,6 @@ export function HierarchicalTopicDetail({
   // else one above it; -1 when nothing is selected. Back clears exactly this level.
   const deepestSelected = firstUnselected === -1 ? frontier : frontier - 1
 
-  // A level's OPT-IN `defaultSelectedId`: select it for the user the moment the list appears with
-  // nothing chosen. Fired as the level's own `onSelect`, so it is indistinguishable from a click.
-  //
-  // Armed per APPEARANCE, which is the whole subtlety. The arming key is the ancestor selections that
-  // produced this list, remembered per level:
-  //   - the list is not rendered at all (its parent is unselected) → DISARM, so the next visit fires;
-  //   - already fired for this key and the user has since cleared the row → stay disarmed. A default
-  //     that re-fires on every clear makes the row impossible to deselect: the default may choose FOR
-  //     the user, never argue WITH them.
-  // A default naming an item the list doesn't have (yet) is simply not applied — an async list arms
-  // when its rows land, and a stale default never selects a phantom row.
-  const autoSelected = useRef<Record<string, string>>({})
-  useEffect(() => {
-    levels.forEach((level, i) => {
-      const wanted = level.defaultSelectedId
-      if (wanted == null) return
-      if (i > frontier) {
-        delete autoSelected.current[level.id] // the list is gone: re-arm for the next visit
-        return
-      }
-      if (level.selectedId != null) return
-      if (!level.items.some((it) => it.id === wanted)) return
-      const key = `${levels
-        .slice(0, i)
-        .map((l) => l.selectedId ?? "")
-        .join("|")}::${wanted}`
-      if (autoSelected.current[level.id] === key) return // fired for this visit; a manual clear stands
-      autoSelected.current[level.id] = key
-      level.onSelect(wanted)
-    })
-  })
-
   // The unsaved-work gate: every action that would clear a level (Back, re-click-deselect,
   // breadcrumb up-nav, selecting a shallower row) runs through here. Dirty → open the 3-action
   // modal and remember the pending action; clean → act now.
@@ -339,12 +342,93 @@ export function HierarchicalTopicDetail({
   //              the user pinned open — there is no room — but never discloses one they pinned shut.
   // Flipping autoHide CLEARS the pins: turning it on hides every parent that was disclosed; turning
   // it off discloses every list that fits (the fit rules then re-hide whatever doesn't).
-  const [autoHide, setAutoHide] = useState(autoHideTopics)
-  const [pins, setPins] = useState<Record<string, boolean>>({})
-  const toggleAutoHide = useCallback(() => {
-    setAutoHide((prev) => !prev)
-    setPins({})
-  }, [])
+  //
+  // These live in the module store (see `surfaceStates`), NOT in component state, because a click in
+  // the stack is a route change and a route change remounts this whole subtree — component state
+  // would be destroyed by the very click that must not disturb it. Keyed by the ROOT list, the one
+  // level a surface keeps across its own navigations. The key resolves late where a host registers
+  // its levels in an effect (the first render has none), which is harmless: there is nothing to
+  // toggle or hover before the stack exists.
+  const surfaceKey = levels[0]?.id ?? ""
+  const [, bumpSurface] = useReducer((n: number) => n + 1, 0)
+  const surface = surfaceStates.get(surfaceKey) ?? {
+    autoHide: autoHideTopics,
+    pins: {},
+    hoverId: null,
+    autoSelected: {},
+  }
+  const { autoHide, pins, hoverId } = surface
+  // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
+  // component around state that outlived it, so a closed-over `surface` can be a render behind.
+  const patchSurface = useCallback(
+    (update: (prev: SurfaceState) => SurfaceState) => {
+      if (!surfaceKey) return
+      const prev = surfaceStates.get(surfaceKey) ?? {
+        autoHide: autoHideTopics,
+        pins: {},
+        hoverId: null,
+        autoSelected: {},
+      }
+      surfaceStates.set(surfaceKey, update(prev))
+      bumpSurface()
+    },
+    [surfaceKey, autoHideTopics],
+  )
+  const toggleAutoHide = useCallback(
+    () => patchSurface((p) => ({ ...p, autoHide: !p.autoHide, pins: {} })),
+    [patchSurface],
+  )
+  const setPins: Dispatch<SetStateAction<Record<string, boolean>>> = useCallback(
+    (update) =>
+      patchSurface((p) => ({
+        ...p,
+        pins: typeof update === "function" ? update(p.pins) : update,
+      })),
+    [patchSurface],
+  )
+  const setHoverId = useCallback(
+    (id: string | null) => patchSurface((p) => ({ ...p, hoverId: id })),
+    [patchSurface],
+  )
+
+  // A level's OPT-IN `defaultSelectedId`: select it for the user the moment the list appears with
+  // nothing chosen. Fired as the level's own `onSelect`, so it is indistinguishable from a click.
+  //
+  // Armed per APPEARANCE, which is the whole subtlety. The arming key is the ancestor selections that
+  // produced this list, remembered per level (in the surface store, because applying or clearing the
+  // selection is itself a route change that remounts this component — a per-instance memory would
+  // forget it had fired and re-select the row the user just cleared, making the row undeselectable):
+  //   - the list is not rendered at all (its parent is unselected) → DISARM, so the next visit fires;
+  //   - already fired for this key and the user has since cleared the row → stay disarmed. The
+  //     default may choose FOR the user, never argue WITH them.
+  // A default naming an item the list doesn't have (yet) is simply not applied — an async list arms
+  // when its rows land, and a stale default never selects a phantom row.
+  useEffect(() => {
+    levels.forEach((level, i) => {
+      const wanted = level.defaultSelectedId
+      if (wanted == null) return
+      if (i > frontier) {
+        // The list is gone (its parent is unselected): re-arm it for the next visit.
+        if (surface.autoSelected[level.id] !== undefined) {
+          patchSurface((p) => {
+            const next = { ...p.autoSelected }
+            delete next[level.id]
+            return { ...p, autoSelected: next }
+          })
+        }
+        return
+      }
+      if (level.selectedId != null) return
+      if (!level.items.some((it) => it.id === wanted)) return
+      const key = `${levels
+        .slice(0, i)
+        .map((l) => l.selectedId ?? "")
+        .join("|")}::${wanted}`
+      if (surface.autoSelected[level.id] === key) return // fired for this visit; a manual clear stands
+      patchSurface((p) => ({ ...p, autoSelected: { ...p.autoSelected, [level.id]: key } }))
+      level.onSelect(wanted)
+    })
+  })
 
   // ONE measurement of the row, owned by the frame: it decides WIDE vs NARROW, and the covered stack
   // reuses it for its fit math (so there is still a single disclosure controller). `useLayoutEffect`
@@ -376,6 +460,8 @@ export function HierarchicalTopicDetail({
     toggleAutoHide,
     pins,
     setPins,
+    hoverId,
+    setHoverId,
     containerW,
   }
 
@@ -528,6 +614,11 @@ interface StackProps {
   /** Per-level user intent from the `«`/`»` toggles: true = pinned hidden, false = pinned disclosed. */
   pins: Record<string, boolean>
   setPins: (next: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+  /** The covered list whose BRANCH the pointer is holding open (the reveal's root), or null. Owned by
+   *  the frame's surface store, not by the stack, so a selection — which remounts this subtree — can't
+   *  yank the branch shut from under a pointer that is still inside it. */
+  hoverId: string | null
+  setHoverId: (id: string | null) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
   children: ReactNode
@@ -1003,6 +1094,8 @@ function CoveredStack({
   toggleAutoHide,
   pins,
   setPins,
+  hoverId,
+  setHoverId,
   containerW,
   children,
 }: StackProps) {
@@ -1030,12 +1123,19 @@ function CoveredStack({
   // would show you. The branch is the unit the user is actually looking at, so the branch is what
   // opens. It is pointer-only on purpose: a FOCUS reveal would keep the group open after a click (the
   // clicked button holds focus), jamming the auto-cover as the window shrinks.
-  const [hoverId, setHoverId] = useState<string | null>(null)
+  //
+  // `hoverId` is the FRAME's (see `surfaceStates`), not this component's: selecting a row inside the
+  // branch is a route change, which remounts this subtree — local state would be destroyed by the
+  // click, collapsing the branch under a pointer that never left it and that no event will reopen it
+  // with (the pointer hasn't moved, so nothing re-enters). Held above the mount, the branch survives
+  // the selection and closes on the one thing that should close it: the pointer leaving.
+  //
   // The group is lifted above the detail (z-50+) so it floats OVER the UI. On CLOSE the lift must
   // LINGER for the wipe-shut transition (z-index can't animate) — else the lists would drop behind the
   // detail mid-close and the wipe would be invisible. `zLiftId` tracks `hoverId` but trails it by the
-  // transition duration when clearing.
-  const [zLiftId, setZLiftId] = useState<string | null>(null)
+  // transition duration when clearing. It SEEDS from `hoverId` so a remount mid-hover re-lifts the
+  // branch on its first frame instead of flashing it behind the detail.
+  const [zLiftId, setZLiftId] = useState<string | null>(hoverId)
   useEffect(() => {
     if (hoverId !== null) {
       setZLiftId(hoverId)
@@ -1138,6 +1238,26 @@ function CoveredStack({
     if (inGroup(columnIndexOf(e.relatedTarget))) return // still inside the revealed branch
     setHoverId(null)
   }
+
+  // The group leave above fires from the COLUMNS, which only works while the pointer is over the
+  // columns it opened. Since the branch now outlives the mount (`surfaceStates`), it can also outlive
+  // the pointer: leave a surface with the pointer resting in an open branch, come back with the mouse
+  // somewhere else, and no column would ever fire a leave to close it. So the open branch also
+  // watches the document: a pointer that turns up ANYWHERE OUTSIDE THE COLUMNS is proof it is not in
+  // the branch, and closes it. Only armed while a branch IS open.
+  //
+  // "Outside the columns" — not "outside the group". The columns own what happens between themselves:
+  // entering a shallower covered list must RE-ROOT the branch there (that is how you walk the stack
+  // leftwards, each list joining the cascade), and this listener runs last, on the document, so a
+  // group test here would overrule that enter and collapse everything the user was walking through.
+  useEffect(() => {
+    if (hoverIndex < 0) return
+    const onPointerOver = (e: PointerEvent) => {
+      if (columnIndexOf(e.target) < 0) setHoverId(null)
+    }
+    document.addEventListener("pointerover", onPointerOver)
+    return () => document.removeEventListener("pointerover", onPointerOver)
+  })
 
   // The `«`/`»` toggle sets a list's pin to the state it is moving TO. Holding the platform's
   // multi-select modifier (⌘ on macOS, Ctrl elsewhere) applies that same state to EVERY list at once

@@ -31,26 +31,36 @@ const TOPICS = [
 ]
 
 /** Three levels, with whichever selections the test wants. Handlers are spies so a test can assert
- *  the pure-intent call (select/clear) rather than a re-render it would have to drive itself. */
-function levelsFor(sel: {
-  region?: string | null
-  eco?: string | null
-  topic?: string | null
-  onSelect?: Record<string, (id: string) => void>
-  onClear?: Record<string, () => void>
-}): TopicLevel[] {
+ *  the pure-intent call (select/clear) rather than a re-render it would have to drive itself.
+ *
+ *  The frame keys its surface state (auto-hide, pins, the open hover branch) by the ROOT level's id,
+ *  and that state deliberately outlives a mount — it has to, because selecting a row remounts the
+ *  page subtree. So each test gets its OWN root id: two tests are two surfaces, not one surface
+ *  visited twice, and neither inherits a branch the other left open. A test that means to model a
+ *  remount passes the same `surface` twice (see the remount test). */
+let surfaceSeq = 0
+function levelsFor(
+  sel: {
+    region?: string | null
+    eco?: string | null
+    topic?: string | null
+    onSelect?: Record<string, (id: string) => void>
+    onClear?: Record<string, () => void>
+  },
+  surface = `s${++surfaceSeq}`,
+): TopicLevel[] {
   const mk = (
-    id: string,
+    key: string,
     title: string,
     items: { id: string; label: string }[],
     selectedId: string | null,
   ): TopicLevel => ({
-    id,
+    id: `${surface}-${key}`,
     title,
     items,
     selectedId,
-    onSelect: sel.onSelect?.[id] ?? (() => {}),
-    onClear: sel.onClear?.[id] ?? (() => {}),
+    onSelect: sel.onSelect?.[key] ?? (() => {}),
+    onClear: sel.onClear?.[key] ?? (() => {}),
   })
   return [
     mk('regions', 'Regions', REGIONS, sel.region ?? null),
@@ -143,6 +153,58 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(boxWidth(0)).toBe('40px')
   })
 
+  it('survives the REMOUNT a selection causes — the pointer never left, so the branch stays open', () => {
+    // Selecting a row in the stack is a route change, and a route change remounts the page subtree.
+    // The branch used to live in the stack's own state, so the user's click destroyed it: the lists
+    // slammed shut under a pointer that was still sitting in them — and since the pointer hadn't
+    // moved, no enter event would ever reopen them. Same surface (same root id) = same open branch.
+    const { unmount } = render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' }, 'ws')}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    enter(col(0))
+    expect(boxWidth(0)).toBe('240px')
+
+    unmount()
+    render(
+      // The re-rendered surface after the click: a different selection, the SAME surface.
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'eu', eco: 'core', topic: 'apps' }, 'ws')}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(boxWidth(0)).toBe('240px')
+    expect(boxWidth(1)).toBe('240px')
+
+    // And it still closes on the one thing that should close it: the pointer leaving.
+    leave(col(1), screen.getByText('detail'))
+    expect(boxWidth(0)).toBe('40px')
+  })
+
+  it('closes a branch left open by a departed surface as soon as the pointer shows up elsewhere', () => {
+    // The branch outliving its mount is the point above — but it must not outlive the POINTER. Leave
+    // the surface with the pointer resting in an open branch and come back with the mouse somewhere
+    // else, and no column can fire the leave that closes it; the document catches that.
+    const { unmount } = render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' }, 'gone')}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    enter(col(0))
+    unmount()
+
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' }, 'gone')}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(boxWidth(0)).toBe('240px') // still open — nothing has told it otherwise yet
+
+    // The pointer turns up outside the stack entirely: proof it is not in the branch.
+    fireEvent.pointerOver(document.body, { relatedTarget: null })
+    expect(boxWidth(0)).toBe('40px')
+  })
+
   it('collapses back to the previous state when the pointer leaves the whole branch', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
@@ -193,6 +255,30 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(col(2).style.boxShadow).toContain('8px')
     // A member INSIDE the group needs neither — its neighbours abut it, separated by rail borders.
     expect(col(2).style.boxShadow).not.toContain('-10px')
+  })
+
+  it('walking LEFT into a shallower peek grows the branch — it does not collapse it', () => {
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    // Open the branch at the middle list, then keep moving left into the peek beside it — the way you
+    // walk back up the stack. The shallower list joins the cascade as its new root and pushes the
+    // already-open lists to the right; collapsing the lot (which is what happened while the document
+    // watcher overruled the enter) throws away everything the user just opened.
+    enter(col(1))
+    expect(boxWidth(1)).toBe('240px')
+    expect(boxLeft(1)).toBe('40px')
+
+    leave(col(1), col(0))
+    enter(col(0))
+    expect(boxWidth(0)).toBe('240px')
+    expect(boxWidth(1)).toBe('240px')
+    expect(boxWidth(2)).toBe('240px')
+    expect(boxLeft(0)).toBe('0px')
+    expect(boxLeft(1)).toBe('240px') // pushed right by the list that just joined
+    expect(boxLeft(2)).toBe('480px')
   })
 
   it('re-roots the branch when the pointer enters a different covered list', () => {
