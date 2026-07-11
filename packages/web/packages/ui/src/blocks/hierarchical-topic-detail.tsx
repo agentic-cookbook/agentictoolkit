@@ -7,11 +7,20 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
 } from "react"
 
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, TriangleAlert } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  TriangleAlert,
+} from "lucide-react"
 
 import { cn } from "../lib/utils"
 import { Button } from "../components/button"
@@ -178,6 +187,7 @@ export function HierarchicalTopicDetail({
   exitGuard = null,
   manualCollapse = true,
   disclosureStyle = "covered",
+  autoHideTopics = true,
   children,
 }: {
   /** The rail levels, outermost first. Each level's selection scopes the next. */
@@ -216,6 +226,11 @@ export function HierarchicalTopicDetail({
    *      (covered), with a `«`/`»` cover toggle on each child and a left drop-shadow making the
    *      stack read as physically layered. No Back button. */
   disclosureStyle?: "minimized" | "covered"
+  /** Start with only the LEAF-MOST topic list disclosed — every parent list is covered by its
+   *  child even when there is room to show it. Default `true`; the first list's header carries a
+   *  toggle so the user can flip it (off ⇒ every list discloses, subject to the fit rules). Pass
+   *  `false` for a surface whose ancestry must stay glanceable (the hub's `/home`). */
+  autoHideTopics?: boolean
   /** Innermost detail content for the current selection (lands in the rightmost
    *  detail pane). */
   children: ReactNode
@@ -266,6 +281,22 @@ export function HierarchicalTopicDetail({
   const onCrumbNavigate = (levelIndex: number | null) =>
     attemptExit(() => (levelIndex === null ? levels[0]?.onClear() : levels[levelIndex + 1]?.onClear()))
 
+  // Disclosure INTENT, owned here so both layouts share one contract (they differ only in how a
+  // hidden list is drawn — a peek vs an icon strip):
+  //   autoHide — only the LEAF-MOST list stays disclosed; every parent is hidden by its child even
+  //              when there IS room. The frame's default; the root list's header toggles it.
+  //   pins     — per-level user intent from the `«`/`»` toggles, overriding autoHide either way
+  //              (true = keep hidden, false = keep disclosed). Width pressure may still hide a list
+  //              the user pinned open — there is no room — but never discloses one they pinned shut.
+  // Flipping autoHide CLEARS the pins: turning it on hides every parent that was disclosed; turning
+  // it off discloses every list that fits (the fit rules then re-hide whatever doesn't).
+  const [autoHide, setAutoHide] = useState(autoHideTopics)
+  const [pins, setPins] = useState<Record<string, boolean>>({})
+  const toggleAutoHide = useCallback(() => {
+    setAutoHide((prev) => !prev)
+    setPins({})
+  }, [])
+
   // The two layouts share the same selection / breadcrumb / exit-guard semantics above and differ
   // ONLY in how ancestor lists yield room to the detail — so each is its own subcomponent owning its
   // observer + layout state (kept distinct so either can evolve or be deleted independently).
@@ -277,6 +308,10 @@ export function HierarchicalTopicDetail({
     minDetailWidth,
     detailTitle,
     attemptExit,
+    autoHide,
+    toggleAutoHide,
+    pins,
+    setPins,
   }
 
   return (
@@ -369,7 +404,69 @@ interface StackProps {
   minDetailWidth: string
   detailTitle?: ReactNode
   attemptExit: (action: () => void) => void
+  /** Hide every list but the leaf-most, even when there is room (see HierarchicalTopicDetail). */
+  autoHide: boolean
+  toggleAutoHide: () => void
+  /** Per-level user intent from the `«`/`»` toggles: true = pinned hidden, false = pinned disclosed. */
+  pins: Record<string, boolean>
+  setPins: (next: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
   children: ReactNode
+}
+
+/** The root list's header control: flips {@link StackProps.autoHide}. Unlike the `«`/`»` cover
+ *  toggles (which name the ACTION they perform on one list) this reports STATE — gold + a closed
+ *  panel while auto-hide is on, muted + an open panel while every list is disclosed — so the user
+ *  can see at a glance why their parent lists are hidden. */
+function AutoHideToggle({ autoHide, onToggle }: { autoHide: boolean; onToggle: () => void }) {
+  const label = autoHide
+    ? "Auto-hide parent topic lists: on — show them all"
+    : "Auto-hide parent topic lists: off — hide all but the last"
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      aria-pressed={autoHide}
+      title={label}
+      className={cn(
+        "rounded px-1 outline-none focus-visible:ring-2 focus-visible:ring-apt-gold/40",
+        autoHide ? "text-apt-gold hover:text-apt-gold/80" : "text-apt-text-muted hover:text-apt-text",
+      )}
+    >
+      {autoHide ? (
+        <PanelLeftClose size={16} aria-hidden className="shrink-0" />
+      ) : (
+        <PanelLeftOpen size={16} aria-hidden className="shrink-0" />
+      )}
+    </button>
+  )
+}
+
+/**
+ * True for the ONE render that follows a STRUCTURAL change — a level appearing/disappearing or any
+ * level's selection changing. Both stacks use it to drop their `left`/`width`/`grid` transitions for
+ * that commit, so choosing a topic lands the new geometry IN PLACE (instantly) instead of sliding the
+ * detail pane in from the left edge as the lists re-cover behind it. Width-driven changes (a window
+ * resize, a cover toggle, the hover reveal) still animate: they don't touch this signature.
+ *
+ * The bump re-renders with the transitions back on, but the geometry it re-renders with is the SAME
+ * one the browser already painted — a transition can only animate a CHANGE, so nothing moves.
+ */
+function useInPlaceOnStructureChange(signature: string): boolean {
+  const prev = useRef(signature)
+  const [, bump] = useState(0)
+  const changed = prev.current !== signature
+  useLayoutEffect(() => {
+    if (prev.current === signature) return
+    prev.current = signature
+    bump((n) => n + 1)
+  }, [signature])
+  return changed
+}
+
+/** The signature {@link useInPlaceOnStructureChange} watches: the level count + every selection. */
+function structureSignature(rendered: TopicLevel[]): string {
+  return `${rendered.length}::${rendered.map((l) => l.selectedId ?? "").join("|")}`
 }
 
 /**
@@ -496,16 +593,21 @@ function MinimizedStack({
   minDetailWidth,
   detailTitle,
   attemptExit,
+  autoHide,
+  toggleAutoHide,
+  pins,
+  setPins,
   levels,
   manualCollapse,
   children,
 }: StackProps & { levels: TopicLevel[]; manualCollapse: boolean }) {
-  // Per-level state keyed by level id (persists across selection changes; no effects sync it):
-  //   override — a manual toggle/drag collapse to the icon strip (user intent)
-  //   widths   — a dragged column width (≤ FULL)
-  const [override, setOverride] = useState<Record<string, boolean>>({})
+  // `pins` (from the frame) is this stack's manual collapse-to-icon-strip intent, and auto-hide is
+  // its default for every non-leaf list — the same two intent layers the covered stack uses, drawn
+  // as an icon strip instead of a peek. `widths` is a dragged column width (≤ FULL).
   const [widths, setWidths] = useState<Record<string, number>>({})
   const [dragging, setDragging] = useState(false)
+  const override = pins
+  const setOverride = setPins
 
   // ONE ResizeObserver over the WHOLE row (not one per nested rail) is the single disclosure /
   // drill-down controller. The leaf minimum is parsed from `minDetailWidth`.
@@ -521,13 +623,18 @@ function MinimizedStack({
   const [hidden, setHidden] = useState(0)
 
   const naturalWidth = (level: TopicLevel) => widths[level.id] ?? level.width ?? FULL_RAIL
-  // A list shows as its icon strip when the user manually collapsed it (override) OR the window
-  // auto-undisclosed it (`auto`). Off-screen drilling (`hidden`) is separate and applied last.
-  const isCollapsed = (level: TopicLevel) => (override[level.id] ?? false) || auto.has(level.id)
+  // Intent: the user's pin (`«`) if they set one, else auto-hide's default (every list but the
+  // leaf-most). Width pressure (`auto`) only ever ADDS a collapse on top of this.
+  const pinnedOrAutoHidden = (level: TopicLevel, i: number) =>
+    override[level.id] ?? (autoHide && i < rendered.length - 1)
+  // A list shows as its icon strip when intent says so OR the window auto-undisclosed it (`auto`).
+  // Off-screen drilling (`hidden`) is separate and applied last.
+  const isCollapsed = (level: TopicLevel, i: number) =>
+    pinnedOrAutoHidden(level, i) || auto.has(level.id)
   // The visible width a list occupies in the fit math: 0 if slid off-screen, its icon strip if
   // collapsed, else its full/dragged width.
   const visibleWidth = (level: TopicLevel, i: number) =>
-    i < hidden ? 0 : isCollapsed(level) ? COLLAPSED_RAIL : naturalWidth(level)
+    i < hidden ? 0 : isCollapsed(level, i) ? COLLAPSED_RAIL : naturalWidth(level)
 
   // Recompute the window auto-disclosure for the current container width — the spec's TWO-PHASE
   // response, planned from scratch each time (so growing the window re-discloses then re-shows, in
@@ -545,14 +652,15 @@ function MinimizedStack({
 
     const collapsed = new Set<string>() // window-undisclosed (icon strip) ids
     let h = 0 // off-screen count
+    const shown = (l: TopicLevel, i: number) => pinnedOrAutoHidden(l, i) || collapsed.has(l.id)
     const widthOf = (l: TopicLevel, i: number) =>
-      i < h ? 0 : (override[l.id] ?? false) || collapsed.has(l.id) ? COLLAPSED_RAIL : naturalWidth(l)
+      i < h ? 0 : shown(l, i) ? COLLAPSED_RAIL : naturalWidth(l)
     const total = () => cols.reduce((s, l, i) => s + widthOf(l, i), 0) + minPx
 
     // PHASE 1 — UNDISCLOSE: collapse the leftmost still-full list to its icon strip (general→specific)
     // until everything fits, or every list is already an icon strip.
     while (total() > width) {
-      const target = cols.find((l) => !((override[l.id] ?? false) || collapsed.has(l.id)))
+      const target = cols.find((l, i) => !shown(l, i))
       if (!target) break
       collapsed.add(target.id)
     }
@@ -564,7 +672,7 @@ function MinimizedStack({
       prev.size === collapsed.size && [...collapsed].every((id) => prev.has(id)) ? prev : collapsed,
     )
     setHidden((prev) => (prev === h ? prev : h))
-  }, [rendered, frontier, firstUnselected, override, widths, minPx])
+  }, [rendered, frontier, firstUnselected, override, autoHide, widths, minPx])
 
   // Re-run on container resize (the window) and whenever the rendered lists / manual collapse change.
   useEffect(() => {
@@ -575,6 +683,19 @@ function MinimizedStack({
     ro.observe(el)
     return () => ro.disconnect()
   }, [recompute])
+
+  // The `«`/`»` toggle pins this list to the state it is moving TO. Holding the platform's
+  // multi-select modifier (⌘ on macOS, Ctrl elsewhere) applies that state to EVERY list at once. The
+  // fit rules still run on top, so an "expand all" only discloses the lists that actually fit.
+  const setCollapse = (i: number, e: ReactMouseEvent) => {
+    const level = rendered[i]!
+    const target = !isCollapsed(level, i)
+    if (e.metaKey || e.ctrlKey) {
+      setOverride(Object.fromEntries(rendered.map((l) => [l.id, target])))
+      return
+    }
+    setOverride((o) => ({ ...o, [level.id]: target }))
+  }
 
   // Drag of a column's trailing border: narrower than a third snaps to the icon strip (override),
   // else sets its width and clears any collapse override.
@@ -611,6 +732,11 @@ function MinimizedStack({
   // animate via the single grid transition (reduce-motion honoured by the global accessibility CSS).
   const cols = [...rendered.map((l, i) => `${visibleWidth(l, i)}px`), "minmax(0,1fr)"].join(" ")
 
+  // Choosing a topic must land the detail IN PLACE, never slide it in as the columns re-flow behind
+  // it; only width-driven changes (resize, a manual toggle) animate the grid.
+  const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
+  const animate = !dragging && !inPlace
+
   // Selection connectors (shared with the covered stack). The signature is the per-level selection
   // plus the grid template (column widths) and off-screen count — everything that moves a row.
   const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${cols}::${hidden}`
@@ -639,7 +765,7 @@ function MinimizedStack({
         // the deepest pane full-width from first paint, with Back to walk up. No `md:` gate.
         // `relative` anchors the absolute selection-connector overlay.
         "relative grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)] [grid-template-columns:var(--cols)]",
-        !dragging && "transition-[grid-template-columns] duration-200 ease-out",
+        animate && "transition-[grid-template-columns] duration-200 ease-out",
       )}
     >
       {rendered.map((level, i) => {
@@ -673,15 +799,19 @@ function MinimizedStack({
               newActive={level.newActive}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
-              collapsed={isCollapsed(level)}
-              onToggle={
-                manualCollapse
-                  ? () => setOverride((o) => ({ ...o, [level.id]: !isCollapsed(level) }))
-                  : () => {}
-              }
+              collapsed={isCollapsed(level, i)}
+              onToggle={manualCollapse ? (e) => setCollapse(i, e) : () => {}}
               onResize={(w) => onResizeLevel(level, w)}
               onResizeStart={() => setDragging(true)}
               onResizeEnd={() => setDragging(false)}
+              // The root rail's leading slot carries the auto-hide toggle for the whole stack. Back
+              // only ever lands on a rail to its right (it appears once a rail is hidden), so the two
+              // never contend for the slot.
+              leftControl={
+                i === 0 ? (
+                  <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
+                ) : undefined
+              }
               // The drill-down Back lands top-left of the leftmost-visible rail.
               backSlot={i === backOnRail ? backButton : undefined}
             />
@@ -734,12 +864,15 @@ function MinimizedStack({
  */
 function CoveredStack({
   rendered,
-  deepestSelected,
   firstUnselected,
   frontier,
   minDetailWidth,
   detailTitle,
   attemptExit,
+  autoHide,
+  toggleAutoHide,
+  pins,
+  setPins,
   children,
 }: StackProps) {
   const minPx = minDetailPx(minDetailWidth)
@@ -758,9 +891,6 @@ function CoveredStack({
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState(0)
-  // Lists the USER manually covered (by id) — persists across resizes; the auto layer may add more
-  // but must never uncover one the user covered.
-  const [manualCovered, setManualCovered] = useState<Set<string>>(new Set())
   // Whole-list HOVER reveal: the covered (peeking) list the pointer is inside (`hoverId`) wipes OPEN to
   // full width above its neighbours (a `clip-path` from the 40px peek to full), so no popover copy is
   // needed. Disclosed ONLY while the pointer stays inside it; leaving — or clicking a row — wipes it
@@ -794,65 +924,74 @@ function CoveredStack({
     return () => ro.disconnect()
   }, [])
 
-  // AUTOMATIC covering: leftmost-first, as many lists as needed so the detail keeps `minDetailWidth`.
-  // The frontier list stays uncovered while it has no selection (its detail is a placeholder, so the
-  // user needs the list to pick from); once everything is selected, every list may be covered.
+  // The frontier list stays uncovered while it has no selection (its "detail" is only a landing, so
+  // the user needs the list to pick from), and is never shifted off-screen for it — an unselected
+  // frontier's placeholder claims NO minimum width (must-not-hide-frontier-choosing-list).
   const coverableCount = firstUnselected === -1 ? rendered.length : frontier
-  let autoCount = 0
+  const detailMin = firstUnselected === -1 ? minPx : 0
+
+  // COVER LAYER 1 — intent. A list is covered because the user pinned it (`«`), or because auto-hide
+  // is on and it isn't the leaf-most list. A pin wins either way, so the user can hold a parent open
+  // under auto-hide (until width pressure below takes the room back).
+  const pinnedOrAutoHidden = (i: number): boolean => {
+    if (i >= coverableCount) return false
+    return pins[rendered[i]!.id] ?? (autoHide && i < rendered.length - 1)
+  }
+
+  // COVER LAYER 2 — width pressure. Cover MORE lists, leftmost-first (general → specific), until the
+  // detail keeps its minimum. This layer only ever ADDS a cover: it may take the room back from a
+  // list the user pinned open (there is none to give), but never discloses one they pinned shut.
+  let pressure = 0
   if (containerW > 0) {
-    // Total list width = covered lists contribute their PEEK, uncovered lists their FULL width.
-    // Cover one more from the left (FULL → PEEK, reclaiming FULL−PEEK) until the detail fits its
-    // minimum, or we've covered every coverable list.
-    const listsWidth = (auto: number) =>
-      rendered.reduce((w, l, i) => {
-        const covered = manualCovered.has(l.id) || i < auto
-        return w + (covered ? COVERED_PEEK : railWidth(l))
-      }, 0)
-    while (autoCount < coverableCount && listsWidth(autoCount) + minPx > containerW) {
-      autoCount++
+    const listsWidth = (n: number) =>
+      rendered.reduce(
+        (w, l, i) => w + (pinnedOrAutoHidden(i) || i < n ? COVERED_PEEK : railWidth(l)),
+        0,
+      )
+    while (pressure < coverableCount && listsWidth(pressure) + detailMin > containerW) pressure++
+  }
+  const isCovered = (i: number) => pinnedOrAutoHidden(i) || i < pressure
+  const widthOf = (i: number) => (isCovered(i) ? COVERED_PEEK : railWidth(rendered[i]!))
+
+  // PHASE 2 — OFF-SCREEN. Every list is down to its peek and they STILL don't leave the detail its
+  // minimum: slide the leftmost list off the left edge and shift the whole stack by exactly THAT
+  // list's width, repeating until the detail fits (or only the frontier is left). Quantised to whole
+  // lists on purpose — a continuous shift would park a list half off the edge, which reads as a
+  // clipped rail rather than a drilled-down one.
+  let hidden = 0
+  let offshift = 0
+  if (containerW > 0) {
+    const widthFrom = (h: number) =>
+      rendered.reduce((w, _l, i) => (i < h ? w : w + widthOf(i)), 0) + detailMin
+    while (hidden < coverableCount && widthFrom(hidden) > containerW) {
+      offshift += widthOf(hidden)
+      hidden++
     }
   }
-  // A list is covered if the user covered it OR the auto layer covered it (one of the leftmost
-  // `autoCount`). Manual wins — auto only ADDS.
-  const isCovered = (i: number) => manualCovered.has(rendered[i]!.id) || i < autoCount
 
-  // Layout pass (running x): each list's natural left; the detail's left + width. A covered list
-  // advances x only by its PEEK (it stays visible as a stacked-card edge under its child), so the
-  // next list / the detail slides left to PARTIALLY cover it — not fully, not off-screen.
+  // Layout pass (running x): each list's natural left. A covered list advances x only by its PEEK (it
+  // stays visible as a stacked-card edge under its child), so the next list / the detail slides left
+  // to PARTIALLY cover it. `offshift` then slides the whole row left over the hidden lists.
   const left: number[] = []
   let x = 0
-  rendered.forEach((l, i) => {
+  rendered.forEach((_l, i) => {
     left.push(x)
-    x += isCovered(i) ? COVERED_PEEK : railWidth(l)
+    x += widthOf(i)
   })
-  const detailLeftNatural = x // before the off-screen shift
+  const detailLeft = Math.max(0, x - offshift)
+  const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // OFF-SCREEN fallback: when the lists + the detail minimum exceed the container, shift the WHOLE
-  // stack left so the detail keeps its minimum — the leftmost still-needed list slides off the left
-  // edge. But an UNSELECTED frontier's detail is only a landing placeholder (not content that needs a
-  // minimum), so there we enforce NO detail minimum: the shift then only prevents the lists from
-  // overflowing, and never slides the choosing frontier off-screen to make room for a placeholder
-  // (honours must-not-hide-frontier-choosing-list). Clamp so a viewport narrower than the lists still
-  // pins the leftmost visible list to the edge rather than forcing a scroll.
-  const detailMin = firstUnselected === -1 ? minPx : 0
-  const offshift = containerW > 0 ? Math.max(0, detailLeftNatural + detailMin - containerW) : 0
-  const detailLeft = containerW > 0 ? Math.max(0, detailLeftNatural - offshift) : detailLeftNatural
-  const detailWidth = containerW > 0 ? containerW - detailLeft : 0
-
-  // Toggle the cover state of the parent list by INTENT (its current visible state), not raw set
-  // membership: if it shows covered the user wants it uncovered → drop it from the manual set (the
-  // auto layer may re-cover it if there is still no room); if it shows uncovered → pin it covered.
-  const toggleCover = (parentIndex: number) => {
-    const id = rendered[parentIndex]!.id
-    // Read the current visible state ONCE, at click time (it factors the derived autoCount, not just
-    // `manualCovered`), rather than inside the updater where only `prev` membership is available.
-    const coveredNow = isCovered(parentIndex)
-    setManualCovered((prev) => {
-      const next = new Set(prev)
-      if (coveredNow) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  // The `«`/`»` toggle sets a list's pin to the state it is moving TO. Holding the platform's
+  // multi-select modifier (⌘ on macOS, Ctrl elsewhere) applies that same state to EVERY list at once
+  // — one click to collapse the whole ancestry, or to open all of it. The fit rules still run on top,
+  // so "open all" only discloses the lists that actually fit.
+  const setCover = (parentIndex: number, e: ReactMouseEvent) => {
+    const target = !isCovered(parentIndex) // the state the clicked button moves that list TO
+    if (e.metaKey || e.ctrlKey) {
+      setPins(Object.fromEntries(rendered.map((l) => [l.id, target])))
+      return
+    }
+    setPins((prev) => ({ ...prev, [rendered[parentIndex]!.id]: target }))
   }
 
   // The `«`/`»` cover control for a CHILD whose parent is rendered list `parentIndex`. `«` (parent
@@ -862,11 +1001,13 @@ function CoveredStack({
     const parent = rendered[parentIndex]
     if (!parent) return undefined
     const parentCovered = isCovered(parentIndex)
-    const label = parentCovered ? "Uncover previous list" : "Cover previous list"
+    const label = parentCovered
+      ? "Uncover previous list (⌘/Ctrl-click: uncover all)"
+      : "Cover previous list (⌘/Ctrl-click: cover all)"
     return (
       <button
         type="button"
-        onClick={() => toggleCover(parentIndex)}
+        onClick={(e) => setCover(parentIndex, e)}
         aria-label={label}
         title={label}
         className="rounded px-1 font-mono text-apt-text-muted outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40"
@@ -879,6 +1020,11 @@ function CoveredStack({
       </button>
     )
   }
+
+  // Choosing a topic must land the detail IN PLACE — never slide it in from the left edge as the
+  // lists re-cover behind it. Only width-driven moves (resize, cover toggle, hover reveal) animate.
+  const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
+  const animate = !dragging && !inPlace
 
   // Selection connectors (shared with the minimized stack). The signature is everything that moves a
   // selected row: the per-level selection and the column layout (left edges + off-screen shift +
@@ -909,6 +1055,9 @@ function CoveredStack({
     >
       {rendered.map((level, i) => {
         const covered = isCovered(i)
+        // Slid off the left edge (phase 2). It stays MOUNTED (so it slides back in when the window
+        // grows) but is fully out of the tab order / AT tree while it is gone.
+        const offscreen = i < hidden
         // The covered list directly under THIS one (its parent is covered) → cast a left shadow on
         // THIS child so the overlap reads as physical. Index 0 has no parent.
         const parentCovered = i > 0 && isCovered(i - 1)
@@ -917,16 +1066,19 @@ function CoveredStack({
         // the same 40px peek. Hovering it WIPES the box open to the full rail width (animated via the
         // `width` transition) above its neighbours (z-lifted); leaving/selecting wipes it shut. The rows
         // are always FULL (never an icon strip), so the wipe reveals the labels with no content swap.
-        const revealed = covered && hoverId === level.id
-        const zLifted = covered && zLiftId === level.id
+        const revealed = covered && !offscreen && hoverId === level.id
+        const zLifted = covered && !offscreen && zLiftId === level.id
         return (
           <div
             key={level.id}
             data-htd-col={i}
             // Reveal on pointer-enter of a covered list; conceal when the pointer leaves it (only
             // disclosed while the mouse is inside it) OR when a row is selected (below).
-            onPointerEnter={covered ? () => setHoverId(level.id) : undefined}
+            onPointerEnter={covered && !offscreen ? () => setHoverId(level.id) : undefined}
             onPointerLeave={() => setHoverId((p) => (p === level.id ? null : p))}
+            aria-hidden={offscreen || undefined}
+            // React 19 types `inert` as a boolean prop; `undefined` (not false) omits the attribute.
+            inert={offscreen || undefined}
             style={{
               left: left[i]! - offshift,
               // Peek → full: the covered box is COVERED_PEEK wide (clipping all but the leading icons) and
@@ -940,7 +1092,8 @@ function CoveredStack({
             }}
             className={cn(
               "absolute top-0 bottom-0 grid overflow-hidden",
-              !dragging &&
+              offscreen && "pointer-events-none",
+              animate &&
                 "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
               // Shadows ride the WRAPPER (its own box-shadow isn't clipped by its overflow, unlike a
               // child's): a RIGHT shadow while revealed so the lifted list floats over its neighbours
@@ -981,8 +1134,16 @@ function CoveredStack({
               onResizeStart={() => setDragging(true)}
               onResizeEnd={() => setDragging(false)}
               showToggle={false}
-              // The cover toggle covers/uncovers THIS list's PARENT (the list to its left).
-              leftControl={i >= 1 ? coverControl(i - 1) : undefined}
+              // The header's leading control slot. On the ROOT list (which has no parent to cover)
+              // it is the auto-hide toggle for the whole stack; on every other list it is the
+              // `«`/`»` that covers/uncovers THIS list's PARENT (the list to its left).
+              leftControl={
+                i === 0 ? (
+                  <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
+                ) : (
+                  coverControl(i - 1)
+                )
+              }
               // The layered-card left shadow rides the wrapper (the rail's own shadow would be clipped
               // by the wrapper's overflow), so the rail doesn't draw one.
               coveredShadow={false}
@@ -1002,7 +1163,7 @@ function CoveredStack({
         style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          !dragging && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+          animate && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >

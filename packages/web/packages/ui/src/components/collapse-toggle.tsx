@@ -1,5 +1,7 @@
 "use client"
 
+import type { MouseEvent as ReactMouseEvent } from "react"
+
 import { cn } from "../lib/utils"
 
 /**
@@ -17,7 +19,9 @@ export function CollapseToggle({
   className,
 }: {
   collapsed: boolean
-  onToggle: () => void
+  /** The click event is forwarded so a caller can read its modifier keys — the hierarchical stack
+   *  treats ⌘/Ctrl-click as "apply this toggle to every list". Callers that don't care ignore it. */
+  onToggle: (e: ReactMouseEvent<HTMLButtonElement>) => void
   /** Region name; the accessible label is "Collapse {label}" / "Expand {label}". */
   label: string
   /** id of the region this toggle controls (aria-controls). */

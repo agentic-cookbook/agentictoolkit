@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.7.0
+version: 1.8.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: '2026-07-07'
+modified: '2026-07-11'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -133,6 +133,63 @@ path.
 > horizontal scroll**, the **breadcrumb help button** (right-justified), the **unified
 > `site-config` help store**, and **per-segment deep linking of the whole hierarchy**
 > including the dismantled list levels. See **Platform Notes**.
+
+### Auto-hide — only the leaf-most list is disclosed
+
+`autoHideTopics` (default **on**) makes the stack lead with its LEAF: only the leaf-most topic list is
+disclosed, and every parent is hidden by its child even when there is room to show it. It is the
+default because a feature surface is normally *used* at its leaf — the ancestry is provenance, not
+navigation. The hub's workspace routes (`/home`) pass `autoHideTopics={false}`: there the ancestry
+(workspace ▸ feature ▸ entity ▸ topic) IS the navigation, so every list stays disclosed while it fits.
+
+The **root** list's header carries a left-justified toggle reporting the STATE (gold + a closed panel
+while on; muted + an open panel while off). Turning it **on** hides every disclosed parent; turning it
+**off** discloses every list that fits (the auto-collapse rules below then re-hide whatever doesn't).
+Flipping it clears the per-list `«`/`»` pins, so it is always a clean reset to one of the two modes.
+
+Disclosure therefore has three layers, and **each may only ever HIDE more, never disclose**:
+
+1. **pins** — the user's own `«`/`»` intent on one list (wins over auto-hide in both directions),
+2. **auto-hide** — the default for every non-leaf list when there is no pin,
+3. **width pressure** — the fit rules below, which may take the room back from a list the user pinned
+   open (there is none to give) but never disclose one they pinned shut.
+
+**⌘/Ctrl-click** on any `«`/`»` applies that button's action to **every** list at once — one click to
+collapse the whole ancestry, or to open all of it (subject to the fit rules).
+
+### Auto-collapse — how the stack yields room (the authoritative rules)
+
+The **detail pane is the priority**: it is never sacrificed to keep a topic list on screen. As the
+container narrows, the lists yield in a strict order, and the detail keeps its `minDetailWidth`
+until it is the SOLE view — at which point it is exactly the container's width.
+
+**Shrinking:**
+
+1. The detail holds its width. Every list is measured at its full width, the detail at its minimum.
+2. **Phase 1 — hide.** While the lists + the detail's minimum don't fit, hide the **leftmost** still-
+   disclosed list (general → specific), one at a time, until they fit or every list is hidden. A
+   hidden list is a 40px peek (`covered`) / an icon strip (`minimized`) — it still occupies that width.
+3. **Phase 2 — off-screen.** Only once every list is already hidden and the peeks + the detail's
+   minimum STILL don't fit: slide the **leftmost** list off the left edge and shift the whole stack
+   left by **exactly that list's width**, hiding it. Repeat list by list until the detail fits, or
+   only the frontier remains. The shift is **quantised to whole lists** — a continuous shift would
+   park a list half off the edge, which reads as a clipped rail rather than a drilled-down one.
+4. The **frontier** (a list with nothing selected yet) is never hidden or slid off for the detail's
+   minimum: its "detail" is only a landing placeholder, which enforces NO minimum, so the list you are
+   choosing from always keeps its place.
+
+**Growing** is the same rules run again from scratch on the wider container, so it reverses exactly:
+off-screen lists slide back on (specific → general), then hidden lists disclose — but **a list only
+re-discloses when `autoHideTopics` is off** (and was not pinned shut), because auto-hide is an intent
+layer above the fit rules, not a consequence of narrowness.
+
+### Selection lands in place — no slide-in
+
+Choosing a topic changes the stack's STRUCTURE (a level appears, or the detail flips from a
+minimum-less landing to real content that claims `minDetailWidth`, re-hiding the lists behind it).
+That re-layout MUST be applied **instantly, in place** — the detail must never animate in from the
+left edge as the lists close behind it. Only **width-driven** changes animate: a window resize, a
+`«`/`»` cover toggle, the hover reveal, a drag.
 
 ### Disclosure styles — minimized vs covered
 
@@ -260,6 +317,21 @@ the hierarchical stack, not the primitive.
 - **must-back-clears-one-level**: Back MUST clear exactly the deepest selected level (`onClear`), re-disclosing one parent; repeated Back walks up to root.
 - **must-guard-unsaved-on-exit**: If the leaf editor is dirty (`exitGuard.isDirty()`), any action that would clear OR replace the open detail — Back, re-click-deselect, breadcrumb up-nav, selecting a shallower row, and selecting a **different row in the deepest selected level itself** (a sibling swap that unmounts the open leaf) — MUST first open a **3-action Save / Discard / Cancel** modal — Save → `await save()` then proceed; Discard → proceed; Cancel → keep editing. Only a forward drill-down into a not-yet-selected level (no open detail to lose) is unguarded; equivalently, `railOnSelect` guards whenever the target level already has a selection (`level.selectedId != null`).
 - **must-not-redisclose-user-collapsed**: Automatic disclosure MUST NOT re-disclose a list that the user explicitly undisclosed (user intent wins over the layout heuristic).
+- **must-keep-detail-at-minimum-while-lists-yield**: Shrinking MUST take the room from the LISTS, never from the detail: the detail MUST hold `minDetailWidth` through both phases, and MUST only be narrower than it once every list is off-screen and it is the sole view — where it MUST be exactly the container's width.
+- **must-shift-off-screen-by-whole-lists**: In phase 2 the off-screen shift MUST be quantised to WHOLE lists — shift the stack left by exactly the leftmost visible list's width, hiding that list, and repeat. A partial shift (parking a list half off the left edge) is a defect.
+- **must-reverse-on-grow**: Widening MUST re-run the same rules on the wider container, so off-screen lists slide back on (specific → general) and hidden lists re-disclose — but a list MUST re-disclose ONLY when `autoHideTopics` is off and the user has not pinned it shut.
+
+### Auto-hide — lead with the leaf
+
+- **must-default-to-auto-hide**: The frame MUST default to `autoHideTopics = true`: only the LEAF-MOST topic list is disclosed and every parent is hidden by its child even when there IS room for it. A surface whose ancestry is its navigation (the hub's workspace `/home`) MUST opt out with `autoHideTopics={false}`.
+- **must-offer-auto-hide-toggle**: The ROOT list's header MUST carry a left-justified toggle that reports whether auto-hide is on (a STATE, not an action — gold/closed-panel on, muted/open-panel off, `aria-pressed`). Turning it ON MUST hide every disclosed parent; turning it OFF MUST disclose every list that fits (the auto-collapse rules then re-hide whatever doesn't).
+- **must-layer-hide-intent**: Disclosure MUST resolve as three layers where each may only ever HIDE more, never disclose: a user's `«`/`»` pin (wins over auto-hide both ways) → auto-hide's default for non-leaf lists → width pressure (which MAY take the room back from a list the user pinned open, but MUST NOT disclose one they pinned shut).
+- **must-toggle-all-on-modifier-click**: ⌘-click (macOS) / Ctrl-click (elsewhere) on any `«`/`»` MUST apply that button's action to EVERY list at once — cover all, or uncover all — with the fit rules still applied on top (so "uncover all" only discloses the lists that actually fit).
+
+### Motion — structure lands in place, width animates
+
+- **must-land-structure-changes-in-place**: A STRUCTURAL change — a level appearing/disappearing, or any level's selection changing — MUST apply its new layout instantly, in place. The detail pane MUST NOT animate in from the left edge as the lists re-hide behind it, and no list may animate out.
+- **must-animate-width-changes**: Width-driven changes — a window resize, a `«`/`»` cover toggle, the hover reveal, a drag — MUST keep animating (subject to **must-respect-reduced-motion**).
 
 ### Covered disclosure — peek, reveal, titles, selection markers
 
@@ -359,6 +431,13 @@ the hierarchical stack, not the primitive.
 | T30 | must-mark-selection-without-bar, must-keep-connectors-attached-when-covered | select root + child in the covered stack | no gold bar; the root selected row has a leading dash; a gold elbow connects the selected parent row to the selected child row, staying attached when the parent is covered |
 | T31 | must-keep-bar-for-standalone | render a standalone `TopicDetail` with a selection | the selected row shows the classic gold left-bar (no dash/connector) |
 | T32 | must-allow-manual-cover | click a list's `»` cover toggle, then resize | the list stays covered (icon-strip peek) across the resize |
+| T33 | must-default-to-auto-hide | render 3 levels, deepest selected, at 1440 | only the leaf-most list is disclosed; both parents peek even though there is room for them |
+| T34 | must-offer-auto-hide-toggle | click the root list header's toggle | it flips to the "off" state and every list discloses; clicking again re-hides every parent |
+| T35 | must-toggle-all-on-modifier-click | ⌘/Ctrl-click a `«` | EVERY list covers to its peek (not just the clicked one's parent); ⌘/Ctrl-click a `»` uncovers them all |
+| T36 | must-keep-detail-at-minimum-while-lists-yield, must-shift-off-screen-by-whole-lists | narrow the container to just under (peeks + `minDetailWidth`) with a leaf selected | the detail sits at EXACTLY `minDetailWidth`; the leftmost list is `inert` at `left = −(its width)`; the shift equals that width exactly (not the overflow amount) |
+| T37 | must-land-structure-changes-in-place | select a topic where the detail's left edge moves | the detail is at its final `left`/`width` on the FIRST frame after the click (no 300ms slide) |
+| T38 | must-animate-width-changes | click a `«`/`»` where the detail's left edge moves | the detail's `left` is still mid-flight one frame later (it eases) |
+| T39 | must-reverse-on-grow | with auto-hide OFF, narrow until lists hide/drill off, then widen back | the lists slide back on (specific → general) and re-disclose; with auto-hide ON they slide back on but stay hidden |
 
 ## Edge Cases
 
@@ -380,10 +459,26 @@ the hierarchical stack, not the primitive.
 
 ## Platform Notes
 
+- **Auto-hide + the fit rules (2026-07-11).** The frame OWNS the disclosure intent — `autoHide`
+  (seeded from `autoHideTopics`, default true) and `pins: Record<levelId, boolean>` — and passes both
+  to whichever stack renders, so the two layouts share one contract and differ only in how a hidden
+  list is DRAWN (a 40px peek vs an icon strip). `toggleAutoHide` flips the flag and clears `pins`
+  (a clean reset). Each stack resolves `pinnedOrAutoHidden(i) = pins[id] ?? (autoHide && i < last)`,
+  then adds width pressure on top — pressure only ever ADDS a hide, so a pin shut is never disclosed.
+  The `«`/`»` handlers read `e.metaKey || e.ctrlKey` to write EVERY level's pin instead of one.
+  Phase 2 is quantised: `while (hidden < coverable && widthFrom(hidden) > containerW) { offshift +=
+  widthOf(hidden); hidden++ }`, so the stack shifts by whole lists and a hidden column is `inert` +
+  `aria-hidden` + `pointer-events-none` (mounted, so it slides back in on grow).
+  `useInPlaceOnStructureChange(structureSignature(rendered))` returns true for the ONE render after a
+  level count / selection change and drops the `transition-[left,width]` classes for that commit, so
+  choosing a topic lands the detail in place; the bump re-render restores the transitions against
+  already-painted geometry, so nothing moves. Width-driven changes never touch that signature and keep
+  animating.
 - **React / Web (TypeScript).** Enclosing frame:
   `websites/shared/ui/src/blocks/hierarchical-topic-detail.tsx`
   (`HierarchicalTopicDetail`, props `levels: TopicLevel[]`, `disclosureStyle?: "covered" |
-  "minimized"` (default `covered`), `showBreadcrumb`, `rootLabel`, `trailingCrumbs`, `help`,
+  "minimized"` (default `covered`), `autoHideTopics?: boolean` (default `true`), `showBreadcrumb`,
+  `rootLabel`, `trailingCrumbs`, `help`,
   `minDetailWidth`, `exitGuard: PaneExitGuard`, `manualCollapse`, `children`). It dispatches to a
   `CoveredStack` (absolute, overlapping, `COVERED_PEEK` = 40px) or a `MinimizedStack` (grid columns);
   it renders each level's `TopicRail` **and** the detail
@@ -500,6 +595,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.8.0 | 2026-07-11 | Mike Fullerton | **Auto-hide + the authoritative auto-collapse rules + motion split.** Added `autoHideTopics` (default **on**): only the leaf-most list is disclosed and every parent is hidden by its child even when there is room — the hub's workspace `/home` opts out (`autoHideTopics={false}`). The ROOT list's header gains a left-justified STATE toggle for it, and **⌘/Ctrl-click** on any `«`/`»` now applies that action to EVERY list. Disclosure is specified as three layers that may only ever hide more, never disclose (pin → auto-hide → width pressure). Wrote down the auto-collapse rules that were previously only implied: the detail HOLDS `minDetailWidth` while the lists yield (hide leftmost-first, then go off-screen), the off-screen shift is **quantised to whole lists** (was a continuous shift that parked a list half off the edge), and growing re-runs the same rules in reverse but only re-discloses when auto-hide is off. Finally, **structural changes now land in place**: selecting a topic re-lays-out instantly instead of animating the detail pane in from the left edge (only width-driven changes — resize, cover toggle, hover reveal, drag — still animate). New requirements `must-default-to-auto-hide`, `must-offer-auto-hide-toggle`, `must-layer-hide-intent`, `must-toggle-all-on-modifier-click`, `must-keep-detail-at-minimum-while-lists-yield`, `must-shift-off-screen-by-whole-lists`, `must-reverse-on-grow`, `must-land-structure-changes-in-place`, `must-animate-width-changes`; test vectors T33–T39. |
 | 1.7.0 | 2026-07-10 | Mike Fullerton | `TopicLevel.headerSlot`: pinned non-scrolling strip for the shared ListHeader (filter + actions) on entity-list levels. |
 | 1.6.0 | 2026-07-07 | Mike Fullerton | Added an optional per-row **delete** affordance. A `TopicDetailItem` may set `onDelete` (+ `deleteLabel` / `deleteConfirm`) to get a **right-justified trash button revealed only on hover** (row reserves trailing width so the label never runs under it, never on icon strips); activating it opens a **destructive confirmation** (shared `AlertModal` — red action, keyboard off, focus on Cancel, busy spinner for async deletes) and `onDelete` runs only on confirm. In the stack the **selection connector breaks around the button** (a computed gap in the SVG path — the overlay paints above the rail, so occlusion isn't possible). New requirements `may-delete-row`, `must-confirm-row-delete`, `must-break-connector-around-delete`. |
 | 1.5.0 | 2026-07-04 | Mike Fullerton | Reworked the covered-list disclosure + the New affordance. **Reveal:** replaced the per-row / per-header `RevealPortal` popover with an **animated whole-list reveal** — a covered list's wrapper is `overflow-hidden` clipped to a 40px peek (rows are always full, so only the leading icon shows) and, on hover (`CoveredStack`'s `hoverId`), its `width` WIPES open to the full rail above its neighbours (lingering z-lift via `zLiftId` so the wipe-shut stays over the child, + drop-shadow), disclosed only while the pointer is inside it and closed (wipes back to the peek) on row-select; there is no aria-current duplication (it is the real rail, not a copy). The reveal is **pointer-driven only** — a focus reveal was dropped because a covered row keeps focus after a click, which left the list disclosed and jammed the auto-cover as the window shrank. Replaced `must-reveal-covered-row-on-hover`/`-on-focus`/`must-reveal-covered-title`/`must-close-reveal-robustly` with `must-reveal-covered-list-on-hover`/`must-disclose-reveal-only-while-inside`/`must-close-reveal-on-select`. **New:** the "New …" affordance moved from a reserved leading `railSlot` row to a compact **`+` right-justified in the list header** (`onNew`/`newLabel`/`newActive`), so the first topic moves up to a proportional top padding; first-row alignment now comes from the uniform titled header (updated `may-offer-new-topic-button`, `must-align-first-row`, `must-render-undisclosed-icon-strip`). Migrated all hierarchical `TopicLevel` consumers off `railSlot`; `railSlot` remains on the standalone `TopicDetail` for a genuinely custom leading row (FocusedTopicDetail's PopupMenu, editor-section's list header), rendered only when supplied. |

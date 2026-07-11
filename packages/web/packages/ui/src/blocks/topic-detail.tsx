@@ -1,6 +1,15 @@
 "use client"
 
-import { Fragment, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react"
+import {
+  Fragment,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react"
 
 import { Circle, Plus, Trash2 } from "lucide-react"
 
@@ -359,7 +368,9 @@ export function TopicRail({
   /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
   newActive?: boolean
   collapsed: boolean
-  onToggle: () => void
+  /** The click event is forwarded so the hierarchical stack can read its modifier keys (⌘/Ctrl-click
+   *  = toggle every list). Callers that don't need it take no argument. */
+  onToggle: (e: ReactMouseEvent<HTMLButtonElement>) => void
   /** Drag of the trailing border reports the column's new pixel width (raw — the parent
    *  clamps to FULL and snaps to collapsed below a third). Omit to hide the drag
    *  handle (fixed-width rails like the theme editor's property columns). */
@@ -441,12 +452,14 @@ export function TopicRail({
   )
 
   // Right-justified header controls: the New `+` (all widths) and, in the minimized style, the
-  // desktop collapse toggle (`«`). The covered style passes `showToggle=false` + its own leftControl.
+  // desktop collapse toggle (`«`). The covered style passes `showToggle=false` and supplies its own
+  // `leftControl` instead — so `showToggle` alone decides, and a leading control (the stack's
+  // auto-hide toggle on the root rail) can coexist with the trailing collapse toggle.
   const rightControls =
-    newButton || (showToggle && !leftControl) ? (
+    newButton || showToggle ? (
       <span className="ml-auto flex shrink-0 items-center gap-1">
         {newButton}
-        {showToggle && !leftControl && <span className="max-md:hidden">{collapseToggle}</span>}
+        {showToggle && <span className="max-md:hidden">{collapseToggle}</span>}
       </span>
     ) : null
 
