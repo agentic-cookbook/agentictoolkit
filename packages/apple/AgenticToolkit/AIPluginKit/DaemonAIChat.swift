@@ -190,7 +190,18 @@ public enum DaemonAIChat {
         // Secret fields come from the host's Keychain. Represent a declared secret
         // even when empty so `buildRequest` can distinguish "this template requires a
         // key and it's blank" from "keyless template with no secret field".
-        for field in descriptor.fields where field.isSecret {
+        //
+        // Scope those secrets to the config's OWN template, not `descriptor.fields`
+        // (the union across every template). A keyless template — e.g. Ollama —
+        // overrides `fields` to drop the shared `apiKey`, so listing `descriptor.fields`
+        // would synthesize a phantom empty `apiKey`, and `buildRequest` then rejects the
+        // keyless provider with "An API key is required". Mirror the app's
+        // template-scoped resolution (`AIProviderResolver`); fall back to the full field
+        // list only when the template id no longer resolves.
+        let secretFields = descriptor.resolvedTemplates
+            .first { $0.id == config.templateId }
+            .map { descriptor.fields(for: $0) } ?? descriptor.fields
+        for field in secretFields where field.isSecret {
             let key = AIProviderConfigKeys.fieldKey(config: config.id, field: field.key)
             values[field.key] = secretStore.get(forKey: key) ?? ""
         }

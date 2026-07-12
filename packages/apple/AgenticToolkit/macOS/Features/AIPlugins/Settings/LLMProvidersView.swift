@@ -24,6 +24,10 @@ struct LLMProviderEditorView: View {
     /// The base URL `fetchedModels` was fetched for, so a repeat appear/open with an
     /// unchanged endpoint skips the network.
     @State private var fetchedBaseURL: String?
+    /// True while a live `/models` fetch is in flight, so the Model row can show a
+    /// "finding models" hint instead of an empty picker (the fetch can lag a few
+    /// seconds when the local server is busy serving other requests).
+    @State private var isFetchingModels = false
 
     init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, chat: ChatSession) {
         self.configuration = configuration
@@ -81,7 +85,12 @@ struct LLMProviderEditorView: View {
                         name = viewModel.configuration(for: configuration.id)?.name ?? name
                     }
 
-                if let template, !template.models.isEmpty || !fetchedModels.isEmpty {
+                // Show the Model row whenever the provider can offer a model: a live-fetch
+                // provider (Ollama etc.) always shows it so the fetched list can populate the
+                // picker even though its static list is empty; others show it when they ship a
+                // static list, a fetch resolved, or a model is already chosen.
+                if let template,
+                   supportsLiveModels || !template.models.isEmpty || !fetchedModels.isEmpty || !currentModel.isEmpty {
                     modelRow(template)
                 }
 
@@ -120,7 +129,8 @@ struct LLMProviderEditorView: View {
                     showModelPicker = true
                 } label: {
                     HStack(spacing: 6) {
-                        Text(resolved)
+                        Text(resolved.isEmpty ? "Choose a model…" : resolved)
+                            .foregroundStyle(resolved.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -137,7 +147,11 @@ struct LLMProviderEditorView: View {
                     .frame(width: 380, height: modelPickerHeight(template))
                 }
 
-                if let detail = template.modelDetail(for: resolved) {
+                if isFetchingModels && fetchedModels.isEmpty {
+                    Text("Finding installed models…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if let detail = template.modelDetail(for: resolved) {
                     modelInfo(detail)
                 }
             }
@@ -224,6 +238,8 @@ struct LLMProviderEditorView: View {
         let baseURL = values["baseURL"] ?? ""
         guard !baseURL.isEmpty else { return }
         guard baseURL != fetchedBaseURL || fetchedModels.isEmpty else { return }
+        isFetchingModels = true
+        defer { isFetchingModels = false }
         let models = await OpenAIModelCatalog.fetch(baseURL: baseURL, apiKey: values["apiKey"])
         if !models.isEmpty {
             fetchedModels = models
