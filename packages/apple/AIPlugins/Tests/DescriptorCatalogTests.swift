@@ -62,4 +62,20 @@ struct DescriptorCatalogTests {
         #expect(xai.defaultValues["baseURL"] == "https://api.x.ai/v1")
         #expect(xai.secretRequired == true)
     }
+
+    @Test("OpenAI-compatible Ollama template is keyless and ships no fabricated models")
+    func openAICompatibleOllamaTemplate() throws {
+        let descriptor = try shipped("OpenAICompatible")
+        let ollama = try #require(descriptor.resolvedTemplates.first { $0.id == "ollama" })
+        #expect(ollama.secretRequired == false)
+        // Keyless: the template drops the shared apiKey field, leaving only baseURL.
+        #expect(descriptor.fields(for: ollama).map(\.key) == ["baseURL"])
+        #expect(ollama.defaultValues["baseURL"] == "http://localhost:11434/v1")
+        // No hardcoded model list. A local server only serves the models the user has
+        // pulled — the editor reads those live from GET {baseURL}/models. Shipping
+        // placeholder names (e.g. "llama3.2") only lets the user pick a model they
+        // don't have and hit "model not found".
+        #expect(ollama.models.isEmpty)
+        #expect(ollama.resolvedDefaultModel == "")
+    }
 }

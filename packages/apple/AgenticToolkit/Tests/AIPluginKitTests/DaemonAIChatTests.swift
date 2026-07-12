@@ -18,10 +18,11 @@ struct DaemonAIChatTests {
     /// registry layout `AIProviderConfigSync` writes: the registry JSON, the selected
     /// id, the non-secret fields ledger + values, and optionally the stored model.
     private func makeSettings(
-        selected id: UUID, model: String = "", values: [String: String] = [:]
+        selected id: UUID, model: String = "", templateId: String = "custom",
+        values: [String: String] = [:]
     ) throws -> ProviderSettingsReader {
         let config = AIProviderConfiguration(
-            id: id, name: "T", pluginIdentifier: pluginId, templateId: "custom"
+            id: id, name: "T", pluginIdentifier: pluginId, templateId: templateId
         )
         let registryJSON = try #require(String(bytes: JSONEncoder().encode([config]), encoding: .utf8))
         var dict: [String: String] = [
@@ -164,6 +165,60 @@ struct DaemonAIChatTests {
         #expect(message.contains("boom"), "the transport error's message must reach providerError: \(message)")
     }
 
+    @Test("plugin path scopes secrets to the config's template — a keyless template gets no phantom apiKey")
+    func pluginPathKeylessTemplateOmitsPhantomSecret() async throws {
+        // The config binds the keyless "ollama" template, which overrides `fields` to
+        // drop the shared apiKey secret. The daemon must NOT synthesize apiKey="" for
+        // it — that phantom empty key is what made OpenAICompatiblePlugin reject Ollama
+        // with "An API key is required", failing every daemon summarize/oversight call.
+        let configId = UUID()
+        let settings = try makeSettings(
+            selected: configId, templateId: "ollama",
+            values: ["baseURL": "http://localhost:11434/v1"]
+        )
+        let captured = CapturingPlugin.Captured()
+        let runtime = makeRuntime(
+            captured: captured, events: [.textDelta("ok"), .end(stopReason: nil)],
+            descriptor: templatedDescriptor()
+        )
+        // No apiKey secret is stored — Ollama needs none.
+        _ = try await DaemonAIChat.complete(
+            systemPrompt: "s", userPrompt: "u", maxTokens: 8,
+            settings: settings, runtime: runtime,
+            cliRunner: failingCLIRunner(), secretStore: InMemorySecretStore()
+        )
+
+        let context = try #require(captured.context)
+        #expect(context.config.apiKey == nil)
+        #expect(context.config.baseURL == "http://localhost:11434/v1")
+    }
+
+    @Test("plugin path still declares an empty secret for a keyed template with no stored key")
+    func pluginPathKeyedTemplateDeclaresEmptySecret() async throws {
+        // The keyed template DOES declare apiKey, so an absent secret must surface as
+        // "" (not nil): that's how buildRequest tells "needs a key, left blank" from
+        // "keyless". Guards the keyless fix from over-correcting.
+        let configId = UUID()
+        let settings = try makeSettings(
+            selected: configId, templateId: "api-key",
+            values: ["baseURL": "https://api.example/v1"]
+        )
+        let captured = CapturingPlugin.Captured()
+        let runtime = makeRuntime(
+            captured: captured, events: [.textDelta("ok"), .end(stopReason: nil)],
+            descriptor: templatedDescriptor()
+        )
+        _ = try await DaemonAIChat.complete(
+            systemPrompt: "s", userPrompt: "u", maxTokens: 8,
+            settings: settings, runtime: runtime,
+            cliRunner: failingCLIRunner(), secretStore: InMemorySecretStore()
+        )
+
+        let context = try #require(captured.context)
+        #expect(context.config.apiKey == "")
+        #expect(context.config.baseURL == "https://api.example/v1")
+    }
+
     // MARK: - Zero-config CLI default path
 
     @Test("no selected configuration → the CLI runner, defaulting to haiku; no plugin is loaded")
@@ -277,10 +332,11 @@ struct DaemonAIChatTests {
     private func makeRuntime(
         captured: CapturingPlugin.Captured,
         events: [AIStreamEvent],
-        error: FakeError? = nil
+        error: FakeError? = nil,
+        descriptor: AIPluginDescriptor? = nil
     ) -> DaemonAIChat.PluginRuntime {
         let plugin = CapturingPlugin(captured: captured)
-        let descriptor = AIPluginDescriptor(
+        let resolvedDescriptor = descriptor ?? AIPluginDescriptor(
             identifier: pluginId,
             displayName: "Test Fake",
             version: "1.0",
@@ -292,7 +348,7 @@ struct DaemonAIChatTests {
             ]
         )
         return DaemonAIChat.PluginRuntime(
-            load: { _, _ in (plugin, descriptor) },
+            load: { _, _ in (plugin, resolvedDescriptor) },
             run: { _, _ in
                 AsyncThrowingStream { continuation in
                     if let error {
@@ -303,6 +359,39 @@ struct DaemonAIChatTests {
                     }
                 }
             }
+        )
+    }
+
+    /// A descriptor with two templates mirroring the real OpenAI-compatible shape:
+    /// a keyless "ollama" (its `fields` override drops the shared apiKey secret,
+    /// `secretRequired: false`) and a keyed "api-key" (`fields: nil` inherits the
+    /// descriptor's baseURL + apiKey). Lets the daemon's template-scoped secret
+    /// resolution be exercised for both keyless and keyed configs.
+    private func templatedDescriptor() -> AIPluginDescriptor {
+        AIPluginDescriptor(
+            identifier: pluginId,
+            displayName: "Test Fake",
+            version: "1.0",
+            models: ["fake-small", "fake-large"],
+            defaultModel: "fake-small",
+            fields: [
+                AIPluginDescriptor.Field(key: "baseURL", label: "Base URL", kind: .text),
+                AIPluginDescriptor.Field(key: "apiKey", label: "API Key", kind: .secret)
+            ],
+            templates: [
+                AIPluginDescriptor.ProviderTemplate(
+                    id: "ollama", displayName: "Ollama (local)",
+                    models: ["fake-small"], defaultModel: "fake-small",
+                    secretRequired: false,
+                    fields: [AIPluginDescriptor.Field(key: "baseURL", label: "Base URL", kind: .text)]
+                ),
+                AIPluginDescriptor.ProviderTemplate(
+                    id: "api-key", displayName: "Keyed",
+                    models: ["fake-small"], defaultModel: "fake-small",
+                    secretRequired: true,
+                    fields: nil
+                )
+            ]
         )
     }
 
