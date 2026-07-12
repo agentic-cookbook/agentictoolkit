@@ -107,6 +107,13 @@ extension SessionWatcher {
             }
 
             notificationManager.requestAuthorization()
+
+            // Nothing else opens the database: `SessionWatcherDatabaseManager()` only
+            // stores state, and `open()` is what actually connects sqlite and runs the
+            // migrations. Without this, `database` stays nil, every prepare fails, and
+            // ingestion quarantines each event into `errors/` instead of persisting it.
+            try databaseManager.open()
+
             try ingestionManager.start()
             livenessMonitor.start()
             ingestionManager.summarizeExistingSessions()
