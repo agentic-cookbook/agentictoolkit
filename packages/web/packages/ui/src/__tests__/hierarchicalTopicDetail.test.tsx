@@ -297,32 +297,106 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
   })
 })
 
-describe('HierarchicalTopicDetail — auto-hide vs a choosing frontier', () => {
-  it('keeps the parent disclosed while its frontier list is still unselected', () => {
-    // Selecting a region pushes the (unselected) ecosystems list. Its "detail" is only a landing
-    // placeholder, so auto-hide must NOT cover the regions list yet — the user needs to see the
-    // context they just picked from (the bug: the parent snapped to a 40px peek on the click).
+describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choosing frontier', () => {
+  it('covers the parent of a choosing frontier on a deep link (no pointer, no reveal)', () => {
+    // Arriving BY URL with a selection whose child list is still unselected: auto-hide covers the
+    // parent as it covers any list above the frontier — no click happened here, so there is no
+    // pointer for a reveal to serve.
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us' }).slice(0, 2)}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    expect(boxWidth(0)).toBe('240px')
-    expect(boxWidth(1)).toBe('240px')
-  })
-
-  it('covers only the lists above the deepest selected one', () => {
-    // Two selections + a choosing topics frontier: the root is an ancestor of the leaf-most
-    // SELECTED list, so auto-hide covers it — but the ecosystems list (whose selection produced
-    // the frontier) stays disclosed beside its choosing child.
-    render(
-      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core' })}>
-        <p>detail</p>
-      </HierarchicalTopicDetail>,
-    )
     expect(boxWidth(0)).toBe('40px')
     expect(boxWidth(1)).toBe('240px')
-    expect(boxWidth(2)).toBe('240px')
+    expect(boxLeft(1)).toBe('40px')
+  })
+
+  it('a click that pushes a new choosing list roots the reveal: the new list floats over the detail until the pointer leaves', () => {
+    // The click covers the list it landed in (auto-hide) with the pointer still inside it — the
+    // exact state pointer-enter names, but the pointer never moved, so no enter will ever fire.
+    // The select roots the branch itself: the clicked list stays open in place and the new
+    // choosing list slides out OVER the detail (at 240px — its resting slot would be 40px).
+    function Stack() {
+      const [region, setRegion] = useState<string | null>(null)
+      const levels: TopicLevel[] = [
+        {
+          id: 'push-regions',
+          title: 'Regions',
+          items: REGIONS,
+          selectedId: region,
+          onSelect: setRegion,
+          onClear: () => setRegion(null),
+        },
+        {
+          id: 'push-ecosystems',
+          title: 'Ecosystems',
+          items: ECOSYSTEMS,
+          selectedId: null,
+          onSelect: () => {},
+          onClear: () => {},
+        },
+      ]
+      return (
+        <HierarchicalTopicDetail levels={levels}>
+          <p>detail</p>
+        </HierarchicalTopicDetail>
+      )
+    }
+    render(<Stack />)
+    expect(boxWidth(0)).toBe('240px') // the sole list, disclosed, waiting to be chosen from
+
+    fireEvent.click(screen.getByRole('button', { name: /us-west-1/ }))
+    expect(boxWidth(0)).toBe('240px') // covered in LAYOUT, held open by the reveal
+    expect(boxLeft(0)).toBe('0px')
+    expect(boxWidth(1)).toBe('240px')
+    expect(boxLeft(1)).toBe('240px') // floating over the detail, not snugged into the 40px slot
+
+    // The pointer leaving the branch is what settles the stack into its covered layout.
+    leave(col(0), screen.getByText('detail'))
+    expect(boxWidth(0)).toBe('40px')
+    expect(boxLeft(1)).toBe('40px')
+  })
+
+  it('a click that completes the path roots nothing — a stack at rest casts no floating card', () => {
+    // Selecting in the LAST level covers nothing at/below the clicked list, so the blind root the
+    // select plants is dropped as meaningless: same geometry as rest, and no trailing card shadow
+    // over the detail (only the resting layered-stack shadow from its covered parent).
+    function Stack() {
+      const [eco, setEco] = useState<string | null>(null)
+      const levels: TopicLevel[] = [
+        {
+          id: 'complete-regions',
+          title: 'Regions',
+          items: REGIONS,
+          selectedId: 'us',
+          onSelect: () => {},
+          onClear: () => {},
+        },
+        {
+          id: 'complete-ecosystems',
+          title: 'Ecosystems',
+          items: ECOSYSTEMS,
+          selectedId: eco,
+          onSelect: setEco,
+          onClear: () => setEco(null),
+        },
+      ]
+      return (
+        <HierarchicalTopicDetail levels={levels}>
+          <p>detail</p>
+        </HierarchicalTopicDetail>
+      )
+    }
+    render(<Stack />)
+    fireEvent.click(screen.getByRole('button', { name: /Core Platform/ }))
+    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(1)).toBe('240px')
+    // The resting layered-stack shadow (its parent peeks under it) — but no floating trailing
+    // edge over the detail, and no z-lift: the reveal machinery left the resting stack alone.
+    expect(col(1).style.boxShadow).toContain('22px') // SHADOW_LEFT, the resting overlap
+    expect(col(1).style.boxShadow).not.toContain('24px') // SHADOW_RIGHT, the floating card's edge
+    expect(Number(col(1).style.zIndex)).toBeLessThan(50) // REVEAL_Z
   })
 })
 
