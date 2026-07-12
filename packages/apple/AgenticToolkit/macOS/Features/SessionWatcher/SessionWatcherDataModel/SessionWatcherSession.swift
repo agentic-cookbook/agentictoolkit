@@ -3,7 +3,11 @@ import Foundation
 extension SessionWatcher {
     // MARK: - SessionWatcherSession
 
-    /// Represents a Claude Code session being monitored.
+    /// A Claude Code session, as rendered by the Sessions window.
+    ///
+    /// This is a plain view model, not a database row: the window reaches it only
+    /// through ``SessionListSource``, so where it came from — an HTTP daemon, a
+    /// local store, a test fixture — is the source's business, not the window's.
     public struct SessionWatcherSession: Equatable, Sendable {
         public var id: Int?
         public var sessionId: String
@@ -102,53 +106,5 @@ extension SessionWatcher {
         case active
         case stale
         case ended
-    }
-
-    // MARK: - SessionWatcherSession Event
-
-    /// Represents a single event in a Claude Code session.
-    public struct SessionWatcherEvent: Equatable, Sendable {
-        public var id: Int?
-        public var sessionId: String
-        public var eventType: String
-        public var timestamp: String
-        public var rawJson: String
-
-        public init(
-            id: Int? = nil,
-            sessionId: String,
-            eventType: String,
-            timestamp: String = "",
-            rawJson: String = "{}"
-        ) {
-            self.id = id
-            self.sessionId = sessionId
-            self.eventType = eventType
-            self.timestamp = timestamp.isEmpty ? ISO8601DateFormatter().string(from: Date()) : timestamp
-            self.rawJson = rawJson
-        }
-    }
-
-    // MARK: - Database Error
-
-    /// Errors that can occur during database operations.
-    public enum SessionWatcherDatabaseError: Error, LocalizedError {
-        case openFailed(String)
-        case prepareFailed(String)
-        case executionFailed(String)
-        case migrationFailed(String)
-
-        public var errorDescription: String? {
-            switch self {
-            case .openFailed(let message):
-                return "Failed to open database: \(message)"
-            case .prepareFailed(let message):
-                return "Failed to prepare statement: \(message)"
-            case .executionFailed(let message):
-                return "Failed to execute statement: \(message)"
-            case .migrationFailed(let message):
-                return "Database migration failed: \(message)"
-            }
-        }
     }
 }

@@ -484,13 +484,13 @@ extension SessionWatcher {
 
         /// Triggers AI summarization for a session. Guards against double-trigger.
         public func summarizeSession(_ session: SessionWatcherSession) {
-            SessionWatcher.SummarizerDebugLog.shared.append("Manual summarize requested for \(session.sessionId)")
+            logger.debug("Manual summarize requested for \(session.sessionId, privacy: .public)")
             guard let summarizer = sessionSummarizer else {
-                SessionWatcher.SummarizerDebugLog.shared.append("sessionSummarizer is nil on SessionListViewModel!")
+                logger.error("No sessionSummarizer set on SessionListViewModel — cannot summarize")
                 return
             }
             guard !summarizingSessionIds.contains(session.sessionId) else {
-                SessionWatcher.SummarizerDebugLog.shared.append("Already summarizing \(session.sessionId), skipping")
+                logger.debug("Already summarizing \(session.sessionId, privacy: .public), skipping")
                 return
             }
 

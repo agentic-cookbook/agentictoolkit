@@ -1,5 +1,6 @@
 import AppKit
 import AgenticToolkitMacOS
+import AIPluginKit
 
 // Headless diagnostic: discover and load every plugin, then report and exit.
 // Runs in the real app process so each plugin's `@rpath/AIPluginKit.framework`

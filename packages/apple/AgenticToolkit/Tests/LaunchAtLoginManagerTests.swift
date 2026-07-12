@@ -32,8 +32,6 @@ final class MockLaunchAtLoginService: LaunchAtLoginServiceProtocol {
 final class LaunchAtLoginManagerTests: XCTestCase {
 
     private var settingsStore: SettingsStore!
-    private var sessionWatcherDatabaseManager: SessionWatcherDatabaseManager!
-    private var tempDBPath: String!
     private var mockService: MockLaunchAtLoginService!
 
     override func setUp() async throws {
@@ -42,21 +40,11 @@ final class LaunchAtLoginManagerTests: XCTestCase {
             with: InMemorySettingsStorageProvider(),
             secureSettingsProvider: InMemorySecureSettingsStorageProvider()
         )
-        // SettingsViewModel still owns a DB-backed settings table; the integration
-        // tests below construct one against a temp path. LaunchAtLoginManager itself
-        // only consults `settingsStore`.
-        let tempDir = NSTemporaryDirectory()
-        tempDBPath = (tempDir as NSString).appendingPathComponent("whippet_launch_test_\(UUID().uuidString).db")
-        sessionWatcherDatabaseManager = try AgenticToolkitMacOS.SessionWatcherDatabaseManager(path: tempDBPath)
         mockService = MockLaunchAtLoginService()
     }
 
     override func tearDown() async throws {
-        sessionWatcherDatabaseManager?.close()
-        if let tempDBPath { try? FileManager.default.removeItem(atPath: tempDBPath) }
         settingsStore = nil
-        sessionWatcherDatabaseManager = nil
-        tempDBPath = nil
         mockService = nil
         try await super.tearDown()
     }
