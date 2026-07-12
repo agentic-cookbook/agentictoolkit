@@ -279,8 +279,9 @@ export function HierarchicalTopicDetail({
    *      (covered), with a `«`/`»` cover toggle on each child and a left drop-shadow making the
    *      stack read as physically layered. No Back button. */
   disclosureStyle?: "minimized" | "covered"
-  /** Start with only the LEAF-MOST topic list disclosed — every parent list is covered by its
-   *  child even when there is room to show it. Default `true`; the first list's header carries a
+  /** Start with only the lists at/below the deepest SELECTED one disclosed — every list above it
+   *  is covered by its child even when there is room to show it (a still-choosing unselected
+   *  frontier keeps its parent disclosed). Default `true`; the first list's header carries a
    *  toggle so the user can flip it (off ⇒ every list discloses, subject to the fit rules). Pass
    *  `false` for a surface whose ancestry must stay glanceable (the hub's `/home`). */
   autoHideTopics?: boolean
@@ -341,8 +342,10 @@ export function HierarchicalTopicDetail({
 
   // Disclosure INTENT, owned here so both layouts share one contract (they differ only in how a
   // hidden list is drawn — a peek vs an icon strip):
-  //   autoHide — only the LEAF-MOST list stays disclosed; every parent is hidden by its child even
-  //              when there IS room. The frame's default; the root list's header toggles it.
+  //   autoHide — only the lists at/below the deepest SELECTED one stay disclosed; every list above
+  //              it is hidden by its child even when there IS room. A still-choosing (unselected)
+  //              frontier keeps its parent disclosed — the user needs the context they picked from.
+  //              The frame's default; the root list's header toggles it.
   //   pins     — per-level user intent from the `«`/`»` toggles, overriding autoHide either way
   //              (true = keep hidden, false = keep disclosed). Width pressure may still hide a list
   //              the user pinned open — there is no room — but never discloses one they pinned shut.
@@ -862,10 +865,11 @@ function MinimizedStack({
   const [hidden, setHidden] = useState(0)
 
   const naturalWidth = (level: TopicLevel) => widths[level.id] ?? level.width ?? FULL_RAIL
-  // Intent: the user's pin (`«`) if they set one, else auto-hide's default (every list but the
-  // leaf-most). Width pressure (`auto`) only ever ADDS a collapse on top of this.
+  // Intent: the user's pin (`«`) if they set one, else auto-hide's default (every list above the
+  // deepest SELECTED one — a still-choosing frontier keeps its parent disclosed, matching the
+  // covered stack's rule). Width pressure (`auto`) only ever ADDS a collapse on top of this.
   const pinnedOrAutoHidden = (level: TopicLevel, i: number) =>
-    override[level.id] ?? (autoHide && i < rendered.length - 1)
+    override[level.id] ?? (autoHide && i < deepestSelected)
   // A list shows as its icon strip when intent says so OR the window auto-undisclosed it (`auto`).
   // Off-screen drilling (`hidden`) is separate and applied last.
   const isCollapsed = (level: TopicLevel, i: number) =>
@@ -1103,6 +1107,7 @@ function MinimizedStack({
  */
 function CoveredStack({
   rendered,
+  deepestSelected,
   firstUnselected,
   frontier,
   minDetailWidth,
@@ -1170,11 +1175,17 @@ function CoveredStack({
   const detailMin = firstUnselected === -1 ? minPx : 0
 
   // COVER LAYER 1 — intent. A list is covered because the user pinned it (`«`), or because auto-hide
-  // is on and it isn't the leaf-most list. A pin wins either way, so the user can hold a parent open
-  // under auto-hide (until width pressure below takes the room back).
+  // is on and it sits ABOVE the deepest selected list. A pin wins either way, so the user can hold a
+  // parent open under auto-hide (until width pressure below takes the room back).
+  //
+  // Auto-hide bounds at `deepestSelected`, NOT at the last rendered list: while the frontier is
+  // still CHOOSING (unselected), the list whose selection just produced it stays disclosed — the
+  // frontier's "detail" is only a landing placeholder, so covering the parent buys the detail
+  // nothing and hides the very context the user picked from. Once the frontier row is selected the
+  // parent becomes an ancestor of the leaf and auto-hide covers it as before.
   const pinnedOrAutoHidden = (i: number): boolean => {
     if (i >= coverableCount) return false
-    return pins[rendered[i]!.id] ?? (autoHide && i < rendered.length - 1)
+    return pins[rendered[i]!.id] ?? (autoHide && i < deepestSelected)
   }
 
   // COVER LAYER 2 — width pressure. Cover MORE lists, leftmost-first (general → specific), until the

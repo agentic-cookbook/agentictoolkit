@@ -297,6 +297,35 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
   })
 })
 
+describe('HierarchicalTopicDetail — auto-hide vs a choosing frontier', () => {
+  it('keeps the parent disclosed while its frontier list is still unselected', () => {
+    // Selecting a region pushes the (unselected) ecosystems list. Its "detail" is only a landing
+    // placeholder, so auto-hide must NOT cover the regions list yet — the user needs to see the
+    // context they just picked from (the bug: the parent snapped to a 40px peek on the click).
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us' }).slice(0, 2)}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(boxWidth(0)).toBe('240px')
+    expect(boxWidth(1)).toBe('240px')
+  })
+
+  it('covers only the lists above the deepest selected one', () => {
+    // Two selections + a choosing topics frontier: the root is an ancestor of the leaf-most
+    // SELECTED list, so auto-hide covers it — but the ecosystems list (whose selection produced
+    // the frontier) stays disclosed beside its choosing child.
+    render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core' })}>
+        <p>detail</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(1)).toBe('240px')
+    expect(boxWidth(2)).toBe('240px')
+  })
+})
+
 describe('HierarchicalTopicDetail — a level’s default selection', () => {
   /** A live 2-level stack (Regions → Topics) whose Topics level names a default. Selection is real
    *  state here, not a spy, because the whole behaviour is about what happens across re-renders as

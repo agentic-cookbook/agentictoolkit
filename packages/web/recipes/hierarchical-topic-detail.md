@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.12.3
+version: 1.12.4
 status: draft
 language: en
 created: '2026-06-30'
-modified: 2026-07-11
+modified: 2026-07-12
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -160,13 +160,18 @@ so all three deselect paths are one code path.
 > `site-config` help store**, and **per-segment deep linking of the whole hierarchy**
 > including the dismantled list levels. See **Platform Notes**.
 
-### Auto-hide — only the leaf-most list is disclosed
+### Auto-hide — only the deepest selected list (and below) is disclosed
 
-`autoHideTopics` (default **on**) makes the stack lead with its LEAF: only the leaf-most topic list is
-disclosed, and every parent is hidden by its child even when there is room to show it. It is the
-default because a feature surface is normally *used* at its leaf — the ancestry is provenance, not
-navigation. The hub's workspace routes (`/home`) pass `autoHideTopics={false}`: there the ancestry
-(workspace ▸ feature ▸ entity ▸ topic) IS the navigation, so every list stays disclosed while it fits.
+`autoHideTopics` (default **on**) makes the stack lead with its LEAF: every list **above the deepest
+SELECTED one** is hidden by its child even when there is room to show it. A still-**choosing**
+frontier (a list with nothing selected yet) keeps its parent disclosed: the frontier's "detail" is
+only a landing placeholder, so hiding the parent buys the detail nothing and takes away the very
+context the user just picked from — the parent is covered only once the user drills INTO the
+frontier by selecting a row (v1.12.4; before that the parent snapped shut the moment its child list
+appeared). Auto-hide is the default because a feature surface is normally *used* at its leaf — the
+ancestry is provenance, not navigation. The hub's workspace routes (`/home`) pass
+`autoHideTopics={false}`: there the ancestry (workspace ▸ feature ▸ entity ▸ topic) IS the
+navigation, so every list stays disclosed while it fits.
 
 The **root** list's header carries a left-justified toggle reporting the STATE (gold + a closed panel
 while on; muted + an open panel while off). Turning it **on** hides every disclosed parent; turning it
@@ -176,7 +181,7 @@ Flipping it clears the per-list `«`/`»` pins, so it is always a clean reset to
 Disclosure therefore has three layers, and **each may only ever HIDE more, never disclose**:
 
 1. **pins** — the user's own `«`/`»` intent on one list (wins over auto-hide in both directions),
-2. **auto-hide** — the default for every non-leaf list when there is no pin,
+2. **auto-hide** — the default for every list above the deepest selected one when there is no pin,
 3. **width pressure** — the fit rules below, which may take the room back from a list the user pinned
    open (there is none to give) but never disclose one they pinned shut.
 
