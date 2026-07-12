@@ -114,8 +114,14 @@ extension SessionWatcher {
 
             try ensureDirectoriesExist()
 
-            // Process any files that already exist
-            processExistingFiles()
+            // Process any files that already exist. This runs on `processingQueue`
+            // rather than the caller's thread: the backlog can run to six figures
+            // and each event may shell out to `git`, so doing it inline wedges the
+            // main thread inside `applicationDidFinishLaunching`. `processingQueue`
+            // is serial, so passes triggered by `startWatching()` queue behind this.
+            processingQueue.async { [weak self] in
+                self?.processExistingFiles()
+            }
 
             // Start watching for new files using DispatchSource
             startWatching()
