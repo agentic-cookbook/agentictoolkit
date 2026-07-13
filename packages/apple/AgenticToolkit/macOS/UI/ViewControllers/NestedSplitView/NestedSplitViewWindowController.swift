@@ -23,6 +23,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     public static let sharedWindowID = "whiprojDocumentWindow"
 
     private struct TabGroup {
+        let id: UUID
         var title: String
         var members: [Edge: UUID]
     }
@@ -141,29 +142,25 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
     /// Single entry point for edge toggling (titlebar menu and Cocoa
     /// Scripting alike) so a freshly enabled edge is always topped up to
-    /// the global tab count. Disabling keeps the edge's members so
-    /// re-enabling restores them.
+    /// the global tab count and the edge set is persisted. Disabling keeps
+    /// the edge's members so re-enabling restores them.
     private func setEdgeEnabled(_ edge: Edge, _ enabled: Bool) {
         guard tabbed.isEdgeEnabled(edge) != enabled else { return }
         tabbed.setEdgeEnabled(edge, enabled)
         if enabled {
             topUpTabs(on: edge)
         }
+        persistAllTabs()
     }
 
     /// Gives `edge` one member tab per group so its count matches the
     /// global tab count.
     private func topUpTabs(on edge: Edge) {
-        var added = false
         for (index, group) in tabGroups.enumerated() where group.members[edge] == nil {
             let id = UUID()
             let split = makeSplitController(for: id)
             tabbed.insertTab(.init(id: id, title: group.title, viewController: split), at: index, on: edge)
             tabGroups[index].members[edge] = id
-            added = true
-        }
-        if added {
-            persistAllTabs()
         }
     }
 
@@ -171,7 +168,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     /// sharing a title, and activates the first member.
     private func addTabGroup() {
         let title = "Tab \(tabGroups.count + 1)"
-        var group = TabGroup(title: title, members: [:])
+        var group = TabGroup(id: UUID(), title: title, members: [:])
         for edge in Edge.allCases where tabbed.isEdgeEnabled(edge) {
             let id = UUID()
             let split = makeSplitController(for: id)
@@ -214,21 +211,12 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     /// lowercase: `"top"`, `"right"`, `"bottom"`, `"left"`. Order matches
     /// `Edge.allCases`.
     public var enabledTabEdgeNames: [String] {
-        get { Edge.allCases.filter { tabbed.isEdgeEnabled($0) }.map(Self.scriptingName(for:)) }
+        get { Edge.allCases.filter { tabbed.isEdgeEnabled($0) }.map(\.rawValue) }
         set {
             let normalized = Set(newValue.map { $0.lowercased() })
             for edge in Edge.allCases {
-                setEdgeEnabled(edge, normalized.contains(Self.scriptingName(for: edge)))
+                setEdgeEnabled(edge, normalized.contains(edge.rawValue))
             }
-        }
-    }
-
-    private static func scriptingName(for edge: Edge) -> String {
-        switch edge {
-        case .top: return "top"
-        case .right: return "right"
-        case .bottom: return "bottom"
-        case .left: return "left"
         }
     }
 
@@ -251,7 +239,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     }
 
     private func refreshFocusedLeaf() {
-        guard let activeTabID = tabbed.selectedTabID(on: .top),
+        guard let activeTabID = tabbed.activeTabID,
               let activeSplit = splitControllersByTabID[activeTabID] else { return }
         let newLeaf = activeSplit.focusedLeafNodeID
         let prior = focusedLeafByTabID[activeTabID]
@@ -274,7 +262,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     }
 
     private func restoreFocusedLeafForActiveTab() {
-        guard let activeTabID = tabbed.selectedTabID(on: .top),
+        guard let activeTabID = tabbed.activeTabID,
               let activeSplit = splitControllersByTabID[activeTabID],
               let focusedNodeID = focusedLeafByTabID[activeTabID] else { return }
         // Defer one runloop tick so the tab's view hierarchy is fully
@@ -288,6 +276,13 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
     private func installInitialTabs() {
         let initial = splitDocument.initialTabs()
+        // Enable edges before adding tabs so members land on live bars.
+        for edge in Edge.allCases {
+            tabbed.setEdgeEnabled(edge, initial.enabledEdges.contains(edge))
+        }
+        // Rebuild groups in stored order: group order is first-seen record
+        // order, per-edge member order is record order.
+        var groupIndexByID: [UUID: Int] = [:]
         for record in initial.tabs {
             let split = NestingSplitViewController.make(
                 from: record.root,
@@ -299,10 +294,28 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
             if let focusedNodeID = record.focusedNodeID {
                 focusedLeafByTabID[record.id] = focusedNodeID
             }
-            tabbed.addTab(.init(id: record.id, title: record.title, viewController: split), on: .top)
-            tabGroups.append(TabGroup(title: record.title, members: [.top: record.id]))
+            tabbed.addTab(.init(id: record.id, title: record.title, viewController: split), on: record.edge)
+            if let index = groupIndexByID[record.groupID] {
+                tabGroups[index].members[record.edge] = record.id
+            } else {
+                groupIndexByID[record.groupID] = tabGroups.count
+                tabGroups.append(TabGroup(
+                    id: record.groupID,
+                    title: record.title,
+                    members: [record.edge: record.id]
+                ))
+            }
         }
-        tabbed.selectTab(id: initial.activeTabID, on: .top)
+        // Documents saved while an edge was disabled may lack members on a
+        // now-enabled edge — restore the global-count invariant.
+        for edge in Edge.allCases where tabbed.isEdgeEnabled(edge) {
+            topUpTabs(on: edge)
+        }
+        if let record = initial.tabs.first(where: { $0.id == initial.activeTabID }) {
+            tabbed.selectTab(id: record.id, on: record.edge)
+        } else {
+            tabbed.selectTab(id: initial.activeTabID, on: .top)
+        }
     }
 
     private func wireLayoutCallback(on split: NestingSplitViewController, tabID: UUID) {
@@ -311,21 +324,31 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         }
     }
 
-    /// Snapshots every tab's split tree and writes the full set back to
-    /// the document. Called whenever the user touches the layout (split,
-    /// close, tab add/remove/reorder/select).
+    /// Snapshots every tab's split tree (on every edge, enabled or not)
+    /// and writes the full set back to the document. Called whenever the
+    /// user touches the layout (split, close, tab add/remove/reorder/
+    /// select, edge toggle).
     private func persistAllTabs() {
         var records: [TabRecord] = []
-        for tab in tabbed.tabs(on: .top) {
-            guard let split = splitControllersByTabID[tab.id] else { continue }
-            records.append(TabRecord(
-                id: tab.id,
-                title: tab.title,
-                root: split.snapshotNode(),
-                focusedNodeID: focusedLeafByTabID[tab.id]
-            ))
+        for edge in Edge.allCases {
+            for tab in tabbed.tabs(on: edge) {
+                guard let split = splitControllersByTabID[tab.id] else { continue }
+                let groupID = tabGroups.first(where: { $0.members[edge] == tab.id })?.id
+                records.append(TabRecord(
+                    id: tab.id,
+                    groupID: groupID,
+                    edge: edge,
+                    title: tab.title,
+                    root: split.snapshotNode(),
+                    focusedNodeID: focusedLeafByTabID[tab.id]
+                ))
+            }
         }
-        splitDocument.persistTabs(records, activeTabID: tabbed.selectedTabID(on: .top))
+        splitDocument.persistTabs(
+            records,
+            activeTabID: tabbed.activeTabID,
+            enabledEdges: Edge.allCases.filter { tabbed.isEdgeEnabled($0) }
+        )
     }
 
     private static func defaultTabLayout() -> LayoutNode {

@@ -1,7 +1,8 @@
 import Foundation
 
 /// Which side of `MultiTabbedViewController`'s container a tab bar is docked to.
-public enum Edge: CaseIterable, Sendable {
+/// The raw value doubles as the persistence and scripting name.
+public enum Edge: String, CaseIterable, Sendable {
     case top
     case right
     case bottom

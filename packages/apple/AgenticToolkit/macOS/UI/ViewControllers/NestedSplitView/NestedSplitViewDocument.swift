@@ -11,6 +11,7 @@ public class NestedSplitViewDocument: NSDocument {
     nonisolated(unsafe) private var _layoutStore: DocumentLayoutStore?
     nonisolated(unsafe) private var pendingTabsForLoad: [TabRecord]?
     nonisolated(unsafe) private var pendingActiveTabIDForLoad: UUID?
+    nonisolated(unsafe) private var pendingEnabledEdgesForLoad: [Edge]?
     nonisolated(unsafe) private var nextPaneNumber: Int = 1
     private let stateLock = NSLock()
 
@@ -30,10 +31,11 @@ public class NestedSplitViewDocument: NSDocument {
         stateLock.unlock()
     }
 
-    private nonisolated func setPendingTabs(_ tabs: [TabRecord]?, activeTabID: UUID?) {
+    private nonisolated func setPendingTabs(_ tabs: [TabRecord]?, activeTabID: UUID?, enabledEdges: [Edge]?) {
         stateLock.lock()
         pendingTabsForLoad = tabs
         pendingActiveTabIDForLoad = activeTabID
+        pendingEnabledEdgesForLoad = enabledEdges
         stateLock.unlock()
     }
 
@@ -50,27 +52,29 @@ public class NestedSplitViewDocument: NSDocument {
     /// freshly-loaded set (after `read(from:)`) or a single default tab
     /// for new documents.
     @MainActor
-    public func initialTabs() -> (tabs: [TabRecord], activeTabID: UUID) {
+    public func initialTabs() -> (tabs: [TabRecord], activeTabID: UUID, enabledEdges: [Edge]) {
         stateLock.lock()
         let pending = pendingTabsForLoad
         let pendingActive = pendingActiveTabIDForLoad
+        let pendingEdges = pendingEnabledEdgesForLoad
         stateLock.unlock()
         if let pending, !pending.isEmpty {
             let active = pendingActive ?? pending[0].id
-            return (pending, active)
+            return (pending, active, pendingEdges ?? [.top])
         }
         let tab = TabRecord(title: "Tab 1", root: defaultLayout())
-        return ([tab], tab.id)
+        return ([tab], tab.id, [.top])
     }
 
-    /// Persist the current set of tabs and which one is active. Called by
-    /// the window controller whenever a tab is added/removed/reordered or
-    /// when split-view layout inside a tab changes.
+    /// Persist the current set of tabs, which one is active, and the
+    /// enabled edges. Called by the window controller whenever a tab is
+    /// added/removed/reordered, an edge is toggled, or split-view layout
+    /// inside a tab changes.
     @MainActor
-    public func persistTabs(_ tabs: [TabRecord], activeTabID: UUID?) {
+    public func persistTabs(_ tabs: [TabRecord], activeTabID: UUID?, enabledEdges: [Edge]) {
         guard let store = layoutStore else { return }
         do {
-            try store.saveTabs(tabs, activeTabID: activeTabID)
+            try store.saveTabs(tabs, activeTabID: activeTabID, enabledEdges: enabledEdges)
         } catch {
             logger.error("Failed to save document tabs: \(error.localizedDescription, privacy: .public)")
         }
@@ -83,7 +87,7 @@ public class NestedSplitViewDocument: NSDocument {
         let store = try DocumentLayoutStore(path: dbURL.path)
         let loaded = try store.loadTabs()
         setLayoutStore(store)
-        setPendingTabs(loaded.tabs, activeTabID: loaded.activeTabID)
+        setPendingTabs(loaded.tabs, activeTabID: loaded.activeTabID, enabledEdges: loaded.enabledEdges)
     }
 
     // MARK: - NSDocument writing
@@ -99,9 +103,14 @@ public class NestedSplitViewDocument: NSDocument {
             return
         }
 
-        if !fileManager.fileExists(atPath: dbURL.path), let source = layoutStore?.databasePath,
-           fileManager.fileExists(atPath: source) {
-            try fileManager.copyItem(atPath: source, toPath: dbURL.path)
+        if !fileManager.fileExists(atPath: dbURL.path), let source = layoutStore {
+            // Flush the WAL first — copying just the main file of a live
+            // WAL database would silently drop every un-checkpointed
+            // commit from the duplicate.
+            try source.checkpoint()
+            if fileManager.fileExists(atPath: source.databasePath) {
+                try fileManager.copyItem(atPath: source.databasePath, toPath: dbURL.path)
+            }
         }
 
         let newStore = try DocumentLayoutStore(path: dbURL.path)
@@ -110,6 +119,7 @@ public class NestedSplitViewDocument: NSDocument {
             stateLock.lock()
             let pending = pendingTabsForLoad
             let pendingActive = pendingActiveTabIDForLoad
+            let pendingEdges = pendingEnabledEdgesForLoad
             stateLock.unlock()
             // `NestedContentRegistry.placeholderIdentifier` is MainActor-
             // isolated; this writer can run off-main, so use the literal.
@@ -119,7 +129,7 @@ public class NestedSplitViewDocument: NSDocument {
                 second: LayoutNode.leaf(contentType: "placeholder")
             ))]
             let active = pendingActive ?? tabs.first?.id
-            try newStore.saveTabs(tabs, activeTabID: active)
+            try newStore.saveTabs(tabs, activeTabID: active, enabledEdges: pendingEdges ?? [.top])
         }
         setLayoutStore(newStore)
     }

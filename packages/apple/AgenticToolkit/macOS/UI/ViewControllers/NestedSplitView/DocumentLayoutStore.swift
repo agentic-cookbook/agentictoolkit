@@ -36,12 +36,25 @@ public struct LayoutNode {
 
 public struct TabRecord {
     public let id: UUID
+    /// Tabs sharing a `groupID` are one document-level tab: one member per
+    /// edge, all with the same title. Defaults to `id` (a group of one).
+    public let groupID: UUID
+    public var edge: Edge
     public var title: String
     public var root: LayoutNode
     public var focusedNodeID: UUID?
 
-    public init(id: UUID = UUID(), title: String, root: LayoutNode, focusedNodeID: UUID? = nil) {
+    public init(
+        id: UUID = UUID(),
+        groupID: UUID? = nil,
+        edge: Edge = .top,
+        title: String,
+        root: LayoutNode,
+        focusedNodeID: UUID? = nil
+    ) {
         self.id = id
+        self.groupID = groupID ?? id
+        self.edge = edge
         self.title = title
         self.root = root
         self.focusedNodeID = focusedNodeID
@@ -53,7 +66,7 @@ public final class DocumentLayoutStore {
     private var database: OpaquePointer?
     public let databasePath: String
 
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     public init(path: String) throws {
         self.databasePath = path
@@ -96,6 +109,9 @@ public final class DocumentLayoutStore {
         }
         if current < 2 {
             try migration002_addTabs()
+        }
+        if current < 3 {
+            try migration003_addEdgesAndGroups()
         }
     }
 
@@ -174,6 +190,24 @@ public final class DocumentLayoutStore {
         try execute("INSERT INTO schema_migrations (version) VALUES (2)")
     }
 
+    /// Adds four-edge tab support. Each tab records which edge it docks to
+    /// and which document-level group it belongs to (v2 tabs become a
+    /// top-edge group of one), and the document remembers its enabled
+    /// edges.
+    private func migration003_addEdgesAndGroups() throws {
+        try execute("ALTER TABLE document_tabs ADD COLUMN edge TEXT NOT NULL DEFAULT 'top'")
+        try execute("ALTER TABLE document_tabs ADD COLUMN group_id TEXT")
+        try execute("UPDATE document_tabs SET group_id = id WHERE group_id IS NULL")
+        try execute("ALTER TABLE document_state ADD COLUMN enabled_edges TEXT NOT NULL DEFAULT 'top'")
+        try execute("INSERT INTO schema_migrations (version) VALUES (3)")
+    }
+
+    /// Flushes the WAL into the main database file so a file-level copy of
+    /// `databasePath` alone captures every committed write.
+    public func checkpoint() throws {
+        try execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    }
+
     // MARK: - SQL helpers
 
     private var lastErrorMessage: String {
@@ -209,11 +243,15 @@ public final class DocumentLayoutStore {
 
     // MARK: - Tab persistence (v2)
 
-    /// Returns every persisted tab (in display order) plus the active tab's
-    /// id, or `(tabs: [], activeTabID: nil)` for a brand-new document.
-    public func loadTabs() throws -> (tabs: [TabRecord], activeTabID: UUID?) {
+    /// Returns every persisted tab (in display order), the active tab's id,
+    /// and the enabled edges — or `([], nil, [.top])` for a brand-new
+    /// document.
+    public func loadTabs() throws -> (tabs: [TabRecord], activeTabID: UUID?, enabledEdges: [Edge]) {
         let allRows = try fetchAllNodeRows()
-        let sql = "SELECT id, title, root_node_id, focused_node_id FROM document_tabs ORDER BY position"
+        let sql = """
+            SELECT id, title, root_node_id, focused_node_id, edge, group_id
+            FROM document_tabs ORDER BY position
+            """
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -228,15 +266,24 @@ public final class DocumentLayoutStore {
                   let rootID = UUID(uuidString: String(cString: rootIDC)) else { continue }
             let focusedNodeID: UUID? = sqlite3_column_text(stmt, 3)
                 .flatMap { UUID(uuidString: String(cString: $0)) }
+            let edge = sqlite3_column_text(stmt, 4)
+                .flatMap { Edge(rawValue: String(cString: $0)) } ?? .top
+            let groupID: UUID? = sqlite3_column_text(stmt, 5)
+                .flatMap { UUID(uuidString: String(cString: $0)) }
             let root = try buildTree(id: rootID, rows: allRows)
-            tabs.append(TabRecord(id: id, title: title, root: root, focusedNodeID: focusedNodeID))
+            tabs.append(TabRecord(
+                id: id, groupID: groupID, edge: edge,
+                title: title, root: root, focusedNodeID: focusedNodeID
+            ))
         }
         let activeTabID: UUID? = try queryScalarString("SELECT active_tab_id FROM document_state WHERE id = 1")
             .flatMap { UUID(uuidString: $0) }
-        return (tabs, activeTabID)
+        let enabledEdges = try queryScalarString("SELECT enabled_edges FROM document_state WHERE id = 1")
+            .map { $0.split(separator: ",").compactMap { Edge(rawValue: String($0)) } } ?? [.top]
+        return (tabs, activeTabID, enabledEdges)
     }
 
-    public func saveTabs(_ tabs: [TabRecord], activeTabID: UUID?) throws {
+    public func saveTabs(_ tabs: [TabRecord], activeTabID: UUID?, enabledEdges: [Edge] = [.top]) throws {
         try execute("BEGIN IMMEDIATE TRANSACTION")
         do {
             try execute("DELETE FROM document_state")
@@ -245,8 +292,8 @@ public final class DocumentLayoutStore {
             for (index, tab) in tabs.enumerated() {
                 try insertNode(tab.root, parentID: nil, position: 0)
                 try executeBound("""
-                    INSERT INTO document_tabs (id, position, title, root_node_id, focused_node_id)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO document_tabs (id, position, title, root_node_id, focused_node_id, edge, group_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 """) { stmt in
                     sqlite3_bind_text(stmt, 1, (tab.id.uuidString as NSString).utf8String, -1, nil)
                     sqlite3_bind_int(stmt, 2, Int32(index))
@@ -257,12 +304,21 @@ public final class DocumentLayoutStore {
                     } else {
                         sqlite3_bind_null(stmt, 5)
                     }
+                    sqlite3_bind_text(stmt, 6, (tab.edge.rawValue as NSString).utf8String, -1, nil)
+                    sqlite3_bind_text(stmt, 7, (tab.groupID.uuidString as NSString).utf8String, -1, nil)
                 }
             }
-            if let activeTabID, tabs.contains(where: { $0.id == activeTabID }) {
-                try executeBound("INSERT INTO document_state (id, active_tab_id) VALUES (1, ?)") { stmt in
-                    sqlite3_bind_text(stmt, 1, (activeTabID.uuidString as NSString).utf8String, -1, nil)
+            // The state row is always written so enabled edges survive even
+            // when no valid active tab exists.
+            let validActive = activeTabID.flatMap { id in tabs.contains(where: { $0.id == id }) ? id : nil }
+            let edgesJoined = Edge.allCases.filter(enabledEdges.contains).map(\.rawValue).joined(separator: ",")
+            try executeBound("INSERT INTO document_state (id, active_tab_id, enabled_edges) VALUES (1, ?, ?)") { stmt in
+                if let validActive {
+                    sqlite3_bind_text(stmt, 1, (validActive.uuidString as NSString).utf8String, -1, nil)
+                } else {
+                    sqlite3_bind_null(stmt, 1)
                 }
+                sqlite3_bind_text(stmt, 2, (edgesJoined as NSString).utf8String, -1, nil)
             }
             try execute("COMMIT")
         } catch {

@@ -142,7 +142,7 @@ open class MultiTabbedViewController: NSViewController {
         let clamped = max(0, min(index, state.tabs.count))
         state.tabs.insert(tab, at: clamped)
         syncTabBar(for: edge)
-        if activeTabID == nil {
+        if activeTabID == nil, isEdgeEnabled(edge) {
             setActiveTab(tab.id)
         }
     }
