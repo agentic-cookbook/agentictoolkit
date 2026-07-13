@@ -8,6 +8,7 @@
 // persona, namespace, organization).
 //
 // Route: /api/registry/identifiers/{rdid} (PATCH rename)
+//        /api/registry/identifiers/{rdid}/exists (GET availability probe)
 
 import { authedJson, rethrowConflict } from "../http";
 import { enc } from "../client-helpers";
@@ -16,6 +17,17 @@ import type { IdentifierRenameBody } from "./wire";
 const BASE = "/api/registry/identifiers";
 
 export const identifiersApi = {
+  /**
+   * Probe whether an rdid is already taken — the live availability check behind
+   * create-form indicators. Never a 404: the backend answers a clean boolean either
+   * way. `registry.identifiers.rdid` is the table PK, so this IS the system-wide
+   * uniqueness authority (the same key a create 409s on).
+   */
+  async exists(rdid: string): Promise<boolean> {
+    const res = await authedJson<{ exists: boolean }>(`${BASE}/${enc(rdid)}/exists`);
+    return res.exists === true;
+  },
+
   /**
    * Rename an rdid in place. The entity/UUID stays put — only the rdid string
    * changes. Surfaces a 409 (rdid already taken) as a friendly, named error.

@@ -26,6 +26,7 @@ export function CreateResourceDialog<TInput, TResult>({
   onClose,
   onCreated,
   renderForm,
+  saveEnabled,
 }: {
   ariaLabel: string;
   heading: string;
@@ -39,6 +40,10 @@ export function CreateResourceDialog<TInput, TResult>({
     onChange: (next: TInput) => void,
     error: string | null,
   ) => ReactNode;
+  /** Optional extra Save gate beyond the has-any-input default — e.g. the New Product
+   *  form disables Save until the identifier availability probe reports available.
+   *  Click-time `validate` stays the backstop; this only drives the disabled state. */
+  saveEnabled?: (draft: TInput) => boolean;
 }) {
   const [draft, setDraft] = useState<TInput>(blank);
   // A stable baseline (the empty form) for the unsaved-changes guard.
@@ -49,8 +54,10 @@ export function CreateResourceDialog<TInput, TResult>({
 
   // Save is enabled once the form has any input; clicking validates and surfaces
   // the precise problem (e.g. the reverse-domain identifier rule) inline, rather
-  // than leaving the button silently disabled with no explanation.
+  // than leaving the button silently disabled with no explanation. A host may
+  // narrow that via `saveEnabled` (async-informed forms like New Product).
   const dirty = JSON.stringify(draft) !== JSON.stringify(pristine);
+  const canSave = dirty && (saveEnabled == null || saveEnabled(draft));
 
   // Cancel / × / Esc route here: a pristine form closes immediately; a dirty one
   // raises the Save / Discard prompt instead of dismissing.
@@ -123,7 +130,7 @@ export function CreateResourceDialog<TInput, TResult>({
           <Button variant="ghost" onClick={requestClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={saving || !dirty}>
+          <Button onClick={save} disabled={saving || !canSave}>
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
@@ -157,7 +164,7 @@ export function CreateResourceDialog<TInput, TResult>({
                 >
                   Discard
                 </Button>
-                <Button onClick={save} disabled={saving || !dirty}>
+                <Button onClick={save} disabled={saving || !canSave}>
                   {saving ? "Saving…" : "Save"}
                 </Button>
               </div>

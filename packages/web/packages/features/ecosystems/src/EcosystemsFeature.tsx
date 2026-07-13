@@ -21,6 +21,13 @@ import { useResourceList, makeEntityDeleteHandler, writeLastId } from "@agentic-
 import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import { EcosystemSettingsPane } from "./EcosystemSettingsPane";
 import { EcosystemDetail, ecoBlank, ecoValidate, ecoNormalize } from "./EcosystemDetail";
+import {
+  EcosystemCreateForm,
+  ecoCreateBlank,
+  ecoCreateReady,
+  ecoCreateToInput,
+  ecoCreateValidate,
+} from "./EcosystemCreateForm";
 import { EcoRequestsPane, EcoPendingUsersPane, EcoInvitesPane } from "./EcosystemInvitationPanes";
 import { useEcosystemCapabilities } from "./use-ecosystem-capabilities";
 import { an } from "./lib/an";
@@ -457,8 +464,9 @@ export function EcosystemsFeature({
     },
   }));
 
-  // The create-dialog identity (label/heading/blank/validate) — ONE definition shared by the
-  // feature-owned dialog below and the listFirst header-"+" dialog, so the two can't drift.
+  // The CHILD-ecosystem create-dialog identity (label/heading/blank/validate). The listFirst
+  // header-"+" dialog no longer shares it: that flow is the workspace New Product form
+  // (derived owner-scoped identifier + availability probe), a different draft shape.
   const dialogCommon = {
     ariaLabel: `New ${lowerSingular}`,
     heading: `New ${lowerSingular}`,
@@ -622,11 +630,20 @@ export function EcosystemsFeature({
             renderMeta: () => null,
           }}
           renderDialog={(onClose, onCreated) => (
+            // The workspace New Product form: Display Name + Slug are typed; the
+            // identifier is READ-ONLY, derived as ecosystem.<workspace-slug>.<slug>
+            // (the workspace slug IS the owner principal's slug — customer or org),
+            // live-probed for system-wide availability. Save stays disabled until
+            // name + slug are filled AND the probe reports available.
             <CreateResourceDialog
-              {...dialogCommon}
+              ariaLabel={`New ${lowerSingular}`}
+              heading={`New ${singular}`}
+              blank={ecoCreateBlank}
+              validate={(d) => ecoCreateValidate(d, slug ?? "")}
+              saveEnabled={ecoCreateReady}
               create={(d) =>
                 ecosystemsApi.create(
-                  ecoNormalize(d),
+                  ecoCreateToInput(d, slug ?? ""),
                   slug != null ? { workspace: slug } : undefined,
                 )
               }
@@ -638,7 +655,13 @@ export function EcosystemsFeature({
                 onCreated(eco.id);
               }}
               renderForm={(draft, onChange, error) => (
-                <EcosystemDetail draft={draft} onChange={onChange} error={error} />
+                <EcosystemCreateForm
+                  draft={draft}
+                  onChange={onChange}
+                  error={error}
+                  ownerScope={slug ?? ""}
+                  noun={lowerSingular}
+                />
               )}
             />
           )}
