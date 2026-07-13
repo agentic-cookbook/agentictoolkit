@@ -27,7 +27,7 @@ import {
   ecoCreateReady,
   ecoCreateToInput,
   ecoCreateValidate,
-} from "./EcosystemCreateForm";
+} from "./EcosystemForm";
 import { EcoRequestsPane, EcoPendingUsersPane, EcoInvitesPane } from "./EcosystemInvitationPanes";
 import { useEcosystemCapabilities } from "./use-ecosystem-capabilities";
 import { an } from "./lib/an";

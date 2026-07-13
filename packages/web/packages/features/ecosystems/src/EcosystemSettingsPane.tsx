@@ -1,22 +1,29 @@
 "use client";
 
-import type { ReactElement, ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 
 import { ecosystemsApi, type Ecosystem, type EcosystemInput } from "@agentic-toolkit/data/ecosystems";
 import { useMasterDetailForm, RecordSettingsPane, useRecordAffordance } from "@agentic-toolkit/resource";
 import { DeleteEntitySection } from "@agentic-toolkit/ui/blocks/delete-entity-section";
+import { isRdid, parseRdid, prefixFor } from "@agentic-toolkit/ui/lib/rdid";
+import { ecoBlank, ecoToInput, ecoDiffers, ecoNormalize } from "./EcosystemDetail";
 import {
-  EcosystemDetail,
-  ecoBlank,
-  ecoToInput,
-  ecoValidate,
-  ecoDiffers,
-  ecoNormalize,
-} from "./EcosystemDetail";
+  EcosystemFields,
+  ecoCreateRdidValid,
+  useRdidAvailability,
+  type RdidAvailability,
+} from "./EcosystemForm";
 
 import { an } from "./lib/an";
 
-/** Settings editor for the active ecosystem (identifier, name, region, domain). */
+/**
+ * Settings editor for the active ecosystem — the SAME form as the New-Product dialog
+ * (EcosystemFields: Display Name / Slug / derived read-only Identifier + availability
+ * status / Description / disabled Geographic Region) plus the Danger Zone. The
+ * identifier's type+scope are fixed (parsed from the saved rdid); editing the SLUG
+ * re-derives it, live-probes availability, and saving renames the rdid through
+ * registry.identifiers (ecosystemsApi.update's rename flow).
+ */
 export function EcosystemSettingsPane({
   noun = "Ecosystem",
   ecosystemId,
@@ -48,12 +55,42 @@ export function EcosystemSettingsPane({
   // a standalone feature site → the trailing slot renders nothing.
   const renderRecordAffordance = useRecordAffordance();
 
+  const active = items?.find((e) => e.id === ecosystemId);
+
+  // The fixed identifier prefix: the saved rdid's own type+scope (so an owner-scoped
+  // product keeps `ecosystem.<owner>.` and a legacy top-level row keeps `ecosystem.`).
+  // A rdid-less row (uuid-addressed) and the pane's create mode fall back to top-level.
+  const prefix = active && isRdid(active.id) ? prefixFor("ecosystem", parseRdid(active.id).scope) : prefixFor("ecosystem");
+  const scope = prefix.slice("ecosystem.".length).replace(/\.$/, "");
+  const leafOf = (identifier: string) =>
+    identifier.startsWith(prefix) ? identifier.slice(prefix.length) : identifier;
+
+  // The probe verdict the form's `validate` reads. It is STATE (not the derived value
+  // below) because validate runs INSIDE useMasterDetailForm during render — before the
+  // derived value exists — and because a verdict change must re-render the pane so the
+  // Save gate (canSave = dirty && valid) tracks it. The effect below keeps it current.
+  const [status, setStatus] = useState<RdidAvailability>("idle");
+
   const form = useMasterDetailForm<Ecosystem, EcosystemInput>({
     items,
     getId: (e) => e.id,
     blank: ecoBlank,
     toInput: ecoToInput,
-    validate: (draft, others) => ecoValidate(draft, others.map((o) => o.identifier)),
+    validate: (draft, others) => {
+      if (!draft.name.trim()) return "Display name is required.";
+      const slug = leafOf(draft.identifier.trim());
+      if (!slug) return "Slug is required.";
+      if (!ecoCreateRdidValid(scope, slug))
+        return `"${draft.identifier}" is not a valid identifier — lowercase letters, digits, and interior hyphens only.`;
+      if (others.some((o) => o.identifier === draft.identifier))
+        return `Identifier "${draft.identifier}" is already in use.`;
+      // A rename (or a create) needs the probe's go-ahead — same bar as the create
+      // dialog. An unchanged identifier skips it (status is "idle" then).
+      if (status === "unavailable") return `Identifier "${draft.identifier}" is already in use.`;
+      if (status !== "idle" && status !== "available")
+        return "Waiting for the identifier availability check.";
+      return null;
+    },
     differs: ecoDiffers,
     normalize: ecoNormalize,
     create: (input) => ecosystemsApi.create(input),
@@ -67,7 +104,17 @@ export function EcosystemSettingsPane({
     createLabel: `New ${noun.toLowerCase()}`,
   });
 
-  const active = items?.find((e) => e.id === ecosystemId);
+  // Availability probe over the DERIVED identifier — skipped (null → "idle") while it
+  // matches the saved rdid, so opening Settings shows no status until the slug changes.
+  const draft = form.draft;
+  const draftSlug = draft ? leafOf(draft.identifier.trim()) : "";
+  const changed = draft != null && (form.creating || active == null || draft.identifier.trim() !== active.id);
+  const grammarOk = draftSlug !== "" && ecoCreateRdidValid(scope, draftSlug);
+  const probe = useRdidAvailability(changed && grammarOk ? prefix + draftSlug : null);
+  const derivedStatus: RdidAvailability = !draft || !changed ? "idle" : !grammarOk ? "invalid" : probe;
+  useEffect(() => {
+    if (derivedStatus !== status) setStatus(derivedStatus);
+  }, [derivedStatus, status]);
 
   return (
     <RecordSettingsPane
@@ -88,16 +135,20 @@ export function EcosystemSettingsPane({
           ? "Loading…"
           : `Select ${an(noun.toLowerCase())} in the sidebar, or create a new one.`
       }
-      renderDetail={(draft) => (
-        <div className="flex flex-col gap-6">
-          <EcosystemDetail
-            key={form.detailKey}
-            draft={draft}
-            onChange={form.onChange}
+      renderDetail={(d) => (
+        <div className="flex flex-col gap-6" key={form.detailKey}>
+          <EcosystemFields
+            prefix={prefix}
+            name={d.name}
+            slug={leafOf(d.identifier.trim())}
+            description={d.description}
+            region={d.region}
+            status={derivedStatus}
             error={form.error}
-            // The rdid is mutable — editable whether creating or editing; on save
-            // a changed identifier is renamed via registry.identifiers (see api).
-            identifierLocked={false}
+            noun={noun.toLowerCase()}
+            onName={(v) => form.onChange({ ...d, name: v })}
+            onSlug={(v) => form.onChange({ ...d, identifier: prefix + v })}
+            onDescription={(v) => form.onChange({ ...d, description: v })}
           />
           {!form.creating && active && onDelete && (
             <DeleteEntitySection

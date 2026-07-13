@@ -12,9 +12,10 @@ import { SEGMENT_RE, prefixFor, validateLeaf } from "@agentic-toolkit/ui/lib/rdi
 import { identifiersApi, type EcosystemInput } from "@agentic-toolkit/data/ecosystems";
 
 /**
- * The live verdict on the derived identifier. Carried IN the create draft (not local
- * state) so the dialog's sync `saveEnabled` gate reads the same value this form
- * displays — the form owns the async probe and writes the verdict back via onChange.
+ * The live verdict on a derived identifier. In the CREATE dialog it is carried IN the
+ * draft (not local state) so the dialog's sync `saveEnabled` gate reads the same value
+ * the form displays; the SETTINGS pane holds it in render scope and reads it from its
+ * `validate` closure instead.
  */
 export type RdidAvailability =
   | "idle"
@@ -23,6 +24,39 @@ export type RdidAvailability =
   | "available"
   | "unavailable"
   | "error";
+
+/**
+ * Debounced server probe for an rdid's system-wide availability (registry.identifiers
+ * is the uniqueness authority — the same key a create/rename 409s on). Pass null to
+ * probe nothing (empty / grammar-invalid / unchanged identifier) → "idle". Grammar
+ * validity is the CALLER's call ("invalid" never comes from here).
+ */
+export function useRdidAvailability(
+  rdid: string | null,
+): Exclude<RdidAvailability, "invalid"> {
+  // Debounce the probed value so the query fires on pauses, not on every keystroke
+  // (the same 350ms idiom as the hub's profile slug-availability check).
+  const [debounced, setDebounced] = useState(rdid);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(rdid), 350);
+    return () => clearTimeout(timer);
+  }, [rdid]);
+
+  const existsQuery = useQuery({
+    queryKey: ["rdid-exists", debounced],
+    queryFn: () => identifiersApi.exists(debounced as string),
+    enabled: debounced != null && debounced !== "",
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  if (rdid == null || rdid === "") return "idle";
+  if (rdid !== debounced || existsQuery.isFetching) return "checking";
+  if (existsQuery.data === false) return "available";
+  if (existsQuery.data === true) return "unavailable";
+  if (existsQuery.isError) return "error";
+  return "checking";
+}
 
 /** The New-Product draft: the user edits name/slug/description; the identifier is
  *  DERIVED (`ecosystem.<ownerScope>.<slug>`), never typed. */
@@ -89,74 +123,41 @@ export function ecoCreateToInput(
 }
 
 /**
- * The "New Product" (workspace-scoped ecosystem create) form: Display Name + Slug are
- * typed; the Identifier is a read-only live derivation `ecosystem.<ownerScope>.<slug>`
- * with a debounced server availability probe (registry.identifiers is the system-wide
- * uniqueness authority — the same key the create 409s on). Unlike EcosystemDetail (the
- * edit / child-create form), the rdid is never directly editable here.
+ * The ONE ecosystem/product form layout, shared by the New-Product dialog and the
+ * Settings pane so the two can't drift: labels sit left of their controls in one
+ * right-aligned column; the Identifier is a read-only live derivation
+ * `<prefix><slug>` with the availability status on a height-reserved line under it;
+ * Geographic Region is disabled ("coming soon"); Domain is not collected.
  */
-export function EcosystemCreateForm({
-  draft,
-  onChange,
+export function EcosystemFields({
+  prefix,
+  name,
+  slug,
+  description,
+  region = "",
+  status,
   error,
-  ownerScope,
   noun = "ecosystem",
+  onName,
+  onSlug,
+  onDescription,
 }: {
-  draft: EcosystemCreateDraft;
-  onChange: (next: EcosystemCreateDraft) => void;
+  /** The fixed identifier prefix (up to and including the final dot). */
+  prefix: string;
+  name: string;
+  slug: string;
+  description: string;
+  /** Shown (still disabled) so an existing row's stored region stays visible. */
+  region?: string;
+  status: RdidAvailability;
   error?: string | null;
-  /** The workspace owner's slug — the fixed rdid scope. "" renders `ecosystem.<slug>`. */
-  ownerScope: string;
   /** Lowercase entity noun for placeholder copy (the hub passes "product"). */
   noun?: string;
+  onName: (v: string) => void;
+  onSlug: (v: string) => void;
+  onDescription: (v: string) => void;
 }) {
   const uid = useId();
-  const slug = draft.slug.trim();
-  const prefix = prefixFor("ecosystem", ownerScope.trim());
-  const grammarOk = slug !== "" && ecoCreateRdidValid(ownerScope, slug);
-
-  // Debounce the typed slug so the probe fires on pauses, not on every keystroke
-  // (the same 350ms idiom as the hub's profile slug-availability check).
-  const [debouncedSlug, setDebouncedSlug] = useState(slug);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSlug(slug), 350);
-    return () => clearTimeout(timer);
-  }, [slug]);
-
-  const probeRdid = prefix + debouncedSlug;
-  const existsQuery = useQuery({
-    queryKey: ["rdid-exists", probeRdid],
-    queryFn: () => identifiersApi.exists(probeRdid),
-    enabled: debouncedSlug !== "" && ecoCreateRdidValid(ownerScope, debouncedSlug),
-    retry: false,
-    staleTime: 30_000,
-  });
-
-  const status: RdidAvailability =
-    slug === ""
-      ? "idle"
-      : !grammarOk
-        ? "invalid"
-        : slug !== debouncedSlug || existsQuery.isFetching
-          ? "checking"
-          : existsQuery.data === false
-            ? "available"
-            : existsQuery.data === true
-              ? "unavailable"
-              : existsQuery.isError
-                ? "error"
-                : "checking";
-
-  // The dialog owns the draft — write the probe verdict back into it so the sync
-  // saveEnabled gate (ecoCreateReady) sees exactly the state this form displays.
-  useEffect(() => {
-    if (draft.rdidStatus !== status) onChange({ ...draft, rdidStatus: status });
-  }, [status, draft, onChange]);
-
-  function set<K extends keyof EcosystemCreateDraft>(key: K, value: string) {
-    onChange({ ...draft, [key]: value });
-  }
-
   // One grid = one shared label column: labels right-aligned beside their controls
   // (Display Name / Slug / Identifier / Geographic Region); Description spans both
   // columns with its box below, per the spec'd layout.
@@ -169,8 +170,8 @@ export function EcosystemCreateForm({
         <Input
           id={`${uid}-name`}
           placeholder={`My ${noun[0]?.toUpperCase()}${noun.slice(1)}`}
-          value={draft.name}
-          onChange={(e) => set("name", e.target.value)}
+          value={name}
+          onChange={(e) => onName(e.target.value)}
         />
         <Label htmlFor={`${uid}-slug`} className="justify-self-end">
           Slug:
@@ -178,8 +179,8 @@ export function EcosystemCreateForm({
         <Input
           id={`${uid}-slug`}
           placeholder={`my-${noun}`}
-          value={draft.slug}
-          onChange={(e) => set("slug", e.target.value.toLowerCase())}
+          value={slug}
+          onChange={(e) => onSlug(e.target.value.toLowerCase())}
         />
         <Label className="justify-self-end self-start pt-0.5">Identifier:</Label>
         <div className="flex flex-col gap-1">
@@ -199,20 +200,70 @@ export function EcosystemCreateForm({
             id={`${uid}-description`}
             rows={3}
             placeholder={`What this ${noun} is for.`}
-            value={draft.description}
-            onChange={(e) => set("description", e.target.value)}
+            value={description}
+            onChange={(e) => onDescription(e.target.value)}
           />
         </div>
         <Label htmlFor={`${uid}-region`} className="justify-self-end">
           Geographic Region:
         </Label>
-        <Input id={`${uid}-region`} placeholder="coming soon" value="" disabled readOnly />
+        <Input id={`${uid}-region`} placeholder="coming soon" value={region} disabled readOnly />
 
         <div className="col-span-2">
           <ErrorText error={error} />
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The "New Product" (workspace-scoped ecosystem create) form: Display Name + Slug are
+ * typed; the Identifier derives live as `ecosystem.<ownerScope>.<slug>` and is probed
+ * for availability. The probe verdict is written back INTO the dialog-owned draft so
+ * the dialog's sync `saveEnabled` gate (ecoCreateReady) sees exactly what is shown.
+ */
+export function EcosystemCreateForm({
+  draft,
+  onChange,
+  error,
+  ownerScope,
+  noun = "ecosystem",
+}: {
+  draft: EcosystemCreateDraft;
+  onChange: (next: EcosystemCreateDraft) => void;
+  error?: string | null;
+  /** The workspace owner's slug — the fixed rdid scope. "" renders `ecosystem.<slug>`. */
+  ownerScope: string;
+  /** Lowercase entity noun for placeholder copy (the hub passes "product"). */
+  noun?: string;
+}) {
+  const slug = draft.slug.trim();
+  const prefix = prefixFor("ecosystem", ownerScope.trim());
+  const grammarOk = slug !== "" && ecoCreateRdidValid(ownerScope, slug);
+
+  const probe = useRdidAvailability(grammarOk ? prefix + slug : null);
+  const status: RdidAvailability = slug === "" ? "idle" : !grammarOk ? "invalid" : probe;
+
+  // The dialog owns the draft — write the probe verdict back into it so the sync
+  // saveEnabled gate (ecoCreateReady) sees exactly the state this form displays.
+  useEffect(() => {
+    if (draft.rdidStatus !== status) onChange({ ...draft, rdidStatus: status });
+  }, [status, draft, onChange]);
+
+  return (
+    <EcosystemFields
+      prefix={prefix}
+      name={draft.name}
+      slug={draft.slug}
+      description={draft.description}
+      status={status}
+      error={error}
+      noun={noun}
+      onName={(v) => onChange({ ...draft, name: v })}
+      onSlug={(v) => onChange({ ...draft, slug: v })}
+      onDescription={(v) => onChange({ ...draft, description: v })}
+    />
   );
 }
 
