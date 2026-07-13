@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { TopicOverview, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import type { TopicLeaf } from "./resource-explorer";
 import { StackLevels } from "./rail-host";
@@ -14,6 +14,10 @@ export interface GroupTopicItem {
   id: string;
   label: string;
   icon: ReactNode;
+  /** What this member is for. When ANY member carries one, the no-selection leaf becomes the
+   *  standard TopicOverview (one card per member) instead of the `emptyHint` placeholder — an
+   *  opt-in through the data, so entity rosters without descriptions keep the plain hint. */
+  description?: string;
   /** The member's detail pane (it may itself publish deeper rails). `subLeaf` carries the
    *  deep-linkable inner entity (the segment AFTER this member) for members that URL-drive their
    *  own selection — a persona list, a master/detail config pane; members without one ignore it. */
@@ -69,10 +73,16 @@ export function StackGroupDetail({
   const { selectedId: selected, select: setSelected } = useDualModeSelection(urlSelection);
   // Selected item if present; else (nothing selected, or a stale id no longer in `items`) nothing.
   const active = selected != null ? items.find((i) => i.id === selected) ?? null : null;
+  const memberItems = items.map((i) => ({
+    id: i.id,
+    label: i.label,
+    icon: i.icon,
+    description: i.description,
+  }));
   const level: TopicLevel = {
     id: levelId,
     title,
-    items: items.map((i) => ({ id: i.id, label: i.label, icon: i.icon })),
+    items: memberItems,
     selectedId: active?.id ?? null,
     onSelect: setSelected,
     onClear: () => setSelected(null),
@@ -85,6 +95,8 @@ export function StackGroupDetail({
           <Fragment key={active.id}>
             {active.render(renderSubLeaf ? renderSubLeaf(active.id) : LOCAL_SUBLEAF)}
           </Fragment>
+        ) : items.some((i) => i.description) ? (
+          <TopicOverview title={title} items={memberItems} onSelect={setSelected} />
         ) : (
           <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">
             {emptyHint}

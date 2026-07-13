@@ -29,6 +29,9 @@ export interface TopicDetailItem {
   label: string
   /** Small dim second line (e.g. a reverse-domain identifier). */
   sublabel?: string
+  /** What this topic is for — one or two sentences. Feeds the standard no-selection
+   *  overview (TopicOverview: one card per topic, icon + label + this text). */
+  description?: string
   /** 16px leading icon; tints with the label (currentColor). The rail is always
    *  collapsible, so every row is guaranteed an icon — a neutral ring fills in
    *  when omitted — so the collapsed icon-only strip never shows a blank slot. */

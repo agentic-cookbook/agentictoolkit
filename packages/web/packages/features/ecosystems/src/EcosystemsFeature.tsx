@@ -40,6 +40,8 @@ export interface EcosystemsTopicConfig {
   id: string;
   label: string;
   icon: ReactNode;
+  /** What this topic is for — feeds the standard no-selection TopicOverview cards. */
+  description?: string;
   dividerAfter?: boolean;
   /** An opt-in capability id — the topic is hidden unless the scoped ecosystem has it
    *  enabled (see useEcosystemCapabilities). Omitted topics always show. */
@@ -64,11 +66,18 @@ export interface RenderTopicPaneCtx {
  * ECOSYSTEM_TOPICS catalog, where these two ids appear with the same meaning.
  */
 export const IN_PACKAGE_TOPICS: EcosystemsTopicConfig[] = [
-  { id: "settings", label: "Settings", icon: <Settings size={16} aria-hidden />, dividerAfter: false },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: <Settings size={16} aria-hidden />,
+    description: "The ecosystem's own record — name, identifier, and description.",
+    dividerAfter: false,
+  },
   {
     id: "child-ecosystems",
     label: "Child Ecosystems",
     icon: <Boxes size={16} aria-hidden />,
+    description: "The ecosystems this one owns.",
     dividerAfter: false,
   },
 ];
@@ -183,10 +192,13 @@ function groupMembers(
   return {
     storage: [
       { id: "buckets", label: "Buckets", icon: <Table2 size={16} aria-hidden />,
+        description: "Reusable, composable collections of tables — applications grant permissions on these.",
         render: (subLeaf) => renderTopicPane("buckets", { ecosystemId: ecoId, title: titleFor("Buckets"), leaf: subLeaf }) },
       { id: "access", label: "Access", icon: <KeyRound size={16} aria-hidden />,
+        description: "Access lists for the buckets: who can read or write each bucket, type, or row.",
         render: (subLeaf) => renderTopicPane("access", { ecosystemId: ecoId, title: titleFor("Access"), leaf: subLeaf }) },
       { id: "all-data", label: "All Data", icon: <Database size={16} aria-hidden />,
+        description: "Browse and edit the raw rows behind every bucket.",
         render: () => renderFeaturePanel("all-data") },
     ],
     // Users (topic id "invitations", kept for deep-link stability): the ecosystem's people —
@@ -198,12 +210,16 @@ function groupMembers(
     // /auth/ecosystems/undefined/... → 404 "Failed to load".
     invitations: [
       { id: "users", label: "Users", icon: <Users size={16} aria-hidden />,
+        description: "End-users who authenticate here (its customer identities).",
         render: (subLeaf) => renderTopicPane("users", { ecosystemId: ecoId, title: titleFor("Users"), leaf: subLeaf }) },
       { id: "requests", label: "Requests", icon: <Inbox size={16} aria-hidden />,
+        description: "People asking to join — approve or decline.",
         render: () => (ecoId ? <EcoRequestsPane ecosystemRdid={ecoId} /> : null) },
       { id: "pending-users", label: "Pending users", icon: <Users size={16} aria-hidden />,
+        description: "Approved sign-ups that haven't completed registration yet.",
         render: () => (ecoId ? <EcoPendingUsersPane ecosystemRdid={ecoId} /> : null) },
       { id: "invites", label: "Invites", icon: <Send size={16} aria-hidden />,
+        description: "Invitations you've sent and their status.",
         render: () => (ecoId ? <EcoInvitesPane ecosystemRdid={ecoId} /> : null) },
     ],
   };
@@ -381,6 +397,7 @@ export function EcosystemsFeature({
     id: t.id,
     label: t.label,
     icon: t.icon,
+    description: t.description,
     dividerAfter: t.dividerAfter,
     render: (ecoId, titleFor, leaf, subLeafFor) => {
       if (!canManageScoped(ecoId)) return notManageablePane;

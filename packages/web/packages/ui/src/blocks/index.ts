@@ -4,6 +4,7 @@ export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor"
 export { Field } from "./field"
 export { FieldGroup } from "./field-group"
 export { TopicDetail, type TopicDetailItem, type RailSlot } from "./topic-detail"
+export { TopicOverview } from "./topic-overview"
 export {
   HierarchicalTopicDetail,
   type TopicLevel,

@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   HierarchicalTopicDetail,
+  TopicOverview,
   type TopicDetailItem,
   type TopicLevel,
 } from "@agentic-toolkit/ui/blocks";
@@ -32,6 +33,8 @@ export interface ResourceTopic {
   id: string;
   label: string;
   icon: ReactNode;
+  /** What this topic is for — feeds the standard no-selection TopicOverview cards. */
+  description?: string;
   dividerAfter?: boolean;
   /** Render the topic's pane for the active resource id (undefined while "All"). `leaf`
    *  carries the deep-linkable leaf selection for master/detail topics; `subLeafFor` builds the
@@ -198,6 +201,7 @@ export function ResourceExplorer<T>({
     id: t.id,
     label: t.label,
     icon: t.icon,
+    description: t.description,
     dividerAfter: t.dividerAfter,
   }));
 
@@ -301,7 +305,13 @@ export function ResourceExplorer<T>({
         renderMeta={landing.renderMeta}
       />
     ) : topic == null ? (
-      <EmptyState title="Select a topic to view." />
+      // The standard no-selection overview: one card per topic (icon + label +
+      // description); clicking a card selects that topic in the rail.
+      <TopicOverview
+        title={topicLevel.title}
+        items={topicItems}
+        onSelect={(id) => topicLevel.onSelect(id)}
+      />
     ) : (
       <Fragment key={scopedId}>
         {topics.find((t) => t.id === topic)?.render(scopedId, titleFor, leaf, subLeafFor)}
