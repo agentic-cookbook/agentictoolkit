@@ -157,37 +157,44 @@ export function EcosystemCreateForm({
     onChange({ ...draft, [key]: value });
   }
 
+  // One grid = one shared label column: labels right-aligned beside their controls
+  // (Display Name / Slug / Identifier / Geographic Region); Description spans both
+  // columns with its box below, per the spec'd layout.
   return (
     <Card>
-      <CardContent className="flex flex-col gap-5">
-        <Field
+      <CardContent className="grid grid-cols-[max-content_1fr] items-center gap-x-3 gap-y-5">
+        <Label htmlFor={`${uid}-name`} className="justify-self-end">
+          Display Name:
+        </Label>
+        <Input
           id={`${uid}-name`}
-          label="Display Name"
           placeholder={`My ${noun[0]?.toUpperCase()}${noun.slice(1)}`}
           value={draft.name}
-          onChange={(v) => set("name", v)}
+          onChange={(e) => set("name", e.target.value)}
         />
-        <Field
+        <Label htmlFor={`${uid}-slug`} className="justify-self-end">
+          Slug:
+        </Label>
+        <Input
           id={`${uid}-slug`}
-          label="Slug"
-          hint="Lowercase letters, digits, and interior hyphens only."
           placeholder={`my-${noun}`}
           value={draft.slug}
-          onChange={(v) => set("slug", v.toLowerCase())}
+          onChange={(e) => set("slug", e.target.value.toLowerCase())}
         />
-        <div className="flex flex-col gap-2">
-          <Label>Identifier</Label>
+        <Label className="justify-self-end self-start pt-0.5">Identifier:</Label>
+        <div className="flex flex-col gap-1">
           <code className="text-sm text-apt-text">
             <span className="text-apt-text-muted">{prefix}</span>
             {slug || <span className="italic text-apt-text-dim">slug</span>}
           </code>
-          <RdidStatusLine status={status} />
-          <p className="text-xs text-apt-text-muted">
-            Not editable — derived from the slug, unique across the whole system.
-          </p>
+          {/* Height reserved even while idle so the rows below don't shift the
+              moment the user types and a verdict appears. */}
+          <div className="min-h-4">
+            <RdidStatusLine status={status} />
+          </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={`${uid}-description`}>Description</Label>
+        <div className="col-span-2 flex flex-col gap-2">
+          <Label htmlFor={`${uid}-description`}>Description:</Label>
           <Textarea
             id={`${uid}-description`}
             rows={3}
@@ -196,16 +203,14 @@ export function EcosystemCreateForm({
             onChange={(e) => set("description", e.target.value)}
           />
         </div>
-        <Field
-          id={`${uid}-region`}
-          label="Geographic Region"
-          placeholder="coming soon"
-          value=""
-          disabled
-          onChange={() => {}}
-        />
+        <Label htmlFor={`${uid}-region`} className="justify-self-end">
+          Geographic Region:
+        </Label>
+        <Input id={`${uid}-region`} placeholder="coming soon" value="" disabled readOnly />
 
-        <ErrorText error={error} />
+        <div className="col-span-2">
+          <ErrorText error={error} />
+        </div>
       </CardContent>
     </Card>
   );
@@ -239,36 +244,4 @@ function RdidStatusLine({ status }: { status: RdidAvailability }) {
         "text-apt-text-dim",
       );
   }
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  placeholder,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  placeholder?: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {hint && <p className="text-xs text-apt-text-muted">{hint}</p>}
-    </div>
-  );
 }
