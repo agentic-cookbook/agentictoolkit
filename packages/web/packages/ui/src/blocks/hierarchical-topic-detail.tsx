@@ -37,6 +37,7 @@ import {
   DialogDescription,
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
+import { TopicOverview } from "./topic-overview"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -77,6 +78,11 @@ export interface TopicLevel {
    *  narrow — selecting a row still NEVER auto-selects anything at a deeper level unless that level
    *  asks for it here. Omit for the platform default: nothing is chosen for the user. */
   defaultSelectedId?: string
+  /** The automatic TOPIC OVERVIEW (default on): while this level is the frontier with nothing
+   *  selected, the detail pane shows one card per row (icon + label + `description`) and
+   *  clicking a card selects it. Pass `false` for a level whose unselected state has a REAL
+   *  landing of its own (ResourceExplorer's searchable entity landing). */
+  overview?: boolean
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
    *  row, or this level's `defaultSelectedId` when the list appears). */
@@ -197,6 +203,10 @@ type SurfaceState = {
   autoHide: boolean
   pins: Record<string, boolean>
   hoverId: string | null
+  /** How the open reveal was rooted: a pointer ENTER opens EVERY on-screen list (`true`), the
+   *  covering CLICK opens only the clicked list's own branch (`false`) — a click on a visible row
+   *  must never spring the user's collapsed parents open (must-not-expand-parents-on-select). */
+  hoverAll: boolean
   /** NARROW mode: the pane index the stack was last PAINTED at. The slide animates from here to
    *  wherever the new selection puts the top pane — and since selecting is a route change that
    *  remounts everything, a pane would otherwise mount already at its final position with nothing to
@@ -366,10 +376,11 @@ export function HierarchicalTopicDetail({
     autoHide: autoHideTopics,
     pins: {},
     hoverId: null,
+    hoverAll: false,
     narrowTop: null,
     autoSelected: {},
   }
-  const { autoHide, pins, hoverId } = surface
+  const { autoHide, pins, hoverId, hoverAll } = surface
   // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
   // component around state that outlived it, so a closed-over `surface` can be a render behind.
   const patchSurface = useCallback(
@@ -379,6 +390,7 @@ export function HierarchicalTopicDetail({
         autoHide: autoHideTopics,
         pins: {},
         hoverId: null,
+        hoverAll: false,
         narrowTop: null,
         autoSelected: {},
       }
@@ -400,7 +412,8 @@ export function HierarchicalTopicDetail({
     [patchSurface],
   )
   const setHoverId = useCallback(
-    (id: string | null) => patchSurface((p) => ({ ...p, hoverId: id })),
+    (id: string | null, all = false) =>
+      patchSurface((p) => ({ ...p, hoverId: id, hoverAll: id === null ? false : all })),
     [patchSurface],
   )
   const setNarrowTop = useCallback(
@@ -462,6 +475,38 @@ export function HierarchicalTopicDetail({
     (layoutMode === "auto" &&
       (phone || (containerW > 0 && containerW < minDetailPx(minDetailWidth) + FULL_RAIL)))
 
+  // THE AUTOMATIC TOPIC OVERVIEW: while the frontier list has no selection, the detail pane is the
+  // standard overview — one card per row (icon + label + description); clicking a card selects it —
+  // for EVERY stack, instead of whatever placeholder the host passed as children. It exists ONLY in
+  // that state: the moment the frontier gains a selection the host's real detail (children) shows.
+  // A level whose unselected state has a real landing of its own opts out (`overview: false`).
+  // Titled by the parent's selected row (the entity whose topics these are), else the level's title.
+  const frontierLevel = firstUnselected === -1 ? null : levels[firstUnselected]
+  const parentOfFrontier = firstUnselected > 0 ? levels[firstUnselected - 1] : null
+  const overviewTitle =
+    parentOfFrontier?.items.find((it) => it.id === parentOfFrontier.selectedId)?.label ??
+    frontierLevel?.title
+  const overview =
+    frontierLevel && frontierLevel.overview !== false && frontierLevel.items.length > 0 ? (
+      <TopicOverview
+        title={overviewTitle}
+        items={frontierLevel.items}
+        onSelect={(id) => frontierLevel.onSelect(id)}
+      />
+    ) : null
+  // `children` stay MOUNTED (hidden) under the overview: in a merged stack the deeper levels are
+  // PUBLISHED by components living in children (StackLevels), so unmounting them would unregister
+  // the very frontier level this overview is for — the stack then oscillates between the two
+  // states (React's max-update-depth). Hidden children publish exactly as when visible.
+  const detail = overview ? (
+    <>
+      {overview}
+      <div hidden>{children}</div>
+    </>
+  ) : (
+    children
+  )
+
   // The layouts share the same selection / breadcrumb / exit-guard semantics above and differ ONLY in
   // how the lists yield room to the detail — so each is its own subcomponent owning its layout state
   // (kept distinct so any one can evolve or be deleted independently).
@@ -478,6 +523,7 @@ export function HierarchicalTopicDetail({
     pins,
     setPins,
     hoverId,
+    hoverAll,
     setHoverId,
     narrowTop: surface.narrowTop,
     setNarrowTop,
@@ -499,14 +545,14 @@ export function HierarchicalTopicDetail({
       <div ref={rowRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
         {narrow ? (
           <NarrowStack {...stackProps} levels={levels}>
-            {children}
+            {detail}
           </NarrowStack>
         ) : disclosureStyle === "minimized" ? (
           <MinimizedStack {...stackProps} levels={levels} manualCollapse={manualCollapse}>
-            {children}
+            {detail}
           </MinimizedStack>
         ) : (
-          <CoveredStack {...stackProps}>{children}</CoveredStack>
+          <CoveredStack {...stackProps}>{detail}</CoveredStack>
         )}
       </div>
 
@@ -637,7 +683,10 @@ interface StackProps {
    *  the frame's surface store, not by the stack, so a selection — which remounts this subtree — can't
    *  yank the branch shut from under a pointer that is still inside it. */
   hoverId: string | null
-  setHoverId: (id: string | null) => void
+  /** True when the open reveal was rooted by a pointer ENTER (expand EVERY on-screen list); false
+   *  for the covering-click root (only the clicked list's own branch — parents stay put). */
+  hoverAll: boolean
+  setHoverId: (id: string | null, all?: boolean) => void
   /** NARROW mode's animation origin — the pane index last painted (see `SurfaceState.narrowTop`), and
    *  the setter that records the pane the stack has now settled on. */
   narrowTop: number | null
@@ -754,26 +803,19 @@ function useSelectionConnectors(
       const next: string[] = []
       for (let i = 0; i < levelCount - 1; i++) {
         const p = anchor(i)
-        if (!p || p.rightX < 0) continue // no selected parent row, or it drilled off-screen
         const c = anchor(i + 1)
-        // The child rail can be OPEN WITHOUT a selection (no auto-select — e.g. the topics list of
-        // a just-created entity). The selected parent row still reads as connected to that rail: the
-        // horizontal run ends in a short stub across the child column's edge instead of an elbow.
-        let boundary: number // the child column's current left edge (the bend)
-        if (c) {
-          boundary = c.left
-        } else {
-          const col = cont.querySelector(`[data-htd-col="${i + 1}"]`)
-          if (!col) continue
-          boundary = col.getBoundingClientRect().left - crect.left
-        }
-        if (boundary > crect.width) continue // the child column drilled off-screen
+        // A connector joins a selected PARENT row to a selected CHILD row — nothing else. A child
+        // rail that is open with NOTHING selected gets NO line into it (spec:
+        // must-connect-selected-rows-only — an unselected list's landing is the topic overview,
+        // and a line pointing at whatever row happens to sit at the parent's height reads as a
+        // phantom selection).
+        if (!p || !c) continue
+        if (p.rightX < 0 || c.left > crect.width) continue // an endpoint drilled off-screen
+        const boundary = c.left // the child column's current left edge (the bend)
         const startX = Math.min(p.rightX + 6, boundary - 4) // just past the parent's visible content
-        // With a selected child: elbow to the column edge, down/up to the child row, in to just
-        // before its icon. Without one: the stub ending just inside the child column.
-        const elbow = c
-          ? `L ${boundary} ${p.y} L ${boundary} ${c.y} L ${Math.max(c.iconLeft - 6, boundary + 2)} ${c.y}`
-          : `L ${boundary + 4} ${p.y}`
+        // The elbow after the parent's horizontal run: to the child column's edge (the bend), down/up
+        // to the child row, then in to just before its icon.
+        const elbow = `L ${boundary} ${p.y} L ${boundary} ${c.y} L ${Math.max(c.iconLeft - 6, boundary + 2)} ${c.y}`
         // Break the horizontal run around a deletable parent row's trash button, so the line never
         // crosses it (the overlay paints above the rail, so this gap — not occlusion — is the break).
         if (p.delLeft != null && p.delRight != null && p.delRight > startX && p.delLeft < boundary) {
@@ -1131,6 +1173,7 @@ function CoveredStack({
   pins,
   setPins,
   hoverId,
+  hoverAll,
   setHoverId,
   containerW,
   children,
@@ -1227,25 +1270,33 @@ function CoveredStack({
   const detailLeft = Math.max(0, x - offshift)
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // THE REVEAL GROUP — EVERY on-screen list, parents and children alike (was: the hovered list and
-  // only the lists below it, which left the hovered list's own parents covered and made walking the
-  // stack leftwards a list-by-list re-rooting exercise). Entering ANY covered list opens the whole
-  // stack in one cascade: members lay out side by side at full width from the left edge, floating
-  // over the detail. Nothing under it moves; the detail keeps its geometry and is simply overlapped,
-  // and dropping the group (pointer out) animates every member straight back to the layout above.
-  // Off-screen (drilled-down) lists stay out of the group — Back is their affordance.
+  // THE REVEAL GROUP — mode depends on how it was rooted (`hoverAll`):
+  //   - pointer ENTER on a covered list → EVERY on-screen list, parents and children alike, opens
+  //     in one cascade chained from the left edge (walking the stack leftwards list-by-list is the
+  //     thing this replaces);
+  //   - the covering CLICK → only the clicked list and its children (the classic branch). A click
+  //     on a visible row must never spring the user's collapsed parents open — the root exists only
+  //     so the clicked list doesn't snap shut under the pointer.
+  // Members lay out side by side at full width, floating over the detail. Nothing under the group
+  // moves; the detail keeps its geometry and is simply overlapped, and dropping the group (pointer
+  // out) animates every member straight back to the layout above. Off-screen (drilled-down) lists
+  // stay out of the group — Back is their affordance.
   //
-  // A reveal that reveals NOTHING is dropped: when no on-screen member is covered, the revealed
-  // geometry IS the resting layout — but the z-lift and the floating card's shadows are not, and a
-  // stack at rest must not cast them. A select roots a reveal blindly (at click time it cannot know
-  // whether it pushes a choosing list over the clicked one or completes the path — see the rail's
+  // A reveal that reveals NOTHING is dropped: when no member is covered, the revealed geometry IS
+  // the resting layout — but the z-lift and the floating card's shadows are not, and a stack at
+  // rest must not cast them. A select roots a reveal blindly (at click time it cannot know whether
+  // it pushes a choosing list over the clicked one or completes the path — see the rail's
   // onSelect); this is where a blind root that ended up covering nothing becomes the no-op it
   // should be.
   const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
+  const groupFrom = (root: number) => (hoverAll ? hidden : root)
   const hoverIndex =
-    hoverRoot >= 0 && rendered.some((_, i) => i >= hidden && isCovered(i)) ? hoverRoot : -1
+    hoverRoot >= 0 && rendered.some((_, i) => i >= groupFrom(hoverRoot) && isCovered(i))
+      ? hoverRoot
+      : -1
   const effectiveHoverId = hoverIndex >= 0 ? hoverId : null
-  const inGroup = (i: number) => hoverIndex >= 0 && i >= hidden
+  const groupStart = hoverIndex >= 0 ? groupFrom(hoverIndex) : -1
+  const inGroup = (i: number) => hoverIndex >= 0 && i >= groupStart
 
   // The group is lifted above the detail (z-50+) so it floats OVER the UI. On CLOSE the lift must
   // LINGER for the wipe-shut transition (z-index can't animate) — else the lists would drop behind
@@ -1261,14 +1312,21 @@ function CoveredStack({
     const t = setTimeout(() => setZLiftId(null), 300)
     return () => clearTimeout(t)
   }, [effectiveHoverId])
-  // The lifted group for z-index only — it TRAILS the open reveal on close (see `zLiftId`).
-  const zFrom = zLiftId === null ? -1 : rendered.findIndex((l) => l.id === zLiftId)
+  // The lifted group for z-index only — it TRAILS the open reveal on close (see `zLiftId`). The
+  // lift region trails with it: capture the group start alongside the id so the wipe-shut lifts
+  // exactly the members that were open, whichever mode rooted them.
+  const zRoot = zLiftId === null ? -1 : rendered.findIndex((l) => l.id === zLiftId)
+  const [zStart, setZStart] = useState<number>(groupStart)
+  useEffect(() => {
+    if (groupStart >= 0) setZStart(groupStart)
+  }, [groupStart])
+  const zFrom = zRoot === -1 ? -1 : zStart >= 0 ? zStart : zRoot
   const revealLeft: number[] = []
   if (hoverIndex >= 0) {
-    // The whole on-screen stack opens: chain full widths from the first on-screen list's
-    // resting left (which offsets to the container's left edge once `offshift` is applied).
-    let rx = left[hidden] ?? 0
-    for (let i = hidden; i < rendered.length; i++) {
+    // The group opens in place: chain full widths from its first member's resting left (for the
+    // expand-all mode that is the container's left edge once `offshift` is applied).
+    let rx = left[groupStart] ?? 0
+    for (let i = groupStart; i < rendered.length; i++) {
       revealLeft[i] = rx
       rx += railWidth(rendered[i]!)
     }
@@ -1406,14 +1464,14 @@ function CoveredStack({
         // The lift is a property of the group: while it is open every member floats above the detail;
         // on close the lift LINGERS (zLiftId trails hoverId) so the wipe-shut happens over the UI
         // instead of behind it. The members keep their relative order (left → right) inside the lift.
-        const zLifted = !offscreen && zFrom >= 0 && i >= hidden
+        const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
         // The group floats as ONE card over the UI, so BOTH its outer edges are edges: its trailing
         // edge shadows the detail it covers, and its LEADING edge shadows the peek stack it slid out
         // of (a peek's own `border-r` is clipped away with the rest of its rail, so that shadow IS
         // the boundary — without it the opened list bleeds into the icon strip behind it). Members
         // inside the group abut each other and are separated by their own rail borders.
         const groupTrailing = revealed && i === rendered.length - 1
-        const groupLeading = revealed && i === hidden && i > 0
+        const groupLeading = revealed && i === groupStart && i > 0
         return (
           <div
             key={level.id}
@@ -1423,7 +1481,8 @@ function CoveredStack({
             // entering a disclosed list outside the branch closes it.
             onPointerEnter={() => {
               if (inGroup(i)) return
-              setHoverId(covered && !offscreen ? level.id : null)
+              // A pointer ENTER on a covered list opens EVERYTHING on-screen (hoverAll).
+              setHoverId(covered && !offscreen ? level.id : null, true)
             }}
             // Closing is the GROUP's business (see onGroupPointerLeave): a leave into a revealed child
             // must not collapse the branch the pointer is still inside.
@@ -1484,7 +1543,7 @@ function CoveredStack({
               // completes the path covers nothing at/below this list, and the blind root is dropped
               // as meaningless (see the reveal group above).
               onSelect={(id) => {
-                if (!inGroup(i)) setHoverId(level.id)
+                if (!inGroup(i)) setHoverId(level.id, false)
                 railOnSelect(level, attemptExit)(id)
               }}
               emptyLabel={level.emptyLabel ?? "Nothing here yet."}

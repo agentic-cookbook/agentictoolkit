@@ -11,7 +11,6 @@ import {
 import { useRouter } from "next/navigation";
 import {
   HierarchicalTopicDetail,
-  TopicOverview,
   type TopicDetailItem,
   type TopicLevel,
 } from "@agentic-toolkit/ui/blocks";
@@ -209,6 +208,9 @@ export function ResourceExplorer<T>({
     id: "resource",
     title: landing?.title ?? "",
     items: entityItems,
+    // The entity list's unselected state is the REAL card landing below (searchable, with New) —
+    // opt out of the frame's automatic topic overview so it isn't replaced by plain cards.
+    overview: false,
     selectedId: isAll ? null : (scopedId ?? null),
     // No default topic appended — selecting an entity shows its topics list with nothing focused.
     onSelect: (id) => router.push(`${basePath}/${id}`, { scroll: false }),
@@ -305,13 +307,9 @@ export function ResourceExplorer<T>({
         renderMeta={landing.renderMeta}
       />
     ) : topic == null ? (
-      // The standard no-selection overview: one card per topic (icon + label +
-      // description); clicking a card selects that topic in the rail.
-      <TopicOverview
-        title={topicLevel.title}
-        items={topicItems}
-        onSelect={(id) => topicLevel.onSelect(id)}
-      />
+      // Fallback only — the frame's automatic topic overview replaces this whenever the
+      // topics level is the unselected frontier (must-show-topic-overview-at-unselected-frontier).
+      <EmptyState title="Select a topic to view." />
     ) : (
       <Fragment key={scopedId}>
         {topics.find((t) => t.id === topic)?.render(scopedId, titleFor, leaf, subLeafFor)}

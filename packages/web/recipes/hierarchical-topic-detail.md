@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.12.5
+version: 1.13.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: 2026-07-12
+modified: 2026-07-13
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -247,18 +247,25 @@ The frame supports two `disclosureStyle`s for how parent lists yield room to the
   (the one being chosen from, with no selection yet) is never covered. When even the peeks + the child +
   the detail minimum don't fit, covered lists drill off-screen exactly as in `minimized`.
 
-### Whole-branch reveal for covered lists
+### Whole-stack reveal for covered lists — hover opens everything, a click opens only its branch
 
 Because a covered list shows only icons, the frame makes it **reachable without permanently uncovering
-it**: hovering a covered/peeking list opens **that list and its children** — the whole **branch** —
-chained side by side at full width, **floating over the detail** (a lifted card with a drop-shadow off
-its trailing edge). Each revealed list is the real rail: full-width rows **and** its titled header
-(title, cover `«`/`»`, the New `+`).
+it**: the pointer ENTERING a covered/peeking list opens **every on-screen list — parents and children
+alike** — chained side by side at full width from the left edge, **floating over the detail** (a lifted
+card with a drop-shadow off its trailing edge). Each revealed list is the real rail: full-width rows
+**and** its titled header (title, cover `«`/`»`, the New `+`).
 
-The unit is the **branch**, not the one list. Revealing the hovered list alone shows you the rows you
-are choosing between but *not what choosing one would show you* — its children are still covered behind
-it, so the reveal answers half the question and you have to commit to a click to see the rest. Opening
-the branch shows the ancestry as it will look, which is what the peek was hiding in the first place.
+For the HOVER, the unit is the **whole stack** (v1.13.0; it was the hovered list's branch, which left
+the hovered list's own parents covered and made walking the stack leftwards a list-by-list re-rooting
+exercise). One deliberate mouse-in answers the whole question: the full ancestry as it will look, which
+is what the peeks were hiding in the first place. Off-screen (drilled-down) lists stay out of the
+reveal — Back is their affordance.
+
+The COVERING CLICK is different (v1.13.0): the reveal a select roots (see auto-hide below) opens ONLY
+the clicked list and its children — never the user's collapsed parents. A click on a visible row is an
+act of navigation, not of disclosure; springing the whole stack open on every leaf click buries the
+detail the user just asked for under lists they had deliberately collapsed. The click-rooted reveal
+exists solely so the clicked list does not snap shut under the pointer.
 
 The branch opens **in place**: it starts where the hovered list already sits and lays its members out
 end to end, so nothing underneath moves — the detail keeps its geometry and is simply overlapped, and
@@ -349,9 +356,43 @@ In the stack, selection is shown **without** the topic-detail gold left-bar (`se
   covered) to just before the child row's icon. The connectors are measured entirely from the DOM and
   re-tracked across the cover/uncover slide, so they stay attached for covered/peeking lists too.
 
+Connectors join **selected rows only** — the chain ends at the deepest selected row. A list that is
+open with **nothing selected** (the frontier being chosen from) gets **no line into it**: a line that
+ends at the list's edge lands beside whatever row happens to sit at the parent's height and reads as a
+phantom selection (v1.13.0 — a stub into the unselected frontier was tried and rejected). The
+unselected frontier's own landing is the topic overview below, not a connector.
+
 Standalone `TopicDetail` (the single two-pane primitive, used by [[focused-topic-detail]] and the showcase)
 keeps the classic **`selectionStyle="bar"`** gold left-border — the dash/connector markers are a property of
 the hierarchical stack, not the primitive.
+
+### Topic overview — the automatic no-selection landing (every HTDV)
+
+Whenever the **frontier** list (the deepest rendered one) has **no selection**, the detail pane shows
+the standard **topic overview** — a responsive grid with **one card per row of that list**: the row's
+icon + label, and its `description` when the item carries one. Clicking a card **selects that row in
+the list** — it is the same `onSelect`, so URL, breadcrumb and connectors follow exactly as if the row
+had been clicked. The overview is titled by the **parent's selected row** (the entity whose topics
+these are), else the level's own title.
+
+This is a property of the FRAME, not of any host: **every** hierarchical view gets it automatically —
+the workspaces list at bare `/home`, the workspace features at `/<slug>/home`, a product's topics, a
+group's members, an editor's sections — with **no host wiring**. It exists ONLY in the no-selection
+state: the moment the frontier gains a selection, the host's real detail (`children`) shows. Cards
+never appear beside or instead of a selected topic's view.
+
+Two seams:
+
+- `TopicDetailItem.description` — the card copy. Hosts should source it from the same store as the
+  help popovers (the hub reads `help.en.json`), so card text and help never drift. Items without one
+  render icon + label only.
+- `TopicLevel.overview: false` — the opt-out, for a level whose unselected state has a REAL landing of
+  its own (ResourceExplorer's searchable entity landing with New). Everything else takes the default.
+
+Implementation constraint that is easy to break: the host's `children` MUST stay **mounted (hidden)**
+under the overview. In the merged one-rail stack the deeper levels are PUBLISHED by components living
+in `children` (`StackLevels`); unmounting them unregisters the very frontier level the overview is for,
+and the stack oscillates between the two states (React's max-update-depth crash).
 
 ## Ingredients
 
@@ -459,19 +500,29 @@ the hierarchical stack, not the primitive.
 - **must-peek-covered-parent**: In the `covered` style, a covered parent list MUST stay partially visible as a fixed ~40 px icon-strip peek at its left edge (a stacked-card overlap), not disappear entirely; child lists overlap their parents with increasing z-index and the detail is topmost.
 - **must-cover-automatically**: A list MUST be covered automatically when there is not room to show it in full alongside the child lists and the detail at its minimum; the **frontier** choosing list (nothing selected yet) MUST NOT be covered, and MUST NOT be slid off-screen by the detail's minimum-width shift — an unselected frontier's detail is a landing placeholder that enforces NO minimum, so the choosing list always keeps its place.
 - **must-allow-manual-cover**: The user MUST be able to manually cover/uncover a list via its `«`/`»` toggle; a manually-covered list MUST stay covered across resizes (user intent wins), and the auto layer MUST NOT uncover a list the user covered.
-- **must-reveal-covered-branch-on-hover**: Hovering a covered (peeking) list MUST reveal the WHOLE BRANCH — that list AND every list below it (its children) — as real rails at full width, with uncovered `[icon] [name]` rows AND their titled headers (title, cover `«`/`»`, New `+`), chained side by side and floating ABOVE the detail (a lifted card with a drop-shadow off the branch's trailing edge). Revealing the hovered list ALONE is a defect: its children stay covered behind it, so the reveal shows what you are choosing between but not what choosing would show you. The reveal MUST be ANIMATED: the branch wipes open from the 40px peek to full width (and back), subject to **must-respect-reduced-motion**. There MUST be no per-row or per-header popover copy. The reveal is POINTER-driven only: it MUST NOT be triggered by focus, because a covered row keeps focus after a click and a focus reveal would leave the branch open — jamming the auto-cover as the window shrinks. (Covered rows stay keyboard-operable via their `aria-label`.)
+- **must-reveal-all-covered-lists-on-hover** (v1.13.0; supersedes must-reveal-covered-branch-on-hover): The pointer ENTERING a covered (peeking) list MUST reveal EVERY on-screen list — the hovered list's parents AND children alike — as real rails at full width, with uncovered `[icon] [name]` rows AND their titled headers (title, cover `«`/`»`, New `+`), chained side by side from the left edge and floating ABOVE the detail (a lifted card with a drop-shadow off the trailing edge). Revealing less is a defect: the branch-only reveal left the hovered list's own parents covered, so walking the stack leftwards was a list-by-list re-rooting exercise. Off-screen (drilled-down) lists stay out — Back is their affordance. The reveal MUST be ANIMATED: the branch wipes open from the 40px peek to full width (and back), subject to **must-respect-reduced-motion**. There MUST be no per-row or per-header popover copy. The reveal is POINTER-driven only: it MUST NOT be triggered by focus, because a covered row keeps focus after a click and a focus reveal would leave the branch open — jamming the auto-cover as the window shrinks. (Covered rows stay keyboard-operable via their `aria-label`.)
 - **must-open-branch-in-place**: The branch MUST open IN PLACE — starting at the left edge the hovered list already occupies, laying its members out end to end. Nothing underneath may move: the detail keeps its geometry and is simply overlapped, so closing the branch animates it straight back to the layout it came from (the state it was in before the hover), with no re-layout of the rest of the view.
 - **must-keep-branch-open-while-inside-it**: The revealed branch MUST stay open while the pointer is inside ANY of its members — moving from the hovered list into one of its revealed children MUST NOT collapse it. It MUST close (animate back to the previous state) only once the pointer has left every member of the branch. Entering a DIFFERENT covered list MUST re-root the branch at that list.
 - **must-grow-the-branch-walking-outward**: Walking the pointer OUTWARD (right → left, into a shallower peek) MUST grow the cascade: the newly entered list joins it as its new root, pushing the already-open lists to the right, and every list that was open STAYS open. Collapsing the cascade because the pointer moved to a list outside the current group throws away everything the user just opened, one step before they get to the top of the stack. Only the pointer leaving the COLUMNS entirely closes it.
 - **must-close-branch-only-on-pointer-exit**: The POINTER — and nothing else — closes the branch. Selecting a row inside it MUST NOT collapse it: the pointer is still in there, and collapsing under the cursor yanks the rows out from under the gesture, so you could never pick a parent and then go on to pick its child in the list that just re-populated beside it — which is what a whole-branch reveal is FOR. The branch (including any deeper list the new selection just added to it) MUST stay open until the pointer leaves every member, and MUST then animate back to the layout the new selection implies.
-- **must-root-reveal-on-covering-select**: A select that COVERS the list it happened in — auto-hide covering the clicked list because its child list just appeared, or width pressure re-covering it — MUST root the branch reveal at that list on the select itself: the pointer is still inside the list, which is exactly the state the hover reveal serves, but the pointer never moved, so no enter event can engage it. The clicked list MUST stay open in place with its new choosing child revealed beside it, floating over the detail, until the pointer leaves the branch (the covered layout then applies). A select that covers nothing at/below the clicked list MUST leave the resting stack untouched — no z-lift, no floating-card shadows (the blindly rooted reveal is dropped as meaningless). Deep links get no reveal: there is no pointer in the stack to serve.
+- **must-not-expand-parents-on-select** (v1.13.0): A CLICK on a visible row MUST NEVER expand the user's collapsed parent lists. Clicking is navigation, not disclosure: the expand-everything reveal belongs to the pointer deliberately ENTERING a covered strip, and only there. The click-rooted reveal below is bounded at the clicked list.
+- **must-root-reveal-on-covering-select**: A select that COVERS the list it happened in — auto-hide covering the clicked list because its child list just appeared, or width pressure re-covering it — MUST root a BRANCH reveal (the clicked list and its children ONLY — see must-not-expand-parents-on-select) at that list on the select itself: the pointer is still inside the list, which is exactly the state the hover reveal serves, but the pointer never moved, so no enter event can engage it. The clicked list MUST stay open in place with its new choosing child revealed beside it, floating over the detail, until the pointer leaves the branch (the covered layout then applies). A select that covers nothing at/below the clicked list MUST leave the resting stack untouched — no z-lift, no floating-card shadows (the blindly rooted reveal is dropped as meaningless). Deep links get no reveal: there is no pointer in the stack to serve.
 - **must-float-branch-as-an-opaque-card**: The revealed branch MUST read as one opaque card floating over the UI. Both of its OUTER edges MUST be edges — a drop-shadow off its trailing edge (over the detail it covers) AND off its leading edge (over the peek stack it slid out of); a peek's own trailing border is clipped away with the rest of its rail, so that leading shadow is the only boundary there, and without it the opened list bleeds into the icon strip behind it. Members INSIDE the branch abut each other, separated by their own rail borders. The branch MUST also be opaque: a rail background that is deliberately translucent against the page (the nav token) MUST be composited over an opaque page-coloured layer while it floats, or the detail's text ghosts through the branch.
 - **must-draw-connectors-over-the-revealed-branch**: The selection connectors MUST stay VISIBLE across the revealed branch — they are the chain the branch exists to show you. The connector overlay MUST therefore be lifted above the branch's own lift: the branch's members float above the detail, so an overlay left at the resting z-order is painted over by the very lists it links, and the selection chain vanishes exactly when the user opens the branch to read it.
 - **must-pure-select-from-reveal**: Clicking a row in a revealed list MUST be a PURE select of that item — it changes the selection only (it MUST NOT unselect, and MUST do nothing if the row is already selected), removing the deeper lists and showing the chosen item's detail.
 - **may-title-each-list**: A level MAY carry a `title`; when present it MUST render left-aligned (aligned with the row text) with a divider beneath it, the disclosure toggle in a fixed leading control slot.
 - **must-mark-selection-without-bar**: In the stack (`selectionStyle="marker"`) the selected row MUST NOT use the topic-detail gold left-bar; the root's selected row MUST show a leading gold dash, and each child's selected row MUST be joined to its selected parent row by a gold elbow connector.
+- **must-connect-selected-rows-only** (v1.13.0): A connector MUST join a selected parent row to a selected CHILD ROW — nothing else. A list that is open with nothing selected MUST get NO line into it (no stub to the list's edge: it lands beside an arbitrary row and reads as a phantom selection). The chain ends at the deepest selected row; the unselected frontier's landing is the topic overview, not a connector.
 - **must-keep-connectors-attached-when-covered**: The selection connectors MUST stay attached to the correct rows when lists are covered/peeking and across the cover/uncover slide (measured from the DOM, re-tracked through the transition).
 - **must-keep-bar-for-standalone**: The standalone `TopicDetail` primitive MUST keep `selectionStyle="bar"` (the gold left-border); the dash/connector markers are a property of the hierarchical stack only.
+
+### Topic overview — the automatic no-selection landing
+
+- **must-show-topic-overview-at-unselected-frontier** (v1.13.0): Whenever the frontier list has NO selection, the detail pane MUST show the standard topic overview: a responsive card grid with ONE card per row of that list — the row's icon + label + its `description` when present — titled by the parent's selected row (else the level's title). Clicking a card MUST fire the level's own `onSelect` for that row (URL, breadcrumb, connectors follow as for a row click). This is a FRAME behavior: every hierarchical view gets it automatically, with no host wiring — including a leading (e.g. workspaces) level when IT is the unselected frontier.
+- **must-hide-overview-once-selected** (v1.13.0): The overview exists ONLY in the no-selection state. The moment the frontier gains a selection the host's real detail (`children`) MUST show — cards MUST never render beside or instead of a selected topic's view.
+- **may-opt-out-overview** (v1.13.0): A level whose unselected state has a REAL landing of its own (ResourceExplorer's searchable entity landing with New) MAY opt out via `TopicLevel.overview: false`; the host's `children` then render as before.
+- **may-describe-topics** (v1.13.0): A `TopicDetailItem` MAY carry a `description` (one or two sentences) feeding its overview card; hosts SHOULD source it from the same store as the help popovers so card copy and help never drift. Items without one render icon + label only.
+- **must-keep-children-mounted-under-overview** (v1.13.0): While the overview shows, the host's `children` MUST stay MOUNTED (hidden) beneath it. In the merged one-rail stack the deeper levels are PUBLISHED by components living in `children` (StackLevels); unmounting them unregisters the very frontier level the overview is for, and the stack oscillates between the two states (React max-update-depth).
 
 ### Narrow mode — the stack as a navigation controller
 
@@ -819,6 +870,7 @@ the hierarchical stack, not the primitive.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.13.0 | 2026-07-13 | Mike Fullerton | **The automatic topic overview + three corrected regressions.** (1) NEW: every HTDV now shows the standard TOPIC OVERVIEW automatically whenever the frontier list has no selection — one card per row (icon + label + new `TopicDetailItem.description`), click = the level's own onSelect; titled by the parent's selected row; `TopicLevel.overview: false` opts a level with a real landing out (ResourceExplorer's entity landing). It is a FRAME property (workspaces at bare /home, features at /<slug>/home, product topics, group members, editor sections — no host wiring), and it exists ONLY while nothing is selected (`must-show-topic-overview-at-unselected-frontier`, `must-hide-overview-once-selected`, `may-opt-out-overview`, `may-describe-topics`). Implementation subtlety written down as `must-keep-children-mounted-under-overview`: children publish the deeper levels (StackLevels), so replacing them unregisters the frontier and the stack oscillates (max-update-depth crash — found live). (2) CORRECTED: connectors join SELECTED rows only (`must-connect-selected-rows-only`) — the v-interim stub from a selected row into an UNSELECTED child list is rejected: it lands beside an arbitrary row and reads as a phantom selection. (3) CORRECTED: the HOVER reveal opens EVERY on-screen list, parents included (`must-reveal-all-covered-lists-on-hover`, supersedes must-reveal-covered-branch-on-hover) — but the COVERING-CLICK reveal stays bounded at the clicked list's own branch (`must-not-expand-parents-on-select`): clicking a visible row is navigation, never disclosure, and must not spring deliberately collapsed parents open. |
 | 1.12.5 | 2026-07-12 | Mike Fullerton | **The covering click roots the branch reveal — auto-collapse never snaps shut under the cursor.** Supersedes 1.12.4's answer to the same bug. Auto-hide covers every list above the FRONTIER again (1.12.4 had exempted a choosing frontier's parent, which just suspended auto-collapse: the parent stayed disclosed in FLOW and nothing auto-collapsed at all). The real problem was pointer mechanics, not the cover rule: the select that pushes a new choosing list covers the clicked list with the pointer still inside it — exactly the state the hover reveal serves — but the pointer never moved, so no enter event could engage the reveal, and the list snapped shut under the cursor with nothing to reopen it. The covered stack's row-select now roots the reveal at its own list: the clicked list stays open in place and the new choosing list slides out floating OVER the detail, as if the user had moused into their freshly covered parent; the pointer leaving settles the covered layout. A select that completes the path covers nothing at/below the clicked list, and the blind root is dropped as meaningless (no lift, no card shadows — the z-lift now tracks the OPEN reveal, not the raw hover id, and the document watcher clears a lingering blind root so a later width squeeze cannot spring a phantom branch). Deep links get no reveal (no pointer). The minimized style reverts to covering above the frontier with no reveal — its strips stay visible and clickable. New requirement `must-root-reveal-on-covering-select`; vectors T28a–T28c. |
 | 1.12.4 | 2026-07-12 | Mike Fullerton | **(Superseded by 1.12.5.)** First cut at the auto-collapse snap-shut bug: auto-hide bounded at the deepest SELECTED list instead of the last rendered one, so a still-choosing frontier kept its parent disclosed in flow. Fixed the snap but at the cost of auto-collapse itself — with the parent left in the flow, nothing collapsed when the child list appeared. |
 | 1.12.3 | 2026-07-11 | Mike Fullerton | **A narrow row needs its own disclosure hint.** A full-width pane has no peeking sibling column beside it to imply that tapping a row pushes another pane in — the wide stack gets that for free from the connector line and the covered peek, narrow mode gets neither. Every selectable row now carries a trailing chevron (`TopicList`'s new `rowDisclosure`, threaded through `TopicRail`, set only by `NarrowStack`); a `disabled` row is excluded (nowhere to go), and the wide/covered stack never sets the flag, so its rows are unchanged. New requirement `must-show-row-disclosure-chevron`; vector T53. |

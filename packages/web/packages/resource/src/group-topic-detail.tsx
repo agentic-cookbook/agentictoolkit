@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
-import { TopicOverview, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import type { TopicLeaf } from "./resource-explorer";
 import { StackLevels } from "./rail-host";
@@ -95,9 +95,9 @@ export function StackGroupDetail({
           <Fragment key={active.id}>
             {active.render(renderSubLeaf ? renderSubLeaf(active.id) : LOCAL_SUBLEAF)}
           </Fragment>
-        ) : items.some((i) => i.description) ? (
-          <TopicOverview title={title} items={memberItems} onSelect={setSelected} />
         ) : (
+          // Fallback only — the frame's automatic topic overview replaces this whenever this
+          // group's level is the unselected frontier of the merged stack.
           <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">
             {emptyHint}
           </p>
