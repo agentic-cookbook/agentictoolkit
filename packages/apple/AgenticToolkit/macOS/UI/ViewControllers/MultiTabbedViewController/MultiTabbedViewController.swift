@@ -38,9 +38,6 @@ open class MultiTabbedViewController: NSViewController {
 
     public weak var delegate: MultiTabbedViewControllerDelegate?
 
-    /// Which edge `newTab(_:)` (File > New Tab) targets.
-    public var newTabTargetEdge: Edge = .top
-
     /// Shown in the center while no tab is active.
     public var mainContentViewController: NSViewController? {
         didSet {
@@ -213,9 +210,10 @@ open class MultiTabbedViewController: NSViewController {
     // MARK: - File menu hook
 
     /// File > New Tab — auto-disabled by AppKit when no responder
-    /// implements this selector.
+    /// implements this selector. The tab count is global across edges, so
+    /// the delegate is expected to add one tab to every enabled edge.
     @objc public func newTab(_ sender: Any?) {
-        delegate?.multiTabbedViewControllerNeedsNewTab(self, on: newTabTargetEdge)
+        delegate?.multiTabbedViewControllerNeedsNewTab(self)
     }
 
     // MARK: - Wiring

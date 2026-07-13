@@ -110,7 +110,9 @@ final class TabBarView: NSView {
             NSLayoutConstraint.activate([
                 widthAnchor.constraint(equalToConstant: thickness),
                 stack.topAnchor.constraint(equalTo: topAnchor),
-                stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+                // Pack buttons from the top; the leftover column height
+                // stays empty instead of stretching the buttons.
+                stack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor),
                 stack.leadingAnchor.constraint(equalTo: leadingAnchor),
                 stack.trailingAnchor.constraint(equalTo: edgeDivider.leadingAnchor),
 
@@ -128,7 +130,9 @@ final class TabBarView: NSView {
                 edgeDivider.widthAnchor.constraint(equalToConstant: 1),
 
                 stack.topAnchor.constraint(equalTo: topAnchor),
-                stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+                // Pack buttons from the top; the leftover column height
+                // stays empty instead of stretching the buttons.
+                stack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor),
                 stack.leadingAnchor.constraint(equalTo: edgeDivider.trailingAnchor),
                 stack.trailingAnchor.constraint(equalTo: trailingAnchor)
             ])
@@ -239,8 +243,12 @@ private final class TabButton: NSView {
             backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
 
+            // The label's top/bottom pins give the button an unambiguous
+            // fitting height — without them, stack views stretch or
+            // collapse buttons on the vertical bars.
             titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 10),
-            titleLabel.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
+            titleLabel.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 4),
+            titleLabel.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -4),
 
             closeButton.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 6),
             closeButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -6),

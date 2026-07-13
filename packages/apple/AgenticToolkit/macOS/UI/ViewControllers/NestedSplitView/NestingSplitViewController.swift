@@ -122,8 +122,22 @@ public final class NestingSplitViewController: NSSplitViewController {
 
     /// Value-type snapshot of the live controller tree.
     public func snapshotNode() -> LayoutNode {
-        let firstSnap = snapshotChild(splitViewItems[0].viewController)
-        let secondSnap = snapshotChild(splitViewItems[1].viewController)
+        let first: NSViewController
+        let second: NSViewController
+        if isViewLoaded, splitViewItems.count >= 2 {
+            first = splitViewItems[0].viewController
+            second = splitViewItems[1].viewController
+        } else {
+            // The split view items are only added in `viewDidLoad`, and a
+            // tab that has never been displayed (e.g. a restored but
+            // inactive tab) never loads its view. Its stored children are
+            // still the accurate tree — mutating the tree via `split(_:)`
+            // requires the view to exist.
+            first = firstChild.viewController
+            second = secondChild.viewController
+        }
+        let firstSnap = snapshotChild(first)
+        let secondSnap = snapshotChild(second)
         let orientationString = (orientation == .horizontal) ? "horizontal" : "vertical"
         return LayoutNode.split(id: nodeID, orientation: orientationString, first: firstSnap, second: secondSnap)
     }

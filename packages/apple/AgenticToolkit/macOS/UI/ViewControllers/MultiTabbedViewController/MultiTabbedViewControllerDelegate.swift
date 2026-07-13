@@ -3,15 +3,16 @@ import Foundation
 
 /// Hosts of `MultiTabbedViewController` implement this protocol to react to user
 /// actions on any edge's tab bar — adding new tabs, switching tabs, closing
-/// tabs, reordering tabs. Every callback names the `Edge` whose bar fired
+/// tabs, reordering tabs. Per-tab callbacks name the `Edge` whose bar fired
 /// the event so a host with multiple enabled edges can route accordingly.
 @MainActor
 public protocol MultiTabbedViewControllerDelegate: AnyObject {
 
-    /// User triggered "New Tab" (e.g. via the File menu). The host should
-    /// build a content view controller and call `addTab(_:on:)` on the
-    /// `MultiTabbedViewController` for the given edge.
-    func multiTabbedViewControllerNeedsNewTab(_ controller: MultiTabbedViewController, on edge: Edge)
+    /// User triggered "New Tab" (e.g. via the File menu). The tab count is
+    /// global across edges: the host should build a content view controller
+    /// per enabled edge and call `addTab(_:on:)` for each, keeping every
+    /// enabled edge at the same tab count.
+    func multiTabbedViewControllerNeedsNewTab(_ controller: MultiTabbedViewController)
 
     /// The active tab on `edge` changed. Always called when the selection
     /// moves — programmatic or user-driven.
@@ -38,7 +39,7 @@ public protocol MultiTabbedViewControllerDelegate: AnyObject {
 }
 
 extension MultiTabbedViewControllerDelegate {
-    public func multiTabbedViewControllerNeedsNewTab(_ controller: MultiTabbedViewController, on edge: Edge) {}
+    public func multiTabbedViewControllerNeedsNewTab(_ controller: MultiTabbedViewController) {}
     public func multiTabbedViewController(
         _ controller: MultiTabbedViewController,
         didSelectTab id: UUID,
