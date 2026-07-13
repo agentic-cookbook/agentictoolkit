@@ -754,15 +754,26 @@ function useSelectionConnectors(
       const next: string[] = []
       for (let i = 0; i < levelCount - 1; i++) {
         const p = anchor(i)
+        if (!p || p.rightX < 0) continue // no selected parent row, or it drilled off-screen
         const c = anchor(i + 1)
-        if (!p || !c) continue
-        if (p.rightX < 0 || c.left > crect.width) continue // an endpoint drilled off-screen
-        const boundary = c.left // the child column's current left edge (the bend)
+        // The child rail can be OPEN WITHOUT a selection (no auto-select — e.g. the topics list of
+        // a just-created entity). The selected parent row still reads as connected to that rail: the
+        // horizontal run ends in a short stub across the child column's edge instead of an elbow.
+        let boundary: number // the child column's current left edge (the bend)
+        if (c) {
+          boundary = c.left
+        } else {
+          const col = cont.querySelector(`[data-htd-col="${i + 1}"]`)
+          if (!col) continue
+          boundary = col.getBoundingClientRect().left - crect.left
+        }
+        if (boundary > crect.width) continue // the child column drilled off-screen
         const startX = Math.min(p.rightX + 6, boundary - 4) // just past the parent's visible content
-        const endX = Math.max(c.iconLeft - 6, boundary + 2) // just before the child's icon
-        // The elbow after the parent's horizontal run: to the child column's edge (the bend), down/up
-        // to the child row, then in to just before its icon.
-        const elbow = `L ${boundary} ${p.y} L ${boundary} ${c.y} L ${endX} ${c.y}`
+        // With a selected child: elbow to the column edge, down/up to the child row, in to just
+        // before its icon. Without one: the stub ending just inside the child column.
+        const elbow = c
+          ? `L ${boundary} ${p.y} L ${boundary} ${c.y} L ${Math.max(c.iconLeft - 6, boundary + 2)} ${c.y}`
+          : `L ${boundary + 4} ${p.y}`
         // Break the horizontal run around a deletable parent row's trash button, so the line never
         // crosses it (the overlay paints above the rail, so this gap — not occlusion — is the break).
         if (p.delLeft != null && p.delRight != null && p.delRight > startX && p.delLeft < boundary) {
