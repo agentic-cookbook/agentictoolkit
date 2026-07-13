@@ -494,17 +494,23 @@ export function HierarchicalTopicDetail({
         onSelect={(id) => frontierLevel.onSelect(id)}
       />
     ) : null
-  // `children` stay MOUNTED (hidden) under the overview: in a merged stack the deeper levels are
-  // PUBLISHED by components living in children (StackLevels), so unmounting them would unregister
-  // the very frontier level this overview is for — the stack then oscillates between the two
-  // states (React's max-update-depth). Hidden children publish exactly as when visible.
-  const detail = overview ? (
+  // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
+  // the deeper levels are PUBLISHED by components living in children (StackLevels), so unmounting
+  // them would unregister the very frontier level this overview is for. The wrapper is therefore
+  // ALWAYS present and only its visibility toggles — conditionally re-parenting children into it
+  // IS a remount (React reconciles by position), which resets their state and unregisters their
+  // levels, looping the stack between the two states (a mount/fetch storm, found live). Inline
+  // display (not the `hidden` attribute) so the flex utility class can't override it.
+  const detail = (
     <>
       {overview}
-      <div hidden>{children}</div>
+      <div
+        style={overview ? { display: "none" } : undefined}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        {children}
+      </div>
     </>
-  ) : (
-    children
   )
 
   // The layouts share the same selection / breadcrumb / exit-guard semantics above and differ ONLY in
@@ -1267,8 +1273,7 @@ function CoveredStack({
     left.push(x)
     x += widthOf(i)
   })
-  const detailLeft = Math.max(0, x - offshift)
-  const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
+  const restingDetailLeft = Math.max(0, x - offshift)
 
   // THE REVEAL GROUP — mode depends on how it was rooted (`hoverAll`):
   //   - pointer ENTER on a covered list → EVERY on-screen list, parents and children alike, opens
@@ -1335,6 +1340,17 @@ function CoveredStack({
   // layout above (a 40px peek, or its full width when disclosed).
   const leftOf = (i: number) => (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
   const boxWidth = (i: number) => (inGroup(i) ? railWidth(rendered[i]!) : widthOf(i))
+
+  // The reveal PUSHES THE DETAIL RIGHT instead of floating over it (v1.13.1): the detail's left
+  // edge tracks the open group's right edge, so the user never loses sight of what they were
+  // reading — it slides aside (possibly clipping at the container's right edge on deep stacks)
+  // and slides back when the reveal closes. The lists still float over the covered PEEKS behind
+  // them; only the detail yields.
+  const lastIdx = rendered.length - 1
+  const revealRight =
+    hoverIndex >= 0 && lastIdx >= 0 ? revealLeft[lastIdx]! + railWidth(rendered[lastIdx]!) - offshift : -1
+  const detailLeft = Math.max(restingDetailLeft, revealRight)
+  const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
   // Closing the group is a property of the GROUP, not of one list: moving the pointer from the
   // hovered list into one of its revealed children must NOT collapse it. So a leave only closes when
