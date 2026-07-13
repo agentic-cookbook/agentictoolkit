@@ -18,7 +18,7 @@ import AppKit
 ///
 /// Hidden edges keep their tab lists so re-enabling restores them.
 @MainActor
-open class TabbedViewController: NSViewController {
+open class MultiTabbedViewController: NSViewController {
 
     // MARK: - Public types
 
@@ -36,7 +36,7 @@ open class TabbedViewController: NSViewController {
 
     // MARK: - Public properties
 
-    public weak var delegate: TabbedViewControllerDelegate?
+    public weak var delegate: MultiTabbedViewControllerDelegate?
 
     /// Which edge `newTab(_:)` (File > New Tab) targets.
     public var newTabTargetEdge: Edge = .top
@@ -164,7 +164,7 @@ open class TabbedViewController: NSViewController {
             activateFallbackTab()
         }
         if let activeTabID, let activeEdge = self.edge(forTabID: activeTabID) {
-            delegate?.tabbedViewController(self, didSelectTab: activeTabID, on: activeEdge)
+            delegate?.multiTabbedViewController(self, didSelectTab: activeTabID, on: activeEdge)
         }
     }
 
@@ -183,7 +183,7 @@ open class TabbedViewController: NSViewController {
         let item = state.tabs.remove(at: from)
         state.tabs.insert(item, at: clamped)
         syncTabBar(for: edge)
-        delegate?.tabbedViewController(self, didReorderTab: id, to: clamped, on: edge)
+        delegate?.multiTabbedViewController(self, didReorderTab: id, to: clamped, on: edge)
     }
 
     // MARK: - Inspection
@@ -215,7 +215,7 @@ open class TabbedViewController: NSViewController {
     /// File > New Tab — auto-disabled by AppKit when no responder
     /// implements this selector.
     @objc public func newTab(_ sender: Any?) {
-        delegate?.tabbedViewControllerNeedsNewTab(self, on: newTabTargetEdge)
+        delegate?.multiTabbedViewControllerNeedsNewTab(self, on: newTabTargetEdge)
     }
 
     // MARK: - Wiring
@@ -225,15 +225,15 @@ open class TabbedViewController: NSViewController {
         bar.onSelect = { [weak self] id in
             guard let self else { return }
             self.selectTab(id: id, on: edge)
-            self.delegate?.tabbedViewController(self, didSelectTab: id, on: edge)
+            self.delegate?.multiTabbedViewController(self, didSelectTab: id, on: edge)
         }
         bar.onClose = { [weak self] id in
             guard let self else { return }
-            self.delegate?.tabbedViewController(self, didRequestCloseTab: id, on: edge)
+            self.delegate?.multiTabbedViewController(self, didRequestCloseTab: id, on: edge)
         }
         bar.onReorder = { [weak self] id, index in
             guard let self else { return }
-            self.delegate?.tabbedViewController(self, didReorderTab: id, to: index, on: edge)
+            self.delegate?.multiTabbedViewController(self, didReorderTab: id, to: index, on: edge)
         }
     }
 

@@ -3,7 +3,7 @@ import Foundation
 
 /// Lets a host (e.g. a window controller) ask a `NestingSplitViewController`
 /// which leaf is currently focused and request that a particular leaf
-/// become first responder. Stays out of `TabbedViewController` so the tab
+/// become first responder. Stays out of `MultiTabbedViewController` so the tab
 /// container doesn't need to know about the split-view internals.
 @MainActor
 public protocol NestedSplitFocusable: AnyObject {

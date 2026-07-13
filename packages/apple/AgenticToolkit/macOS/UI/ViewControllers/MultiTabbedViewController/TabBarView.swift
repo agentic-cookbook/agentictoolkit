@@ -1,6 +1,6 @@
 import AppKit
 
-/// Edge-aligned tab bar header for `TabbedViewController`. Renders one
+/// Edge-aligned tab bar header for `MultiTabbedViewController`. Renders one
 /// pill-style button per tab inside an `NSStackView` whose orientation
 /// follows the bar's `Edge`. Calls back to its owner via closures so it
 /// stays decoupled from the controller's public API.
@@ -24,7 +24,7 @@ final class TabBarView: NSView {
         var title: String
     }
 
-    // MARK: - Callbacks (set by TabbedViewController)
+    // MARK: - Callbacks (set by MultiTabbedViewController)
 
     var onSelect: ((UUID) -> Void)?
     var onClose: ((UUID) -> Void)?

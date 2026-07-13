@@ -54,7 +54,7 @@ final class MenuManager {
         appendContributions(extras, to: menu)
         if !extras.isEmpty { menu.addItem(.separator()) }
         menu.addItem(stock("New", #selector(NSDocumentController.newDocument(_:)), key: "n"))
-        menu.addItem(stock("New Tab", #selector(TabbedViewController.newTab(_:))))
+        menu.addItem(stock("New Tab", #selector(MultiTabbedViewController.newTab(_:))))
         menu.addItem(stock("Open…", #selector(NSDocumentController.openDocument(_:)), key: "o"))
         menu.addItem(buildOpenRecentItem())
         menu.addItem(.separator())

@@ -8,7 +8,7 @@ import AgenticToolkitCoreMacOS
 /// preferences (not per-document) — content layout (the per-tab nested
 /// split tree, tab arrangement, active tab) lives in the package's SQLite.
 ///
-/// The window's content view is a generic `TabbedViewController` from the
+/// The window's content view is a generic `MultiTabbedViewController` from the
 /// toolkit. Each tab hosts its own `NestingSplitViewController` rooted at
 /// the layout tree persisted for that tab.
 @MainActor
@@ -17,7 +17,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     public static let sharedWindowID = "whiprojDocumentWindow"
 
     private let splitDocument: NestedSplitViewDocument
-    private let tabbed: TabbedViewController
+    private let tabbed: MultiTabbedViewController
 
     /// Live mapping from a tab's UUID to the tab's root `NestingSplitViewController`.
     /// Used by the layout-change callback to rebuild a tab's `TabRecord`
@@ -37,7 +37,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
     public init(document: NestedSplitViewDocument) {
         self.splitDocument = document
-        self.tabbed = TabbedViewController()
+        self.tabbed = MultiTabbedViewController()
         super.init(windowID: Self.sharedWindowID, contentViewController: tabbed)
 
         self.windowSpec = WindowSpec(
@@ -283,20 +283,28 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     }
 }
 
-// MARK: - TabbedViewControllerDelegate
+// MARK: - MultiTabbedViewControllerDelegate
 
-extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
+extension NestedSplitViewWindowController: MultiTabbedViewControllerDelegate {
 
-    public func tabbedViewControllerNeedsNewTab(_ controller: TabbedViewController, on edge: Edge) {
+    public func multiTabbedViewControllerNeedsNewTab(_ controller: MultiTabbedViewController, on edge: Edge) {
         addDefaultTab(on: edge)
     }
 
-    public func tabbedViewController(_ controller: TabbedViewController, didSelectTab id: UUID, on edge: Edge) {
+    public func multiTabbedViewController(
+        _ controller: MultiTabbedViewController,
+        didSelectTab id: UUID,
+        on edge: Edge
+    ) {
         restoreFocusedLeafForActiveTab()
         persistAllTabs()
     }
 
-    public func tabbedViewController(_ controller: TabbedViewController, didRequestCloseTab id: UUID, on edge: Edge) {
+    public func multiTabbedViewController(
+        _ controller: MultiTabbedViewController,
+        didRequestCloseTab id: UUID,
+        on edge: Edge
+    ) {
         // Refuse to close the last tab on the top edge (mirrors
         // Safari/Terminal). Other edges are toggleable, so closing their
         // last tab is fine.
@@ -307,8 +315,8 @@ extension NestedSplitViewWindowController: TabbedViewControllerDelegate {
         persistAllTabs()
     }
 
-    public func tabbedViewController(
-        _ controller: TabbedViewController,
+    public func multiTabbedViewController(
+        _ controller: MultiTabbedViewController,
         didReorderTab id: UUID,
         to index: Int,
         on edge: Edge

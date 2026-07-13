@@ -1,6 +1,6 @@
 import Foundation
 
-/// Which side of `TabbedViewController`'s container a tab bar is docked to.
+/// Which side of `MultiTabbedViewController`'s container a tab bar is docked to.
 public enum Edge: CaseIterable, Sendable {
     case top
     case right
