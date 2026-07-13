@@ -1227,23 +1227,25 @@ function CoveredStack({
   const detailLeft = Math.max(0, x - offshift)
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // THE REVEAL GROUP — the hovered list and every list below it (its children). The group opens in
-  // place: it starts where the hovered list already sits and lays its members out side by side at
-  // full width, so the branch reads as one cascade floating over the detail. Nothing under it moves;
-  // the detail keeps its geometry and is simply overlapped, and dropping the group (pointer out)
-  // animates every member straight back to the layout above.
+  // THE REVEAL GROUP — EVERY on-screen list, parents and children alike (was: the hovered list and
+  // only the lists below it, which left the hovered list's own parents covered and made walking the
+  // stack leftwards a list-by-list re-rooting exercise). Entering ANY covered list opens the whole
+  // stack in one cascade: members lay out side by side at full width from the left edge, floating
+  // over the detail. Nothing under it moves; the detail keeps its geometry and is simply overlapped,
+  // and dropping the group (pointer out) animates every member straight back to the layout above.
+  // Off-screen (drilled-down) lists stay out of the group — Back is their affordance.
   //
-  // A reveal that reveals NOTHING is dropped: when no member at/below the root is covered, the
-  // revealed geometry IS the resting layout (full widths chained from the root's own left) — but
-  // the z-lift and the floating card's shadows are not, and a stack at rest must not cast them. A
-  // select roots a reveal blindly (at click time it cannot know whether it pushes a choosing list
-  // over the clicked one or completes the path — see the rail's onSelect); this is where a blind
-  // root that ended up covering nothing becomes the no-op it should be.
+  // A reveal that reveals NOTHING is dropped: when no on-screen member is covered, the revealed
+  // geometry IS the resting layout — but the z-lift and the floating card's shadows are not, and a
+  // stack at rest must not cast them. A select roots a reveal blindly (at click time it cannot know
+  // whether it pushes a choosing list over the clicked one or completes the path — see the rail's
+  // onSelect); this is where a blind root that ended up covering nothing becomes the no-op it
+  // should be.
   const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
   const hoverIndex =
-    hoverRoot >= 0 && rendered.some((_, i) => i >= hoverRoot && isCovered(i)) ? hoverRoot : -1
+    hoverRoot >= 0 && rendered.some((_, i) => i >= hidden && isCovered(i)) ? hoverRoot : -1
   const effectiveHoverId = hoverIndex >= 0 ? hoverId : null
-  const inGroup = (i: number) => hoverIndex >= 0 && i >= hoverIndex
+  const inGroup = (i: number) => hoverIndex >= 0 && i >= hidden
 
   // The group is lifted above the detail (z-50+) so it floats OVER the UI. On CLOSE the lift must
   // LINGER for the wipe-shut transition (z-index can't animate) — else the lists would drop behind
@@ -1263,8 +1265,10 @@ function CoveredStack({
   const zFrom = zLiftId === null ? -1 : rendered.findIndex((l) => l.id === zLiftId)
   const revealLeft: number[] = []
   if (hoverIndex >= 0) {
-    let rx = left[hoverIndex]!
-    for (let i = hoverIndex; i < rendered.length; i++) {
+    // The whole on-screen stack opens: chain full widths from the first on-screen list's
+    // resting left (which offsets to the container's left edge once `offshift` is applied).
+    let rx = left[hidden] ?? 0
+    for (let i = hidden; i < rendered.length; i++) {
       revealLeft[i] = rx
       rx += railWidth(rendered[i]!)
     }
@@ -1402,14 +1406,14 @@ function CoveredStack({
         // The lift is a property of the group: while it is open every member floats above the detail;
         // on close the lift LINGERS (zLiftId trails hoverId) so the wipe-shut happens over the UI
         // instead of behind it. The members keep their relative order (left → right) inside the lift.
-        const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
+        const zLifted = !offscreen && zFrom >= 0 && i >= hidden
         // The group floats as ONE card over the UI, so BOTH its outer edges are edges: its trailing
         // edge shadows the detail it covers, and its LEADING edge shadows the peek stack it slid out
         // of (a peek's own `border-r` is clipped away with the rest of its rail, so that shadow IS
         // the boundary — without it the opened list bleeds into the icon strip behind it). Members
         // inside the group abut each other and are separated by their own rail borders.
         const groupTrailing = revealed && i === rendered.length - 1
-        const groupLeading = revealed && i === hoverIndex && i > 0
+        const groupLeading = revealed && i === hidden && i > 0
         return (
           <div
             key={level.id}
