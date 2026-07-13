@@ -8,6 +8,11 @@
 // `/home` on the projects site).
 export { ProjectsFeature } from "./ProjectsFeature";
 
+// The "Project" topic of a product/persona: resolves the subject's auto-provisioned
+// project and renders the standard overview pane for it — host-injected into the
+// product topic rail (hub ProductsTab) and the persona editor (host seams).
+export { SubjectProjectPane } from "./SubjectProjectPane";
+
 // The /home Projects URL grammar, owned here so both hosts parse it identically.
 // The URL grammar lives at the SERVER-SAFE ./parse subpath ONLY — deliberately NOT
 // re-exported here: this barrel's dist is a "use client" module, so an RSC page that

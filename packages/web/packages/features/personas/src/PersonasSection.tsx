@@ -37,6 +37,7 @@ export function PersonasSection({
   renderChatPane,
   profileUrlFor,
   renderKnowledgeBases,
+  renderProject,
 }: {
   /** The workspace whose personas this section shows. Resolved server-side to the workspace's
    *  OWNING principal (`?workspace=`): the list holds only personas that principal owns, and a
@@ -63,6 +64,9 @@ export function PersonasSection({
   /** Renders the Knowledge Bases browser scoped to a persona's owned ecosystem. See
    *  {@link PersonaEditor}. */
   renderKnowledgeBases?: (scopeEcosystemId: string) => ReactNode;
+  /** Renders a persona's auto-provisioned project (the Project facet). See
+   *  {@link PersonaEditor}. */
+  renderProject?: (personaId: string) => ReactNode;
 }) {
   // Data rides the toolkit's shared react-query cache, NOT local state: Next remounts the page
   // subtree on every param navigation, so local state would restart from null on each persona/topic
@@ -178,6 +182,7 @@ export function PersonasSection({
         renderChatPane={renderChatPane}
         profileUrlFor={profileUrlFor}
         renderKnowledgeBases={renderKnowledgeBases}
+        renderProject={renderProject}
       />
     ) : openPersona ? (
       <PersonaEditor
@@ -194,6 +199,7 @@ export function PersonasSection({
         renderChatPane={renderChatPane}
         profileUrlFor={profileUrlFor}
         renderKnowledgeBases={renderKnowledgeBases}
+        renderProject={renderProject}
       />
     ) : (
       <>

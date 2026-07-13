@@ -132,6 +132,20 @@ export const projectsApi = {
     }
   },
 
+  /** The auto-provisioned SUBJECT project of one product (ecosystem) or persona — the
+   *  "Project" topic's lookup (backend `?subjectKind=&subjectId=`; `subjectId` may be
+   *  the subject's rdid or uuid, resolved at the edge). Null when none is provisioned
+   *  yet or the caller has no reach. */
+  async subjectProject(
+    subjectKind: "ecosystem" | "persona",
+    subjectId: string,
+  ): Promise<Project | null> {
+    const rows = await authedJson<ProjectRow[]>(
+      `${BASE}?subjectKind=${enc(subjectKind)}&subjectId=${enc(subjectId)}`,
+    );
+    return rows[0] ? toProject(rows[0]) : null;
+  },
+
   async create(
     input: {
       name: string;

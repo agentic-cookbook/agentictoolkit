@@ -6,6 +6,7 @@ import {
   BookOpen,
   Brain,
   Drama,
+  FolderKanban,
   IdCard,
   KeyRound,
   ShieldCheck,
@@ -216,6 +217,7 @@ export function PersonaEditor({
   renderChatPane,
   profileUrlFor,
   renderKnowledgeBases,
+  renderProject,
 }: {
   /** The persona to edit, or null to create a new one. */
   persona: Persona | null;
@@ -243,6 +245,11 @@ export function PersonaEditor({
   /** Renders the Knowledge Bases browser scoped to the persona's OWNED ecosystem (the Knowledge
    *  facet). Omit to show a "not available in this view" notice instead. */
   renderKnowledgeBases?: (scopeEcosystemId: string) => ReactNode;
+  /** Renders the persona's auto-provisioned PROJECT (the Project facet — a separate feature
+   *  package this one doesn't depend on, so the host injects the pane, e.g.
+   *  @agentic-toolkit/projects' SubjectProjectPane). Omit to show a "not available in this
+   *  view" notice instead. */
+  renderProject?: (personaId: string) => ReactNode;
 }) {
   // Derive the initial draft from the persona prop; keyed remount (per id) in the
   // parent gives each persona a fresh editor, so seeding state here is safe.
@@ -448,6 +455,24 @@ export function PersonaEditor({
           />
         </div>
       ),
+    },
+    {
+      id: "project",
+      label: "Project",
+      icon: <FolderKanban size={16} aria-hidden />,
+      description: "The persona's own project — plan and track its work.",
+      // The persona's auto-provisioned PROJECT (subject-linked at create / by the deploy
+      // backfill). The projects feature package is a sibling this package doesn't depend
+      // on, so its pane is host-injected (renderProject) — same seam as Knowledge above.
+      render: () => {
+        if (!persona) {
+          return <SaveFirstNotice>Save this persona first to open its project.</SaveFirstNotice>;
+        }
+        if (!renderProject) {
+          return <SaveFirstNotice>The project isn't available in this view.</SaveFirstNotice>;
+        }
+        return renderProject(persona.id);
+      },
     },
     {
       id: "knowledge",
