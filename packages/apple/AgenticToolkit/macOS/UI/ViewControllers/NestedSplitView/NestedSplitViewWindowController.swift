@@ -123,10 +123,9 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         guard let edge = sender.representedObject as? Edge else { return }
         let nowEnabled = !tabbed.isEdgeEnabled(edge)
         tabbed.setEdgeEnabled(edge, nowEnabled)
-        // A freshly-enabled edge with no tabs renders as an empty 28pt
-        // tab strip + blank content area — visually indistinguishable from
-        // "nothing happened". Seed it with one tab so the toggle has an
-        // obvious effect.
+        // A freshly-enabled edge with no tabs renders as an empty tab
+        // strip — visually indistinguishable from "nothing happened".
+        // Seed it with one tab so the toggle has an obvious effect.
         if nowEnabled && tabbed.tabs(on: edge).isEmpty {
             addDefaultTab(on: edge)
         }

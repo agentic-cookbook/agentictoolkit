@@ -1,24 +1,22 @@
 import AppKit
 
 /// IDE-style tabbed container with up to four edge-docked tab bars (top,
-/// right, bottom, left) plus a host-supplied center main view. Each enabled
-/// edge owns its own tab list, active tab, and content area; edges can be
-/// toggled on/off independently.
+/// right, bottom, left) around a single shared content area. Each enabled
+/// edge owns its own tab list; edges can be toggled on/off independently.
 ///
 /// Layout (when all four edges enabled):
 /// ```
-/// outer NSSplitView (vertical layout: panes stacked top→bottom)
-/// ├── EdgePanel(.top)
-/// ├── inner NSSplitView (horizontal layout: panes side by side)
-/// │   ├── EdgePanel(.left)
-/// │   ├── centerContainer ← mainContentViewController.view
-/// │   └── EdgePanel(.right)
-/// └── EdgePanel(.bottom)
+///           [ top tab bar ]
+/// [left bar][   content   ][right bar]
+///           [ bottom bar  ]
 /// ```
+/// Each horizontal bar is its own row spanning the content's width; each
+/// vertical bar is its own column spanning the content's height. Exactly
+/// one tab is active across the whole controller, and its view controller
+/// fills the center. `mainContentViewController` (if set) fills the center
+/// while no tab is active.
 ///
-/// Hidden edges drop out of the split view; their `EdgePanel` (and the
-/// child view controllers it hosts) is retained so re-enabling restores
-/// state.
+/// Hidden edges keep their tab lists so re-enabling restores them.
 @MainActor
 open class TabbedViewController: NSViewController {
 
@@ -43,52 +41,50 @@ open class TabbedViewController: NSViewController {
     /// Which edge `newTab(_:)` (File > New Tab) targets.
     public var newTabTargetEdge: Edge = .top
 
+    /// Shown in the center while no tab is active.
     public var mainContentViewController: NSViewController? {
         didSet {
             guard oldValue !== mainContentViewController else { return }
-            swapMainContent(old: oldValue, new: mainContentViewController)
+            refreshCenterContent()
         }
     }
+
+    /// The single tab (across all edges) whose content occupies the center.
+    public private(set) var activeTabID: UUID?
 
     // MARK: - Private state
 
     @MainActor
     private final class EdgeState {
         var enabled: Bool
-        var size: CGFloat
         var tabs: [Tab] = []
-        var selectedTabID: UUID?
 
-        init(enabled: Bool, size: CGFloat) {
+        init(enabled: Bool) {
             self.enabled = enabled
-            self.size = size
         }
     }
 
     private var edgeStates: [Edge: EdgeState] = [
-        .top: EdgeState(enabled: true, size: 200),
-        .right: EdgeState(enabled: false, size: 280),
-        .bottom: EdgeState(enabled: false, size: 200),
-        .left: EdgeState(enabled: false, size: 280)
+        .top: EdgeState(enabled: true),
+        .right: EdgeState(enabled: false),
+        .bottom: EdgeState(enabled: false),
+        .left: EdgeState(enabled: false)
     ]
 
-    private var edgePanels: [Edge: EdgePanel] = [:]
+    private var tabBars: [Edge: TabBarView] = [:]
 
-    private let outerSplit = NSSplitView()
-    private let innerSplit = NSSplitView()
     private let centerContainer = NSView()
-
-    private var splitArrangementDirty = false
+    private var mountedCenterController: NSViewController?
+    private var edgeConstraints: [NSLayoutConstraint] = []
 
     // MARK: - Lifecycle
 
     public init() {
         super.init(nibName: nil, bundle: nil)
         for edge in Edge.allCases {
-            let panel = EdgePanel(edge: edge)
-            panel.frame = NSRect(origin: .zero, size: defaultPanelFrameSize(for: edge))
-            edgePanels[edge] = panel
-            wireCallbacks(for: panel)
+            let bar = TabBarView(edge: edge)
+            tabBars[edge] = bar
+            wireCallbacks(for: bar)
         }
     }
 
@@ -98,47 +94,24 @@ open class TabbedViewController: NSViewController {
     open override func loadView() {
         let root = NSView()
 
-        outerSplit.isVertical = false
-        outerSplit.dividerStyle = .thin
-        outerSplit.translatesAutoresizingMaskIntoConstraints = false
-
-        innerSplit.isVertical = true
-        innerSplit.dividerStyle = .thin
-        innerSplit.translatesAutoresizingMaskIntoConstraints = false
-        innerSplit.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
-
         centerContainer.translatesAutoresizingMaskIntoConstraints = false
-
-        rebuildSplitArrangement()
-
-        root.addSubview(outerSplit)
-        NSLayoutConstraint.activate([
-            outerSplit.topAnchor.constraint(equalTo: root.topAnchor),
-            outerSplit.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            outerSplit.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            outerSplit.bottomAnchor.constraint(equalTo: root.bottomAnchor)
-        ])
+        root.addSubview(centerContainer)
+        for edge in Edge.allCases {
+            guard let bar = tabBars[edge] else { continue }
+            bar.isHidden = !isEdgeEnabled(edge)
+            root.addSubview(bar)
+        }
 
         self.view = root
+        rebuildEdgeConstraints()
     }
 
     open override func viewDidLoad() {
         super.viewDidLoad()
-        if let main = mainContentViewController {
-            mountMain(main)
-        }
         for edge in Edge.allCases {
             syncTabBar(for: edge)
-            mountSelectedTabContent(on: edge)
         }
-    }
-
-    open override func viewDidLayout() {
-        super.viewDidLayout()
-        if splitArrangementDirty {
-            applyDividerPositions()
-            splitArrangementDirty = false
-        }
+        refreshCenterContent()
     }
 
     // MARK: - Edge enable/disable
@@ -146,31 +119,19 @@ open class TabbedViewController: NSViewController {
     public func setEdgeEnabled(_ edge: Edge, _ enabled: Bool) {
         guard let state = edgeStates[edge], state.enabled != enabled else { return }
         state.enabled = enabled
-        guard isViewLoaded else { return }
-        rebuildSplitArrangement()
-        if enabled {
-            mountSelectedTabContent(on: edge)
+        if !enabled, let activeTabID, state.tabs.contains(where: { $0.id == activeTabID }) {
+            activateFallbackTab()
         }
+        if enabled, activeTabID == nil {
+            activateFallbackTab()
+        }
+        guard isViewLoaded else { return }
+        tabBars[edge]?.isHidden = !enabled
+        rebuildEdgeConstraints()
     }
 
     public func isEdgeEnabled(_ edge: Edge) -> Bool {
         edgeStates[edge]?.enabled ?? false
-    }
-
-    public func setEdgeSize(_ edge: Edge, _ size: CGFloat) {
-        guard let state = edgeStates[edge] else { return }
-        state.size = size
-        guard let panel = edgePanels[edge] else { return }
-        switch edge {
-        case .top, .bottom:
-            panel.frame.size.height = size
-        case .left, .right:
-            panel.frame.size.width = size
-        }
-        if isViewLoaded {
-            splitArrangementDirty = true
-            view.needsLayout = true
-        }
     }
 
     // MARK: - Tab manipulation (per edge)
@@ -184,33 +145,26 @@ open class TabbedViewController: NSViewController {
         let clamped = max(0, min(index, state.tabs.count))
         state.tabs.insert(tab, at: clamped)
         syncTabBar(for: edge)
-        if state.selectedTabID == nil {
-            selectTab(id: tab.id, on: edge)
+        if activeTabID == nil {
+            setActiveTab(tab.id)
         }
     }
 
     public func removeTab(id: UUID) {
         guard let edge = edge(forTabID: id), let state = edgeStates[edge] else { return }
         guard let index = state.tabs.firstIndex(where: { $0.id == id }) else { return }
-        let wasSelected = (state.selectedTabID == id)
-        let removed = state.tabs.remove(at: index)
-        if wasSelected {
-            if isViewLoaded {
-                unmountTabContent(removed.viewController)
-            }
-            let nextIndex = min(index, state.tabs.count - 1)
-            if nextIndex >= 0 {
-                state.selectedTabID = state.tabs[nextIndex].id
-                if isViewLoaded, let panel = edgePanels[edge] {
-                    mountTabContent(state.tabs[nextIndex].viewController, in: panel)
-                }
-            } else {
-                state.selectedTabID = nil
-            }
-        }
+        let wasActive = (activeTabID == id)
+        state.tabs.remove(at: index)
         syncTabBar(for: edge)
-        if let id = state.selectedTabID {
-            delegate?.tabbedViewController(self, didSelectTab: id, on: edge)
+        guard wasActive else { return }
+        let nextIndex = min(index, state.tabs.count - 1)
+        if nextIndex >= 0 {
+            setActiveTab(state.tabs[nextIndex].id)
+        } else {
+            activateFallbackTab()
+        }
+        if let activeTabID, let activeEdge = self.edge(forTabID: activeTabID) {
+            delegate?.tabbedViewController(self, didSelectTab: activeTabID, on: activeEdge)
         }
     }
 
@@ -218,7 +172,7 @@ open class TabbedViewController: NSViewController {
         guard let edge = edge(forTabID: id), let state = edgeStates[edge] else { return }
         guard let idx = state.tabs.firstIndex(where: { $0.id == id }) else { return }
         state.tabs[idx].title = title
-        edgePanels[edge]?.tabBar.renameItem(id: id, title: title)
+        tabBars[edge]?.renameItem(id: id, title: title)
     }
 
     public func moveTab(id: UUID, to index: Int, on edge: Edge) {
@@ -238,28 +192,22 @@ open class TabbedViewController: NSViewController {
         edgeStates[edge]?.tabs ?? []
     }
 
+    /// The active tab, if it lives on `edge`.
     public func selectedTab(on edge: Edge) -> Tab? {
-        guard let state = edgeStates[edge], let id = state.selectedTabID else { return nil }
-        return state.tabs.first(where: { $0.id == id })
+        guard let id = selectedTabID(on: edge) else { return nil }
+        return edgeStates[edge]?.tabs.first(where: { $0.id == id })
     }
 
+    /// The active tab's ID, if the active tab lives on `edge`.
     public func selectedTabID(on edge: Edge) -> UUID? {
-        edgeStates[edge]?.selectedTabID
+        guard let activeTabID,
+              edgeStates[edge]?.tabs.contains(where: { $0.id == activeTabID }) == true else { return nil }
+        return activeTabID
     }
 
     public func selectTab(id: UUID, on edge: Edge) {
-        guard let state = edgeStates[edge], state.selectedTabID != id else { return }
-        let oldID = state.selectedTabID
-        state.selectedTabID = id
-        if isViewLoaded {
-            if let oldID, let oldTab = state.tabs.first(where: { $0.id == oldID }) {
-                unmountTabContent(oldTab.viewController)
-            }
-            if let newTab = state.tabs.first(where: { $0.id == id }), let panel = edgePanels[edge] {
-                mountTabContent(newTab.viewController, in: panel)
-            }
-        }
-        edgePanels[edge]?.tabBar.setSelected(id)
+        guard edgeStates[edge]?.tabs.contains(where: { $0.id == id }) == true else { return }
+        setActiveTab(id)
     }
 
     // MARK: - File menu hook
@@ -272,18 +220,18 @@ open class TabbedViewController: NSViewController {
 
     // MARK: - Wiring
 
-    private func wireCallbacks(for panel: EdgePanel) {
-        let edge = panel.edge
-        panel.tabBar.onSelect = { [weak self] id in
+    private func wireCallbacks(for bar: TabBarView) {
+        let edge = bar.edge
+        bar.onSelect = { [weak self] id in
             guard let self else { return }
             self.selectTab(id: id, on: edge)
             self.delegate?.tabbedViewController(self, didSelectTab: id, on: edge)
         }
-        panel.tabBar.onClose = { [weak self] id in
+        bar.onClose = { [weak self] id in
             guard let self else { return }
             self.delegate?.tabbedViewController(self, didRequestCloseTab: id, on: edge)
         }
-        panel.tabBar.onReorder = { [weak self] id, index in
+        bar.onReorder = { [weak self] id, index in
             guard let self else { return }
             self.delegate?.tabbedViewController(self, didReorderTab: id, to: index, on: edge)
         }
@@ -291,147 +239,117 @@ open class TabbedViewController: NSViewController {
 
     // MARK: - Layout
 
-    private func rebuildSplitArrangement() {
-        for sub in outerSplit.arrangedSubviews {
-            outerSplit.removeArrangedSubview(sub)
-            sub.removeFromSuperview()
+    /// Pins the center to the enabled bars (or the container edges), each
+    /// horizontal bar to its own row hugging the center's width, and each
+    /// vertical bar to its own column hugging the center's height. Bar
+    /// thickness comes from `TabBarView`'s own constraints. Disabled bars
+    /// are hidden and left unconstrained.
+    private func rebuildEdgeConstraints() {
+        NSLayoutConstraint.deactivate(edgeConstraints)
+
+        let topBar = isEdgeEnabled(.top) ? tabBars[.top] : nil
+        let bottomBar = isEdgeEnabled(.bottom) ? tabBars[.bottom] : nil
+        let leftBar = isEdgeEnabled(.left) ? tabBars[.left] : nil
+        let rightBar = isEdgeEnabled(.right) ? tabBars[.right] : nil
+
+        var constraints: [NSLayoutConstraint] = [
+            centerContainer.topAnchor.constraint(equalTo: topBar?.bottomAnchor ?? view.topAnchor),
+            centerContainer.bottomAnchor.constraint(equalTo: bottomBar?.topAnchor ?? view.bottomAnchor),
+            centerContainer.leadingAnchor.constraint(equalTo: leftBar?.trailingAnchor ?? view.leadingAnchor),
+            centerContainer.trailingAnchor.constraint(equalTo: rightBar?.leadingAnchor ?? view.trailingAnchor)
+        ]
+
+        if let topBar {
+            constraints += [
+                topBar.topAnchor.constraint(equalTo: view.topAnchor),
+                topBar.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
+                topBar.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor)
+            ]
         }
-        for sub in innerSplit.arrangedSubviews {
-            innerSplit.removeArrangedSubview(sub)
-            sub.removeFromSuperview()
+        if let bottomBar {
+            constraints += [
+                bottomBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                bottomBar.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
+                bottomBar.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor)
+            ]
+        }
+        if let leftBar {
+            constraints += [
+                leftBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                leftBar.topAnchor.constraint(equalTo: centerContainer.topAnchor),
+                leftBar.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor)
+            ]
+        }
+        if let rightBar {
+            constraints += [
+                rightBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                rightBar.topAnchor.constraint(equalTo: centerContainer.topAnchor),
+                rightBar.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor)
+            ]
         }
 
-        if isEdgeEnabled(.left), let panel = edgePanels[.left] {
-            innerSplit.addArrangedSubview(panel)
-        }
-        innerSplit.addArrangedSubview(centerContainer)
-        if isEdgeEnabled(.right), let panel = edgePanels[.right] {
-            innerSplit.addArrangedSubview(panel)
-        }
-
-        if isEdgeEnabled(.top), let panel = edgePanels[.top] {
-            outerSplit.addArrangedSubview(panel)
-        }
-        outerSplit.addArrangedSubview(innerSplit)
-        if isEdgeEnabled(.bottom), let panel = edgePanels[.bottom] {
-            outerSplit.addArrangedSubview(panel)
-        }
-
-        applyHoldingPriorities()
-        splitArrangementDirty = true
-        if isViewLoaded { view.needsLayout = true }
+        edgeConstraints = constraints
+        NSLayoutConstraint.activate(constraints)
     }
 
-    private func applyHoldingPriorities() {
-        // Center is elastic; edge panels resist resizing so the center
-        // absorbs window-size changes.
-        let panelPriority = NSLayoutConstraint.Priority(260)
-        let centerPriority = NSLayoutConstraint.Priority(240)
+    // MARK: - Active tab & mounting
 
-        for (idx, sub) in innerSplit.arrangedSubviews.enumerated() {
-            let priority: NSLayoutConstraint.Priority = (sub === centerContainer) ? centerPriority : panelPriority
-            innerSplit.setHoldingPriority(priority, forSubviewAt: idx)
+    private var activeTab: Tab? {
+        guard let activeTabID else { return nil }
+        for state in edgeStates.values {
+            if let tab = state.tabs.first(where: { $0.id == activeTabID }) { return tab }
         }
-        for (idx, sub) in outerSplit.arrangedSubviews.enumerated() {
-            let priority: NSLayoutConstraint.Priority = (sub === innerSplit) ? centerPriority : panelPriority
-            outerSplit.setHoldingPriority(priority, forSubviewAt: idx)
-        }
+        return nil
     }
 
-    private func applyDividerPositions() {
-        var outerIdx = 0
-        if isEdgeEnabled(.top), let topSize = edgeStates[.top]?.size, outerSplit.subviews.count > outerIdx + 1 {
-            outerSplit.setPosition(topSize, ofDividerAt: outerIdx)
-            outerIdx += 1
-        }
-        if isEdgeEnabled(.bottom),
-           let bottomSize = edgeStates[.bottom]?.size,
-           outerSplit.subviews.count > outerIdx + 1 {
-            let pos = outerSplit.bounds.height - bottomSize
-            outerSplit.setPosition(pos, ofDividerAt: outerIdx)
-        }
-
-        var innerIdx = 0
-        if isEdgeEnabled(.left), let leftSize = edgeStates[.left]?.size, innerSplit.subviews.count > innerIdx + 1 {
-            innerSplit.setPosition(leftSize, ofDividerAt: innerIdx)
-            innerIdx += 1
-        }
-        if isEdgeEnabled(.right), let rightSize = edgeStates[.right]?.size, innerSplit.subviews.count > innerIdx + 1 {
-            let pos = innerSplit.bounds.width - rightSize
-            innerSplit.setPosition(pos, ofDividerAt: innerIdx)
-        }
+    private func setActiveTab(_ id: UUID?) {
+        guard activeTabID != id else { return }
+        activeTabID = id
+        for bar in tabBars.values { bar.setSelected(id) }
+        refreshCenterContent()
     }
 
-    private func defaultPanelFrameSize(for edge: Edge) -> NSSize {
-        let size = edgeStates[edge]?.size ?? 200
-        switch edge {
-        case .top, .bottom:
-            return NSSize(width: 600, height: size)
-        case .left, .right:
-            return NSSize(width: size, height: 400)
+    /// Activates the first tab on the first enabled edge, or clears the
+    /// active tab when no enabled edge has tabs.
+    private func activateFallbackTab() {
+        for edge in Edge.allCases where isEdgeEnabled(edge) {
+            if let first = edgeStates[edge]?.tabs.first {
+                setActiveTab(first.id)
+                return
+            }
         }
+        setActiveTab(nil)
     }
 
-    // MARK: - Mounting
-
-    private func swapMainContent(old: NSViewController?, new: NSViewController?) {
-        if let old, isViewLoaded {
-            old.view.removeFromSuperview()
-            old.removeFromParent()
+    private func refreshCenterContent() {
+        guard isViewLoaded else { return }
+        let target = activeTab?.viewController ?? mainContentViewController
+        guard mountedCenterController !== target else { return }
+        if let mounted = mountedCenterController {
+            mounted.view.removeFromSuperview()
+            mounted.removeFromParent()
         }
-        if let new, isViewLoaded {
-            mountMain(new)
+        mountedCenterController = target
+        guard let target else { return }
+        if target.parent !== self {
+            addChild(target)
         }
-    }
-
-    private func mountMain(_ controller: NSViewController) {
-        addChild(controller)
-        controller.view.translatesAutoresizingMaskIntoConstraints = false
-        centerContainer.addSubview(controller.view)
+        target.view.translatesAutoresizingMaskIntoConstraints = false
+        centerContainer.addSubview(target.view)
         NSLayoutConstraint.activate([
-            controller.view.topAnchor.constraint(equalTo: centerContainer.topAnchor),
-            controller.view.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
-            controller.view.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
-            controller.view.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor)
+            target.view.topAnchor.constraint(equalTo: centerContainer.topAnchor),
+            target.view.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
+            target.view.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
+            target.view.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor)
         ])
-    }
-
-    private func mountSelectedTabContent(on edge: Edge) {
-        guard isViewLoaded,
-              let state = edgeStates[edge],
-              let id = state.selectedTabID,
-              let tab = state.tabs.first(where: { $0.id == id }),
-              let panel = edgePanels[edge] else { return }
-        mountTabContent(tab.viewController, in: panel)
-    }
-
-    private func mountTabContent(_ controller: NSViewController, in panel: EdgePanel) {
-        if controller.parent !== self {
-            addChild(controller)
-        }
-        if controller.view.superview !== panel.contentContainer {
-            controller.view.translatesAutoresizingMaskIntoConstraints = false
-            panel.contentContainer.addSubview(controller.view)
-            NSLayoutConstraint.activate([
-                controller.view.topAnchor.constraint(equalTo: panel.contentContainer.topAnchor),
-                controller.view.leadingAnchor.constraint(equalTo: panel.contentContainer.leadingAnchor),
-                controller.view.trailingAnchor.constraint(equalTo: panel.contentContainer.trailingAnchor),
-                controller.view.bottomAnchor.constraint(equalTo: panel.contentContainer.bottomAnchor)
-            ])
-        }
-    }
-
-    private func unmountTabContent(_ controller: NSViewController) {
-        controller.view.removeFromSuperview()
-        controller.removeFromParent()
     }
 
     // MARK: - Sync
 
     private func syncTabBar(for edge: Edge) {
-        guard let state = edgeStates[edge], let panel = edgePanels[edge] else { return }
+        guard let state = edgeStates[edge], let bar = tabBars[edge] else { return }
         let items = state.tabs.map { TabBarView.ItemModel(id: $0.id, title: $0.title) }
-        panel.tabBar.setItems(items, selectedID: state.selectedTabID)
+        bar.setItems(items, selectedID: activeTabID)
     }
 
     private func edge(forTabID id: UUID) -> Edge? {
