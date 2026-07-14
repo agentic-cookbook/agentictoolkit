@@ -1877,10 +1877,12 @@ function CascadingStack({
     topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
   })
 
-  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported verbatim (see there for the full
-  // story: enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the
-  // group-scoped close rules). The one cascade difference: members open at their full widths chained
-  // horizontally from the group start, but their TOPS stay the cascade's — revealing is horizontal.
+  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported (see there for the full story:
+  // enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the group-scoped
+  // close rules). ROUND 9 (#5): the reveal no longer FANS OUT horizontally. Every revealed member —
+  // not just the first — stays at its tight CASCADE_INDENT step (its resting left), moving inward
+  // from its parent's right exactly as when collapsed; the reveal is purely a z-LIFT that raises the
+  // covered branch above the lists that overdraw it, so its rows show without the cascade sliding.
   const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
   const groupFrom = (root: number) => (hoverAll ? hidden : root)
   const hoverIndex =
@@ -1911,7 +1913,9 @@ function CascadingStack({
     let rx = left[groupStart] ?? 0
     for (let i = groupStart; i < rendered.length; i++) {
       revealLeft[i] = rx
-      rx += railWidth(rendered[i]!)
+      // ROUND 9 (#5): step by the indent, NOT the full rail width — so a revealed member lands on
+      // its resting inward position (revealLeft[i] === left[i]) for EVERY level, not just the first.
+      rx += widthOf(i)
     }
   }
   // Immersed, every list parks fully past the left edge (right edge ≤ 0): shift the whole resting
@@ -2061,10 +2065,13 @@ function CascadingStack({
           <div
             key={level.id}
             data-htd-col={i}
-            // Entering a COVERED list opens the branch rooted at it (see CoveredStack).
+            // Entering a COVERED SUBMENU opens the branch rooted at it (see CoveredStack). ROUND 9
+            // (#3): the auto-expand/collapse mouse tracking is on the submenus only — entering the
+            // ROOT never opens a branch (it passes null, closing any open one), so the root list is
+            // inert to hover; only a deeper menu expands under the pointer.
             onPointerEnter={() => {
               if (inGroup(i)) return
-              setHoverId(covered && !offscreen ? level.id : null, true)
+              setHoverId(!isRootList && covered && !offscreen ? level.id : null, true)
             }}
             onPointerLeave={onGroupPointerLeave}
             aria-hidden={offscreen || undefined}
@@ -2094,6 +2101,10 @@ function CascadingStack({
               // covered ancestors at rest, and a lifted member floats over the detail (the rail's
               // own bg is 96% opaque — see CoveredStack).
               "absolute flex flex-col overflow-hidden bg-apt-bg",
+              // ROUND 9 (#2): every child menu carries a full, defined border so the overlapping
+              // cards read as distinct sheets, not just a soft shadow. The root is borderless (it is
+              // the ground the cascade sits on).
+              !isRootList && "border border-apt-border",
               offscreen && "pointer-events-none",
               animate &&
                 "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
@@ -2108,11 +2119,13 @@ function CascadingStack({
               className={cn(
                 "flex min-h-0 flex-col",
                 isRootList && "flex-1",
-                // ROUND 8 (#3): in every non-root menu, dim the rows that aren't the selected one —
-                // the top/root menu is exempt. Hovering a row un-dims it, so the frontier list you
-                // are choosing from (which has no selection yet) stays usable. `data-htd-row` +
+                // ROUND 9 (#4): dim the non-selected rows ONLY in a menu that is COVERED by another
+                // (behind the cascade). When every menu is expanded — nothing covered — none dim.
+                // A covered menu being REVEALED (hovered forward) un-dims too, since it is no longer
+                // hidden behind its child. Hovering a row still un-dims it. `data-htd-row` +
                 // `aria-current` are the row markers (see TopicRail).
-                !isRootList &&
+                covered &&
+                  !revealed &&
                   "[&_[data-htd-row]:not([aria-current=true]):not(:hover)]:opacity-40",
               )}
             >
