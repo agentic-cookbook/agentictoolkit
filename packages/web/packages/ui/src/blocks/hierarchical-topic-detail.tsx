@@ -294,18 +294,18 @@ export function HierarchicalTopicDetail({
    *   - `"cascading"` — a VERTICAL cascade (nested-menu layout): only the ROOT list is full
    *      height. Each deeper list opens to the RIGHT of the row selected in its parent, its TOP
    *      aligned to the top of that selected row, and its height HUGS its own rows (capped at the
-   *      container bottom, scrolling past it). Auto-hide COLLAPSES a selected NON-ROOT list to its
-   *      title + chosen row (a breadcrumb-like chip) instead of covering it — the root always
-   *      stays full height; no hover-reveal. */
+   *      container bottom, scrolling past it). Covering — auto-hide, the `«`/`»` pins, width
+   *      pressure, the hover branch reveal — works exactly as in `covered`; only the vertical
+   *      placement differs. */
   disclosureStyle?: "minimized" | "covered" | "cascading"
   /** Start with every list above the FRONTIER (the deepest rendered list) hidden — covered by its
-   *  child (`covered`) or collapsed to its chosen row (`cascading`) — even when there is room to
-   *  show it. Default `true`; the first list's header carries a toggle so the user can flip it
-   *  (off ⇒ every list discloses, subject to the fit rules). Pass `false` for a surface whose
-   *  ancestry must stay glanceable (the hub's `/home`). The covered style never snaps a list shut
-   *  under the cursor: the click that covers a list also roots the branch reveal at it (the
-   *  pointer is still inside), so the new choosing list slides out floating over the detail, and
-   *  the stack settles when the pointer leaves. */
+   *  child to a peek (the `covered` and `cascading` styles) or an icon strip (`minimized`) — even
+   *  when there is room to show it. Default `true`; the first list's header carries a toggle so
+   *  the user can flip it (off ⇒ every list discloses, subject to the fit rules). Pass `false`
+   *  for a surface whose ancestry must stay glanceable (the hub's `/home`). The covering styles
+   *  never snap a list shut under the cursor: the click that covers a list also roots the branch
+   *  reveal at it (the pointer is still inside), so the new choosing list slides out floating
+   *  over the detail, and the stack settles when the pointer leaves. */
   autoHideTopics?: boolean
   /** WIDE (lists beside the detail, `disclosureStyle` above) vs NARROW (one full-width pane at a
    *  time, pushed/popped like an iOS `UINavigationController`). Default `"auto"`: narrow when only a
@@ -1687,26 +1687,29 @@ function CoveredStack({
  * equal-height columns. The leaf detail fills the remaining width on the right at full height (it is
  * content, not a topic list, so the "align + hug" rule does not apply to it).
  *
- * Only the VERTICAL placement differs from `covered`; horizontally the lists still lay out left→right
- * at full width. The frame's shared auto-hide intent maps to a vertical COLLAPSE instead of a cover:
- * a collapsed list keeps its place in the cascade but shows only its title header + its chosen row
- * (a breadcrumb-like chip), so a deep trail reads as the path of choices with the frontier list open
- * at its end. `autoHide` (the root header's stack-wide toggle — the only disclosure control in this
- * style) collapses every selected NON-ROOT list above the frontier; the ROOT never collapses (the
- * style's one invariant: the root list is always full height). Re-clicking a chip's row deselects,
- * which expands the list as the new frontier. No per-list pins, hover-reveal or width pressure —
- * collapsing reclaims vertical room and noise, not horizontal room. Still its own component rather
- * than a mode of the covered stack (the block keeps each layout distinct so any one can evolve or
- * be deleted independently).
+ * ONLY the vertical placement differs from `covered`: the disclosure machinery is the covered
+ * stack's, unchanged — auto-hide and the `«`/`»` pins slide a list LEFT under its child to a 40px
+ * peek (its rows stay intact behind the clip; nothing is removed from the list), width pressure
+ * covers leftmost-first until the detail keeps its minimum, and hovering a covered list reveals
+ * the branch floating over the detail. A covered list's vertical footprint still hugs its rows at
+ * its cascade position (covering is a horizontal clip, so the staircase never moves). Kept as its
+ * own component so either layout can evolve or be deleted independently — the price is the
+ * mirrored covering logic, annotated where it is ported verbatim.
  */
 function CascadingStack({
   rendered,
+  firstUnselected,
   frontier,
   minDetailWidth,
   detailTitle,
   attemptExit,
   autoHide,
   toggleAutoHide,
+  pins,
+  setPins,
+  hoverId,
+  hoverAll,
+  setHoverId,
   containerW,
   children,
 }: StackProps) {
@@ -1722,38 +1725,68 @@ function CascadingStack({
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // COLLAPSE — the cascade's drawing of the frame's auto-hide intent: with `autoHide` on, every
-  // selected NON-ROOT list above the frontier shows only its title header + its SELECTED row. The
-  // ROOT is exempt — the style's one invariant is that the root list is always full height — and a
-  // list without a selection never collapses (there is no chosen row to show), which also means a
-  // collapsed chip self-heals: re-clicking its row deselects, the level becomes the frontier, and
-  // the full list is back. Deliberately NO per-list pins (the covered `«`/`»` have no counterpart
-  // here — the root header's AutoHideToggle is the whole control surface) and no width-pressure
-  // layer — collapsing reclaims vertical room, not horizontal, so there is no fit math to feed.
-  const collapsedOf = (i: number): boolean =>
-    i > 0 && rendered[i]!.selectedId != null && autoHide && i < frontier
+  // COVERING — CoveredStack's rules, ported verbatim (see there for the full rationale of every
+  // layer). The frontier stays uncovered while it has no selection, and an unselected frontier's
+  // placeholder claims no minimum width (must-not-hide-frontier-choosing-list).
+  const coverableCount = firstUnselected === -1 ? rendered.length : frontier
+  const detailMin = firstUnselected === -1 ? minPx : 0
 
-  // HORIZONTAL: a plain running-x of full rail widths — no covering, so every list is full width.
+  // COVER LAYER 1 — intent: the user's pin (`«`), else auto-hide's default for every list above
+  // the frontier.
+  const pinnedOrAutoHidden = (i: number): boolean => {
+    if (i >= coverableCount) return false
+    return pins[rendered[i]!.id] ?? (autoHide && i < frontier)
+  }
+
+  // COVER LAYER 2 — width pressure: cover MORE lists, leftmost-first, until the detail keeps its
+  // minimum. Only ever ADDS a cover — never discloses one the user pinned shut.
+  let pressure = 0
+  if (containerW > 0) {
+    const listsWidth = (n: number) =>
+      rendered.reduce(
+        (w, l, i) => w + (pinnedOrAutoHidden(i) || i < n ? COVERED_PEEK : railWidth(l)),
+        0,
+      )
+    while (pressure < coverableCount && listsWidth(pressure) + detailMin > containerW) pressure++
+  }
+  const isCovered = (i: number) => pinnedOrAutoHidden(i) || i < pressure
+  const widthOf = (i: number) => (isCovered(i) ? COVERED_PEEK : railWidth(rendered[i]!))
+
+  // PHASE 2 — OFF-SCREEN: every list at its peek and the detail minimum STILL doesn't fit — slide
+  // the leftmost lists off the left edge, whole lists at a time (see CoveredStack).
+  let hidden = 0
+  let offshift = 0
+  if (containerW > 0) {
+    const widthFrom = (h: number) =>
+      rendered.reduce((w, _l, i) => (i < h ? w : w + widthOf(i)), 0) + detailMin
+    while (hidden < coverableCount && widthFrom(hidden) > containerW) {
+      offshift += widthOf(hidden)
+      hidden++
+    }
+  }
+
+  // HORIZONTAL layout pass (running x): a covered list advances x only by its peek, so its child
+  // slides left to partially cover it — exactly the covered stack's horizontal model.
   const left: number[] = []
   let x = 0
-  rendered.forEach((l, i) => {
+  rendered.forEach((_l, i) => {
     left.push(x)
-    x += railWidth(l)
+    x += widthOf(i)
   })
+  const restingDetailLeft = Math.max(0, x - offshift)
 
   // VERTICAL cascade. Each non-root list's TOP is its parent's top plus where the parent's SELECTED
   // row sits WITHIN the parent's own box. Measuring the offset within the box (not the row's absolute
   // position) makes the measurement independent of where the box currently sits — so one pre-paint
-  // pass converges with no feedback loop: moving a child never moves its parent's rows. `rowOffset[i]`
-  // is that within-box offset for list `i`'s selected row (0 when the list has no selection).
+  // pass converges with no feedback loop: moving a child never moves its parent's rows. Covering a
+  // list doesn't move its rows either (the peek is a horizontal CLIP), so the staircase is identical
+  // covered or disclosed. `rowOffset[i]` is that within-box offset for list `i`'s selected row (0
+  // when the list has no selection).
   const [rowOffset, setRowOffset] = useState<number[]>([])
   const rowMeasureRef = useRef<() => void>(() => {})
-  // Re-measure when a selection changes, a list's row count or collapse changes, or the container
-  // width changes; the ResizeObserver below also catches height changes, and the container handlers
-  // catch scroll.
-  const measureSig = `${rendered
-    .map((l, i) => `${l.selectedId ?? ""}#${l.items.length}#${collapsedOf(i) ? 1 : 0}`)
-    .join("|")}::${containerW}`
+  // Re-measure when a selection changes, a list's row count changes, or the container width changes;
+  // the ResizeObserver below also catches height changes, and the container handlers catch scroll.
+  const measureSig = `${rendered.map((l) => `${l.selectedId ?? ""}#${l.items.length}`).join("|")}::${containerW}`
   useLayoutEffect(() => {
     const cont = containerRef.current
     if (!cont) return
@@ -1786,13 +1819,114 @@ function CascadingStack({
     topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
   })
 
-  const detailLeft = x // the right edge of the deepest list
-  const detailWidth = containerW > 0 ? Math.max(minPx, containerW - detailLeft) : 0
+  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported verbatim (see there for the full
+  // story: enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the
+  // group-scoped close rules). The one cascade difference: members open at their full widths chained
+  // horizontally from the group start, but their TOPS stay the cascade's — revealing is horizontal.
+  const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
+  const groupFrom = (root: number) => (hoverAll ? hidden : root)
+  const hoverIndex =
+    hoverRoot >= 0 && rendered.some((_, i) => i >= groupFrom(hoverRoot) && isCovered(i))
+      ? hoverRoot
+      : -1
+  const effectiveHoverId = hoverIndex >= 0 ? hoverId : null
+  const groupStart = hoverIndex >= 0 ? groupFrom(hoverIndex) : -1
+  const inGroup = (i: number) => hoverIndex >= 0 && i >= groupStart
+
+  const [zLiftId, setZLiftId] = useState<string | null>(effectiveHoverId)
+  useEffect(() => {
+    if (effectiveHoverId !== null) {
+      setZLiftId(effectiveHoverId)
+      return
+    }
+    const t = setTimeout(() => setZLiftId(null), 300)
+    return () => clearTimeout(t)
+  }, [effectiveHoverId])
+  const zRoot = zLiftId === null ? -1 : rendered.findIndex((l) => l.id === zLiftId)
+  const [zStart, setZStart] = useState<number>(groupStart)
+  useEffect(() => {
+    if (groupStart >= 0) setZStart(groupStart)
+  }, [groupStart])
+  const zFrom = zRoot === -1 ? -1 : zStart >= 0 ? zStart : zRoot
+  const revealLeft: number[] = []
+  if (hoverIndex >= 0) {
+    let rx = left[groupStart] ?? 0
+    for (let i = groupStart; i < rendered.length; i++) {
+      revealLeft[i] = rx
+      rx += railWidth(rendered[i]!)
+    }
+  }
+  const leftOf = (i: number) => (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
+  const boxWidth = (i: number) => (inGroup(i) ? railWidth(rendered[i]!) : widthOf(i))
+
+  // The reveal PUSHES THE DETAIL RIGHT instead of floating over it, as in CoveredStack.
+  const lastIdx = rendered.length - 1
+  const revealRight =
+    hoverIndex >= 0 && lastIdx >= 0 ? revealLeft[lastIdx]! + railWidth(rendered[lastIdx]!) - offshift : -1
+  const detailLeft = Math.max(restingDetailLeft, revealRight)
+  const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
+
+  // Group close rules — ported verbatim: a leave only closes when the pointer lands outside every
+  // member, and an open branch also watches the document for a pointer that turns up elsewhere.
+  const columnIndexOf = (target: EventTarget | null): number => {
+    if (!(target instanceof Element)) return -1
+    const col = target.closest("[data-htd-col]")
+    return col ? Number(col.getAttribute("data-htd-col")) : -1
+  }
+  const onGroupPointerLeave = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (hoverIndex < 0) return
+    if (inGroup(columnIndexOf(e.relatedTarget))) return // still inside the revealed branch
+    setHoverId(null)
+  }
+  useEffect(() => {
+    if (hoverId === null) return
+    const onPointerOver = (e: PointerEvent) => {
+      if (columnIndexOf(e.target) < 0) setHoverId(null)
+    }
+    document.addEventListener("pointerover", onPointerOver)
+    return () => document.removeEventListener("pointerover", onPointerOver)
+  })
+
+  // The `«`/`»` toggle — ported verbatim, including dropping any open reveal on the click so the
+  // stack settles immediately (must-apply-disclosure-toggles-immediately).
+  const setCover = (parentIndex: number, e: ReactMouseEvent) => {
+    const target = !isCovered(parentIndex)
+    setHoverId(null)
+    if (e.metaKey || e.ctrlKey) {
+      setPins(Object.fromEntries(rendered.map((l) => [l.id, target])))
+      return
+    }
+    setPins((prev) => ({ ...prev, [rendered[parentIndex]!.id]: target }))
+  }
+  const coverControl = (parentIndex: number) => {
+    const parent = rendered[parentIndex]
+    if (!parent) return undefined
+    const parentCovered = isCovered(parentIndex)
+    const label = parentCovered
+      ? "Uncover previous list (⌘/Ctrl-click: uncover all)"
+      : "Cover previous list (⌘/Ctrl-click: cover all)"
+    return (
+      <button
+        type="button"
+        onClick={(e) => setCover(parentIndex, e)}
+        aria-label={label}
+        title={label}
+        className="rounded px-1 font-mono text-apt-text-muted outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40"
+      >
+        {parentCovered ? (
+          <ChevronsRight size={16} aria-hidden className="shrink-0" />
+        ) : (
+          <ChevronsLeft size={16} aria-hidden className="shrink-0" />
+        )}
+      </button>
+    )
+  }
 
   // Selection connectors (shared): the gold elbow from each selected parent row to its selected child
   // row, reinforcing the cascade. The signature is everything that moves a selected row — the
-  // per-level selection, the column left edges, and the vertical tops.
-  const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${left.join(",")}::${topOf.join(",")}::${containerW}`
+  // per-level selection, the column left edges, the vertical tops, the off-screen shift and the
+  // reveal group.
+  const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${left.join(",")}::${topOf.join(",")}::${offshift}::${containerW}::${hoverIndex}`
   const connectorsPossible = rendered.length >= 2 && rendered.some((l) => l.selectedId != null)
   const { connectors, onScroll } = useSelectionConnectors(
     containerRef,
@@ -1825,92 +1959,145 @@ function CascadingStack({
     >
       {rendered.map((level, i) => {
         const isRootList = i === 0
-        // Collapsed = title header + the SELECTED row only (the breadcrumb chip). Same TopicRail,
-        // filtered rows — so the row keeps `aria-current` (the cascade measurement and connectors
-        // keep working) and its click is still the ordinary re-click-deselect.
-        const collapsed = collapsedOf(i)
+        const covered = isCovered(i)
+        const offscreen = i < hidden
+        const parentCovered = i > 0 && isCovered(i - 1)
+        const revealed = inGroup(i) && !offscreen
+        const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
+        const groupTrailing = revealed && i === rendered.length - 1
+        const groupLeading = revealed && i === groupStart && i > 0
         return (
           <div
             key={level.id}
             data-htd-col={i}
+            // Entering a COVERED list opens the branch rooted at it (see CoveredStack).
+            onPointerEnter={() => {
+              if (inGroup(i)) return
+              setHoverId(covered && !offscreen ? level.id : null, true)
+            }}
+            onPointerLeave={onGroupPointerLeave}
+            aria-hidden={offscreen || undefined}
+            inert={offscreen || undefined}
             style={{
-              left: left[i],
+              left: leftOf(i),
               top: topOf[i],
-              width: railWidth(level),
+              width: boxWidth(i),
               // The root fills the full height; a child hugs its rows, capped at the container's
-              // bottom (its inner list then scrolls). `min-h-0` on the rail (its base class) lets it
-              // shrink to the cap so the list scrolls rather than overflowing.
+              // bottom (its inner list then scrolls). `min-h-0` down the chain lets it shrink to
+              // the cap so the list scrolls rather than overflowing.
               ...(isRootList
                 ? { bottom: 0 }
                 : { maxHeight: `calc(100% - ${topOf[i]}px)` }),
-              zIndex: i + 1,
+              zIndex: zLifted ? REVEAL_Z + i : i + 1,
+              // The floating card's edges — same composition as CoveredStack.
+              boxShadow:
+                [
+                  groupTrailing && SHADOW_RIGHT,
+                  (groupLeading || (parentCovered && !revealed)) && SHADOW_LEFT,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || undefined,
             }}
             className={cn(
-              "absolute flex flex-col",
-              // `top` is deliberately NOT transitioned (see `animate`): only the horizontal position
-              // eases, so a resize slides the lists sideways while a selection drops the new list in.
+              // `top` is deliberately NOT transitioned (see `animate`): only the horizontal
+              // geometry eases, so a resize/cover/reveal slides the lists sideways while a
+              // selection drops the new list in. `overflow-hidden` is the peek clip.
+              "absolute flex flex-col overflow-hidden",
+              offscreen && "pointer-events-none",
               animate &&
-                "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+                "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
+              // A lifted member floats over the detail: give it the page background so the card is
+              // opaque (the rail's own bg is 96% opaque — see CoveredStack).
+              zLifted && "bg-apt-bg",
             )}
           >
-            <TopicRail
-              title={level.title}
-              // The root fills its full-height column; a child is told nothing, so the rail sizes to
-              // its rows (the hug). `min-h-0` keeps its overflow working when the cap bites.
-              className={isRootList ? "min-h-0 flex-1" : "min-h-0"}
-              covered={false}
-              isRoot={isRootList}
-              selectionStyle="marker"
-              items={collapsed ? level.items.filter((it) => it.id === level.selectedId) : level.items}
-              selectedId={level.selectedId}
-              onSelect={railOnSelect(level, attemptExit)}
-              emptyLabel={level.emptyLabel ?? "Nothing here yet."}
-              onNew={level.onNew}
-              newLabel={level.newLabel}
-              newActive={level.newActive}
-              titleActions={level.titleActions}
-              // The chip is its header + one row; the extra strips would defeat the point of it.
-              railSlot={collapsed ? undefined : level.railSlot}
-              headerSlot={collapsed ? undefined : level.headerSlot}
-              // Never the icon strip (that is the minimized style's drawing of "hidden"); the
-              // trailing-border handle still resizes the rail.
-              collapsed={false}
-              onToggle={() => {}}
-              onResize={(w) => onResizeLevel(level, w)}
-              onResizeStart={() => setDragging(true)}
-              onResizeEnd={() => setDragging(false)}
-              showToggle={false}
-              // The ROOT header carries the stack-wide auto-hide toggle (the style's only
-              // disclosure control); every other header's slot stays empty, as before.
-              leftControl={
-                isRootList ? (
-                  <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
-                ) : undefined
-              }
-              coveredShadow={false}
-            />
+            {/* A covered list renders at its FULL width inside a peek-wide clipped wrapper (the
+                covered stack's technique: the wipe never reflows the rows). The fixed-width inner
+                div keeps the flex hug/scroll chain intact — the wrapper hugs it, `maxHeight` caps
+                it, `min-h-0` lets the rail's list scroll under the cap. */}
+            <div
+              style={{ width: railWidth(level) }}
+              className={cn("flex min-h-0 flex-col", isRootList && "flex-1")}
+            >
+              <TopicRail
+                title={level.title}
+                // Rows are ALWAYS full — the wrapper's clip makes the peek (see CoveredStack).
+                covered={false}
+                isRoot={isRootList}
+                selectionStyle="marker"
+                items={level.items}
+                selectedId={level.selectedId}
+                // A select from a list at rest roots a branch reveal here, exactly as in
+                // CoveredStack (must-root-reveal-on-covering-select): the select that covers this
+                // list must not snap it shut under the pointer.
+                onSelect={(id) => {
+                  if (!inGroup(i)) setHoverId(level.id, false)
+                  railOnSelect(level, attemptExit)(id)
+                }}
+                emptyLabel={level.emptyLabel ?? "Nothing here yet."}
+                onNew={level.onNew}
+                newLabel={level.newLabel}
+                newActive={level.newActive}
+                titleActions={level.titleActions}
+                railSlot={level.railSlot}
+                headerSlot={level.headerSlot}
+                // Never the icon strip (that is the minimized style's drawing of "hidden"); the
+                // trailing-border handle still resizes the rail.
+                collapsed={false}
+                onToggle={() => {}}
+                onResize={(w) => onResizeLevel(level, w)}
+                onResizeStart={() => setDragging(true)}
+                onResizeEnd={() => setDragging(false)}
+                showToggle={false}
+                // The header's leading control slot, exactly as in CoveredStack: the stack-wide
+                // auto-hide toggle on the ROOT; on every other list the `«`/`»` that covers/
+                // uncovers THIS list's PARENT (the list to its left).
+                leftControl={
+                  isRootList ? (
+                    <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
+                  ) : (
+                    coverControl(i - 1)
+                  )
+                }
+                // The layered-card left shadow rides the wrapper (a rail's own shadow would be
+                // clipped by the wrapper's overflow).
+                coveredShadow={false}
+              />
+            </div>
           </div>
         )
       })}
-      {/* Selection connectors: gold elbows linking each selected parent row to its selected child. */}
-      <SelectionConnectorOverlay paths={connectors} />
-      {/* The detail (leaf) pane — rightmost, full height, fills to the container's right edge down to
-          `minDetailWidth`. Not a topic list, so it neither hugs nor aligns; it is the content surface. */}
+      {/* Selection connectors: gold elbows linking each selected parent row to its selected child —
+          lifted above an open branch exactly as in CoveredStack. */}
+      <SelectionConnectorOverlay
+        paths={connectors}
+        zIndex={zFrom >= 0 ? REVEAL_Z + rendered.length : undefined}
+      />
+      {/* The detail (leaf) pane — rightmost, FULL height (it is content, not a topic list, so the
+          align+hug rule does not apply). Its top-left carries the frontier list's cover toggle and
+          its left shadow turns on when that list is covered — as in CoveredStack. */}
       <section
         key="__detail__"
-        style={{ left: detailLeft, top: 0, bottom: 0, width: detailWidth, zIndex: rendered.length + 1 }}
+        style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
-          "absolute flex flex-col overflow-auto bg-apt-surface",
+          "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
           animate && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+          rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
-        {detailTitle !== undefined && (
-          <div className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-nav px-2">
-            <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
-              {detailTitle}
-            </span>
-          </div>
-        )}
+        {rendered.length > 0 &&
+          (detailTitle !== undefined ? (
+            <div className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-nav pr-2">
+              <div className="flex w-8 shrink-0 items-center justify-center">{coverControl(rendered.length - 1)}</div>
+              <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
+                {detailTitle}
+              </span>
+            </div>
+          ) : (
+            <div className="flex shrink-0 items-center border-b border-apt-border bg-apt-nav px-1.5 py-1.5">
+              {coverControl(rendered.length - 1)}
+            </div>
+          ))}
         {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
             the viewport. */}
         <div
