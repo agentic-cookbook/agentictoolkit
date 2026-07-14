@@ -1937,26 +1937,61 @@ function CascadingStack({
   const detailLeft = immersed ? 0 : rendered.length > 0 ? stackRight : 0
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // Group close rules — ported verbatim: a leave only closes when the pointer lands outside every
-  // member, and an open branch also watches the document for a pointer that turns up elsewhere.
-  const columnIndexOf = (target: EventTarget | null): number => {
-    if (!(target instanceof Element)) return -1
-    const col = target.closest("[data-htd-col]")
-    return col ? Number(col.getAttribute("data-htd-col")) : -1
-  }
-  const onGroupPointerLeave = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (hoverIndex < 0) return
-    if (inGroup(columnIndexOf(e.relatedTarget))) return // still inside the revealed branch
-    setHoverId(null)
-  }
+  // MOUSE-LEAVE via a UNION RECTANGLE (Mike): while a branch is expanded, the region the pointer must
+  // exit to auto-collapse is ONE rectangle — the union of every on-screen menu column — not a
+  // per-column test (which flickers as the pointer crosses the gaps/overlaps between the cards). We
+  // measure it in VIEWPORT coords, used for both the pointer test and the fixed-position debug border.
+  const [revealRect, setRevealRect] = useState<{
+    left: number
+    top: number
+    right: number
+    bottom: number
+  } | null>(null)
+  const revealRectSig = `${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
   useEffect(() => {
-    if (hoverId === null) return
-    const onPointerOver = (e: PointerEvent) => {
-      if (columnIndexOf(e.target) < 0) setHoverId(null)
+    const cont = containerRef.current
+    if (hoverIndex < 0 || !cont) {
+      setRevealRect(null)
+      return
     }
-    document.addEventListener("pointerover", onPointerOver)
-    return () => document.removeEventListener("pointerover", onPointerOver)
-  })
+    const measure = () => {
+      let l = Infinity
+      let t = Infinity
+      let r = -Infinity
+      let b = -Infinity
+      cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
+        if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
+        const rc = col.getBoundingClientRect()
+        if (rc.width === 0 || rc.height === 0) return
+        l = Math.min(l, rc.left)
+        t = Math.min(t, rc.top)
+        r = Math.max(r, rc.right)
+        b = Math.max(b, rc.bottom)
+      })
+      setRevealRect(l === Infinity ? null : { left: l, top: t, right: r, bottom: b })
+    }
+    const raf = requestAnimationFrame(measure)
+    const settle = setTimeout(measure, 320) // re-measure once the slide transition settles
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(settle)
+    }
+  }, [revealRectSig])
+  // Auto-collapse the moment the pointer leaves the union rectangle.
+  useEffect(() => {
+    if (hoverIndex < 0 || !revealRect) return
+    const onMove = (e: PointerEvent) => {
+      if (
+        e.clientX < revealRect.left ||
+        e.clientX > revealRect.right ||
+        e.clientY < revealRect.top ||
+        e.clientY > revealRect.bottom
+      )
+        setHoverId(null)
+    }
+    document.addEventListener("pointermove", onMove)
+    return () => document.removeEventListener("pointermove", onMove)
+  }, [hoverIndex, revealRect])
 
   // The `«`/`»` toggle — ported verbatim, including dropping any open reveal on the click so the
   // stack settles immediately (must-apply-disclosure-toggles-immediately).
@@ -2071,7 +2106,6 @@ function CascadingStack({
               if (inGroup(i)) return
               setHoverId(!isRootList && covered && !offscreen ? level.id : null, true)
             }}
-            onPointerLeave={onGroupPointerLeave}
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
             style={{
@@ -2217,6 +2251,22 @@ function CascadingStack({
           {children}
         </div>
       </section>
+      {/* DEBUG (Mike): the union rectangle used for the mouse-leave test, outlined in red. */}
+      {revealRect && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: revealRect.left,
+            top: revealRect.top,
+            width: revealRect.right - revealRect.left,
+            height: revealRect.bottom - revealRect.top,
+            border: "1px solid red",
+            pointerEvents: "none",
+            zIndex: 2147483647,
+          }}
+        />
+      )}
     </div>
   )
 }
