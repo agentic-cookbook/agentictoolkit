@@ -356,6 +356,7 @@ export function TopicRail({
   onNew,
   newLabel,
   newActive,
+  titleActions,
   collapsed,
   onToggle,
   onResize,
@@ -388,6 +389,9 @@ export function TopicRail({
   newLabel?: string
   /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
   newActive?: boolean
+  /** Extra right-justified controls in the TITLE row, just ahead of the `+` (e.g. an
+   *  Auto Configure action). Only rendered with a `title`d, un-collapsed header. */
+  titleActions?: ReactNode
   collapsed: boolean
   /** The click event is forwarded so the hierarchical stack can read its modifier keys (⌘/Ctrl-click
    *  = toggle every list). Callers that don't need it take no argument. */
@@ -485,8 +489,9 @@ export function TopicRail({
   // `leftControl` instead — so `showToggle` alone decides, and a leading control (the stack's
   // auto-hide toggle on the root rail) can coexist with the trailing collapse toggle.
   const rightControls =
-    newButton || showToggle ? (
+    titleActions || newButton || showToggle ? (
       <span className="ml-auto flex shrink-0 items-center gap-1">
+        {titleActions}
         {newButton}
         {showToggle && <span className="max-md:hidden">{collapseToggle}</span>}
       </span>

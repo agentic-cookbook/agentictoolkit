@@ -98,6 +98,9 @@ export interface TopicLevel {
   newLabel?: string
   /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
   newActive?: boolean
+  /** Extra right-justified controls in this level's TITLE row, just ahead of the `+`
+   *  (e.g. the Sites list's Auto Configure). Keep them compact — the row is one line. */
+  titleActions?: ReactNode
   /** Fixed rail width in px for THIS level (default 240 / FULL_RAIL). Widen a level
    *  whose rows must show on one line (e.g. long API paths). Covered style. */
   width?: number
@@ -1102,6 +1105,7 @@ function MinimizedStack({
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
+              titleActions={level.titleActions}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
               collapsed={isCollapsed(level, i)}
@@ -1566,6 +1570,7 @@ function CoveredStack({
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
+              titleActions={level.titleActions}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
               // Covered lists never shrink to an icon strip (no toggle) — but the trailing-border
@@ -1768,6 +1773,7 @@ function NarrowStack({
             onNew={level.onNew}
             newLabel={level.newLabel}
             newActive={level.newActive}
+            titleActions={level.titleActions}
             railSlot={level.railSlot}
             headerSlot={level.headerSlot}
             // Nothing to disclose, cover or resize: the pane IS the whole view.

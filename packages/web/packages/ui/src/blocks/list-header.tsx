@@ -22,6 +22,10 @@ export interface ListHeaderSearch {
    *  keystroke republishing the level) never steals focus, because the ref
    *  identity is stable. */
   autoFocus?: boolean
+  /** Let the field take ALL remaining row width instead of capping at `max-w-xs`
+   *  — for headers where the filter is the only occupant (actions live elsewhere,
+   *  e.g. the topic level's title row). */
+  grow?: boolean
 }
 
 export interface ListHeaderProps {
@@ -58,7 +62,7 @@ export function ListHeader({
         <div className="shrink-0 font-mono text-xs tracking-wide text-apt-text-muted">{title}</div>
       )}
       {search && (
-        <div className={cn("relative min-w-0 max-w-xs flex-1")}>
+        <div className={cn("relative min-w-0 flex-1", !search.grow && "max-w-xs")}>
           <Search
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"

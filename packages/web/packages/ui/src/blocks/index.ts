@@ -24,6 +24,7 @@ export { ListHeader, type ListHeaderProps, type ListHeaderSearch } from "./list-
 export { ListWithDetailsPane, type ListWithDetailsPaneProps, type ListAction } from "./list-with-details-pane"
 export { SendInvitationModal, type SendInvitationModalProps, type SendInvitationPayload } from "./send-invitation-modal"
 export { AddUsersModal, type AddUsersModalProps, type DraftUser } from "./add-users-modal"
+export { CreateResourceDialog, type CreateResourceDialogProps } from "./create-resource-dialog"
 export {
   UserCard,
   UserCardSkeleton,
