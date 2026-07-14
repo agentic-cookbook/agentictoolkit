@@ -2274,6 +2274,11 @@ function CascadingStack({
                 // The layered-card left shadow rides the wrapper (a rail's own shadow would be
                 // clipped by the wrapper's overflow).
                 coveredShadow={false}
+                // (#2) The ROOT rail FILLS its full-height column with its OWN (solid) nav surface, so
+                // the area below its rows reads as filled — not the single 96%-opaque enclosing box
+                // layer, which showed darker/empty under the rows. Child menus keep hugging their rows
+                // (no fill), so the cascade still steps.
+                className={isRootList ? "flex-1" : undefined}
               />
             </div>
           </div>
