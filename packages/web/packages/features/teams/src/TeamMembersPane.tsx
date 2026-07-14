@@ -248,6 +248,9 @@ export function TeamMembersPane({
     onNew: startCreate,
     newLabel: "New member",
     newActive: creating,
+    // While the add-member form is open the pane body IS the detail — without this
+    // the automatic TopicOverview (unselected frontier) covers the open form.
+    overview: creating ? false : undefined,
   };
   useStackLevel(level);
   // The create form is the only "dirty" state here (members have no editor) — guard it when
