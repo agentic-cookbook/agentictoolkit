@@ -19,10 +19,8 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronsDownUp,
   ChevronsLeft,
   ChevronsRight,
-  ChevronsUpDown,
   PanelLeftClose,
   PanelLeftOpen,
   TriangleAlert,
@@ -296,8 +294,9 @@ export function HierarchicalTopicDetail({
    *   - `"cascading"` — a VERTICAL cascade (nested-menu layout): only the ROOT list is full
    *      height. Each deeper list opens to the RIGHT of the row selected in its parent, its TOP
    *      aligned to the top of that selected row, and its height HUGS its own rows (capped at the
-   *      container bottom, scrolling past it). Auto-hide COLLAPSES a selected list to its title +
-   *      chosen row (a breadcrumb-like chip) instead of covering it; no hover-reveal. */
+   *      container bottom, scrolling past it). Auto-hide COLLAPSES a selected NON-ROOT list to its
+   *      title + chosen row (a breadcrumb-like chip) instead of covering it — the root always
+   *      stays full height; no hover-reveal. */
   disclosureStyle?: "minimized" | "covered" | "cascading"
   /** Start with every list above the FRONTIER (the deepest rendered list) hidden — covered by its
    *  child (`covered`) or collapsed to its chosen row (`cascading`) — even when there is room to
@@ -1692,12 +1691,13 @@ function CoveredStack({
  * at full width. The frame's shared auto-hide intent maps to a vertical COLLAPSE instead of a cover:
  * a collapsed list keeps its place in the cascade but shows only its title header + its chosen row
  * (a breadcrumb-like chip), so a deep trail reads as the path of choices with the frontier list open
- * at its end. `autoHide` collapses every selected list above the frontier; each non-root list's own
- * header chevron pins it either way (⌘/Ctrl-click: all lists); re-clicking the chip's row deselects,
- * which expands the list as the new frontier. No hover-reveal and no width pressure — collapsing
- * reclaims vertical room and noise, not horizontal room. Still its own component rather than a mode
- * of the covered stack (the block keeps each layout distinct so any one can evolve or be deleted
- * independently).
+ * at its end. `autoHide` (the root header's stack-wide toggle — the only disclosure control in this
+ * style) collapses every selected NON-ROOT list above the frontier; the ROOT never collapses (the
+ * style's one invariant: the root list is always full height). Re-clicking a chip's row deselects,
+ * which expands the list as the new frontier. No per-list pins, hover-reveal or width pressure —
+ * collapsing reclaims vertical room and noise, not horizontal room. Still its own component rather
+ * than a mode of the covered stack (the block keeps each layout distinct so any one can evolve or
+ * be deleted independently).
  */
 function CascadingStack({
   rendered,
@@ -1707,8 +1707,6 @@ function CascadingStack({
   attemptExit,
   autoHide,
   toggleAutoHide,
-  pins,
-  setPins,
   containerW,
   children,
 }: StackProps) {
@@ -1724,55 +1722,16 @@ function CascadingStack({
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // COLLAPSE — the cascade's drawing of the frame's shared auto-hide intent (the same two layers as
-  // the covered stack: `autoHide` as the default for every selected list above the frontier, a
-  // per-list pin overriding it either way). A collapsed list shows only its title header + its
-  // SELECTED row; only a list WITH a selection can collapse (there is no chosen row to show
-  // otherwise), which also means a collapsed chip self-heals: re-clicking its row deselects, the
-  // level becomes the frontier, and the full list is back. No width-pressure layer — collapsing
-  // reclaims vertical room, not horizontal, so there is no fit math to feed.
-  const collapsedOf = (i: number): boolean => {
-    const level = rendered[i]!
-    if (level.selectedId == null) return false
-    return pins[level.id] ?? (autoHide && i < frontier)
-  }
-  // The header chevron pins this list to the state it is moving TO; ⌘/Ctrl applies it to every list
-  // (same contract as the covered stack's `«`/`»`).
-  const setCollapse = (i: number, e: ReactMouseEvent) => {
-    const target = !collapsedOf(i)
-    if (e.metaKey || e.ctrlKey) {
-      setPins(Object.fromEntries(rendered.map((l) => [l.id, target])))
-      return
-    }
-    setPins((prev) => ({ ...prev, [rendered[i]!.id]: target }))
-  }
-  // Each list's own header carries its toggle (unlike the covered style, which parks a parent's
-  // toggle on its child because a covered parent's header is clipped away — here the collapsed
-  // chip's header stays visible, so acting on the list itself is the direct affordance). The ROOT's
-  // slot belongs to the stack-wide AutoHideToggle, and the slot is single-width, so the root has no
-  // individual pin — flip auto-hide or ⌘-click a chevron to move it.
-  const collapseControl = (i: number) => {
-    if (rendered[i]!.selectedId == null) return undefined
-    const collapsed = collapsedOf(i)
-    const label = collapsed
-      ? "Expand this list (⌘/Ctrl-click: expand all)"
-      : "Collapse this list to its chosen row (⌘/Ctrl-click: collapse all)"
-    return (
-      <button
-        type="button"
-        onClick={(e) => setCollapse(i, e)}
-        aria-label={label}
-        title={label}
-        className="rounded px-1 font-mono text-apt-text-muted outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40"
-      >
-        {collapsed ? (
-          <ChevronsUpDown size={16} aria-hidden className="shrink-0" />
-        ) : (
-          <ChevronsDownUp size={16} aria-hidden className="shrink-0" />
-        )}
-      </button>
-    )
-  }
+  // COLLAPSE — the cascade's drawing of the frame's auto-hide intent: with `autoHide` on, every
+  // selected NON-ROOT list above the frontier shows only its title header + its SELECTED row. The
+  // ROOT is exempt — the style's one invariant is that the root list is always full height — and a
+  // list without a selection never collapses (there is no chosen row to show), which also means a
+  // collapsed chip self-heals: re-clicking its row deselects, the level becomes the frontier, and
+  // the full list is back. Deliberately NO per-list pins (the covered `«`/`»` have no counterpart
+  // here — the root header's AutoHideToggle is the whole control surface) and no width-pressure
+  // layer — collapsing reclaims vertical room, not horizontal, so there is no fit math to feed.
+  const collapsedOf = (i: number): boolean =>
+    i > 0 && rendered[i]!.selectedId != null && autoHide && i < frontier
 
   // HORIZONTAL: a plain running-x of full rail widths — no covering, so every list is full width.
   const left: number[] = []
@@ -1878,11 +1837,10 @@ function CascadingStack({
               left: left[i],
               top: topOf[i],
               width: railWidth(level),
-              // The root fills the full height; a child — or a collapsed root chip — hugs its rows,
-              // capped at the container's bottom (its inner list then scrolls). `min-h-0` on the
-              // rail (its base class) lets it shrink to the cap so the list scrolls rather than
-              // overflowing.
-              ...(isRootList && !collapsed
+              // The root fills the full height; a child hugs its rows, capped at the container's
+              // bottom (its inner list then scrolls). `min-h-0` on the rail (its base class) lets it
+              // shrink to the cap so the list scrolls rather than overflowing.
+              ...(isRootList
                 ? { bottom: 0 }
                 : { maxHeight: `calc(100% - ${topOf[i]}px)` }),
               zIndex: i + 1,
@@ -1897,10 +1855,9 @@ function CascadingStack({
           >
             <TopicRail
               title={level.title}
-              // The (expanded) root fills its full-height column; everything else is told nothing,
-              // so the rail sizes to its rows (the hug). `min-h-0` keeps its overflow working when
-              // the cap bites.
-              className={isRootList && !collapsed ? "min-h-0 flex-1" : "min-h-0"}
+              // The root fills its full-height column; a child is told nothing, so the rail sizes to
+              // its rows (the hug). `min-h-0` keeps its overflow working when the cap bites.
+              className={isRootList ? "min-h-0 flex-1" : "min-h-0"}
               covered={false}
               isRoot={isRootList}
               selectionStyle="marker"
@@ -1923,14 +1880,12 @@ function CascadingStack({
               onResizeStart={() => setDragging(true)}
               onResizeEnd={() => setDragging(false)}
               showToggle={false}
-              // The header's leading control slot: the stack-wide auto-hide toggle on the ROOT,
-              // this list's own collapse/expand chevron on every other list (see collapseControl).
+              // The ROOT header carries the stack-wide auto-hide toggle (the style's only
+              // disclosure control); every other header's slot stays empty, as before.
               leftControl={
                 isRootList ? (
                   <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
-                ) : (
-                  collapseControl(i)
-                )
+                ) : undefined
               }
               coveredShadow={false}
             />
