@@ -1775,24 +1775,28 @@ function CascadingStack({
     return pins[rendered[i]!.id] ?? (autoHide && i < frontier)
   }
 
-  // COVER LAYER 2 — width pressure: cover MORE lists, leftmost-first, until the frontier list's
-  // right edge fits the container. Only ever ADDS a cover — never discloses one the user pinned
-  // shut.
+  // The leaf detail sits BESIDE the frontier list; reserve its minimum so width pressure covers
+  // enough ancestors to keep the frontier list AND the detail on-screen.
+  const detailMin = minDetailPx(minDetailWidth)
+
+  // COVER LAYER 2 — width pressure: cover MORE lists, leftmost-first, until the disclosed cascade
+  // plus the detail minimum fits the container. Only ever ADDS a cover — never discloses one the
+  // user pinned shut.
   let pressure = 0
   if (containerW > 0) {
-    // Every list now advances by the indent (round 8 #2), so the whole cascade is tight and
-    // effectively always fits the wide layout — width pressure no longer needs to cover anything (a
-    // genuinely narrow container flips to NarrowStack instead). Kept for parity with CoveredStack.
-    const listsWidth = () => rendered.length * CASCADE_INDENT
-    while (pressure < coverableCount && listsWidth() > containerW) pressure++
+    const listsWidth = (n: number) =>
+      rendered.reduce(
+        (w, l, i) => w + (pinnedOrAutoHidden(i) || i < n ? CASCADE_INDENT : railWidth(l)),
+        0,
+      )
+    while (pressure < coverableCount && listsWidth(pressure) + detailMin > containerW) pressure++
   }
   const isCovered = (i: number) => pinnedOrAutoHidden(i) || i < pressure
-  // ROUND 8 (#2): every child sits one CASCADE_INDENT right of its parent — disclosed OR covered —
-  // the tight nested-menu step, the SAME indent the collapsed state uses. So the horizontal advance
-  // is the indent at every level; a list's full box (see `boxWidth`) overdraws its parent, and
-  // because children hug their rows the parent's lower rows still show. Covered vs disclosed no
-  // longer differ horizontally at rest — covering now only arms the hover branch reveal.
-  const widthOf = (_i: number) => CASCADE_INDENT
+  // A COVERED list advances x by only the tight CASCADE_INDENT peek (its child slides left over it,
+  // overdrawing it in the back-to-front z-order); a DISCLOSED list advances by its FULL width, so the
+  // cascade fans to the RIGHT. Covering vs disclosing IS this horizontal difference — the very thing
+  // the `«`/`»` toggle, auto-hide and the hover reveal act on.
+  const widthOf = (i: number) => (isCovered(i) ? CASCADE_INDENT : railWidth(rendered[i]!))
 
   // PHASE 2 — OFF-SCREEN: every list at its indent STILL doesn't fit — slide the leftmost lists
   // off the left edge, whole lists at a time (see CoveredStack).
@@ -1800,7 +1804,7 @@ function CascadingStack({
   let offshift = 0
   if (containerW > 0) {
     const widthFrom = (h: number) =>
-      rendered.reduce((w, _l, i) => (i < h ? w : w + widthOf(i)), 0)
+      rendered.reduce((w, _l, i) => (i < h ? w : w + widthOf(i)), 0) + detailMin
     while (hidden < coverableCount && widthFrom(hidden) > containerW) {
       offshift += widthOf(hidden)
       hidden++
@@ -1822,11 +1826,9 @@ function CascadingStack({
     x += widthOf(i)
   })
 
-  // ROUND 8 (#1): the root list spans the WHOLE collapsed menu stack. With every list advancing by
-  // just the indent, the cascade's right edge is the deepest (frontier) list's right; the root box
-  // widens to that so the stacked menus sit WITHIN the root, and the detail begins after the stack.
+  // The detail begins at the frontier list's RIGHT edge (it sits beside the cascade). Covered
+  // ancestors advance by only their peek, so the disclosed frontier + the detail stay on-screen.
   const stackRight = (left[frontier] ?? 0) + railWidth(rendered[frontier] ?? rendered[0]!)
-  const rootBoxWidth = Math.max(railWidth(rendered[0]!), stackRight)
 
   // VERTICAL cascade. Each non-root list's TOP is its parent's top plus the parent's HEADER
   // height — the child discloses immediately under the parent's header bar, measured (not assumed)
@@ -1877,12 +1879,12 @@ function CascadingStack({
     topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
   })
 
-  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported (see there for the full story:
-  // enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the group-scoped
-  // close rules). ROUND 9 (#5): the reveal no longer FANS OUT horizontally. Every revealed member —
-  // not just the first — stays at its tight CASCADE_INDENT step (its resting left), moving inward
-  // from its parent's right exactly as when collapsed; the reveal is purely a z-LIFT that raises the
-  // covered branch above the lists that overdraw it, so its rows show without the cascade sliding.
+  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported verbatim (see there for the full
+  // story: enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the
+  // group-scoped close rules). Hovering a COVERED submenu opens its branch: the members disclose at
+  // their FULL widths chained horizontally from the group start (fanning to the right so they become
+  // readable), while their TOPS stay the cascade's — revealing is horizontal. This IS the
+  // auto-expand; leaving auto-collapses the branch back to its covered peeks.
   const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
   const groupFrom = (root: number) => (hoverAll ? hidden : root)
   const hoverIndex =
@@ -1913,15 +1915,13 @@ function CascadingStack({
     let rx = left[groupStart] ?? 0
     for (let i = groupStart; i < rendered.length; i++) {
       revealLeft[i] = rx
-      // ROUND 9 (#5): step by the indent, NOT the full rail width — so a revealed member lands on
-      // its resting inward position (revealLeft[i] === left[i]) for EVERY level, not just the first.
-      rx += widthOf(i)
+      rx += railWidth(rendered[i]!)
     }
   }
   // Immersed, every list parks fully past the left edge (right edge ≤ 0): shift the whole resting
   // layout left by the rightmost box edge. Boxes stay full width — nothing pokes back into view.
   const immersedShift = immersed
-    ? Math.max(0, ...rendered.map((l, i) => (left[i] ?? 0) + (i === 0 ? rootBoxWidth : railWidth(l))))
+    ? Math.max(0, ...rendered.map((l, i) => (left[i] ?? 0) + railWidth(l)))
     : 0
   const leftOf = (i: number) =>
     immersed ? left[i]! - immersedShift : (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
@@ -1929,13 +1929,11 @@ function CascadingStack({
   // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
   // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
   // so a full-width box would poke back into view below the survivors' hugged bottoms).
-  const boxWidth = (i: number) =>
-    i < hidden ? widthOf(i) : i === 0 ? rootBoxWidth : railWidth(rendered[i]!)
+  const boxWidth = (i: number) => (i < hidden ? widthOf(i) : railWidth(rendered[i]!))
 
-  // THE DETAIL SITS BESIDE THE MENU STACK — pinned at the collapsed stack's right edge (round 8 #1),
-  // never pushed by the cascade. At rest the tight menus sit within the widened root and don't reach
-  // it; only a hover branch reveal expands lists rightward OVER it, like menus dropping over content.
-  // Immersed, it takes the whole surface.
+  // THE DETAIL SITS BESIDE THE MENU STACK — pinned at the frontier list's right edge, never pushed by
+  // the cascade; a hover branch reveal fans lists rightward OVER it (they float at REVEAL_Z), like
+  // menus dropping over content. Immersed, it takes the whole surface.
   const detailLeft = immersed ? 0 : rendered.length > 0 ? stackRight : 0
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
@@ -2061,12 +2059,6 @@ function CascadingStack({
         const revealed = inGroup(i) && !offscreen
         const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
         const groupTrailing = revealed && i === rendered.length - 1
-        // ROUND 9 (#4): "covered by another menu" is the VISUAL overlap, not the auto-hide/pin
-        // `isCovered` state — at rest (autoHide off, no pins) `isCovered` is false everywhere, yet
-        // every menu but the DEEPEST is still overdrawn by its child in the tight cascade. So a menu
-        // is covered iff it is on-screen and NOT the deepest rendered list; that is what dims. When
-        // there is only the root (nothing deeper), nothing is covered → nothing dims.
-        const coveredByChild = !offscreen && i < rendered.length - 1
         return (
           <div
             key={level.id}
@@ -2121,18 +2113,19 @@ function CascadingStack({
                 the slide-off). The inner div is also the flex hug/scroll chain: the wrapper hugs
                 it, `maxHeight` caps it, `min-h-0` lets the rail's list scroll under the cap. */}
             <div
-              style={{ width: isRootList ? rootBoxWidth : railWidth(level) }}
+              style={{ width: railWidth(level) }}
               className={cn(
                 "flex min-h-0 flex-col",
                 isRootList && "flex-1",
-                // ROUND 9 (#4): dim the non-selected rows ONLY in a menu that is COVERED by another
-                // (overdrawn by its child — see `coveredByChild`). When every menu is expanded —
-                // nothing overdrawn — none dim. A covered menu being REVEALED (hovered forward)
-                // un-dims too, since it is no longer hidden behind its child. Hovering a row still
-                // un-dims it. `data-htd-row` + `aria-current` are the row markers (see TopicRail).
-                coveredByChild &&
+                // DIM RULE (Mike): a menu's rows are un-dimmed ONLY when it is fully expanded or it is
+                // the top (root) menu. So dim a menu that is COVERED and not currently REVEALED (a
+                // reveal expands it to full width → un-dim), and never the root. This is a whole-menu
+                // state, NOT per-row: hovering a row must not change its color (no `:hover` here).
+                // The selected row (`aria-current`) stays lit so the path reads through the peeks.
+                covered &&
                   !revealed &&
-                  "[&_[data-htd-row]:not([aria-current=true]):not(:hover)]:opacity-40",
+                  !isRootList &&
+                  "[&_[data-htd-row]:not([aria-current=true])]:opacity-40",
               )}
             >
               <TopicRail
