@@ -29,6 +29,12 @@ export interface TopicDetailItem {
   label: string
   /** Small dim second line (e.g. a reverse-domain identifier). */
   sublabel?: string
+  /** Render `sublabel` INLINE after the label on ONE line (dim), instead of stacked on a
+   *  second line — for dense entity lists (sites / groups / platforms) where a single row
+   *  per item is wanted. The label keeps layout priority (grows + truncates first); the
+   *  sublabel shrinks + truncates after it. No effect in the icon-only (collapsed/covered)
+   *  strips, which hide the label entirely. */
+  inlineSublabel?: boolean
   /** What this topic is for — one or two sentences. Feeds the standard no-selection
    *  overview (TopicOverview: one card per topic, icon + label + this text). */
   description?: string
@@ -212,14 +218,27 @@ function TopicList({
         <span aria-hidden data-htd-icon className="flex shrink-0">
           {icon}
         </span>
-        {!hideLabel && (
-          <span data-htd-label className="min-w-0">
-            <span className="block truncate">{item.label}</span>
-            {item.sublabel && (
-              <span className="block truncate text-[0.7rem] text-apt-text-dim">{item.sublabel}</span>
-            )}
-          </span>
-        )}
+        {!hideLabel &&
+          (item.inlineSublabel && item.sublabel ? (
+            // Single-line row: label + dim sublabel share one line. The label grows and
+            // truncates first (it's the identifier that matters); the sublabel shrinks and
+            // truncates after it so a long secondary string can't crowd the label out.
+            <span data-htd-label className="flex min-w-0 flex-1 items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              <span className="min-w-0 shrink truncate text-[0.7rem] text-apt-text-dim">
+                {item.sublabel}
+              </span>
+            </span>
+          ) : (
+            <span data-htd-label className="min-w-0">
+              <span className="block truncate">{item.label}</span>
+              {item.sublabel && (
+                <span className="block truncate text-[0.7rem] text-apt-text-dim">
+                  {item.sublabel}
+                </span>
+              )}
+            </span>
+          ))}
         {!hideLabel && (item.trailing || rowDisclosure) && (
           <span className="ml-auto flex shrink-0 items-center gap-1 pl-1.5">
             {item.trailing}

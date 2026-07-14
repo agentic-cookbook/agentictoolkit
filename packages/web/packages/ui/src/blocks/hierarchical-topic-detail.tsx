@@ -37,7 +37,7 @@ import {
   DialogDescription,
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
-import { TopicOverview } from "./topic-overview"
+import { TopicOverview, TopicOverviewHelp } from "./topic-overview"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -83,6 +83,12 @@ export interface TopicLevel {
    *  clicking a card selects it. Pass `false` for a level whose unselected state has a REAL
    *  landing of its own (ResourceExplorer's searchable entity landing). */
   overview?: boolean
+  /** For a list whose rows are all the SAME KIND of thing (Sites, Groups): replace the
+   *  per-row card grid — noise at 100+ near-identical rows — with ONE centered help blurb
+   *  explaining what the items are and how to pick one. Set this to the blurb content (a
+   *  string or richer nodes); when present it wins over the card overview at this level's
+   *  unselected frontier. Ignored when `overview` is `false`. */
+  overviewHelp?: ReactNode
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
    *  row, or this level's `defaultSelectedId` when the list appears). */
@@ -502,12 +508,19 @@ export function HierarchicalTopicDetail({
     parentOfFrontier?.items.find((it) => it.id === parentOfFrontier.selectedId)?.label ??
     frontierLevel?.title
   const overview =
-    frontierLevel && frontierLevel.overview !== false && frontierLevel.items.length > 0 ? (
-      <TopicOverview
-        title={overviewTitle}
-        items={frontierLevel.items}
-        onSelect={(id) => frontierLevel.onSelect(id)}
-      />
+    frontierLevel && frontierLevel.overview !== false ? (
+      // A homogeneous list (Sites/Groups) opts into a single centered help blurb instead of
+      // a card grid of near-identical rows; it shows even for an empty list (the blurb still
+      // explains what belongs here). Otherwise the standard per-row card grid, when non-empty.
+      frontierLevel.overviewHelp != null ? (
+        <TopicOverviewHelp title={overviewTitle}>{frontierLevel.overviewHelp}</TopicOverviewHelp>
+      ) : frontierLevel.items.length > 0 ? (
+        <TopicOverview
+          title={overviewTitle}
+          items={frontierLevel.items}
+          onSelect={(id) => frontierLevel.onSelect(id)}
+        />
+      ) : null
     ) : null
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
   // the deeper levels are PUBLISHED by components living in children (StackLevels), so unmounting
