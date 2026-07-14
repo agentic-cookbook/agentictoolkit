@@ -532,28 +532,28 @@ export function TopicRail({
     </button>
   ) : null
 
-  // Right-justified header controls: the New `+` (all widths) and, in the minimized style, the
-  // desktop collapse toggle (`«`). The covered style passes `showToggle=false` and supplies its own
-  // `leftControl` instead — so `showToggle` alone decides, and a leading control (the stack's
-  // auto-hide toggle on the root rail) can coexist with the trailing collapse toggle.
+  // Right-justified header controls: `titleActions` and, in the minimized style, the desktop collapse
+  // toggle (`«`). The New `+` is NOT here — in the titled header it rides immediately after the title
+  // (see `headerInner`); only the untitled header branches below render it on their own. The covered
+  // style passes `showToggle=false` and supplies its own `leftControl` instead.
   const rightControls =
-    titleActions || newButton || showToggle ? (
+    titleActions || showToggle ? (
       <span className="ml-auto flex shrink-0 items-center gap-1">
         {titleActions}
-        {newButton}
         {showToggle && <span className="max-md:hidden">{collapseToggle}</span>}
       </span>
     ) : null
 
   // The titled header's inner content. The control slot is a fixed width matching where item icons
-  // start; the title is CENTERED in the remaining header width; the New/toggle/close controls are
-  // right-justified.
+  // start; the title is CENTERED in the remaining header width with the New `+` immediately after it;
+  // the toggle/close controls are right-justified.
   const headerInner = (
     <>
       <div className="flex w-8 shrink-0 items-center justify-center">{leftControl ?? backSlot ?? null}</div>
       {title !== undefined && (
-        <span className="min-w-0 flex-1 truncate text-center font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
-          {title}
+        <span className="flex min-w-0 flex-1 items-center justify-center gap-1 font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
+          <span className="truncate">{title}</span>
+          {newButton}
         </span>
       )}
       {rightControls}

@@ -1937,10 +1937,13 @@ function CascadingStack({
   const detailLeft = immersed ? 0 : rendered.length > 0 ? stackRight : 0
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // MOUSE-LEAVE via a UNION RECTANGLE (Mike): while a branch is expanded, the region the pointer must
-  // exit to auto-collapse is ONE rectangle — the union of every on-screen menu column — not a
-  // per-column test (which flickers as the pointer crosses the gaps/overlaps between the cards). We
-  // measure it in VIEWPORT coords, used for both the pointer test and the fixed-position debug border.
+  // MOUSE-LEAVE via a TRACKING RECTANGLE (Mike): while a branch is disclosed, the region the pointer
+  // must exit to auto-collapse is ONE rectangle — not a per-column test (which flickers as the pointer
+  // crosses the gaps/overlaps between the cards). Measured in VIEWPORT coords; also drawn as the red
+  // debug border. Its LEFT/TOP span the whole cascade interaction area (the container's top-left, i.e.
+  // below the breadcrumbs) so moving back over the peeks / root header does not fall out of it; its
+  // RIGHT hugs the disclosed menus, and its BOTTOM is the bottom of the SUBMENUS — NOT the full-height
+  // ROOT (which is excluded), so leaving below the submenus collapses.
   const [revealRect, setRevealRect] = useState<{
     left: number
     top: number
@@ -1955,20 +1958,18 @@ function CascadingStack({
       return
     }
     const measure = () => {
-      let l = Infinity
-      let t = Infinity
+      const cr = cont.getBoundingClientRect()
       let r = -Infinity
       let b = -Infinity
       cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
         if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
+        if (col.getAttribute("data-htd-col") === "0") return // the full-height ROOT is not a submenu
         const rc = col.getBoundingClientRect()
         if (rc.width === 0 || rc.height === 0) return
-        l = Math.min(l, rc.left)
-        t = Math.min(t, rc.top)
         r = Math.max(r, rc.right)
         b = Math.max(b, rc.bottom)
       })
-      setRevealRect(l === Infinity ? null : { left: l, top: t, right: r, bottom: b })
+      setRevealRect(r === -Infinity ? null : { left: cr.left, top: cr.top, right: r, bottom: b })
     }
     const raf = requestAnimationFrame(measure)
     const settle = setTimeout(measure, 320) // re-measure once the slide transition settles
@@ -1977,7 +1978,7 @@ function CascadingStack({
       clearTimeout(settle)
     }
   }, [revealRectSig])
-  // Auto-collapse the moment the pointer leaves the union rectangle.
+  // Auto-collapse the moment the pointer leaves the tracking rectangle.
   useEffect(() => {
     if (hoverIndex < 0 || !revealRect) return
     const onMove = (e: PointerEvent) => {
@@ -1992,6 +1993,57 @@ function CascadingStack({
     document.addEventListener("pointermove", onMove)
     return () => document.removeEventListener("pointermove", onMove)
   }, [hoverIndex, revealRect])
+
+  // AUTO-DISCLOSE via a TRIGGER RECTANGLE (Mike): at rest (nothing disclosed), moving the pointer into
+  // the area to the LEFT of the topmost (frontier) menu — below the breadcrumbs (the container's top)
+  // down to the BOTTOM of that menu — discloses the whole cascade. Only armed when there IS a covered
+  // ancestor to disclose (a fully-disclosed or single-level cascade has nothing to open).
+  const anyCovered = rendered.some((_, i) => isCovered(i))
+  const [triggerRect, setTriggerRect] = useState<{
+    left: number
+    top: number
+    right: number
+    bottom: number
+  } | null>(null)
+  const triggerSig = `${hoverIndex}:${anyCovered}:${frontier}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
+  useEffect(() => {
+    const cont = containerRef.current
+    if (hoverIndex >= 0 || immersed || !anyCovered || !cont) {
+      setTriggerRect(null)
+      return
+    }
+    const measure = () => {
+      const cr = cont.getBoundingClientRect()
+      const topEl = cont.querySelector<HTMLElement>(`[data-htd-col="${frontier}"]`)
+      if (!topEl) {
+        setTriggerRect(null)
+        return
+      }
+      const tr = topEl.getBoundingClientRect()
+      setTriggerRect({ left: cr.left, top: cr.top, right: tr.left, bottom: tr.bottom })
+    }
+    const raf = requestAnimationFrame(measure)
+    const settle = setTimeout(measure, 320)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(settle)
+    }
+  }, [triggerSig])
+  // Open the cascade the moment the pointer enters the trigger rectangle.
+  useEffect(() => {
+    if (hoverIndex >= 0 || !triggerRect) return
+    const onMove = (e: PointerEvent) => {
+      if (
+        e.clientX >= triggerRect.left &&
+        e.clientX <= triggerRect.right &&
+        e.clientY >= triggerRect.top &&
+        e.clientY <= triggerRect.bottom
+      )
+        setHoverId(rendered[frontier]?.id ?? null, true)
+    }
+    document.addEventListener("pointermove", onMove)
+    return () => document.removeEventListener("pointermove", onMove)
+  }, [hoverIndex, triggerRect])
 
   // The `«`/`»` toggle — ported verbatim, including dropping any open reveal on the click so the
   // stack settles immediately (must-apply-disclosure-toggles-immediately).
@@ -2098,24 +2150,10 @@ function CascadingStack({
           <div
             key={level.id}
             data-htd-col={i}
-            // Entering a COVERED SUBMENU opens the branch rooted at it (see CoveredStack). The
-            // auto-expand/collapse mouse tracking is on the submenus only — entering the ROOT never
-            // opens a branch (it passes null, closing any open one), so the root list is inert to
-            // hover; only a deeper menu expands under the pointer.
-            //
-            // (#5) And a covered submenu opens ONLY when the pointer enters its LEFT peek strip — the
-            // ~CASCADE_INDENT-wide sliver still visible to the left of the covering child — never the
-            // area exposed BELOW or beside a shorter covering child. Auto-expand is a left-edge
-            // gesture: arriving above/below the peek must not spring the branch open.
-            onPointerEnter={(e) => {
-              if (inGroup(i)) return
-              if (!isRootList && covered && !offscreen) {
-                const box = e.currentTarget.getBoundingClientRect()
-                if (e.clientX - box.left <= CASCADE_INDENT) setHoverId(level.id, true)
-                return
-              }
-              setHoverId(null)
-            }}
+            // Hover open/close is NOT per-column here: the auto-DISCLOSE trigger rect (left of the
+            // topmost menu, below the breadcrumbs) opens the cascade, and the tracking rect governs
+            // the auto-collapse — both measured on the container above. So the columns carry no
+            // pointer-enter/leave of their own.
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
             style={{
@@ -2201,17 +2239,18 @@ function CascadingStack({
                 // (#1) Tighten the bottom padding so a short, hugging menu doesn't trail dead space
                 // under its last row.
                 denseBottom
-                // (#4) Every CHILD menu gets a right-justified close (✕) in its header: it dismisses
-                // the menu and clears the selection in the PARENT list that opened it (the root, with
-                // no parent, never gets one). Drop any open reveal so the stack settles at once, and
-                // route the clear through the exit guard like every other de-selection.
+                // (#4) ONLY the TOPMOST (frontier) menu gets a right-justified close (✕) in its
+                // header — not every child. It dismisses that menu and clears the selection in the
+                // PARENT list that opened it (the root, with no parent, never qualifies). Drop any
+                // open reveal so the stack settles at once, and route the clear through the exit guard
+                // like every other de-selection.
                 onClose={
-                  isRootList
-                    ? undefined
-                    : () => {
+                  i === frontier && !isRootList
+                    ? () => {
                         setHoverId(null)
                         attemptExit(() => rendered[i - 1]!.onClear())
                       }
+                    : undefined
                 }
                 closeLabel={`Close ${level.title ?? "menu"}`}
                 // Never the icon strip (that is the minimized style's drawing of "hidden"); the
