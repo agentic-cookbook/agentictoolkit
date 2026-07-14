@@ -407,8 +407,20 @@ export function HierarchicalTopicDetail({
     },
     [surfaceKey, autoHideTopics],
   )
+  // Flipping the mode also DROPS any open reveal: a revealed group renders at full width no
+  // matter what autoHide says, so with the pointer parked inside it the flip would change
+  // nothing on screen until the pointer happened to leave — the toggle read as dead. Closing
+  // the reveal settles the stack to the new mode on the click itself
+  // (must-apply-disclosure-toggles-immediately).
   const toggleAutoHide = useCallback(
-    () => patchSurface((p) => ({ ...p, autoHide: !p.autoHide, pins: {} })),
+    () =>
+      patchSurface((p) => ({
+        ...p,
+        autoHide: !p.autoHide,
+        pins: {},
+        hoverId: null,
+        hoverAll: false,
+      })),
     [patchSurface],
   )
   const setPins: Dispatch<SetStateAction<Record<string, boolean>>> = useCallback(
@@ -1408,6 +1420,12 @@ function CoveredStack({
   // so "open all" only discloses the lists that actually fit.
   const setCover = (parentIndex: number, e: ReactMouseEvent) => {
     const target = !isCovered(parentIndex) // the state the clicked button moves that list TO
+    // The toggle must SHOW its work on the click: while a reveal is open the group renders at
+    // full width regardless of pins, so a pin flip alone changes nothing until the pointer
+    // happens to leave — the click reads as dead and its effect "turns up later". Dropping the
+    // reveal settles the stack to the new pin state immediately; the pointer hasn't moved, so
+    // no enter re-opens it (must-apply-disclosure-toggles-immediately).
+    setHoverId(null)
     if (e.metaKey || e.ctrlKey) {
       setPins(Object.fromEntries(rendered.map((l) => [l.id, target])))
       return
