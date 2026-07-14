@@ -2061,6 +2061,12 @@ function CascadingStack({
         const revealed = inGroup(i) && !offscreen
         const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
         const groupTrailing = revealed && i === rendered.length - 1
+        // ROUND 9 (#4): "covered by another menu" is the VISUAL overlap, not the auto-hide/pin
+        // `isCovered` state — at rest (autoHide off, no pins) `isCovered` is false everywhere, yet
+        // every menu but the DEEPEST is still overdrawn by its child in the tight cascade. So a menu
+        // is covered iff it is on-screen and NOT the deepest rendered list; that is what dims. When
+        // there is only the root (nothing deeper), nothing is covered → nothing dims.
+        const coveredByChild = !offscreen && i < rendered.length - 1
         return (
           <div
             key={level.id}
@@ -2120,11 +2126,11 @@ function CascadingStack({
                 "flex min-h-0 flex-col",
                 isRootList && "flex-1",
                 // ROUND 9 (#4): dim the non-selected rows ONLY in a menu that is COVERED by another
-                // (behind the cascade). When every menu is expanded — nothing covered — none dim.
-                // A covered menu being REVEALED (hovered forward) un-dims too, since it is no longer
-                // hidden behind its child. Hovering a row still un-dims it. `data-htd-row` +
-                // `aria-current` are the row markers (see TopicRail).
-                covered &&
+                // (overdrawn by its child — see `coveredByChild`). When every menu is expanded —
+                // nothing overdrawn — none dim. A covered menu being REVEALED (hovered forward)
+                // un-dims too, since it is no longer hidden behind its child. Hovering a row still
+                // un-dims it. `data-htd-row` + `aria-current` are the row markers (see TopicRail).
+                coveredByChild &&
                   !revealed &&
                   "[&_[data-htd-row]:not([aria-current=true]):not(:hover)]:opacity-40",
               )}
