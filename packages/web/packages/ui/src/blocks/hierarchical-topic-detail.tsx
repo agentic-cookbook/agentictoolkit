@@ -290,8 +290,13 @@ export function HierarchicalTopicDetail({
    *      top-left Back walks back up.
    *   - `"covered"` — the lists stay FULL width; the leftmost slide LEFT *under* their child
    *      (covered), with a `«`/`»` cover toggle on each child and a left drop-shadow making the
-   *      stack read as physically layered. No Back button. */
-  disclosureStyle?: "minimized" | "covered"
+   *      stack read as physically layered. No Back button.
+   *   - `"cascading"` — a VERTICAL cascade (nested-menu layout): only the ROOT list is full
+   *      height. Each deeper list opens to the RIGHT of the row selected in its parent, its TOP
+   *      aligned to the top of that selected row, and its height HUGS its own rows (capped at the
+   *      container bottom, scrolling past it). No covering / hover-reveal — hugged lists are short,
+   *      so there is room. */
+  disclosureStyle?: "minimized" | "covered" | "cascading"
   /** Start with every list above the FRONTIER (the deepest rendered list) covered by its child,
    *  even when there is room to show it. Default `true`; the first list's header carries a
    *  toggle so the user can flip it (off ⇒ every list discloses, subject to the fit rules). Pass
@@ -560,6 +565,8 @@ export function HierarchicalTopicDetail({
           <MinimizedStack {...stackProps} levels={levels} manualCollapse={manualCollapse}>
             {detail}
           </MinimizedStack>
+        ) : disclosureStyle === "cascading" ? (
+          <CascadingStack {...stackProps}>{detail}</CascadingStack>
         ) : (
           <CoveredStack {...stackProps}>{detail}</CoveredStack>
         )}
@@ -1639,6 +1646,216 @@ function CoveredStack({
           ))}
         {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
             the viewport, so on a phone the form reflows to the full width instead of scrolling. */}
+        <div
+          className="flex min-h-0 w-full flex-1 flex-col"
+          style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
+        >
+          {children}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/**
+ * The "cascading" disclosure style — a VERTICAL cascade (nested-menu layout).
+ *
+ * Only the ROOT list is full height, on the left. Every deeper list is the CHILD of the row selected
+ * in its parent: it opens to the RIGHT of that parent, its TOP aligned to the top of the selected
+ * parent ROW, and its height HUGS its own rows — capped at the container's bottom, scrolling past it.
+ * So the stack reads as a chain of menus dropping down-and-right from each choice, instead of a row of
+ * equal-height columns. The leaf detail fills the remaining width on the right at full height (it is
+ * content, not a topic list, so the "align + hug" rule does not apply to it).
+ *
+ * Only the VERTICAL placement differs from `covered`; horizontally the lists still lay out left→right
+ * at full width. There is no covering / hover-reveal — hugged lists are short, so there is room —
+ * which is why this is its own component rather than a mode of the covered stack (the block keeps each
+ * layout distinct so any one can evolve or be deleted independently).
+ */
+function CascadingStack({
+  rendered,
+  minDetailWidth,
+  detailTitle,
+  attemptExit,
+  containerW,
+  children,
+}: StackProps) {
+  const minPx = minDetailPx(minDetailWidth)
+  // Per-level rail width, resizable by the trailing-border handle within a readable range (same
+  // contract as the covered stack — there is no icon strip to snap to here either).
+  const MIN_DRAG_RAIL = 160
+  const MAX_DRAG_RAIL = 640
+  const [widths, setWidths] = useState<Record<string, number>>({})
+  const [dragging, setDragging] = useState(false)
+  const railWidth = (l: TopicLevel) => widths[l.id] ?? l.width ?? FULL_RAIL
+  const onResizeLevel = (level: TopicLevel, w: number) =>
+    setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // HORIZONTAL: a plain running-x of full rail widths — no covering, so every list is full width.
+  const left: number[] = []
+  let x = 0
+  rendered.forEach((l, i) => {
+    left.push(x)
+    x += railWidth(l)
+  })
+
+  // VERTICAL cascade. Each non-root list's TOP is its parent's top plus where the parent's SELECTED
+  // row sits WITHIN the parent's own box. Measuring the offset within the box (not the row's absolute
+  // position) makes the measurement independent of where the box currently sits — so one pre-paint
+  // pass converges with no feedback loop: moving a child never moves its parent's rows. `rowOffset[i]`
+  // is that within-box offset for list `i`'s selected row (0 when the list has no selection).
+  const [rowOffset, setRowOffset] = useState<number[]>([])
+  const rowMeasureRef = useRef<() => void>(() => {})
+  // Re-measure when a selection changes, a list's row count changes, or the container width changes;
+  // the ResizeObserver below also catches height changes, and the container handlers catch scroll.
+  const measureSig = `${rendered.map((l) => `${l.selectedId ?? ""}#${l.items.length}`).join("|")}::${containerW}`
+  useLayoutEffect(() => {
+    const cont = containerRef.current
+    if (!cont) return
+    const measure = () => {
+      const next: number[] = []
+      for (let i = 0; i < rendered.length; i++) {
+        const col = cont.querySelector(`[data-htd-col="${i}"]`)
+        const sel = col?.querySelector('[aria-current="true"]')
+        if (!col || !sel) {
+          next[i] = 0
+          continue
+        }
+        next[i] = sel.getBoundingClientRect().top - col.getBoundingClientRect().top
+      }
+      setRowOffset((prev) =>
+        prev.length === next.length && prev.every((v, k) => v === next[k]) ? prev : next,
+      )
+    }
+    rowMeasureRef.current = measure
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(cont)
+    return () => ro.disconnect()
+  }, [measureSig])
+
+  // Prefix-sum the within-box offsets into each list's absolute TOP: the root is full height (top 0);
+  // a child's top is its parent's top plus the parent's selected-row offset.
+  const topOf: number[] = []
+  rendered.forEach((_l, i) => {
+    topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
+  })
+
+  const detailLeft = x // the right edge of the deepest list
+  const detailWidth = containerW > 0 ? Math.max(minPx, containerW - detailLeft) : 0
+
+  // Selection connectors (shared): the gold elbow from each selected parent row to its selected child
+  // row, reinforcing the cascade. The signature is everything that moves a selected row — the
+  // per-level selection, the column left edges, and the vertical tops.
+  const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${left.join(",")}::${topOf.join(",")}::${containerW}`
+  const connectorsPossible = rendered.length >= 2 && rendered.some((l) => l.selectedId != null)
+  const { connectors, onScroll } = useSelectionConnectors(
+    containerRef,
+    rendered.length,
+    connectorSig,
+    connectorsPossible,
+  )
+  // A scroll (or pointer/focus movement that re-flows a row) re-measures BOTH the cascade tops and the
+  // connector paths.
+  const reMeasure = () => {
+    rowMeasureRef.current()
+    onScroll()
+  }
+
+  // Choosing a topic lands the new list IN PLACE (its `top` is never transitioned — a re-measure is
+  // pre-paint, so a corrected top never visibly slides); only the horizontal `left`/`width` (a resize)
+  // animates, and never mid-drag.
+  const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
+  const animate = !dragging && !inPlace
+
+  return (
+    <div
+      ref={containerRef}
+      onScrollCapture={reMeasure}
+      onPointerOver={reMeasure}
+      onPointerOut={reMeasure}
+      onFocus={reMeasure}
+      onBlur={reMeasure}
+      className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+    >
+      {rendered.map((level, i) => {
+        const isRootList = i === 0
+        return (
+          <div
+            key={level.id}
+            data-htd-col={i}
+            style={{
+              left: left[i],
+              top: topOf[i],
+              width: railWidth(level),
+              // The root fills the full height; a child hugs its rows, capped at the container's
+              // bottom (its inner list then scrolls). `min-h-0` on the rail (its base class) lets it
+              // shrink to the cap so the list scrolls rather than overflowing.
+              ...(isRootList
+                ? { bottom: 0 }
+                : { maxHeight: `calc(100% - ${topOf[i]}px)` }),
+              zIndex: i + 1,
+            }}
+            className={cn(
+              "absolute flex flex-col",
+              // `top` is deliberately NOT transitioned (see `animate`): only the horizontal position
+              // eases, so a resize slides the lists sideways while a selection drops the new list in.
+              animate &&
+                "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+            )}
+          >
+            <TopicRail
+              title={level.title}
+              // The root fills its full-height column; a child is told nothing, so the rail sizes to
+              // its rows (the hug). `min-h-0` keeps its overflow working when the cap bites.
+              className={isRootList ? "min-h-0 flex-1" : "min-h-0"}
+              covered={false}
+              isRoot={isRootList}
+              selectionStyle="marker"
+              items={level.items}
+              selectedId={level.selectedId}
+              onSelect={railOnSelect(level, attemptExit)}
+              emptyLabel={level.emptyLabel ?? "Nothing here yet."}
+              onNew={level.onNew}
+              newLabel={level.newLabel}
+              newActive={level.newActive}
+              titleActions={level.titleActions}
+              railSlot={level.railSlot}
+              headerSlot={level.headerSlot}
+              // No covering here: no cover toggle, and the trailing-border handle resizes the rail.
+              collapsed={false}
+              onToggle={() => {}}
+              onResize={(w) => onResizeLevel(level, w)}
+              onResizeStart={() => setDragging(true)}
+              onResizeEnd={() => setDragging(false)}
+              showToggle={false}
+              coveredShadow={false}
+            />
+          </div>
+        )
+      })}
+      {/* Selection connectors: gold elbows linking each selected parent row to its selected child. */}
+      <SelectionConnectorOverlay paths={connectors} />
+      {/* The detail (leaf) pane — rightmost, full height, fills to the container's right edge down to
+          `minDetailWidth`. Not a topic list, so it neither hugs nor aligns; it is the content surface. */}
+      <section
+        key="__detail__"
+        style={{ left: detailLeft, top: 0, bottom: 0, width: detailWidth, zIndex: rendered.length + 1 }}
+        className={cn(
+          "absolute flex flex-col overflow-auto bg-apt-surface",
+          animate && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+        )}
+      >
+        {detailTitle !== undefined && (
+          <div className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-nav px-2">
+            <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
+              {detailTitle}
+            </span>
+          </div>
+        )}
+        {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
+            the viewport. */}
         <div
           className="flex min-h-0 w-full flex-1 flex-col"
           style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
