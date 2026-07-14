@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react"
 
-import { ChevronRight, Circle, Plus, Trash2 } from "lucide-react"
+import { ChevronRight, Circle, Plus, Trash2, X } from "lucide-react"
 
 import { AlertModal } from "../components/alert-modal"
 import { CollapseToggle } from "../components/collapse-toggle"
@@ -394,6 +394,9 @@ export function TopicRail({
   headerSlot,
   className,
   rowDisclosure = false,
+  onClose,
+  closeLabel,
+  denseBottom = false,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -462,6 +465,16 @@ export function TopicRail({
   /** Trailing chevron on every selectable row (narrow/nav-stack mode's disclosure hint — see
    *  {@link TopicList}'s doc). Default off. */
   rowDisclosure?: boolean
+  /** A right-justified CLOSE (✕) button in the list HEADER. The hierarchical stacks pass it on
+   *  every CHILD menu (never the root): clicking it dismisses the menu and clears the selection in
+   *  the parent list that opened it. Omit to render no close button. */
+  onClose?: () => void
+  /** Accessible name + tooltip for the close button. Defaults to "Close". */
+  closeLabel?: string
+  /** Tighten the list's BOTTOM padding (the gap under the last row). Default false keeps the
+   *  generous scroll breathing room; the cascade menus pass true so a short, hugging menu doesn't
+   *  trail dead space under its last item. */
+  denseBottom?: boolean
 }) {
   const asideRef = useRef<HTMLElement>(null)
   const listId = useId()
@@ -504,6 +517,21 @@ export function TopicRail({
     <CollapseToggle collapsed={collapsed} onToggle={onToggle} label="topic list" controls={listId} />
   )
 
+  // A right-justified close (✕) in the header — the hierarchical stacks put it on every CHILD menu to
+  // dismiss the menu and clear its selection in the parent list. Icon-only, so its label rides as the
+  // accessible name + native tooltip.
+  const closeButton = onClose ? (
+    <button
+      type="button"
+      aria-label={closeLabel ?? "Close"}
+      title={closeLabel ?? "Close"}
+      onClick={onClose}
+      className="flex shrink-0 items-center justify-center rounded p-0.5 text-apt-text-muted outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40"
+    >
+      <X size={16} aria-hidden />
+    </button>
+  ) : null
+
   // Right-justified header controls: the New `+` (all widths) and, in the minimized style, the
   // desktop collapse toggle (`«`). The covered style passes `showToggle=false` and supplies its own
   // `leftControl` instead — so `showToggle` alone decides, and a leading control (the stack's
@@ -518,16 +546,18 @@ export function TopicRail({
     ) : null
 
   // The titled header's inner content. The control slot is a fixed width matching where item icons
-  // start; the title sits where item labels start; the New/toggle controls are right-justified.
+  // start; the title is CENTERED in the remaining header width; the New/toggle/close controls are
+  // right-justified.
   const headerInner = (
     <>
       <div className="flex w-8 shrink-0 items-center justify-center">{leftControl ?? backSlot ?? null}</div>
       {title !== undefined && (
-        <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
+        <span className="min-w-0 flex-1 truncate text-center font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
           {title}
         </span>
       )}
       {rightControls}
+      {closeButton}
     </>
   )
   return (
@@ -572,7 +602,10 @@ export function TopicRail({
       ) : leftControl ? (
         <div data-htd-header className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
           {leftControl}
-          {newButton}
+          <span className="flex items-center gap-1">
+            {newButton}
+            {closeButton}
+          </span>
         </div>
       ) : backSlot ? (
         <div data-htd-header className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
@@ -605,7 +638,8 @@ export function TopicRail({
       <div
         id={listId}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto pb-8",
+          "min-h-0 flex-1 overflow-y-auto",
+          denseBottom ? "pb-2" : "pb-8",
           collapsed ? "pl-0 pr-1 pt-2" : "pl-0 pr-4 pt-2",
         )}
       >

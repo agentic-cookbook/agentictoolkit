@@ -1604,6 +1604,19 @@ function CoveredStack({
               titleActions={level.titleActions}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
+              // (#4) Every CHILD menu gets a right-justified close (✕) in its header: it dismisses the
+              // menu and clears the selection in the PARENT list that opened it (the root, with no
+              // parent, never gets one). Drop any open reveal so the stack settles at once, and route
+              // the clear through the exit guard like every other de-selection.
+              onClose={
+                i === 0
+                  ? undefined
+                  : () => {
+                      setHoverId(null)
+                      attemptExit(() => rendered[i - 1]!.onClear())
+                    }
+              }
+              closeLabel={`Close ${level.title ?? "menu"}`}
               // Covered lists never shrink to an icon strip (no toggle) — but the trailing-border
               // handle DOES resize the rail: drag it to widen/narrow the column.
               collapsed={false}

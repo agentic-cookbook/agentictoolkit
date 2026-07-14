@@ -2098,13 +2098,23 @@ function CascadingStack({
           <div
             key={level.id}
             data-htd-col={i}
-            // Entering a COVERED SUBMENU opens the branch rooted at it (see CoveredStack). ROUND 9
-            // (#3): the auto-expand/collapse mouse tracking is on the submenus only — entering the
-            // ROOT never opens a branch (it passes null, closing any open one), so the root list is
-            // inert to hover; only a deeper menu expands under the pointer.
-            onPointerEnter={() => {
+            // Entering a COVERED SUBMENU opens the branch rooted at it (see CoveredStack). The
+            // auto-expand/collapse mouse tracking is on the submenus only — entering the ROOT never
+            // opens a branch (it passes null, closing any open one), so the root list is inert to
+            // hover; only a deeper menu expands under the pointer.
+            //
+            // (#5) And a covered submenu opens ONLY when the pointer enters its LEFT peek strip — the
+            // ~CASCADE_INDENT-wide sliver still visible to the left of the covering child — never the
+            // area exposed BELOW or beside a shorter covering child. Auto-expand is a left-edge
+            // gesture: arriving above/below the peek must not spring the branch open.
+            onPointerEnter={(e) => {
               if (inGroup(i)) return
-              setHoverId(!isRootList && covered && !offscreen ? level.id : null, true)
+              if (!isRootList && covered && !offscreen) {
+                const box = e.currentTarget.getBoundingClientRect()
+                if (e.clientX - box.left <= CASCADE_INDENT) setHoverId(level.id, true)
+                return
+              }
+              setHoverId(null)
             }}
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
@@ -2129,13 +2139,17 @@ function CascadingStack({
               // `top` is deliberately NOT transitioned (see `animate`): only the horizontal
               // geometry eases, so a cover/reveal slides the lists sideways while a selection
               // drops the new list in. `overflow-hidden` clips the off-screen peek and the
-              // `maxHeight` cap. `bg-apt-bg` keeps every box opaque — a child OVERDRAWS its
-              // covered ancestors at rest, and a lifted member floats over the detail (the rail's
-              // own bg is 96% opaque — see CoveredStack).
-              "absolute flex flex-col overflow-hidden bg-apt-bg",
-              // ROUND 9 (#2): every child menu carries a full, defined border so the overlapping
-              // cards read as distinct sheets, not just a soft shadow. The root is borderless (it is
-              // the ground the cascade sits on).
+              // `maxHeight` cap.
+              "absolute flex flex-col overflow-hidden",
+              // (#2) The ROOT's enclosing box takes the root menu's OWN surface (`bg-apt-nav`) so the
+              // rail — 96% opaque — reads as a solid fill of its container, with no page background
+              // bleeding through at the edges. Every OTHER box stays `bg-apt-bg` (opaque): a child
+              // OVERDRAWS its covered ancestors at rest, and a lifted member floats over the detail —
+              // both need a fully opaque backing (the rail's own bg is only 96%).
+              isRootList ? "bg-apt-nav" : "bg-apt-bg",
+              // Every child menu carries a full, defined border so the overlapping cards read as
+              // distinct sheets, not just a soft shadow. The root is borderless (it is the ground
+              // the cascade sits on).
               !isRootList && "border border-apt-border",
               offscreen && "pointer-events-none",
               animate &&
@@ -2184,6 +2198,22 @@ function CascadingStack({
                 titleActions={level.titleActions}
                 railSlot={level.railSlot}
                 headerSlot={level.headerSlot}
+                // (#1) Tighten the bottom padding so a short, hugging menu doesn't trail dead space
+                // under its last row.
+                denseBottom
+                // (#4) Every CHILD menu gets a right-justified close (✕) in its header: it dismisses
+                // the menu and clears the selection in the PARENT list that opened it (the root, with
+                // no parent, never gets one). Drop any open reveal so the stack settles at once, and
+                // route the clear through the exit guard like every other de-selection.
+                onClose={
+                  isRootList
+                    ? undefined
+                    : () => {
+                        setHoverId(null)
+                        attemptExit(() => rendered[i - 1]!.onClear())
+                      }
+                }
+                closeLabel={`Close ${level.title ?? "menu"}`}
                 // Never the icon strip (that is the minimized style's drawing of "hidden"); the
                 // trailing-border handle still resizes the rail.
                 collapsed={false}
