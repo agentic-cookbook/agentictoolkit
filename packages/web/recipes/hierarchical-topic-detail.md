@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.13.3
+version: 1.14.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: 2026-07-13
+modified: 2026-07-14
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -384,11 +384,22 @@ group's members, an editor's sections — with **no host wiring**. It exists ONL
 state: the moment the frontier gains a selection, the host's real detail (`children`) shows. Cards
 never appear beside or instead of a selected topic's view.
 
-Two seams:
+Each card **fits its contents**: the title lays out `flex items-start` with a break-anywhere label span,
+so a long label with no spaces to wrap on (a full reverse-domain identifier) wraps cleanly across lines
+INSIDE the card — the icon pinned to its first line — instead of overflowing or clipping at the card's edge.
+
+Three seams:
 
 - `TopicDetailItem.description` — the card copy. Hosts should source it from the same store as the
   help popovers (the hub reads `help.en.json`), so card text and help never drift. Items without one
   render icon + label only.
+- `TopicLevel.overviewHelp` — swap the whole card grid for a single **centered help blurb** (exported
+  `TopicOverviewHelp`) at this level's unselected frontier. It is for a list of **one KIND of thing** (a
+  Sites list, a Groups list) where a grid of 100+ near-identical cards is noise: instead, one readable,
+  customizable blurb (the host's — a string or richer nodes) explains what the items are and why you'd
+  pick one. The component owns only the centered framing (`max-w-prose`, `text-center`, `<strong>`
+  emphasis); the content is the host's, and it too should read from the help store. `overviewHelp` wins
+  over the card grid at this level, and is ignored when `overview: false`.
 - `TopicLevel.overview: false` — the opt-out, for a level whose unselected state has a REAL landing of
   its own (ResourceExplorer's searchable entity landing with New). Everything else takes the default.
 
@@ -528,6 +539,8 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 - **must-hide-overview-once-selected** (v1.13.0): The overview exists ONLY in the no-selection state. The moment the frontier gains a selection the host's real detail (`children`) MUST show — cards MUST never render beside or instead of a selected topic's view.
 - **may-opt-out-overview** (v1.13.0): A level whose unselected state has a REAL landing of its own (ResourceExplorer's searchable entity landing with New) MAY opt out via `TopicLevel.overview: false`; the host's `children` then render as before.
 - **may-describe-topics** (v1.13.0): A `TopicDetailItem` MAY carry a `description` (one or two sentences) feeding its overview card; hosts SHOULD source it from the same store as the help popovers so card copy and help never drift. Items without one render icon + label only.
+- **must-fit-overview-cards** (v1.14.0): An overview card MUST fit its contents — a long label with no break opportunities (a full reverse-domain identifier) MUST wrap across lines inside the card, the icon pinned to the first line, and MUST NOT overflow or clip at the card's edge.
+- **may-render-overview-help** (v1.14.0): A level MAY set `TopicLevel.overviewHelp` (a string or nodes) to replace the card grid at ITS unselected frontier with a single centered help blurb (`TopicOverviewHelp`) — for a list of one KIND of thing, where a grid of near-identical cards is noise and the landing should instead explain what the items are and how to choose one. It MUST win over the card grid at that level and MUST be ignored when `overview` is `false`.
 - **must-keep-children-mounted-under-overview** (v1.13.0): While the overview shows, the host's `children` MUST stay MOUNTED (hidden) beneath it. In the merged one-rail stack the deeper levels are PUBLISHED by components living in `children` (StackLevels); unmounting them unregisters the very frontier level the overview is for, and the stack oscillates between the two states (React max-update-depth).
 
 ### Narrow mode — the stack as a navigation controller
@@ -673,6 +686,8 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 | T51 | must-slide-panes-ease-in-out, must-respect-reduced-motion | narrow, `prefers-reduced-motion: reduce`, select a row | the panes are at their new places on the first frame: no travel, same layout |
 | T53 | must-show-row-disclosure-chevron | narrow, a pane with an enabled row and a `disabled` row | the enabled row carries a trailing chevron, the disabled one does not; the same rows in the WIDE covered stack carry no chevron at all |
 | T54 | must-apply-disclosure-toggles-immediately | hover a covered peek so the reveal opens, then (without moving the pointer out) click a header's `«`/`»`, and separately the root header's auto-hide toggle | the reveal DROPS on the click and the stack settles to the new pin / mode state immediately — the layout visibly changes on the click itself, not later when the pointer happens to leave |
+| T55 | must-fit-overview-cards | a frontier list whose rows carry long unbreakable labels (full reverse-domain ids), narrow the pane | each label wraps across lines inside its card (icon on the first line); no card overflows or clips its content at the edge |
+| T56 | may-render-overview-help | a level with `overviewHelp` set, at its unselected frontier | the detail shows ONE centered help blurb (not the card grid); with `overview: false` the blurb is suppressed and the host's `children` show |
 
 ## Edge Cases
 
@@ -877,6 +892,7 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.14.0 | 2026-07-14 | Mike Fullerton | **Overview cards fit their contents + a per-level help-blurb overview.** (1) `must-fit-overview-cards`: the overview `CardTitle` lays out `flex items-start` with a break-anywhere label span, so a long unbreakable label (a full reverse-domain id) wraps INSIDE the card instead of clipping at its edge (found on the status board's endpoint cards). (2) `may-render-overview-help` + exported `TopicOverviewHelp`: a level MAY set `TopicLevel.overviewHelp` (string or nodes) to swap the card grid for a single centered help blurb at its unselected frontier — for a list of one KIND of thing (Sites, Groups), where 100+ near-identical cards are noise and the landing should instead explain what the items are and how to choose one. Wins over the grid; ignored under `overview: false`. Vectors T55–T56. |
 | 1.13.3 | 2026-07-13 | Mike Fullerton | **The disclosure toggles settle the stack on the click itself.** Clicking a `«`/`»` pin or the root header's auto-hide toggle inside an open hover reveal changed nothing on screen: the revealed group renders its members at full width regardless of pins or the mode, and nothing closed the reveal (the pointer never left it), so the click read as dead — the pin "turned up later" when the pointer happened to move away, and flipping auto-hide off looked like the mode was stuck on. The toggles now DROP any open reveal as part of the click, so the stack settles to the new state immediately; the pointer hasn't moved, so nothing re-opens the reveal until it next enters a covered peek. (A row SELECT still deliberately roots a reveal — must-root-reveal-on-covering-select — because there, settling would snap the clicked list shut under the pointer; for the explicit toggles, settling IS the requested action.) New requirement `must-apply-disclosure-toggles-immediately`; vector T54. Note the fit rules are unchanged: with auto-hide OFF, width pressure still covers the lists that don't fit, and those peeks still hover-reveal — turning the mode off discloses what FITS, it does not disable the covered style. |
 | 1.13.2 | 2026-07-13 | Mike Fullerton | **Title-row actions + the create modal moves down to ui.** (1) `TopicLevel.titleActions` — extra compact controls right-justified in the TITLE row ahead of the `+` (new requirement `may-offer-title-actions`); first consumer is the status board's Sites list, whose Auto Configure action moves up from the `headerSlot` `ListHeader` so the filter field can take the whole header row (`ListHeader` `search.grow` drops its `max-w-xs` cap). (2) `CreateResourceDialog` relocates from `@agentic-toolkit/resource` to `@agentic-toolkit/ui/blocks` so consumers that vendor only ui (the self-enclosed status/builds backends) can obey **must-create-in-modal**; ui can't import auth (auth depends on ui), so the auth telemetry became an `onSaveError` seam and the resource package re-exports the dialog with it pre-wired — the resource-feature API — including 1.13.x's `saveEnabled` Save gate — is unchanged. Applied must-create-in-modal to all six status/builds config sections (Groups/Sites-Endpoints/Platforms ×2 apps), whose `+` had opened an inline create form in the leaf: creation is now a scoped modal (URL+group for a monitored site; name/slug for a group; platform wiring for an integration), the selection underneath never moves, and save selects the created row. |
 | 1.13.1 | 2026-07-13 | Mike Fullerton | **The reveal pushes the detail aside — never over it.** Auto-expanding a covered stack (the hover reveal / the covering-click branch) used to float the lists OVER the detail, hiding exactly what the user was reading. The detail's left edge now tracks the open group's right edge: it slides right (animated) so it stays visible beside the reveal, clips at the container's right edge on deep stacks, and slides back when the reveal closes. The peeks behind the group are still overlapped — only the detail yields. New requirement `must-push-detail-aside-on-reveal`; `must-open-branch-in-place` re-scoped to the lists. Also: the embedded "Project" topic of a product/persona (SubjectProjectPane) now publishes the project's FULL topic set (Overview / Work Items / Activity / Access) as a group rail in the one stack, matching the standalone Projects feature, instead of rendering only the overview pane. |
