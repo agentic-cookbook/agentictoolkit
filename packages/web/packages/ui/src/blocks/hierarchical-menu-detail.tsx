@@ -1745,7 +1745,6 @@ function CascadingStack({
   pins,
   setPins,
   hoverId,
-  hoverAll,
   setHoverId,
   containerW,
   children,
@@ -1877,58 +1876,30 @@ function CascadingStack({
     topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
   })
 
-  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported (see there for the full story:
-  // enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the group-scoped
-  // close rules). ROUND 9 (#5): the reveal no longer FANS OUT horizontally. Every revealed member —
-  // not just the first — stays at its tight CASCADE_INDENT step (its resting left), moving inward
-  // from its parent's right exactly as when collapsed; the reveal is purely a z-LIFT that raises the
-  // covered branch above the lists that overdraw it, so its rows show without the cascade sliding.
+  // THE REVEAL — hovering a COVERED submenu pops it to the FRONT so its own rows become readable,
+  // then it drops back the moment the pointer leaves (this IS the auto-expand / auto-collapse).
+  // ROUND 9: the menu does NOT slide (per #5 it keeps its tight inward position) and no branch fans
+  // out — the hovered menu ALONE lifts above the child that overdraws it, drawn at full width over
+  // the cascade. The root and the deepest (frontier) list are never revealed: the root is inert to
+  // hover (#3) and the frontier is already fully shown. `zTop` is the lifted index — with no slide
+  // there is no wipe-shut to linger through, so it just tracks `hoverIndex`.
   const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
-  const groupFrom = (root: number) => (hoverAll ? hidden : root)
   const hoverIndex =
-    hoverRoot >= 0 && rendered.some((_, i) => i >= groupFrom(hoverRoot) && isCovered(i))
+    hoverRoot > 0 && hoverRoot >= hidden && hoverRoot < rendered.length - 1 && !immersed
       ? hoverRoot
       : -1
-  const effectiveHoverId = hoverIndex >= 0 ? hoverId : null
-  const groupStart = hoverIndex >= 0 ? groupFrom(hoverIndex) : -1
-  const inGroup = (i: number) => hoverIndex >= 0 && i >= groupStart
-
-  const [zLiftId, setZLiftId] = useState<string | null>(effectiveHoverId)
-  useEffect(() => {
-    if (effectiveHoverId !== null) {
-      setZLiftId(effectiveHoverId)
-      return
-    }
-    const t = setTimeout(() => setZLiftId(null), 300)
-    return () => clearTimeout(t)
-  }, [effectiveHoverId])
-  const zRoot = zLiftId === null ? -1 : rendered.findIndex((l) => l.id === zLiftId)
-  const [zStart, setZStart] = useState<number>(groupStart)
-  useEffect(() => {
-    if (groupStart >= 0) setZStart(groupStart)
-  }, [groupStart])
-  const zFrom = zRoot === -1 ? -1 : zStart >= 0 ? zStart : zRoot
-  const revealLeft: number[] = []
-  if (hoverIndex >= 0) {
-    let rx = left[groupStart] ?? 0
-    for (let i = groupStart; i < rendered.length; i++) {
-      revealLeft[i] = rx
-      // ROUND 9 (#5): step by the indent, NOT the full rail width — so a revealed member lands on
-      // its resting inward position (revealLeft[i] === left[i]) for EVERY level, not just the first.
-      rx += widthOf(i)
-    }
-  }
+  const inGroup = (i: number) => i === hoverIndex
+  const zTop = hoverIndex
   // Immersed, every list parks fully past the left edge (right edge ≤ 0): shift the whole resting
   // layout left by the rightmost box edge. Boxes stay full width — nothing pokes back into view.
   const immersedShift = immersed
     ? Math.max(0, ...rendered.map((l, i) => (left[i] ?? 0) + (i === 0 ? rootBoxWidth : railWidth(l))))
     : 0
-  const leftOf = (i: number) =>
-    immersed ? left[i]! - immersedShift : (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
-  // Covering never resizes a box — the child overdrawing it IS the covered drawing (so a reveal
-  // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
-  // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
-  // so a full-width box would poke back into view below the survivors' hugged bottoms).
+  const leftOf = (i: number) => (immersed ? left[i]! - immersedShift : left[i]! - offshift)
+  // Covering never resizes a box — the child overdrawing it IS the covered drawing, and a reveal is a
+  // pure z-lift (no slide). The one exception: an OFF-SCREEN list narrows to its indent so it parks
+  // fully past the left edge (`leftOf` shifts it by only the indents, so a full-width box would poke
+  // back into view below the survivors' hugged bottoms).
   const boxWidth = (i: number) =>
     i < hidden ? widthOf(i) : i === 0 ? rootBoxWidth : railWidth(rendered[i]!)
 
@@ -2056,11 +2027,10 @@ function CascadingStack({
     >
       {rendered.map((level, i) => {
         const isRootList = i === 0
-        const covered = isCovered(i)
         const offscreen = immersed || i < hidden
         const revealed = inGroup(i) && !offscreen
-        const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
-        const groupTrailing = revealed && i === rendered.length - 1
+        const zLifted = !offscreen && i === zTop
+        const groupTrailing = revealed
         // ROUND 9 (#4): "covered by another menu" is the VISUAL overlap, not the auto-hide/pin
         // `isCovered` state — at rest (autoHide off, no pins) `isCovered` is false everywhere, yet
         // every menu but the DEEPEST is still overdrawn by its child in the tight cascade. So a menu
@@ -2071,13 +2041,14 @@ function CascadingStack({
           <div
             key={level.id}
             data-htd-col={i}
-            // Entering a COVERED SUBMENU opens the branch rooted at it (see CoveredStack). ROUND 9
-            // (#3): the auto-expand/collapse mouse tracking is on the submenus only — entering the
-            // ROOT never opens a branch (it passes null, closing any open one), so the root list is
-            // inert to hover; only a deeper menu expands under the pointer.
+            // Entering a COVERED SUBMENU pops it to the front (auto-expand). ROUND 9 (#3+#4): the
+            // mouse tracking is on the submenus only — a menu is a candidate iff it is
+            // `coveredByChild` (overdrawn, on-screen, not the frontier) AND not the root. Entering the
+            // root or the deepest list passes null, closing any open reveal, so the root is inert to
+            // hover and moving out to the frontier collapses.
             onPointerEnter={() => {
               if (inGroup(i)) return
-              setHoverId(!isRootList && covered && !offscreen ? level.id : null, true)
+              setHoverId(coveredByChild && !isRootList ? level.id : null, false)
             }}
             onPointerLeave={onGroupPointerLeave}
             aria-hidden={offscreen || undefined}
@@ -2187,7 +2158,7 @@ function CascadingStack({
           lifted above an open branch exactly as in CoveredStack. */}
       <SelectionConnectorOverlay
         paths={connectors}
-        zIndex={zFrom >= 0 ? REVEAL_Z + rendered.length : undefined}
+        zIndex={zTop >= 0 ? REVEAL_Z + rendered.length : undefined}
       />
       {/* The detail (leaf) pane — pinned BESIDE THE ROOT LIST at full height, UNDER the deeper
           lists (z 0 vs their i+1): the cascade discloses over it like menus over content, and it
