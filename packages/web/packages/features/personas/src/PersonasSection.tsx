@@ -156,6 +156,9 @@ export function PersonasSection({
       },
       newLabel: "New Persona",
       newActive: creating,
+      // This level's unselected state is a REAL landing (the All table below — and,
+      // while creating, the blank editor), never the automatic TopicOverview grid.
+      overview: false,
     },
   ];
 
