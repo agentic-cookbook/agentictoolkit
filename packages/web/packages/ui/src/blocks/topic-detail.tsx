@@ -547,16 +547,16 @@ export function TopicRail({
           their rows line up. Without a title (standalone TopicDetail) or when collapsed, fall back to
           the bare control strip (priority: leftControl → backSlot → toggle/`+` → nothing). */}
       {title !== undefined && !collapsed ? (
-        <div className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border pr-2">
+        <div data-htd-header className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border pr-2">
           {headerInner}
         </div>
       ) : leftControl ? (
-        <div className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
+        <div data-htd-header className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
           {leftControl}
           {newButton}
         </div>
       ) : backSlot ? (
-        <div className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
+        <div data-htd-header className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
           {backSlot}
           <span className="flex items-center gap-1">
             {newButton}
