@@ -2325,22 +2325,6 @@ function CascadingStack({
           {children}
         </div>
       </section>
-      {/* DEBUG (Mike): the union rectangle used for the mouse-leave test, outlined in red. */}
-      {revealRect && (
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            left: revealRect.left,
-            top: revealRect.top,
-            width: revealRect.right - revealRect.left,
-            height: revealRect.bottom - revealRect.top,
-            border: "1px solid red",
-            pointerEvents: "none",
-            zIndex: 2147483647,
-          }}
-        />
-      )}
     </div>
   )
 }
