@@ -82,8 +82,12 @@ function levelsKey(levels: TopicLevel[]): string {
       // `emptyLabel` is part of the key: an empty list's rows don't change between "Loading…",
       // "Nothing here yet.", and an error message, so without it a list that resolves from loading
       // to empty/error would keep re-showing the stale "Loading…" (the level never re-registers).
+      // `overview` too: it flips (false) while a master/detail inline editor is open —
+      // same re-registration need as emptyLabel, or the frontier keeps the stale card grid.
       (l) =>
-        `${l.id}:${l.title ?? ""}:${l.selectedId ?? ""}:${l.emptyLabel ?? ""}:${l.defaultSelectedId ?? ""}:${l.items
+        `${l.id}:${l.title ?? ""}:${l.selectedId ?? ""}:${l.emptyLabel ?? ""}:${l.defaultSelectedId ?? ""}:${
+          l.overview === false ? "!o" : ""
+        }:${l.items
           .map((it) => `${it.id}=${it.label}=${it.sublabel ?? ""}`)
           .join(",")}`,
     )

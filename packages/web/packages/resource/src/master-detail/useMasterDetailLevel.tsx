@@ -84,6 +84,10 @@ export function useMasterDetailLevel<TItem, TInput>({
     onNew: onNew ?? form.actions.onCreate,
     newLabel: newButtonLabel,
     newActive: onNew ? false : form.creating,
+    // While the inline editor is open the pane body IS the detail. CREATE is the
+    // critical case: nothing is selected yet, so without this the automatic
+    // TopicOverview (unselected frontier → card grid) covers the open form.
+    overview: form.editing ? false : undefined,
   };
 
   useStackLevel(level);
