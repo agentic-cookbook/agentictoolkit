@@ -160,6 +160,7 @@ function TopicList({
     return (
       <button
         type="button"
+        data-htd-row
         disabled={item.disabled}
         onClick={() => {
           // Covered lists pure-SELECT: a click only CHANGES the selection — it never toggles/unselects,

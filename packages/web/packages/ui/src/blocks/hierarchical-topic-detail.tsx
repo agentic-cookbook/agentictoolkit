@@ -292,14 +292,16 @@ export function HierarchicalTopicDetail({
    *      (covered), with a `«`/`»` cover toggle on each child and a left drop-shadow making the
    *      stack read as physically layered. No Back button.
    *   - `"cascading"` — a VERTICAL cascade (nested-menu layout): only the ROOT list is full
-   *      height. Each deeper list opens to the RIGHT of the row selected in its parent, its TOP
-   *      aligned to the top of that selected row, and its height HUGS its own rows (capped at the
-   *      container bottom, scrolling past it). Covering — auto-hide, the `«`/`»` pins, width
-   *      pressure, the hover branch reveal — works exactly as in `covered`; only the vertical
-   *      placement differs. */
+   *      height. Each deeper list opens to the RIGHT of its parent, its TOP aligned to the top of
+   *      the parent's FIRST row (one header-height step per level), and its height HUGS its own
+   *      rows (capped at the container bottom, scrolling past it). Covering — auto-hide, the
+   *      `«`/`»` pins, width pressure, the hover branch reveal — follows `covered`'s rules, but a
+   *      covered list is never resized: its child simply draws OVER it (back-to-front z-order),
+   *      so every covered list keeps its HEADER row visible above the child. */
   disclosureStyle?: "minimized" | "covered" | "cascading"
   /** Start with every list above the FRONTIER (the deepest rendered list) hidden — covered by its
-   *  child to a peek (the `covered` and `cascading` styles) or an icon strip (`minimized`) — even
+   *  child to a peek (`covered`), overdrawn by its child down to its header row (`cascading`), or
+   *  an icon strip (`minimized`) — even
    *  when there is room to show it. Default `true`; the first list's header carries a toggle so
    *  the user can flip it (off ⇒ every list discloses, subject to the fit rules). Pass `false`
    *  for a surface whose ancestry must stay glanceable (the hub's `/home`). The covering styles
@@ -1680,21 +1682,28 @@ function CoveredStack({
 /**
  * The "cascading" disclosure style — a VERTICAL cascade (nested-menu layout).
  *
- * Only the ROOT list is full height, on the left. Every deeper list is the CHILD of the row selected
- * in its parent: it opens to the RIGHT of that parent, its TOP aligned to the top of the selected
- * parent ROW, and its height HUGS its own rows — capped at the container's bottom, scrolling past it.
- * So the stack reads as a chain of menus dropping down-and-right from each choice, instead of a row of
- * equal-height columns. The leaf detail fills the remaining width on the right at full height (it is
- * content, not a topic list, so the "align + hug" rule does not apply to it).
+ * Only the ROOT list is full height, on the left. Every deeper list opens to the RIGHT of its
+ * parent, its TOP aligned to the top of the parent's FIRST row — one header-height step per level,
+ * regardless of which row is selected — and its height HUGS its own rows, capped at the container's
+ * bottom (its list scrolls past it). So the stack reads as a chain of menus stepping down-and-right,
+ * with every list's HEADER always visible. The leaf detail fills the remaining width on the right at
+ * full height (it is content, not a topic list, so the "align + hug" rule does not apply to it).
  *
- * ONLY the vertical placement differs from `covered`: the disclosure machinery is the covered
- * stack's, unchanged — auto-hide and the `«`/`»` pins slide a list LEFT under its child to a 40px
- * peek (its rows stay intact behind the clip; nothing is removed from the list), width pressure
- * covers leftmost-first until the detail keeps its minimum, and hovering a covered list reveals
- * the branch floating over the detail. A covered list's vertical footprint still hugs its rows at
- * its cascade position (covering is a horizontal clip, so the staircase never moves). Kept as its
- * own component so either layout can evolve or be deleted independently — the price is the
- * mirrored covering logic, annotated where it is ported verbatim.
+ * The disclosure INTENT machinery is the covered stack's, unchanged — auto-hide and the `«`/`»`
+ * pins, width pressure covering leftmost-first until the detail keeps its minimum, the hover
+ * branch reveal. But covering DRAWS differently here: a covered list is never resized or clipped.
+ * Covering only shrinks the list's horizontal ADVANCE to the peek indent, so its child — painted
+ * above it, back-to-front z-order — literally draws over it. And because the child's top sits at
+ * the parent's first row, what stays visible of a covered list is its full HEADER row, a peek-wide
+ * strip of its rows, and whatever its child is too short to overdraw:
+ *
+ *   Workspaces
+ *     « Workspace
+ *       « Personas
+ *         « mike        ← the detail strip
+ *
+ * Kept as its own component so either layout can evolve or be deleted independently — the price is
+ * the mirrored covering logic, annotated where it is ported verbatim.
  */
 function CascadingStack({
   rendered,
@@ -1766,7 +1775,9 @@ function CascadingStack({
   }
 
   // HORIZONTAL layout pass (running x): a covered list advances x only by its peek, so its child
-  // slides left to partially cover it — exactly the covered stack's horizontal model.
+  // slides left over it — the covered stack's horizontal model, but drawn differently: the covered
+  // list keeps its FULL box (no resize, no clip; see `boxWidth`) and the child, painted above it in
+  // the back-to-front z-order, simply overdraws it.
   const left: number[] = []
   let x = 0
   rendered.forEach((_l, i) => {
@@ -1775,18 +1786,20 @@ function CascadingStack({
   })
   const restingDetailLeft = Math.max(0, x - offshift)
 
-  // VERTICAL cascade. Each non-root list's TOP is its parent's top plus where the parent's SELECTED
-  // row sits WITHIN the parent's own box. Measuring the offset within the box (not the row's absolute
-  // position) makes the measurement independent of where the box currently sits — so one pre-paint
-  // pass converges with no feedback loop: moving a child never moves its parent's rows. Covering a
-  // list doesn't move its rows either (the peek is a horizontal CLIP), so the staircase is identical
-  // covered or disclosed. `rowOffset[i]` is that within-box offset for list `i`'s selected row (0
-  // when the list has no selection).
+  // VERTICAL cascade. Each non-root list's TOP is its parent's top plus where the parent's FIRST
+  // row sits WITHIN the parent's own box — its header height, measured rather than assumed so a
+  // wrapping title or a header slot stays correct. One header-height step per level, regardless of
+  // which row is selected; the steps are exactly what keeps every covered ancestor's HEADER visible
+  // above its child. Measuring the offset within the box (not the row's absolute position) makes
+  // the measurement independent of where the box currently sits — so one pre-paint pass converges
+  // with no feedback loop: moving a child never moves its parent's rows. `rowOffset[i]` is that
+  // within-box offset of list `i`'s first row (the items list's own top when the list is empty).
   const [rowOffset, setRowOffset] = useState<number[]>([])
   const rowMeasureRef = useRef<() => void>(() => {})
-  // Re-measure when a selection changes, a list's row count changes, or the container width changes;
-  // the ResizeObserver below also catches height changes, and the container handlers catch scroll.
-  const measureSig = `${rendered.map((l) => `${l.selectedId ?? ""}#${l.items.length}`).join("|")}::${containerW}`
+  // Re-measure when the set of lists changes, a list gains/loses its first row, or the container
+  // width changes; the ResizeObserver below also catches height changes, and the container handlers
+  // catch scroll.
+  const measureSig = `${rendered.map((l) => `${l.id}#${l.items.length}`).join("|")}::${containerW}`
   useLayoutEffect(() => {
     const cont = containerRef.current
     if (!cont) return
@@ -1794,12 +1807,12 @@ function CascadingStack({
       const next: number[] = []
       for (let i = 0; i < rendered.length; i++) {
         const col = cont.querySelector(`[data-htd-col="${i}"]`)
-        const sel = col?.querySelector('[aria-current="true"]')
-        if (!col || !sel) {
+        const first = col?.querySelector("[data-htd-row]") ?? col?.querySelector("ul")
+        if (!col || !first) {
           next[i] = 0
           continue
         }
-        next[i] = sel.getBoundingClientRect().top - col.getBoundingClientRect().top
+        next[i] = first.getBoundingClientRect().top - col.getBoundingClientRect().top
       }
       setRowOffset((prev) =>
         prev.length === next.length && prev.every((v, k) => v === next[k]) ? prev : next,
@@ -1813,7 +1826,7 @@ function CascadingStack({
   }, [measureSig])
 
   // Prefix-sum the within-box offsets into each list's absolute TOP: the root is full height (top 0);
-  // a child's top is its parent's top plus the parent's selected-row offset.
+  // a child's top is its parent's top plus the parent's first-row offset.
   const topOf: number[] = []
   rendered.forEach((_l, i) => {
     topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
@@ -1857,7 +1870,11 @@ function CascadingStack({
     }
   }
   const leftOf = (i: number) => (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
-  const boxWidth = (i: number) => (inGroup(i) ? railWidth(rendered[i]!) : widthOf(i))
+  // Covering never resizes a box — the child overdrawing it IS the covered drawing (so a reveal
+  // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
+  // to its peek so it parks fully past the left edge (`leftOf` shifts it by only the peek widths,
+  // so a full-width box would poke back into view below the survivors' hugged bottoms).
+  const boxWidth = (i: number) => (i < hidden ? widthOf(i) : railWidth(rendered[i]!))
 
   // The reveal PUSHES THE DETAIL RIGHT instead of floating over it, as in CoveredStack.
   const lastIdx = rendered.length - 1
@@ -2000,28 +2017,28 @@ function CascadingStack({
             }}
             className={cn(
               // `top` is deliberately NOT transitioned (see `animate`): only the horizontal
-              // geometry eases, so a resize/cover/reveal slides the lists sideways while a
-              // selection drops the new list in. `overflow-hidden` is the peek clip.
-              "absolute flex flex-col overflow-hidden",
+              // geometry eases, so a cover/reveal slides the lists sideways while a selection
+              // drops the new list in. `overflow-hidden` clips the off-screen peek and the
+              // `maxHeight` cap. `bg-apt-bg` keeps every box opaque — a child OVERDRAWS its
+              // covered ancestors at rest, and a lifted member floats over the detail (the rail's
+              // own bg is 96% opaque — see CoveredStack).
+              "absolute flex flex-col overflow-hidden bg-apt-bg",
               offscreen && "pointer-events-none",
               animate &&
                 "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
-              // A lifted member floats over the detail: give it the page background so the card is
-              // opaque (the rail's own bg is 96% opaque — see CoveredStack).
-              zLifted && "bg-apt-bg",
             )}
           >
-            {/* A covered list renders at its FULL width inside a peek-wide clipped wrapper (the
-                covered stack's technique: the wipe never reflows the rows). The fixed-width inner
-                div keeps the flex hug/scroll chain intact — the wrapper hugs it, `maxHeight` caps
-                it, `min-h-0` lets the rail's list scroll under the cap. */}
+            {/* The rail keeps its FULL width regardless of the wrapper's (only an off-screen
+                wrapper narrows — the covered stack's clip technique — so rows never reflow during
+                the slide-off). The inner div is also the flex hug/scroll chain: the wrapper hugs
+                it, `maxHeight` caps it, `min-h-0` lets the rail's list scroll under the cap. */}
             <div
               style={{ width: railWidth(level) }}
               className={cn("flex min-h-0 flex-col", isRootList && "flex-1")}
             >
               <TopicRail
                 title={level.title}
-                // Rows are ALWAYS full — the wrapper's clip makes the peek (see CoveredStack).
+                // Rows are ALWAYS full — a covered list is simply overdrawn by its child.
                 covered={false}
                 isRoot={isRootList}
                 selectionStyle="marker"
