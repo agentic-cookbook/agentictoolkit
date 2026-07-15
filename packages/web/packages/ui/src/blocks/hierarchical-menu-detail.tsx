@@ -2025,7 +2025,12 @@ function CascadingStack({
   // BLACK VERTICAL BAR between the root and the detail. Widening only the enclosing box would NOT
   // fix it: `bg-apt-nav` is 96% opaque, so box-alone reads visibly darker than box+rail — the strip
   // would still show as a bar. The RAIL itself has to be this wide (see the rail's `width` below).
-  const rootWidth = Math.max(railWidth(rendered[0]!), groundRight)
+  //
+  // EXACTLY `groundRight` — never `max(railWidth(root), groundRight)`. The detail begins at
+  // `groundRight`, and the root paints ABOVE it (z 1 vs 0), so any excess would silently overpaint
+  // the detail's left edge instead of widening anything. A root rail wider than the ground just gets
+  // clipped by the box, which is right: at >1 level the root is covered and only its peek shows.
+  const rootWidth = groundRight
 
   const boxWidth = (i: number) =>
     i < hidden ? widthOf(i) : i === 0 ? rootWidth : railWidth(rendered[i]!)
@@ -2499,12 +2504,22 @@ function CascadingStack({
                 }
                 closeLabel={`Close ${level.title ?? "menu"}`}
                 // Never the icon strip (that is the minimized style's drawing of "hidden"); the
-                // trailing-border handle still resizes the rail.
+                // trailing-border handle still resizes the rail — EXCEPT on the root.
                 collapsed={false}
                 onToggle={() => {}}
-                onResize={(w) => onResizeLevel(level, w)}
-                onResizeStart={() => setDragging(true)}
-                onResizeEnd={() => setDragging(false)}
+                // THE ROOT IS NOT RESIZABLE. Its width is DERIVED — it is the ground, sized to span
+                // the whole stack (`rootWidth`) — so there is no user-owned width to drag, and a drag
+                // actively corrupts the layout: `onResize` reports the RAW POINTER X, which lands in
+                // `widths[root.id]`, feeds `railWidth(root)` → `disclosedAdvance` → `left[]` →
+                // `stackRight` → back into `rootWidth`. Worse, the handle is `right-0` of the rail and
+                // `h-full`, so widening the root to the ground put a 6px invisible full-height
+                // col-resize strip exactly ON the root/detail seam — the spot you cross to reach the
+                // menus. One stray click-drag there and the root jumps to whatever x the pointer was
+                // at (Mike caught it at 335px, overpainting the detail). Passing no `onResize` renders
+                // no handle at all, and `widths[root.id]` can then never be set.
+                onResize={isRootList ? undefined : (w) => onResizeLevel(level, w)}
+                onResizeStart={isRootList ? undefined : () => setDragging(true)}
+                onResizeEnd={isRootList ? undefined : () => setDragging(false)}
                 showToggle={false}
                 // The header's leading control slot, exactly as in CoveredStack: the stack-wide
                 // auto-hide toggle on the ROOT; on every other list the `«`/`»` that covers/
@@ -2549,7 +2564,14 @@ function CascadingStack({
           // as the root's width above, and driven by the same `groundRight`, so the two edges travel
           // as one seam instead of one chasing the other. Gated on `dragging` alone for the same
           // reason as the root: `inPlace` is about a NEW list landing, and the detail is never new.
-          !dragging && "transition-[left,width] duration-300 ease-in-out",
+          //
+          // `left` ONLY — NEVER `width`. This pane holds the entire detail view, so transitioning its
+          // width re-lays-out all of that content on every frame for 300ms: the whole page visibly
+          // churns, which reads as a flash across the window (Mike: "the contents inside this should
+          // not be animated on disclosure"). Animating `left` alone moves the box without touching
+          // its content's layout — a TRANSLATION, which is what was asked for. `width` lands
+          // immediately, so the content reflows once, off-frame, instead of sixty times.
+          !dragging && "transition-[left] duration-300 ease-in-out",
         )}
       >
         {rendered.length > 0 &&
