@@ -646,6 +646,13 @@ const CASCADE_INDENT = 32
 // off-screen (see CascadingStack).
 const DETAIL_PIN = "__detail__"
 
+// The selection chain's ONE stroke weight: the connector paths and the gold rail down an unchosen
+// submenu's left edge are the SAME line, so they are drawn with the same width and the same colour
+// (`apt-gold`) and must stay that way (Mike). They diverged once — the rail was a flat 2px `w-0.5`
+// against the connector's 1.5px stroke — and the pair read as two different golds, because a 2px bar
+// lands on whole device pixels while a 1.5px stroke is anti-aliased across three and comes out dimmer.
+const CHAIN_STROKE_PX = 1.5
+
 // The newly-disclosed submenu's entrance (see CascadingStack's entrance effect). Ease-in-out with a
 // SLIGHT bounce: the final control point overshoots past 1 (y2 = 1.28), so the box eases in, sails a
 // touch beyond its resting size, and settles back — a bezier does this in one curve, with no
@@ -674,12 +681,17 @@ const cascadeMemory = new Map<
     seenKeys: Set<string> | null
     /** Last ground right edge observed with the stack COLLAPSED; `null` until one has been seen. */
     groundRight: number | null
+    /** The selection the detail pane last painted, so its fade can tell "became a different detail"
+     *  from "mounted". `null` until first painted — and it must live out here for the same reason as
+     *  `seenKeys`: choosing a row IS the param change that remounts the subtree, so component state
+     *  would forget on precisely the transition that must animate. */
+    detailToken: string | null
   }
 >()
 const cascadeMemoryFor = (key: string) => {
   const existing = cascadeMemory.get(key)
   if (existing) return existing
-  const fresh = { seenKeys: null, groundRight: null }
+  const fresh = { seenKeys: null, groundRight: null, detailToken: null }
   cascadeMemory.set(key, fresh)
   return fresh
 }
@@ -688,6 +700,20 @@ const cascadeMemoryFor = (key: string) => {
 // anticipatory swell before the box shrinks away, which is what running the entrance backwards
 // actually looks like.
 const EXIT_EASE = "cubic-bezier(0.75, -0.28, 0.55, 1)"
+
+// The beat between one menu's exit and the next when a whole branch closes (see `exitBranch`). Short
+// enough that the collapse still reads as ONE gesture rather than a queue of separate closes — the
+// menus overlap heavily, since each runs for ENTER_MS.
+const EXIT_STAGGER_MS = 70
+
+/** How long the detail's content takes to fade in when it becomes a DIFFERENT detail (see
+ *  `DetailContent`). */
+const DETAIL_FADE_MS = 220
+
+// How long an exit waits for React to unmount the column before deciding the clear no-opped and making
+// the menu visible again (see `exitCol`'s `finish`). Generous on purpose: `onClear` is often a route
+// change, and restoring while one is still in flight is the flash this guards against.
+const EXIT_RESTORE_GIVEUP_MS = 2000
 
 // NOTE — nothing in this component is gated on `prefers-reduced-motion`, per a standing instruction
 // from this block's owner to ignore that setting until further notice. It is NOT a claim about
@@ -725,6 +751,71 @@ function menuUnion(cont: HTMLElement): { right: number; bottom: number } | null 
     bottom = Math.max(bottom, rc.bottom)
   })
   return right === -Infinity ? null : { right, bottom }
+}
+
+/**
+ * The detail pane's content, FADED IN whenever it becomes a different detail (Mike) — swapping from
+ * one leaf to another was previously a hard cut.
+ *
+ * This fades the incoming content in; it does NOT hold the outgoing content on screen to dissolve
+ * between the two. That is deliberate. The host owns whatever is in here — CSS editors, forms, live
+ * queries — and the only two ways to keep the old picture through the swap both make it worse:
+ * rendering the outgoing element a second time MOUNTS IT AGAIN (a second editor booting from scratch,
+ * so the "old" half of the dissolve would be a blank pane, not the thing that was there), and cloning
+ * the subtree copies markup but not the pixels — a canvas or an editor's viewport clones empty. So the
+ * incoming leaf rises over the pane's own surface, which is what is behind it either way.
+ *
+ * Imperative, like the menu entrance, so the start frame is flushed before the transition is armed —
+ * and so the swap never depends on a `key`, which would remount the host's content on every selection
+ * and throw away exactly the state it is being asked to preserve.
+ */
+function DetailContent({
+  token,
+  minWidth,
+  mem,
+  children,
+}: {
+  token: string
+  minWidth: string
+  mem: { detailToken: string | null }
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const slowAnimations = useSlowAnimations()
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const prev = mem.detailToken
+    mem.detailToken = token
+    // Never primed = a genuine first paint: the detail did not BECOME anything, so fading it in would
+    // be an unasked-for intro on load. Unchanged = a re-render that is not a swap.
+    if (prev === null || prev === token) return
+    const ms = DETAIL_FADE_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
+    el.style.transition = "none"
+    el.style.opacity = "0"
+    void el.offsetWidth // flush the start state so the transition has something to run FROM
+    el.style.transition = `opacity ${ms}ms ease-in-out`
+    el.style.opacity = "1"
+    const done = (e: TransitionEvent) => {
+      if (e.target !== el || e.propertyName !== "opacity") return
+      el.removeEventListener("transitionend", done)
+      el.style.transition = ""
+      el.style.opacity = ""
+    }
+    el.addEventListener("transitionend", done)
+    return () => el.removeEventListener("transitionend", done)
+  }, [token, mem, slowAnimations])
+  return (
+    /* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than the
+       viewport. */
+    <div
+      ref={ref}
+      className="flex min-h-0 w-full flex-1 flex-col"
+      style={{ minWidth: `min(${minWidth}, 100%)` }}
+    >
+      {children}
+    </div>
+  )
 }
 
 /** DEV-ONLY overlay: one labelled mouse-detection rectangle (see the debug frames block in
@@ -953,6 +1044,10 @@ function useSelectionConnectors(
   /** When the child list is open with NOTHING selected, connect to the LIST ITSELF (see the loop).
    *  Opt-in: only the cascade wants it; the other stacks keep drawing nothing. */
   anchorUnselectedChild = false,
+  /** How long to keep re-measuring after `sig` changes — long enough to cover whatever motion that
+   *  change starts. Default 400ms: the lists slide over ~0.3s. The cascade raises it to cover a
+   *  staggered branch collapse, which runs longer and is driven imperatively. */
+  trackMs = 400,
 ): { connectors: string[]; onScroll: () => void } {
   const [connectors, setConnectors] = useState<string[]>([])
   const measureRef = useRef<() => void>(() => {})
@@ -1047,11 +1142,11 @@ function useSelectionConnectors(
     const start = performance.now()
     const loop = () => {
       measure()
-      if (performance.now() - start < 400) raf = requestAnimationFrame(loop)
+      if (performance.now() - start < trackMs) raf = requestAnimationFrame(loop)
     }
     loop()
     return () => cancelAnimationFrame(raf)
-  }, [containerRef, levelCount, sig, possible])
+  }, [containerRef, levelCount, sig, possible, trackMs])
   return { connectors, onScroll: () => measureRef.current() }
 }
 
@@ -1076,7 +1171,7 @@ function SelectionConnectorOverlay({ paths, zIndex = 30 }: { paths: string[]; zI
           d={d}
           fill="none"
           className="stroke-apt-gold"
-          strokeWidth={1.5}
+          strokeWidth={CHAIN_STROKE_PX}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -1924,6 +2019,18 @@ function CascadingStack({
   // <html>; the JS-driven entrance/exit sets its timing imperatively, with no variable to read, so
   // it scales off the same flag by hand to stay in step with them.
   const enterMs = ENTER_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
+  const exitStaggerMs = EXIT_STAGGER_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
+  // The staggered exits are the one thing here that outlives its own render: `exitBranch` schedules
+  // the deeper menus on timers, and an unmount mid-collapse (the host routed away) must not leave them
+  // to fire against detached nodes.
+  const exitTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(
+    () => () => {
+      exitTimers.current.forEach(clearTimeout)
+      exitTimers.current = []
+    },
+    [],
+  )
 
   // COVERING — CoveredStack's intent rules (see there for the rationale of each layer), with two
   // cascade differences: the indent is the tighter CASCADE_INDENT, and the pressure/off-screen
@@ -2328,13 +2435,25 @@ function CascadingStack({
   // reveal group and immersion.
   const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${left.join(",")}::${topOf.join(",")}::${offshift}::${containerW}::${hoverIndex}::${immersed}`
   const connectorsPossible = rendered.length >= 2 && rendered.some((l) => l.selectedId != null)
+  // THE CONNECTOR RETRACTS WITH THE MENU IT POINTS AT (Mike). The hook re-measures on a rAF loop for a
+  // window after `sig` changes, so the entrance was always tracked — a structural change starts it. An
+  // EXIT is driven imperatively, though, changing no signature: the loop was long stopped, so the line
+  // hung at FULL LENGTH across the whole close and only blinked out at the very end, when the level
+  // finally cleared. Bumping this on every exit restarts the loop, and because the paths are measured
+  // from `getBoundingClientRect` — which reports the animating `scale` — each line now shortens into
+  // the row its menu is shrinking into, and drops when the box reaches zero. That is the entrance run
+  // backwards, which is what the rest of the close already is; a fade would only have hidden the line
+  // instead of moving it.
+  const [exitTick, setExitTick] = useState(0)
   const { connectors, onScroll } = useSelectionConnectors(
     containerRef,
     rendered.length,
-    connectorSig,
+    `${connectorSig}:${exitTick}`,
     connectorsPossible,
     // The cascade connects to a still-unchosen submenu as a whole — see the loop in the hook.
     true,
+    // Cover the whole staggered collapse: the last menu starts at (n-1) × stagger and runs ENTER_MS.
+    Math.max(400, enterMs + rendered.length * exitStaggerMs + 120),
   )
   // A scroll (or pointer/focus movement that re-flows a row) re-measures BOTH the cascade tops and the
   // connector paths.
@@ -2441,15 +2560,28 @@ function CascadingStack({
       col.removeEventListener("transitionend", onEnd)
       clearTimeout(timer)
       done()
-      // If the level did NOT go away, the node is still here and still scaled to nothing — hand it
-      // back rather than leave an invisible menu behind. Unmounted is the normal path, so this is
-      // just the fail-visible branch.
-      requestAnimationFrame(() => {
-        if (!col.isConnected) return
+      // Hand the node back ONLY if the clear truly did not take it away — the fail-visible branch for
+      // a host `onClear` that no-ops, so we never strand an invisible menu.
+      //
+      // It has to WAIT for the unmount rather than assume it. `onClear` is routinely a ROUTE change
+      // (the hub's rails clear by navigating), which unmounts this column an unknown number of frames
+      // later — so restoring on the next frame, as this first did, caught the node still mounted and
+      // put the menu BACK ON SCREEN AT FULL SIZE for a beat until the route settled (Mike). Nothing
+      // here can distinguish "clear still in flight" from "clear did nothing", so give the unmount far
+      // longer than any plausible navigation before concluding the latter: a late restore costs an
+      // invisible menu for a moment, an early one is the flash.
+      const deadline = performance.now() + EXIT_RESTORE_GIVEUP_MS
+      const waitForUnmount = () => {
+        if (!col.isConnected) return // the normal path: React took it away, nothing to hand back
+        if (performance.now() < deadline) {
+          requestAnimationFrame(waitForUnmount)
+          return
+        }
         col.style.transition = ""
         col.style.transform = ""
         col.style.transformOrigin = ""
-      })
+      }
+      requestAnimationFrame(waitForUnmount)
     }
     const onEnd = (e: TransitionEvent) => {
       if (e.target === col && e.propertyName === "transform") finish()
@@ -2463,17 +2595,35 @@ function CascadingStack({
   // until they popped out from under it. Each shrinks into ITS OWN parent's chosen row, which is the
   // exact mirror of the entrance (where re-disclosing a branch grows every menu below out of its own
   // parent's row). `done` — the real clear — fires once, after the last one settles.
+  //
+  // THE STACK COLLAPSES INWARD (Mike): the menus go in ORDER, deepest first, each starting a beat
+  // after the one it opened — so the cascade telescopes back toward the root instead of every menu
+  // vanishing at once. Deepest-first is what "inward" means here: a menu retracts into its parent only
+  // after its own child is gone, so no menu is ever left floating with its opener already gone.
   const exitBranch = (from: number, done: () => void) => {
-    const cols = rendered.map((_l, i) => i).filter((i) => i >= from)
+    const cols = rendered
+      .map((_l, i) => i)
+      .filter((i) => i >= from)
+      .reverse()
     if (cols.length === 0) {
       done()
       return
     }
+    setExitTick((n) => n + 1) // restart the connector's measure loop so the lines retract WITH the menus
     let pending = cols.length
     const oneDone = () => {
       if (--pending === 0) done()
     }
-    cols.forEach((i) => exitCol(i, oneDone))
+    // `done` (the real clear) waits for the LAST menu, so the whole stack is gone before the levels
+    // change and React unmounts the columns out from under the animation.
+    cols.forEach((i, k) => {
+      if (k === 0) {
+        exitCol(i, oneDone)
+        return
+      }
+      const t = setTimeout(() => exitCol(i, oneDone), k * exitStaggerMs)
+      exitTimers.current.push(t)
+    })
   }
 
   return (
@@ -2556,11 +2706,15 @@ function CascadingStack({
                 on that rail's midpoint. Together they say "this whole list is the current step", with
                 no row singled out. It goes the moment an item is chosen, at which point the connector
                 re-points at that row and the rail's job is done. Never the root: it is the ground, not
-                a disclosed submenu. `z-10` clears the rail's own surface. */}
+                a disclosed submenu. `z-10` clears the rail's own surface.
+
+                It is the SAME LINE as the connector that lands on it, so it takes the connector's
+                exact width and colour from `CHAIN_STROKE_PX` / `apt-gold` — see that constant. */}
             {!isRootList && level.selectedId == null && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-0.5 bg-apt-gold"
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 bg-apt-gold"
+                style={{ width: CHAIN_STROKE_PX }}
               />
             )}
             {/* The rail keeps its FULL width regardless of the wrapper's (only an off-screen
@@ -2751,14 +2905,9 @@ function CascadingStack({
               {immersionControl}
             </div>
           ))}
-        {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
-            the viewport. */}
-        <div
-          className="flex min-h-0 w-full flex-1 flex-col"
-          style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
-        >
+        <DetailContent token={structureSignature(rendered)} minWidth={minDetailWidth} mem={mem}>
           {children}
-        </div>
+        </DetailContent>
       </section>
     </div>
   )
