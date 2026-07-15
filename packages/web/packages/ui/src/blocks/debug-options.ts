@@ -10,6 +10,9 @@ import { useSyncExternalStore } from "react"
  *    impossible to reason about from a screenshot: a rect that is one frame STALE looks exactly like
  *    a correct one. Seeing them is the difference between diagnosing and guessing.
  *  - SLOW ANIMATIONS — stretch every transition 10x, so a 300ms move takes 3s and can be watched.
+ *    Scope is deliberate: TRANSITIONS and one-shot animations stretch, but indeterminate loops
+ *    (spinners, skeleton sweeps, ambient pulses) do NOT. A loop has no choreography to study — every
+ *    frame is already on screen — and at 10x a spinner reads as a hang rather than a slow spinner.
  *
  * They live HERE rather than in a consuming app because this package owns the behaviour; an app's
  * Debug panel just flips them. Storage/notification mirrors the app-side `envOverride` store: the
@@ -24,6 +27,15 @@ const KEYS = {
 
 /** How much longer everything takes with SLOW ANIMATIONS on. */
 export const SLOW_ANIM_FACTOR = 10
+
+/**
+ * Tailwind's own default transition duration. Its `transition-*` utilities emit
+ * `transition-duration: var(--tw-duration, var(--default-transition-duration))` and define
+ * `--default-transition-duration: 150ms` on `:root`, so every transition that doesn't name an
+ * explicit duration resolves through this one variable — and re-pointing it scales all of them at
+ * once. Keep in step with the `--default-transition-duration` in Tailwind's `theme.css`.
+ */
+const TW_DEFAULT_TRANSITION_MS = 150
 
 const listeners: Set<() => void> = ((
   globalThis as { __aptDebugOptionListeners?: Set<() => void> }
@@ -95,11 +107,30 @@ export function useSlowAnimations(): boolean {
 }
 
 /**
- * The style object carrying the animation-scale variable. Spread it onto a view's ROOT container:
- * every `duration-[calc(<base>ms*var(--apt-anim-scale,1))]` beneath it then stretches together, each
- * keeping its OWN base duration. The `,1` fallback means anything rendered outside such a container
- * is simply unaffected, so this can never change production timing.
+ * The CSS variables that stretch animation timing while SLOW ANIMATIONS is on. Apply them to the
+ * DOCUMENT ROOT (`<html>`) while it's on and REMOVE them when it's off — never write an "off" value.
+ * Both variables already have a resting definition (Tailwind's `--default-transition-duration`, and
+ * the `, 1` fallback each duration carries), so absence IS the off state; writing `1` / `150ms`
+ * instead would pin today's numbers and silently override a future change to either.
+ *
+ * Root, not a view container, for two reasons:
+ *
+ *  - Dialogs, popovers and menus render through a PORTAL into `document.body`, escaping the React
+ *    tree entirely. A style on any view's container can never reach them; only an ancestor of the
+ *    portal host can, and `<html>` is the one ancestor everything shares.
+ *  - Tailwind defines `--default-transition-duration` on `:root`, so the override below has to land
+ *    there to win. An inline style on `<html>` beats the stylesheet rule and still inherits.
+ *
+ * Between them the two variables cover every animation that doesn't hard-code its own duration:
+ * the scale stretches each explicit `calc(<base> * var(--apt-anim-scale, 1))` duration (each keeping
+ * its OWN base), and the Tailwind default covers every transition that never named one.
+ *
+ * A build that never applies these — production, where the Debug console is dead-code-eliminated —
+ * keeps its stock timing, because an unset variable is a no-op on both counts.
  */
-export function animScaleStyle(slow: boolean): Record<string, string> {
-  return { "--apt-anim-scale": slow ? String(SLOW_ANIM_FACTOR) : "1" }
+export function slowAnimationVars(): Record<string, string> {
+  return {
+    "--apt-anim-scale": String(SLOW_ANIM_FACTOR),
+    "--default-transition-duration": `${TW_DEFAULT_TRANSITION_MS * SLOW_ANIM_FACTOR}ms`,
+  }
 }

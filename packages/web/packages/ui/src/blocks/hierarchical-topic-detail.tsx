@@ -38,7 +38,6 @@ import {
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicOverviewHelp } from "./topic-overview"
-import { useSlowAnimations, animScaleStyle } from "./debug-options"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -328,8 +327,6 @@ export function HierarchicalTopicDetail({
   // The unsaved-work gate: every action that would clear a level (Back, re-click-deselect,
   // breadcrumb up-nav, selecting a shallower row) runs through here. Dirty → open the 3-action
   // modal and remember the pending action; clean → act now.
-  // DEV-ONLY: stretch every transition below (see `debug-options`). Default off.
-  const slowAnimations = useSlowAnimations()
   const [pendingExit, setPendingExit] = useState<(() => void) | null>(null)
   const [savingExit, setSavingExit] = useState(false)
   const attemptExit = useCallback(
@@ -568,9 +565,9 @@ export function HierarchicalTopicDetail({
   }
 
   return (
-    // `--apt-anim-scale` (dev-only) stretches every `duration-[calc(…*var(--apt-anim-scale,1))]`
-    // beneath this root — 1 normally, 10 with the debug switch on. One place covers every stack.
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col" style={animScaleStyle(slowAnimations)}>
+    // The dev-only animation scale is applied to <html> by the host app, not here: portaled
+    // dialogs/menus escape this subtree, so a container-level variable could never reach them.
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <TopBar
         rootLabel={rootLabel}
         crumbs={crumbs}

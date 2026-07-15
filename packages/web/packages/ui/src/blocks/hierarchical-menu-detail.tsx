@@ -47,7 +47,7 @@ import {
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview } from "./topic-overview"
-import { useShowDebugFrames, useSlowAnimations, animScaleStyle, SLOW_ANIM_FACTOR } from "./debug-options"
+import { useShowDebugFrames, useSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -1882,8 +1882,9 @@ function CascadingStack({
   // DEV-ONLY debug switches (both default off; see `debug-options`).
   const showDebugFrames = useShowDebugFrames()
   const slowAnimations = useSlowAnimations()
-  // The CSS `duration-[calc(…*var(--apt-anim-scale,1))]` classes below stretch off the container's
-  // variable; the JS-driven entrance/exit must be scaled by hand to stay in step with them.
+  // The CSS durations below stretch off the `--apt-anim-scale` variable the host app puts on
+  // <html>; the JS-driven entrance/exit sets its timing imperatively, with no variable to read, so
+  // it scales off the same flag by hand to stay in step with them.
   const enterMs = ENTER_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
 
   // COVERING — CoveredStack's intent rules (see there for the rationale of each layer), with two
@@ -2442,9 +2443,6 @@ function CascadingStack({
       onPointerOut={reMeasure}
       onFocus={reMeasure}
       onBlur={reMeasure}
-      // Carries `--apt-anim-scale` for every `duration-[calc(…*var(--apt-anim-scale,1))]` beneath —
-      // 1 normally, 10 with the debug switch on, each transition keeping its own base duration.
-      style={animScaleStyle(slowAnimations)}
       className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
     >
       {rendered.map((level, i) => {

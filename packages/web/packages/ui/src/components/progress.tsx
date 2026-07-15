@@ -30,7 +30,12 @@ function Progress({
     >
       <div
         data-slot="progress-indicator"
-        className={cn("h-full w-full rounded-full bg-apt-gold transition-transform duration-300 ease-out", indicatorClassName)}
+        className={cn(
+          // calc(): honours the dev-only 10x-slow switch (`--apt-anim-scale`, applied to <html>);
+          // the `, 1` fallback keeps this a plain 300ms everywhere else.
+          "h-full w-full rounded-full bg-apt-gold transition-transform duration-[calc(300ms*var(--apt-anim-scale,1))] ease-out",
+          indicatorClassName,
+        )}
         style={{ transform: `translateX(-${100 - pct}%)` }}
       />
     </div>

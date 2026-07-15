@@ -73,7 +73,7 @@
   font-size: 0.9rem;
   line-height: 1.2;
   outline: none;
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color calc(0.15s * var(--apt-anim-scale, 1)), color calc(0.15s * var(--apt-anim-scale, 1));
 }
 
 .adh-dropdown-menu__item[data-highlighted],
