@@ -5,7 +5,7 @@ import { Boxes } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import {
-  HierarchicalTopicDetail,
+  HierarchicalDetailView,
   type TopicDetailItem,
   type TopicLevel,
   FieldGroup,
@@ -647,11 +647,11 @@ export function ServicesSection({
       </>
     );
 
-  // Under a rail host: PUBLISH the service level and render the leaf. Standalone: own HTD.
+  // Under a rail host: PUBLISH the service level and render the leaf. Standalone: own stack.
   if (railHost) return <StackLevels levels={levels}>{content}</StackLevels>;
   return (
-    <HierarchicalTopicDetail levels={levels} showBreadcrumb={false}>
+    <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
       {content}
-    </HierarchicalTopicDetail>
+    </HierarchicalDetailView>
   );
 }

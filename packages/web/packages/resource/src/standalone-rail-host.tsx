@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
-import { HierarchicalTopicDetail } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
 import {
   RailHostContext,
   useRailHost,
@@ -81,9 +81,9 @@ export function StandaloneRailHost({ children }: { children: ReactNode }): React
 
   return (
     <RailHostContext.Provider value={host}>
-      <HierarchicalTopicDetail levels={mergedLevels} showBreadcrumb={false} exitGuard={exitGuard}>
+      <HierarchicalDetailView levels={mergedLevels} showBreadcrumb={false} exitGuard={exitGuard}>
         {children}
-      </HierarchicalTopicDetail>
+      </HierarchicalDetailView>
     </RailHostContext.Provider>
   );
 }

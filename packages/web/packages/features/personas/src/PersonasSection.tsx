@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { readTokenSubject } from "@agentic-toolkit/data";
-import { HierarchicalTopicDetail, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { StackLevels, useRailHost } from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -215,8 +215,8 @@ export function PersonasSection({
   // topics land after it) and render the leaf. Standalone: own HTD.
   if (railHost) return <StackLevels levels={levels}>{content}</StackLevels>;
   return (
-    <HierarchicalTopicDetail levels={levels} showBreadcrumb={false}>
+    <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
       {content}
-    </HierarchicalTopicDetail>
+    </HierarchicalDetailView>
   );
 }

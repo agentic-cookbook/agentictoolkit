@@ -3,7 +3,7 @@
 import { useMemo, type ComponentType, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  HierarchicalTopicDetail,
+  HierarchicalDetailView,
   type PaneExitGuard,
   type TopicDetailItem,
   type TopicLevel,
@@ -35,9 +35,9 @@ export type CrudShell = ComponentType<CrudShellProps>
 
 export function DefaultCrudShell({ levels, rootLabel, exitGuard, children }: CrudShellProps) {
   return (
-    <HierarchicalTopicDetail levels={levels} rootLabel={rootLabel} exitGuard={exitGuard ?? null}>
+    <HierarchicalDetailView levels={levels} rootLabel={rootLabel} exitGuard={exitGuard ?? null}>
       {children}
-    </HierarchicalTopicDetail>
+    </HierarchicalDetailView>
   )
 }
 

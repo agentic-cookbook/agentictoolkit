@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react'
 import { cn } from '@agentic-toolkit/ui'
-import { HierarchicalTopicDetail, type TopicLevel } from '@agentic-toolkit/ui/blocks/hierarchical-topic-detail'
+import { HierarchicalDetailView } from '@agentic-toolkit/ui/blocks/hierarchical-detail-view'
+import { type TopicLevel } from '@agentic-toolkit/ui/blocks/hierarchical-topic-detail'
 import { allTags, endpointsForTag, getEndpoint, endpointKey as toKey } from './lib/getEndpoint'
 import { methodDotClass } from './lib/tone'
 import { ApiEndpointDetail } from './ApiEndpointDetail'
@@ -91,17 +92,17 @@ export function ApiBrowser({ endpoint, endpointKey, pathValues, queryValues, bod
   )
 
   return (
-    // HTD's root is flex-1 — it needs a flex parent to fill the modal's height.
+    // The stack's root is flex-1 — it needs a flex parent to fill the modal's height.
     <div className="flex h-full min-h-0 overflow-hidden">
-      <HierarchicalTopicDetail
+      <HierarchicalDetailView
         levels={levels}
         rootLabel="API"
         minDetailWidth="30rem"
         detailTitle={selMeta ? (selMeta.summary ?? `${selMeta.method} ${selMeta.path}`) : undefined}
       >
-        {/* HTD's detail pane carries no padding of its own — pad the content here. */}
+        {/* The detail pane carries no padding of its own — pad the content here. */}
         <div className="px-4 py-6">{detail}</div>
-      </HierarchicalTopicDetail>
+      </HierarchicalDetailView>
     </div>
   )
 }

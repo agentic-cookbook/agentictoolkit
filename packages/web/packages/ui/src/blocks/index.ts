@@ -13,6 +13,15 @@ export {
 // Hierarchical Menu Details View — the cascading (vertical nested-menu) experiment, isolated as its
 // own component so HTDV stays at its pre-experiment shape. Shares HTDV's TopicLevel/PaneExitGuard.
 export { HierarchicalMenuDetail } from "./hierarchical-menu-detail"
+// The switch between the two while the experiment runs. Consumers render HierarchicalDetailView and
+// the host app picks the view once, via the provider; the two components above are then an
+// implementation detail. Default (no provider) = HTDV, so nothing changes for an app that opts out.
+export {
+  HierarchicalDetailView,
+  HierarchicalDetailViewProvider,
+  useHierarchicalMenuDetailView,
+  type HierarchicalDetailViewProps,
+} from "./hierarchical-detail-view"
 // Dev-only debug switches (mouse-detection frames, 10x-slow animations). They live here because
 // this package owns the behaviour; a consuming app's Debug panel flips them, and the app applies
 // `slowAnimationVars` to <html> once (see its AppShell) so portaled dialogs/menus scale too.
