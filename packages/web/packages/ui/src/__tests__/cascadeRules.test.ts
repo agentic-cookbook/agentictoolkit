@@ -133,6 +133,15 @@ describe("must-hold-the-ground-under-the-pointer", () => {
     expect(mayMoveGround({ pointerInStack: true, latched: false })).toBe(true)
   })
 
+  it("stays held across a remount, because the pointer has not moved — only the component has", () => {
+    // Choosing a row is a route-param change, so React discards and remounts the whole subtree ON
+    // THE CLICK the latch has to survive. If the remounted component reports `pointerInStack: false`
+    // (a fresh `useState(false)` rather than a seed from the surface's memory), the ground frees
+    // itself on exactly that frame and jumps — the reported bug, reintroduced through the back door.
+    // The pointer is still in the menus, so the answer is unchanged:
+    expect(mayMoveGround({ pointerInStack: true, latched: true })).toBe(false)
+  })
+
   it("depends on the POINTER only — not on a reveal, a cover, or a selection", () => {
     // The regression this rule exists to forbid. The old test was `hoverIndex < 0`, a proxy for "the
     // submenus are collapsed" — and a reveal only exists while some list is COVERED, so the day

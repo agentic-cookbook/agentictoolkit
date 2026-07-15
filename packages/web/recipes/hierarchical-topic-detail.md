@@ -622,6 +622,10 @@ arguments — the measuring stays in the component, the deciding is tested.
   collapsed", and a reveal only exists while some list is COVERED — so the day `autoHideTopics` went
   false nothing was ever covered, the proxy pinned itself to "always free to move", and the ground
   tracked every click. A rule about the pointer MUST ask about the pointer.
+  Both halves of the latch — the held width AND whether the pointer is in the menus — MUST survive a
+  remount (**must-keep-view-state-across-a-selection**): choosing a row IS the route-param change that
+  remounts the stack, so component state would report "the pointer left" on precisely the frame the
+  click lands, free the ground and let it jump. The pointer has not moved; only the component has.
 - **must-draw-every-detection-frame**: With the "Show Mouse Detection Frames" debug switch on, EVERY
   region MUST be drawn — the collapse (red) and disclose (green) hit-test rects and the menu region
   (blue) that holds the ground — whether or not it is currently ARMED. A disarmed region MUST render

@@ -683,8 +683,16 @@ const cascadeMemory = new Map<
     /** Menu keys on screen at the last commit — `null` until primed. Primed-but-empty and never-primed
      *  must stay distinguishable: on a genuine first load nothing was "opened", so nothing animates. */
     seenKeys: Set<string> | null
-    /** Last ground right edge observed with the stack COLLAPSED; `null` until one has been seen. */
+    /** Last ground right edge observed with the stack settled; `null` until one has been seen. */
     groundRight: number | null
+    /** Was the pointer last seen inside the menu region? Out here for the same reason as `groundRight`
+     *  — and it is load-bearing WITH it, not merely adjacent. The ground is held while the pointer is
+     *  in the menus, and the click that must hold it is USUALLY THE REMOUNT ITSELF (choosing a row is
+     *  a route-param change). Component state would therefore reset to "outside" on exactly the frame
+     *  the latch matters, free the ground, and let it jump — the bug the latch exists to stop, wearing
+     *  a different hat. `false` before any pointer has been seen: a deep link has no pointer in the
+     *  stack, and its first paint must take the real width. */
+    pointerInStack: boolean
     /** The selection the detail pane last painted, so its fade can tell "became a different detail"
      *  from "mounted". `null` until first painted — and it must live out here for the same reason as
      *  `seenKeys`: choosing a row IS the param change that remounts the subtree, so component state
@@ -695,7 +703,7 @@ const cascadeMemory = new Map<
 const cascadeMemoryFor = (key: string) => {
   const existing = cascadeMemory.get(key)
   if (existing) return existing
-  const fresh = { seenKeys: null, groundRight: null, detailToken: null }
+  const fresh = { seenKeys: null, groundRight: null, detailToken: null, pointerInStack: false }
   cascadeMemory.set(key, fresh)
   return fresh
 }
@@ -2028,6 +2036,9 @@ function CascadingStack({
   const onResizeLevel = (level: TopicLevel, w: number) =>
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
+  // This surface's remount-surviving memory (see `cascadeMemory`). Read FIRST, because the pointer
+  // state below has to seed from it on the very first render of a remount.
+  const mem = cascadeMemoryFor(rendered[0]?.id ?? "")
   // DEV-ONLY debug switches (both default off; see `debug-options`).
   const showDebugFrames = useShowDebugFrames()
   const slowAnimations = useSlowAnimations()
@@ -2273,13 +2284,21 @@ function CascadingStack({
 
   // A document-level listener, like the other two rects — the columns are SIBLING boxes, not
   // descendants, so per-box enter/leave flickers as the pointer crosses the seams between them.
-  const [pointerInStack, setPointerInStack] = useState(false)
+  // SEEDED FROM THE SURFACE'S MEMORY, never from `false`: choosing a row is a route-param change that
+  // remounts this subtree, so a fresh `false` here would report "the pointer left the menus" on the
+  // exact frame the click lands — freeing the ground and letting it jump, which is the bug the latch
+  // exists to prevent. The pointer has not moved; only the component has.
+  const [pointerInStack, setPointerInStack] = useState(() => mem.pointerInStack)
   useEffect(() => {
     if (!stackRect) return
-    const onMove = (e: PointerEvent) => setPointerInStack(inRect(stackRect, e.clientX, e.clientY))
+    const onMove = (e: PointerEvent) => {
+      const inside = inRect(stackRect, e.clientX, e.clientY)
+      mem.pointerInStack = inside // survives the remount; the state below only drives this render
+      setPointerInStack(inside)
+    }
     document.addEventListener("pointermove", onMove)
     return () => document.removeEventListener("pointermove", onMove)
-  }, [stackRect])
+  }, [stackRect, mem])
 
   // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the resting
   // stack (`stackRight`), but it is HELD while the pointer is in the menus, because moving it moves
@@ -2287,9 +2306,9 @@ function CascadingStack({
   // mid-interaction shoves the UI around under the pointer. `mayMoveGround` owns the rule (and its
   // history — the previous version silently stopped working); this is only the plumbing.
   //
-  // The held value lives in `cascadeMemory` (not React state) so a route-param REMOUNT — which is
-  // exactly what choosing a workspace triggers — cannot reset it mid-interaction.
-  const mem = cascadeMemoryFor(rendered[0]?.id ?? "")
+  // Both halves of this — the held width AND whether the pointer is in the menus — live in
+  // `cascadeMemory`, so a route-param REMOUNT (exactly what choosing a row triggers) cannot reset
+  // either mid-interaction. `mem` is read at the top of this component.
   const groundFree = mayMoveGround({ pointerInStack, latched: mem.groundRight !== null })
   const groundRight = groundFree ? stackRight : (mem.groundRight ?? stackRight)
   useEffect(() => {
