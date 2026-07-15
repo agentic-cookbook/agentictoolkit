@@ -948,13 +948,20 @@ function useSelectionConnectors(
           delRight: delRect ? delRect.right - crect.left : null,
         }
       }
-      // The whole child COLUMN as a connector target: its left edge, at its vertical centre.
-      const colAnchor = (i: number) => {
+      // The whole child COLUMN as a connector target: its left edge, at the point NEAREST the
+      // parent's row (Mike) — the row's own height, clamped to the column's vertical span. The
+      // parent's row is usually already beside the list, so this is normally a straight horizontal
+      // run with no bend at all; it only elbows when the row sits above or below the list, and then
+      // only as far as the nearer end. (Aiming at the column's CENTRE instead made every connector
+      // bend, and the deeper the cascade the longer the pointless vertical run.)
+      const colAnchor = (i: number, fromY: number) => {
         const col = cont.querySelector(`[data-htd-col="${i}"]`)
         if (!col) return null
         const r = col.getBoundingClientRect()
         if (r.width === 0 || r.height === 0) return null // mid-entrance (scaled to a point)
-        return { y: r.top + r.height / 2 - crect.top, left: r.left - crect.left }
+        const top = r.top - crect.top
+        const bottom = r.bottom - crect.top
+        return { y: Math.min(Math.max(fromY, top), bottom), left: r.left - crect.left }
       }
       const next: string[] = []
       for (let i = 0; i < levelCount - 1; i++) {
@@ -965,11 +972,11 @@ function useSelectionConnectors(
         // list is open with NOTHING selected, the ORIGINAL rule drew nothing (spec:
         // must-connect-selected-rows-only — a line pointing at whatever row happens to sit at the
         // parent's height reads as a phantom selection). The cascade now instead points at the
-        // SUBMENU AS A WHOLE (Mike): it lands ON the list's left edge at its vertical CENTRE, where
-        // that list's gold rail runs. That keeps the parent→child chain visible while a branch is
-        // being chosen from, and it cannot be misread as a row selection because it never enters the
-        // list or touches a row.
-        const cc = c ?? (anchorUnselectedChild ? colAnchor(i + 1) : null)
+        // SUBMENU AS A WHOLE (Mike): it lands ON the list's left edge, at the point nearest the
+        // parent's row, where that list's gold rail runs. That keeps the parent→child chain visible
+        // while a branch is being chosen from, and it cannot be misread as a row selection because it
+        // never enters the list or touches a row — the rail it meets spans the list's whole height.
+        const cc = c ?? (anchorUnselectedChild ? colAnchor(i + 1, p.y) : null)
         if (!cc) continue
         if (p.rightX < 0 || cc.left > crect.width) continue // an endpoint drilled off-screen
         const boundary = cc.left // the child column's current left edge (the bend)
