@@ -645,6 +645,19 @@ const CASCADE_INDENT = 32
 // off-screen (see CascadingStack).
 const DETAIL_PIN = "__detail__"
 
+// The newly-disclosed submenu's entrance (see CascadingStack's entrance effect). Ease-in-out with a
+// SLIGHT bounce: the final control point overshoots past 1 (y2 = 1.28), so the box eases in, sails a
+// touch beyond its resting size, and settles back — a bezier does this in one curve, with no
+// keyframes and nothing to keep in sync with the transition that follows.
+const ENTER_MS = 300
+const ENTER_EASE = "cubic-bezier(0.45, 0, 0.25, 1.28)"
+
+// NOTE — NOTHING in this component is gated on `prefers-reduced-motion`, on purpose. This block's
+// owner runs macOS with "Reduce Motion" ON, so a `motion-reduce:transition-none` here does not
+// degrade the cascade for him — it deletes it, and every animation above (the entrance, the ground's
+// width, the detail's travel) silently never runs on the machine it is being designed against. The
+// gates were removed for exactly that reason; do not reintroduce them without asking him first.
+
 // The z-floor of a hover-revealed branch: its members lift to REVEAL_Z + i so the whole cascade
 // floats over the detail. The connector overlay rides just above the highest member (see below), so
 // the gold selection chain still crosses the branch it links.
@@ -1583,7 +1596,7 @@ function CoveredStack({
               "absolute top-0 bottom-0 grid overflow-hidden",
               offscreen && "pointer-events-none",
               animate &&
-                "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
+                "transition-[left,width,box-shadow] duration-300 ease-in-out",
               // The rail's own `bg-apt-nav` is 96% opaque — right for a nav sitting on the page, wrong
               // for a branch FLOATING over the detail, which ghosts the detail's text through it. A
               // lifted member gets the page background under its rail, so the card is opaque while it
@@ -1668,7 +1681,7 @@ function CoveredStack({
         style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          animate && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+          animate && "transition-[left,width] duration-300 ease-in-out",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
@@ -1844,15 +1857,6 @@ function CascadingStack({
   // ancestors advance by only their peek, so the disclosed frontier + the detail stay on-screen.
   const stackRight = (left[frontier] ?? 0) + railWidth(rendered[frontier] ?? rendered[0]!)
 
-  // (#1, Mike) THE ROOT LIST IS AS WIDE AS THE WHOLE MENU STACK — it spans x=0 to `stackRight`,
-  // exactly where the detail begins. The root is the GROUND the cascade sits on, so it must paint
-  // every pixel under the stack. At its own rail width it stopped at 240 while the stack ran to
-  // `stackRight` (240 + each covered ancestor's indent), leaving that difference as an unpainted
-  // BLACK VERTICAL BAR between the root and the detail. Widening only the enclosing box would NOT
-  // fix it: `bg-apt-nav` is 96% opaque, so box-alone reads visibly darker than box+rail — the strip
-  // would still show as a bar. The RAIL itself has to be this wide (see the rail's `width` below).
-  const rootWidth = Math.max(railWidth(rendered[0]!), stackRight)
-
   // VERTICAL cascade. Each non-root list's TOP is its parent's top plus the parent's HEADER
   // height — the child discloses immediately under the parent's header bar, measured (not assumed)
   // so a wrapping title stays correct. One header-height step per level, regardless of which row
@@ -1953,13 +1957,34 @@ function CascadingStack({
   // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
   // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
   // so a full-width box would poke back into view below the survivors' hugged bottoms).
+  // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the RESTING
+  // stack (`stackRight`), but it is HELD FROZEN WHILE THE STACK IS EXPANDED (Mike): choosing a row
+  // inside an open reveal grows the resting stack, and letting that through would widen the root and
+  // shove the detail rightward WHILE the menus are still fanned out over them — motion nobody asked
+  // for, under menus that are about to move anyway. So latch it on reveal and release on collapse.
+  // Collapsing is not a structure change, so `animate` is on and both ease across together.
+  const [heldGroundRight, setHeldGroundRight] = useState(stackRight)
+  useEffect(() => {
+    if (hoverIndex < 0) setHeldGroundRight(stackRight)
+  }, [hoverIndex, stackRight])
+  const groundRight = hoverIndex >= 0 ? heldGroundRight : stackRight
+
+  // (#1, Mike) THE ROOT LIST IS AS WIDE AS THE WHOLE MENU STACK — it spans x=0 to the ground's right
+  // edge, exactly where the detail begins. The root is the GROUND the cascade sits on, so it must
+  // paint every pixel under the stack. At its own rail width it stopped at 240 while the stack ran to
+  // `stackRight` (240 + each covered ancestor's indent), leaving that difference as an unpainted
+  // BLACK VERTICAL BAR between the root and the detail. Widening only the enclosing box would NOT
+  // fix it: `bg-apt-nav` is 96% opaque, so box-alone reads visibly darker than box+rail — the strip
+  // would still show as a bar. The RAIL itself has to be this wide (see the rail's `width` below).
+  const rootWidth = Math.max(railWidth(rendered[0]!), groundRight)
+
   const boxWidth = (i: number) =>
     i < hidden ? widthOf(i) : i === 0 ? rootWidth : railWidth(rendered[i]!)
 
-  // THE DETAIL SITS BESIDE THE MENU STACK — pinned at the frontier list's right edge, never pushed by
-  // the cascade; a hover branch reveal fans lists rightward OVER it (they float at REVEAL_Z), like
-  // menus dropping over content. Immersed, it takes the whole surface.
-  const detailLeft = immersed ? 0 : rendered.length > 0 ? stackRight : 0
+  // THE DETAIL SITS BESIDE THE MENU STACK — pinned at the ground's right edge, never pushed by the
+  // cascade; a hover branch reveal fans lists rightward OVER it (they float at REVEAL_Z), like menus
+  // dropping over content. Immersed, it takes the whole surface.
+  const detailLeft = immersed ? 0 : rendered.length > 0 ? groundRight : 0
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
   // MOUSE-LEAVE via a TRACKING RECTANGLE (Mike): while a branch is disclosed, the region the pointer
@@ -2154,6 +2179,58 @@ function CascadingStack({
   const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
   const animate = !dragging && !inPlace
 
+  // NEW SUBMENU ENTRANCE (Mike) — a list disclosed by choosing a row GROWS OUT OF THAT ROW: it
+  // starts as a point at the chosen row's centre and expands + travels into its cascade position,
+  // overshooting slightly before it settles. ONE `transform` does both the translation and the
+  // scale: park the transform-origin on the row's centre expressed in the NEW box's own coordinates
+  // (it legitimately lands outside the box — CSS allows a transform-origin beyond the border box),
+  // and `scale(0)` collapses the box onto exactly that point. Easing back to `scale(1)` then reads
+  // as growing out of the row AND sliding into place, with no second property to keep in sync.
+  //
+  // Driven imperatively rather than through React state because the start frame must be flushed to
+  // the compositor BEFORE the transition is armed (`offsetWidth` below) — a rendered `scale(0)` that
+  // React batches away would simply pop. `transform`/`transform-origin`/`transition` are not in any
+  // style prop here, so React never clobbers them, and `transitionend` hands the box back to its
+  // Tailwind transition. `inPlace` is true on this same render, so the box's `left`/`width` are not
+  // transitioning and cannot fight the entrance.
+  const seenLevelIds = useRef<Set<string> | null>(null)
+  const enterSig = rendered.map((l) => l.id).join("|")
+  useLayoutEffect(() => {
+    const cont = containerRef.current
+    const prev = seenLevelIds.current
+    seenLevelIds.current = new Set(rendered.map((l) => l.id))
+    // First mount: every list is "new", but nothing was OPENED — animating here would play an
+    // unasked-for intro on every page load.
+    if (!cont || prev === null) return
+    rendered.forEach((level, i) => {
+      if (i === 0 || prev.has(level.id)) return
+      const col = cont.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)
+      const row = cont.querySelector<HTMLElement>(
+        `[data-htd-col="${i - 1}"] [data-htd-row][aria-current="true"]`,
+      )
+      if (!col || !row) return
+      const cr = col.getBoundingClientRect()
+      const rr = row.getBoundingClientRect()
+      if (cr.width === 0 || cr.height === 0) return
+      col.style.transition = "none"
+      col.style.transformOrigin = `${rr.left + rr.width / 2 - cr.left}px ${
+        rr.top + rr.height / 2 - cr.top
+      }px`
+      col.style.transform = "scale(0)"
+      void col.offsetWidth // flush the start state so the transition has something to run FROM
+      col.style.transition = `transform ${ENTER_MS}ms ${ENTER_EASE}`
+      col.style.transform = "scale(1)"
+      const done = (e: TransitionEvent) => {
+        if (e.target !== col || e.propertyName !== "transform") return
+        col.removeEventListener("transitionend", done)
+        col.style.transition = ""
+        col.style.transform = ""
+        col.style.transformOrigin = ""
+      }
+      col.addEventListener("transitionend", done)
+    })
+  }, [enterSig])
+
   return (
     <div
       ref={containerRef}
@@ -2215,8 +2292,13 @@ function CascadingStack({
               // the cascade sits on).
               !isRootList && "border border-apt-border",
               offscreen && "pointer-events-none",
-              animate &&
-                "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
+              !isRootList && animate && "transition-[left,width,box-shadow] duration-300 ease-in-out",
+              // THE ROOT'S WIDTH ALWAYS EASES (Mike) — it is the ground under the whole stack, and it
+              // only ever moves when the stack has settled (see `groundRight`), so it is never the
+              // list that must "land in place": `inPlace` would make the ground SNAP instead. Gated on
+              // `dragging` alone so a rail drag still tracks the pointer with no lag. Its `left` is
+              // always 0, so there is nothing else here worth transitioning.
+              isRootList && !dragging && "transition-[width,box-shadow] duration-300 ease-in-out",
             )}
           >
             {/* The rail keeps its FULL width regardless of the wrapper's (only an off-screen
@@ -2224,12 +2306,14 @@ function CascadingStack({
                 the slide-off). The inner div is also the flex hug/scroll chain: the wrapper hugs
                 it, `maxHeight` caps it, `min-h-0` lets the rail's list scroll under the cap.
                 THE ROOT is `rootWidth` — the whole stack's width — so its solid surface paints
-                right up to the detail with no darker 96%-only strip left over (see `rootWidth`). */}
+                right up to the detail with no darker 96%-only strip left over (see `rootWidth`), and
+                it eases in step with its enclosing box so the two edges never separate mid-flight. */}
             <div
               style={{ width: isRootList ? rootWidth : railWidth(level) }}
               className={cn(
                 "flex min-h-0 flex-col",
                 isRootList && "flex-1",
+                isRootList && !dragging && "transition-[width] duration-300 ease-in-out",
                 // DIM RULE (Mike): a menu's rows are un-dimmed ONLY when it is fully expanded or it is
                 // the top (root) menu. So dim a menu that is COVERED and not currently REVEALED (a
                 // reveal expands it to full width → un-dim), and never the root. This is a whole-menu
@@ -2336,7 +2420,11 @@ function CascadingStack({
         style={{ left: detailLeft, width: detailWidth, zIndex: 0 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          animate && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+          // The detail TRANSLATES WITH THE ROOT'S TRAILING BORDER (Mike) — same duration and easing
+          // as the root's width above, and driven by the same `groundRight`, so the two edges travel
+          // as one seam instead of one chasing the other. Gated on `dragging` alone for the same
+          // reason as the root: `inPlace` is about a NEW list landing, and the detail is never new.
+          !dragging && "transition-[left,width] duration-300 ease-in-out",
         )}
       >
         {rendered.length > 0 &&
@@ -2444,12 +2532,11 @@ function NarrowStack({
   })
   // Every pane — the topic lists AND the detail — slides on the same transition: EASE-IN-OUT, so the
   // push and the pop both accelerate out of rest and settle back into it rather than snapping to a
-  // stop. `motion-reduce` drops the transition entirely, so with the OS setting on the panes cut
-  // straight to their new places (the layout is identical, only the travel is gone).
+  // stop. Deliberately NOT gated on `motion-reduce` — see the note on the entrance constants.
   const paneClass = (i: number) =>
     cn(
       "absolute inset-0 flex flex-col",
-      "transition-transform duration-300 ease-in-out motion-reduce:transition-none",
+      "transition-transform duration-300 ease-in-out",
       i !== anim && "pointer-events-none",
     )
 
