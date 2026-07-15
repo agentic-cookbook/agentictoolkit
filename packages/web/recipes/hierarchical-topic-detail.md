@@ -3,11 +3,11 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.14.0
+version: 1.15.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: 2026-07-14
+modified: 2026-07-15
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -555,9 +555,85 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 - **must-mark-narrow-selection-with-bar**: In narrow mode a list's selected row MUST use the primitive's gold `selectionStyle="bar"`: the dash/connector markers need a parent list on screen to connect FROM, and narrow mode never has one.
 - **must-show-row-disclosure-chevron**: In narrow mode every selectable row MUST carry a trailing chevron (›) marking that picking it pushes another pane in — a full-width pane has no peeking sibling column left to hint at that, so the row itself must say so. A `disabled` row MUST NOT show it (it has nowhere to go). The chevron is narrow-only: the wide/covered stack MUST NOT render it — the selection connector line already shows what a choice leads to there.
 
+### Cascading view — motion, ground and the selection chain
+
+Rules specific to `disclosureStyle="cascading"` (the `HierarchicalMenuDetail` vertical menu cascade).
+Everything above still applies; these pin the parts that are unique to a nested-menu shape.
+
+**These rules are EXECUTABLE.** Each id below is a test name in
+`packages/ui/src/__tests__/cascadeRules.test.ts` (pure rules) or `cascadeInteraction.test.ts` (the
+DOM wiring), and the decisions themselves live as pure functions in `packages/ui/src/blocks/
+cascade-rules.ts` rather than as expressions inside the 3000-line component. That is deliberate and
+it is the point of this section: every rule here was reported, fixed, and then silently REGRESSED by
+a later fix, because nothing named it and nothing could test it. **Before changing the cascade, run
+`pnpm --filter @agentic-toolkit/ui test`; if one of these fails, the fix is not to update the
+assertion — someone has just re-broken a reported bug.**
+
+The cascade's GEOMETRY (the rect unions, the connector paths, the measured ground) is not covered by
+those tests and cannot be: jsdom has no layout engine, so `getBoundingClientRect` is all zeros. That
+gap is exactly why the geometry-dependent rules had to become pure decisions taking measurements as
+arguments — the measuring stays in the component, the deciding is tested.
+
+- **must-draw-one-chain-line**: The selection chain MUST read as ONE line wherever it is drawn. Three
+  things draw it — a selected row's gold left bar, the gold rail down an unchosen submenu's left
+  edge, and the elbow connectors joining a selected parent row to its child — and they MUST share a
+  width (`CHAIN_STROKE_PX`) and a colour token (`apt-gold`). The width is **2**, and it is 2 because
+  `topic-detail`'s `border-l-2` row bar is the drawing that has always shipped: the others match IT,
+  never the reverse. Matching the WIDTH alone is NOT sufficient and MUST NOT be treated as the fix:
+  an anti-aliased SVG stroke spreads its gold across an extra device pixel at partial alpha, so at
+  the same nominal width it still reads dimmer and softer than the CSS borders beside it and the pair
+  looks like two different golds. The connector overlay MUST therefore render `crispEdges` (every
+  path is axis-aligned, so snapping to the pixel grid costs nothing), and the width MUST stay a whole
+  number of pixels.
+- **must-bounce-the-entrance**: A submenu disclosed by choosing a row MUST grow out of that row and
+  BOUNCE into rest, each swing overshooting less than the last: **+10, −10, +5, −5, 0** percentage
+  points around its resting size. Size and travel bounce TOGETHER and by the same figures — the
+  transform origin sits on the chosen row's centre, so one `scale` track makes the box proportionally
+  bigger and proportionally further from that row in one number. It MUST be a keyframe list, not a
+  cubic-bezier: a bezier overshoots once and cannot reverse four times. The duration MUST leave every
+  segment at least two frames at 60Hz (which is why it is 460ms, not 300 — five segments in 300ms
+  leaves the last two undrawable, making the spec decorative).
+- **must-not-wiggle-the-exit**: The exit MUST NOT wiggle — it shrinks straight back into the row that
+  opened it, with no anticipatory swell. The bounce belongs to the GROW only. Specifically the exit
+  curve MUST NOT carry a negative control point: the exit was once the entrance's exact mirror, and
+  mirroring an overshoot produces an UNDERSHOOT at the start, which is the wiggle. Both control
+  points' `y` MUST stay within [0, 1].
+- **must-animate-every-menu-closure**: EVERY click that tears menus down MUST collapse them
+  progressively — never vanish them in one frame. That includes selecting a **different** row in a
+  level that already has a selection (switching workspace destroys exactly the same menus a re-click
+  does), not only the re-click-to-clear. The only click that MUST NOT collapse is a forward drill
+  into a level with nothing selected: nothing is open below it to take away. The real navigation
+  (`onSelect`/`onClear`) runs as the animation's callback, so a broken animation MUST NOT be able to
+  swallow the click.
+- **must-collapse-inward**: When a parent is unselected/replaced, its descendant menus MUST collapse
+  in ORDER, deepest first, each a beat after the one it opened, so the stack telescopes back toward
+  the root. Deepest-first is what makes it read as inward: a menu retracts into its parent only once
+  its own child is gone, so no menu is ever left floating with its opener already gone. Each menu
+  shrinks into ITS OWN parent's chosen row, and the selection connectors MUST retract WITH them
+  (the entrance run backwards) rather than hanging at full length until the end.
+- **must-hold-the-ground-under-the-pointer**: The GROUND — the root list's right edge, which is also
+  the detail's left edge — MUST NOT move while the pointer is inside the menus. It is load-bearing:
+  the root's width and the detail's position both hang off it, so moving it mid-gesture shoves the UI
+  around under the pointer. Selecting a row, unselecting one, and opening or closing submenus MUST
+  ALL leave it exactly where it is; it may settle only once the pointer has left the menu region (the
+  union of the root list and every open menu — measured from the DOM, so a hover reveal fanning out
+  over the detail still counts as being in the menus). The rule MUST be expressed in terms of the
+  POINTER and nothing else. It once read "no hover reveal is open" as a proxy for "the submenus are
+  collapsed", and a reveal only exists while some list is COVERED — so the day `autoHideTopics` went
+  false nothing was ever covered, the proxy pinned itself to "always free to move", and the ground
+  tracked every click. A rule about the pointer MUST ask about the pointer.
+- **must-draw-every-detection-frame**: With the "Show Mouse Detection Frames" debug switch on, EVERY
+  region MUST be drawn — the collapse (red) and disclose (green) hit-test rects and the menu region
+  (blue) that holds the ground — whether or not it is currently ARMED. A disarmed region MUST render
+  dashed and labelled, not omitted. Measuring a rect and arming it are separate questions and MUST
+  stay separate in the code: "no rect on screen" and "the rect is disarmed, so nothing can trigger
+  it" look identical when the answer is to draw nothing, and the second one is the diagnosis. Omitting
+  them is how the switch came to look broken — with nothing covered there was nothing to disclose and
+  no reveal to collapse, so both rects were null and the switch drew nothing at all.
+
 ### General
 
-- **must-respect-reduced-motion**: All animations (disclosure, resize snap, auto-disclosure, the narrow push/pop) MUST be disabled when the user's "reduce animation" preference is set.
+- **must-respect-reduced-motion**: All animations (disclosure, resize snap, auto-disclosure, the narrow push/pop) MUST be disabled when the user's "reduce animation" preference is set. **SUSPENDED** for both hierarchical views by a standing instruction from the block's owner to ignore `prefers-reduced-motion` until further notice — HTDV's `motion-reduce:` gates were removed so the two views cannot disagree once one flag picks between them. Restore both together when the instruction is lifted. (This is not a claim about anyone's OS configuration.)
 - **must-source-help-from-config**: All help content (the breadcrumb help button and every detail-pane help icon) MUST come from a single unified help config in `websites/site-config`, keyed by the route to the detail page + the ui element.
 
 ## Layout

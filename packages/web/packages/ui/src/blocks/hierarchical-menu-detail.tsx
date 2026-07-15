@@ -48,6 +48,21 @@ import {
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview } from "./topic-overview"
 import { useShowDebugFrames, useSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
+// The cascade's DECISIONS — the selection chain's weight, the entrance bounce, the exit curve, the
+// ground's release rule, the rail-click plan and the detection frames' arming — live there as named,
+// pure, TESTED rules rather than as expressions buried in this file. Every one of them was reported,
+// fixed, and then silently regressed by a later fix; see that module's header for why they moved out.
+import {
+  CHAIN_STROKE_PX,
+  ENTER_MS,
+  EXIT_MS,
+  enterKeyframes,
+  exitKeyframes,
+  mayMoveGround,
+  planRailSelect,
+  revealRectArmed,
+  triggerRectArmed,
+} from "./cascade-rules"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -646,19 +661,8 @@ const CASCADE_INDENT = 32
 // off-screen (see CascadingStack).
 const DETAIL_PIN = "__detail__"
 
-// The selection chain's ONE stroke weight: the connector paths and the gold rail down an unchosen
-// submenu's left edge are the SAME line, so they are drawn with the same width and the same colour
-// (`apt-gold`) and must stay that way (Mike). They diverged once — the rail was a flat 2px `w-0.5`
-// against the connector's 1.5px stroke — and the pair read as two different golds, because a 2px bar
-// lands on whole device pixels while a 1.5px stroke is anti-aliased across three and comes out dimmer.
-const CHAIN_STROKE_PX = 1.5
-
-// The newly-disclosed submenu's entrance (see CascadingStack's entrance effect). Ease-in-out with a
-// SLIGHT bounce: the final control point overshoots past 1 (y2 = 1.28), so the box eases in, sails a
-// touch beyond its resting size, and settles back — a bezier does this in one curve, with no
-// keyframes and nothing to keep in sync with the transition that follows.
-const ENTER_MS = 300
-const ENTER_EASE = "cubic-bezier(0.45, 0, 0.25, 1.28)"
+// (The selection chain's weight, the entrance bounce, the exit curve, the ground's release rule and
+// the rail-click decision are imported from `cascade-rules` at the top of this file.)
 
 /** Per-surface cascade memory that MUST SURVIVE A REMOUNT, keyed by the root level's id exactly like
  *  `surfaceStates`.
@@ -695,15 +699,9 @@ const cascadeMemoryFor = (key: string) => {
   cascadeMemory.set(key, fresh)
   return fresh
 }
-// Closing reverses the entrance, so it takes the MIRRORED curve: reversing cubic-bezier(x1,y1,x2,y2)
-// is cubic-bezier(1-x2, 1-y2, 1-x1, 1-y1). The overshoot therefore lands at the START as a slight
-// anticipatory swell before the box shrinks away, which is what running the entrance backwards
-// actually looks like.
-const EXIT_EASE = "cubic-bezier(0.75, -0.28, 0.55, 1)"
-
 // The beat between one menu's exit and the next when a whole branch closes (see `exitBranch`). Short
 // enough that the collapse still reads as ONE gesture rather than a queue of separate closes — the
-// menus overlap heavily, since each runs for ENTER_MS.
+// menus overlap heavily, since each runs for EXIT_MS.
 const EXIT_STAGGER_MS = 70
 
 /** How long the detail's content takes to fade in when it becomes a DIFFERENT detail (see
@@ -818,16 +816,31 @@ function DetailContent({
   )
 }
 
+/** A hit-test region in VIEWPORT coords (which is why everything drawn from one is `position: fixed`). */
+type Rect = { left: number; top: number; right: number; bottom: number }
+
+/** Is `(x, y)` inside `r`? Edges count as in. */
+const inRect = (r: Rect, x: number, y: number) =>
+  x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+
 /** DEV-ONLY overlay: one labelled mouse-detection rectangle (see the debug frames block in
- *  CascadingStack). Inert and `fixed`, because the rects are measured in viewport coords. */
+ *  CascadingStack). Inert and `fixed`, because the rects are measured in viewport coords.
+ *
+ *  `armed` is the whole point of the overlay (must-draw-every-detection-frame). A region that exists
+ *  but is currently INERT is drawn dashed and labelled "off" rather than omitted: "no rect on screen"
+ *  and "the rect is disarmed, so nothing can trigger it" look identical when the answer is to draw
+ *  nothing — and the second one is the diagnosis. Omitting them is how the trigger rect sat dead for
+ *  a whole round (nothing was covered, so there was nothing to disclose) and read as a broken switch. */
 function DebugFrame({
   rect,
   color,
   label,
+  armed,
 }: {
-  rect: { left: number; top: number; right: number; bottom: number }
+  rect: Rect
   color: string
   label: string
+  armed: boolean
 }) {
   return (
     <div
@@ -838,7 +851,8 @@ function DebugFrame({
         top: rect.top,
         width: Math.max(0, rect.right - rect.left),
         height: Math.max(0, rect.bottom - rect.top),
-        border: `1px solid ${color}`,
+        border: `1px ${armed ? "solid" : "dashed"} ${color}`,
+        opacity: armed ? 1 : 0.55,
         pointerEvents: "none",
         zIndex: 2147483647,
       }}
@@ -854,7 +868,7 @@ function DebugFrame({
           padding: "0 3px",
         }}
       >
-        {label}
+        {armed ? label : `${label} (off)`}
       </span>
     </div>
   )
@@ -922,21 +936,27 @@ function usePhoneUserAgent(): boolean {
  *  lose. Because selections are contiguous from the top, `selectedId != null` is exactly
  *  "this level is at or above the deepest selection".
  *
- *  `exit` runs the DE-selection through the caller's close animation, which must finish while the
- *  menus are still mounted (see `exitCol`) — so it takes the clear as a callback rather than
- *  returning. Default: clear immediately. Only the cascade passes one; the covering and minimized
- *  styles grow no menu out of the clicked row, so they have no entrance to reverse. */
+ *  `exit` runs the change through the caller's close animation, which must finish while the menus
+ *  are still mounted (see `exitCol`) — so it takes the real navigation as a callback rather than
+ *  returning. Default: run it immediately. Only the cascade passes one; the covering and minimized
+ *  styles grow no menu out of the clicked row, so they have no entrance to reverse.
+ *
+ *  WHICH clicks animate is `planRailSelect`'s call, not this function's — see `cascade-rules`. The
+ *  short version: BOTH a re-click (clear) and a swap to a different row destroy every menu below
+ *  this level, so both collapse them first; only a forward drill into an unselected level skips it,
+ *  having nothing open below to take away. Routing just the clear through `exit` — as this did — is
+ *  why switching workspace made the whole cascade vanish in one frame. */
 function railOnSelect(
   level: TopicLevel,
   attemptExit: (action: () => void) => void,
-  exit: (clear: () => void) => void = (clear) => clear(),
+  exit: (proceed: () => void) => void = (proceed) => proceed(),
 ) {
-  return (id: string) =>
-    id === level.selectedId
-      ? attemptExit(() => exit(() => level.onClear()))
-      : level.selectedId != null
-        ? attemptExit(() => level.onSelect(id))
-        : level.onSelect(id)
+  return (id: string) => {
+    const plan = planRailSelect(level.selectedId ?? null, id)
+    const navigate = () => (plan.action === "clear" ? level.onClear() : level.onSelect(id))
+    const run = () => (plan.collapse ? exit(navigate) : navigate())
+    return plan.guarded ? attemptExit(run) : run()
+  }
 }
 
 interface StackProps {
@@ -1164,17 +1184,17 @@ function SelectionConnectorOverlay({ paths, zIndex = 30 }: { paths: string[]; zI
       data-htd-connectors
       style={{ zIndex }}
       className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+      // THE CHAIN IS ONE LINE (must-draw-one-chain-line): these strokes must be indistinguishable
+      // from the selected row's `border-l-2` and the submenu's gold rail — both CSS boxes, both
+      // crisp. Matching the WIDTH alone did not do it: an anti-aliased stroke spreads 2px of gold
+      // across 3 device pixels at partial alpha, so it came out both softer and DIMMER than the
+      // borders beside it, and read as a different gold. Every path here is axis-aligned (horizontal
+      // runs, vertical elbows), so snapping to the pixel grid costs nothing and buys exact parity.
+      // `crispEdges` also makes round caps/joins meaningless — hence their absence below.
+      shapeRendering="crispEdges"
     >
       {paths.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          fill="none"
-          className="stroke-apt-gold"
-          strokeWidth={CHAIN_STROKE_PX}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path key={i} d={d} fill="none" className="stroke-apt-gold" strokeWidth={CHAIN_STROKE_PX} />
       ))}
     </svg>
   )
@@ -2008,10 +2028,6 @@ function CascadingStack({
   const onResizeLevel = (level: TopicLevel, w: number) =>
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
-  // Is the pointer inside the ROOT list's container? Consulted ONLY when nothing is selected — see
-  // the ground's release rule below. The columns otherwise carry no pointer handlers by design (the
-  // trigger/tracking rects govern the reveal), so this stays scoped to the root box.
-  const [pointerInRoot, setPointerInRoot] = useState(false)
   // DEV-ONLY debug switches (both default off; see `debug-options`).
   const showDebugFrames = useShowDebugFrames()
   const slowAnimations = useSlowAnimations()
@@ -2019,6 +2035,7 @@ function CascadingStack({
   // <html>; the JS-driven entrance/exit sets its timing imperatively, with no variable to read, so
   // it scales off the same flag by hand to stay in step with them.
   const enterMs = ENTER_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
+  const exitMs = EXIT_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
   const exitStaggerMs = EXIT_STAGGER_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
   // The staggered exits are the one thing here that outlives its own render: `exitBranch` schedules
   // the deeper menus on timers, and an unmount mid-collapse (the host routed away) must not leave them
@@ -2215,28 +2232,69 @@ function CascadingStack({
   // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
   // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
   // so a full-width box would poke back into view below the survivors' hugged bottoms).
-  // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the RESTING
-  // stack (`stackRight`), but it is HELD until the user has finished interacting, because moving it
-  // moves EVERYTHING: the root's width and the detail's position both hang off it, so any change
-  // mid-interaction shoves the UI around under the pointer.
+  // THE MENU REGION — the union of the root list and every open menu, in viewport coords. The root
+  // is full height, so this is the whole left column of the surface out to the stack's right edge:
+  // leaving it means moving onto the detail or off the surface, which is the one gesture that says
+  // "I am done with the menus". Read by the ground's release rule below and drawn as the overlay's
+  // third frame.
   //
-  // RELEASE RULE (Mike, verbatim): "do not adjust the width of the root topic list until all the
-  // submenus are collapsed, or there isn't a selection AND the mouse exits the root topic list
-  // container." Those are the two ways to be done:
-  //   - the submenus have collapsed (the reveal is gone — the pointer left the cascade); or
-  //   - there is nothing selected at all, so there are no submenus to wait on, and the pointer has
-  //     left the root list. Without this second clause the width would move the instant a click
-  //     lands, in the gap before the new reveal arms.
+  // Measured from the DOM rather than derived from `groundRight`, so it reports what is PAINTED —
+  // including a hover reveal fanning menus out over the detail, which `groundRight` knows nothing
+  // about and which must still count as being in the menus.
+  const [stackRect, setStackRect] = useState<Rect | null>(null)
+  const stackRectSig = `${rendered.length}:${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
+  useLayoutEffect(() => {
+    const cont = containerRef.current
+    if (!cont) return
+    const measure = () => {
+      const cr = cont.getBoundingClientRect()
+      const rootEl = cont.querySelector<HTMLElement>(`[data-htd-col="0"]`)
+      const u = menuUnion(cont)
+      const right = Math.max(rootEl?.getBoundingClientRect().right ?? cr.left, u?.right ?? cr.left)
+      const next = { left: cr.left, top: cr.top, right, bottom: cr.bottom }
+      setStackRect((prev) =>
+        prev &&
+        prev.left === next.left &&
+        prev.top === next.top &&
+        prev.right === next.right &&
+        prev.bottom === next.bottom
+          ? prev
+          : next,
+      )
+    }
+    measure()
+    const raf = requestAnimationFrame(measure)
+    const settle = setTimeout(measure, 340) // the root's width EASES — catch where it lands
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(settle)
+    }
+  }, [stackRectSig])
+
+  // A document-level listener, like the other two rects — the columns are SIBLING boxes, not
+  // descendants, so per-box enter/leave flickers as the pointer crosses the seams between them.
+  const [pointerInStack, setPointerInStack] = useState(false)
+  useEffect(() => {
+    if (!stackRect) return
+    const onMove = (e: PointerEvent) => setPointerInStack(inRect(stackRect, e.clientX, e.clientY))
+    document.addEventListener("pointermove", onMove)
+    return () => document.removeEventListener("pointermove", onMove)
+  }, [stackRect])
+
+  // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the resting
+  // stack (`stackRight`), but it is HELD while the pointer is in the menus, because moving it moves
+  // EVERYTHING: the root's width and the detail's position both hang off it, so any change
+  // mid-interaction shoves the UI around under the pointer. `mayMoveGround` owns the rule (and its
+  // history — the previous version silently stopped working); this is only the plumbing.
+  //
   // The held value lives in `cascadeMemory` (not React state) so a route-param REMOUNT — which is
   // exactly what choosing a workspace triggers — cannot reset it mid-interaction.
   const mem = cascadeMemoryFor(rendered[0]?.id ?? "")
-  const submenusCollapsed = hoverIndex < 0
-  const rootHasSelection = rendered[0]?.selectedId != null
-  const mayMoveGround = submenusCollapsed && (rootHasSelection || !pointerInRoot)
-  const groundRight = mayMoveGround ? stackRight : (mem.groundRight ?? stackRight)
+  const groundFree = mayMoveGround({ pointerInStack, latched: mem.groundRight !== null })
+  const groundRight = groundFree ? stackRight : (mem.groundRight ?? stackRight)
   useEffect(() => {
-    if (mayMoveGround) mem.groundRight = stackRight
-  }, [mayMoveGround, stackRight, mem])
+    if (groundFree) mem.groundRight = stackRight
+  }, [groundFree, stackRight, mem])
 
   // (#1, Mike) THE ROOT LIST IS AS WIDE AS THE WHOLE MENU STACK — it spans x=0 to the ground's right
   // edge, exactly where the detail begins. The root is the GROUND the cascade sits on, so it must
@@ -2268,16 +2326,18 @@ function CascadingStack({
   // (the container's top-left, i.e. below the breadcrumbs) so moving back over the peeks / root header
   // does not fall out of it, and its RIGHT/BOTTOM are `menuUnion`'s — hugging the menus (see there for
   // why the root is left out).
-  const [revealRect, setRevealRect] = useState<{
-    left: number
-    top: number
-    right: number
-    bottom: number
-  } | null>(null)
+  //
+  // MEASURED whenever there are menus to measure — NOT only while it is armed. The two are separate
+  // questions (must-draw-every-detection-frame): `revealArmed` below decides whether leaving it
+  // actually collapses anything, while the rect itself exists so the debug overlay can always show
+  // where the region IS and whether it is live. Tying the measurement to the arming is what left the
+  // overlay blank and unexplained.
+  const revealArmed = revealRectArmed({ hoverIndex })
+  const [revealRect, setRevealRect] = useState<Rect | null>(null)
   const revealRectSig = `${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
   useEffect(() => {
     const cont = containerRef.current
-    if (hoverIndex < 0 || !cont) {
+    if (!cont) {
       setRevealRect(null)
       return
     }
@@ -2286,6 +2346,7 @@ function CascadingStack({
       const u = menuUnion(cont)
       setRevealRect(u ? { left: cr.left, top: cr.top, right: u.right, bottom: u.bottom } : null)
     }
+    measure()
     const raf = requestAnimationFrame(measure)
     const settle = setTimeout(measure, 320) // re-measure once the slide transition settles
     return () => {
@@ -2295,19 +2356,13 @@ function CascadingStack({
   }, [revealRectSig])
   // Auto-collapse the moment the pointer leaves the tracking rectangle.
   useEffect(() => {
-    if (hoverIndex < 0 || !revealRect) return
+    if (!revealArmed || !revealRect) return
     const onMove = (e: PointerEvent) => {
-      if (
-        e.clientX < revealRect.left ||
-        e.clientX > revealRect.right ||
-        e.clientY < revealRect.top ||
-        e.clientY > revealRect.bottom
-      )
-        setHoverId(null)
+      if (!inRect(revealRect, e.clientX, e.clientY)) setHoverId(null)
     }
     document.addEventListener("pointermove", onMove)
     return () => document.removeEventListener("pointermove", onMove)
-  }, [hoverIndex, revealRect])
+  }, [revealArmed, revealRect])
 
   // AUTO-DISCLOSE via a TRIGGER RECTANGLE (Mike): at rest (nothing disclosed), moving the pointer into
   // the area to the LEFT of the topmost (frontier) menu — below the breadcrumbs (the container's top)
@@ -2320,17 +2375,18 @@ function CascadingStack({
   // pointer in alongside it did nothing. The menus are one stack; the region that opens them is one
   // rect over all of them. Only the RIGHT edge is still the frontier's — the trigger is the approach
   // lane BESIDE the cascade, so it must stop where the topmost menu starts.
+  //
+  // Measured whenever the frontier is measurable, armed only when there is something to disclose —
+  // see `revealRect` above on why those are separate. `anyCovered` is exactly why this matters: with
+  // nothing covered the region is correctly DEAD, and drawing it dashed is the only way that answer
+  // is ever visible.
   const anyCovered = rendered.some((_, i) => isCovered(i))
-  const [triggerRect, setTriggerRect] = useState<{
-    left: number
-    top: number
-    right: number
-    bottom: number
-  } | null>(null)
+  const triggerArmed = triggerRectArmed({ hoverIndex, immersed, anyCovered })
+  const [triggerRect, setTriggerRect] = useState<Rect | null>(null)
   const triggerSig = `${hoverIndex}:${anyCovered}:${frontier}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
   useEffect(() => {
     const cont = containerRef.current
-    if (hoverIndex >= 0 || immersed || !anyCovered || !cont) {
+    if (!cont) {
       setTriggerRect(null)
       return
     }
@@ -2347,6 +2403,7 @@ function CascadingStack({
       const u = menuUnion(cont)
       setTriggerRect({ left: cr.left, top: cr.top, right: tr.left, bottom: u?.bottom ?? tr.bottom })
     }
+    measure()
     const raf = requestAnimationFrame(measure)
     const settle = setTimeout(measure, 320)
     return () => {
@@ -2356,19 +2413,13 @@ function CascadingStack({
   }, [triggerSig])
   // Open the cascade the moment the pointer enters the trigger rectangle.
   useEffect(() => {
-    if (hoverIndex >= 0 || !triggerRect) return
+    if (!triggerArmed || !triggerRect) return
     const onMove = (e: PointerEvent) => {
-      if (
-        e.clientX >= triggerRect.left &&
-        e.clientX <= triggerRect.right &&
-        e.clientY >= triggerRect.top &&
-        e.clientY <= triggerRect.bottom
-      )
-        setHoverId(rendered[frontier]?.id ?? null, true)
+      if (inRect(triggerRect, e.clientX, e.clientY)) setHoverId(rendered[frontier]?.id ?? null, true)
     }
     document.addEventListener("pointermove", onMove)
     return () => document.removeEventListener("pointermove", onMove)
-  }, [hoverIndex, triggerRect])
+  }, [triggerArmed, triggerRect])
 
   // The `«`/`»` toggle — ported verbatim, including dropping any open reveal on the click so the
   // stack settles immediately (must-apply-disclosure-toggles-immediately).
@@ -2452,8 +2503,9 @@ function CascadingStack({
     connectorsPossible,
     // The cascade connects to a still-unchosen submenu as a whole — see the loop in the hook.
     true,
-    // Cover the whole staggered collapse: the last menu starts at (n-1) × stagger and runs ENTER_MS.
-    Math.max(400, enterMs + rendered.length * exitStaggerMs + 120),
+    // Cover whichever runs longer: an entrance, or the staggered collapse (whose last menu starts at
+    // (n-1) × stagger and then runs EXIT_MS).
+    Math.max(400, enterMs, exitMs + rendered.length * exitStaggerMs) + 120,
   )
   // A scroll (or pointer/focus movement that re-flows a row) re-measures BOTH the cascade tops and the
   // connector paths.
@@ -2470,18 +2522,21 @@ function CascadingStack({
 
   // NEW SUBMENU ENTRANCE (Mike) — a list disclosed by choosing a row GROWS OUT OF THAT ROW: it
   // starts as a point at the chosen row's centre and expands + travels into its cascade position,
-  // overshooting slightly before it settles. ONE `transform` does both the translation and the
-  // scale: park the transform-origin on the row's centre expressed in the NEW box's own coordinates
-  // (it legitimately lands outside the box — CSS allows a transform-origin beyond the border box),
-  // and `scale(0)` collapses the box onto exactly that point. Easing back to `scale(1)` then reads
-  // as growing out of the row AND sliding into place, with no second property to keep in sync.
+  // BOUNCING into rest (+10, −10, +5, +−5, 0 percentage points — see `cascade-rules`). ONE `scale`
+  // track does the translation, the size AND both bounces: park the transform-origin on the row's
+  // centre expressed in the NEW box's own coordinates (it legitimately lands outside the box — CSS
+  // allows a transform-origin beyond the border box), and `scale(0)` collapses the box onto exactly
+  // that point. Every step away from `scale(1)` is then a step both bigger and further from the row,
+  // which is why one number is enough and why the size bounce and the travel bounce share figures.
   //
-  // Driven imperatively rather than through React state because the start frame must be flushed to
-  // the compositor BEFORE the transition is armed (`offsetWidth` below) — a rendered `scale(0)` that
-  // React batches away would simply pop. `transform`/`transform-origin`/`transition` are not in any
-  // style prop here, so React never clobbers them, and `transitionend` hands the box back to its
-  // Tailwind transition. `inPlace` is true on this same render, so the box's `left`/`width` are not
-  // transitioning and cannot fight the entrance.
+  // A Web Animations keyframe list rather than a transition: the bounce reverses FOUR times and a
+  // cubic-bezier can only overshoot once (see EXIT_EASE's note on what the old single-curve version
+  // could and couldn't say). WAAPI also removes the `offsetWidth` flush this needed as a transition —
+  // keyframes carry their own start state, so there is no batched-away first frame to force.
+  //
+  // `transform`/`transform-origin` are in no style prop here, so React never clobbers them, and the
+  // animation reverts to the element's own (untransformed) style when it finishes. `inPlace` is true
+  // on this same render, so the box's `left`/`width` are not transitioning and cannot fight it.
   // A menu's identity here is NOT its level id: ids are REUSED. Choosing a different workspace
   // re-fills the existing "workspace" level rather than adding one, and that is a disclosure too, so
   // keying on the id alone silently skips the animation for exactly that case. Key on the SELECTION
@@ -2512,22 +2567,22 @@ function CascadingStack({
       const cr = col.getBoundingClientRect()
       const rr = row.getBoundingClientRect()
       if (cr.width === 0 || cr.height === 0) return
-      col.style.transition = "none"
+      // No WAAPI (jsdom under test, or a browser too old): land in place. The entrance is decoration
+      // — never make the menu's ARRIVAL depend on being able to animate it.
+      if (typeof col.animate !== "function") return
       col.style.transformOrigin = `${rr.left + rr.width / 2 - cr.left}px ${
         rr.top + rr.height / 2 - cr.top
       }px`
-      col.style.transform = "scale(0)"
-      void col.offsetWidth // flush the start state so the transition has something to run FROM
-      col.style.transition = `transform ${enterMs}ms ${ENTER_EASE}`
-      col.style.transform = "scale(1)"
-      const done = (e: TransitionEvent) => {
-        if (e.target !== col || e.propertyName !== "transform") return
-        col.removeEventListener("transitionend", done)
-        col.style.transition = ""
-        col.style.transform = ""
+      // `fill: backwards` applies the scale(0) start frame immediately, so the box cannot paint at
+      // full size in the frame before the animation's first tick.
+      const anim = col.animate(enterKeyframes(), { duration: enterMs, fill: "backwards" })
+      // Hand the origin back once it rests (on cancel too — a re-disclosure mid-flight starts its
+      // own animation and must not inherit a stale origin).
+      const clean = () => {
         col.style.transformOrigin = ""
       }
-      col.addEventListener("transitionend", done)
+      anim.addEventListener("finish", clean)
+      anim.addEventListener("cancel", clean)
     })
   }, [enterSig])
 
@@ -2543,21 +2598,22 @@ function CascadingStack({
       `[data-htd-col="${i - 1}"] [data-htd-row][aria-current="true"]`,
     )
     const cr = col?.getBoundingClientRect()
-    if (!col || !row || !cr || cr.width === 0 || cr.height === 0) {
-      done() // nothing measurable to animate — never hold the close hostage to the animation
+    if (!col || !row || !cr || cr.width === 0 || cr.height === 0 || typeof col.animate !== "function") {
+      done() // nothing measurable to animate (or no WAAPI) — never hold the close hostage to it
       return
     }
     const rr = row.getBoundingClientRect()
     col.style.transformOrigin = `${rr.left + rr.width / 2 - cr.left}px ${
       rr.top + rr.height / 2 - cr.top
     }px`
-    col.style.transition = `transform ${enterMs}ms ${EXIT_EASE}`
-    col.style.transform = "scale(0)"
+    // `fill: forwards` HOLDS the box at scale(0) after the animation ends, so the menu stays gone
+    // for the frames between "shrunk away" and React actually unmounting it. Without the fill it
+    // would snap back to full size at the end of its own exit — the very flash this is avoiding.
+    const anim = col.animate(exitKeyframes(), { duration: exitMs, fill: "forwards" })
     let settled = false
     const finish = () => {
       if (settled) return
       settled = true
-      col.removeEventListener("transitionend", onEnd)
       clearTimeout(timer)
       done()
       // Hand the node back ONLY if the clear truly did not take it away — the fail-visible branch for
@@ -2577,17 +2633,16 @@ function CascadingStack({
           requestAnimationFrame(waitForUnmount)
           return
         }
-        col.style.transition = ""
-        col.style.transform = ""
+        anim.cancel() // release the `forwards` fill holding it at scale(0)
         col.style.transformOrigin = ""
       }
       requestAnimationFrame(waitForUnmount)
     }
-    const onEnd = (e: TransitionEvent) => {
-      if (e.target === col && e.propertyName === "transform") finish()
-    }
-    col.addEventListener("transitionend", onEnd)
-    const timer = setTimeout(finish, enterMs + 80) // a dropped transitionend must not strand the close
+    anim.addEventListener("finish", finish)
+    // An unmount mid-exit CANCELS the animation, so `finish` would never fire and `done` — the real
+    // clear — would never run. The timer is that backstop, not a workaround for a flaky event.
+    const timer = setTimeout(finish, exitMs + 80)
+    exitTimers.current.push(timer)
   }
 
   // Clearing level `j`'s selection takes columns `j+1`…frontier away TOGETHER, so the whole sub-branch
@@ -2652,12 +2707,6 @@ function CascadingStack({
             // pointer-enter/leave of their own.
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
-            // Only the ROOT, and only to answer "has the mouse left the root list?" for the ground's
-            // release rule. Submenus are SIBLING boxes, not descendants, so moving onto one leaves
-            // the root — which is fine: this is read only when nothing is selected, i.e. when there
-            // are no submenus to move onto.
-            onPointerEnter={isRootList ? () => setPointerInRoot(true) : undefined}
-            onPointerLeave={isRootList ? () => setPointerInRoot(false) : undefined}
             style={{
               left: leftOf(i),
               top: topOf[i],
@@ -2855,17 +2904,27 @@ function CascadingStack({
         paths={connectors}
         zIndex={zFrom >= 0 ? REVEAL_Z + rendered.length : undefined}
       />
-      {/* DEBUG — the two mouse-detection frames, off unless the Debug panel's "Show Mouse Detection
-          Frames" is on. They are the ONLY way to see these regions: both are invisible by
+      {/* DEBUG — the mouse-detection frames, off unless the Debug panel's "Show Mouse Detection
+          Frames" is on. They are the ONLY way to see these regions: all three are invisible by
           construction, and a rect that is one frame STALE looks identical to a correct one. Drawn in
           viewport coords (they are measured that way), `position: fixed`, inert, above everything.
-            RED   = the COLLAPSE/tracking rect — leaving it auto-collapses an open branch.
-            GREEN = the DISCLOSE/trigger rect — entering it opens the cascade.
-          Only one is live at a time (the trigger is armed only while nothing is revealed). */}
+            RED    = the COLLAPSE/tracking rect — leaving it auto-collapses an open branch.
+            GREEN  = the DISCLOSE/trigger rect — entering it opens the cascade.
+            BLUE   = the MENU REGION — while the pointer is inside it, the ground is held.
+          EVERY frame the switch promises is drawn (must-draw-every-detection-frame) — dashed and
+          "(off)" when the region is inert rather than omitted. Omitting them is exactly how this
+          switch came to look broken: with `autoHideTopics={false}` nothing is ever covered, so the
+          trigger has nothing to disclose and the reveal never opens, so BOTH rects were null and the
+          switch drew nothing at all. Dashed frames say that out loud; an empty screen doesn't. */}
       {showDebugFrames && (
         <>
-          {revealRect && <DebugFrame rect={revealRect} color="red" label="collapse" />}
-          {triggerRect && <DebugFrame rect={triggerRect} color="#22c55e" label="disclose" />}
+          {revealRect && <DebugFrame rect={revealRect} color="red" label="collapse" armed={revealArmed} />}
+          {triggerRect && (
+            <DebugFrame rect={triggerRect} color="#22c55e" label="disclose" armed={triggerArmed} />
+          )}
+          {stackRect && (
+            <DebugFrame rect={stackRect} color="#3b82f6" label="ground held" armed={pointerInStack} />
+          )}
         </>
       )}
       {/* The detail (leaf) pane — pinned BESIDE THE ROOT LIST at full height, UNDER the deeper
