@@ -913,6 +913,13 @@ function SelectionConnectorOverlay({ paths, zIndex = 30 }: { paths: string[]; zI
   )
 }
 
+// NOTE — nothing in this component is gated on `prefers-reduced-motion`, per a standing instruction
+// from this block's owner to ignore that setting until further notice. It is NOT a claim about
+// anyone's OS configuration; keep it that way unless he lifts the instruction. This block used to
+// gate three of its transitions on `motion-reduce` while its twin (HierarchicalMenuDetail) gated
+// none — which mattered the moment one flag started choosing between them, because a view switch
+// would have silently doubled as a reduced-motion switch.
+
 /**
  * The "minimized" disclosure style (unchanged from the original single-layout block): the lists are
  * flat grid columns; as the window narrows the leftmost shrink to icon strips (auto), then slide
@@ -1564,7 +1571,7 @@ function CoveredStack({
               "absolute top-0 bottom-0 grid overflow-hidden",
               offscreen && "pointer-events-none",
               animate &&
-                "transition-[left,width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out motion-reduce:transition-none",
+                "transition-[left,width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
               // The rail's own `bg-apt-nav` is 96% opaque — right for a nav sitting on the page, wrong
               // for a branch FLOATING over the detail, which ghosts the detail's text through it. A
               // lifted member gets the page background under its rail, so the card is opaque while it
@@ -1662,7 +1669,7 @@ function CoveredStack({
         style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          animate && "transition-[left,width] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out motion-reduce:transition-none",
+          animate && "transition-[left,width] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
@@ -1775,12 +1782,11 @@ function NarrowStack({
   })
   // Every pane — the topic lists AND the detail — slides on the same transition: EASE-IN-OUT, so the
   // push and the pop both accelerate out of rest and settle back into it rather than snapping to a
-  // stop. `motion-reduce` drops the transition entirely, so with the OS setting on the panes cut
-  // straight to their new places (the layout is identical, only the travel is gone).
+  // stop. Deliberately NOT gated on `motion-reduce` — see the note on this file's disclosure styles.
   const paneClass = (i: number) =>
     cn(
       "absolute inset-0 flex flex-col",
-      "transition-transform duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out motion-reduce:transition-none",
+      "transition-transform duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
       i !== anim && "pointer-events-none",
     )
 
