@@ -2122,14 +2122,13 @@ function CascadingStack({
   // (the container's top-left, i.e. below the breadcrumbs) so moving back over the peeks / root header
   // does not fall out of it, and its RIGHT/BOTTOM hug the lists.
   //
-  // THE ROOT IS INCLUDED — this SUPERSEDES the earlier rule that excluded it so that "leaving below
-  // the submenus collapses". New rule (Mike): the menus must NEVER auto-collapse while the pointer is
-  // inside the topic lists, and the root IS a topic list. Excluding it made the rect stop at the
-  // SUBMENUS' bottom while the root ran to the container's, so the whole lower half of the root list —
-  // plainly inside the lists — counted as "left the menus". With the root in, the rect covers the
-  // ground the cascade sits on, and the way out is to move off it: into the detail beside it, or past
-  // the deepest menu. The rect is a bounding box over the boxes, so it also spans the gaps between
-  // them, which is the point — crossing a seam must not flicker it shut.
+  // ITS BOTTOM HUGS THE LOWEST MENU (Mike) — the full-height ROOT is excluded from the union, so the
+  // rect ends at the deepest menu's bottom rather than running to the window's edge. The rect is a
+  // bounding box over the boxes, so it also spans the gaps between them, which is the point: crossing
+  // a seam must not flicker it shut. Its left/top being the container's means the root's ROWS are
+  // inside it regardless (they sit at the very top, and the submenus always hang lower) — so the
+  // pointer is never inside a topic list yet judged "out". Only the root's empty ground below the
+  // deepest menu falls outside, which is precisely where leaving SHOULD collapse.
   const [revealRect, setRevealRect] = useState<{
     left: number
     top: number
@@ -2149,6 +2148,14 @@ function CascadingStack({
       let b = -Infinity
       cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
         if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
+        // The full-height ROOT is excluded: it runs to the container's bottom, so including it
+        // dragged the rect's BOTTOM down to the window's edge — a vast dead region below the menus
+        // that still counted as "in". The bottom must hug the LOWEST MENU (Mike). Nothing is lost by
+        // leaving the root out: the rect's left/top are the container's, and the root's ROWS sit at
+        // the very top with the submenus always hanging lower, so every row stays inside the rect
+        // regardless. Only the root's empty ground below the deepest menu falls outside — which is
+        // exactly the region that SHOULD collapse on exit.
+        if (col.getAttribute("data-htd-col") === "0") return
         const rc = col.getBoundingClientRect()
         // A zero-size box is a menu mid-entrance (scaled to a point) — it would drag the union in to
         // its origin, so let the settle re-measure below pick it up at full size instead.
