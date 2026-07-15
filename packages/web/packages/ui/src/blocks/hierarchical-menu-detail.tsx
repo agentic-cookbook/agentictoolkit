@@ -2268,14 +2268,23 @@ function CascadingStack({
                 denseBottom
                 // (#4) ONLY the TOPMOST (frontier) menu gets a right-justified close (✕) in its
                 // header — not every child. It dismisses that menu and clears the selection in the
-                // PARENT list that opened it (the root, with no parent, never qualifies). Drop any
-                // open reveal so the stack settles at once, and route the clear through the exit guard
-                // like every other de-selection.
+                // PARENT list that opened it (the root, with no parent, never qualifies); the clear
+                // routes through the exit guard like every other de-selection.
+                //
+                // CLOSING MUST NOT AUTO-COLLAPSE THE MENUS LEFT OPEN (Mike). Two things would snap
+                // a fully-disclosed stack shut, so the reveal has to be carried across the close:
+                // dropping `hoverId` outright, and — since the disclose trigger roots `hoverId` at
+                // the FRONTIER, the very list this ✕ removes — leaving it dangling on a level that
+                // no longer exists. So re-root the reveal at the list that BECOMES the frontier,
+                // keeping its `hoverAll` scope. Only when no reveal is open do we clear (matching
+                // the old behaviour, where it was a no-op). The tracking rect still collapses the
+                // stack once the pointer actually leaves it — that is the one thing that should.
                 onClose={
                   i === frontier && !isRootList
                     ? () => {
-                        setHoverId(null)
-                        attemptExit(() => rendered[i - 1]!.onClear())
+                        const parent = rendered[i - 1]!
+                        setHoverId(hoverIndex >= 0 ? parent.id : null, hoverAll)
+                        attemptExit(() => parent.onClear())
                       }
                     : undefined
                 }
