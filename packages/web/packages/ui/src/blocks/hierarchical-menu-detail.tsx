@@ -912,6 +912,9 @@ function useSelectionConnectors(
   levelCount: number,
   sig: string,
   possible: boolean,
+  /** When the child list is open with NOTHING selected, connect to the LIST ITSELF (see the loop).
+   *  Opt-in: only the cascade wants it; the other stacks keep drawing nothing. */
+  anchorUnselectedChild = false,
 ): { connectors: string[]; onScroll: () => void } {
   const [connectors, setConnectors] = useState<string[]>([])
   const measureRef = useRef<() => void>(() => {})
@@ -945,22 +948,37 @@ function useSelectionConnectors(
           delRight: delRect ? delRect.right - crect.left : null,
         }
       }
+      // The whole child COLUMN as a connector target: its left edge, at its vertical centre.
+      const colAnchor = (i: number) => {
+        const col = cont.querySelector(`[data-htd-col="${i}"]`)
+        if (!col) return null
+        const r = col.getBoundingClientRect()
+        if (r.width === 0 || r.height === 0) return null // mid-entrance (scaled to a point)
+        return { y: r.top + r.height / 2 - crect.top, left: r.left - crect.left }
+      }
       const next: string[] = []
       for (let i = 0; i < levelCount - 1; i++) {
         const p = anchor(i)
+        if (!p) continue
         const c = anchor(i + 1)
-        // A connector joins a selected PARENT row to a selected CHILD row — nothing else. A child
-        // rail that is open with NOTHING selected gets NO line into it (spec:
-        // must-connect-selected-rows-only — an unselected list's landing is the topic overview,
-        // and a line pointing at whatever row happens to sit at the parent's height reads as a
-        // phantom selection).
-        if (!p || !c) continue
-        if (p.rightX < 0 || c.left > crect.width) continue // an endpoint drilled off-screen
-        const boundary = c.left // the child column's current left edge (the bend)
+        // A connector normally joins a selected PARENT row to a selected CHILD row. When the child
+        // list is open with NOTHING selected, the ORIGINAL rule drew nothing (spec:
+        // must-connect-selected-rows-only — a line pointing at whatever row happens to sit at the
+        // parent's height reads as a phantom selection). The cascade now instead points at the
+        // SUBMENU AS A WHOLE (Mike): it lands ON the list's left edge at its vertical CENTRE, where
+        // that list's gold rail runs. That keeps the parent→child chain visible while a branch is
+        // being chosen from, and it cannot be misread as a row selection because it never enters the
+        // list or touches a row.
+        const cc = c ?? (anchorUnselectedChild ? colAnchor(i + 1) : null)
+        if (!cc) continue
+        if (p.rightX < 0 || cc.left > crect.width) continue // an endpoint drilled off-screen
+        const boundary = cc.left // the child column's current left edge (the bend)
         const startX = Math.min(p.rightX + 6, boundary - 4) // just past the parent's visible content
-        // The elbow after the parent's horizontal run: to the child column's edge (the bend), down/up
-        // to the child row, then in to just before its icon.
-        const elbow = `L ${boundary} ${p.y} L ${boundary} ${c.y} L ${Math.max(c.iconLeft - 6, boundary + 2)} ${c.y}`
+        // The elbow after the parent's horizontal run: to the child column's edge (the bend), then
+        // down/up to the target. With a selected child row it carries on IN to just before that row's
+        // icon; with no selection it STOPS on the edge, meeting the rail.
+        const tail = c ? ` L ${Math.max(c.iconLeft - 6, boundary + 2)} ${c.y}` : ""
+        const elbow = `L ${boundary} ${p.y} L ${boundary} ${cc.y}${tail}`
         // Break the horizontal run around a deletable parent row's trash button, so the line never
         // crosses it (the overlay paints above the rail, so this gap — not occlusion — is the break).
         if (p.delLeft != null && p.delRight != null && p.delRight > startX && p.delLeft < boundary) {
@@ -2277,6 +2295,8 @@ function CascadingStack({
     rendered.length,
     connectorSig,
     connectorsPossible,
+    // The cascade connects to a still-unchosen submenu as a whole — see the loop in the hook.
+    true,
   )
   // A scroll (or pointer/focus movement that re-flows a row) re-measures BOTH the cascade tops and the
   // connector paths.
@@ -2478,6 +2498,18 @@ function CascadingStack({
               isRootList && !dragging && "transition-[width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
             )}
           >
+            {/* A SUBMENU WITH NOTHING CHOSEN YET wears the same gold rail a selected root row wears
+                (Mike), running its full height down its left edge — and the parent's connector lands
+                on that rail's midpoint. Together they say "this whole list is the current step", with
+                no row singled out. It goes the moment an item is chosen, at which point the connector
+                re-points at that row and the rail's job is done. Never the root: it is the ground, not
+                a disclosed submenu. `z-10` clears the rail's own surface. */}
+            {!isRootList && level.selectedId == null && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-0.5 bg-apt-gold"
+              />
+            )}
             {/* The rail keeps its FULL width regardless of the wrapper's (only an off-screen
                 wrapper narrows — the covered stack's clip technique — so rows never reflow during
                 the slide-off). The inner div is also the flex hug/scroll chain: the wrapper hugs

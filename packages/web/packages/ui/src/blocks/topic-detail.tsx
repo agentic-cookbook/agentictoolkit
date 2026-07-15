@@ -210,14 +210,16 @@ function TopicList({
               : cn("cursor-pointer text-apt-text", hoverBar && "hover:border-l-apt-text"),
         )}
       >
-        {/* Root list, marker style: a leading gold dash in front of the selected row's icon. It
-            lives INSIDE the row's `pl-2` leading gap (2px in, 6px wide → it ends exactly where the
-            icon starts), so halving that gap moved the dash with it rather than under the icon. */}
+        {/* Root list, marker style: the selected row is marked by a FULL-HEIGHT vertical bar flush
+            with the row's left edge (Mike — replaces the old horizontal dash that sat in the `pl-2`
+            leading gap). Drawn as an element rather than the row's `border-l` because the border is
+            the hover affordance's channel and a marker rail must not depend on that. */}
         {active && isRoot && !centered && selectionStyle === "marker" && (
-          <span
-            aria-hidden
-            className="absolute top-1/2 left-0.5 h-0.5 w-1.5 -translate-y-1/2 rounded-full bg-apt-gold"
-          />
+          // `-left-0.5`, not `left-0`: the row carries a 2px transparent `border-l` (the hover
+          // affordance's channel), and an absolute child resolves against the PADDING box — so
+          // `left-0` would sit 2px inside the row's real edge. The negative offset backs it onto the
+          // border box, flush with the column edge.
+          <span aria-hidden className="absolute inset-y-0 -left-0.5 w-0.5 bg-apt-gold" />
         )}
         {/* Decorative: the label (text or aria-label) is the name, so the icon is hidden from AT. */}
         <span aria-hidden data-htd-icon className="flex shrink-0">
