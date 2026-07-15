@@ -97,6 +97,7 @@ function TopicList({
   isRoot = false,
   selectionStyle = "bar",
   rowDisclosure = false,
+  hoverBar = true,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -119,6 +120,10 @@ function TopicList({
    *  TopicDetail and the minimized stack. `"marker"` drops the bar for the dash (root) + the
    *  parent→child connector line (drawn by the covered stack's overlay). */
   selectionStyle?: "bar" | "marker"
+  /** Whether hovering an unselected row previews the left bar. Default true (every existing rail).
+   *  `false` removes it: the cascading menus want no hover bar — there, hover is conveyed by the row
+   *  UN-DIMMING, and a second white bar on top of that just reads as noise. */
+  hoverBar?: boolean
   /** Trailing chevron on every selectable row, signalling that picking it discloses another pane —
    *  the narrow (nav-stack) layout's only affordance for that, since it has no peeking sibling column
    *  to hint at what a tap pushes in. Hidden on a `disabled` row (it isn't going anywhere) and in the
@@ -202,7 +207,7 @@ function TopicList({
                 selectionStyle === "marker"
                 ? "text-apt-gold"
                 : "border-l-apt-gold text-apt-gold"
-              : "cursor-pointer text-apt-text hover:border-l-apt-text",
+              : cn("cursor-pointer text-apt-text", hoverBar && "hover:border-l-apt-text"),
         )}
       >
         {/* Root list, marker style: a leading gold dash in front of the selected row's icon. It
@@ -397,6 +402,7 @@ export function TopicRail({
   onClose,
   closeLabel,
   denseBottom = false,
+  hoverBar = true,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -475,6 +481,9 @@ export function TopicRail({
    *  generous scroll breathing room; the cascade menus pass true so a short, hugging menu doesn't
    *  trail dead space under its last item. */
   denseBottom?: boolean
+  /** Whether hovering an unselected row previews the left bar. Default true; the cascade menus pass
+   *  false (see TopicList's `hoverBar`). */
+  hoverBar?: boolean
 }) {
   const asideRef = useRef<HTMLElement>(null)
   const listId = useId()
@@ -654,6 +663,7 @@ export function TopicRail({
           covered={covered}
           isRoot={isRoot}
           selectionStyle={selectionStyle}
+          hoverBar={hoverBar}
           rowDisclosure={rowDisclosure}
         />
       </div>

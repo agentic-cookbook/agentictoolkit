@@ -652,11 +652,45 @@ const DETAIL_PIN = "__detail__"
 const ENTER_MS = 300
 const ENTER_EASE = "cubic-bezier(0.45, 0, 0.25, 1.28)"
 
-// NOTE — NOTHING in this component is gated on `prefers-reduced-motion`, on purpose. This block's
-// owner runs macOS with "Reduce Motion" ON, so a `motion-reduce:transition-none` here does not
-// degrade the cascade for him — it deletes it, and every animation above (the entrance, the ground's
-// width, the detail's travel) silently never runs on the machine it is being designed against. The
-// gates were removed for exactly that reason; do not reintroduce them without asking him first.
+/** Per-surface cascade memory that MUST SURVIVE A REMOUNT, keyed by the root level's id exactly like
+ *  `surfaceStates`.
+ *
+ *  Next remounts the whole page subtree when a ROUTE PARAM changes — and choosing a different
+ *  workspace in the root list IS a param change (`/[slug]/…`). React state therefore resets in the
+ *  middle of one continuous interaction, which is invisible in the code but very visible on screen:
+ *  the entrance loses all knowledge of which menus were already open and concludes "first mount,
+ *  animate nothing", and the ground latch re-seeds from whatever the layout happens to be at mount
+ *  and snaps the root's width. Both bugs are the same bug, so both live here.
+ *
+ *  Deliberately NOT folded into `surfaceStates`: that store is React state and every write re-renders
+ *  the surface. These two are a cache read during render and written from effects — they must never
+ *  drive a render of their own. */
+const cascadeMemory = new Map<
+  string,
+  {
+    /** Menu keys on screen at the last commit — `null` until primed. Primed-but-empty and never-primed
+     *  must stay distinguishable: on a genuine first load nothing was "opened", so nothing animates. */
+    seenKeys: Set<string> | null
+    /** Last ground right edge observed with the stack COLLAPSED; `null` until one has been seen. */
+    groundRight: number | null
+  }
+>()
+const cascadeMemoryFor = (key: string) => {
+  const existing = cascadeMemory.get(key)
+  if (existing) return existing
+  const fresh = { seenKeys: null, groundRight: null }
+  cascadeMemory.set(key, fresh)
+  return fresh
+}
+// Closing reverses the entrance, so it takes the MIRRORED curve: reversing cubic-bezier(x1,y1,x2,y2)
+// is cubic-bezier(1-x2, 1-y2, 1-x1, 1-y1). The overshoot therefore lands at the START as a slight
+// anticipatory swell before the box shrinks away, which is what running the entrance backwards
+// actually looks like.
+const EXIT_EASE = "cubic-bezier(0.75, -0.28, 0.55, 1)"
+
+// NOTE — nothing in this component is gated on `prefers-reduced-motion`, per a standing instruction
+// from this block's owner to ignore that setting until further notice. It is NOT a claim about
+// anyone's OS configuration; keep it that way unless he lifts the instruction.
 
 // The z-floor of a hover-revealed branch: its members lift to REVEAL_Z + i so the whole cascade
 // floats over the detail. The connector overlay rides just above the highest member (see below), so
@@ -1773,6 +1807,10 @@ function CascadingStack({
   const onResizeLevel = (level: TopicLevel, w: number) =>
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
+  // Is the pointer inside the ROOT list's container? Consulted ONLY when nothing is selected — see
+  // the ground's release rule below. The columns otherwise carry no pointer handlers by design (the
+  // trigger/tracking rects govern the reveal), so this stays scoped to the root box.
+  const [pointerInRoot, setPointerInRoot] = useState(false)
 
   // COVERING — CoveredStack's intent rules (see there for the rationale of each layer), with two
   // cascade differences: the indent is the tighter CASCADE_INDENT, and the pressure/off-screen
@@ -1958,16 +1996,27 @@ function CascadingStack({
   // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
   // so a full-width box would poke back into view below the survivors' hugged bottoms).
   // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the RESTING
-  // stack (`stackRight`), but it is HELD FROZEN WHILE THE STACK IS EXPANDED (Mike): choosing a row
-  // inside an open reveal grows the resting stack, and letting that through would widen the root and
-  // shove the detail rightward WHILE the menus are still fanned out over them — motion nobody asked
-  // for, under menus that are about to move anyway. So latch it on reveal and release on collapse.
-  // Collapsing is not a structure change, so `animate` is on and both ease across together.
-  const [heldGroundRight, setHeldGroundRight] = useState(stackRight)
+  // stack (`stackRight`), but it is HELD until the user has finished interacting, because moving it
+  // moves EVERYTHING: the root's width and the detail's position both hang off it, so any change
+  // mid-interaction shoves the UI around under the pointer.
+  //
+  // RELEASE RULE (Mike, verbatim): "do not adjust the width of the root topic list until all the
+  // submenus are collapsed, or there isn't a selection AND the mouse exits the root topic list
+  // container." Those are the two ways to be done:
+  //   - the submenus have collapsed (the reveal is gone — the pointer left the cascade); or
+  //   - there is nothing selected at all, so there are no submenus to wait on, and the pointer has
+  //     left the root list. Without this second clause the width would move the instant a click
+  //     lands, in the gap before the new reveal arms.
+  // The held value lives in `cascadeMemory` (not React state) so a route-param REMOUNT — which is
+  // exactly what choosing a workspace triggers — cannot reset it mid-interaction.
+  const mem = cascadeMemoryFor(rendered[0]?.id ?? "")
+  const submenusCollapsed = hoverIndex < 0
+  const rootHasSelection = rendered[0]?.selectedId != null
+  const mayMoveGround = submenusCollapsed && (rootHasSelection || !pointerInRoot)
+  const groundRight = mayMoveGround ? stackRight : (mem.groundRight ?? stackRight)
   useEffect(() => {
-    if (hoverIndex < 0) setHeldGroundRight(stackRight)
-  }, [hoverIndex, stackRight])
-  const groundRight = hoverIndex >= 0 ? heldGroundRight : stackRight
+    if (mayMoveGround) mem.groundRight = stackRight
+  }, [mayMoveGround, stackRight, mem])
 
   // (#1, Mike) THE ROOT LIST IS AS WIDE AS THE WHOLE MENU STACK — it spans x=0 to the ground's right
   // edge, exactly where the detail begins. The root is the GROUND the cascade sits on, so it must
@@ -2193,17 +2242,28 @@ function CascadingStack({
   // style prop here, so React never clobbers them, and `transitionend` hands the box back to its
   // Tailwind transition. `inPlace` is true on this same render, so the box's `left`/`width` are not
   // transitioning and cannot fight the entrance.
-  const seenLevelIds = useRef<Set<string> | null>(null)
-  const enterSig = rendered.map((l) => l.id).join("|")
+  // A menu's identity here is NOT its level id: ids are REUSED. Choosing a different workspace
+  // re-fills the existing "workspace" level rather than adding one, and that is a disclosure too, so
+  // keying on the id alone silently skips the animation for exactly that case. Key on the SELECTION
+  // PATH above the menu plus its id — that changes on precisely the occasions this menu is showing a
+  // newly-disclosed list, at any depth (a root click re-discloses the whole branch under it, so
+  // every menu below re-enters, each growing out of its own parent's chosen row).
+  const enterKey = (i: number) =>
+    `${rendered
+      .slice(0, i)
+      .map((l) => l.selectedId ?? "")
+      .join(">")}>${rendered[i]!.id}`
+  const enterSig = rendered.map((_l, i) => enterKey(i)).join("|")
   useLayoutEffect(() => {
     const cont = containerRef.current
-    const prev = seenLevelIds.current
-    seenLevelIds.current = new Set(rendered.map((l) => l.id))
-    // First mount: every list is "new", but nothing was OPENED — animating here would play an
-    // unasked-for intro on every page load.
+    const prev = mem.seenKeys
+    mem.seenKeys = new Set(rendered.map((_l, i) => enterKey(i)))
+    // Never primed: a genuine first load, where every list is "new" but nothing was OPENED —
+    // animating here would play an unasked-for intro. A REMOUNT is not this case: `mem` survives it,
+    // so the menus that were already on screen are still known and only the re-disclosed ones fire.
     if (!cont || prev === null) return
     rendered.forEach((level, i) => {
-      if (i === 0 || prev.has(level.id)) return
+      if (i === 0 || prev.has(enterKey(i))) return
       const col = cont.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)
       const row = cont.querySelector<HTMLElement>(
         `[data-htd-col="${i - 1}"] [data-htd-row][aria-current="true"]`,
@@ -2231,6 +2291,52 @@ function CascadingStack({
     })
   }, [enterSig])
 
+  // CLOSING RUNS THE ENTRANCE BACKWARDS (Mike) — the submenu shrinks back into the row that opened
+  // it. Same origin, same duration, mirrored curve; only then is the level actually cleared. The
+  // order matters and is why this is imperative rather than an "exiting" render state: React unmounts
+  // the column the instant its level goes away, so the node has to be animated BEFORE `onClear` runs,
+  // while it is still mounted and the parent's row is still `aria-current` (that row IS the origin).
+  const exitCol = (i: number, done: () => void) => {
+    const cont = containerRef.current
+    const col = cont?.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)
+    const row = cont?.querySelector<HTMLElement>(
+      `[data-htd-col="${i - 1}"] [data-htd-row][aria-current="true"]`,
+    )
+    const cr = col?.getBoundingClientRect()
+    if (!col || !row || !cr || cr.width === 0 || cr.height === 0) {
+      done() // nothing measurable to animate — never hold the close hostage to the animation
+      return
+    }
+    const rr = row.getBoundingClientRect()
+    col.style.transformOrigin = `${rr.left + rr.width / 2 - cr.left}px ${
+      rr.top + rr.height / 2 - cr.top
+    }px`
+    col.style.transition = `transform ${ENTER_MS}ms ${EXIT_EASE}`
+    col.style.transform = "scale(0)"
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      col.removeEventListener("transitionend", onEnd)
+      clearTimeout(timer)
+      done()
+      // If the level did NOT go away, the node is still here and still scaled to nothing — hand it
+      // back rather than leave an invisible menu behind. Unmounted is the normal path, so this is
+      // just the fail-visible branch.
+      requestAnimationFrame(() => {
+        if (!col.isConnected) return
+        col.style.transition = ""
+        col.style.transform = ""
+        col.style.transformOrigin = ""
+      })
+    }
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target === col && e.propertyName === "transform") finish()
+    }
+    col.addEventListener("transitionend", onEnd)
+    const timer = setTimeout(finish, ENTER_MS + 80) // a dropped transitionend must not strand the close
+  }
+
   return (
     <div
       ref={containerRef}
@@ -2243,7 +2349,6 @@ function CascadingStack({
     >
       {rendered.map((level, i) => {
         const isRootList = i === 0
-        const covered = isCovered(i)
         const offscreen = immersed || i < hidden
         const revealed = inGroup(i) && !offscreen
         const zLifted = !offscreen && zFrom >= 0 && i >= zFrom
@@ -2258,6 +2363,12 @@ function CascadingStack({
             // pointer-enter/leave of their own.
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
+            // Only the ROOT, and only to answer "has the mouse left the root list?" for the ground's
+            // release rule. Submenus are SIBLING boxes, not descendants, so moving onto one leaves
+            // the root — which is fine: this is read only when nothing is selected, i.e. when there
+            // are no submenus to move onto.
+            onPointerEnter={isRootList ? () => setPointerInRoot(true) : undefined}
+            onPointerLeave={isRootList ? () => setPointerInRoot(false) : undefined}
             style={{
               left: leftOf(i),
               top: topOf[i],
@@ -2314,15 +2425,15 @@ function CascadingStack({
                 "flex min-h-0 flex-col",
                 isRootList && "flex-1",
                 isRootList && !dragging && "transition-[width] duration-300 ease-in-out",
-                // DIM RULE (Mike): a menu's rows are un-dimmed ONLY when it is fully expanded or it is
-                // the top (root) menu. So dim a menu that is COVERED and not currently REVEALED (a
-                // reveal expands it to full width → un-dim), and never the root. This is a whole-menu
-                // state, NOT per-row: hovering a row must not change its color (no `:hover` here).
-                // The selected row (`aria-current`) stays lit so the path reads through the peeks.
-                covered &&
-                  !revealed &&
-                  !isRootList &&
-                  "[&_[data-htd-row]:not([aria-current=true])]:opacity-40",
+                // DIM RULE (Mike) — it keys off THIS MENU'S SELECTION, nothing else. A menu with a
+                // selection dims every row except the chosen one, so the chosen path reads straight
+                // down the cascade; a menu with NOTHING selected dims nothing, because there is no
+                // choice yet to contrast against (that is the frontier — the list you are picking
+                // from). Cover/reveal/root state deliberately does NOT enter into it. `:hover`
+                // un-dims a row for as long as the pointer is on it, so a dimmed row stays readable
+                // on approach.
+                level.selectedId != null &&
+                  "[&_[data-htd-row]:not([aria-current=true]):not(:hover)]:opacity-40",
               )}
             >
               <TopicRail
@@ -2336,8 +2447,16 @@ function CascadingStack({
                 // A select from a list at rest roots a branch reveal here, exactly as in
                 // CoveredStack (must-root-reveal-on-covering-select): the select that covers this
                 // list must not snap it shut under the pointer.
+                //
+                // ALWAYS re-root at the list being selected IN, even when it is already part of an
+                // open reveal. `hoverId` is rooted at the FRONTIER, and a selection here REBUILDS
+                // everything below this list — so the frontier it points at is usually the level the
+                // selection is about to destroy. Leaving it there strands `hoverId` on a level that
+                // no longer exists, the reveal silently dies, and with it the `groundRight` latch:
+                // the root's width would snap and shove the whole UI sideways mid-interaction. The
+                // list clicked in always survives, so it is the one safe anchor.
                 onSelect={(id) => {
-                  if (!inGroup(i)) setHoverId(level.id, false)
+                  setHoverId(level.id, hoverAll && inGroup(i))
                   railOnSelect(level, attemptExit)(id)
                 }}
                 emptyLabel={level.emptyLabel ?? "Nothing here yet."}
@@ -2350,6 +2469,10 @@ function CascadingStack({
                 // (#1) Tighten the bottom padding so a short, hugging menu doesn't trail dead space
                 // under its last row.
                 denseBottom
+                // No hover bar in the menus (Mike): hovering a row is already conveyed by it
+                // UN-DIMMING (see the dim rule above), so the left white bar was a second, competing
+                // read of the same state. Every other rail keeps it.
+                hoverBar={false}
                 // (#4) ONLY the TOPMOST (frontier) menu gets a right-justified close (✕) in its
                 // header — not every child. It dismisses that menu and clears the selection in the
                 // PARENT list that opened it (the root, with no parent, never qualifies); the clear
@@ -2368,7 +2491,9 @@ function CascadingStack({
                     ? () => {
                         const parent = rendered[i - 1]!
                         setHoverId(hoverIndex >= 0 ? parent.id : null, hoverAll)
-                        attemptExit(() => parent.onClear())
+                        // Re-rooting the reveal above cannot move anything (`hoverAll` groups from
+                        // `hidden` either way), so the box the exit measures is the box on screen.
+                        attemptExit(() => exitCol(i, () => parent.onClear()))
                       }
                     : undefined
                 }
