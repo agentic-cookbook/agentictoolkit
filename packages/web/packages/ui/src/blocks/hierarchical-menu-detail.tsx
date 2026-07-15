@@ -698,6 +698,35 @@ const EXIT_EASE = "cubic-bezier(0.75, -0.28, 0.55, 1)"
 // the gold selection chain still crosses the branch it links.
 const REVEAL_Z = 50
 
+/** The union of every on-screen MENU box, in viewport coords — the one measurement BOTH mouse
+ *  -detection rects in `CascadingStack` are built from, so they can never disagree about where the
+ *  menus end. `right`/`bottom` are the union's far edges: as wide as the widest and AS TALL AS THE
+ *  TALLEST menu (Mike), spanning the gaps between them (a bounding box over the boxes — crossing a
+ *  seam must not flicker the stack).
+ *
+ *  The full-height ROOT (`data-htd-col="0"`) is EXCLUDED: it runs to the container's bottom, so
+ *  including it would drag the union down to the window's edge — a vast dead region below the menus.
+ *  Nothing is lost, because both rects start at the container's top-left and the root's ROWS sit at
+ *  the very top with the submenus always hanging lower; only the root's empty ground below the
+ *  deepest menu falls outside, which is exactly the region that should read as "out".
+ *
+ *  Null when no menu is measurable. */
+function menuUnion(cont: HTMLElement): { right: number; bottom: number } | null {
+  let right = -Infinity
+  let bottom = -Infinity
+  cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
+    if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
+    if (col.getAttribute("data-htd-col") === "0") return // the full-height root — see above
+    const rc = col.getBoundingClientRect()
+    // A zero-size box is a menu mid-entrance (scaled to a point) — it would drag the union in to its
+    // origin, so let the caller's settle re-measure pick it up at full size instead.
+    if (rc.width === 0 || rc.height === 0) return
+    right = Math.max(right, rc.right)
+    bottom = Math.max(bottom, rc.bottom)
+  })
+  return right === -Infinity ? null : { right, bottom }
+}
+
 /** DEV-ONLY overlay: one labelled mouse-detection rectangle (see the debug frames block in
  *  CascadingStack). Inert and `fixed`, because the rects are measured in viewport coords. */
 function DebugFrame({
@@ -800,11 +829,20 @@ function usePhoneUserAgent(): boolean {
  *  (a sibling swap that replaces the open leaf editor). Only a forward drill-down into a
  *  not-yet-selected level (`selectedId == null`) is unguarded: there is no open detail to
  *  lose. Because selections are contiguous from the top, `selectedId != null` is exactly
- *  "this level is at or above the deepest selection". */
-function railOnSelect(level: TopicLevel, attemptExit: (action: () => void) => void) {
+ *  "this level is at or above the deepest selection".
+ *
+ *  `exit` runs the DE-selection through the caller's close animation, which must finish while the
+ *  menus are still mounted (see `exitCol`) — so it takes the clear as a callback rather than
+ *  returning. Default: clear immediately. Only the cascade passes one; the covering and minimized
+ *  styles grow no menu out of the clicked row, so they have no entrance to reverse. */
+function railOnSelect(
+  level: TopicLevel,
+  attemptExit: (action: () => void) => void,
+  exit: (clear: () => void) => void = (clear) => clear(),
+) {
   return (id: string) =>
     id === level.selectedId
-      ? attemptExit(() => level.onClear())
+      ? attemptExit(() => exit(() => level.onClear()))
       : level.selectedId != null
         ? attemptExit(() => level.onSelect(id))
         : level.onSelect(id)
@@ -2121,15 +2159,8 @@ function CascadingStack({
   // crosses the gaps/overlaps between the cards). Measured in VIEWPORT coords; drawn in red by the
   // "Show Mouse Detection Frames" debug switch. Its LEFT/TOP span the whole cascade interaction area
   // (the container's top-left, i.e. below the breadcrumbs) so moving back over the peeks / root header
-  // does not fall out of it, and its RIGHT/BOTTOM hug the lists.
-  //
-  // ITS BOTTOM HUGS THE LOWEST MENU (Mike) — the full-height ROOT is excluded from the union, so the
-  // rect ends at the deepest menu's bottom rather than running to the window's edge. The rect is a
-  // bounding box over the boxes, so it also spans the gaps between them, which is the point: crossing
-  // a seam must not flicker it shut. Its left/top being the container's means the root's ROWS are
-  // inside it regardless (they sit at the very top, and the submenus always hang lower) — so the
-  // pointer is never inside a topic list yet judged "out". Only the root's empty ground below the
-  // deepest menu falls outside, which is precisely where leaving SHOULD collapse.
+  // does not fall out of it, and its RIGHT/BOTTOM are `menuUnion`'s — hugging the menus (see there for
+  // why the root is left out).
   const [revealRect, setRevealRect] = useState<{
     left: number
     top: number
@@ -2145,26 +2176,8 @@ function CascadingStack({
     }
     const measure = () => {
       const cr = cont.getBoundingClientRect()
-      let r = -Infinity
-      let b = -Infinity
-      cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
-        if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
-        // The full-height ROOT is excluded: it runs to the container's bottom, so including it
-        // dragged the rect's BOTTOM down to the window's edge — a vast dead region below the menus
-        // that still counted as "in". The bottom must hug the LOWEST MENU (Mike). Nothing is lost by
-        // leaving the root out: the rect's left/top are the container's, and the root's ROWS sit at
-        // the very top with the submenus always hanging lower, so every row stays inside the rect
-        // regardless. Only the root's empty ground below the deepest menu falls outside — which is
-        // exactly the region that SHOULD collapse on exit.
-        if (col.getAttribute("data-htd-col") === "0") return
-        const rc = col.getBoundingClientRect()
-        // A zero-size box is a menu mid-entrance (scaled to a point) — it would drag the union in to
-        // its origin, so let the settle re-measure below pick it up at full size instead.
-        if (rc.width === 0 || rc.height === 0) return
-        r = Math.max(r, rc.right)
-        b = Math.max(b, rc.bottom)
-      })
-      setRevealRect(r === -Infinity ? null : { left: cr.left, top: cr.top, right: r, bottom: b })
+      const u = menuUnion(cont)
+      setRevealRect(u ? { left: cr.left, top: cr.top, right: u.right, bottom: u.bottom } : null)
     }
     const raf = requestAnimationFrame(measure)
     const settle = setTimeout(measure, 320) // re-measure once the slide transition settles
@@ -2191,8 +2204,15 @@ function CascadingStack({
 
   // AUTO-DISCLOSE via a TRIGGER RECTANGLE (Mike): at rest (nothing disclosed), moving the pointer into
   // the area to the LEFT of the topmost (frontier) menu — below the breadcrumbs (the container's top)
-  // down to the BOTTOM of that menu — discloses the whole cascade. Only armed when there IS a covered
-  // ancestor to disclose (a fully-disclosed or single-level cascade has nothing to open).
+  // down to the BOTTOM OF THE TALLEST MENU — discloses the whole cascade. Only armed when there IS a
+  // covered ancestor to disclose (a fully-disclosed or single-level cascade has nothing to open).
+  //
+  // The height is the UNION of every menu (Mike), not the frontier's own: the frontier is whichever
+  // menu opened last, so keying off it made the trigger as short as THAT card — a deep-but-short menu
+  // (an "Areas" of four rows) left the tall list beside it outside the region, and sweeping the
+  // pointer in alongside it did nothing. The menus are one stack; the region that opens them is one
+  // rect over all of them. Only the RIGHT edge is still the frontier's — the trigger is the approach
+  // lane BESIDE the cascade, so it must stop where the topmost menu starts.
   const anyCovered = rendered.some((_, i) => isCovered(i))
   const [triggerRect, setTriggerRect] = useState<{
     left: number
@@ -2215,7 +2235,10 @@ function CascadingStack({
         return
       }
       const tr = topEl.getBoundingClientRect()
-      setTriggerRect({ left: cr.left, top: cr.top, right: tr.left, bottom: tr.bottom })
+      // Falling back to the frontier's own bottom keeps the trigger armed for the one case the union
+      // can't measure (every menu mid-entrance at zero size); the settle re-measure below corrects it.
+      const u = menuUnion(cont)
+      setTriggerRect({ left: cr.left, top: cr.top, right: tr.left, bottom: u?.bottom ?? tr.bottom })
     }
     const raf = requestAnimationFrame(measure)
     const settle = setTimeout(measure, 320)
@@ -2435,6 +2458,24 @@ function CascadingStack({
     const timer = setTimeout(finish, enterMs + 80) // a dropped transitionend must not strand the close
   }
 
+  // Clearing level `j`'s selection takes columns `j+1`…frontier away TOGETHER, so the whole sub-branch
+  // has to reverse — animating only its topmost menu would leave the deeper ones parked on screen
+  // until they popped out from under it. Each shrinks into ITS OWN parent's chosen row, which is the
+  // exact mirror of the entrance (where re-disclosing a branch grows every menu below out of its own
+  // parent's row). `done` — the real clear — fires once, after the last one settles.
+  const exitBranch = (from: number, done: () => void) => {
+    const cols = rendered.map((_l, i) => i).filter((i) => i >= from)
+    if (cols.length === 0) {
+      done()
+      return
+    }
+    let pending = cols.length
+    const oneDone = () => {
+      if (--pending === 0) done()
+    }
+    cols.forEach((i) => exitCol(i, oneDone))
+  }
+
   return (
     <div
       ref={containerRef}
@@ -2565,9 +2606,13 @@ function CascadingStack({
                 // no longer exists, the reveal silently dies, and with it the `groundRight` latch:
                 // the root's width would snap and shove the whole UI sideways mid-interaction. The
                 // list clicked in always survives, so it is the one safe anchor.
+                // UN-selecting reverses the entrance (Mike): re-clicking this list's selected row
+                // clears it, which takes the menus BELOW (`i+1`…) away — so they shrink back into the
+                // rows that opened them before the clear lands. Without this the ✕ was the only
+                // animated close and a re-click just made the menu vanish.
                 onSelect={(id) => {
                   setHoverId(level.id, hoverAll && inGroup(i))
-                  railOnSelect(level, attemptExit)(id)
+                  railOnSelect(level, attemptExit, (clear) => exitBranch(i + 1, clear))(id)
                 }}
                 emptyLabel={level.emptyLabel ?? "Nothing here yet."}
                 onNew={level.onNew}
@@ -2603,7 +2648,8 @@ function CascadingStack({
                         setHoverId(hoverIndex >= 0 ? parent.id : null, hoverAll)
                         // Re-rooting the reveal above cannot move anything (`hoverAll` groups from
                         // `hidden` either way), so the box the exit measures is the box on screen.
-                        attemptExit(() => exitCol(i, () => parent.onClear()))
+                        // This ✕ is only ever on the frontier, so the branch here is this one menu.
+                        attemptExit(() => exitBranch(i, () => parent.onClear()))
                       }
                     : undefined
                 }
