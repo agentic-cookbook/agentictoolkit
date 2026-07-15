@@ -181,6 +181,15 @@ export interface InlineEditableTextProps
   /** Typography variant: `mono` for keys/identifiers, `muted` for secondary
    *  text — the two treatments every consumer was overriding by hand. */
   variant?: InlineEditableTextVariant
+  /** Size the control to its VALUE rather than the input's fixed default width. Opt-in,
+   *  and only needed inside a content-sized container — notably a DataTable column under
+   *  `autoSizeColumns`, which measures each cell's natural width. An `<input>` has an
+   *  intrinsic ~20-character default and this one is `w-full`, and a percentage width
+   *  against an INDEFINITE (max-content) track resolves to auto — so such a column would
+   *  size to that default and clip longer values, no matter what they say. A hidden ghost
+   *  carrying the same text and metrics supplies the width instead; the input stretches
+   *  over it. Default false: the plain full-width input, unchanged. */
+  autoSize?: boolean
   /** Accessible name; the shell is invisible until hover/focus, so this is required. */
   "aria-label": string
 }
@@ -200,11 +209,12 @@ export function InlineEditableText({
   onCommitEdit,
   onCancelEdit,
   variant = "default",
+  autoSize = false,
   onKeyDown,
   className,
   ...props
 }: InlineEditableTextProps): React.ReactElement {
-  return (
+  const input = (
     <Input
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -219,9 +229,32 @@ export function InlineEditableText({
         "hover:border-apt-border",
         variant === "mono" && "font-mono",
         variant === "muted" && "text-apt-text-muted",
+        autoSize && "col-start-1 row-start-1",
         className,
       )}
       {...props}
     />
+  )
+  if (!autoSize) return input
+
+  // The ghost and the input share ONE grid cell, so the ghost's max-content width becomes
+  // the wrapper's — and the `w-full` input then fills it. The ghost must therefore mirror
+  // every metric that decides the input's ideal width: font family/size, horizontal
+  // padding, and border. `whitespace-pre` keeps it on one line (and preserves the spaces
+  // of a value being typed); the placeholder stands in for an empty value so a blank field
+  // is still clickable. It is a measuring device, never content — hence aria-hidden.
+  return (
+    <span className="grid min-w-0 items-center">
+      <span
+        aria-hidden
+        className={cn(
+          "invisible col-start-1 row-start-1 h-7 whitespace-pre border border-transparent px-2 py-1 text-sm",
+          variant === "mono" && "font-mono",
+        )}
+      >
+        {value || props.placeholder || ""}
+      </span>
+      {input}
+    </span>
   )
 }
