@@ -47,6 +47,7 @@ import {
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview } from "./topic-overview"
+import { useShowDebugFrames, useSlowAnimations, animScaleStyle, SLOW_ANIM_FACTOR } from "./debug-options"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -697,6 +698,48 @@ const EXIT_EASE = "cubic-bezier(0.75, -0.28, 0.55, 1)"
 // the gold selection chain still crosses the branch it links.
 const REVEAL_Z = 50
 
+/** DEV-ONLY overlay: one labelled mouse-detection rectangle (see the debug frames block in
+ *  CascadingStack). Inert and `fixed`, because the rects are measured in viewport coords. */
+function DebugFrame({
+  rect,
+  color,
+  label,
+}: {
+  rect: { left: number; top: number; right: number; bottom: number }
+  color: string
+  label: string
+}) {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        left: rect.left,
+        top: rect.top,
+        width: Math.max(0, rect.right - rect.left),
+        height: Math.max(0, rect.bottom - rect.top),
+        border: `1px solid ${color}`,
+        pointerEvents: "none",
+        zIndex: 2147483647,
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          background: color,
+          color: "#000",
+          font: "9px/1.4 ui-monospace, monospace",
+          padding: "0 3px",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  )
+}
+
 // The card edges of the covered stack — the boundary a clipped peek's own `border-r` cannot draw.
 // (Colour via a CSS var so the no-raw-hex colour checker stays clean.)
 const SHADOW_RIGHT = "8px 0 24px -6px var(--color-shadow)"
@@ -1166,7 +1209,7 @@ function MinimizedStack({
         // the deepest pane full-width from first paint, with Back to walk up. No `md:` gate.
         // `relative` anchors the absolute selection-connector overlay.
         "relative grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)] [grid-template-columns:var(--cols)]",
-        animate && "transition-[grid-template-columns] duration-200 ease-out",
+        animate && "transition-[grid-template-columns] duration-[calc(200ms*var(--apt-anim-scale,1))] ease-out",
       )}
     >
       {rendered.map((level, i) => {
@@ -1630,7 +1673,7 @@ function CoveredStack({
               "absolute top-0 bottom-0 grid overflow-hidden",
               offscreen && "pointer-events-none",
               animate &&
-                "transition-[left,width,box-shadow] duration-300 ease-in-out",
+                "transition-[left,width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
               // The rail's own `bg-apt-nav` is 96% opaque — right for a nav sitting on the page, wrong
               // for a branch FLOATING over the detail, which ghosts the detail's text through it. A
               // lifted member gets the page background under its rail, so the card is opaque while it
@@ -1715,7 +1758,7 @@ function CoveredStack({
         style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          animate && "transition-[left,width] duration-300 ease-in-out",
+          animate && "transition-[left,width] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
@@ -1811,6 +1854,12 @@ function CascadingStack({
   // the ground's release rule below. The columns otherwise carry no pointer handlers by design (the
   // trigger/tracking rects govern the reveal), so this stays scoped to the root box.
   const [pointerInRoot, setPointerInRoot] = useState(false)
+  // DEV-ONLY debug switches (both default off; see `debug-options`).
+  const showDebugFrames = useShowDebugFrames()
+  const slowAnimations = useSlowAnimations()
+  // The CSS `duration-[calc(…*var(--apt-anim-scale,1))]` classes below stretch off the container's
+  // variable; the JS-driven entrance/exit must be scaled by hand to stay in step with them.
+  const enterMs = ENTER_MS * (slowAnimations ? SLOW_ANIM_FACTOR : 1)
 
   // COVERING — CoveredStack's intent rules (see there for the rationale of each layer), with two
   // cascade differences: the indent is the tighter CASCADE_INDENT, and the pressure/off-screen
@@ -2043,11 +2092,19 @@ function CascadingStack({
 
   // MOUSE-LEAVE via a TRACKING RECTANGLE (Mike): while a branch is disclosed, the region the pointer
   // must exit to auto-collapse is ONE rectangle — not a per-column test (which flickers as the pointer
-  // crosses the gaps/overlaps between the cards). Measured in VIEWPORT coords; also drawn as the red
-  // debug border. Its LEFT/TOP span the whole cascade interaction area (the container's top-left, i.e.
-  // below the breadcrumbs) so moving back over the peeks / root header does not fall out of it; its
-  // RIGHT hugs the disclosed menus, and its BOTTOM is the bottom of the SUBMENUS — NOT the full-height
-  // ROOT (which is excluded), so leaving below the submenus collapses.
+  // crosses the gaps/overlaps between the cards). Measured in VIEWPORT coords; drawn in red by the
+  // "Show Mouse Detection Frames" debug switch. Its LEFT/TOP span the whole cascade interaction area
+  // (the container's top-left, i.e. below the breadcrumbs) so moving back over the peeks / root header
+  // does not fall out of it, and its RIGHT/BOTTOM hug the lists.
+  //
+  // THE ROOT IS INCLUDED — this SUPERSEDES the earlier rule that excluded it so that "leaving below
+  // the submenus collapses". New rule (Mike): the menus must NEVER auto-collapse while the pointer is
+  // inside the topic lists, and the root IS a topic list. Excluding it made the rect stop at the
+  // SUBMENUS' bottom while the root ran to the container's, so the whole lower half of the root list —
+  // plainly inside the lists — counted as "left the menus". With the root in, the rect covers the
+  // ground the cascade sits on, and the way out is to move off it: into the detail beside it, or past
+  // the deepest menu. The rect is a bounding box over the boxes, so it also spans the gaps between
+  // them, which is the point — crossing a seam must not flicker it shut.
   const [revealRect, setRevealRect] = useState<{
     left: number
     top: number
@@ -2067,8 +2124,9 @@ function CascadingStack({
       let b = -Infinity
       cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
         if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
-        if (col.getAttribute("data-htd-col") === "0") return // the full-height ROOT is not a submenu
         const rc = col.getBoundingClientRect()
+        // A zero-size box is a menu mid-entrance (scaled to a point) — it would drag the union in to
+        // its origin, so let the settle re-measure below pick it up at full size instead.
         if (rc.width === 0 || rc.height === 0) return
         r = Math.max(r, rc.right)
         b = Math.max(b, rc.bottom)
@@ -2283,7 +2341,7 @@ function CascadingStack({
       }px`
       col.style.transform = "scale(0)"
       void col.offsetWidth // flush the start state so the transition has something to run FROM
-      col.style.transition = `transform ${ENTER_MS}ms ${ENTER_EASE}`
+      col.style.transition = `transform ${enterMs}ms ${ENTER_EASE}`
       col.style.transform = "scale(1)"
       const done = (e: TransitionEvent) => {
         if (e.target !== col || e.propertyName !== "transform") return
@@ -2316,7 +2374,7 @@ function CascadingStack({
     col.style.transformOrigin = `${rr.left + rr.width / 2 - cr.left}px ${
       rr.top + rr.height / 2 - cr.top
     }px`
-    col.style.transition = `transform ${ENTER_MS}ms ${EXIT_EASE}`
+    col.style.transition = `transform ${enterMs}ms ${EXIT_EASE}`
     col.style.transform = "scale(0)"
     let settled = false
     const finish = () => {
@@ -2339,7 +2397,7 @@ function CascadingStack({
       if (e.target === col && e.propertyName === "transform") finish()
     }
     col.addEventListener("transitionend", onEnd)
-    const timer = setTimeout(finish, ENTER_MS + 80) // a dropped transitionend must not strand the close
+    const timer = setTimeout(finish, enterMs + 80) // a dropped transitionend must not strand the close
   }
 
   return (
@@ -2350,6 +2408,9 @@ function CascadingStack({
       onPointerOut={reMeasure}
       onFocus={reMeasure}
       onBlur={reMeasure}
+      // Carries `--apt-anim-scale` for every `duration-[calc(…*var(--apt-anim-scale,1))]` beneath —
+      // 1 normally, 10 with the debug switch on, each transition keeping its own base duration.
+      style={animScaleStyle(slowAnimations)}
       className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
     >
       {rendered.map((level, i) => {
@@ -2408,13 +2469,13 @@ function CascadingStack({
               // the cascade sits on).
               !isRootList && "border border-apt-border",
               offscreen && "pointer-events-none",
-              !isRootList && animate && "transition-[left,width,box-shadow] duration-300 ease-in-out",
+              !isRootList && animate && "transition-[left,width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
               // THE ROOT'S WIDTH ALWAYS EASES (Mike) — it is the ground under the whole stack, and it
               // only ever moves when the stack has settled (see `groundRight`), so it is never the
               // list that must "land in place": `inPlace` would make the ground SNAP instead. Gated on
               // `dragging` alone so a rail drag still tracks the pointer with no lag. Its `left` is
               // always 0, so there is nothing else here worth transitioning.
-              isRootList && !dragging && "transition-[width,box-shadow] duration-300 ease-in-out",
+              isRootList && !dragging && "transition-[width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
             )}
           >
             {/* The rail keeps its FULL width regardless of the wrapper's (only an off-screen
@@ -2429,7 +2490,7 @@ function CascadingStack({
               className={cn(
                 "flex min-h-0 flex-col",
                 isRootList && "flex-1",
-                isRootList && !dragging && "transition-[width] duration-300 ease-in-out",
+                isRootList && !dragging && "transition-[width] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
                 // DIM RULE (Mike) — it keys off THIS MENU'S SELECTION, nothing else. A menu with a
                 // selection dims every row except the chosen one, so the chosen path reads straight
                 // down the cascade; a menu with NOTHING selected dims nothing, because there is no
@@ -2550,6 +2611,19 @@ function CascadingStack({
         paths={connectors}
         zIndex={zFrom >= 0 ? REVEAL_Z + rendered.length : undefined}
       />
+      {/* DEBUG — the two mouse-detection frames, off unless the Debug panel's "Show Mouse Detection
+          Frames" is on. They are the ONLY way to see these regions: both are invisible by
+          construction, and a rect that is one frame STALE looks identical to a correct one. Drawn in
+          viewport coords (they are measured that way), `position: fixed`, inert, above everything.
+            RED   = the COLLAPSE/tracking rect — leaving it auto-collapses an open branch.
+            GREEN = the DISCLOSE/trigger rect — entering it opens the cascade.
+          Only one is live at a time (the trigger is armed only while nothing is revealed). */}
+      {showDebugFrames && (
+        <>
+          {revealRect && <DebugFrame rect={revealRect} color="red" label="collapse" />}
+          {triggerRect && <DebugFrame rect={triggerRect} color="#22c55e" label="disclose" />}
+        </>
+      )}
       {/* The detail (leaf) pane — pinned BESIDE THE ROOT LIST at full height, UNDER the deeper
           lists (z 0 vs their i+1): the cascade discloses over it like menus over content, and it
           never moves with the cascade. Its top-left carries the immersion toggle (`«` slides every
@@ -2571,7 +2645,7 @@ function CascadingStack({
           // not be animated on disclosure"). Animating `left` alone moves the box without touching
           // its content's layout — a TRANSLATION, which is what was asked for. `width` lands
           // immediately, so the content reflows once, off-frame, instead of sixty times.
-          !dragging && "transition-[left] duration-300 ease-in-out",
+          !dragging && "transition-[left] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
         )}
       >
         {rendered.length > 0 &&
@@ -2683,7 +2757,7 @@ function NarrowStack({
   const paneClass = (i: number) =>
     cn(
       "absolute inset-0 flex flex-col",
-      "transition-transform duration-300 ease-in-out",
+      "transition-transform duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
       i !== anim && "pointer-events-none",
     )
 

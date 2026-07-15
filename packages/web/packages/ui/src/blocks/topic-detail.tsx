@@ -559,12 +559,29 @@ export function TopicRail({
   const headerInner = (
     <>
       <div className="flex w-8 shrink-0 items-center justify-center">{leftControl ?? backSlot ?? null}</div>
+      {/* THE TITLE IS CENTERED ON THE HEADER ITSELF (Mike) — not on the space left over between the
+          controls. As a `flex-1` item it centred within [leftControl … rightControls], so its centre
+          sat `(32 - rightWidth) / 2` off the header's: it drifted whenever the trailing controls
+          changed, and since only the frontier menu carries a ✕, sibling menus in one cascade centred
+          their titles differently. Taking it OUT OF FLOW and pinning it to the header's midpoint makes
+          it independent of every other icon, which is the rule asked for.
+          The `+` HANGS off the title's right edge (absolute, `left-full`) rather than sitting beside it
+          in flow, so "immediately after the title" costs the title no centring. It must live outside
+          the `truncate` box — that box is `overflow-hidden` and would clip it. */}
       {title !== undefined && (
-        <span className="flex min-w-0 flex-1 items-center justify-center gap-1 font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
-          <span className="truncate">{title}</span>
-          {newButton}
+        <span className="pointer-events-none absolute left-1/2 flex max-w-[calc(100%-6rem)] -translate-x-1/2 items-center font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
+          <span className="relative flex min-w-0 items-center">
+            <span className="truncate">{title}</span>
+            {newButton && (
+              <span className="pointer-events-auto absolute top-1/2 left-full ml-1 -translate-y-1/2">
+                {newButton}
+              </span>
+            )}
+          </span>
         </span>
       )}
+      {/* Eats the row so the trailing controls stay right-justified now the title is out of flow. */}
+      <div className="min-w-0 flex-1" />
       {rightControls}
       {closeButton}
     </>
@@ -605,7 +622,11 @@ export function TopicRail({
           their rows line up. Without a title (standalone TopicDetail) or when collapsed, fall back to
           the bare control strip (priority: leftControl → backSlot → toggle/`+` → nothing). */}
       {title !== undefined && !collapsed ? (
-        <div data-htd-header className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border pr-2">
+        <div
+          data-htd-header
+          // `relative` anchors the absolutely-centred title in `headerInner`.
+          className="relative flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border pr-2"
+        >
           {headerInner}
         </div>
       ) : leftControl ? (
@@ -766,7 +787,7 @@ export function TopicDetail({
       style={{ "--rail-w": collapsed ? `${COLLAPSED_RAIL}px` : `${railWidth}px` } as CSSProperties}
       className={cn(
         "grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] md:[grid-template-columns:var(--rail-w)_minmax(0,1fr)]",
-        !dragging && "md:transition-[grid-template-columns] md:duration-200 md:ease-out",
+        !dragging && "md:transition-[grid-template-columns] md:duration-[calc(200ms*var(--apt-anim-scale,1))] md:ease-out",
       )}
     >
       <TopicRail

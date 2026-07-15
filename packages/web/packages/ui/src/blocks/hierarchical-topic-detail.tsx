@@ -38,6 +38,7 @@ import {
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicOverviewHelp } from "./topic-overview"
+import { useSlowAnimations, animScaleStyle } from "./debug-options"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -327,6 +328,8 @@ export function HierarchicalTopicDetail({
   // The unsaved-work gate: every action that would clear a level (Back, re-click-deselect,
   // breadcrumb up-nav, selecting a shallower row) runs through here. Dirty → open the 3-action
   // modal and remember the pending action; clean → act now.
+  // DEV-ONLY: stretch every transition below (see `debug-options`). Default off.
+  const slowAnimations = useSlowAnimations()
   const [pendingExit, setPendingExit] = useState<(() => void) | null>(null)
   const [savingExit, setSavingExit] = useState(false)
   const attemptExit = useCallback(
@@ -565,7 +568,9 @@ export function HierarchicalTopicDetail({
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    // `--apt-anim-scale` (dev-only) stretches every `duration-[calc(…*var(--apt-anim-scale,1))]`
+    // beneath this root — 1 normally, 10 with the debug switch on. One place covers every stack.
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col" style={animScaleStyle(slowAnimations)}>
       <TopBar
         rootLabel={rootLabel}
         crumbs={crumbs}
@@ -1098,7 +1103,7 @@ function MinimizedStack({
         // the deepest pane full-width from first paint, with Back to walk up. No `md:` gate.
         // `relative` anchors the absolute selection-connector overlay.
         "relative grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)] [grid-template-columns:var(--cols)]",
-        animate && "transition-[grid-template-columns] duration-200 ease-out",
+        animate && "transition-[grid-template-columns] duration-[calc(200ms*var(--apt-anim-scale,1))] ease-out",
       )}
     >
       {rendered.map((level, i) => {
@@ -1562,7 +1567,7 @@ function CoveredStack({
               "absolute top-0 bottom-0 grid overflow-hidden",
               offscreen && "pointer-events-none",
               animate &&
-                "transition-[left,width,box-shadow] duration-300 ease-in-out motion-reduce:transition-none",
+                "transition-[left,width,box-shadow] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out motion-reduce:transition-none",
               // The rail's own `bg-apt-nav` is 96% opaque — right for a nav sitting on the page, wrong
               // for a branch FLOATING over the detail, which ghosts the detail's text through it. A
               // lifted member gets the page background under its rail, so the card is opaque while it
@@ -1660,7 +1665,7 @@ function CoveredStack({
         style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          animate && "transition-[left,width] duration-300 ease-in-out motion-reduce:transition-none",
+          animate && "transition-[left,width] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out motion-reduce:transition-none",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
@@ -1778,7 +1783,7 @@ function NarrowStack({
   const paneClass = (i: number) =>
     cn(
       "absolute inset-0 flex flex-col",
-      "transition-transform duration-300 ease-in-out motion-reduce:transition-none",
+      "transition-transform duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out motion-reduce:transition-none",
       i !== anim && "pointer-events-none",
     )
 
