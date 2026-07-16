@@ -72,15 +72,28 @@ export interface LoginCardProps {
    * `/oauth/signin/start` flow. Use for apps that are their own OAuth client.
    */
   githubStartHref?: string
+  /**
+   * What the identifier field accepts. `'email'` (default) is an email-only field:
+   * `type="email"` with native browser validation and an "Email" label — the right
+   * choice for a site whose backend authenticates by email only. `'identifier'`
+   * accepts an email, a user id (slug), OR a verified phone: `type="text"` (native
+   * email validation would block a slug/phone before submit), a broader default
+   * label, and the identifierHint. A site must opt IN to `'identifier'` — the
+   * default never advertises login methods a plain email backend can't accept.
+   */
+  identifierMode?: 'email' | 'identifier'
   /** Copy overrides. */
   heading?: string
   subheading?: string
   emailButtonLabel?: string
   githubButtonLabel?: string
   dividerLabel?: string
+  /** Label for the identifier field. Defaults to "Email" in email mode, or
+   *  "Email, user ID, or phone" in identifier mode. */
   emailLabel?: string
-  /** Helper text under the identifier field noting the accepted login forms
-   *  (email / user id / phone). Pass an empty string to suppress it. */
+  /** Helper text under the identifier field noting the accepted login forms.
+   *  Defaults to empty in email mode, or an email/user-id/phone blurb in
+   *  identifier mode. Pass an empty string to suppress it. */
   identifierHint?: string
   passwordLabel?: string
   passkeyButtonLabel?: string
@@ -88,7 +101,8 @@ export interface LoginCardProps {
   signupLinkLabel?: string
   /** Label shown inside the submit button while logging in. Default: "Logging in…" */
   loadingLabel?: string
-  /** Error shown when passkey sign-in is attempted without an identifier. Default: "Enter your email, user ID, or phone to sign in with a passkey." */
+  /** Error shown when passkey sign-in is attempted without an identifier.
+   *  Defaults per identifierMode. */
   passkeyEmailRequiredLabel?: string
   /** Error shown when passkey sign-in fails. Default: "Passkey sign-in failed." */
   passkeyFailedLabel?: string
@@ -109,21 +123,38 @@ export function LoginCard({
   showSignup = false,
   signupHref = '/signup',
   githubStartHref,
+  identifierMode = 'email',
   heading = 'Welcome back.',
   subheading = 'Log in to your account',
   emailButtonLabel = 'Log in with email',
   githubButtonLabel = 'Continue with GitHub',
   dividerLabel = 'or',
-  emailLabel = 'Email, user ID, or phone',
-  identifierHint = 'You can log in with your email, your user ID, or a verified phone number with country code (e.g. +1…).',
+  emailLabel,
+  identifierHint,
   passwordLabel = 'Password',
   passkeyButtonLabel = 'Sign in with a passkey',
   signupPromptLabel = "Don't have an account?",
   signupLinkLabel = 'Sign up',
   loadingLabel = 'Logging in…',
-  passkeyEmailRequiredLabel = 'Enter your email, user ID, or phone to sign in with a passkey.',
+  passkeyEmailRequiredLabel,
   passkeyFailedLabel = 'Passkey sign-in failed.',
 }: LoginCardProps): ReactElement {
+  // In identifier mode the field also accepts a user id (slug) or phone, so it must
+  // be type=text (native email validation would block those) and carry a broader
+  // label + hint; the explicit props still override these mode defaults.
+  const acceptsAnyIdentifier = identifierMode === 'identifier'
+  const resolvedEmailLabel = emailLabel ?? (acceptsAnyIdentifier ? 'Email, user ID, or phone' : 'Email')
+  const resolvedHint =
+    identifierHint ??
+    (acceptsAnyIdentifier
+      ? 'You can log in with your email, your user ID, or a verified phone number with country code (e.g. +1…).'
+      : '')
+  const resolvedPasskeyRequiredLabel =
+    passkeyEmailRequiredLabel ??
+    (acceptsAnyIdentifier
+      ? 'Enter your email, user ID, or phone to sign in with a passkey.'
+      : 'Enter your email to sign in with a passkey.')
+  const identifierInputType = acceptsAnyIdentifier ? 'text' : 'email'
   const router = useRouter()
   // The login identifier: an email, a user id (slug), or a phone number — the
   // backend classifies it, so this field applies no format validation.
@@ -168,7 +199,7 @@ export function LoginCard({
     if (!onPasskeyLogin) return
     setError(null)
     if (!identifier.trim()) {
-      setError(passkeyEmailRequiredLabel)
+      setError(resolvedPasskeyRequiredLabel)
       return
     }
     setIsSubmitting(true)
@@ -187,6 +218,11 @@ export function LoginCard({
     setError(null)
     setIsSubmitting(true)
     try {
+      // Trim like the passkey path: a stray leading/trailing space (mobile autofill,
+      // copy-paste) would otherwise miss an exact email/slug match server-side. In
+      // email mode type=email already trims natively; this keeps identifier mode
+      // consistent.
+      const trimmedIdentifier = identifier.trim()
       // Central login page → funnel the credential login through the AS so the
       // exchange code returns to the originating brand site and the central
       // session is established (centralEmailLogin navigates away on success).
@@ -197,12 +233,12 @@ export function LoginCard({
           authApiBase,
           clientId: central.clientId,
           returnUrl: central.returnUrl,
-          identifier,
+          identifier: trimmedIdentifier,
           password,
         })
         return
       }
-      const result = await onEmailLogin(identifier, password)
+      const result = await onEmailLogin(trimmedIdentifier, password)
       // An enrolled second factor: switch to the MFA step rather than navigating.
       // Checked BEFORE account-linking — no session exists until MFA completes.
       if (isMfaChallenge(result)) {
@@ -319,20 +355,20 @@ export function LoginCard({
         <form onSubmit={handleSubmit} className="auth-card__form">
           {error && <div className="auth-card__error">{error}</div>}
           <div className="auth-card__field">
-            <label htmlFor="auth-email" className="auth-card__label">{emailLabel}</label>
-            {/* type="text", NOT "email": the field also takes a user id (slug) or a
-                phone number, and native email validation would block those before
-                submit. autoComplete="username" keeps password managers filling it. */}
+            <label htmlFor="auth-email" className="auth-card__label">{resolvedEmailLabel}</label>
+            {/* In identifier mode this is type=text, NOT email: the field also takes a
+                user id (slug) or phone, and native email validation would block those
+                before submit. autoComplete="username" keeps password managers filling it. */}
             <input
               id="auth-email"
-              type="text"
-              autoComplete="username"
+              type={identifierInputType}
+              autoComplete={acceptsAnyIdentifier ? 'username' : 'email'}
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               required
               className="auth-card__input"
             />
-            {identifierHint && <p className="auth-card__hint">{identifierHint}</p>}
+            {resolvedHint && <p className="auth-card__hint">{resolvedHint}</p>}
           </div>
           <div className="auth-card__field">
             <label htmlFor="auth-password" className="auth-card__label">{passwordLabel}</label>
