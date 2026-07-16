@@ -205,12 +205,14 @@ export type MenuRect = { left: number; top: number; right: number; bottom: numbe
  * the result was untraceable. One region, read FRESH from the DOM at pointer-event time (never from
  * React state), removes the staleness entirely: the test is always against what is painted now.
  *
- * The region spans the CONTAINER's full height on the left (`container.top/bottom`), because the root
- * list is full height — moving up or down the root column, or into the gutter beside it, must never
- * read as "left the menus". Its right/bottom hug the actual columns. Erring generous (holding open in
- * a dead corner of the box) is the safe direction: the failure it replaces was collapsing under the
- * pointer, and "clicking does nothing; only a deliberate move OUT collapses" wants the benefit of the
- * doubt to fall on staying open. Null when there are no columns to measure.
+ * The region HUGS THE MENUS' CONTENT — it must NOT drop to the container's bottom. The detail pane
+ * shows below and beside the menus, so a region that ran the container's full height would swallow it,
+ * and moving DOWN to the detail (a real "leave the menus") would never collapse them — they would hang
+ * over the form instead of getting out of the way. So the container only extends the TOP-LEFT (the
+ * approach lane: the breadcrumb gutter above, the peeks / immersion strip to the left), never the
+ * bottom or the right — those hug the actual columns. The caller is responsible for passing the
+ * full-height ROOT column clamped to its rows' bottom, for the same reason. Null when nothing to
+ * measure.
  */
 export function menuRegion(colRects: MenuRect[], container: MenuRect | null): MenuRect | null {
   if (colRects.length === 0) return null
@@ -225,9 +227,8 @@ export function menuRegion(colRects: MenuRect[], container: MenuRect | null): Me
     bottom = Math.max(bottom, r.bottom)
   }
   if (container) {
-    left = Math.min(left, container.left)
-    top = Math.min(top, container.top)
-    bottom = Math.max(bottom, container.bottom)
+    left = Math.min(left, container.left) // the peeks / immersion strip to the left
+    top = Math.min(top, container.top) // the breadcrumb gutter above the first row
   }
   return { left, top, right, bottom }
 }

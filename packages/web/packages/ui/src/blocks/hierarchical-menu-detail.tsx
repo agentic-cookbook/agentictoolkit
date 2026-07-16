@@ -790,7 +790,19 @@ function usePointerInMenus(
       if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns are not "the menus"
       const r = col.getBoundingClientRect()
       if (r.width === 0 || r.height === 0) return // a menu mid-entrance (scaled to a point)
-      rects.push(r)
+      if (col.getAttribute("data-htd-col") === "0") {
+        // The ROOT column is FULL HEIGHT (it is the ground the cascade sits on), but the menus occupy
+        // only its ROWS — everything below is empty ground where the detail shows through. Contribute
+        // the rows' bottom, not the box's, so the region ends where the menus end and moving down onto
+        // the detail reads as leaving them. Clamp to the box bottom so a long, scrolling root (whose
+        // last row is scrolled past the cut) still counts only to where it is actually cut off.
+        const rows = col.querySelectorAll<HTMLElement>("[data-htd-row]")
+        const last = rows[rows.length - 1]
+        const bottom = last ? Math.min(last.getBoundingClientRect().bottom, r.bottom) : r.top
+        rects.push({ left: r.left, top: r.top, right: r.right, bottom })
+        return
+      }
+      rects.push(r) // a submenu already hugs its rows (height-capped), so its box IS its content
     })
     return menuRegion(rects, cont.getBoundingClientRect())
   }, [containerRef])

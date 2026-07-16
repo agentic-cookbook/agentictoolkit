@@ -225,22 +225,23 @@ describe("menu region — the ONE authority for pointer-in-menus", () => {
     bottom,
   })
 
-  it("unions the columns and spans the container's full height on the left", () => {
-    // Two menus at different heights + a full-height root: the region hugs the widest/tallest menu on
-    // the right, but its top/bottom take the container's, so moving up or down the full-height root
-    // column never reads as "left the menus".
-    const container = rect(0, 0, 900, 600)
-    const cols = [rect(0, 0, 200, 600), rect(200, 40, 420, 300)] // root (full height) + a short submenu
+  it("hugs the menus' content — it does NOT run the container's full height", () => {
+    // The bug the debug frame exposed: the region ran the container's full height (the root column is
+    // full height) and swallowed the detail below the menus. The caller clamps the root to its rows'
+    // bottom (here 235), and `menuRegion` takes only the container's TOP-LEFT (the approach lane) —
+    // never its bottom or right. So the region ends where the menus end, not at the page footer.
+    const container = rect(0, 0, 900, 2000) // the full-height shell
+    const cols = [rect(0, 0, 200, 235), rect(200, 40, 420, 300)] // root clamped to rows + a submenu
     const region = menuRegion(cols, container)
-    expect(region).toEqual({ left: 0, top: 0, right: 420, bottom: 600 })
+    expect(region).toEqual({ left: 0, top: 0, right: 420, bottom: 300 })
   })
 
-  it("holds the pointer that is over a short submenu's DEAD space below it (errs generous)", () => {
-    // The safe direction: the failure being replaced was collapsing UNDER the pointer, so a point in
-    // the region's box — even below a short submenu — counts as held rather than risking a collapse.
-    const region = menuRegion([rect(0, 0, 200, 600), rect(200, 40, 420, 300)], rect(0, 0, 900, 600))!
-    expect(pointInRegion(region, 300, 500)).toBe(true) // below the submenu, still in the box
-    expect(pointInRegion(region, 600, 300)).toBe(false) // out on the detail side
+  it("counts a point BELOW the menus as OUT, so moving to the detail collapses them", () => {
+    const region = menuRegion([rect(0, 0, 200, 235), rect(200, 40, 420, 300)], rect(0, 0, 900, 2000))!
+    expect(pointInRegion(region, 100, 200)).toBe(true) // on a root row — in the menus
+    expect(pointInRegion(region, 300, 250)).toBe(true) // within the submenu's height band — in
+    expect(pointInRegion(region, 300, 500)).toBe(false) // below the menus — the detail form area, OUT
+    expect(pointInRegion(region, 600, 100)).toBe(false) // right of the menus — the detail, OUT
   })
 
   it("is null when there are no columns to measure", () => {
