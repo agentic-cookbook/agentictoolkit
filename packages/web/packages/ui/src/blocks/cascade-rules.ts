@@ -147,16 +147,16 @@ export function exitKeyframes(): Keyframe[] {
  * always about, instead of inferring it from a mechanism that can switch itself off.
  */
 export function mayMoveGround({
-  pointerInStack,
+  pointerInMenus,
   latched,
 }: {
-  /** Is the pointer inside the union of the root list and every open menu? */
-  pointerInStack: boolean
+  /** Is the pointer inside the menu region (`menuRegion`) — the same authority the reveal uses? */
+  pointerInMenus: boolean
   /** Has a ground width ever been recorded for this surface? */
   latched: boolean
 }): boolean {
   if (!latched) return true // first paint: nothing to hold, so take the real width
-  return !pointerInStack
+  return !pointerInMenus
 }
 
 // ─── Choosing a row ───────────────────────────────────────────────────────────────────────────────
@@ -188,32 +188,121 @@ export function planRailSelect(selectedId: string | null, clickedId: string): Ra
   return { action: "select", guarded: true, collapse: true }
 }
 
-// ─── The mouse-detection frames ───────────────────────────────────────────────────────────────────
+// ─── The menu region: the ONE authority for "is the pointer in the menus?" ─────────────────────────
+
+/** A hit-test rectangle in viewport coords. */
+export type MenuRect = { left: number; top: number; right: number; bottom: number }
 
 /**
- * Is the auto-COLLAPSE (red) region live — i.e. would leaving it close a reveal?
- * (**must-draw-every-detection-frame**)
+ * The union of the on-screen menu column rects into ONE region — the single authority for whether
+ * the pointer is "in the menus", which governs BOTH the reveal's held-state AND the ground latch.
+ *
+ * This exists because the two were computed separately and both fragilely: the reveal's held-state
+ * was `hoverIndex >= 0` (which depends on width pressure, measured a beat after the click) tested
+ * against an EFFECT-measured `revealRect` (a render behind whenever the layout was still settling),
+ * and the ground had its own `stackRect`. Choosing a row remounts the whole subtree, so "a beat
+ * late" and "a render behind" are the norm on exactly the interaction that must not collapse — and
+ * the result was untraceable. One region, read FRESH from the DOM at pointer-event time (never from
+ * React state), removes the staleness entirely: the test is always against what is painted now.
+ *
+ * The region spans the CONTAINER's full height on the left (`container.top/bottom`), because the root
+ * list is full height — moving up or down the root column, or into the gutter beside it, must never
+ * read as "left the menus". Its right/bottom hug the actual columns. Erring generous (holding open in
+ * a dead corner of the box) is the safe direction: the failure it replaces was collapsing under the
+ * pointer, and "clicking does nothing; only a deliberate move OUT collapses" wants the benefit of the
+ * doubt to fall on staying open. Null when there are no columns to measure.
  */
-export function revealRectArmed({ hoverIndex }: { hoverIndex: number }): boolean {
-  return hoverIndex >= 0
+export function menuRegion(colRects: MenuRect[], container: MenuRect | null): MenuRect | null {
+  if (colRects.length === 0) return null
+  let left = Infinity
+  let top = Infinity
+  let right = -Infinity
+  let bottom = -Infinity
+  for (const r of colRects) {
+    left = Math.min(left, r.left)
+    top = Math.min(top, r.top)
+    right = Math.max(right, r.right)
+    bottom = Math.max(bottom, r.bottom)
+  }
+  if (container) {
+    left = Math.min(left, container.left)
+    top = Math.min(top, container.top)
+    bottom = Math.max(bottom, container.bottom)
+  }
+  return { left, top, right, bottom }
 }
+
+/** Is `(x, y)` inside `r`? Edges count as in. */
+export function pointInRegion(r: MenuRect, x: number, y: number): boolean {
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+}
+
+// ─── The reveal: what is open, and the ONLY two things that may close it ────────────────────────────
+
+/**
+ * The open reveal: which list's branch is held open (`root`), and whether it spans EVERY on-screen
+ * list (a pointer ENTER — `all: true`) or only the rooted list's own branch (a covering SELECT —
+ * `all: false`, so a click never springs the user's collapsed parents open,
+ * must-not-expand-parents-on-select).
+ */
+export type RevealState = { root: string | null; all: boolean }
+export const NO_REVEAL: RevealState = { root: null, all: false }
+
+/**
+ * The COMPLETE set of things that may change the reveal — the whole point of naming them.
+ *
+ * A `root` is the ONLY opener, and a SELECT dispatches exactly that: choosing a row RE-ROOTS the
+ * reveal at the list clicked in, it never closes it. The only two closers are the pointer leaving the
+ * menus and an explicit disclosure toggle. There is deliberately no "select" or "click" event here:
+ * that a click cannot close a reveal is the invariant whose absence let a click collapse the menus,
+ * so it is encoded as an unrepresentable state. A future edit that wants to close on select has to
+ * add a new event, and `revealClosedBy`'s test will reject it.
+ */
+export type RevealEvent =
+  | { type: "root"; id: string; all: boolean } // hover-enter (all) OR covering-select (branch)
+  | { type: "pointerLeftMenus" } // the pointer left the region — the ONE auto-collapse
+  | { type: "settle" } // a «/» or immersion toggle: settle the layout NOW (an explicit action)
+
+export function reduceReveal(_prev: RevealState, e: RevealEvent): RevealState {
+  switch (e.type) {
+    case "root":
+      return { root: e.id, all: e.all }
+    case "pointerLeftMenus":
+    case "settle":
+      return NO_REVEAL
+  }
+}
+
+/**
+ * Does this event CLOSE the reveal? True for exactly the pointer-leave and the explicit toggle;
+ * false for a root. "Auto-collapse is `pointerLeftMenus` and nothing else" is this function, and a
+ * click never reaches it — which is what "clicking does nothing wrt auto-collapse" means in code.
+ */
+export function revealClosedBy(e: RevealEvent): boolean {
+  return e.type === "pointerLeftMenus" || e.type === "settle"
+}
+
+// ─── The disclose trigger frame ─────────────────────────────────────────────────────────────────────
 
 /**
  * Is the auto-DISCLOSE (green) region live — i.e. would entering it open the cascade?
  *
- * Note what this depends on: `anyCovered`. With nothing covered there is nothing to disclose, so the
- * region is correctly dead — which is precisely why the debug overlay must draw it ANYWAY, dashed.
- * "No green rect on screen" and "the green rect is disarmed because nothing is covered" look
- * identical when the answer is to draw nothing, and the second is the diagnosis.
+ * Opening is a SEPARATE authority from the held-region above: this arms the lane, left of the
+ * frontier, that a resting (collapsed) cascade opens when the pointer sweeps into it. It depends on
+ * `anyCovered` — with nothing covered there is nothing to disclose, so the region is correctly dead,
+ * which is precisely why the debug overlay must draw it ANYWAY, dashed. "No green rect on screen" and
+ * "the green rect is disarmed because nothing is covered" look identical when the answer is to draw
+ * nothing, and the second is the diagnosis.
  */
 export function triggerRectArmed({
-  hoverIndex,
+  revealOpen,
   immersed,
   anyCovered,
 }: {
-  hoverIndex: number
+  /** Is a reveal already open? (Then there is nothing to trigger — the cascade is already disclosed.) */
+  revealOpen: boolean
   immersed: boolean
   anyCovered: boolean
 }): boolean {
-  return hoverIndex < 0 && !immersed && anyCovered
+  return !revealOpen && !immersed && anyCovered
 }

@@ -59,9 +59,11 @@ import {
   enterKeyframes,
   exitKeyframes,
   mayMoveGround,
+  menuRegion,
   planRailSelect,
-  revealRectArmed,
+  pointInRegion,
   triggerRectArmed,
+  type MenuRect,
 } from "./cascade-rules"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
@@ -686,13 +688,13 @@ const cascadeMemory = new Map<
     /** Last ground right edge observed with the stack settled; `null` until one has been seen. */
     groundRight: number | null
     /** Was the pointer last seen inside the menu region? Out here for the same reason as `groundRight`
-     *  — and it is load-bearing WITH it, not merely adjacent. The ground is held while the pointer is
-     *  in the menus, and the click that must hold it is USUALLY THE REMOUNT ITSELF (choosing a row is
-     *  a route-param change). Component state would therefore reset to "outside" on exactly the frame
-     *  the latch matters, free the ground, and let it jump — the bug the latch exists to stop, wearing
-     *  a different hat. `false` before any pointer has been seen: a deep link has no pointer in the
+     *  — and it is load-bearing WITH it, not merely adjacent. The menus are held open while the pointer
+     *  is in the region, and the click that must hold them is USUALLY THE REMOUNT ITSELF (choosing a
+     *  row is a route-param change). Component state would therefore reset to "outside" on exactly the
+     *  frame the hold matters, freeing the ground AND dropping the reveal — the bug this whole layer
+     *  exists to stop. `false` before any pointer has been seen: a deep link has no pointer in the
      *  stack, and its first paint must take the real width. */
-    pointerInStack: boolean
+    pointerInMenus: boolean
     /** The selection the detail pane last painted, so its fade can tell "became a different detail"
      *  from "mounted". `null` until first painted — and it must live out here for the same reason as
      *  `seenKeys`: choosing a row IS the param change that remounts the subtree, so component state
@@ -703,7 +705,7 @@ const cascadeMemory = new Map<
 const cascadeMemoryFor = (key: string) => {
   const existing = cascadeMemory.get(key)
   if (existing) return existing
-  const fresh = { seenKeys: null, groundRight: null, detailToken: null, pointerInStack: false }
+  const fresh = { seenKeys: null, groundRight: null, detailToken: null, pointerInMenus: false }
   cascadeMemory.set(key, fresh)
   return fresh
 }
@@ -757,6 +759,96 @@ function menuUnion(cont: HTMLElement): { right: number; bottom: number } | null 
     bottom = Math.max(bottom, rc.bottom)
   })
   return right === -Infinity ? null : { right, bottom }
+}
+
+/**
+ * THE SINGLE AUTHORITY for "is the pointer in the menus?" — the layer whose absence made choosing a
+ * row auto-collapse the cascade (Mike). It governs both the ground latch and whether the reveal is
+ * held, and it is the ONE thing (with the explicit `«/»` toggles) that may close a reveal. See
+ * `cascade-rules`' `menuRegion` for the full why; in short, the two used to be computed separately
+ * and both from stale sources — `hoverIndex >= 0` (width pressure, a beat late) against an
+ * effect-measured `revealRect` (a render behind) — on precisely the remount a click triggers.
+ *
+ * The fix is to read the region FRESH from the DOM inside the pointer handler, so the test is never
+ * against a stale rect: only a real `pointermove` whose coordinates fall outside what is painted NOW
+ * can report "left the menus". If the pointer never moves after a click, nothing ever closes — which
+ * is exactly "clicking does nothing; only the mouse leaving collapses".
+ *
+ * Seeded from `mem` across the remount (a fresh `false` would report "left" on the click's own frame),
+ * and it keeps a measured rect in state PURELY for the debug overlay to draw — never for hit-testing.
+ */
+function usePointerInMenus(
+  containerRef: RefObject<HTMLDivElement | null>,
+  mem: { pointerInMenus: boolean },
+  regionSig: string,
+): { pointerInMenus: boolean; regionRect: MenuRect | null } {
+  const readRegion = useCallback((): MenuRect | null => {
+    const cont = containerRef.current
+    if (!cont) return null
+    const rects: MenuRect[] = []
+    cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
+      if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns are not "the menus"
+      const r = col.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) return // a menu mid-entrance (scaled to a point)
+      rects.push(r)
+    })
+    return menuRegion(rects, cont.getBoundingClientRect())
+  }, [containerRef])
+
+  const [pointerInMenus, setPointerInMenus] = useState(() => mem.pointerInMenus)
+  useEffect(() => {
+    // Coalesce to ONE region read per animation frame: this is a document-wide pointermove, and
+    // `readRegion` calls `getBoundingClientRect`, which forces a synchronous reflow while the cascade
+    // is animating. Reading once per frame bounds that to at most one reflow per frame no matter how
+    // fast the pointer moves — and it is still FRESH (the frame reads live layout, never a React state
+    // value that lags a render), which is the whole reason the old effect-measured rect raced.
+    let raf = 0
+    let last: { x: number; y: number } | null = null
+    const flush = () => {
+      raf = 0
+      if (!last) return
+      const region = readRegion()
+      const inside = region != null && pointInRegion(region, last.x, last.y)
+      mem.pointerInMenus = inside // survives the remount; the state only drives THIS render
+      setPointerInMenus((prev) => (prev === inside ? prev : inside))
+    }
+    const onMove = (e: PointerEvent) => {
+      last = { x: e.clientX, y: e.clientY }
+      if (raf === 0) raf = requestAnimationFrame(flush)
+    }
+    document.addEventListener("pointermove", onMove)
+    return () => {
+      document.removeEventListener("pointermove", onMove)
+      if (raf !== 0) cancelAnimationFrame(raf)
+    }
+  }, [readRegion, mem])
+
+  // A measured rect for the DEBUG overlay ONLY (never hit-testing — that reads fresh above). Re-measured
+  // when the layout signature changes and once more after the width transition settles.
+  const [regionRect, setRegionRect] = useState<MenuRect | null>(null)
+  useLayoutEffect(() => {
+    const measure = () =>
+      setRegionRect((prev) => {
+        const next = readRegion()
+        return prev &&
+          next &&
+          prev.left === next.left &&
+          prev.top === next.top &&
+          prev.right === next.right &&
+          prev.bottom === next.bottom
+          ? prev
+          : next
+      })
+    measure()
+    const raf = requestAnimationFrame(measure)
+    const settle = setTimeout(measure, 340)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(settle)
+    }
+  }, [readRegion, regionSig])
+
+  return { pointerInMenus, regionRect }
 }
 
 /**
@@ -824,13 +916,6 @@ function DetailContent({
   )
 }
 
-/** A hit-test region in VIEWPORT coords (which is why everything drawn from one is `position: fixed`). */
-type Rect = { left: number; top: number; right: number; bottom: number }
-
-/** Is `(x, y)` inside `r`? Edges count as in. */
-const inRect = (r: Rect, x: number, y: number) =>
-  x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
-
 /** DEV-ONLY overlay: one labelled mouse-detection rectangle (see the debug frames block in
  *  CascadingStack). Inert and `fixed`, because the rects are measured in viewport coords.
  *
@@ -845,7 +930,7 @@ function DebugFrame({
   label,
   armed,
 }: {
-  rect: Rect
+  rect: MenuRect
   color: string
   label: string
   armed: boolean
@@ -2243,73 +2328,21 @@ function CascadingStack({
   // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
   // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
   // so a full-width box would poke back into view below the survivors' hugged bottoms).
-  // THE MENU REGION — the union of the root list and every open menu, in viewport coords. The root
-  // is full height, so this is the whole left column of the surface out to the stack's right edge:
-  // leaving it means moving onto the detail or off the surface, which is the one gesture that says
-  // "I am done with the menus". Read by the ground's release rule below and drawn as the overlay's
-  // third frame.
-  //
-  // Measured from the DOM rather than derived from `groundRight`, so it reports what is PAINTED —
-  // including a hover reveal fanning menus out over the detail, which `groundRight` knows nothing
-  // about and which must still count as being in the menus.
-  const [stackRect, setStackRect] = useState<Rect | null>(null)
-  const stackRectSig = `${rendered.length}:${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
-  useLayoutEffect(() => {
-    const cont = containerRef.current
-    if (!cont) return
-    const measure = () => {
-      const cr = cont.getBoundingClientRect()
-      const rootEl = cont.querySelector<HTMLElement>(`[data-htd-col="0"]`)
-      const u = menuUnion(cont)
-      const right = Math.max(rootEl?.getBoundingClientRect().right ?? cr.left, u?.right ?? cr.left)
-      const next = { left: cr.left, top: cr.top, right, bottom: cr.bottom }
-      setStackRect((prev) =>
-        prev &&
-        prev.left === next.left &&
-        prev.top === next.top &&
-        prev.right === next.right &&
-        prev.bottom === next.bottom
-          ? prev
-          : next,
-      )
-    }
-    measure()
-    const raf = requestAnimationFrame(measure)
-    const settle = setTimeout(measure, 340) // the root's width EASES — catch where it lands
-    return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(settle)
-    }
-  }, [stackRectSig])
-
-  // A document-level listener, like the other two rects — the columns are SIBLING boxes, not
-  // descendants, so per-box enter/leave flickers as the pointer crosses the seams between them.
-  // SEEDED FROM THE SURFACE'S MEMORY, never from `false`: choosing a row is a route-param change that
-  // remounts this subtree, so a fresh `false` here would report "the pointer left the menus" on the
-  // exact frame the click lands — freeing the ground and letting it jump, which is the bug the latch
-  // exists to prevent. The pointer has not moved; only the component has.
-  const [pointerInStack, setPointerInStack] = useState(() => mem.pointerInStack)
-  useEffect(() => {
-    if (!stackRect) return
-    const onMove = (e: PointerEvent) => {
-      const inside = inRect(stackRect, e.clientX, e.clientY)
-      mem.pointerInStack = inside // survives the remount; the state below only drives this render
-      setPointerInStack(inside)
-    }
-    document.addEventListener("pointermove", onMove)
-    return () => document.removeEventListener("pointermove", onMove)
-  }, [stackRect, mem])
+  // THE ONE AUTHORITY — "is the pointer in the menus?" — read fresh from the DOM (see
+  // `usePointerInMenus`). It governs the ground latch below AND whether the reveal is held (further
+  // down), which used to be two separate, both-stale computations; unifying them onto one fresh
+  // measurement is the layer whose absence let choosing a row collapse the cascade. `regionRect` is
+  // for the debug overlay only.
+  const regionSig = `${rendered.length}:${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
+  const { pointerInMenus, regionRect } = usePointerInMenus(containerRef, mem, regionSig)
 
   // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the resting
   // stack (`stackRight`), but it is HELD while the pointer is in the menus, because moving it moves
   // EVERYTHING: the root's width and the detail's position both hang off it, so any change
-  // mid-interaction shoves the UI around under the pointer. `mayMoveGround` owns the rule (and its
-  // history — the previous version silently stopped working); this is only the plumbing.
-  //
-  // Both halves of this — the held width AND whether the pointer is in the menus — live in
-  // `cascadeMemory`, so a route-param REMOUNT (exactly what choosing a row triggers) cannot reset
-  // either mid-interaction. `mem` is read at the top of this component.
-  const groundFree = mayMoveGround({ pointerInStack, latched: mem.groundRight !== null })
+  // mid-interaction shoves the UI around under the pointer. `mayMoveGround` owns the rule; this is
+  // only the plumbing. The held width lives in `cascadeMemory` so a route-param REMOUNT cannot reset
+  // it mid-interaction (the pointer half lives there too — see the hook). `mem` is read at the top.
+  const groundFree = mayMoveGround({ pointerInMenus, latched: mem.groundRight !== null })
   const groundRight = groundFree ? stackRight : (mem.groundRight ?? stackRight)
   useEffect(() => {
     if (groundFree) mem.groundRight = stackRight
@@ -2338,50 +2371,18 @@ function CascadingStack({
   const detailLeft = immersed ? 0 : rendered.length > 0 ? groundRight : 0
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // MOUSE-LEAVE via a TRACKING RECTANGLE (Mike): while a branch is disclosed, the region the pointer
-  // must exit to auto-collapse is ONE rectangle — not a per-column test (which flickers as the pointer
-  // crosses the gaps/overlaps between the cards). Measured in VIEWPORT coords; drawn in red by the
-  // "Show Mouse Detection Frames" debug switch. Its LEFT/TOP span the whole cascade interaction area
-  // (the container's top-left, i.e. below the breadcrumbs) so moving back over the peeks / root header
-  // does not fall out of it, and its RIGHT/BOTTOM are `menuUnion`'s — hugging the menus (see there for
-  // why the root is left out).
-  //
-  // MEASURED whenever there are menus to measure — NOT only while it is armed. The two are separate
-  // questions (must-draw-every-detection-frame): `revealArmed` below decides whether leaving it
-  // actually collapses anything, while the rect itself exists so the debug overlay can always show
-  // where the region IS and whether it is live. Tying the measurement to the arming is what left the
-  // overlay blank and unexplained.
-  const revealArmed = revealRectArmed({ hoverIndex })
-  const [revealRect, setRevealRect] = useState<Rect | null>(null)
-  const revealRectSig = `${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
+  // AUTO-COLLAPSE — the ONE closer of the reveal, and the whole point of this refactor. A reveal is
+  // held open while `pointerInMenus`; the instant that authority reports the pointer OUTSIDE the menu
+  // region, the reveal closes (`reduceReveal`'s `pointerLeftMenus`, the only auto-close there is). No
+  // click, remount, width change or selection reaches here — choosing a row RE-ROOTS the reveal, it
+  // never closes it, so a click can no longer collapse the menus. If the pointer never moves after a
+  // click, `pointerInMenus` stays true and nothing collapses, which is exactly "clicking does nothing
+  // wrt auto-collapse". This also subsumes the covered stack's old blind-root document watcher: a
+  // reveal that revealed nothing is still an open `hoverId`, and it too clears the moment the pointer
+  // is proven outside.
   useEffect(() => {
-    const cont = containerRef.current
-    if (!cont) {
-      setRevealRect(null)
-      return
-    }
-    const measure = () => {
-      const cr = cont.getBoundingClientRect()
-      const u = menuUnion(cont)
-      setRevealRect(u ? { left: cr.left, top: cr.top, right: u.right, bottom: u.bottom } : null)
-    }
-    measure()
-    const raf = requestAnimationFrame(measure)
-    const settle = setTimeout(measure, 320) // re-measure once the slide transition settles
-    return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(settle)
-    }
-  }, [revealRectSig])
-  // Auto-collapse the moment the pointer leaves the tracking rectangle.
-  useEffect(() => {
-    if (!revealArmed || !revealRect) return
-    const onMove = (e: PointerEvent) => {
-      if (!inRect(revealRect, e.clientX, e.clientY)) setHoverId(null)
-    }
-    document.addEventListener("pointermove", onMove)
-    return () => document.removeEventListener("pointermove", onMove)
-  }, [revealArmed, revealRect])
+    if (hoverId !== null && !pointerInMenus) setHoverId(null)
+  }, [pointerInMenus, hoverId, setHoverId])
 
   // AUTO-DISCLOSE via a TRIGGER RECTANGLE (Mike): at rest (nothing disclosed), moving the pointer into
   // the area to the LEFT of the topmost (frontier) menu — below the breadcrumbs (the container's top)
@@ -2395,13 +2396,14 @@ function CascadingStack({
   // rect over all of them. Only the RIGHT edge is still the frontier's — the trigger is the approach
   // lane BESIDE the cascade, so it must stop where the topmost menu starts.
   //
-  // Measured whenever the frontier is measurable, armed only when there is something to disclose —
-  // see `revealRect` above on why those are separate. `anyCovered` is exactly why this matters: with
-  // nothing covered the region is correctly DEAD, and drawing it dashed is the only way that answer
-  // is ever visible.
+  // Measured whenever the frontier is measurable, armed only when there is something to disclose.
+  // Measuring and arming are separate questions (must-draw-every-detection-frame): the rect exists so
+  // the debug overlay can always show where the region is, while `triggerArmed` decides whether
+  // entering it opens anything. `anyCovered` is exactly why that matters: with nothing covered the
+  // region is correctly DEAD, and drawing it dashed is the only way that answer is ever visible.
   const anyCovered = rendered.some((_, i) => isCovered(i))
-  const triggerArmed = triggerRectArmed({ hoverIndex, immersed, anyCovered })
-  const [triggerRect, setTriggerRect] = useState<Rect | null>(null)
+  const triggerArmed = triggerRectArmed({ revealOpen: hoverIndex >= 0, immersed, anyCovered })
+  const [triggerRect, setTriggerRect] = useState<MenuRect | null>(null)
   const triggerSig = `${hoverIndex}:${anyCovered}:${frontier}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
   useEffect(() => {
     const cont = containerRef.current
@@ -2434,7 +2436,8 @@ function CascadingStack({
   useEffect(() => {
     if (!triggerArmed || !triggerRect) return
     const onMove = (e: PointerEvent) => {
-      if (inRect(triggerRect, e.clientX, e.clientY)) setHoverId(rendered[frontier]?.id ?? null, true)
+      if (pointInRegion(triggerRect, e.clientX, e.clientY))
+        setHoverId(rendered[frontier]?.id ?? null, true)
     }
     document.addEventListener("pointermove", onMove)
     return () => document.removeEventListener("pointermove", onMove)
@@ -2924,25 +2927,25 @@ function CascadingStack({
         zIndex={zFrom >= 0 ? REVEAL_Z + rendered.length : undefined}
       />
       {/* DEBUG — the mouse-detection frames, off unless the Debug panel's "Show Mouse Detection
-          Frames" is on. They are the ONLY way to see these regions: all three are invisible by
+          Frames" is on. They are the ONLY way to see these regions: both are invisible by
           construction, and a rect that is one frame STALE looks identical to a correct one. Drawn in
           viewport coords (they are measured that way), `position: fixed`, inert, above everything.
-            RED    = the COLLAPSE/tracking rect — leaving it auto-collapses an open branch.
+            BLUE   = the MENU REGION — the ONE authority. While the pointer is inside it the ground is
+                     latched AND any open reveal is held; the moment it leaves, both release. This is
+                     the single rect that used to be two (a separate "collapse" and "ground held"),
+                     which is exactly the unification this refactor is.
             GREEN  = the DISCLOSE/trigger rect — entering it opens the cascade.
-            BLUE   = the MENU REGION — while the pointer is inside it, the ground is held.
-          EVERY frame the switch promises is drawn (must-draw-every-detection-frame) — dashed and
-          "(off)" when the region is inert rather than omitted. Omitting them is exactly how this
-          switch came to look broken: with `autoHideTopics={false}` nothing is ever covered, so the
-          trigger has nothing to disclose and the reveal never opens, so BOTH rects were null and the
-          switch drew nothing at all. Dashed frames say that out loud; an empty screen doesn't. */}
+          Both are drawn whether or not ARMED (must-draw-every-detection-frame) — dashed and "(off)"
+          when inert rather than omitted. Omitting them is how the switch came to look broken: with
+          `autoHideTopics={false}` nothing is covered, so the trigger has nothing to disclose; a
+          dashed frame says that out loud, an empty screen doesn't. */}
       {showDebugFrames && (
         <>
-          {revealRect && <DebugFrame rect={revealRect} color="red" label="collapse" armed={revealArmed} />}
+          {regionRect && (
+            <DebugFrame rect={regionRect} color="#3b82f6" label="menus held" armed={pointerInMenus} />
+          )}
           {triggerRect && (
             <DebugFrame rect={triggerRect} color="#22c55e" label="disclose" armed={triggerArmed} />
-          )}
-          {stackRect && (
-            <DebugFrame rect={stackRect} color="#3b82f6" label="ground held" armed={pointerInStack} />
           )}
         </>
       )}

@@ -7,12 +7,18 @@ import {
   ENTER_MS,
   EXIT_EASE,
   EXIT_MS,
+  NO_REVEAL,
   enterKeyframes,
   exitKeyframes,
   mayMoveGround,
+  menuRegion,
   planRailSelect,
-  revealRectArmed,
+  pointInRegion,
+  reduceReveal,
+  revealClosedBy,
   triggerRectArmed,
+  type MenuRect,
+  type RevealEvent,
 } from "../blocks/cascade-rules"
 
 /**
@@ -121,36 +127,38 @@ describe("must-hold-the-ground-under-the-pointer", () => {
   it("holds the root list's width while the pointer is in the menus", () => {
     // Both reported symptoms: clicking Integrations resized the root list, and unselecting it resized
     // the root list. In both the pointer is still in the menus, so the ground must not move.
-    expect(mayMoveGround({ pointerInStack: true, latched: true })).toBe(false)
+    expect(mayMoveGround({ pointerInMenus: true, latched: true })).toBe(false)
   })
 
   it("releases once the pointer has left the menus", () => {
-    expect(mayMoveGround({ pointerInStack: false, latched: true })).toBe(true)
+    expect(mayMoveGround({ pointerInMenus: false, latched: true })).toBe(true)
   })
 
   it("takes the real width on a first paint, when there is nothing latched to hold", () => {
     // Without this the stack renders at a held width of nothing.
-    expect(mayMoveGround({ pointerInStack: true, latched: false })).toBe(true)
+    expect(mayMoveGround({ pointerInMenus: true, latched: false })).toBe(true)
   })
 
   it("stays held across a remount, because the pointer has not moved — only the component has", () => {
     // Choosing a row is a route-param change, so React discards and remounts the whole subtree ON
-    // THE CLICK the latch has to survive. If the remounted component reports `pointerInStack: false`
+    // THE CLICK the hold has to survive. If the remounted component reports `pointerInMenus: false`
     // (a fresh `useState(false)` rather than a seed from the surface's memory), the ground frees
     // itself on exactly that frame and jumps — the reported bug, reintroduced through the back door.
     // The pointer is still in the menus, so the answer is unchanged:
-    expect(mayMoveGround({ pointerInStack: true, latched: true })).toBe(false)
+    expect(mayMoveGround({ pointerInMenus: true, latched: true })).toBe(false)
   })
 
-  it("depends on the POINTER only — not on a reveal, a cover, or a selection", () => {
-    // The regression this rule exists to forbid. The old test was `hoverIndex < 0`, a proxy for "the
-    // submenus are collapsed" — and a reveal only exists while some list is COVERED, so the day
-    // autoHideTopics went false the proxy silently pinned itself to "always free to move". Any future
-    // rewrite that reintroduces a cover/reveal/selection term fails here: the function takes no such
-    // argument, and this asserts the signature stays that way.
-    expect(Object.keys({ pointerInStack: false, latched: true })).toEqual(["pointerInStack", "latched"])
-    expect(mayMoveGround({ pointerInStack: true, latched: true })).toBe(false)
-    expect(mayMoveGround({ pointerInStack: false, latched: true })).toBe(true)
+  it("shares its one input with the reveal — the SAME `pointerInMenus` governs both", () => {
+    // The unification this refactor is: the ground latch and the reveal's held-state are no longer
+    // two separately-computed (and separately-stale) things. Both are `pointerInMenus`. This rule
+    // takes exactly that plus the first-paint latch, and nothing else — no cover/reveal/selection
+    // term that could switch it off behind the layout's back.
+    expect(Object.keys({ pointerInMenus: false, latched: true })).toEqual([
+      "pointerInMenus",
+      "latched",
+    ])
+    expect(mayMoveGround({ pointerInMenus: true, latched: true })).toBe(false)
+    expect(mayMoveGround({ pointerInMenus: false, latched: true })).toBe(true)
   })
 })
 
@@ -197,28 +205,82 @@ describe("must-guard-unsaved-on-exit", () => {
 })
 
 describe("must-draw-every-detection-frame", () => {
-  it("arms the collapse region only while a reveal is open", () => {
-    expect(revealRectArmed({ hoverIndex: 0 })).toBe(true)
-    expect(revealRectArmed({ hoverIndex: -1 })).toBe(false)
-  })
-
   it("arms the disclose region only when something is covered to disclose", () => {
-    const base = { hoverIndex: -1, immersed: false, anyCovered: true }
+    const base = { revealOpen: false, immersed: false, anyCovered: true }
     expect(triggerRectArmed(base)).toBe(true)
     // The exact state that made the debug switch look broken: autoHideTopics={false} covers nothing,
     // so the region is legitimately dead — and must therefore be DRAWN dead, not omitted.
     expect(triggerRectArmed({ ...base, anyCovered: false })).toBe(false)
     expect(triggerRectArmed({ ...base, immersed: true })).toBe(false)
-    expect(triggerRectArmed({ ...base, hoverIndex: 0 })).toBe(false)
+    // A reveal already open means the cascade is disclosed — nothing left to trigger.
+    expect(triggerRectArmed({ ...base, revealOpen: true })).toBe(false)
+  })
+})
+
+describe("menu region — the ONE authority for pointer-in-menus", () => {
+  const rect = (left: number, top: number, right: number, bottom: number): MenuRect => ({
+    left,
+    top,
+    right,
+    bottom,
   })
 
-  it("never arms both regions at once", () => {
-    for (const hoverIndex of [-1, 0, 2])
-      for (const anyCovered of [true, false])
-        for (const immersed of [true, false]) {
-          const both =
-            revealRectArmed({ hoverIndex }) && triggerRectArmed({ hoverIndex, immersed, anyCovered })
-          expect(both).toBe(false)
-        }
+  it("unions the columns and spans the container's full height on the left", () => {
+    // Two menus at different heights + a full-height root: the region hugs the widest/tallest menu on
+    // the right, but its top/bottom take the container's, so moving up or down the full-height root
+    // column never reads as "left the menus".
+    const container = rect(0, 0, 900, 600)
+    const cols = [rect(0, 0, 200, 600), rect(200, 40, 420, 300)] // root (full height) + a short submenu
+    const region = menuRegion(cols, container)
+    expect(region).toEqual({ left: 0, top: 0, right: 420, bottom: 600 })
+  })
+
+  it("holds the pointer that is over a short submenu's DEAD space below it (errs generous)", () => {
+    // The safe direction: the failure being replaced was collapsing UNDER the pointer, so a point in
+    // the region's box — even below a short submenu — counts as held rather than risking a collapse.
+    const region = menuRegion([rect(0, 0, 200, 600), rect(200, 40, 420, 300)], rect(0, 0, 900, 600))!
+    expect(pointInRegion(region, 300, 500)).toBe(true) // below the submenu, still in the box
+    expect(pointInRegion(region, 600, 300)).toBe(false) // out on the detail side
+  })
+
+  it("is null when there are no columns to measure", () => {
+    expect(menuRegion([], rect(0, 0, 900, 600))).toBeNull()
+  })
+})
+
+describe("the reveal closes on exactly two things — never a select", () => {
+  it("a root (a select or a hover-enter) OPENS, and can never close", () => {
+    // The invariant whose absence let a click collapse the menus. A select dispatches `root`.
+    expect(reduceReveal(NO_REVEAL, { type: "root", id: "features", all: false })).toEqual({
+      root: "features",
+      all: false,
+    })
+    expect(revealClosedBy({ type: "root", id: "features", all: false })).toBe(false)
+  })
+
+  it("re-roots from one open reveal to another without ever passing through closed", () => {
+    const open: RevealEvent = { type: "root", id: "a", all: true }
+    const reRoot: RevealEvent = { type: "root", id: "b", all: false }
+    const state = reduceReveal(reduceReveal(NO_REVEAL, open), reRoot)
+    expect(state).toEqual({ root: "b", all: false })
+  })
+
+  it("closes on the pointer leaving the menus — the ONE auto-collapse", () => {
+    expect(reduceReveal({ root: "features", all: false }, { type: "pointerLeftMenus" })).toBe(NO_REVEAL)
+    expect(revealClosedBy({ type: "pointerLeftMenus" })).toBe(true)
+  })
+
+  it("closes on an explicit toggle — settling IS the requested action there", () => {
+    expect(reduceReveal({ root: "features", all: true }, { type: "settle" })).toBe(NO_REVEAL)
+    expect(revealClosedBy({ type: "settle" })).toBe(true)
+  })
+
+  it("has NO event that closes on a select — it is unrepresentable", () => {
+    // The whole set of events, and which close. If a future edit wants a click to collapse, it has to
+    // add an event here, and this test will make that choice loud instead of silent.
+    const closers = (["pointerLeftMenus", "settle"] as const).map((type) => revealClosedBy({ type }))
+    const opener = revealClosedBy({ type: "root", id: "x", all: false })
+    expect(closers).toEqual([true, true])
+    expect(opener).toBe(false)
   })
 })

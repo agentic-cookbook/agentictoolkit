@@ -3,7 +3,7 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.15.0
+version: 1.16.0
 status: draft
 language: en
 created: '2026-06-30'
@@ -626,14 +626,30 @@ arguments — the measuring stays in the component, the deciding is tested.
   remount (**must-keep-view-state-across-a-selection**): choosing a row IS the route-param change that
   remounts the stack, so component state would report "the pointer left" on precisely the frame the
   click lands, free the ground and let it jump. The pointer has not moved; only the component has.
+- **must-collapse-from-one-pointer-authority**: Whether the menus are held open MUST be decided by a
+  SINGLE authority — "is the pointer inside the menu region?" — read FRESH from the DOM at pointer-event
+  time, and that same authority MUST govern BOTH the reveal's held-state AND the ground latch. It is the
+  ONLY thing (besides an explicit `«/»` toggle) that may close a reveal. A row select MUST only ever
+  RE-ROOT the reveal at the list clicked in — never close it; a remount, a width change and a selection
+  MUST NOT close it. Equivalently: the only two events that close a reveal are "the pointer left the
+  menus" and "an explicit disclosure toggle", and a click is neither. This rule exists because the
+  hold used to be computed two ways at once, both from stale sources — `hoverIndex >= 0` (which trails
+  width pressure, measured a beat after the click) tested against an effect-measured rect (a render
+  behind) — on exactly the remount a click triggers; the result was untraceable and regressed
+  repeatedly. Reading the region fresh means only a real pointer move outside what is painted NOW can
+  collapse anything: if the pointer does not move after a click, nothing collapses. This subsumes the
+  covered stack's blind-root document watcher — a reveal that revealed nothing is still an open root,
+  and it too clears the moment the pointer is proven outside.
 - **must-draw-every-detection-frame**: With the "Show Mouse Detection Frames" debug switch on, EVERY
-  region MUST be drawn — the collapse (red) and disclose (green) hit-test rects and the menu region
-  (blue) that holds the ground — whether or not it is currently ARMED. A disarmed region MUST render
-  dashed and labelled, not omitted. Measuring a rect and arming it are separate questions and MUST
-  stay separate in the code: "no rect on screen" and "the rect is disarmed, so nothing can trigger
-  it" look identical when the answer is to draw nothing, and the second one is the diagnosis. Omitting
-  them is how the switch came to look broken — with nothing covered there was nothing to disclose and
-  no reveal to collapse, so both rects were null and the switch drew nothing at all.
+  region MUST be drawn — the menu region (blue) that is the single authority above, and the disclose
+  (green) trigger rect — whether or not it is currently ARMED. A disarmed region MUST render dashed and
+  labelled, not omitted. Measuring a rect and arming it are separate questions and MUST stay separate in
+  the code: "no rect on screen" and "the rect is disarmed, so nothing can trigger it" look identical
+  when the answer is to draw nothing, and the second one is the diagnosis. Omitting them is how the
+  switch came to look broken — with nothing covered there was nothing to disclose, so the trigger rect
+  was null and the switch drew nothing at all. (The blue region is ONE frame now, not the former
+  separate "collapse" and "ground held" rects — the unification of must-collapse-from-one-pointer
+  -authority made visible.)
 
 ### General
 
