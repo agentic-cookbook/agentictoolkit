@@ -390,7 +390,7 @@ export function readCentralParams(search?: string): CentralParams | null {
 export interface CentralEmailLoginParams extends CentralParams {
   /** AS base (e.g. https://api.agenticdeveloperhub.com); defaults to the env. */
   authApiBase?: string
-  /** Email, slug, or generic identifier. */
+  /** Email, user id (slug), or verified phone (E.164) — the AS classifies it. */
   identifier: string
   password: string
 }
@@ -409,8 +409,10 @@ export async function centralEmailLogin(p: CentralEmailLoginParams): Promise<voi
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
+    // The generic `identifier` key: the AS classifies email / slug / phone. The
+    // legacy `email` key would pin the lookup to email-only.
     body: JSON.stringify({
-      email: p.identifier,
+      identifier: p.identifier,
       password: p.password,
       clientId: p.clientId,
       return: p.returnUrl,

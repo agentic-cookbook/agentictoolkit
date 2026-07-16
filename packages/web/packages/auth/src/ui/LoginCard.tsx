@@ -34,10 +34,12 @@ export interface LoginCardProps {
    * relative path (local dev). Typically wired from `NEXT_PUBLIC_AUTH_API_URL`.
    */
   authApiBase?: string
-  /** Called with credentials on email submit (wire to useAuth().login). */
-  onEmailLogin: (email: string, password: string) => Promise<unknown>
+  /** Called with the entered identifier (email, user id/slug, or phone) + password on
+   *  submit (wire to useAuth().login — the backend classifies the identifier). */
+  onEmailLogin: (identifier: string, password: string) => Promise<unknown>
   /** Optional passwordless passkey sign-in (wire to useAuth().loginWithPasskey). When
-   *  provided, a "Sign in with a passkey" button is shown that uses the entered email. */
+   *  provided, a "Sign in with a passkey" button is shown that uses the entered
+   *  identifier (email, user id, or phone). */
   onPasskeyLogin?: (identifier: string) => Promise<unknown>
   /** Where to navigate after a successful email login. */
   postLoginRedirect: string
@@ -77,13 +79,16 @@ export interface LoginCardProps {
   githubButtonLabel?: string
   dividerLabel?: string
   emailLabel?: string
+  /** Helper text under the identifier field noting the accepted login forms
+   *  (email / user id / phone). Pass an empty string to suppress it. */
+  identifierHint?: string
   passwordLabel?: string
   passkeyButtonLabel?: string
   signupPromptLabel?: string
   signupLinkLabel?: string
   /** Label shown inside the submit button while logging in. Default: "Logging in…" */
   loadingLabel?: string
-  /** Error shown when passkey sign-in is attempted without an email. Default: "Enter your email to sign in with a passkey." */
+  /** Error shown when passkey sign-in is attempted without an identifier. Default: "Enter your email, user ID, or phone to sign in with a passkey." */
   passkeyEmailRequiredLabel?: string
   /** Error shown when passkey sign-in fails. Default: "Passkey sign-in failed." */
   passkeyFailedLabel?: string
@@ -109,17 +114,20 @@ export function LoginCard({
   emailButtonLabel = 'Log in with email',
   githubButtonLabel = 'Continue with GitHub',
   dividerLabel = 'or',
-  emailLabel = 'Email',
+  emailLabel = 'Email, user ID, or phone',
+  identifierHint = 'You can log in with your email, your user ID, or a verified phone number with country code (e.g. +1…).',
   passwordLabel = 'Password',
   passkeyButtonLabel = 'Sign in with a passkey',
   signupPromptLabel = "Don't have an account?",
   signupLinkLabel = 'Sign up',
   loadingLabel = 'Logging in…',
-  passkeyEmailRequiredLabel = 'Enter your email to sign in with a passkey.',
+  passkeyEmailRequiredLabel = 'Enter your email, user ID, or phone to sign in with a passkey.',
   passkeyFailedLabel = 'Passkey sign-in failed.',
 }: LoginCardProps): ReactElement {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  // The login identifier: an email, a user id (slug), or a phone number — the
+  // backend classifies it, so this field applies no format validation.
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -159,13 +167,13 @@ export function LoginCard({
   async function handlePasskey() {
     if (!onPasskeyLogin) return
     setError(null)
-    if (!email.trim()) {
+    if (!identifier.trim()) {
       setError(passkeyEmailRequiredLabel)
       return
     }
     setIsSubmitting(true)
     try {
-      await onPasskeyLogin(email.trim())
+      await onPasskeyLogin(identifier.trim())
       router.push(postLoginRedirect)
     } catch (err) {
       setError(err instanceof Error ? err.message : passkeyFailedLabel)
@@ -189,12 +197,12 @@ export function LoginCard({
           authApiBase,
           clientId: central.clientId,
           returnUrl: central.returnUrl,
-          identifier: email,
+          identifier,
           password,
         })
         return
       }
-      const result = await onEmailLogin(email, password)
+      const result = await onEmailLogin(identifier, password)
       // An enrolled second factor: switch to the MFA step rather than navigating.
       // Checked BEFORE account-linking — no session exists until MFA completes.
       if (isMfaChallenge(result)) {
@@ -312,14 +320,19 @@ export function LoginCard({
           {error && <div className="auth-card__error">{error}</div>}
           <div className="auth-card__field">
             <label htmlFor="auth-email" className="auth-card__label">{emailLabel}</label>
+            {/* type="text", NOT "email": the field also takes a user id (slug) or a
+                phone number, and native email validation would block those before
+                submit. autoComplete="username" keeps password managers filling it. */}
             <input
               id="auth-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               className="auth-card__input"
             />
+            {identifierHint && <p className="auth-card__hint">{identifierHint}</p>}
           </div>
           <div className="auth-card__field">
             <label htmlFor="auth-password" className="auth-card__label">{passwordLabel}</label>

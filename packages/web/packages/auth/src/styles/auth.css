@@ -126,6 +126,14 @@
 }
 .auth-card__input:focus { border-color: var(--auth-accent); }
 
+/* Helper text under the identifier field (accepted login forms). */
+.auth-card__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--auth-text-dim);
+}
+
 .auth-card__submit {
   width: 100%;
   padding: 0.625rem 0;

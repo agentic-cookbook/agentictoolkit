@@ -31,10 +31,12 @@ export interface AuthContextValue<U extends AuthUser = AuthUser> {
   isLoading: boolean
   isAuthenticated: boolean
   accessToken: string | null
-  /** Resolves to the signed-in user, OR to an {@link MfaChallenge} when the account
-   *  has an enrolled second factor (HTTP 202). The caller completes the challenge via
-   *  sendMfaSms / completeMfa / completeMfaPasskey. */
-  login: (email: string, password: string) => Promise<U | MfaChallenge>
+  /** Credential login. `identifier` is an email, a user id (slug), or a verified
+   *  phone number (E.164) — the backend classifies it. Resolves to the signed-in
+   *  user, OR to an {@link MfaChallenge} when the account has an enrolled second
+   *  factor (HTTP 202). The caller completes the challenge via sendMfaSms /
+   *  completeMfa / completeMfaPasskey. */
+  login: (identifier: string, password: string) => Promise<U | MfaChallenge>
   register: (email: string, password: string, name: string) => Promise<U>
   /** Push an SMS login code during a pending MFA challenge. */
   sendMfaSms: (token: string) => Promise<void>
@@ -368,7 +370,11 @@ export function AuthProvider<U extends AuthUser = AuthUser>({
   )
 
   const login = useCallback(
-    (email: string, password: string) => postCredentials('/api/auth/login', { email, password }, 'Login failed'),
+    // The generic `identifier` key (email, user id/slug, or E.164 phone) — the
+    // backend's /auth/login classifies it; the legacy `email` key would pin the
+    // lookup to email-only and break slug/phone logins.
+    (identifier: string, password: string) =>
+      postCredentials('/api/auth/login', { identifier, password }, 'Login failed'),
     [postCredentials],
   )
 
