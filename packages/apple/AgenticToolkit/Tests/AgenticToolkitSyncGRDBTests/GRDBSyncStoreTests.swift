@@ -156,6 +156,46 @@ final class GRDBSyncStoreTests: XCTestCase {
         XCTAssertEqual(first.map(\.opId), second.map(\.opId))
     }
 
+    func testStageOnUnregisteredResourceThrowsUnknownResource() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        do {
+            try await store.stage(LocalMutation(resource: "unknown.resource", rowId: "r1", type: .upsert, data: [:]))
+            XCTFail("expected unknownResource")
+        } catch SyncStoreFailure.unknownResource(let resource) {
+            XCTAssertEqual(resource, "unknown.resource")
+        }
+    }
+
+    func testLiveRowsOnUnregisteredResourceThrowsUnknownResource() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes]) // some resource IS registered — just not this one
+        do {
+            _ = try store.liveRows(resource: "unknown.resource", limit: 10, offset: 0)
+            XCTFail("expected unknownResource")
+        } catch SyncStoreFailure.unknownResource(let resource) {
+            XCTAssertEqual(resource, "unknown.resource")
+        }
+    }
+
+    func testLiveRowOnUnregisteredResourceThrowsUnknownResource() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes]) // some resource IS registered — just not this one
+        do {
+            _ = try store.liveRow(resource: "unknown.resource", id: "r1")
+            XCTFail("expected unknownResource")
+        } catch SyncStoreFailure.unknownResource(let resource) {
+            XCTAssertEqual(resource, "unknown.resource")
+        }
+    }
+
+    func testMirrorTableNameRejectsResourceWithCharactersOutsideTheSafeSet() throws {
+        XCTAssertThrowsError(try GRDBSyncStore.mirrorTableName(for: "personal.notes; DROP TABLE _sync_state;--"))
+        XCTAssertThrowsError(try GRDBSyncStore.mirrorTableName(for: "Personal.Notes")) // uppercase not allowed
+        XCTAssertThrowsError(try GRDBSyncStore.mirrorTableName(for: ""))
+        XCTAssertNoThrow(try GRDBSyncStore.mirrorTableName(for: "personal.notes_v2"))
+    }
+
     func testDeleteTombstonesLocallyAndResyncPreservesOutbox() async throws {
         let store = try makeStore()
         try await store.prepare(resources: [notes])

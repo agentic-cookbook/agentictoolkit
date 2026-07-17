@@ -132,39 +132,72 @@ public actor SyncEngine {
             var conflicts = 0
             var rejected = 0
             var adoptions: [SyncChange] = []
+            var resultsForStore: [SyncPushResult] = []
+            resultsForStore.reserveCapacity(response.results.count)
             for result in response.results {
                 switch result.status {
                 case .applied:
                     applied += 1
-                case .conflict:
-                    conflicts += 1
-                    if let current = result.current,
-                       let matchingOp = ops.first(where: { $0.opId == result.opId }) {
-                        // LWW + delete-wins: adopt the server row locally.
-                        let deleted = !(current["deleted_at"]?.isNull ?? true)
-                        let version = current["sync_version"].map { value -> String in
-                            if case .number(let number) = value { return String(Int(number)) }
-                            return value.stringValue ?? "0"
-                        } ?? "0"
-                        adoptions.append(SyncChange(
-                            resource: matchingOp.resource,
-                            id: matchingOp.rowId,
-                            op: deleted ? .delete : .upsert,
-                            syncVersion: version,
-                            data: deleted ? nil : current
-                        ))
-                        eventContinuation.yield(
-                            .conflictResolved(resource: matchingOp.resource, rowId: matchingOp.rowId)
-                        )
-                    }
+                    resultsForStore.append(result)
                 case .rejected:
                     rejected += 1
+                    resultsForStore.append(result)
+                case .conflict:
+                    guard let matchingOp = ops.first(where: { $0.opId == result.opId }) else {
+                        conflicts += 1
+                        resultsForStore.append(result)
+                        continue
+                    }
+                    guard let current = result.current else {
+                        // p2-Minor9: a conflict with no `current` row can't
+                        // be resolved — there is nothing to adopt. Treat it
+                        // like a rejection (quarantine, reason preserved)
+                        // instead of silently logging + dropping the op.
+                        rejected += 1
+                        resultsForStore.append(
+                            SyncPushResult(opId: result.opId, status: .rejected, reason: result.reason)
+                        )
+                        continue
+                    }
+                    guard let version = Self.adoptedVersion(from: current) else {
+                        // p2g: a non-finite/out-of-Int64-range sync_version
+                        // can't be converted safely — String(Int(number))
+                        // would trap. Skip adopting; the op still resolves
+                        // via `complete` below (the server remains
+                        // authoritative even though we can't mirror its row).
+                        conflicts += 1
+                        eventContinuation.yield(.failed(
+                            "conflict adoption skipped for \(matchingOp.resource)/\(matchingOp.rowId): " +
+                            "unrepresentable sync_version"
+                        ))
+                        resultsForStore.append(result)
+                        continue
+                    }
+                    conflicts += 1
+                    // LWW + delete-wins: adopt the server row locally.
+                    let deleted = !(current["deleted_at"]?.isNull ?? true)
+                    var data = current
+                    // p2-Minor4: these are bookkeeping columns, not app
+                    // data — don't leak them into the mirror row's `data`.
+                    data["sync_version"] = nil
+                    data["sync_stamped_at"] = nil
+                    adoptions.append(SyncChange(
+                        resource: matchingOp.resource,
+                        id: matchingOp.rowId,
+                        op: deleted ? .delete : .upsert,
+                        syncVersion: version,
+                        data: deleted ? nil : data
+                    ))
+                    eventContinuation.yield(
+                        .conflictResolved(resource: matchingOp.resource, rowId: matchingOp.rowId)
+                    )
+                    resultsForStore.append(result)
                 }
             }
             if !adoptions.isEmpty {
                 try await store.apply(adoptions, advancingTo: nil)
             }
-            try await store.complete(response.results)
+            try await store.complete(resultsForStore)
             eventContinuation.yield(.pushed(applied: applied, conflicts: conflicts, rejected: rejected))
             if response.results.isEmpty { return } // defensive: avoid spinning
             // Spin guard: if none of the ops we just attempted were resolved
@@ -177,6 +210,18 @@ public actor SyncEngine {
                 throw SyncEngineError.pushMadeNoProgress
             }
         }
+    }
+
+    /// Checked conversion of a conflict's `current["sync_version"]` to the
+    /// string form `SyncChange.syncVersion` expects. Returns nil (skip
+    /// adopting, per p2g) rather than trapping for a non-finite or
+    /// out-of-Int64-range double — `Int(exactly:)` is the safe, native
+    /// checked-conversion API for exactly this case.
+    private static func adoptedVersion(from current: [String: JSONValue]) -> String? {
+        guard let value = current["sync_version"] else { return "0" }
+        guard case .number(let number) = value else { return value.stringValue ?? "0" }
+        guard let intValue = Int(exactly: number) else { return nil }
+        return String(intValue)
     }
 
     /// A resync clears the mirror and cursor but preserves the outbox

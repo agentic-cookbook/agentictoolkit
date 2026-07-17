@@ -51,7 +51,8 @@ final class SyncEngineTests: XCTestCase {
         )
         let ops = try await store.pendingOps(limit: 10)
         let serverRow: [String: JSONValue] = [
-            "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(9), "deleted_at": .null
+            "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(9),
+            "sync_stamped_at": .string("2026-07-16T00:00:00Z"), "deleted_at": .null
         ]
         let transport = ScriptedSyncTransport(pushes: [
             .success(SyncPushResponse(
@@ -69,6 +70,63 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(remainingOps.count, 0)
         let row = await store.row(resource: "personal.notes", id: "r1")
         XCTAssertEqual(row?.data["title"]?.stringValue, "theirs") // LWW: server row adopted
+        XCTAssertEqual(row?.syncVersion, "9")
+        // p2-Minor4: bookkeeping columns must not leak into the mirror's `data`.
+        XCTAssertNil(row?.data["sync_version"])
+        XCTAssertNil(row?.data["sync_stamped_at"])
+    }
+
+    func testConflictWithoutCurrentIsQuarantinedNotSilentlyDropped() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("mine")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        let transport = ScriptedSyncTransport(pushes: [
+            .success(SyncPushResponse(
+                results: [
+                    SyncPushResult(opId: ops[0].opId, status: .conflict, reason: "server_row_missing", current: nil)
+                ],
+                watermark: "9"
+            ))
+        ])
+        let (engine, _) = engine(store: store, transport: transport)
+        await engine.syncNow(reason: .manual)
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(remainingOps.count, 0) // resolved, not retried forever
+        let quarantined = await store.quarantined
+        XCTAssertEqual(quarantined.map(\.opId), [ops[0].opId]) // quarantined, not silently dropped
+        let row = await store.row(resource: "personal.notes", id: "r1")
+        XCTAssertEqual(row?.data["title"]?.stringValue, "mine") // nothing to adopt: local row untouched
+    }
+
+    func testConflictWithUnrepresentableSyncVersionSkipsAdoptionButStillResolves() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("mine")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        let serverRow: [String: JSONValue] = [
+            "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(.infinity), "deleted_at": .null
+        ]
+        let transport = ScriptedSyncTransport(pushes: [
+            .success(SyncPushResponse(
+                results: [
+                    SyncPushResult(
+                        opId: ops[0].opId, status: .conflict, reason: "stale_base_version", current: serverRow
+                    )
+                ],
+                watermark: "9"
+            ))
+        ])
+        let (engine, _) = engine(store: store, transport: transport)
+        await engine.syncNow(reason: .manual)
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(remainingOps.count, 0) // op still resolves — no infinite spin
+        let row = await store.row(resource: "personal.notes", id: "r1")
+        XCTAssertEqual(row?.data["title"]?.stringValue, "mine") // adoption skipped: local row untouched
     }
 
     func testUnauthorizedPausesUntilManualKick() async throws {

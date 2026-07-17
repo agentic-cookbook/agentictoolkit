@@ -3,10 +3,15 @@ import XCTest
 
 final class SyncWireTests: XCTestCase {
 
+    /// A missing fixture is a broken test environment, not a reason to skip
+    /// silently (sync fix-wave item p2b): XCTSkip would report these tests
+    /// as passing in CI even though nothing was actually verified. Fail
+    /// loudly instead so the missing vendor step gets noticed.
     private func fixture(_ name: String) throws -> Data {
         let bundle = Bundle(for: Self.self)
         guard let url = bundle.url(forResource: name, withExtension: "json") else {
-            throw XCTSkip("missing fixture \(name).json — vendor it from the backend repo first")
+            XCTFail("missing fixture \(name).json — vendor it from the backend repo first")
+            throw SyncWireTestsFixtureError.missing(name)
         }
         return try Data(contentsOf: url)
     }
@@ -44,4 +49,10 @@ final class SyncWireTests: XCTestCase {
         XCTAssertEqual(first.count, 36)
         XCTAssertEqual(first[first.index(first.startIndex, offsetBy: 14)], "7") // version nibble
     }
+}
+
+/// Thrown after `XCTFail` so `fixture(_:)` still returns Never on the
+/// missing-file path without force-unwrapping.
+private enum SyncWireTestsFixtureError: Error {
+    case missing(String)
 }

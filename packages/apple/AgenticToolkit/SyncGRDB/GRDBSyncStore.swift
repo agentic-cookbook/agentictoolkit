@@ -29,8 +29,17 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
 
     public var database: BoundedDatabase { boundedDatabase }
 
-    public static func mirrorTableName(for resource: String) -> String {
-        resource.replacingOccurrences(of: ".", with: "_")
+    /// Resource strings are interpolated directly into SQL as identifiers
+    /// (SQLite has no bind-parameter syntax for identifiers), so this is the
+    /// one chokepoint every caller below routes through — reject anything
+    /// outside `[a-z0-9_.]` before it ever reaches a query string (sync
+    /// fix-wave item p2l).
+    public static func mirrorTableName(for resource: String) throws -> String {
+        let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_.")
+        guard !resource.isEmpty, resource.allSatisfy({ allowed.contains($0) }) else {
+            throw SyncStoreFailure.unknownResource(resource)
+        }
+        return resource.replacingOccurrences(of: ".", with: "_")
     }
 
     private func onQueue<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
@@ -69,7 +78,7 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
             try boundedDatabase.write { conn in
                 try conn.execute(sql: Self.bookkeepingSchema)
                 for resource in resources {
-                    let table = Self.mirrorTableName(for: resource.resource)
+                    let table = try Self.mirrorTableName(for: resource.resource)
                     try conn.execute(sql: """
                         CREATE TABLE IF NOT EXISTS "\(table)" (
                             id TEXT PRIMARY KEY NOT NULL,
@@ -105,7 +114,6 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         try await onQueue {
             try boundedDatabase.write { conn in
                 for change in batch {
-                    let table = Self.mirrorTableName(for: change.resource)
                     let isKnown = try Bool.fetchOne(
                         conn, sql: "SELECT EXISTS(SELECT 1 FROM _sync_resources WHERE resource = ?)",
                         arguments: [change.resource]
@@ -113,6 +121,7 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                     guard isKnown else {
                         throw SyncStoreFailure.unknownResource(change.resource)
                     }
+                    let table = try Self.mirrorTableName(for: change.resource)
                     let version = Int(change.syncVersion) ?? 0
                     if change.op == .delete {
                         try conn.execute(
@@ -158,13 +167,26 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
     /// item p2a: two ops with the same baseVersion → server applies the
     /// first and stale-conflicts the second, silently dropping the newer
     /// edit.
+    ///
+    /// The resource must already be registered via `prepare(resources:)` —
+    /// staging offline for an unprepared resource throws
+    /// `SyncStoreFailure.unknownResource` rather than a raw SQL error
+    /// against a mirror table that was never created (sync fix-wave item
+    /// p2o).
     public func stage(_ mutation: LocalMutation) async throws {
         let boundedDatabase = self.boundedDatabase
         let encoder = self.encoder
         let decoder = self.decoder
         try await onQueue {
             try boundedDatabase.write { conn in
-                let table = Self.mirrorTableName(for: mutation.resource)
+                let isKnown = try Bool.fetchOne(
+                    conn, sql: "SELECT EXISTS(SELECT 1 FROM _sync_resources WHERE resource = ?)",
+                    arguments: [mutation.resource]
+                ) ?? false
+                guard isKnown else {
+                    throw SyncStoreFailure.unknownResource(mutation.resource)
+                }
+                let table = try Self.mirrorTableName(for: mutation.resource)
                 let base = try Int.fetchOne(
                     conn, sql: "SELECT sync_version FROM \"\(table)\" WHERE id = ?", arguments: [mutation.rowId]
                 )
@@ -313,7 +335,7 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
             try boundedDatabase.write { conn in
                 let tables = try String.fetchAll(conn, sql: "SELECT resource FROM _sync_resources")
                 for resource in tables {
-                    try conn.execute(sql: "DELETE FROM \"\(Self.mirrorTableName(for: resource))\"")
+                    try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
                 }
                 try conn.execute(sql: "DELETE FROM _sync_state")
             }
@@ -322,9 +344,20 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
 
     // MARK: - Read helpers (hosts: daemon serving + UI observation)
 
+    /// The resource must already be registered via `prepare(resources:)`;
+    /// an unregistered resource throws `SyncStoreFailure.unknownResource`
+    /// (checked against `_sync_resources` before the mirror table is even
+    /// named — sync fix-wave item p2o).
     public func liveRows(resource: String, limit: Int = 100, offset: Int = 0) throws -> [[String: JSONValue]] {
-        let table = Self.mirrorTableName(for: resource)
-        return try boundedDatabase.read { conn in
+        try boundedDatabase.read { conn in
+            let isKnown = try Bool.fetchOne(
+                conn, sql: "SELECT EXISTS(SELECT 1 FROM _sync_resources WHERE resource = ?)",
+                arguments: [resource]
+            ) ?? false
+            guard isKnown else {
+                throw SyncStoreFailure.unknownResource(resource)
+            }
+            let table = try Self.mirrorTableName(for: resource)
             let rows = try Row.fetchAll(
                 conn,
                 sql: "SELECT id, data FROM \"\(table)\" WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?",
@@ -334,10 +367,18 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         }
     }
 
+    /// Same unregistered-resource contract as `liveRows` above.
     public func liveRow(resource: String, id: String) throws -> [String: JSONValue]? {
-        let table = Self.mirrorTableName(for: resource)
-        return try boundedDatabase.read { conn in
-            try Row.fetchOne(
+        try boundedDatabase.read { conn in
+            let isKnown = try Bool.fetchOne(
+                conn, sql: "SELECT EXISTS(SELECT 1 FROM _sync_resources WHERE resource = ?)",
+                arguments: [resource]
+            ) ?? false
+            guard isKnown else {
+                throw SyncStoreFailure.unknownResource(resource)
+            }
+            let table = try Self.mirrorTableName(for: resource)
+            return try Row.fetchOne(
                 conn,
                 sql: "SELECT id, data FROM \"\(table)\" WHERE id = ? AND deleted_at IS NULL",
                 arguments: [id]

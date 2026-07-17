@@ -73,6 +73,17 @@ final class InMemorySyncStoreTests: XCTestCase {
         XCTAssertEqual(Set(allOps.map(\.opId)).count, 2)
     }
 
+    func testStageOnUnregisteredResourceThrowsUnknownResourceRatherThanAutoCreating() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        do {
+            try await store.stage(LocalMutation(resource: "unknown.resource", rowId: "r1", type: .upsert, data: [:]))
+            XCTFail("expected unknownResource")
+        } catch SyncStoreFailure.unknownResource(let resource) {
+            XCTAssertEqual(resource, "unknown.resource")
+        }
+    }
+
     func testApplyAdvancesCursorAndResyncPreservesOutbox() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])

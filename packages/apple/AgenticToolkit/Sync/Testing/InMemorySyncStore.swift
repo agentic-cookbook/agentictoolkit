@@ -64,9 +64,18 @@ public actor InMemorySyncStore: SyncStore {
     /// opId, same original baseVersion — mirroring GRDBSyncStore.stage so the
     /// fakes don't lie about the coalescing behavior the real store provides
     /// (sync fix-wave item p2a).
+    ///
+    /// The resource must already be registered via `prepare(resources:)` —
+    /// staging offline for an unregistered resource throws
+    /// `SyncStoreFailure.unknownResource` rather than silently creating an
+    /// empty table for it, matching GRDBSyncStore.stage (sync fix-wave item
+    /// p2o).
     public func stage(_ mutation: LocalMutation) async throws {
+        guard tables[mutation.resource] != nil else {
+            throw SyncStoreFailure.unknownResource(mutation.resource)
+        }
         let base = tables[mutation.resource]?[mutation.rowId]?.syncVersion
-        tables[mutation.resource, default: [:]][mutation.rowId] = Row(
+        tables[mutation.resource]![mutation.rowId] = Row(
             syncVersion: base ?? "0",
             deleted: mutation.type == .delete,
             data: mutation.data ?? [:]

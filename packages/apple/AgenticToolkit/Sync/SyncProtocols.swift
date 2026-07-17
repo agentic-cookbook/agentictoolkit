@@ -4,12 +4,23 @@ import Foundation
 /// Implementations must make `stage` and `apply` atomic with the outbox
 /// mutations they imply — the engine relies on that to stay crash-safe.
 public protocol SyncStore: Sendable {
+    /// Registers `resources`, creating any mirror storage they need.
+    /// Idempotent — safe to call repeatedly (schema versions upsert).
+    /// Hosts MUST call this — via a static manifest, or by letting the
+    /// first successful pull populate it — before ever calling `stage(_:)`
+    /// for a resource. Staging offline ahead of that throws
+    /// `SyncStoreFailure.unknownResource`; it never silently invents
+    /// storage for a resource nothing has registered (sync fix-wave item
+    /// p2o).
     func prepare(resources: [SyncResource]) async throws
     func cursor() async throws -> SyncCursor?
     /// Applies a pulled batch atomically; a nil cursor applies without
     /// advancing (used for conflict resolutions).
     func apply(_ batch: [SyncChange], advancingTo cursor: SyncCursor?) async throws
-    /// Local mutation: optimistic row write + outbox op, atomic.
+    /// Local mutation: optimistic row write + outbox op, atomic. The
+    /// resource must already be registered via `prepare(resources:)` — see
+    /// that method's doc comment. Implementations throw
+    /// `SyncStoreFailure.unknownResource` for a resource that isn't.
     func stage(_ mutation: LocalMutation) async throws
     func pendingOps(limit: Int) async throws -> [SyncPushOp]
     /// Resolves outbox ops by opId. The server ledgers push results
