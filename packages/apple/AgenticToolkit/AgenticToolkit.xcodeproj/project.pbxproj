@@ -154,6 +154,7 @@
 		3A9F7E9837216316A434A162 /* PersistedWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC870990D2D1C5B720CEE15 /* PersistedWindowState.swift */; };
 		3AA5608A715B68B29C10DD7D /* AIProviderMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC959528CF23522D84FE859F /* AIProviderMigration.swift */; };
 		3AF300DD5F9B12CEE773628D /* ITermColorsParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4154F5388A1DC1ED394A0E9E /* ITermColorsParserTests.swift */; };
+		3BCAB27C3DCCEB6494F84DC8 /* WindowConfigPopoverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */; };
 		3C1CFAA23B69766F1848AD74 /* PopupMenuChoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5ED7659A9B0B9B315F084B /* PopupMenuChoiceView.swift */; };
 		3C4A0010264689EDB4ED93F3 /* SystemWindowContextNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EF0B59F7D7ADED790C9F9B /* SystemWindowContextNotifications.swift */; };
 		3CBCD0A41F04581E70F5932C /* AIRequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7610008818461A7BFD0669 /* AIRequestBuilderTests.swift */; };
@@ -353,6 +354,7 @@
 		9F173A2DD1B90807959C4F6D /* ColorSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D3B50946944B1C6A884F9F /* ColorSetting.swift */; };
 		9F95153742FDE3319D0AE504 /* VerticalStackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83086F9AA30ABF344231CA8 /* VerticalStackView.swift */; };
 		9FCD2ABDE5A5AE4E51402734 /* RadioButtonChoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEDE81A0A5A28045A2DF62BF /* RadioButtonChoiceView.swift */; };
+		9FDD36A100F90A9656BF852B /* WindowConfigPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */; };
 		A04C641D01BE2D44A9AE5856 /* TerminalSessionRowCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140B7E5133EF9E3212A9A543 /* TerminalSessionRowCellView.swift */; };
 		A110D72A83C87D315C47F704 /* MockChatSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211A3E3EDFCDC7EDA2F4601C /* MockChatSessionTests.swift */; };
 		A14295124F9E66E8A5533E6A /* ScriptingRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C71C9CB4C83289BC8FB988 /* ScriptingRouter.swift */; };
@@ -1234,6 +1236,7 @@
 		86FEFB54F5560AB6533F4379 /* NotesCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCommands.swift; sourceTree = "<group>"; };
 		88CC81802D37F9BE7A21B1E7 /* AIPluginDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginDescriptor.swift; sourceTree = "<group>"; };
 		88ED234B6F128987D24A658F /* ModelPickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerViewController.swift; sourceTree = "<group>"; };
+		894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigPopover.swift; sourceTree = "<group>"; };
 		896AEE008F661A1C4FAA1A23 /* ChoiceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceViewModel.swift; sourceTree = "<group>"; };
 		8B07B6ADDBA75DF064352068 /* TypingIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingIndicatorView.swift; sourceTree = "<group>"; };
 		8B0E71540AA3ACF6A4B46F74 /* LogProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogProvider.swift; sourceTree = "<group>"; };
@@ -1302,6 +1305,7 @@
 		B1448079A7768C5DAEB521D1 /* ThemeStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStoreTests.swift; sourceTree = "<group>"; };
 		B1B799587637B5B9D60F9F14 /* SystemWindowMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowMatcherTests.swift; sourceTree = "<group>"; };
 		B244EC19F79775430B3CCBA1 /* SQLiteHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteHelpers.swift; sourceTree = "<group>"; };
+		B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigPopoverTests.swift; sourceTree = "<group>"; };
 		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		B3D112853E30CE786A73B192 /* UserSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSetting.swift; sourceTree = "<group>"; };
 		B4C87939516A070CC66803F4 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
@@ -2416,6 +2420,7 @@
 				EA0CDF0223338F1A986F66B0 /* ScreenManagerTests.swift */,
 				8D21F8F899C4B44436BA0F07 /* ScreenMatcherTests.swift */,
 				5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */,
+				B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */,
 				8F32D28A8E0199C82E8216B0 /* WindowManagerRecentsTests.swift */,
 				0E574D92FE93D15A12138FEB /* WindowManagerSimulatedRelaunchTests.swift */,
 				626FECFD2A90654F819760B3 /* WindowManagerTerminationTests.swift */,
@@ -2578,6 +2583,7 @@
 			isa = PBXGroup;
 			children = (
 				69D0314BEF2FB056EE285DB7 /* SingleWindowController.swift */,
+				894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */,
 				86A0358BA20B02FF69A28CFF /* WindowController.swift */,
 				F92FB7BCCF9327A97360842B /* WindowSpec.swift */,
 			);
@@ -2898,7 +2904,7 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_9B06F77E-23F2-4D92-8C90-19E2F80059A5" /* Settings */ = {
+		"TEMP_3A8878AB-53B2-480F-A99C-276B6C4FE45C" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -3876,6 +3882,7 @@
 				A7CB53AD9111F5F7F7884E40 /* WindowActivationStrategy.swift in Sources */,
 				E79A585CE11E7583105060F3 /* WindowActivationTarget.swift in Sources */,
 				353E0DB26D7C74F4E6830A16 /* WindowActivationTester.swift in Sources */,
+				9FDD36A100F90A9656BF852B /* WindowConfigPopover.swift in Sources */,
 				648501CD6BD93DC814CBB89D /* WindowController.swift in Sources */,
 				85688183AD85E15F0910A82B /* WindowDiscoveryView.swift in Sources */,
 				4309FE28C9A1B19B47425ED6 /* WindowDiscoveryViewModel.swift in Sources */,
@@ -4093,6 +4100,7 @@
 				3026B15B7983DC1A60A293F0 /* ThemeUITests.swift in Sources */,
 				69586F910669C1E535DCBEA7 /* ThemedControlsTests.swift in Sources */,
 				0AFF0852BB6191797F3F6795 /* TopicListViewControllerTests.swift in Sources */,
+				3BCAB27C3DCCEB6494F84DC8 /* WindowConfigPopoverTests.swift in Sources */,
 				D9939A0FD1FD9ADD1190A5AA /* WindowDiscoveryMatchingTests.swift in Sources */,
 				D151BBED553E914325BF6AD7 /* WindowManagerRecentsTests.swift in Sources */,
 				A40602C3E4F3794E607D81EC /* WindowManagerSimulatedRelaunchTests.swift in Sources */,

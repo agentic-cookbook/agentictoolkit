@@ -179,7 +179,12 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     /// the user own width) use `NSWindow.fitHeight(toContentHeight:)` instead —
     /// a deliberately separate, simpler mechanism, not a duplicate.
     public func fitWindow(toContentSize contentSize: NSSize) {
-        guard let window, contentSize.width > 0, contentSize.height > 0 else { return }
+        // `!isContentRefitSuppressed`: while a config popover is open the window
+        // is frozen (see `suppressContentRefit()`), so both the explicit refit
+        // path (`performContentRefit`) and any other caller are no-ops until the
+        // popover closes and `resumeContentRefit()` applies one fit.
+        guard let window, !isContentRefitSuppressed,
+              contentSize.width > 0, contentSize.height > 0 else { return }
         let frameSize = window.frameRect(
             forContentRect: NSRect(origin: .zero, size: contentSize)
         ).size
@@ -201,6 +206,65 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         )
         guard target != window.frame else { return }
         window.setFrame(target, display: true, animate: false)
+    }
+
+    // MARK: - Content refit seam
+
+    /// Supplies the window's desired content size on demand. A content-hugging
+    /// controller (e.g. the Usage HUD / Details window) registers this once;
+    /// `performContentRefit()` and the config popover's resume-on-close both
+    /// recompute the fit from this single source. A `nil` result means "no refit
+    /// yet" (content not built), not zero.
+    public var contentSizeProvider: (() -> NSSize?)?
+
+    /// True while a `WindowConfigPopover` is open on this window: the window is
+    /// frozen at its current size (content min == max) so a size/text slider drag
+    /// *inside* the popover can't resize the window out from under the pointer.
+    public private(set) var isContentRefitSuppressed = false
+
+    /// Content min/max captured at freeze time, restored when the freeze lifts.
+    private var suppressedContentMinSize: NSSize?
+    private var suppressedContentMaxSize: NSSize?
+
+    /// Recomputes the fit from `contentSizeProvider` and applies it — the single
+    /// content-refit entry point for content-hugging windows. A no-op while a
+    /// config popover is open (`isContentRefitSuppressed`) or before a provider
+    /// is registered.
+    public func performContentRefit() {
+        guard !isContentRefitSuppressed, let size = contentSizeProvider?() else { return }
+        fitWindow(toContentSize: size)
+    }
+
+    /// Freezes the window at its current size while a config popover is open, so a
+    /// slider drag inside the popover can't shift the window under the pointer.
+    /// Pins the content min/max to the live size (which also stops the AppKit
+    /// auto-size-from-content path a borderless HUD uses). Idempotent; driven by
+    /// `WindowConfigPopover` on popover-open.
+    public func suppressContentRefit() {
+        guard !isContentRefitSuppressed, let window else { return }
+        isContentRefitSuppressed = true
+        suppressedContentMinSize = window.contentMinSize
+        suppressedContentMaxSize = window.contentMaxSize
+        let current = window.contentRect(forFrameRect: window.frame).size
+        window.contentMinSize = current
+        window.contentMaxSize = current
+    }
+
+    /// Lifts the freeze set by `suppressContentRefit()`: restores the content
+    /// min/max and applies one refit, so any content change made while the popover
+    /// was open lands now. Idempotent; driven by `WindowConfigPopover` on
+    /// popover-close.
+    public func resumeContentRefit() {
+        guard isContentRefitSuppressed else { return }
+        isContentRefitSuppressed = false
+        if let window {
+            window.contentMinSize = suppressedContentMinSize ?? .zero
+            window.contentMaxSize = suppressedContentMaxSize
+                ?? NSSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        }
+        suppressedContentMinSize = nil
+        suppressedContentMaxSize = nil
+        performContentRefit()
     }
 
     /// If the spec opts in to visibility persistence and the last saved
