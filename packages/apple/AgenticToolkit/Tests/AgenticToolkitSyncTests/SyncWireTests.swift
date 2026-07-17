@@ -55,6 +55,18 @@ final class SyncWireTests: XCTestCase {
         XCTAssertEqual(first.count, 36)
         XCTAssertEqual(first[first.index(first.startIndex, offsetBy: 14)], "7") // version nibble
     }
+
+    /// item (m): RFC 9562 Method 3's whole point is that same-millisecond
+    /// ids don't rely on random bits happening to sort correctly — 1000
+    /// back-to-back calls (almost certainly landing in the same
+    /// millisecond, or a handful) must come out strictly increasing.
+    func testUUIDv7RapidCallsAreStrictlyIncreasing() throws {
+        let ids = (0..<1000).map { _ in SyncID.uuidV7() }
+        for (previous, next) in zip(ids, ids.dropFirst()) {
+            XCTAssertLessThan(previous, next)
+        }
+        XCTAssertEqual(Set(ids).count, ids.count) // no duplicates as a side effect of strict ordering
+    }
 }
 
 /// Thrown after `XCTFail` so `fixture(_:)` still returns Never on the

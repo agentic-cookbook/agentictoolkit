@@ -110,7 +110,6 @@
 		1599CCB7CB36173D05459F5D /* AgenticToolkitMacOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F03FB5CC81FF718A106A6513 /* AgenticToolkitMacOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		163387E3904D4E21E24AF4F7 /* AgenticToolkitMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F03FB5CC81FF718A106A6513 /* AgenticToolkitMacOS.framework */; };
 		16C4C0E0EA485890B97F4DEF /* InMemorySettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E84C2ED0A1658E6689EA0B /* InMemorySettingsStoreTests.swift */; };
-		1764BCC76165BEF24881555E /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 82CC7270D35E8E2ACB09DDE3 /* Fixtures */; };
 		17C65568E7218AE88D6F5368 /* MatchStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEFD96B23DBED0737E91903 /* MatchStrategy.swift */; };
 		17FE9EDC907863B301001ADD /* ChatBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EA98060EA6B2608283BFF8 /* ChatBackend.swift */; };
 		19268E8027ECBCAC1810B587 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035AE53EF8F5238E77BF732 /* ProgressView.swift */; };
@@ -1389,7 +1388,6 @@
 		80F6AEF2C35429822C9FB844 /* RangeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeViewModel.swift; sourceTree = "<group>"; };
 		817F82444C74B3C73FA1A61C /* LogWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWindowController.swift; sourceTree = "<group>"; };
 		8260C383C600DF922738271F /* TerminalThemeProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalThemeProjectionTests.swift; sourceTree = "<group>"; };
-		82CC7270D35E8E2ACB09DDE3 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Fixtures; path = Tests/AgenticToolkitSyncTests/Fixtures; sourceTree = SOURCE_ROOT; };
 		831448F23EB8464AE194DE61 /* SqliteStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SqliteStorageProvider.swift; sourceTree = "<group>"; };
 		837B862D62977FB381BED18B /* WindowScreenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowScreenshot.swift; sourceTree = "<group>"; };
 		83891226E4E59687EFD31663 /* UserSettings+SessionWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UserSettings+SessionWatcher.swift"; sourceTree = "<group>"; };
@@ -2375,7 +2373,6 @@
 				1AAD528680671DF31EDDD2DF /* PermissionsUI */,
 				6195413EFDBE2B28E7AA4745 /* Sync */,
 				66DBB78F533566A0624D994C /* SyncGRDB */,
-				82CC7270D35E8E2ACB09DDE3 /* Fixtures */,
 				46362EE4D383C8CCD532EA98 /* Frameworks */,
 				1FB4D33EE74A5956DAF82520 /* Products */,
 			);
@@ -3199,13 +3196,6 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_552B8787-7F99-4DED-A578-CBA2438E76D8" /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Settings;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -3703,7 +3693,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1764BCC76165BEF24881555E /* Fixtures in Resources */,
 				7B33D61A136B5ED511F288E5 /* pull-response.json in Resources */,
 				197EF1F3AD5BD0E76D3BB7AB /* push-request.json in Resources */,
 				1F762A1296F59D124018F8ED /* push-response.json in Resources */,

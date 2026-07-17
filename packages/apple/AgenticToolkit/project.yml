@@ -140,7 +140,13 @@ targets:
           - "Features/TerminalSession/Settings/TerminalSettingsPanelViewController.swift"
           - "SystemIntegration/Appearance/OldAppearanceSettingsPane.swift"
           - "SystemIntegration/Appearance/OldAppearanceSettingsPanelViewController.swift"
-          - "UI/Settings/SettingStorage/RGBAColor+NSColor.swift"
+          # Whole folder, not just the one file it contains (built into
+          # AgenticToolkitCoreMacOS instead, see that target's sources
+          # above): excluding only the file left an empty "UI/Settings"
+          # directory that XcodeGen still generated an orphaned PBXGroup
+          # for despite generateEmptyDirectories: false, causing spurious
+          # TEMP_ UUID churn in project.pbxproj on every regeneration.
+          - "UI/Settings"
     dependencies:
       - target: AgenticToolkitCore
       - target: AgenticToolkitCoreUI
@@ -230,10 +236,11 @@ targets:
     templates:
       - SwiftLint
     sources:
+      # The plain folder scan above already picks up Fixtures/*.json as
+      # individually-registered resources; an explicit `type: folder`
+      # entry for the same path double-registers it (a folder reference
+      # in Resources AND the three flat file copies). Flat copies only.
       - Tests/AgenticToolkitSyncTests
-      - path: Tests/AgenticToolkitSyncTests/Fixtures
-        type: folder
-        buildPhase: resources
     dependencies:
       - target: AgenticToolkitSync
         embed: true

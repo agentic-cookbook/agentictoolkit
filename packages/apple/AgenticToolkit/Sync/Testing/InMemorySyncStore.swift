@@ -7,6 +7,12 @@ public actor InMemorySyncStore: SyncStore {
         public var syncVersion: String
         public var deleted: Bool
         public var data: [String: JSONValue]
+
+        public init(syncVersion: String, deleted: Bool, data: [String: JSONValue]) {
+            self.syncVersion = syncVersion
+            self.deleted = deleted
+            self.data = data
+        }
     }
 
     /// Mirrors GRDBSyncStore's outbox status: `inflight` ops were handed out

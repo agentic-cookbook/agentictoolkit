@@ -207,6 +207,109 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(remainingOps.count, 1)
     }
 
+    // MARK: - backoff / spin-guard / quarantine (item i, j)
+
+    /// item (i): consecutive pull failures must auto-retry via the engine's
+    /// own backoff scheduling (no manual re-kick needed), and a success in
+    /// between must reset consecutiveFailures — proven by the very next
+    /// failure's retry landing close to baseBackoff again, not the much
+    /// larger delay a still-climbing counter would have produced.
+    func testConsecutivePullFailuresBackOffThenResetOnSuccess() async throws {
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 0.02, maxBackoff: 5
+        )
+        let transport = ScriptedSyncTransport(pulls: [
+            .failure(.transport("e1")),
+            .failure(.transport("e2")),
+            .failure(.transport("e3")),
+            pullPage([], cursor: "c0", hasMore: false), // success: resets consecutiveFailures
+            .failure(.transport("e4")),                 // a fresh failure right after the reset
+            pullPage([], cursor: "c0", hasMore: false)   // its auto-retry
+        ])
+        let engine = SyncEngine(store: InMemorySyncStore(), transport: transport, configuration: config)
+
+        func waitForPullCount(_ target: Int) async -> Date? {
+            let deadline = Date().addingTimeInterval(3)
+            while Date() < deadline {
+                if await transport.pullCursors.count >= target { return Date() }
+                try? await Task.sleep(for: .milliseconds(2))
+            }
+            return nil
+        }
+
+        await engine.syncNow(reason: .manual) // fires failure #1; scheduleRetry auto-drives 2, 3, then success
+        let successAt = await waitForPullCount(4)
+        XCTAssertNotNil(successAt) // the automatic retry chain reached the scripted success unaided
+
+        await engine.syncNow(reason: .manual) // a fresh failure, now that consecutiveFailures was reset
+        let nextFailureAt = Date()
+        let retriedAt = await waitForPullCount(6)
+        XCTAssertNotNil(retriedAt) // this failure also auto-retried
+        await engine.stop() // no more scripted outcomes remain; nothing left to cancel, but tidy up regardless
+
+        let gap = retriedAt!.timeIntervalSince(nextFailureAt)
+        // Had consecutiveFailures NOT been reset by the earlier success, this would be
+        // treated as the 4th consecutive failure (delay ~0.16s here); reset means it's
+        // the 1st again (~0.02s). Comfortably below the un-reset value, with slack for
+        // scheduling jitter.
+        XCTAssertLessThan(gap, 0.08)
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        let failedCount = events.filter { if case .failed = $0 { return true }; return false }.count
+        XCTAssertEqual(failedCount, 4) // 3 pre-success + 1 post-success
+    }
+
+    /// item (i) spin guard: a push response whose opId matches nothing in
+    /// the outbox must fail loudly (SyncEngineError.pushMadeNoProgress)
+    /// rather than re-fetching and re-pushing the same unresolved batch
+    /// forever.
+    func testPushResponseWithBogusOpIdFailsInsteadOfSpinning() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        let transport = ScriptedSyncTransport(
+            pulls: [pullPage([], cursor: "c0", hasMore: false)],
+            pushes: [.success(SyncPushResponse(
+                results: [SyncPushResult(opId: "bogus-op-id-not-in-outbox", status: .applied)], watermark: "0"
+            ))]
+        )
+        let (engine, _) = engine(store: store, transport: transport)
+        await engine.syncNow(reason: .manual)
+        await engine.stop() // cancels the resulting backoff retry before it can fire mid-assertion
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(remainingOps.count, 1) // outbox intact: nothing was (wrongly) resolved
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains { if case .failed = $0 { return true }; return false }) // no hang, no spin
+    }
+
+    /// item (j): a server-rejected push result must land the op in the
+    /// store's quarantine, not silently vanish or get retried under its
+    /// original opId on the next cycle.
+    func testRejectedPushResultQuarantinesOpAndIsNotRetriedNextCycle() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        let opId = await store.pendingOpId(resource: "personal.notes", rowId: "r1")
+        let transport = ScriptedSyncTransport(
+            pulls: [pullPage([], cursor: "c0", hasMore: false), pullPage([], cursor: "c0", hasMore: false)],
+            pushes: [.success(SyncPushResponse(
+                results: [SyncPushResult(opId: opId!, status: .rejected, reason: "invalid_data")], watermark: "0"
+            ))]
+        )
+        let (engine, _) = engine(store: store, transport: transport)
+        await engine.syncNow(reason: .manual) // rejects and quarantines
+        let quarantined = await store.quarantined
+        XCTAssertEqual(quarantined.map(\.opId), [opId])
+        let remainingAfterFirstCycle = try await store.pendingOps(limit: 10)
+        XCTAssertTrue(remainingAfterFirstCycle.isEmpty) // resolved, not left pending for a retry
+
+        await engine.syncNow(reason: .manual) // second cycle: nothing left in the outbox to push
+        let pushedRequests = await transport.pushedRequests
+        XCTAssertEqual(pushedRequests.count, 1) // never re-pushed under its original (or any) opId
+    }
+
     // MARK: - pause()/resume()
 
     func testPauseDuringInFlightCycleWaitsForCompletion() async throws {
