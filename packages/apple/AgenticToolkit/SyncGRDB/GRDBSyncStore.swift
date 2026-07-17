@@ -15,7 +15,9 @@ public struct GRDBSyncStoreStatus: Codable, Sendable {
 /// `SyncStore` on `BoundedDatabase` (WAL pool): JSON-payload mirror tables, an
 /// outbox, and a conflicts audit. The mirror is fed only by apply()/stage();
 /// it is NEVER deleted as a recovery path (resetForResync truncates tables,
-/// preserving the outbox and the file).
+/// preserving the outbox and the file; purgeForIdentityChange additionally
+/// clears the outbox — see its doc comment for why — but still never touches
+/// the file).
 public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
 
     private let boundedDatabase: BoundedDatabase
@@ -338,6 +340,49 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                     try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
                 }
                 try conn.execute(sql: "DELETE FROM _sync_state")
+            }
+        }
+    }
+
+    /// Account-boundary purge: call this when the signed-in identity itself
+    /// changes (sign-out, switch account) — not for an ordinary resync.
+    /// In one write transaction: every registered mirror table is emptied,
+    /// `_sync_state` (the cursor) is cleared, and every `_sync_outbox` row is
+    /// deleted regardless of status — `pending`, `inflight`, *and*
+    /// `quarantined` alike.
+    ///
+    /// This is the deliberate difference from `resetForResync()`, which
+    /// preserves the outbox: a resync happens because the *data* needs
+    /// re-fetching while the identity performing it is unchanged, so
+    /// queued local edits are still owed to the server under that same
+    /// identity and must survive. Here the identity itself is changing —
+    /// every queued op belongs to the *departing* identity, and pushing it
+    /// under a new identity's credentials would misattribute the mutation.
+    /// That's the defect this method exists to close; nothing may survive
+    /// the boundary except the app-level resource registrations.
+    ///
+    /// `_sync_resources` is intentionally left untouched: it's the set of
+    /// resources this app knows how to sync (from `prepare(resources:)`),
+    /// not per-identity state — the next identity needs the same
+    /// registrations, and callers should not need to re-`prepare` before
+    /// their first post-purge `stage(_:)`.
+    ///
+    /// `_sync_conflicts` (the audit log) is also left untouched — it's a
+    /// historical record, not live sync state, and isn't read back into any
+    /// sync decision.
+    ///
+    /// Like `resetForResync()`, this never touches the database file itself
+    /// — only rows within it, in one transaction.
+    public func purgeForIdentityChange() async throws {
+        let boundedDatabase = self.boundedDatabase
+        try await onQueue {
+            try boundedDatabase.write { conn in
+                let tables = try String.fetchAll(conn, sql: "SELECT resource FROM _sync_resources")
+                for resource in tables {
+                    try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
+                }
+                try conn.execute(sql: "DELETE FROM _sync_state")
+                try conn.execute(sql: "DELETE FROM _sync_outbox")
             }
         }
     }

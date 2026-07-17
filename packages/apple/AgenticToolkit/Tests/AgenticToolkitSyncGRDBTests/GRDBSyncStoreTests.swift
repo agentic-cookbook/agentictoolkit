@@ -215,6 +215,43 @@ final class GRDBSyncStoreTests: XCTestCase {
         let pending = try await store.pendingOps(limit: 10)
         XCTAssertEqual(pending.count, 1)
     }
+
+    func testPurgeForIdentityChangeClearsMirrorsCursorAndOutboxButKeepsRegistrations() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.apply(
+            [SyncChange(
+                resource: "personal.notes", id: "s1", op: .upsert, syncVersion: "1", data: ["title": .string("A")]
+            )],
+            advancingTo: SyncCursor(rawValue: "c1")
+        )
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r2", type: .upsert, data: [:]))
+        let ops = try await store.pendingOps(limit: 10) // marks both inflight
+        try await store.complete([SyncPushResult(opId: ops[1].opId, status: .rejected, reason: "invalid_data")])
+        // r1's op is still inflight (unresolved), r2's op is now quarantined —
+        // both belong to the identity that's about to depart.
+        let beforePurge = try store.status()
+        XCTAssertEqual(beforePurge.outboxDepth, 1)
+        XCTAssertEqual(beforePurge.quarantinedDepth, 1)
+
+        try await store.purgeForIdentityChange()
+
+        let status = try store.status()
+        XCTAssertEqual(status.outboxDepth, 0)
+        XCTAssertEqual(status.quarantinedDepth, 0) // quarantined ops are purged too, not just pending/inflight
+        let cursor = try await store.cursor()
+        XCTAssertNil(cursor)
+        XCTAssertEqual(try store.liveRows(resource: "personal.notes", limit: 10, offset: 0).count, 0)
+        // registrations are app-level, not per-identity
+        XCTAssertEqual(try store.registeredResources(), ["personal.notes"])
+
+        // prepare intact: the next identity's staging works without re-registering.
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r3", type: .upsert, data: [:]))
+        let opsAfterPurge = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(opsAfterPurge.count, 1)
+        XCTAssertEqual(opsAfterPurge[0].rowId, "r3")
+    }
 }
 
 /// Async throwing assertion helper (XCTest lacks one).

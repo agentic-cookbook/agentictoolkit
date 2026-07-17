@@ -3199,7 +3199,7 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_E3350146-37FF-4A4F-A227-99C56F3786F9" /* Settings */ = {
+		"TEMP_552B8787-7F99-4DED-A578-CBA2438E76D8" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
