@@ -189,6 +189,7 @@ targets:
     settings:
       base:
         SDKROOT: auto
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     # Daemon-safe: a GRDB DatabasePool with deadline-ejection (progress_handler),
     # read/write reentrancy (read-your-writes), and per-lane stats. Foundation +
@@ -218,6 +219,7 @@ targets:
     settings:
       base:
         SDKROOT: auto
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     # Daemon-safe: the offline-sync engine + protocol seam (SyncStore/
     # SyncTransport/SyncTriggerSource). Foundation + Network only; no AppKit.
@@ -253,6 +255,7 @@ targets:
     settings:
       base:
         SDKROOT: auto
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     # Daemon-safe: SyncStore implementation on BoundedDatabase (WAL pool).
 

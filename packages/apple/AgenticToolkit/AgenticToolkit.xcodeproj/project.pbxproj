@@ -3199,7 +3199,7 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_864CA179-26DF-4F90-827C-8812CA727A00" /* Settings */ = {
+		"TEMP_E3350146-37FF-4A4F-A227-99C56F3786F9" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -5013,6 +5013,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitSyncGRDB;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -5157,6 +5158,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitDatabase;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -5348,6 +5350,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitSyncGRDB;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -5375,6 +5378,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitSync;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -5439,6 +5443,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitDatabase;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -5724,6 +5729,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikefullerton.agentictoolkit.AgenticToolkitSync;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
