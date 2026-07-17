@@ -340,11 +340,23 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                             // (or arriving right after it) snapshots the correct
                             // baseVersion — closing the stage-during-push
                             // self-conflict race (adh sync.md §3).
-                            let table = try Self.mirrorTableName(for: resource)
-                            try conn.execute(
-                                sql: "UPDATE \"\(table)\" SET sync_version = ? WHERE id = ?",
-                                arguments: [Int(newVersion) ?? 0, rowId]
-                            )
+                            //
+                            // Strict, same rationale as item (g): `Int(newVersion) ?? 0`
+                            // would silently stamp sync_version = 0 on an unparseable
+                            // value, corrupting the mirror row's ordering. But unlike
+                            // apply()'s invalidChange throw, this runs inside the push
+                            // completion transaction — throwing here would abort the
+                            // whole transaction, leave the outbox row in place, and
+                            // wedge on replay even though the server already applied the
+                            // op. So: skip adoption (treat as absent) rather than throw;
+                            // the outbox row is still deleted below.
+                            if let intVersion = Int(newVersion) {
+                                let table = try Self.mirrorTableName(for: resource)
+                                try conn.execute(
+                                    sql: "UPDATE \"\(table)\" SET sync_version = ? WHERE id = ?",
+                                    arguments: [intVersion, rowId]
+                                )
+                            }
                         }
                         try conn.execute(sql: "DELETE FROM _sync_outbox WHERE op_id = ?", arguments: [result.opId])
                     case .rejected:

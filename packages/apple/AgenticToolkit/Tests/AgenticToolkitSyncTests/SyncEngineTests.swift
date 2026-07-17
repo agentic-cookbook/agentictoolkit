@@ -192,6 +192,42 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertFalse(events.contains { if case .failed = $0 { return true }; return false }) // no backoff retry
     }
 
+    /// review fix: a server that keeps returning 410 on every pull (GC
+    /// horizon persistently ahead of us, or just misbehaving) must not drive
+    /// `performResync` into an unbounded hot reset+pull loop. After the
+    /// first immediate nested retry, every further 410 should route through
+    /// the normal backoff/retry path instead — bounding the pull count
+    /// within any fixed time window and never hanging.
+    func testRepeatedResyncRequiredBacksOffInsteadOfHanging() async throws {
+        let transport = AlwaysResyncTransport()
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("offline")])
+        )
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 0.01, maxBackoff: 0.03
+        )
+        let engine = SyncEngine(store: store, transport: transport, configuration: config)
+        await engine.syncNow(reason: .manual)
+        // Let a couple of scheduled retries fire — if the bound weren't in
+        // place, this window would instead see a hot loop of thousands of
+        // pull attempts with zero delay between them.
+        try await Task.sleep(for: .milliseconds(100))
+        await engine.stop()
+        let pullCount = await transport.pullCount
+        XCTAssertGreaterThanOrEqual(pullCount, 2) // the initial attempt + its one allowed nested retry happened
+        XCTAssertLessThan(pullCount, 50) // bounded — nowhere near a hot-loop pull count for this window
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains {
+            if case .failed(let reason) = $0 { return reason.contains("resync_required") }
+            return false
+        })
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(remainingOps.count, 1) // outbox intact throughout
+    }
+
     func testTransportFailureLeavesOutboxIntact() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
@@ -376,8 +412,17 @@ private actor Flag {
 private actor GatedPullTransport: SyncTransport {
     private var startedContinuation: CheckedContinuation<Void, Never>?
     private var releaseContinuation: CheckedContinuation<Void, Never>?
+    // review fix: without this flag, a caller whose `syncNow` Task happens to
+    // reach `pull()` before the test's `waitUntilPullStarted()` call installs
+    // its continuation would see `startedContinuation` still nil in `pull()`
+    // (so the `resume()` there is a no-op), and then suspend forever once
+    // `waitUntilPullStarted()` finally runs and awaits a continuation nobody
+    // will ever resume. Recording that `pull()` already happened lets
+    // `waitUntilPullStarted()` return immediately instead of racing it.
+    private var started = false
 
     func waitUntilPullStarted() async {
+        if started { return }
         await withCheckedContinuation { startedContinuation = $0 }
     }
 
@@ -387,10 +432,28 @@ private actor GatedPullTransport: SyncTransport {
     }
 
     func pull(cursor: SyncCursor?, limit: Int) async throws -> SyncPullResponse {
+        started = true
         startedContinuation?.resume()
         startedContinuation = nil
         await withCheckedContinuation { releaseContinuation = $0 }
         return SyncPullResponse(manifest: [], changes: [], cursor: "gated", hasMore: false)
+    }
+
+    func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
+        SyncPushResponse(results: request.ops.map { SyncPushResult(opId: $0.opId, status: .applied) }, watermark: "0")
+    }
+}
+
+/// SyncTransport fake whose `pull` always throws `.resyncRequired` — used to
+/// prove `performResync`'s recursion bound actually bounds it, rather than
+/// scripting a fixed-length failure list (which can't distinguish "bounded"
+/// from "just as long as the script").
+private actor AlwaysResyncTransport: SyncTransport {
+    private(set) var pullCount = 0
+
+    func pull(cursor: SyncCursor?, limit: Int) async throws -> SyncPullResponse {
+        pullCount += 1
+        throw SyncTransportError.resyncRequired
     }
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {

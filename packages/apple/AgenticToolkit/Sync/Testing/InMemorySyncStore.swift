@@ -143,11 +143,16 @@ public actor InMemorySyncStore: SyncStore {
             switch result.status {
             case .applied:
                 let completedOp = outbox[idx].pushOp
-                if let newVersion = result.newVersion, tables[completedOp.resource]?[completedOp.rowId] != nil {
+                if let newVersion = result.newVersion,
+                   Int(newVersion) != nil, // skip-if-unparseable: parity with GRDBSyncStore.complete
+                   tables[completedOp.resource]?[completedOp.rowId] != nil {
                     // Adopt the server's post-apply sync_version onto the mirror row
                     // before dropping the outbox entry — mirrors GRDBSyncStore.complete
                     // so the fakes don't lie about the adoption behavior the real store
-                    // provides (adh sync.md §3).
+                    // provides (adh sync.md §3). An unparseable newVersion is skipped
+                    // rather than adopted (or thrown) — same rationale as GRDBSyncStore:
+                    // this is completion bookkeeping, not a place to abort and wedge the
+                    // outbox row.
                     tables[completedOp.resource]![completedOp.rowId]!.syncVersion = newVersion
                 }
                 outbox.remove(at: idx)

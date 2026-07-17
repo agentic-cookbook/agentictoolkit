@@ -38,6 +38,23 @@ final class InMemorySyncStoreTests: XCTestCase {
         XCTAssertEqual(newOps[0].baseVersion, "77") // subsequent stage() snapshots the adopted version
     }
 
+    /// review fix: an unparseable `newVersion` on an `applied` result must be
+    /// skipped (not adopted, not thrown) — parity with GRDBSyncStore. The
+    /// outbox entry is still dropped since the server did apply the op.
+    func testCompleteAppliedWithUnparseableNewVersionSkipsAdoptionButStillDeletesOutboxRow() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        try await store.complete([SyncPushResult(opId: ops[0].opId, status: .applied, newVersion: "bogus")])
+        let row = await store.row(resource: "personal.notes", id: "r1")
+        XCTAssertEqual(row?.syncVersion, "0") // untouched: stage() seeds new rows at syncVersion "0"
+        let remaining = try await store.pendingOps(limit: 10)
+        XCTAssertTrue(remaining.isEmpty) // outbox entry still dropped — the server did apply the op
+    }
+
     func testStageCoalescesUpsertThenUpsertKeepingOpIdAndBaseVersion() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])

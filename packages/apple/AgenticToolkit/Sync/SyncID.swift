@@ -24,15 +24,18 @@ public enum SyncID {
     /// clock moved backwards) → increment the 12-bit counter; on its rare
     /// overflow, borrow a virtual millisecond rather than colliding —
     /// monotonicity is the stronger guarantee here than exact wall-clock
-    /// accuracy. New millisecond → reset the counter, reseeded mid-range
-    /// (not 0) per RFC 9562's guidance to avoid leaking a predictable
-    /// sequence start.
+    /// accuracy. New millisecond → reset the counter to a random value in
+    /// the lower half of its 12-bit range (0...0x7FF, not the full
+    /// 0...0xFFF) per RFC 9562's guidance to avoid leaking a predictable
+    /// sequence start while still leaving the upper half as headroom for
+    /// same-millisecond increments before the rare-overflow path above
+    /// kicks in.
     private static func nextTick(wallClockMilliseconds: UInt64) -> (milliseconds: UInt64, counter: UInt16) {
         lock.lock()
         defer { lock.unlock() }
         if wallClockMilliseconds > lastMilliseconds {
             lastMilliseconds = wallClockMilliseconds
-            counter = UInt16.random(in: 0...0xFFF)
+            counter = UInt16.random(in: 0...0x7FF)
         } else if counter == 0xFFF {
             lastMilliseconds += 1
             counter = 0

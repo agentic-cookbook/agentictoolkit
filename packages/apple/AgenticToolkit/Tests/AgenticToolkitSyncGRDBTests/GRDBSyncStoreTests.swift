@@ -100,6 +100,27 @@ final class GRDBSyncStoreTests: XCTestCase {
         XCTAssertEqual(newOps[0].baseVersion, "77") // subsequent stage() snapshots the adopted version
     }
 
+    /// review fix: an unparseable `newVersion` on an `applied` result must be
+    /// skipped (not coerced to 0, not thrown) — the outbox row still gets
+    /// deleted since the server did apply the op; only the mirror's
+    /// sync_version is left untouched.
+    func testCompleteAppliedWithUnparseableNewVersionSkipsAdoptionButStillDeletesOutboxRow() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        try await store.complete([SyncPushResult(opId: ops[0].opId, status: .applied, newVersion: "bogus")])
+        let table = try GRDBSyncStore.mirrorTableName(for: "personal.notes")
+        let version = try store.database.read { conn in
+            try Int.fetchOne(conn, sql: "SELECT sync_version FROM \"\(table)\" WHERE id = ?", arguments: ["r1"])
+        }
+        XCTAssertEqual(version, 0) // untouched: stage() seeds new rows at sync_version 0
+        let remaining = try await store.pendingOps(limit: 10)
+        XCTAssertTrue(remaining.isEmpty) // outbox row still deleted — the server did apply the op
+    }
+
     /// item (g): a pulled `SyncChange.syncVersion` that isn't the `/^\d+$/`
     /// the wire contract guarantees must fail loudly, not silently coerce
     /// to `0` via `Int(...) ?? 0` and corrupt the mirror row's ordering.

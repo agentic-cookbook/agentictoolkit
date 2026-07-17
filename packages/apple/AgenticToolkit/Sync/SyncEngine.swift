@@ -37,6 +37,9 @@ public actor SyncEngine {
     private var hostPaused = false
     private var pauseWaiters: [CheckedContinuation<Void, Never>] = []
     private var consecutiveFailures = 0
+    /// Consecutive `resyncRequired` (410) events seen without an
+    /// intervening successful cycle — see `performResync`'s bounding logic.
+    private var consecutiveResyncs = 0
     private var triggerTasks: [Task<Void, Never>] = []
     private var retryTask: Task<Void, Never>?
 
@@ -127,6 +130,7 @@ public actor SyncEngine {
             try await pullLoop()
             try await pushLoop()
             consecutiveFailures = 0
+            consecutiveResyncs = 0
             eventContinuation.yield(.idle)
         } catch SyncTransportError.unauthorized {
             authPaused = true
@@ -281,6 +285,7 @@ public actor SyncEngine {
             try await pushLoop()   // contract (adh sync.md §4): preserved outbox replays
                                     // with its existing opIds, exactly as without the 410
             consecutiveFailures = 0
+            consecutiveResyncs = 0
             eventContinuation.yield(.idle)
         } catch SyncTransportError.unauthorized {
             // Same event semantics as syncNow's own unauthorized handling:
@@ -290,10 +295,23 @@ public actor SyncEngine {
             eventContinuation.yield(.authRequired)
         } catch SyncTransportError.resyncRequired {
             // A second 410 mid-resync (rare, but the server can raise the GC
-            // horizon again between our reset and the re-pull) — rethrow
-            // into the same recovery path rather than treating it as a
-            // generic failure.
-            await performResync()
+            // horizon again between our reset and the re-pull) is worth one
+            // immediate nested retry. But recursing unconditionally here
+            // hot-loops reset+pull forever against a server that keeps
+            // returning 410 — bound it: `consecutiveResyncs` persists across
+            // performResync calls (reset only by a fully successful cycle),
+            // so only the very first 410-after-a-410 gets the immediate
+            // retry; every one after that routes through the same
+            // scheduleRetry/backoff path as any other failure, giving the
+            // server (or our clock) time to actually catch up.
+            consecutiveResyncs += 1
+            if consecutiveResyncs <= 1 {
+                await performResync()
+            } else {
+                consecutiveFailures += 1
+                eventContinuation.yield(.failed("repeated resync_required from server; backing off"))
+                scheduleRetry()
+            }
         } catch {
             consecutiveFailures += 1
             eventContinuation.yield(.failed(String(describing: error)))
