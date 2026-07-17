@@ -79,6 +79,83 @@ final class GRDBSyncStoreTests: XCTestCase {
         XCTAssertEqual(status.quarantinedDepth, 1)
     }
 
+    func testStageCoalescesUpsertThenUpsertKeepingOpIdAndBaseVersion() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.apply(
+            [SyncChange(resource: "personal.notes", id: "r1", op: .upsert, syncVersion: "3", data: [:])],
+            advancingTo: SyncCursor(rawValue: "c3")
+        )
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let originalOpId = try store.database.read { conn in
+            try String.fetchOne(conn, sql: "SELECT op_id FROM _sync_outbox WHERE row_id = ?", arguments: ["r1"])
+        }
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["body": .string("second")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(ops.count, 1) // coalesced, not two ops with the same stale baseVersion
+        XCTAssertEqual(ops[0].opId, originalOpId)
+        XCTAssertEqual(ops[0].baseVersion, "3")
+        XCTAssertEqual(ops[0].data?["title"]?.stringValue, "first")
+        XCTAssertEqual(ops[0].data?["body"]?.stringValue, "second")
+    }
+
+    func testStageCoalescesUpsertThenDeleteKeepingOpId() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let originalOpId = try store.database.read { conn in
+            try String.fetchOne(conn, sql: "SELECT op_id FROM _sync_outbox WHERE row_id = ?", arguments: ["r1"])
+        }
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .delete))
+        let ops = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(ops.count, 1)
+        XCTAssertEqual(ops[0].opId, originalOpId)
+        XCTAssertEqual(ops[0].type, .delete)
+        XCTAssertNil(ops[0].data)
+    }
+
+    func testStageAfterPendingOpsCreatesNewOpWithFreshOpId() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let firstOps = try await store.pendingOps(limit: 10) // marks the op inflight
+        XCTAssertEqual(firstOps.count, 1)
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["body": .string("second")])
+        )
+        let allOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(allOps.count, 2) // the inflight op plus a fresh one — not coalesced
+        XCTAssertTrue(allOps.contains { $0.opId == firstOps[0].opId })
+        XCTAssertEqual(Set(allOps.map(\.opId)).count, 2)
+    }
+
+    func testPendingOpsReturnsInsertionRowidOrder() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r2", type: .upsert, data: [:]))
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r3", type: .upsert, data: [:]))
+        let ops = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(ops.map(\.rowId), ["r1", "r2", "r3"])
+    }
+
+    func testPendingOpsReturnsInflightOpsAgainUntilCompleted() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        let first = try await store.pendingOps(limit: 10)
+        let second = try await store.pendingOps(limit: 10) // still inflight: must be handed out again
+        XCTAssertEqual(first.map(\.opId), second.map(\.opId))
+    }
+
     func testDeleteTombstonesLocallyAndResyncPreservesOutbox() async throws {
         let store = try makeStore()
         try await store.prepare(resources: [notes])

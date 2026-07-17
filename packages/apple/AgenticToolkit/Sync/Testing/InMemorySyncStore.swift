@@ -9,10 +9,25 @@ public actor InMemorySyncStore: SyncStore {
         public var data: [String: JSONValue]
     }
 
+    /// Mirrors GRDBSyncStore's outbox status: `inflight` ops were handed out
+    /// by a `pendingOps` call whose push never completed (still in flight, or
+    /// the process crashed before `complete` landed) — they stay eligible on
+    /// the next `pendingOps` call so a retry replays the same opId. Rejected
+    /// ops are removed from `outbox` entirely and tracked in `quarantined`.
+    private enum OutboxStatus: Sendable {
+        case pending
+        case inflight
+    }
+
+    private struct OutboxEntry: Sendable {
+        var pushOp: SyncPushOp
+        var status: OutboxStatus
+    }
+
     private var resources: [SyncResource] = []
     private var tables: [String: [String: Row]] = [:]
     private var storedCursor: SyncCursor?
-    private var outbox: [SyncPushOp] = []
+    private var outbox: [OutboxEntry] = []
     public private(set) var conflictLog: [(opId: String, reason: String?)] = []
     /// Ops the server rejected. These are NOT retried under their original
     /// opId — the server ledgers push results immutably per opId, so a
@@ -44,6 +59,11 @@ public actor InMemorySyncStore: SyncStore {
         if let cursor { storedCursor = cursor }
     }
 
+    /// Local mutation: optimistic mirror write + outbox op. Coalesces into an
+    /// existing `pending` op for this (resource, rowId) in place — same
+    /// opId, same original baseVersion — mirroring GRDBSyncStore.stage so the
+    /// fakes don't lie about the coalescing behavior the real store provides
+    /// (sync fix-wave item p2a).
     public func stage(_ mutation: LocalMutation) async throws {
         let base = tables[mutation.resource]?[mutation.rowId]?.syncVersion
         tables[mutation.resource, default: [:]][mutation.rowId] = Row(
@@ -51,23 +71,53 @@ public actor InMemorySyncStore: SyncStore {
             deleted: mutation.type == .delete,
             data: mutation.data ?? [:]
         )
-        outbox.append(SyncPushOp(
-            opId: SyncID.uuidV7(),
-            resource: mutation.resource,
-            rowId: mutation.rowId,
-            type: mutation.type,
-            baseVersion: base,
-            data: mutation.data
-        ))
+        if let index = outbox.firstIndex(where: {
+            $0.status == .pending && $0.pushOp.resource == mutation.resource && $0.pushOp.rowId == mutation.rowId
+        }) {
+            let existingOp = outbox[index].pushOp
+            let mergedData: [String: JSONValue]?
+            switch mutation.type {
+            case .upsert:
+                mergedData = (existingOp.data ?? [:]).merging(mutation.data ?? [:]) { _, new in new }
+            case .delete:
+                mergedData = nil
+            }
+            outbox[index].pushOp = SyncPushOp(
+                opId: existingOp.opId,
+                resource: existingOp.resource,
+                rowId: existingOp.rowId,
+                type: mutation.type,
+                baseVersion: existingOp.baseVersion,
+                data: mergedData
+            )
+        } else {
+            outbox.append(OutboxEntry(
+                pushOp: SyncPushOp(
+                    opId: SyncID.uuidV7(),
+                    resource: mutation.resource,
+                    rowId: mutation.rowId,
+                    type: mutation.type,
+                    baseVersion: base,
+                    data: mutation.data
+                ),
+                status: .pending
+            ))
+        }
     }
 
+    /// Returns up to `limit` ops in insertion order (FIFO), marking every
+    /// returned op `inflight`. Already-`inflight` ops are returned again —
+    /// see `OutboxStatus`.
     public func pendingOps(limit: Int) async throws -> [SyncPushOp] {
-        Array(outbox.prefix(limit))
+        let indices = outbox.indices.filter { outbox[$0].status == .pending || outbox[$0].status == .inflight }
+            .prefix(limit)
+        for index in indices { outbox[index].status = .inflight }
+        return indices.map { outbox[$0].pushOp }
     }
 
     public func complete(_ results: [SyncPushResult]) async throws {
         for result in results {
-            guard let idx = outbox.firstIndex(where: { $0.opId == result.opId }) else { continue }
+            guard let idx = outbox.firstIndex(where: { $0.pushOp.opId == result.opId }) else { continue }
             switch result.status {
             case .applied:
                 outbox.remove(at: idx)
@@ -75,7 +125,7 @@ public actor InMemorySyncStore: SyncStore {
                 conflictLog.append((result.opId, result.reason))
                 outbox.remove(at: idx)
             case .rejected:
-                quarantined.append(outbox.remove(at: idx))
+                quarantined.append(outbox.remove(at: idx).pushOp)
             }
         }
     }
@@ -90,6 +140,15 @@ public actor InMemorySyncStore: SyncStore {
         (tables[resource] ?? [:]).values.filter { !$0.deleted }.count
     }
     public func row(resource: String, id: String) -> Row? { tables[resource]?[id] }
+    /// The current `pending` op's id for (resource, rowId), if any. Unlike
+    /// `pendingOps`, this does NOT mark the op `inflight` — for tests that
+    /// need to capture an opId before a later `stage()` call that should
+    /// still coalesce into it.
+    public func pendingOpId(resource: String, rowId: String) -> String? {
+        outbox.first {
+            $0.status == .pending && $0.pushOp.resource == resource && $0.pushOp.rowId == rowId
+        }?.pushOp.opId
+    }
 }
 
 public enum SyncStoreFailure: Error, Sendable, Equatable {

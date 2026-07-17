@@ -130,6 +130,7 @@
 		234CEE167B9D43140A2EC2A6 /* SystemWindowContextsSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71138CCA6F7155839D93DE12 /* SystemWindowContextsSettings.swift */; };
 		237804904D4F7A58F500FF25 /* DaemonAIChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BD8F8CA7B88AC3A53AB9785 /* DaemonAIChatTests.swift */; };
 		2379C7574D0AAF1D97F00B48 /* StoredSettingPropertyWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0448347D601C05E85051B6 /* StoredSettingPropertyWrapper.swift */; };
+		24174BC46EF589F76D6D44AD /* SyncEngineGRDBIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 645F3729EEAEC76F45754792 /* SyncEngineGRDBIntegrationTests.swift */; };
 		24B34FACDE15F9F3180FB988 /* MultiTabbedViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AFBE61B041BDA17EFFCB3F /* MultiTabbedViewControllerDelegate.swift */; };
 		2574598DAD92C7B1127E0465 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C87939516A070CC66803F4 /* Placeholder.swift */; };
 		278CA7A2D60F12C6B857BE9D /* Badge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6E8EA3F66DE979A9977004 /* Badge.swift */; };
@@ -1331,6 +1332,7 @@
 		626FECFD2A90654F819760B3 /* WindowManagerTerminationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagerTerminationTests.swift; sourceTree = "<group>"; };
 		62FE1E6B9845CD68F2E7DEE9 /* TopicListViewControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicListViewControllerTests.swift; sourceTree = "<group>"; };
 		635A19282B38E0A6A626932E /* MCPServerConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfiguration.swift; sourceTree = "<group>"; };
+		645F3729EEAEC76F45754792 /* SyncEngineGRDBIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineGRDBIntegrationTests.swift; sourceTree = "<group>"; };
 		64A98A60FFB1917014F3BD5A /* TerminalSessionWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionWindowController.swift; sourceTree = "<group>"; };
 		659E37C58EEAD586A1CB9F82 /* WhippetDocumentController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhippetDocumentController.swift; sourceTree = "<group>"; };
 		65AD1E929AB88513FB11E84F /* TerminalSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSession.swift; sourceTree = "<group>"; };
@@ -2430,6 +2432,7 @@
 			isa = PBXGroup;
 			children = (
 				916EE798B464361B030150D4 /* GRDBSyncStoreTests.swift */,
+				645F3729EEAEC76F45754792 /* SyncEngineGRDBIntegrationTests.swift */,
 				D8BFA956ECF26D7CD7AFD93E /* SyncGRDBSmokeTests.swift */,
 			);
 			name = AgenticToolkitSyncGRDBTests;
@@ -3196,7 +3199,7 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
-		"TEMP_258C01F0-D30A-45F4-8756-82633DABD498" /* Settings */ = {
+		"TEMP_864CA179-26DF-4F90-827C-8812CA727A00" /* Settings */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -4516,6 +4519,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CAC99FDFADD265984765C3EC /* GRDBSyncStoreTests.swift in Sources */,
+				24174BC46EF589F76D6D44AD /* SyncEngineGRDBIntegrationTests.swift in Sources */,
 				A754BA62575AB6986CA5905B /* SyncGRDBSmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

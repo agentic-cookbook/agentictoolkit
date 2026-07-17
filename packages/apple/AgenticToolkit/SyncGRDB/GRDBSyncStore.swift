@@ -43,23 +43,31 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
 
     // MARK: - SyncStore
 
+    /// The bookkeeping tables (as opposed to per-resource mirror tables).
+    /// Idempotent (`CREATE TABLE IF NOT EXISTS`) so it's safe to run from
+    /// both `prepare(resources:)` and `cursor()` — the engine's pull loop
+    /// calls `cursor()` before it has a manifest to hand `prepare`, so on a
+    /// truly cold store (no prior `prepare` call ever made) `cursor()` would
+    /// otherwise throw "no such table: _sync_state" on the very first sync.
+    private static let bookkeepingSchema = """
+        CREATE TABLE IF NOT EXISTS _sync_state (id INTEGER PRIMARY KEY CHECK (id = 1), cursor TEXT);
+        CREATE TABLE IF NOT EXISTS _sync_resources (
+            resource TEXT PRIMARY KEY, schema_version INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS _sync_outbox (
+            op_id TEXT PRIMARY KEY, resource TEXT NOT NULL, row_id TEXT NOT NULL,
+            type TEXT NOT NULL, base_version TEXT, payload TEXT,
+            status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS _sync_conflicts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, op_id TEXT, resource TEXT,
+            row_id TEXT, reason TEXT, resolved_at TEXT NOT NULL);
+        """
+
     public func prepare(resources: [SyncResource]) async throws {
         let boundedDatabase = self.boundedDatabase
         try await onQueue {
             try boundedDatabase.write { conn in
-                try conn.execute(sql: """
-                    CREATE TABLE IF NOT EXISTS _sync_state (id INTEGER PRIMARY KEY CHECK (id = 1), cursor TEXT);
-                    CREATE TABLE IF NOT EXISTS _sync_resources (
-                        resource TEXT PRIMARY KEY, schema_version INTEGER NOT NULL);
-                    CREATE TABLE IF NOT EXISTS _sync_outbox (
-                        op_id TEXT PRIMARY KEY, resource TEXT NOT NULL, row_id TEXT NOT NULL,
-                        type TEXT NOT NULL, base_version TEXT, payload TEXT,
-                        status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
-                        created_at TEXT NOT NULL);
-                    CREATE TABLE IF NOT EXISTS _sync_conflicts (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, op_id TEXT, resource TEXT,
-                        row_id TEXT, reason TEXT, resolved_at TEXT NOT NULL);
-                    """)
+                try conn.execute(sql: Self.bookkeepingSchema)
                 for resource in resources {
                     let table = Self.mirrorTableName(for: resource.resource)
                     try conn.execute(sql: """
@@ -84,8 +92,9 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
     public func cursor() async throws -> SyncCursor? {
         let boundedDatabase = self.boundedDatabase
         return try await onQueue {
-            try boundedDatabase.read { conn in
-                try String.fetchOne(conn, sql: "SELECT cursor FROM _sync_state WHERE id = 1")
+            try boundedDatabase.write { conn in
+                try conn.execute(sql: Self.bookkeepingSchema)
+                return try String.fetchOne(conn, sql: "SELECT cursor FROM _sync_state WHERE id = 1")
             }.map(SyncCursor.init(rawValue:))
         }
     }
@@ -140,9 +149,19 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         }
     }
 
+    /// Local mutation: optimistic mirror write + outbox op, atomic. If a
+    /// `pending` (not yet `inflight`/`quarantined`) outbox op already exists
+    /// for this (resource, rowId), it is coalesced in place — same opId,
+    /// same original `baseVersion` (the version the user's edits started
+    /// from) — rather than minting a second op with a now-stale baseVersion
+    /// that would conflict against the first on push. See sync fix-wave
+    /// item p2a: two ops with the same baseVersion → server applies the
+    /// first and stale-conflicts the second, silently dropping the newer
+    /// edit.
     public func stage(_ mutation: LocalMutation) async throws {
         let boundedDatabase = self.boundedDatabase
         let encoder = self.encoder
+        let decoder = self.decoder
         try await onQueue {
             try boundedDatabase.write { conn in
                 let table = Self.mirrorTableName(for: mutation.resource)
@@ -164,33 +183,75 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                         arguments: [mutation.rowId, base ?? 0, payload]
                     )
                 }
-                let opPayload = String(data: try encoder.encode(mutation.data ?? [:]), encoding: .utf8) ?? "{}"
-                try conn.execute(
+
+                let existing = try Row.fetchOne(
+                    conn,
                     sql: """
-                        INSERT INTO _sync_outbox
-                            (op_id, resource, row_id, type, base_version, payload, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, 'pending', datetime('now'))
+                        SELECT op_id, payload FROM _sync_outbox
+                        WHERE resource = ? AND row_id = ? AND status = 'pending' LIMIT 1
                         """,
-                    arguments: [SyncID.uuidV7(), mutation.resource, mutation.rowId, mutation.type.rawValue,
-                                base.map(String.init), opPayload]
+                    arguments: [mutation.resource, mutation.rowId]
                 )
+                if let existing {
+                    let opId: String = existing["op_id"]
+                    let mergedPayload: [String: JSONValue]
+                    switch mutation.type {
+                    case .upsert:
+                        let existingPayload: [String: JSONValue] = try (existing["payload"] as String?)
+                            .flatMap { $0.data(using: .utf8) }
+                            .map { try decoder.decode([String: JSONValue].self, from: $0) } ?? [:]
+                        mergedPayload = existingPayload.merging(mutation.data ?? [:]) { _, new in new }
+                    case .delete:
+                        mergedPayload = [:]
+                    }
+                    let mergedPayloadString = String(data: try encoder.encode(mergedPayload), encoding: .utf8) ?? "{}"
+                    try conn.execute(
+                        sql: "UPDATE _sync_outbox SET type = ?, payload = ? WHERE op_id = ?",
+                        arguments: [mutation.type.rawValue, mergedPayloadString, opId]
+                    )
+                } else {
+                    let opPayload = String(data: try encoder.encode(mutation.data ?? [:]), encoding: .utf8) ?? "{}"
+                    try conn.execute(
+                        sql: """
+                            INSERT INTO _sync_outbox
+                                (op_id, resource, row_id, type, base_version, payload, status, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, 'pending', datetime('now'))
+                            """,
+                        arguments: [SyncID.uuidV7(), mutation.resource, mutation.rowId, mutation.type.rawValue,
+                                    base.map(String.init), opPayload]
+                    )
+                }
             }
         }
     }
 
+    /// Returns up to `limit` outbox ops in insertion order (`rowid` — the
+    /// FIFO order the ops were created in), and marks every returned op
+    /// `inflight` in the same transaction. Ops already `inflight` (from a
+    /// prior call whose push never completed — a crash, or a server
+    /// round-trip still outstanding) are included again: replaying the same
+    /// opIds on retry is the server contract's idempotency guarantee.
     public func pendingOps(limit: Int) async throws -> [SyncPushOp] {
         let boundedDatabase = self.boundedDatabase
         let decoder = self.decoder
         return try await onQueue {
-            try boundedDatabase.read { conn in
+            try boundedDatabase.write { conn in
                 let rows = try Row.fetchAll(
                     conn,
                     sql: """
                         SELECT op_id, resource, row_id, type, base_version, payload FROM _sync_outbox
-                        WHERE status = 'pending' ORDER BY created_at, op_id LIMIT ?
+                        WHERE status IN ('pending', 'inflight') ORDER BY rowid LIMIT ?
                         """,
                     arguments: [limit]
                 )
+                let opIds: [String] = rows.map { $0["op_id"] }
+                if !opIds.isEmpty {
+                    let placeholders = Array(repeating: "?", count: opIds.count).joined(separator: ", ")
+                    try conn.execute(
+                        sql: "UPDATE _sync_outbox SET status = 'inflight' WHERE op_id IN (\(placeholders))",
+                        arguments: StatementArguments(opIds)
+                    )
+                }
                 return try rows.map { row in
                     let payload: [String: JSONValue] = try (row["payload"] as String?)
                         .flatMap { $0.data(using: .utf8) }
@@ -299,8 +360,10 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
 
     public func status() throws -> GRDBSyncStoreStatus {
         try boundedDatabase.read { conn in
+            // pending + inflight: both are unresolved ops still owed to the
+            // server (inflight just means a push round-trip is outstanding).
             let outboxDepth = try Int.fetchOne(
-                conn, sql: "SELECT COUNT(*) FROM _sync_outbox WHERE status = 'pending'"
+                conn, sql: "SELECT COUNT(*) FROM _sync_outbox WHERE status IN ('pending', 'inflight')"
             ) ?? 0
             let quarantinedDepth = try Int.fetchOne(
                 conn, sql: "SELECT COUNT(*) FROM _sync_outbox WHERE status = 'quarantined'"
