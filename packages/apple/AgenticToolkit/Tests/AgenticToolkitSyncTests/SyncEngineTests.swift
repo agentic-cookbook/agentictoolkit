@@ -84,7 +84,7 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(after.count, 2)
     }
 
-    func testResyncRequiredResetsMirrorPreservingOutboxThenRepulls() async throws {
+    func testResyncRequiredResetsMirrorPreservingOutboxThenRepullsAndReplaysOutbox() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
         try await store.apply(
@@ -92,6 +92,7 @@ final class SyncEngineTests: XCTestCase {
             advancingTo: SyncCursor(rawValue: "stale")
         )
         try await store.stage(LocalMutation(resource: "personal.notes", rowId: "mine", type: .upsert, data: [:]))
+        let stagedOpId = try await store.pendingOps(limit: 10)[0].opId
         let transport = ScriptedSyncTransport(pulls: [
             .failure(.resyncRequired),
             pullPage(
@@ -105,8 +106,10 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertNotNil(freshRow)
         let oldRow = await store.row(resource: "personal.notes", id: "old")
         XCTAssertNil(oldRow)
+        let pushedOpIds = await transport.pushedRequests.flatMap(\.ops).map(\.opId)
+        XCTAssertEqual(pushedOpIds, [stagedOpId]) // outbox survived the reset and replayed under its original opId
         let remainingOps = try await store.pendingOps(limit: 10)
-        XCTAssertGreaterThanOrEqual(remainingOps.count, 1) // outbox replayed/preserved
+        XCTAssertEqual(remainingOps.count, 0)     // acknowledged, not dropped
     }
 
     func testTransportFailureLeavesOutboxIntact() async throws {
@@ -119,6 +122,7 @@ final class SyncEngineTests: XCTestCase {
         )
         let (engine, _) = engine(store: store, transport: transport)
         await engine.syncNow(reason: .manual)
+        await engine.stop() // cancels the armed retry-backoff task before it can fire mid-assertion
         let remainingOps = try await store.pendingOps(limit: 10)
         XCTAssertEqual(remainingOps.count, 1)
     }

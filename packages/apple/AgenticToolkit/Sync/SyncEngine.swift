@@ -126,6 +126,7 @@ public actor SyncEngine {
         while true {
             let ops = try await store.pendingOps(limit: config.pushBatchSize)
             guard !ops.isEmpty else { return }
+            let attemptedOpIds = Set(ops.map(\.opId))
             let response = try await transport.push(SyncPushRequest(deviceId: config.deviceId, ops: ops))
             var applied = 0
             var conflicts = 0
@@ -166,18 +167,29 @@ public actor SyncEngine {
             try await store.complete(response.results)
             eventContinuation.yield(.pushed(applied: applied, conflicts: conflicts, rejected: rejected))
             if response.results.isEmpty { return } // defensive: avoid spinning
+            // Spin guard: if none of the ops we just attempted were resolved
+            // (e.g. a misbehaving server returns results whose opIds match
+            // nothing in the outbox), `complete` no-ops and the same batch
+            // would be re-fetched forever. Surface it as a failure instead.
+            let stillPending = try await store.pendingOps(limit: config.pushBatchSize)
+            let remainingOpIds = Set(stillPending.map(\.opId))
+            if attemptedOpIds.isSubset(of: remainingOpIds) {
+                throw SyncEngineError.pushMadeNoProgress
+            }
         }
     }
 
     /// A resync clears the mirror and cursor but preserves the outbox
-    /// (`SyncStore.resetForResync` contract). It re-pulls the full snapshot
-    /// immediately; pushing the preserved outbox is left to the next cycle
-    /// so a resync never races a push against rows it just discarded.
+    /// (`SyncStore.resetForResync` contract). It re-pulls the full snapshot,
+    /// then replays the preserved outbox under its existing opIds, exactly
+    /// as it would have without the 410 (adh sync.md §4).
     private func performResync() async {
         do {
             try await store.resetForResync()
             eventContinuation.yield(.resyncPerformed)
             try await pullLoop()
+            try await pushLoop()   // contract (adh sync.md §4): preserved outbox replays
+                                    // with its existing opIds, exactly as without the 410
             consecutiveFailures = 0
             eventContinuation.yield(.idle)
         } catch {
@@ -197,4 +209,14 @@ public actor SyncEngine {
             await self?.kick(reason: .periodic)
         }
     }
+}
+
+/// Internal engine failure modes surfaced via `SyncEvent.failed` (not part
+/// of the frozen public surface).
+enum SyncEngineError: Error, Sendable, Equatable {
+    /// A push round-trip resolved none of the ops it attempted (e.g. the
+    /// server returned results whose opIds matched nothing in the outbox).
+    /// Retrying the identical batch forever would spin; surfaced as a
+    /// regular failure so backoff + the normal retry path handle it.
+    case pushMadeNoProgress
 }
