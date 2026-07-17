@@ -196,8 +196,17 @@ final class SyncEngineTests: XCTestCase {
     /// horizon persistently ahead of us, or just misbehaving) must not drive
     /// `performResync` into an unbounded hot reset+pull loop. After the
     /// first immediate nested retry, every further 410 should route through
-    /// the normal backoff/retry path instead — bounding the pull count
-    /// within any fixed time window and never hanging.
+    /// the normal backoff/retry path instead of recursing again.
+    ///
+    /// Deflaked: no wall-clock window or fuzzy pull-count range. `syncNow`
+    /// is driven directly, three times, instead of waiting on the engine's
+    /// own scheduled retry timer — each direct call exercises the bounded
+    /// nested-resync path fully synchronously (the one allowed nested retry
+    /// happens inline, before that call returns), so the pull count after
+    /// every call is exact. `baseBackoff`/`maxBackoff` are set far longer
+    /// than this test can possibly run, so the retry task armed by each
+    /// cycle's `scheduleRetry()` never fires during the test — it's simply
+    /// canceled by the final `engine.stop()`.
     func testRepeatedResyncRequiredBacksOffInsteadOfHanging() async throws {
         let transport = AlwaysResyncTransport()
         let store = InMemorySyncStore()
@@ -206,24 +215,41 @@ final class SyncEngineTests: XCTestCase {
             LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("offline")])
         )
         let config = SyncEngineConfiguration(
-            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 0.01, maxBackoff: 0.03
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 10, maxBackoff: 10
         )
         let engine = SyncEngine(store: store, transport: transport, configuration: config)
+
+        // Cycle 1: syncNow's own pull, performResync's re-pull, and the ONE
+        // allowed nested retry's re-pull — all synchronous within this
+        // single call. The bound engages after that: exactly 3 pulls, then
+        // backs off instead of recursing a third time.
         await engine.syncNow(reason: .manual)
-        // Let a couple of scheduled retries fire — if the bound weren't in
-        // place, this window would instead see a hot loop of thousands of
-        // pull attempts with zero delay between them.
-        try await Task.sleep(for: .milliseconds(100))
-        await engine.stop()
-        let pullCount = await transport.pullCount
-        XCTAssertGreaterThanOrEqual(pullCount, 2) // the initial attempt + its one allowed nested retry happened
-        XCTAssertLessThan(pullCount, 50) // bounded — nowhere near a hot-loop pull count for this window
+        let pullCountAfterCycle1 = await transport.pullCount
+        XCTAssertEqual(pullCountAfterCycle1, 3)
+
+        // Cycles 2 and 3, driven directly rather than via the scheduled
+        // retry: consecutiveResyncs never resets against a transport that
+        // always returns resyncRequired, so the bound engages immediately on
+        // every later cycle too — exactly 2 pulls each, never climbing back
+        // toward 3.
+        await engine.syncNow(reason: .manual)
+        let pullCountAfterCycle2 = await transport.pullCount
+        XCTAssertEqual(pullCountAfterCycle2, 5)
+        await engine.syncNow(reason: .manual)
+        let pullCountAfterCycle3 = await transport.pullCount
+        XCTAssertEqual(pullCountAfterCycle3, 7)
+
+        await engine.stop() // cancels the (10s-out, never-fired) retry task armed by cycle 3
+
         var events: [SyncEvent] = []
         for await event in engine.events { events.append(event) }
-        XCTAssertTrue(events.contains {
-            if case .failed(let reason) = $0 { return reason.contains("resync_required") }
-            return false
-        })
+        let failedReasons = events.compactMap { event -> String? in
+            if case .failed(let reason) = event { return reason }
+            return nil
+        }
+        XCTAssertEqual(failedReasons.count, 3) // exactly one bound-triggered failure per cycle above
+        XCTAssertTrue(failedReasons.allSatisfy { $0.contains("resync_required") })
+
         let remainingOps = try await store.pendingOps(limit: 10)
         XCTAssertEqual(remainingOps.count, 1) // outbox intact throughout
     }
@@ -248,8 +274,18 @@ final class SyncEngineTests: XCTestCase {
     /// item (i): consecutive pull failures must auto-retry via the engine's
     /// own backoff scheduling (no manual re-kick needed), and a success in
     /// between must reset consecutiveFailures — proven by the very next
-    /// failure's retry landing close to baseBackoff again, not the much
-    /// larger delay a still-climbing counter would have produced.
+    /// failure's retry landing in the same (exponent-1) backoff window as
+    /// failure #1's own retry, not the much larger window a still-climbing
+    /// counter would have produced.
+    ///
+    /// Deflaked: no absolute wall-clock threshold. Both the exponent-1
+    /// baseline (failure #1 → its own auto-retry) and the post-reset gap
+    /// (the fresh failure after the intervening success → its auto-retry)
+    /// are measured from the same run, and the assertion compares their
+    /// RATIO — robust to CI scheduling jitter that an absolute-ms threshold
+    /// is not, while still failing hard on a real regression (an un-reset
+    /// counter would put the post-reset gap at exponent 4, ~8x the
+    /// baseline, comfortably over the ratio ceiling below).
     func testConsecutivePullFailuresBackOffThenResetOnSuccess() async throws {
         let config = SyncEngineConfiguration(
             deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 0.02, maxBackoff: 5
@@ -273,22 +309,26 @@ final class SyncEngineTests: XCTestCase {
             return nil
         }
 
+        let firstFailureAt = Date()
         await engine.syncNow(reason: .manual) // fires failure #1; scheduleRetry auto-drives 2, 3, then success
+        let secondPullAt = await waitForPullCount(2) // failure #1's own auto-retry: the exponent-1 baseline
+        XCTAssertNotNil(secondPullAt)
+        let baselineGap = secondPullAt!.timeIntervalSince(firstFailureAt)
+
         let successAt = await waitForPullCount(4)
         XCTAssertNotNil(successAt) // the automatic retry chain reached the scripted success unaided
 
-        await engine.syncNow(reason: .manual) // a fresh failure, now that consecutiveFailures was reset
         let nextFailureAt = Date()
+        await engine.syncNow(reason: .manual) // a fresh failure, now that consecutiveFailures was reset
         let retriedAt = await waitForPullCount(6)
         XCTAssertNotNil(retriedAt) // this failure also auto-retried
         await engine.stop() // no more scripted outcomes remain; nothing left to cancel, but tidy up regardless
 
-        let gap = retriedAt!.timeIntervalSince(nextFailureAt)
-        // Had consecutiveFailures NOT been reset by the earlier success, this would be
-        // treated as the 4th consecutive failure (delay ~0.16s here); reset means it's
-        // the 1st again (~0.02s). Comfortably below the un-reset value, with slack for
-        // scheduling jitter.
-        XCTAssertLessThan(gap, 0.08)
+        let resetGap = retriedAt!.timeIntervalSince(nextFailureAt)
+        // Relative, not absolute: the reset gap should land close to the
+        // exponent-1 baseline (same backoff window), not climb toward the
+        // exponent-4 window an un-reset counter would produce (~8x).
+        XCTAssertLessThan(resetGap, baselineGap * 3)
 
         var events: [SyncEvent] = []
         for await event in engine.events { events.append(event) }
@@ -374,6 +414,62 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertTrue(returnedAfterRelease) // pause() only returned once the cycle finished
     }
 
+    // MARK: - syncNow spinner join
+
+    /// syncNow's new contract: a caller that coalesces into an already-
+    /// running cycle no longer returns immediately — it suspends until the
+    /// cycle it joined finishes, exactly like `pause()` already does. This
+    /// is what makes syncNow an honest signal for pull-to-refresh spinners
+    /// and BG-task completion handlers. Two concurrent syncNow calls against
+    /// a gated transport: neither returns before the gate opens; both
+    /// return once the joined (first) cycle completes; the second call's
+    /// coalesced follow-up cycle then runs (per the documented "may still
+    /// run after return" clause), landing the transport at exactly 2 pulls.
+    func testConcurrentSyncNowCallsBothWaitForTheJoinedCycleThenFollowUpRuns() async throws {
+        let transport = GatedPullTransport()
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 0.01, maxBackoff: 0.05
+        )
+        let engine = SyncEngine(store: InMemorySyncStore(), transport: transport, configuration: config)
+
+        let firstReturned = Flag()
+        let firstTask = Task {
+            await engine.syncNow(reason: .manual)
+            await firstReturned.set()
+        }
+        await transport.waitUntilPullStarted() // the first cycle is now blocked inside the gated pull
+
+        // A second, concurrent syncNow call coalesces into the running cycle
+        // (same as before) but, per the new contract, suspends rather than
+        // returning immediately.
+        let secondReturned = Flag()
+        let secondTask = Task {
+            await engine.syncNow(reason: .periodic)
+            await secondReturned.set()
+        }
+        try await Task.sleep(for: .milliseconds(50)) // let secondTask reach and suspend on the shared continuation
+
+        let firstReturnedEarly = await firstReturned.get()
+        let secondReturnedEarly = await secondReturned.get()
+        XCTAssertFalse(firstReturnedEarly)  // still gated
+        XCTAssertFalse(secondReturnedEarly) // joined the wait, not returned early
+
+        await transport.release() // lets the gated pull — and the joined cycle — complete
+        await firstTask.value
+        await secondTask.value
+        let firstReturnedAfter = await firstReturned.get()
+        let secondReturnedAfter = await secondReturned.get()
+        XCTAssertTrue(firstReturnedAfter)
+        XCTAssertTrue(secondReturnedAfter) // both returned once the cycle they joined finished
+
+        let pullCount = await transport.pullCount
+        // 1 pull for the cycle both calls joined, + 1 for the coalesced
+        // follow-up cycle the second call's pendingReason queued — exactly
+        // the "a coalesced follow-up cycle may still run after return"
+        // semantics, not a third or unbounded number of cycles.
+        XCTAssertEqual(pullCount, 2)
+    }
+
     func testKicksWhilePausedDoNotPull() async throws {
         let transport = ScriptedSyncTransport(pulls: [pullPage([], cursor: "c0", hasMore: false)])
         let (engine, _) = engine(transport: transport)
@@ -409,6 +505,10 @@ private actor Flag {
 /// cycle "in flight" (mid pull) before releasing it — needed to test
 /// `pause()`'s "suspends until the running cycle completes" contract, which
 /// `ScriptedSyncTransport`'s always-immediately-resolving fakes can't do.
+/// Only the FIRST `pull` call gates on `release()`; any subsequent calls
+/// (e.g. a syncNow spinner-join's coalesced follow-up cycle) resolve
+/// immediately — the gate exists to observe one cycle in flight, not to
+/// block every cycle a test happens to trigger.
 private actor GatedPullTransport: SyncTransport {
     private var startedContinuation: CheckedContinuation<Void, Never>?
     private var releaseContinuation: CheckedContinuation<Void, Never>?
@@ -420,6 +520,8 @@ private actor GatedPullTransport: SyncTransport {
     // will ever resume. Recording that `pull()` already happened lets
     // `waitUntilPullStarted()` return immediately instead of racing it.
     private var started = false
+    private var gateConsumed = false
+    private(set) var pullCount = 0
 
     func waitUntilPullStarted() async {
         if started { return }
@@ -432,10 +534,14 @@ private actor GatedPullTransport: SyncTransport {
     }
 
     func pull(cursor: SyncCursor?, limit: Int) async throws -> SyncPullResponse {
+        pullCount += 1
         started = true
         startedContinuation?.resume()
         startedContinuation = nil
-        await withCheckedContinuation { releaseContinuation = $0 }
+        if !gateConsumed {
+            gateConsumed = true
+            await withCheckedContinuation { releaseContinuation = $0 }
+        }
         return SyncPullResponse(manifest: [], changes: [], cursor: "gated", hasMore: false)
     }
 

@@ -35,7 +35,11 @@ public actor SyncEngine {
     private var pendingReason: SyncKickReason?
     private var authPaused = false
     private var hostPaused = false
-    private var pauseWaiters: [CheckedContinuation<Void, Never>] = []
+    /// Resumed when the in-flight cycle finishes — shared by `pause()`
+    /// (waiting to safely mutate the store) and `syncNow(reason:)` (waiting
+    /// to return an honest "sync happened" signal to a caller that coalesced
+    /// into the running cycle instead of starting its own).
+    private var cycleWaiters: [CheckedContinuation<Void, Never>] = []
     private var consecutiveFailures = 0
     /// Consecutive `resyncRequired` (410) events seen without an
     /// intervening successful cycle — see `performResync`'s bounding logic.
@@ -102,7 +106,7 @@ public actor SyncEngine {
         hostPaused = true
         guard running else { return }
         await withCheckedContinuation { continuation in
-            pauseWaiters.append(continuation)
+            cycleWaiters.append(continuation)
         }
     }
 
@@ -112,7 +116,16 @@ public actor SyncEngine {
         hostPaused = false
     }
 
-    /// Runs one full cycle to completion (test/host entry point).
+    /// Runs one full cycle to completion (test/host entry point). If a cycle
+    /// is already running, this call coalesces into it (the same as `kick`)
+    /// rather than starting a second one — but unlike `kick`, it does not
+    /// return immediately. It suspends until the current cycle (yours or the
+    /// one you joined) finishes, then returns; a coalesced follow-up cycle
+    /// may still run after that return, but this call does not wait for it.
+    /// That makes `syncNow` an honest "a sync just ran" signal for callers
+    /// like pull-to-refresh spinners or BG-task completion handlers. Does
+    /// NOT wait while `hostPaused`/`authPaused` (non-manual) short-circuit —
+    /// those keep their existing immediate-return behavior.
     public func syncNow(reason: SyncKickReason) async {
         guard !hostPaused else { return }
         if authPaused {
@@ -122,6 +135,9 @@ public actor SyncEngine {
         }
         guard !running else {
             pendingReason = pendingReason ?? reason
+            await withCheckedContinuation { continuation in
+                cycleWaiters.append(continuation)
+            }
             return
         }
         running = true
@@ -143,8 +159,8 @@ public actor SyncEngine {
             scheduleRetry()
         }
         running = false
-        let waiters = pauseWaiters
-        pauseWaiters = []
+        let waiters = cycleWaiters
+        cycleWaiters = []
         for waiter in waiters { waiter.resume() }
         if hostPaused {
             // Paused while this cycle was in flight: per pause()'s contract,
