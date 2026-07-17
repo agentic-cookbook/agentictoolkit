@@ -435,6 +435,18 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
     /// an unregistered resource throws `SyncStoreFailure.unknownResource`
     /// (checked against `_sync_resources` before the mirror table is even
     /// named — sync fix-wave item p2o).
+    ///
+    /// Offset pagination here is contract-bound, not a free design choice:
+    /// the mirror deliberately shadows the backend's own offset/limit REST
+    /// paging contract, because the daemon is a transparent proxy — it
+    /// cannot invent a different paging API for its offline fallback.
+    /// `O(offset)` is therefore accepted rather than eliminated: callers cap
+    /// `limit` (`MirrorServer`'s `listLimit`, currently 200), which bounds
+    /// how deep a page scan can go. `ORDER BY id` rides the mirror table's
+    /// primary-key index for free; access beyond `id` would go through the
+    /// JSON1 expressions over the `data` blob by design — the mirror stores
+    /// arbitrary resource fields schema-evolution-free, without a typed
+    /// column per field, so there is nowhere else for non-PK access to live.
     public func liveRows(resource: String, limit: Int = 100, offset: Int = 0) throws -> [[String: JSONValue]] {
         try boundedDatabase.read { conn in
             let isKnown = try Bool.fetchOne(
