@@ -47,7 +47,17 @@ public actor SyncEngine {
         self.store = store
         self.transport = transport
         self.config = configuration
-        (self.events, self.eventContinuation) = AsyncStream.makeStream(of: SyncEvent.self)
+        // .bufferingNewest(256), not .unbounded: protects a host that
+        // constructs an engine but never subscribes to `events` (or stops
+        // subscribing) from an unbounded memory leak — every cycle yields
+        // several events. Both shipped hosts (BitBag, the adhd daemon)
+        // drain the stream continuously, so 256 is far more than either
+        // needs in practice; this is a backstop, not a working limit, and
+        // the "hosts must drain" obligation still stands documented here.
+        (self.events, self.eventContinuation) = AsyncStream.makeStream(
+            of: SyncEvent.self,
+            bufferingPolicy: .bufferingNewest(256)
+        )
     }
 
     public func attach(_ trigger: any SyncTriggerSource) {
@@ -272,6 +282,18 @@ public actor SyncEngine {
                                     // with its existing opIds, exactly as without the 410
             consecutiveFailures = 0
             eventContinuation.yield(.idle)
+        } catch SyncTransportError.unauthorized {
+            // Same event semantics as syncNow's own unauthorized handling:
+            // this is an auth failure, not a sync failure — pause and wait
+            // for a manual kick rather than backing off and retrying.
+            authPaused = true
+            eventContinuation.yield(.authRequired)
+        } catch SyncTransportError.resyncRequired {
+            // A second 410 mid-resync (rare, but the server can raise the GC
+            // horizon again between our reset and the re-pull) — rethrow
+            // into the same recovery path rather than treating it as a
+            // generic failure.
+            await performResync()
         } catch {
             consecutiveFailures += 1
             eventContinuation.yield(.failed(String(describing: error)))

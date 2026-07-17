@@ -100,6 +100,48 @@ final class GRDBSyncStoreTests: XCTestCase {
         XCTAssertEqual(newOps[0].baseVersion, "77") // subsequent stage() snapshots the adopted version
     }
 
+    /// item (g): a pulled `SyncChange.syncVersion` that isn't the `/^\d+$/`
+    /// the wire contract guarantees must fail loudly, not silently coerce
+    /// to `0` via `Int(...) ?? 0` and corrupt the mirror row's ordering.
+    func testApplyWithUnparseableSyncVersionThrowsInvalidChange() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        let batch = [
+            SyncChange(resource: "personal.notes", id: "a", op: .upsert, syncVersion: "not-a-number", data: [:])
+        ]
+        do {
+            try await store.apply(batch, advancingTo: SyncCursor(rawValue: "c1"))
+            XCTFail("expected invalidChange")
+        } catch SyncStoreFailure.invalidChange {
+            // expected
+        } catch {
+            XCTFail("expected SyncStoreFailure.invalidChange, got \(error)")
+        }
+        // Nothing landed: the bad row didn't sneak in under a coerced version.
+        XCTAssertEqual(try store.liveRows(resource: "personal.notes", limit: 10, offset: 0).count, 0)
+    }
+
+    /// item (h): a corrupt `_sync_outbox.type` column (bypassing the app —
+    /// e.g. a hand-edited row, a future migration bug) must fail loudly
+    /// rather than silently default to `.upsert` via `SyncChangeOp(rawValue:)
+    /// ?? .upsert`, which could push a delete as an upsert.
+    func testPendingOpsWithCorruptTypeColumnThrowsInvalidChange() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        try store.database.write { conn in
+            try conn.execute(sql: "UPDATE _sync_outbox SET type = 'bogus' WHERE row_id = ?", arguments: ["r1"])
+        }
+        do {
+            _ = try await store.pendingOps(limit: 10)
+            XCTFail("expected invalidChange")
+        } catch SyncStoreFailure.invalidChange {
+            // expected
+        } catch {
+            XCTFail("expected SyncStoreFailure.invalidChange, got \(error)")
+        }
+    }
+
     func testStageCoalescesUpsertThenUpsertKeepingOpIdAndBaseVersion() async throws {
         let store = try makeStore()
         try await store.prepare(resources: [notes])

@@ -124,7 +124,14 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                         throw SyncStoreFailure.unknownResource(change.resource)
                     }
                     let table = try Self.mirrorTableName(for: change.resource)
-                    let version = Int(change.syncVersion) ?? 0
+                    // Strict: the wire contract guarantees syncVersion matches
+                    // `/^\d+$/` (adh src/sync/wire.ts), so an unparseable value
+                    // means something upstream is broken — fail loudly rather
+                    // than silently coercing to 0 and corrupting the mirror's
+                    // version ordering.
+                    guard let version = Int(change.syncVersion) else {
+                        throw SyncStoreFailure.invalidChange("unparseable syncVersion: \(change.syncVersion)")
+                    }
                     if change.op == .delete {
                         try conn.execute(
                             sql: """
@@ -280,11 +287,20 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                     let payload: [String: JSONValue] = try (row["payload"] as String?)
                         .flatMap { $0.data(using: .utf8) }
                         .map { try decoder.decode([String: JSONValue].self, from: $0) } ?? [:]
+                    let typeColumn: String = row["type"]
+                    // Strict: a corrupt/unrecognized `type` column means the
+                    // outbox row can't be trusted — silently defaulting to
+                    // `.upsert` could push a mutation the caller never made
+                    // (e.g. resurrect a row that was actually staged as a
+                    // delete). Fail loudly instead.
+                    guard let type = SyncChangeOp(rawValue: typeColumn) else {
+                        throw SyncStoreFailure.invalidChange("corrupt outbox type column: \(typeColumn)")
+                    }
                     return SyncPushOp(
                         opId: row["op_id"],
                         resource: row["resource"],
                         rowId: row["row_id"],
-                        type: SyncChangeOp(rawValue: row["type"]) ?? .upsert,
+                        type: type,
                         baseVersion: row["base_version"],
                         data: payload.isEmpty ? nil : payload
                     )

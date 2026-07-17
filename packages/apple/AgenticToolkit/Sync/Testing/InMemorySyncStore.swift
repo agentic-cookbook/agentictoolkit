@@ -50,6 +50,13 @@ public actor InMemorySyncStore: SyncStore {
             guard tables[change.resource] != nil else {
                 throw SyncStoreFailure.unknownResource(change.resource)
             }
+            // Parity with GRDBSyncStore.apply: even though this fake keeps
+            // syncVersion as a String, an unparseable one must fail the same
+            // way the real store does rather than silently accepting a value
+            // that violates the wire contract's `/^\d+$/` guarantee.
+            guard Int(change.syncVersion) != nil else {
+                throw SyncStoreFailure.invalidChange("unparseable syncVersion: \(change.syncVersion)")
+            }
             tables[change.resource]![change.id] = Row(
                 syncVersion: change.syncVersion,
                 deleted: change.op == .delete,
@@ -170,4 +177,11 @@ public actor InMemorySyncStore: SyncStore {
 
 public enum SyncStoreFailure: Error, Sendable, Equatable {
     case unknownResource(String)
+    /// A pulled `SyncChange`/outbox row carried a value this store can't
+    /// safely interpret — e.g. a `syncVersion` that isn't the `/^\d+$/` the
+    /// wire contract guarantees, or (GRDBSyncStore only) a corrupt outbox
+    /// `type` column. Additive case: hosts only `catch is SyncStoreFailure`,
+    /// never switch exhaustively over it (confirmed by grepping the two
+    /// host repos), so this doesn't break existing exhaustive handling.
+    case invalidChange(String)
 }

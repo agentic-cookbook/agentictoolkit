@@ -102,6 +102,27 @@ final class InMemorySyncStoreTests: XCTestCase {
         }
     }
 
+    /// item (g), InMemory parity with GRDBSyncStore: an unparseable
+    /// `syncVersion` must fail loudly rather than being silently accepted
+    /// into a mirror row that then lies about its ordering.
+    func testApplyWithUnparseableSyncVersionThrowsInvalidChange() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        do {
+            try await store.apply(
+                [SyncChange(resource: "personal.notes", id: "a", op: .upsert, syncVersion: "not-a-number", data: [:])],
+                advancingTo: SyncCursor(rawValue: "c1")
+            )
+            XCTFail("expected invalidChange")
+        } catch SyncStoreFailure.invalidChange {
+            // expected
+        } catch {
+            XCTFail("expected SyncStoreFailure.invalidChange, got \(error)")
+        }
+        let rowCount = try await store.rowCount(resource: "personal.notes")
+        XCTAssertEqual(rowCount, 0) // nothing landed under a coerced version
+    }
+
     func testApplyAdvancesCursorAndResyncPreservesOutbox() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])

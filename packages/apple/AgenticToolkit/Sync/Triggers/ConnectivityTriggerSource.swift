@@ -6,11 +6,13 @@ import Network
 /// This is the first and only place in this target that imports Network.
 public final class ConnectivityTriggerSource: SyncTriggerSource, @unchecked Sendable {
     public let kicks: AsyncStream<SyncKickReason>
+    private let continuation: AsyncStream<SyncKickReason>.Continuation
     private let monitor = NWPathMonitor()
 
     public init(queue: DispatchQueue = DispatchQueue(label: "ConnectivityTriggerSource")) {
         let (stream, continuation) = AsyncStream.makeStream(of: SyncKickReason.self)
         self.kicks = stream
+        self.continuation = continuation
         nonisolated(unsafe) var wasSatisfied: Bool?
         monitor.pathUpdateHandler = { path in
             let satisfied = path.status == .satisfied
@@ -24,5 +26,6 @@ public final class ConnectivityTriggerSource: SyncTriggerSource, @unchecked Send
 
     public func stop() {
         monitor.cancel()
+        continuation.finish()
     }
 }

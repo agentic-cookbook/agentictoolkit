@@ -170,6 +170,28 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(remainingOps.count, 0)     // acknowledged, not dropped
     }
 
+    /// item (e): a second failure (401) hitting the resync's own re-pull must
+    /// be handled with the same auth-pause semantics as an ordinary cycle's
+    /// unauthorized — not folded into performResync's generic `.failed` +
+    /// backoff-retry catch-all.
+    func testUnauthorizedDuringResyncRepullEmitsAuthRequiredAndPauses() async throws {
+        let transport = ScriptedSyncTransport(pulls: [
+            .failure(.resyncRequired),
+            .failure(.unauthorized)
+        ])
+        let (engine, _) = engine(transport: transport)
+        await engine.syncNow(reason: .manual)
+        await engine.syncNow(reason: .periodic) // authPaused: must NOT hit the transport again
+        let cursors = await transport.pullCursors
+        XCTAssertEqual(cursors.count, 2) // the resyncRequired pull, then the resync's re-pull — no third attempt
+        await engine.stop()
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.resyncPerformed))
+        XCTAssertTrue(events.contains(.authRequired))
+        XCTAssertFalse(events.contains { if case .failed = $0 { return true }; return false }) // no backoff retry
+    }
+
     func testTransportFailureLeavesOutboxIntact() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])

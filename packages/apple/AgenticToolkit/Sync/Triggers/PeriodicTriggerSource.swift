@@ -23,4 +23,12 @@ public final class PeriodicTriggerSource: SyncTriggerSource, @unchecked Sendable
         task.cancel()
         continuation.finish()
     }
+
+    // The task's closure captures no `self` (only the local `continuation`),
+    // so calling `stop()` here is safe: it never resurrects `self` or
+    // extends its lifetime, it just cancels/finishes state the task itself
+    // already holds independently of this instance.
+    deinit {
+        stop()
+    }
 }
