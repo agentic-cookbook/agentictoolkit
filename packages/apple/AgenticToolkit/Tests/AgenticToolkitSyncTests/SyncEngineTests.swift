@@ -184,4 +184,91 @@ final class SyncEngineTests: XCTestCase {
         let remainingOps = try await store.pendingOps(limit: 10)
         XCTAssertEqual(remainingOps.count, 1)
     }
+
+    // MARK: - pause()/resume()
+
+    func testPauseDuringInFlightCycleWaitsForCompletion() async throws {
+        let transport = GatedPullTransport()
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 0.01, maxBackoff: 0.05
+        )
+        let engine = SyncEngine(store: InMemorySyncStore(), transport: transport, configuration: config)
+
+        let cycleTask = Task { await engine.syncNow(reason: .manual) }
+        await transport.waitUntilPullStarted() // the cycle is now blocked inside the pull call
+
+        let pauseReturned = Flag()
+        let pauseTask = Task {
+            await engine.pause()
+            await pauseReturned.set()
+        }
+        try await Task.sleep(for: .milliseconds(50)) // let pauseTask reach and suspend on the continuation
+        let returnedBeforeRelease = await pauseReturned.get()
+        XCTAssertFalse(returnedBeforeRelease) // still waiting: the cycle hasn't completed yet
+
+        await transport.release()
+        await cycleTask.value
+        await pauseTask.value
+        let returnedAfterRelease = await pauseReturned.get()
+        XCTAssertTrue(returnedAfterRelease) // pause() only returned once the cycle finished
+    }
+
+    func testKicksWhilePausedDoNotPull() async throws {
+        let transport = ScriptedSyncTransport(pulls: [pullPage([], cursor: "c0", hasMore: false)])
+        let (engine, _) = engine(transport: transport)
+        await engine.pause() // not running: returns immediately
+        await engine.kick(reason: .periodic)
+        await engine.syncNow(reason: .manual)
+        let cursors = await transport.pullCursors
+        XCTAssertTrue(cursors.isEmpty) // both no-op while paused: nothing buffered, nothing pulled
+    }
+
+    func testResumeThenKickSyncs() async throws {
+        let transport = ScriptedSyncTransport(pulls: [pullPage([], cursor: "c0", hasMore: false)])
+        let (engine, _) = engine(transport: transport)
+        await engine.pause()
+        await engine.kick(reason: .periodic) // dropped: pause() buffers nothing
+        await engine.resume()
+        await engine.kick(reason: .manual)
+        let cursors = await transport.pullCursors
+        XCTAssertEqual(cursors.count, 1)
+    }
+}
+
+/// Test-only actor flag: cheaper than a second gated transport for the
+/// simple "did this async call return yet" checks pause() tests need.
+private actor Flag {
+    private var value = false
+    func set() { value = true }
+    func get() -> Bool { value }
+}
+
+/// SyncTransport fake whose `pull(cursor:limit:)` blocks on a manually
+/// resumed continuation, so a test can deterministically observe a sync
+/// cycle "in flight" (mid pull) before releasing it — needed to test
+/// `pause()`'s "suspends until the running cycle completes" contract, which
+/// `ScriptedSyncTransport`'s always-immediately-resolving fakes can't do.
+private actor GatedPullTransport: SyncTransport {
+    private var startedContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+    func waitUntilPullStarted() async {
+        await withCheckedContinuation { startedContinuation = $0 }
+    }
+
+    func release() {
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+
+    func pull(cursor: SyncCursor?, limit: Int) async throws -> SyncPullResponse {
+        startedContinuation?.resume()
+        startedContinuation = nil
+        await withCheckedContinuation { releaseContinuation = $0 }
+        return SyncPullResponse(manifest: [], changes: [], cursor: "gated", hasMore: false)
+    }
+
+    func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
+        SyncPushResponse(results: request.ops.map { SyncPushResult(opId: $0.opId, status: .applied) }, watermark: "0")
+    }
 }

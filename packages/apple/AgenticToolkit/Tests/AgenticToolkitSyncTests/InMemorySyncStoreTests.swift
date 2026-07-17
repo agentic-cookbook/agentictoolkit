@@ -20,6 +20,24 @@ final class InMemorySyncStoreTests: XCTestCase {
         XCTAssertTrue(after.isEmpty)
     }
 
+    func testCompleteAppliedAdoptsNewVersionOntoMirrorRowForSubsequentStage() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        try await store.complete([SyncPushResult(opId: ops[0].opId, status: .applied, newVersion: "77")])
+        let row = await store.row(resource: "personal.notes", id: "r1")
+        XCTAssertEqual(row?.syncVersion, "77") // adopted onto the mirror row before the outbox entry was dropped
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("second")])
+        )
+        let newOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(newOps.count, 1)
+        XCTAssertEqual(newOps[0].baseVersion, "77") // subsequent stage() snapshots the adopted version
+    }
+
     func testStageCoalescesUpsertThenUpsertKeepingOpIdAndBaseVersion() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])

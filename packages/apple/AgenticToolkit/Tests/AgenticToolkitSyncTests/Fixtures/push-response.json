@@ -1,6 +1,6 @@
 {
   "results": [
-    { "opId": "0197a5e0-bbbb-7000-8000-000000000001", "status": "applied" },
+    { "opId": "0197a5e0-bbbb-7000-8000-000000000001", "status": "applied", "newVersion": "1056" },
     {
       "opId": "0197a5e0-bbbb-7000-8000-000000000002",
       "status": "conflict",
@@ -20,7 +20,7 @@
         "sync_version": "1055"
       }
     },
-    { "opId": "0197a5e0-bbbb-7000-8000-000000000003", "status": "applied" }
+    { "opId": "0197a5e0-bbbb-7000-8000-000000000003", "status": "applied", "newVersion": "1058" }
   ],
   "watermark": "1058"
 }

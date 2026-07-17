@@ -79,6 +79,27 @@ final class GRDBSyncStoreTests: XCTestCase {
         XCTAssertEqual(status.quarantinedDepth, 1)
     }
 
+    func testCompleteAppliedAdoptsNewVersionOntoMirrorRowForSubsequentStage() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [notes])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("first")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        try await store.complete([SyncPushResult(opId: ops[0].opId, status: .applied, newVersion: "77")])
+        let table = try GRDBSyncStore.mirrorTableName(for: "personal.notes")
+        let version = try store.database.read { conn in
+            try Int.fetchOne(conn, sql: "SELECT sync_version FROM \"\(table)\" WHERE id = ?", arguments: ["r1"])
+        }
+        XCTAssertEqual(version, 77) // adopted onto the mirror row before the outbox row was deleted
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("second")])
+        )
+        let newOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(newOps.count, 1)
+        XCTAssertEqual(newOps[0].baseVersion, "77") // subsequent stage() snapshots the adopted version
+    }
+
     func testStageCoalescesUpsertThenUpsertKeepingOpIdAndBaseVersion() async throws {
         let store = try makeStore()
         try await store.prepare(resources: [notes])

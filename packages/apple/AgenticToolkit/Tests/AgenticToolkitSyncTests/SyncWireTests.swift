@@ -39,6 +39,12 @@ final class SyncWireTests: XCTestCase {
         XCTAssertEqual(response.results.map(\.status), [.applied, .conflict, .applied])
         XCTAssertNotNil(response.results[1].current)
         XCTAssertEqual(response.watermark, "1058")
+        // newVersion is populated on the two `applied` results that actually wrote a
+        // row, and absent (nil) on the `conflict` — decode asserts the wire shape both
+        // ways (adh sync.md §3).
+        XCTAssertEqual(response.results[0].newVersion, "1056")
+        XCTAssertNil(response.results[1].newVersion)
+        XCTAssertEqual(response.results[2].newVersion, "1058")
     }
 
     func testUUIDv7IsSortableAndWellFormed() throws {

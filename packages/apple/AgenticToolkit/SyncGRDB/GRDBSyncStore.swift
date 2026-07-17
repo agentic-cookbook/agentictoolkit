@@ -300,11 +300,11 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                 for result in results {
                     switch result.status {
                     case .applied, .conflict:
+                        let meta = try Row.fetchOne(
+                            conn, sql: "SELECT resource, row_id FROM _sync_outbox WHERE op_id = ?",
+                            arguments: [result.opId]
+                        )
                         if result.status == .conflict {
-                            let meta = try Row.fetchOne(
-                                conn, sql: "SELECT resource, row_id FROM _sync_outbox WHERE op_id = ?",
-                                arguments: [result.opId]
-                            )
                             try conn.execute(
                                 sql: """
                                     INSERT INTO _sync_conflicts (op_id, resource, row_id, reason, resolved_at)
@@ -314,6 +314,20 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                                     result.opId, meta?["resource"] as String?, meta?["row_id"] as String?,
                                     result.reason
                                 ]
+                            )
+                        } else if let newVersion = result.newVersion,
+                                  let resource = meta?["resource"] as String?,
+                                  let rowId = meta?["row_id"] as String? {
+                            // Adopt the server's post-apply sync_version onto the mirror
+                            // row BEFORE deleting the outbox row, in the same
+                            // transaction, so a stage() call racing this completion
+                            // (or arriving right after it) snapshots the correct
+                            // baseVersion — closing the stage-during-push
+                            // self-conflict race (adh sync.md §3).
+                            let table = try Self.mirrorTableName(for: resource)
+                            try conn.execute(
+                                sql: "UPDATE \"\(table)\" SET sync_version = ? WHERE id = ?",
+                                arguments: [Int(newVersion) ?? 0, rowId]
                             )
                         }
                         try conn.execute(sql: "DELETE FROM _sync_outbox WHERE op_id = ?", arguments: [result.opId])

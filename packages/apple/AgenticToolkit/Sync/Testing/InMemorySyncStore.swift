@@ -129,6 +129,14 @@ public actor InMemorySyncStore: SyncStore {
             guard let idx = outbox.firstIndex(where: { $0.pushOp.opId == result.opId }) else { continue }
             switch result.status {
             case .applied:
+                let completedOp = outbox[idx].pushOp
+                if let newVersion = result.newVersion, tables[completedOp.resource]?[completedOp.rowId] != nil {
+                    // Adopt the server's post-apply sync_version onto the mirror row
+                    // before dropping the outbox entry — mirrors GRDBSyncStore.complete
+                    // so the fakes don't lie about the adoption behavior the real store
+                    // provides (adh sync.md §3).
+                    tables[completedOp.resource]![completedOp.rowId]!.syncVersion = newVersion
+                }
                 outbox.remove(at: idx)
             case .conflict:
                 conflictLog.append((result.opId, result.reason))

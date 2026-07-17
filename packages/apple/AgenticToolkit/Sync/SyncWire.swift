@@ -103,11 +103,25 @@ public struct SyncPushResult: Codable, Sendable, Equatable {
     public let status: SyncPushStatus
     public let reason: String?
     public let current: [String: JSONValue]?
-    public init(opId: String, status: SyncPushStatus, reason: String? = nil, current: [String: JSONValue]? = nil) {
+    // Post-apply sync_version, populated ONLY on `applied` results that actually wrote a
+    // row (an idempotent no-op delete of a nonexistent/already-tombstoned row has no row
+    // to report). Lets the client adopt it as the row's new baseVersion immediately,
+    // closing the race where a local edit gets staged again while a push for the same
+    // row is still in flight (see adh sync.md §3). Optional so replayed (ledgered)
+    // results from before this field existed still decode.
+    public let newVersion: String?
+    public init(
+        opId: String,
+        status: SyncPushStatus,
+        reason: String? = nil,
+        current: [String: JSONValue]? = nil,
+        newVersion: String? = nil
+    ) {
         self.opId = opId
         self.status = status
         self.reason = reason
         self.current = current
+        self.newVersion = newVersion
     }
 }
 

@@ -34,6 +34,8 @@ public actor SyncEngine {
     private var running = false
     private var pendingReason: SyncKickReason?
     private var authPaused = false
+    private var hostPaused = false
+    private var pauseWaiters: [CheckedContinuation<Void, Never>] = []
     private var consecutiveFailures = 0
     private var triggerTasks: [Task<Void, Never>] = []
     private var retryTask: Task<Void, Never>?
@@ -67,6 +69,7 @@ public actor SyncEngine {
 
     /// Fire-and-forget entry point: coalesces into the running cycle.
     public func kick(reason: SyncKickReason) async {
+        guard !hostPaused else { return }
         if running {
             pendingReason = pendingReason ?? reason
             return
@@ -74,8 +77,31 @@ public actor SyncEngine {
         await syncNow(reason: reason)
     }
 
+    /// Pauses the engine for identity-boundary operations (e.g. a sign-out
+    /// purge): call this, mutate the store, then call `resume()`. Sets a
+    /// `hostPaused` flag that makes `kick`/`syncNow` no-op (they buffer
+    /// nothing while paused — a queued kick is simply dropped, not deferred
+    /// until `resume()`). If a cycle is already running when `pause()` is
+    /// called, it suspends until that cycle finishes, so the instant it
+    /// returns the caller can safely mutate store state with no sync cycle
+    /// in flight.
+    public func pause() async {
+        hostPaused = true
+        guard running else { return }
+        await withCheckedContinuation { continuation in
+            pauseWaiters.append(continuation)
+        }
+    }
+
+    /// Clears the pause set by `pause()`. Does not itself trigger a sync —
+    /// callers that want one should follow with `kick`/`syncNow`.
+    public func resume() {
+        hostPaused = false
+    }
+
     /// Runs one full cycle to completion (test/host entry point).
     public func syncNow(reason: SyncKickReason) async {
+        guard !hostPaused else { return }
         if authPaused {
             let manual = reason == .manual || { if case .hostSpecific = reason { return true }; return false }()
             guard manual else { return }
@@ -103,7 +129,16 @@ public actor SyncEngine {
             scheduleRetry()
         }
         running = false
-        if let queued = pendingReason {
+        let waiters = pauseWaiters
+        pauseWaiters = []
+        for waiter in waiters { waiter.resume() }
+        if hostPaused {
+            // Paused while this cycle was in flight: per pause()'s contract,
+            // buffer nothing — a resume() + explicit kick is required to
+            // sync again, rather than resurrecting a reason queued before
+            // (or during) the pause.
+            pendingReason = nil
+        } else if let queued = pendingReason {
             pendingReason = nil
             await syncNow(reason: queued)
         }
