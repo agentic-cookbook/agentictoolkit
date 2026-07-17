@@ -1,0 +1,26 @@
+{
+  "deviceId": "adhd-mac-0197a5e0",
+  "ops": [
+    {
+      "opId": "0197a5e0-bbbb-7000-8000-000000000001",
+      "resource": "personal.notes",
+      "rowId": "0197a5e0-0000-7000-8000-000000000003",
+      "type": "upsert",
+      "data": { "title": "New offline note", "body": "written on a plane" }
+    },
+    {
+      "opId": "0197a5e0-bbbb-7000-8000-000000000002",
+      "resource": "personal.notes",
+      "rowId": "0197a5e0-0000-7000-8000-000000000001",
+      "type": "upsert",
+      "baseVersion": "1041",
+      "data": { "title": "Groceries", "body": "milk, eggs, bread" }
+    },
+    {
+      "opId": "0197a5e0-bbbb-7000-8000-000000000003",
+      "resource": "personal.notes",
+      "rowId": "0197a5e0-0000-7000-8000-000000000004",
+      "type": "delete"
+    }
+  ]
+}

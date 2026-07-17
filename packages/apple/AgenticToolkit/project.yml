@@ -229,6 +229,9 @@ targets:
       - SwiftLint
     sources:
       - Tests/AgenticToolkitSyncTests
+      - path: Tests/AgenticToolkitSyncTests/Fixtures
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: AgenticToolkitSync
         embed: true
