@@ -4,6 +4,7 @@ options:
   developmentLanguage: en
   deploymentTarget:
     macOS: "26.0"
+    iOS: "26.0"
   groupSortPosition: top
   generateEmptyDirectories: false
   xcodeVersion: "2640"
@@ -176,7 +177,7 @@ targets:
 
   AgenticToolkitDatabase:
     type: framework
-    platform: macOS
+    supportedDestinations: [macOS, iOS]
     templates:
       - SwiftLint
     sources:
@@ -185,6 +186,10 @@ targets:
       - package: GRDB
         product: GRDB
       - sdk: libsqlite3.tbd
+    settings:
+      base:
+        SDKROOT: auto
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     # Daemon-safe: a GRDB DatabasePool with deadline-ejection (progress_handler),
     # read/write reentrancy (read-your-writes), and per-lane stats. Foundation +
     # GRDB + system SQLite only; no AppKit.
@@ -197,6 +202,71 @@ targets:
     sources:
       - Tests/AgenticToolkitDatabaseTests
     dependencies:
+      - target: AgenticToolkitDatabase
+        embed: true
+        codeSign: true
+      - package: GRDB
+        product: GRDB
+
+  AgenticToolkitSync:
+    type: framework
+    supportedDestinations: [macOS, iOS]
+    templates:
+      - SwiftLint
+    sources:
+      - Sync
+    settings:
+      base:
+        SDKROOT: auto
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    # Daemon-safe: the offline-sync engine + protocol seam (SyncStore/
+    # SyncTransport/SyncTriggerSource). Foundation + Network only; no AppKit.
+
+  AgenticToolkitSyncTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AgenticToolkitSyncTests
+    dependencies:
+      - target: AgenticToolkitSync
+        embed: true
+        codeSign: true
+
+  AgenticToolkitSyncGRDB:
+    type: framework
+    supportedDestinations: [macOS, iOS]
+    templates:
+      - SwiftLint
+    sources:
+      - SyncGRDB
+    dependencies:
+      - target: AgenticToolkitSync
+      - target: AgenticToolkitDatabase
+      - package: GRDB
+        product: GRDB
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        SDKROOT: auto
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    # Daemon-safe: SyncStore implementation on BoundedDatabase (WAL pool).
+
+  AgenticToolkitSyncGRDBTests:
+    type: bundle.unit-test
+    platform: macOS
+    templates:
+      - SwiftLint
+    sources:
+      - Tests/AgenticToolkitSyncGRDBTests
+    dependencies:
+      - target: AgenticToolkitSyncGRDB
+        embed: true
+        codeSign: true
+      - target: AgenticToolkitSync
+        embed: true
+        codeSign: true
       - target: AgenticToolkitDatabase
         embed: true
         codeSign: true
@@ -319,6 +389,8 @@ aggregateTargets:
       - AgenticToolkitPermissionsUI
       - AgenticToolkitMacOS
       - AgenticToolkitDatabase
+      - AgenticToolkitSync
+      - AgenticToolkitSyncGRDB
 
   AgenticToolkitMacOSTestsAll:
     targets:
@@ -338,6 +410,10 @@ aggregateTargets:
       - AgenticToolkitMacOSTests
       - AgenticToolkitDatabase
       - AgenticToolkitDatabaseTests
+      - AgenticToolkitSync
+      - AgenticToolkitSyncTests
+      - AgenticToolkitSyncGRDB
+      - AgenticToolkitSyncGRDBTests
 
 schemes:
   AgenticToolkitDatabase:
@@ -350,6 +426,40 @@ schemes:
       config: Debug
       targets:
         - AgenticToolkitDatabaseTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  AgenticToolkitSync:
+    build:
+      targets:
+        AgenticToolkitSync: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitSyncTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  AgenticToolkitSyncGRDB:
+    build:
+      targets:
+        AgenticToolkitSyncGRDB: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgenticToolkitSyncGRDBTests
     profile:
       config: Release
     analyze:
