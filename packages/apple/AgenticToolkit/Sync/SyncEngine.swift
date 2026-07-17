@@ -176,6 +176,7 @@ public actor SyncEngine {
 
     private func pullLoop() async throws {
         var hasMore = true
+        var consecutiveNoProgress = 0
         while hasMore {
             let cursor = try await store.cursor()
             let response = try await transport.pull(cursor: cursor, limit: config.pullLimit)
@@ -184,8 +185,29 @@ public actor SyncEngine {
             try await store.apply(response.changes, advancingTo: next)
             eventContinuation.yield(.pulledBatch(changes: response.changes.count, cursor: next))
             hasMore = response.hasMore
+            // No-progress guard: the server's cohort stall guard legitimately
+            // returns empty changes + hasMore=true + an unchanged cursor when
+            // the caller's cursor is ahead of the observed xmin (a lagging
+            // replica) — that is not a bug, but the client must back off
+            // rather than hot-loop re-requesting the same page forever.
+            // Require a couple of consecutive occurrences (not one) so a
+            // single legitimate empty-but-advancing page, or a same-cursor
+            // page whose changes are non-empty, never trips this.
+            if response.changes.isEmpty && response.hasMore && next == cursor {
+                consecutiveNoProgress += 1
+                if consecutiveNoProgress >= Self.maxConsecutiveNoProgressPulls {
+                    throw SyncEngineError.pullMadeNoProgress
+                }
+            } else {
+                consecutiveNoProgress = 0
+            }
         }
     }
+
+    /// Bound on consecutive empty+hasMore+unchanged-cursor pull responses
+    /// before `pullLoop` gives up and surfaces `.pullMadeNoProgress` instead
+    /// of hot-looping against a stalled/lagging server.
+    private static let maxConsecutiveNoProgressPulls = 2
 
     private func pushLoop() async throws {
         while true {
@@ -355,4 +377,23 @@ enum SyncEngineError: Error, Sendable, Equatable {
     /// Retrying the identical batch forever would spin; surfaced as a
     /// regular failure so backoff + the normal retry path handle it.
     case pushMadeNoProgress
+    /// `pullLoop` saw `maxConsecutiveNoProgressPulls` consecutive responses
+    /// with empty changes, `hasMore == true`, and a cursor unchanged from the
+    /// one just requested — belt-and-braces against a buggy/lagging server
+    /// that never advances; the normal backoff + retry path handles it from
+    /// here rather than the engine hot-looping the same request forever.
+    case pullMadeNoProgress
+}
+
+extension SyncEngineError: CustomStringConvertible {
+    /// `syncNow`'s catch-all reports failures via `String(describing: error)`
+    /// (`SyncEvent.failed`'s payload is a plain `String`) — this conformance
+    /// is what makes that text a clear, human-readable reason instead of the
+    /// bare enum case name.
+    var description: String {
+        switch self {
+        case .pushMadeNoProgress: return "push made no progress"
+        case .pullMadeNoProgress: return "pull made no progress"
+        }
+    }
 }

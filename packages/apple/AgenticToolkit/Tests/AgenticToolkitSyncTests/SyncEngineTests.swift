@@ -386,6 +386,37 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(pushedRequests.count, 1) // never re-pushed under its original (or any) opId
     }
 
+    /// pullLoop no-progress guard: the server's cohort stall guard
+    /// legitimately returns empty changes + hasMore=true + an unchanged
+    /// cursor when the caller's cursor is ahead of the observed xmin (a
+    /// lagging replica) — that's not a bug, but the client must back off
+    /// rather than hot-loop re-requesting the same page forever.
+    func testPullMadeNoProgressFailsAfterBoundedConsecutiveStalls() async throws {
+        let transport = ScriptedSyncTransport(pulls: [
+            pullPage([], cursor: "stalled", hasMore: true),
+            pullPage([], cursor: "stalled", hasMore: true),
+            pullPage([], cursor: "stalled", hasMore: true),
+            pullPage([], cursor: "stalled", hasMore: true) // never reached if the guard works
+        ])
+        let (engine, _) = engine(transport: transport)
+        await engine.syncNow(reason: .manual)
+        await engine.stop() // cancels the resulting backoff retry before it can fire mid-assertion
+        let pullCursors = await transport.pullCursors
+        // Bounded: 1 baseline request (no prior stored cursor to compare
+        // against) + 2 consecutive no-progress occurrences, then it gives
+        // up — not a hang, and not all 4 scripted responses consumed.
+        XCTAssertEqual(pullCursors.count, 3)
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        guard case .failed(let reason)? = events.first(where: {
+            if case .failed = $0 { return true }; return false
+        }) else {
+            XCTFail("expected a .failed event")
+            return
+        }
+        XCTAssertEqual(reason, "pull made no progress")
+    }
+
     // MARK: - pause()/resume()
 
     func testPauseDuringInFlightCycleWaitsForCompletion() async throws {
