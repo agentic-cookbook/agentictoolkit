@@ -1,0 +1,348 @@
+{
+    "items": [
+        {
+            "id": "d469bec1-9b15-4783-b24b-f1546844b920",
+            "providerKind": "anthropic",
+            "name": "Anthropic",
+            "baseUrl": "https://api.anthropic.com/v1",
+            "documentationUrl": "https://docs.anthropic.com",
+            "statusUrl": "https://status.anthropic.com",
+            "createdAt": "2026-05-06 13:20:52.244552",
+            "updatedAt": "2026-05-06 16:09:53.046",
+            "models": [
+                {
+                    "id": "b93d2641-f25e-4069-a7df-75a67c5da10f",
+                    "name": "claude-3-5-haiku-latest",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "24994187-46b2-42a1-96b4-c377ca39ac57",
+                    "name": "claude-3-5-sonnet-latest",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "725eaf1a-05cd-4841-8217-04dd7b7be435",
+                    "name": "claude-3-opus-latest",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "3498bb33-aa87-46cc-8ea0-22f38c84d7ff",
+                    "name": "claude-haiku-4-5",
+                    "createdAt": "2026-05-06 13:20:52.324486"
+                },
+                {
+                    "id": "8a20c2f7-afea-4b17-b69a-dcba5962a7df",
+                    "name": "claude-opus-4-7",
+                    "createdAt": "2026-05-06 13:20:52.288676"
+                },
+                {
+                    "id": "7dde69e0-064c-47ed-838d-58d53f2bfbce",
+                    "name": "claude-sonnet-4-6",
+                    "createdAt": "2026-05-06 13:20:52.306615"
+                }
+            ]
+        },
+        {
+            "id": "0d1cbd3f-1789-4240-b28f-443f05201cbf",
+            "providerKind": "openai",
+            "name": "Cerebras",
+            "baseUrl": "https://api.cerebras.ai/v1",
+            "documentationUrl": "https://inference-docs.cerebras.ai",
+            "statusUrl": "https://status.cerebras.ai",
+            "createdAt": "2026-05-06 13:26:46.951449",
+            "updatedAt": "2026-05-06 16:09:52.835",
+            "models": [
+                {
+                    "id": "1478f303-36e1-4079-8443-22a6664a46d9",
+                    "name": "llama3.1-70b",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "496e6a1f-b81e-4cd0-bedf-471041baee5a",
+                    "name": "llama3.1-8b",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "4f54195b-4616-4ffc-b27f-c9b314dcdb39",
+            "providerKind": "openai",
+            "name": "DeepSeek",
+            "baseUrl": "https://api.deepseek.com/v1",
+            "documentationUrl": "https://api-docs.deepseek.com",
+            "statusUrl": "https://status.deepseek.com",
+            "createdAt": "2026-05-06 13:26:47.0427",
+            "updatedAt": "2026-05-06 16:09:52.875",
+            "models": [
+                {
+                    "id": "e9cbf030-8d0b-4047-85fc-288f1cccc9c6",
+                    "name": "deepseek-chat",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "9bd016ad-33b5-46e3-80da-288673bff059",
+                    "name": "deepseek-reasoner",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "fc181e67-9332-4b31-835f-03e42373c3ac",
+            "providerKind": "openai",
+            "name": "Fireworks",
+            "baseUrl": "https://api.fireworks.ai/inference/v1",
+            "documentationUrl": "https://docs.fireworks.ai",
+            "statusUrl": "https://status.fireworks.ai",
+            "createdAt": "2026-05-06 13:26:46.8711",
+            "updatedAt": "2026-05-06 16:09:52.796",
+            "models": [
+                {
+                    "id": "7faf3544-8ef8-44c6-b576-52eca50d50f6",
+                    "name": "accounts/fireworks/models/llama-v3p1-70b-instruct",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "b4ace238-17bf-4468-96d7-98f917551641",
+                    "name": "accounts/fireworks/models/mixtral-8x7b-instruct",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "38b4bde9-1e1f-476e-9a44-0a1bdfd23ccf",
+            "providerKind": "gemini",
+            "name": "Gemini",
+            "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+            "documentationUrl": "https://ai.google.dev/gemini-api/docs",
+            "statusUrl": "https://status.cloud.google.com",
+            "createdAt": "2026-05-06 13:26:47.606624",
+            "updatedAt": "2026-05-06 16:09:53.098",
+            "models": [
+                {
+                    "id": "b99f6013-8fad-42c2-bfc8-5f269fde2517",
+                    "name": "gemini-1.5-flash",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "e583521f-b00d-4f4d-9736-f7b730bfe798",
+                    "name": "gemini-1.5-pro",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "dad208ac-2753-4d79-af51-5361ad6c888f",
+                    "name": "gemini-2.0-flash-exp",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "45deb563-1529-49ab-a1b2-d0eefebfb792",
+                    "name": "gemini-2.5-flash",
+                    "createdAt": "2026-05-06 13:26:47.694725"
+                },
+                {
+                    "id": "44cdeef1-dd39-44e4-b837-50e13b37c957",
+                    "name": "gemini-2.5-pro",
+                    "createdAt": "2026-05-06 13:26:47.662494"
+                }
+            ]
+        },
+        {
+            "id": "29052cf5-aeff-47e7-a168-ce6bf1487e5e",
+            "providerKind": "openai",
+            "name": "Groq",
+            "baseUrl": "https://api.groq.com/openai/v1",
+            "documentationUrl": "https://console.groq.com/docs",
+            "statusUrl": "https://groqstatus.com",
+            "createdAt": "2026-05-06 13:26:46.543538",
+            "updatedAt": "2026-05-06 16:09:52.643",
+            "models": [
+                {
+                    "id": "a838d218-a8b3-4264-a86f-e2cddfafbd2e",
+                    "name": "llama-3.1-8b-instant",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "18f8cac7-78a7-4ded-aebe-b29feda48db0",
+                    "name": "llama-3.3-70b-versatile",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "07ce6131-a8a4-485e-9112-fd196307fe2e",
+                    "name": "mixtral-8x7b-32768",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "8fa9fe12-3ff7-455f-85f0-41a04be24b98",
+            "providerKind": "openai",
+            "name": "Mistral",
+            "baseUrl": "https://api.mistral.ai/v1",
+            "documentationUrl": "https://docs.mistral.ai",
+            "statusUrl": "https://status.mistral.ai",
+            "createdAt": "2026-05-06 13:26:47.151099",
+            "updatedAt": "2026-05-06 16:09:52.906",
+            "models": [
+                {
+                    "id": "66a4ceb8-1b7b-45b9-a3cb-f95ad6653b81",
+                    "name": "mistral-large-latest",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "94a21cb9-3f89-44d4-8d15-5b0bfd411e0d",
+                    "name": "mistral-small-latest",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "0c23263c-93a4-4927-ba4c-15f37af83466",
+            "providerKind": "openai",
+            "name": "Moonshot Kimi",
+            "baseUrl": "https://api.moonshot.ai/v1",
+            "documentationUrl": "https://platform.kimi.ai/docs",
+            "statusUrl": null,
+            "createdAt": "2026-07-15 13:44:16.184679",
+            "updatedAt": "2026-07-15 13:44:16.184679",
+            "models": [
+                {
+                    "id": "adc75fbb-2d57-43c8-9dab-825e381cb17b",
+                    "name": "kimi-k2.6",
+                    "createdAt": "2026-07-15 13:44:16.184679"
+                },
+                {
+                    "id": "1d97f897-bab0-431b-a0e1-7a4b5eb15371",
+                    "name": "kimi-k2.7-code",
+                    "createdAt": "2026-07-15 13:44:16.184679"
+                },
+                {
+                    "id": "65f83de7-3705-471f-a0d3-6fc263cd3e6c",
+                    "name": "kimi-k2.7-code-highspeed",
+                    "createdAt": "2026-07-15 13:44:16.184679"
+                }
+            ]
+        },
+        {
+            "id": "7dc1e2b3-119f-443b-8734-7be5bc6531d0",
+            "providerKind": "openai",
+            "name": "Ollama (local)",
+            "baseUrl": "http://localhost:11434/v1",
+            "documentationUrl": "https://github.com/ollama/ollama/blob/main/docs/openai.md",
+            "statusUrl": null,
+            "createdAt": "2026-05-06 13:26:47.438517",
+            "updatedAt": "2026-05-06 16:09:53.018",
+            "models": [
+                {
+                    "id": "237f9cb8-09c5-48b9-8f2b-6a7605d90116",
+                    "name": "llama3.2",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "7ce129e8-6582-441f-ae76-23a8f5d9f7a7",
+                    "name": "qwen2.5",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "cd45f2de-462e-4209-ab12-4cbff6c70191",
+            "providerKind": "openai",
+            "name": "OpenAI",
+            "baseUrl": "https://api.openai.com/v1",
+            "documentationUrl": "https://platform.openai.com/docs",
+            "statusUrl": "https://status.openai.com",
+            "createdAt": "2026-05-06 13:20:52.12769",
+            "updatedAt": "2026-05-06 16:09:52.693",
+            "models": [
+                {
+                    "id": "12babdfe-160f-41a4-8879-00a9601423aa",
+                    "name": "gpt-4.1",
+                    "createdAt": "2026-05-06 13:20:52.168271"
+                },
+                {
+                    "id": "75a946c9-6ec5-484b-a900-e9755c6499b5",
+                    "name": "gpt-4o",
+                    "createdAt": "2026-05-06 13:20:52.195689"
+                },
+                {
+                    "id": "83651b20-fcc1-4230-b734-b5b5ede826ae",
+                    "name": "gpt-4o-mini",
+                    "createdAt": "2026-05-06 13:20:52.213125"
+                },
+                {
+                    "id": "f5753f32-eb71-46d8-af71-6415c3bc513a",
+                    "name": "o1-mini",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "6572cef4-8558-4e89-bfb6-696a5aaeb29e",
+            "providerKind": "openai",
+            "name": "OpenRouter",
+            "baseUrl": "https://openrouter.ai/api/v1",
+            "documentationUrl": "https://openrouter.ai/docs",
+            "statusUrl": "https://status.openrouter.ai",
+            "createdAt": "2026-05-06 13:26:47.338312",
+            "updatedAt": "2026-05-06 16:09:52.983",
+            "models": [
+                {
+                    "id": "4e64a4bb-c3c8-4c80-9921-c45667a61586",
+                    "name": "anthropic/claude-3.5-sonnet",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "1ac03693-af0a-4647-913e-d816f2d1670c",
+                    "name": "openrouter/auto",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "c4b70f12-5c2b-439b-bf87-0a7398141ed6",
+            "providerKind": "openai",
+            "name": "Together",
+            "baseUrl": "https://api.together.xyz/v1",
+            "documentationUrl": "https://docs.together.ai",
+            "statusUrl": "https://status.together.ai",
+            "createdAt": "2026-05-06 13:26:46.786029",
+            "updatedAt": "2026-05-06 16:09:52.755",
+            "models": [
+                {
+                    "id": "ccf763a5-858e-4dfd-867c-591a892d5a7d",
+                    "name": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "45615756-a182-4bb8-b938-9787c719e9f5",
+                    "name": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        },
+        {
+            "id": "99496b13-4449-476e-8331-8fc01c2af2c0",
+            "providerKind": "openai",
+            "name": "xAI",
+            "baseUrl": "https://api.x.ai/v1",
+            "documentationUrl": "https://docs.x.ai",
+            "statusUrl": "https://status.x.ai",
+            "createdAt": "2026-05-06 13:26:47.243982",
+            "updatedAt": "2026-05-06 16:09:52.941",
+            "models": [
+                {
+                    "id": "f5afa49d-f4f3-44a0-a822-c1c6b54917f7",
+                    "name": "grok-2-latest",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                },
+                {
+                    "id": "8571e95d-c154-41db-9d59-bd769f858eca",
+                    "name": "grok-2-mini",
+                    "createdAt": "2026-05-17 02:19:32.158904"
+                }
+            ]
+        }
+    ],
+    "total": 13,
+    "page": 1,
+    "pageSize": 100
+}
