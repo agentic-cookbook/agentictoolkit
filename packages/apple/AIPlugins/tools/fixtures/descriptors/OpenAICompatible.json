@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 3,
+  "identifier": "com.agentictoolkit.plugin.openai-compatible",
+  "displayName": "OpenAI-compatible",
+  "version": "1.0",
+  "models": [],
+  "defaultModel": null,
+  "fields": [
+    {
+      "key": "baseURL",
+      "label": "Base URL",
+      "kind": "text",
+      "placeholder": "https://api.example.com/v1"
+    },
+    {
+      "key": "apiKey",
+      "label": "API Key",
+      "kind": "secret"
+    }
+  ],
+  "templates": [
+    {
+      "id": "cerebras",
+      "displayName": "Cerebras",
+      "provider": "Cerebras",
+      "llm": "Llama",
+      "configType": "API Key",
+      "providerDescription": "Cerebras — ultra-fast inference on Cerebras hardware.",
+      "defaultValues": {
+        "baseURL": "https://api.cerebras.ai/v1"
+      },
+      "models": [
+        "llama3.1-70b",
+        "llama3.1-8b"
+      ],
+      "defaultModel": "llama3.1-70b",
+      "secretRequired": true
+    },
+    {
+      "id": "deepseek",
+      "displayName": "DeepSeek",
+      "provider": "DeepSeek",
+      "llm": "DeepSeek",
+      "configType": "API Key",
+      "providerDescription": "DeepSeek — open models with strong coding and reasoning.",
+      "llmDescription": "DeepSeek — competitive open models; the reasoner variant is tuned for step-by-step problems.",
+      "defaultValues": {
+        "baseURL": "https://api.deepseek.com/v1"
+      },
+      "models": [
+        "deepseek-chat",
+        "deepseek-reasoner"
+      ],
+      "defaultModel": "deepseek-chat",
+      "secretRequired": true
+    },
+    {
+      "id": "fireworks",
+      "displayName": "Fireworks",
+      "provider": "Fireworks",
+      "llm": "Various",
+      "configType": "API Key",
+      "providerDescription": "Fireworks AI — fast hosted open-source models.",
+      "defaultValues": {
+        "baseURL": "https://api.fireworks.ai/inference/v1"
+      },
+      "models": [
+        "accounts/fireworks/models/llama-v3p1-70b-instruct",
+        "accounts/fireworks/models/mixtral-8x7b-instruct"
+      ],
+      "defaultModel": "accounts/fireworks/models/llama-v3p1-70b-instruct",
+      "secretRequired": true
+    },
+    {
+      "id": "groq",
+      "displayName": "Groq",
+      "provider": "Groq",
+      "llm": "Various",
+      "configType": "API Key",
+      "providerDescription": "Groq — very low-latency inference on LPU hardware.",
+      "defaultValues": {
+        "baseURL": "https://api.groq.com/openai/v1"
+      },
+      "models": [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768"
+      ],
+      "defaultModel": "llama-3.3-70b-versatile",
+      "secretRequired": true
+    },
+    {
+      "id": "mistral",
+      "displayName": "Mistral",
+      "provider": "Mistral",
+      "llm": "Mistral",
+      "configType": "API Key",
+      "providerDescription": "Mistral AI — European open-weight models.",
+      "llmDescription": "Mistral — efficient open-weight models with strong general performance.",
+      "defaultValues": {
+        "baseURL": "https://api.mistral.ai/v1"
+      },
+      "models": [
+        "mistral-large-latest",
+        "mistral-small-latest"
+      ],
+      "defaultModel": "mistral-large-latest",
+      "secretRequired": true
+    },
+    {
+      "id": "ollama",
+      "displayName": "Ollama (local)",
+      "provider": "Ollama",
+      "llm": "Various",
+      "configType": "Local",
+      "providerDescription": "Ollama — run open models locally on your machine (no API key). The model list is read live from your Ollama server, so it shows exactly the models you have pulled.",
+      "defaultValues": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": [],
+      "defaultModel": null,
+      "secretRequired": false,
+      "fields": [
+        {
+          "key": "baseURL",
+          "label": "Base URL",
+          "kind": "text",
+          "placeholder": "http://localhost:11434/v1"
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "displayName": "OpenRouter",
+      "provider": "OpenRouter",
+      "llm": "Various",
+      "configType": "API Key",
+      "providerDescription": "OpenRouter — a single gateway that routes to many providers.",
+      "defaultValues": {
+        "baseURL": "https://openrouter.ai/api/v1"
+      },
+      "models": [
+        "openrouter/auto",
+        "anthropic/claude-3.5-sonnet"
+      ],
+      "defaultModel": "openrouter/auto",
+      "secretRequired": true
+    },
+    {
+      "id": "together",
+      "displayName": "Together",
+      "provider": "Together",
+      "llm": "Various",
+      "configType": "API Key",
+      "providerDescription": "Together AI — hosted open-source models.",
+      "defaultValues": {
+        "baseURL": "https://api.together.xyz/v1"
+      },
+      "models": [
+        "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+      ],
+      "defaultModel": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+      "secretRequired": true
+    },
+    {
+      "id": "xai",
+      "displayName": "xAI",
+      "provider": "xAI",
+      "llm": "Grok",
+      "configType": "API Key",
+      "providerDescription": "xAI — the Grok family of models.",
+      "llmDescription": "Grok — xAI's general-purpose models; 4.5 is the flagship (fast, 500k context), 4.3 offers a 1M-token context.",
+      "defaultValues": {
+        "baseURL": "https://api.x.ai/v1"
+      },
+      "models": [
+        "grok-4.5",
+        "grok-4.3",
+        "grok-4.20-0309-reasoning",
+        "grok-4.20-0309-non-reasoning",
+        "grok-4.20-multi-agent-0309"
+      ],
+      "defaultModel": "grok-4.5",
+      "secretRequired": true
+    },
+    {
+      "id": "custom",
+      "displayName": "Custom (OpenAI-compatible)",
+      "provider": "Custom",
+      "llm": "",
+      "configType": "Custom",
+      "providerDescription": "Any OpenAI-compatible endpoint you configure with a base URL. An API key is optional — supply one if your endpoint requires it.",
+      "defaultValues": {
+        "baseURL": ""
+      },
+      "models": [],
+      "defaultModel": null,
+      "secretRequired": false
+    }
+  ]
+}

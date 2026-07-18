@@ -26,7 +26,10 @@ import urllib.request
 from pathlib import Path
 
 DEFAULT_BASE_URL = "https://api.agenticdeveloperhub.com"
-CATALOG_PATH = "/persona/provider-templates?pageSize=100"
+CATALOG_PATH = "/persona/provider-templates"
+PAGE_SIZE = 100
+# Safety cap so a server that ignores the `page` param can't loop us forever.
+MAX_PAGES = 100
 
 # adh vendor name -> OpenAICompatible descriptor template id. Stable ids matter:
 # saved AIProviderConfigurations reference templateId, so a rename would orphan a
@@ -71,25 +74,48 @@ def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
-def fetch_catalog(base_url: str) -> list[dict]:
-    """GET the provider-templates catalog and return the ``items`` list.
-
-    Raises ``RuntimeError`` on HTTP failure, an empty catalog, or a catalog
-    missing an expected providerKind.
-    """
-    url = base_url.rstrip("/") + CATALOG_PATH
+def _get_json(url: str) -> dict:
+    """GET a URL and parse the JSON body, mapping every failure to RuntimeError."""
     try:
         with urllib.request.urlopen(url, timeout=30) as resp:
             status = getattr(resp, "status", resp.getcode())
             if status != 200:
                 raise RuntimeError(f"GET {url} -> HTTP {status}")
-            payload = json.loads(resp.read().decode("utf-8"))
+            body = resp.read().decode("utf-8")
     except urllib.error.URLError as exc:
         raise RuntimeError(f"GET {url} failed: {exc}") from exc
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"GET {url} returned a non-JSON body: {exc}") from exc
 
-    items = payload.get("items")
+
+def fetch_catalog(base_url: str) -> list[dict]:
+    """GET every page of the provider-templates catalog; return the ``items``.
+
+    Follows pagination (the API returns ``{items, total, page, pageSize}``) so the
+    catalog is never silently truncated. Raises ``RuntimeError`` on HTTP failure, a
+    non-JSON body, an empty catalog, or a catalog missing an expected providerKind.
+    """
+    base = base_url.rstrip("/") + CATALOG_PATH
+    items: list[dict] = []
+    for page in range(1, MAX_PAGES + 1):
+        payload = _get_json(f"{base}?page={page}&pageSize={PAGE_SIZE}")
+        batch = payload.get("items") or []
+        items.extend(batch)
+        total = payload.get("total")
+        if not batch or len(batch) < PAGE_SIZE:
+            break
+        if isinstance(total, int) and len(items) >= total:
+            break
+    else:
+        raise RuntimeError(
+            f"catalog paged past {MAX_PAGES} pages without terminating "
+            f"({base}); refusing to write"
+        )
+
     if not items:
-        raise RuntimeError(f"GET {url} returned an empty catalog; refusing to write")
+        raise RuntimeError(f"GET {base} returned an empty catalog; refusing to write")
     kinds = {t.get("providerKind") for t in items}
     missing = REQUIRED_KINDS - kinds
     if missing:
@@ -209,13 +235,13 @@ def build_updates(items: list[dict]) -> dict[Path, str]:
         if adh_t is None:
             continue
         path = descriptor_path(plugin_dir)
-        desc = json.loads(path.read_text())
+        desc = json.loads(path.read_text(encoding="utf-8"))
         merge_single_vendor(desc, model_names(adh_t))
         updates[path] = canonical_json(desc)
 
     if routed["openai"] is not None:
         path = descriptor_path(OPENAI_VENDOR_DIR)
-        desc = json.loads(path.read_text())
+        desc = json.loads(path.read_text(encoding="utf-8"))
         merge_single_vendor(desc, model_names(routed["openai"]))
         updates[path] = canonical_json(desc)
 
@@ -230,12 +256,15 @@ def build_updates(items: list[dict]) -> dict[Path, str]:
 def normalize_updates() -> dict[Path, str]:
     """Re-emit each descriptor in canonical format with no content change."""
     dirs = (*SINGLE_VENDOR_KIND.values(), OPENAI_VENDOR_DIR, OPENAI_COMPATIBLE_DIR)
-    return {descriptor_path(d): canonical_json(json.loads(descriptor_path(d).read_text())) for d in dirs}
+    return {
+        descriptor_path(d): canonical_json(json.loads(descriptor_path(d).read_text(encoding="utf-8")))
+        for d in dirs
+    }
 
 
 def apply_or_diff(updates: dict[Path, str], dry_run: bool) -> None:
     for path, new_text in updates.items():
-        old_text = path.read_text() if path.exists() else ""
+        old_text = path.read_text(encoding="utf-8") if path.exists() else ""
         if old_text == new_text:
             continue
         if dry_run:
@@ -248,7 +277,7 @@ def apply_or_diff(updates: dict[Path, str], dry_run: bool) -> None:
             sys.stdout.writelines(diff)
         else:
             json.loads(new_text)  # validate before writing
-            path.write_text(new_text)
+            path.write_text(new_text, encoding="utf-8")
             print(f"wrote {path}")
 
 

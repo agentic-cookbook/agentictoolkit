@@ -1,6 +1,11 @@
 """Unit tests for the adh provider-catalog descriptor generator.
 
-Runs entirely against a committed fixture of adh's response — no network.
+Runs entirely against committed fixtures — no network. Two fixtures are used:
+`fixtures/adh-provider-templates.json` (a captured adh response) and
+`fixtures/descriptors/*.json` (the *pre-merge* descriptors). The descriptor
+inputs are pinned pristine snapshots, NOT the live (already-regenerated) files —
+otherwise `…adds_kimi`/`ollama_override` would be tautological, passing even if
+the merge did nothing.
 """
 import copy
 import json
@@ -9,8 +14,7 @@ import pathlib
 import generate_ai_descriptors as g
 
 TOOLS = pathlib.Path(__file__).resolve().parent
-AIPLUGINS = TOOLS.parent
-FIX = json.loads((TOOLS / "fixtures/adh-provider-templates.json").read_text())
+FIX = json.loads((TOOLS / "fixtures/adh-provider-templates.json").read_text(encoding="utf-8"))
 ITEMS = FIX["items"]
 
 
@@ -19,7 +23,9 @@ def _by(kind, name):
 
 
 def _descriptor(plugin_dir):
-    return json.loads((AIPLUGINS / plugin_dir / "descriptor.json").read_text())
+    """The pristine pre-merge descriptor snapshot (not the live regenerated file)."""
+    path = TOOLS / "fixtures/descriptors" / f"{plugin_dir}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _adh_openai_compat():
