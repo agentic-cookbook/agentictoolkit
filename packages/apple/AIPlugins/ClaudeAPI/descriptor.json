@@ -4,9 +4,12 @@
   "displayName": "Claude (API)",
   "version": "1.0",
   "models": [
-    "claude-sonnet-4-6",
+    "claude-3-5-haiku-latest",
+    "claude-3-5-sonnet-latest",
+    "claude-3-opus-latest",
     "claude-haiku-4-5",
-    "claude-opus-4-7"
+    "claude-opus-4-7",
+    "claude-sonnet-4-6"
   ],
   "defaultModel": "claude-sonnet-4-6",
   "fields": [
@@ -30,9 +33,12 @@
         "authMode": "x-api-key"
       },
       "models": [
-        "claude-sonnet-4-6",
+        "claude-3-5-haiku-latest",
+        "claude-3-5-sonnet-latest",
+        "claude-3-opus-latest",
         "claude-haiku-4-5",
-        "claude-opus-4-7"
+        "claude-opus-4-7",
+        "claude-sonnet-4-6"
       ],
       "defaultModel": "claude-sonnet-4-6",
       "secretRequired": true,
@@ -70,9 +76,12 @@
         "authMode": "bearer-oauth"
       },
       "models": [
-        "claude-sonnet-4-6",
+        "claude-3-5-haiku-latest",
+        "claude-3-5-sonnet-latest",
+        "claude-3-opus-latest",
         "claude-haiku-4-5",
-        "claude-opus-4-7"
+        "claude-opus-4-7",
+        "claude-sonnet-4-6"
       ],
       "defaultModel": "claude-sonnet-4-6",
       "secretRequired": true,

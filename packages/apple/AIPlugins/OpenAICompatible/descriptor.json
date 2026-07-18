@@ -82,8 +82,8 @@
         "baseURL": "https://api.groq.com/openai/v1"
       },
       "models": [
-        "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
         "mixtral-8x7b-32768"
       ],
       "defaultModel": "llama-3.3-70b-versatile",
@@ -117,8 +117,11 @@
       "defaultValues": {
         "baseURL": "http://localhost:11434/v1"
       },
-      "models": [],
-      "defaultModel": null,
+      "models": [
+        "llama3.2",
+        "qwen2.5"
+      ],
+      "defaultModel": "llama3.2",
       "secretRequired": false,
       "fields": [
         {
@@ -140,8 +143,8 @@
         "baseURL": "https://openrouter.ai/api/v1"
       },
       "models": [
-        "openrouter/auto",
-        "anthropic/claude-3.5-sonnet"
+        "anthropic/claude-3.5-sonnet",
+        "openrouter/auto"
       ],
       "defaultModel": "openrouter/auto",
       "secretRequired": true
@@ -175,13 +178,24 @@
         "baseURL": "https://api.x.ai/v1"
       },
       "models": [
-        "grok-4.5",
-        "grok-4.3",
-        "grok-4.20-0309-reasoning",
-        "grok-4.20-0309-non-reasoning",
-        "grok-4.20-multi-agent-0309"
+        "grok-2-latest",
+        "grok-2-mini"
       ],
-      "defaultModel": "grok-4.5",
+      "defaultModel": "grok-2-latest",
+      "secretRequired": true
+    },
+    {
+      "id": "kimi",
+      "displayName": "Moonshot Kimi",
+      "defaultValues": {
+        "baseURL": "https://api.moonshot.ai/v1"
+      },
+      "models": [
+        "kimi-k2.6",
+        "kimi-k2.7-code",
+        "kimi-k2.7-code-highspeed"
+      ],
+      "defaultModel": "kimi-k2.6",
       "secretRequired": true
     },
     {

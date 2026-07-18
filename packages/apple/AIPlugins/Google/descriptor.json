@@ -4,9 +4,11 @@
   "displayName": "Google (Gemini)",
   "version": "1.0",
   "models": [
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+    "gemini-2.0-flash-exp",
     "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash"
+    "gemini-2.5-pro"
   ],
   "defaultModel": "gemini-2.5-flash",
   "fields": [
@@ -27,9 +29,11 @@
       "llmDescription": "Gemini — multimodal, with a very long context window and native tool use.",
       "defaultValues": {},
       "models": [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash-exp",
         "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash"
+        "gemini-2.5-pro"
       ],
       "defaultModel": "gemini-2.5-flash",
       "secretRequired": true,
