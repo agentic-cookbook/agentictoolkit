@@ -20,6 +20,11 @@ export interface ApiBrowserProps {
   /** Seed the focused endpoint's request body. */
   body?: string
   apiOrigin?: string
+  /** Browse-only: hide the interactive "Try it" panel in every endpoint pane, leaving a pure
+   *  reference (Overview + Response schema + Code examples). Set on the public API-reference site,
+   *  which has no session; the authenticated surfaces (hub/admin/community/the Help modal) omit it
+   *  and keep try-it. See {@link ApiEndpointDetailProps.readOnly}. */
+  readOnly?: boolean
 }
 
 function methodDot(method: string): ReactNode {
@@ -33,7 +38,7 @@ function methodDot(method: string): ReactNode {
  * endpoint stays browsable via the rails + breadcrumb. Selecting an endpoint remounts
  * its detail (keyed by key) so try-it state never leaks between endpoints.
  */
-export function ApiBrowser({ endpoint, endpointKey, pathValues, queryValues, body, apiOrigin }: ApiBrowserProps) {
+export function ApiBrowser({ endpoint, endpointKey, pathValues, queryValues, body, apiOrigin, readOnly }: ApiBrowserProps) {
   const focusKey = endpointKey ?? (endpoint ? toKey(endpoint) : undefined)
   const focusMeta = focusKey ? getEndpoint(focusKey) : undefined
 
@@ -86,6 +91,7 @@ export function ApiBrowser({ endpoint, endpointKey, pathValues, queryValues, bod
       initialQueryValues={inFocusFamily ? queryValues : undefined}
       initialBody={selKey === focusKey ? body : undefined}
       apiOrigin={apiOrigin}
+      readOnly={readOnly}
     />
   ) : (
     <p className="text-sm text-apt-text-muted">{!tag ? 'Choose a tag to browse its endpoints.' : 'Choose an endpoint.'}</p>

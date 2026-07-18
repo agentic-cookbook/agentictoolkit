@@ -35,6 +35,12 @@ export interface ApiEndpointDetailProps {
   /** Seed request-body JSON (else the schema example). */
   initialBody?: string
   apiOrigin?: string
+  /** Browse-only: drop the interactive "Try it" panel (its param inputs, Send, and result), so
+   *  the pane is a pure reference — Overview + Response schema + Code examples. Set on the PUBLIC
+   *  API-reference site, which has no session. When falsy (every authenticated consumer — hub,
+   *  admin, community, the Help modal) the try-it panel renders exactly as before. Because the
+   *  try-it panel owns the only `useAuth()` call, a `readOnly` pane needs no AuthProvider at all. */
+  readOnly?: boolean
 }
 
 function MethodBadge({ method }: { method: string }) {
@@ -132,10 +138,13 @@ function seedValues(params: EndpointParam[], loc: 'path' | 'query', src?: Record
 
 /**
  * The full detail for ONE endpoint — one pane with disclosable sections: Overview
- * (static), Response and Code examples (collapsed by default), Try it (open by
- * default). Owns the try-it form state; the browser remounts this (keyed by
- * endpoint) when you navigate, so state never leaks between endpoints and the
- * disclosures reset to their defaults on each endpoint.
+ * (static), Response and Code examples (collapsed by default), and — unless
+ * {@link ApiEndpointDetailProps.readOnly | readOnly} — the interactive Try it panel
+ * (open by default). The browser remounts this (keyed by endpoint) when you navigate,
+ * so state never leaks between endpoints and the disclosures reset on each endpoint.
+ *
+ * Path/query/body values live here (not in the try-it panel) because the Code examples
+ * render them too; the try-it panel edits them through the setters passed down.
  */
 export function ApiEndpointDetail({
   meta,
@@ -143,9 +152,8 @@ export function ApiEndpointDetail({
   initialQueryValues,
   initialBody,
   apiOrigin = PUBLIC_API_ORIGIN,
+  readOnly = false,
 }: ApiEndpointDetailProps) {
-  const { isAuthenticated, accessToken } = useAuth()
-
   const [pathValues, setPathValues] = useState<Record<string, string>>(() => seedValues(meta.params, 'path', initialPathValues))
   const [queryValues, setQueryValues] = useState<Record<string, string>>(() => seedValues(meta.params, 'query', initialQueryValues))
   const [bodyText, setBodyText] = useState<string>(() =>
@@ -155,11 +163,129 @@ export function ApiEndpointDetail({
         ? JSON.stringify(schemaToExample(meta.requestBody.schema), null, 2)
         : '',
   )
+  const [activeStatus, setActiveStatus] = useState<string>(() => meta.responses[0]?.status ?? '')
+
+  const values = { pathValues, queryValues, body: bodyText }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Overview — not disclosable */}
+      <StaticSection title="Overview">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-apt-border bg-apt-surface-2 px-3 py-2">
+          <MethodBadge method={meta.method} />
+          <code className="break-all font-mono text-sm text-apt-text">{meta.path}</code>
+          {meta.tag && (
+            <span className="rounded-md border border-apt-border bg-apt-surface px-2 py-0.5 text-xs text-apt-text-muted">
+              {meta.tag}
+            </span>
+          )}
+        </div>
+        {meta.summary && <h3 className="text-base font-semibold leading-snug text-apt-text">{meta.summary}</h3>}
+        {meta.description && <p className="whitespace-pre-line text-sm text-apt-text-muted">{meta.description}</p>}
+        {meta.security && meta.security.length > 0 && (
+          <p className="text-xs text-apt-text-dim">
+            Auth: <span className="font-mono">{meta.security.join(', ')}</span> — calls run as the logged-in user.
+          </p>
+        )}
+      </StaticSection>
+
+      {/* Response — disclosable, collapsed by default */}
+      {meta.responses.length > 0 && (
+        <Disclosure title="Response" className="bg-apt-bg">
+          <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(String(v))}>
+            <TabsList>
+              {meta.responses.map((r) => (
+                <TabsTab key={r.status} value={r.status}>
+                  <span className={statusTone(r.status)}>{r.status}</span>
+                </TabsTab>
+              ))}
+            </TabsList>
+            {meta.responses.map((r) => (
+              <TabsPanel key={r.status} value={r.status} className="flex flex-col gap-3 pt-3">
+                {r.description && <p className="text-sm text-apt-text-muted">{r.description}</p>}
+                {r.schema ? (
+                  <>
+                    <SchemaFieldList schema={r.schema} />
+                    <div className="flex flex-col gap-1.5">
+                      <span className="font-mono text-xs uppercase tracking-wider text-apt-text-muted">Example</span>
+                      <CodeBlock code={JSON.stringify(schemaToExample(r.schema), null, 2)} lang="json" ariaLabel={`Example ${r.status} body`} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-apt-text-dim">No response body.</p>
+                )}
+              </TabsPanel>
+            ))}
+          </Tabs>
+        </Disclosure>
+      )}
+
+      {/* Code examples — disclosable, collapsed by default */}
+      <Disclosure title="Code examples" className="bg-apt-bg">
+        <div className="flex flex-col gap-4">
+          {SNIPPET_LANGS.map((l) => (
+            <div key={l.id} className="flex flex-col gap-1.5">
+              <span className="font-mono text-xs uppercase tracking-wider text-apt-text-muted">{l.label}</span>
+              <CodeBlock code={snippetFor(l.id, meta, values, apiOrigin)} lang={l.highlight} ariaLabel={`${l.label} snippet`} />
+            </div>
+          ))}
+        </div>
+      </Disclosure>
+
+      {/* Try it — disclosable, open by default. Omitted on read-only (public) surfaces; it owns
+          the sole useAuth() call, so a read-only pane needs no AuthProvider. */}
+      {!readOnly && (
+        <TryItPanel
+          meta={meta}
+          pathValues={pathValues}
+          setPathValues={setPathValues}
+          queryValues={queryValues}
+          setQueryValues={setQueryValues}
+          bodyText={bodyText}
+          setBodyText={setBodyText}
+          onResponseStatus={(status) => {
+            if (meta.responses.some((r) => r.status === status)) setActiveStatus(status)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * The interactive "Try it" panel: param/body inputs, a Send that runs the request as the
+ * logged-in user (through the site's same-origin `/api` BFF proxy), and the live result. Split
+ * out of {@link ApiEndpointDetail} so that it — and its `useAuth()` dependency — mount ONLY on
+ * authenticated surfaces; a read-only pane omits it entirely and needs no AuthProvider.
+ *
+ * The path/query/body VALUES are owned by the parent (the Code examples render them too) and
+ * edited here via the setters; the send-lifecycle state (result, in-flight, confirm) is local.
+ */
+function TryItPanel({
+  meta,
+  pathValues,
+  setPathValues,
+  queryValues,
+  setQueryValues,
+  bodyText,
+  setBodyText,
+  onResponseStatus,
+}: {
+  meta: EndpointMeta
+  pathValues: Record<string, string>
+  setPathValues: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  queryValues: Record<string, string>
+  setQueryValues: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  bodyText: string
+  setBodyText: (value: string) => void
+  onResponseStatus: (status: string) => void
+}) {
+  const { isAuthenticated, accessToken } = useAuth()
+
   const [result, setResult] = useState<ApiResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [activeStatus, setActiveStatus] = useState<string>(() => meta.responses[0]?.status ?? '')
 
   const values = { pathValues, queryValues, body: bodyText }
   const pathParams = meta.params.filter((p) => p.in === 'path')
@@ -177,7 +303,7 @@ export function ApiEndpointDetail({
       const req = buildRequest(meta, values, accessToken)
       const res = await executeRequest(req)
       setResult(res)
-      if (meta.responses.some((r) => r.status === String(res.status))) setActiveStatus(String(res.status))
+      onResponseStatus(String(res.status))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
@@ -196,147 +322,81 @@ export function ApiEndpointDetail({
 
   return (
     <>
-      <div className="flex flex-col gap-4">
-        {/* Overview — not disclosable */}
-        <StaticSection title="Overview">
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-apt-border bg-apt-surface-2 px-3 py-2">
+      <Disclosure title="Try it" defaultOpen className="bg-apt-bg">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-apt-border bg-apt-surface-2 px-3 py-2">
             <MethodBadge method={meta.method} />
-            <code className="break-all font-mono text-sm text-apt-text">{meta.path}</code>
-            {meta.tag && (
-              <span className="rounded-md border border-apt-border bg-apt-surface px-2 py-0.5 text-xs text-apt-text-muted">
-                {meta.tag}
-              </span>
-            )}
+            <code className="min-w-0 flex-1 truncate font-mono text-sm text-apt-text" title={livePreviewUrl}>
+              {livePreviewUrl}
+            </code>
+            <Button size="sm" onClick={onSendClick} disabled={!canSend}>
+              {sending ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Send size={14} aria-hidden />}
+              Send
+            </Button>
           </div>
-          {meta.summary && <h3 className="text-base font-semibold leading-snug text-apt-text">{meta.summary}</h3>}
-          {meta.description && <p className="whitespace-pre-line text-sm text-apt-text-muted">{meta.description}</p>}
-          {meta.security && meta.security.length > 0 && (
+
+          {!isAuthenticated && <p className="text-sm text-apt-orange">Sign in to try this endpoint as yourself.</p>}
+          {isAuthenticated && (
             <p className="text-xs text-apt-text-dim">
-              Auth: <span className="font-mono">{meta.security.join(', ')}</span> — calls run as the logged-in user.
+              Sent as you — <span className="font-mono">Authorization: Bearer</span> is attached from your session.
             </p>
           )}
-        </StaticSection>
+          {missingRequired.length > 0 && (
+            <p className="text-xs text-apt-text-muted">
+              Fill required param{missingRequired.length > 1 ? 's' : ''}: {missingRequired.map((p) => p.name).join(', ')}
+            </p>
+          )}
 
-        {/* Response — disclosable, collapsed by default */}
-        {meta.responses.length > 0 && (
-          <Disclosure title="Response" className="bg-apt-bg">
-            <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(String(v))}>
-              <TabsList>
-                {meta.responses.map((r) => (
-                  <TabsTab key={r.status} value={r.status}>
-                    <span className={statusTone(r.status)}>{r.status}</span>
-                  </TabsTab>
-                ))}
-              </TabsList>
-              {meta.responses.map((r) => (
-                <TabsPanel key={r.status} value={r.status} className="flex flex-col gap-3 pt-3">
-                  {r.description && <p className="text-sm text-apt-text-muted">{r.description}</p>}
-                  {r.schema ? (
-                    <>
-                      <SchemaFieldList schema={r.schema} />
-                      <div className="flex flex-col gap-1.5">
-                        <span className="font-mono text-xs uppercase tracking-wider text-apt-text-muted">Example</span>
-                        <CodeBlock code={JSON.stringify(schemaToExample(r.schema), null, 2)} lang="json" ariaLabel={`Example ${r.status} body`} />
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-sm text-apt-text-dim">No response body.</p>
-                  )}
-                </TabsPanel>
-              ))}
-            </Tabs>
-          </Disclosure>
-        )}
-
-        {/* Code examples — disclosable, collapsed by default */}
-        <Disclosure title="Code examples" className="bg-apt-bg">
-          <div className="flex flex-col gap-4">
-            {SNIPPET_LANGS.map((l) => (
-              <div key={l.id} className="flex flex-col gap-1.5">
-                <span className="font-mono text-xs uppercase tracking-wider text-apt-text-muted">{l.label}</span>
-                <CodeBlock code={snippetFor(l.id, meta, values, apiOrigin)} lang={l.highlight} ariaLabel={`${l.label} snippet`} />
-              </div>
-            ))}
-          </div>
-        </Disclosure>
-
-        {/* Try it — disclosable, open by default */}
-        <Disclosure title="Try it" defaultOpen className="bg-apt-bg">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 rounded-lg border border-apt-border bg-apt-surface-2 px-3 py-2">
-              <MethodBadge method={meta.method} />
-              <code className="min-w-0 flex-1 truncate font-mono text-sm text-apt-text" title={livePreviewUrl}>
-                {livePreviewUrl}
-              </code>
-              <Button size="sm" onClick={onSendClick} disabled={!canSend}>
-                {sending ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Send size={14} aria-hidden />}
-                Send
-              </Button>
-            </div>
-
-            {!isAuthenticated && <p className="text-sm text-apt-orange">Sign in to try this endpoint as yourself.</p>}
-            {isAuthenticated && (
-              <p className="text-xs text-apt-text-dim">
-                Sent as you — <span className="font-mono">Authorization: Bearer</span> is attached from your session.
-              </p>
-            )}
-            {missingRequired.length > 0 && (
-              <p className="text-xs text-apt-text-muted">
-                Fill required param{missingRequired.length > 1 ? 's' : ''}: {missingRequired.map((p) => p.name).join(', ')}
-              </p>
-            )}
-
-            {(pathParams.length > 0 || queryParams.length > 0) && (
-              <FieldGroup title="Parameters">
-                {pathParams.map((p) => (
-                  <Field key={p.name} label={`${p.name} · path`} hint={p.description} error={!pathValues[p.name] ? 'Required' : undefined}>
-                    <ParamInput param={p} value={pathValues[p.name] ?? ''} onChange={(v) => setPathValues((s) => ({ ...s, [p.name]: v }))} />
-                  </Field>
-                ))}
-                {queryParams.map((p) => (
-                  <Field
-                    key={p.name}
-                    label={`${p.name} · query${p.required ? '' : '?'}`}
-                    hint={p.description}
-                    error={p.required && !queryValues[p.name] ? 'Required' : undefined}
-                  >
-                    <ParamInput param={p} value={queryValues[p.name] ?? ''} onChange={(v) => setQueryValues((s) => ({ ...s, [p.name]: v }))} />
-                  </Field>
-                ))}
-              </FieldGroup>
-            )}
-
-            {bodyAllowed(meta) && (
-              <FieldGroup title="Request body">
-                <Field label="application/json" hint={meta.requestBody?.required ? 'Required.' : 'Optional.'}>
-                  <Textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} spellCheck={false} className="min-h-40 font-mono text-sm" />
+          {(pathParams.length > 0 || queryParams.length > 0) && (
+            <FieldGroup title="Parameters">
+              {pathParams.map((p) => (
+                <Field key={p.name} label={`${p.name} · path`} hint={p.description} error={!pathValues[p.name] ? 'Required' : undefined}>
+                  <ParamInput param={p} value={pathValues[p.name] ?? ''} onChange={(v) => setPathValues((s) => ({ ...s, [p.name]: v }))} />
                 </Field>
-              </FieldGroup>
-            )}
+              ))}
+              {queryParams.map((p) => (
+                <Field
+                  key={p.name}
+                  label={`${p.name} · query${p.required ? '' : '?'}`}
+                  hint={p.description}
+                  error={p.required && !queryValues[p.name] ? 'Required' : undefined}
+                >
+                  <ParamInput param={p} value={queryValues[p.name] ?? ''} onChange={(v) => setQueryValues((s) => ({ ...s, [p.name]: v }))} />
+                </Field>
+              ))}
+            </FieldGroup>
+          )}
 
-            {/* Result — always present, empty until the first Send. */}
-            <div className="flex flex-col gap-2 rounded-lg border border-apt-border bg-apt-surface p-3">
-              <span className="font-mono text-xs font-semibold uppercase tracking-wider text-apt-text-muted">Result</span>
-              {error ? (
-                <p className="text-sm text-apt-red">{error}</p>
-              ) : result ? (
-                <>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className={cn('font-mono font-semibold', statusTone(String(result.status)))}>
-                      {result.status} {result.statusText}
-                    </span>
-                    <span className="text-apt-text-dim">·</span>
-                    <span className="text-apt-text-muted">{result.durationMs} ms</span>
-                  </div>
-                  <CodeBlock code={prettyJson(result.bodyText).text || '(empty response body)'} lang="json" ariaLabel="Response body" />
-                </>
-              ) : (
-                <p className="text-sm text-apt-text-dim">Send the request to see the response here.</p>
-              )}
-            </div>
+          {bodyAllowed(meta) && (
+            <FieldGroup title="Request body">
+              <Field label="application/json" hint={meta.requestBody?.required ? 'Required.' : 'Optional.'}>
+                <Textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} spellCheck={false} className="min-h-40 font-mono text-sm" />
+              </Field>
+            </FieldGroup>
+          )}
+
+          {/* Result — always present, empty until the first Send. */}
+          <div className="flex flex-col gap-2 rounded-lg border border-apt-border bg-apt-surface p-3">
+            <span className="font-mono text-xs font-semibold uppercase tracking-wider text-apt-text-muted">Result</span>
+            {error ? (
+              <p className="text-sm text-apt-red">{error}</p>
+            ) : result ? (
+              <>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={cn('font-mono font-semibold', statusTone(String(result.status)))}>
+                    {result.status} {result.statusText}
+                  </span>
+                  <span className="text-apt-text-dim">·</span>
+                  <span className="text-apt-text-muted">{result.durationMs} ms</span>
+                </div>
+                <CodeBlock code={prettyJson(result.bodyText).text || '(empty response body)'} lang="json" ariaLabel="Response body" />
+              </>
+            ) : (
+              <p className="text-sm text-apt-text-dim">Send the request to see the response here.</p>
+            )}
           </div>
-        </Disclosure>
-      </div>
+        </div>
+      </Disclosure>
 
       <AlertModal
         open={confirmOpen}
