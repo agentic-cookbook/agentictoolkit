@@ -32,3 +32,144 @@
 .dark .adh-api-code pre.shiki span {
   color: var(--shiki-dark);
 }
+
+/* === Server-rendered API reference shell (ApiReferenceShell) ===
+ * A sticky link sidebar (Tags → Endpoints) beside the endpoint article. Styled with the apt-*
+ * tokens so it matches the panel; the interactive ApiBrowser (rails) is unaffected. */
+.adh-api-ref {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  width: 100%;
+  align-items: start;
+}
+
+.adh-api-ref__sidebar {
+  position: sticky;
+  top: var(--adh-header-height, 3.5rem);
+  align-self: start;
+  max-height: calc(100dvh - var(--adh-header-height, 3.5rem));
+  overflow-y: auto;
+  padding: 1.25rem 0.75rem;
+  border-right: 1px solid var(--color-apt-border);
+}
+
+.adh-api-ref__title {
+  display: block;
+  margin: 0 0 1rem;
+  padding: 0 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-apt-text-muted);
+  text-decoration: none;
+}
+.adh-api-ref__title:hover {
+  color: var(--color-apt-text);
+}
+
+.adh-api-ref__main {
+  min-width: 0;
+  padding: 1.75rem 2rem 4rem;
+}
+
+.adh-api-nav,
+.adh-api-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.adh-api-nav__group {
+  margin-bottom: 1rem;
+}
+
+.adh-api-nav__heading {
+  margin: 0 0 0.35rem;
+  padding: 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-apt-text-muted);
+}
+
+.adh-api-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--color-apt-text-muted);
+  text-decoration: none;
+}
+.adh-api-nav__link:hover {
+  color: var(--color-apt-text);
+  background: var(--color-apt-surface);
+}
+.adh-api-nav__link--active {
+  border-left-color: var(--color-apt-accent, #c4a35a);
+  background: var(--color-apt-surface);
+  color: var(--color-apt-text);
+  font-weight: 600;
+}
+
+.adh-api-nav__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+}
+
+.adh-api-nav__method {
+  flex: none;
+  width: 3.2rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.adh-api-nav__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+}
+
+/* Mobile: swap the sticky sidebar for a native <details> disclosure (no JS). */
+.adh-api-ref__mobile {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .adh-api-ref {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .adh-api-ref__sidebar {
+    display: none;
+  }
+  .adh-api-ref__mobile {
+    display: block;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-apt-border);
+  }
+  .adh-api-ref__mobile-summary {
+    cursor: pointer;
+    padding: 0.5rem 0;
+    font-weight: 600;
+    color: var(--color-apt-text);
+  }
+  .adh-api-ref__mobile .adh-api-nav {
+    padding: 0.5rem 0;
+  }
+  .adh-api-ref__main {
+    padding: 1.5rem 1.25rem 3rem;
+  }
+}

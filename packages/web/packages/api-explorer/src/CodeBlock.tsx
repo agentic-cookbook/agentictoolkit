@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, Copy } from 'lucide-react'
 import { cn } from '@agentic-toolkit/ui'
-import { useClipboard } from '@agentic-toolkit/ui/hooks/useClipboard'
+import { CopyButton } from './CopyButton'
 import { highlightToHtml, type HighlightLang } from './lib/highlight'
 
 /**
@@ -24,7 +23,6 @@ export function CodeBlock({
   ariaLabel?: string
 }) {
   const [html, setHtml] = useState<string | null>(null)
-  const { copied, copy } = useClipboard()
 
   useEffect(() => {
     let active = true
@@ -45,14 +43,7 @@ export function CodeBlock({
 
   return (
     <div className={cn('adh-api-code group relative', className)}>
-      <button
-        type="button"
-        onClick={() => void copy(code)}
-        className="absolute right-2 top-2 z-10 rounded-md border border-apt-border bg-apt-surface/85 p-1.5 text-apt-text-muted opacity-0 transition hover:text-apt-text focus-visible:opacity-100 group-hover:opacity-100"
-        aria-label={copied ? 'Copied' : 'Copy'}
-      >
-        {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
-      </button>
+      <CopyButton code={code} />
       {html ? (
         <div aria-label={ariaLabel} dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
