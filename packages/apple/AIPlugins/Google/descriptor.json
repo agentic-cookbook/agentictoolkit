@@ -3,10 +3,18 @@
   "identifier": "com.agentictoolkit.plugin.google",
   "displayName": "Google (Gemini)",
   "version": "1.0",
-  "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+  "models": [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash"
+  ],
   "defaultModel": "gemini-2.5-flash",
   "fields": [
-    { "key": "apiKey", "label": "API Key", "kind": "secret" }
+    {
+      "key": "apiKey",
+      "label": "API Key",
+      "kind": "secret"
+    }
   ],
   "templates": [
     {
@@ -18,13 +26,32 @@
       "providerDescription": "Google DeepMind — the Gemini family of multimodal models.",
       "llmDescription": "Gemini — multimodal, with a very long context window and native tool use.",
       "defaultValues": {},
-      "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+      "models": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash"
+      ],
       "defaultModel": "gemini-2.5-flash",
       "secretRequired": true,
       "modelDetails": [
-        { "id": "gemini-2.5-flash", "description": "Fast, efficient multimodal model.", "tools": true, "goodFor": "Speed and cost-sensitive tasks" },
-        { "id": "gemini-2.5-pro", "description": "Most capable Gemini; excels at long-context reasoning.", "tools": true, "goodFor": "Complex reasoning and long documents" },
-        { "id": "gemini-2.0-flash", "description": "Previous-generation fast model.", "tools": true, "goodFor": "General tasks" }
+        {
+          "id": "gemini-2.5-flash",
+          "description": "Fast, efficient multimodal model.",
+          "tools": true,
+          "goodFor": "Speed and cost-sensitive tasks"
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "description": "Most capable Gemini; excels at long-context reasoning.",
+          "tools": true,
+          "goodFor": "Complex reasoning and long documents"
+        },
+        {
+          "id": "gemini-2.0-flash",
+          "description": "Previous-generation fast model.",
+          "tools": true,
+          "goodFor": "General tasks"
+        }
       ]
     }
   ]
