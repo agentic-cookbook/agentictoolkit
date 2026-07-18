@@ -843,9 +843,32 @@ function usePointerInMenus(
       last = { x: e.clientX, y: e.clientY }
       if (raf === 0) raf = requestAnimationFrame(flush)
     }
+    // The pointer leaving the VIEWPORT entirely (flung out a window edge, or focus lost to another
+    // app) fires no `pointermove` inside the page, so a fling out OVER the menus would otherwise leave
+    // `pointerInMenus` stuck TRUE and the whole layout latched until the pointer returns and moves.
+    // Treat leaving the window as leaving the menus — the same "settle once the pointer is out" the
+    // move handler enforces. A `pointerout` with a null `relatedTarget` is "left the document"; `blur`
+    // covers tab/app switches, where no such event fires. Neither can fire during a click (the pointer
+    // is inside), so the held-select gesture is untouched.
+    const settleOut = () => {
+      if (raf !== 0) {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+      last = null
+      mem.pointerInMenus = false
+      setPointerInMenus((prev) => (prev === false ? prev : false))
+    }
+    const onOut = (e: PointerEvent) => {
+      if (e.relatedTarget === null) settleOut()
+    }
     document.addEventListener("pointermove", onMove)
+    document.addEventListener("pointerout", onOut)
+    window.addEventListener("blur", settleOut)
     return () => {
       document.removeEventListener("pointermove", onMove)
+      document.removeEventListener("pointerout", onOut)
+      window.removeEventListener("blur", settleOut)
       if (raf !== 0) cancelAnimationFrame(raf)
     }
   }, [readRegion, mem])
@@ -2251,13 +2274,19 @@ function CascadingStack({
     }
   }
 
-  // Record the covering whenever the stack is SETTLED (pointer OUT), so the hold above has a value to
+  // Record the covering whenever it was computed FRESH this render (`heldCover` null → the pointer is
+  // OUT, or it is IN but nothing settled has been recorded yet), so the hold above has a value to
   // freeze at across the remount a select triggers — the column analogue of the `groundRight` latch
-  // below. Guarded on `mem.pointerInMenus` so a held frame never overwrites the settled value with the
-  // frozen one it is currently replaying.
+  // below. Deriving the guard from the same render-time `heldCover` that fed `pressure`/`hidden` —
+  // rather than re-reading `mem.pointerInMenus`, which the rAF pointer flush can flip between this
+  // render and the effect's commit — means the effect only ever stores values it actually PAINTED,
+  // never the frozen ones it is currently replaying. Recording on the pointer-in-but-unseeded case
+  // bootstraps the hold on the FIRST paint of a surface entered before it ever settled (a deep link
+  // whose pointer is already in the menus), so even its very first select is held.
+  const coverFresh = heldCover === null
   useEffect(() => {
-    if (!mem.pointerInMenus) mem.heldCover = { pressure, hidden }
-  }, [mem, pressure, hidden])
+    if (coverFresh) mem.heldCover = { pressure, hidden }
+  }, [mem, coverFresh, pressure, hidden])
 
   // IMMERSION — the detail strip's `«`: the detail takes the WHOLE surface, every list (root
   // included) sliding off the left edge; the strip's `»` brings the stack back. Stored under the
