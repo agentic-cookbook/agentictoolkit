@@ -530,7 +530,12 @@ function ServiceEditor({
  */
 export function ServicesSection({
   urlSelection,
+  title = "Persona Services",
 }: {
+  /** The rail level's heading — the label this list appears under in the stack (e.g.
+   *  "LLM Providers" when hosted as a workspace Settings topic). Defaults to the feature's
+   *  own name so standalone/embedded callers are unchanged. */
+  title?: string;
   urlSelection?: {
     /** The open service's id, from the URL path segment (`/<slug>/persona-services/<id>`). */
     serviceId?: string;
@@ -587,7 +592,7 @@ export function ServicesSection({
   const levels: TopicLevel[] = [
     {
       id: "services",
-      title: "Persona Services",
+      title,
       items,
       // While creating a new draft the master list highlights nothing (any previously-open id is
       // still tracked; we don't change selection on create).
@@ -604,6 +609,11 @@ export function ServicesSection({
       },
       newLabel: "New Service",
       newActive: creating,
+      // This level's unselected state is a REAL landing (the All table below — and, while
+      // creating, the blank editor), never the automatic TopicOverview grid (mirrors
+      // PersonasSection). Without it, when any service already exists the frontier overview
+      // masks the inline create editor, so clicking "+" appears to do nothing.
+      overview: false,
     },
   ];
 
