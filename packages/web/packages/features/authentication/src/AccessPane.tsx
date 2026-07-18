@@ -9,8 +9,13 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Field } from "@agentic-toolkit/ui/blocks";
+import { Input } from "@agentic-toolkit/ui/components/input";
+import { Select } from "@agentic-toolkit/ui/components/select";
+import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import {
   ButtonBar,
+  CreateResourceDialog,
   useMasterDetailForm,
   useMasterDetailLevel,
   useRecordAffordance,
@@ -83,6 +88,10 @@ export function AccessPane({
     apps: [],
   });
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Creating an access list is a MODAL over the stack, never a blank leaf (HTD recipe
+  // `must-create-in-modal`): the `+` opens it, and on save the new list is selected so
+  // its REAL detail (members + grants) opens.
+  const [newOpen, setNewOpen] = useState(false);
   const renderRecordAffordance = useRecordAffordance();
 
   // Latest-wins guards: both loaders re-run when their inputs change identity (ecosystemId,
@@ -155,43 +164,52 @@ export function AccessPane({
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }
     : undefined;
 
+  // The access-list draft's placement rules — bucket + name + description — extracted so the
+  // form (edit) and the create MODAL share one source of truth (validation, trimming, the
+  // create call). Members and grants are NOT placement; they live in the detail that opens once
+  // the created list is selected.
+  const groupBlank = (): AccessGroupInput => ({ bucketId: "", name: "", description: "" });
+  const groupValidate = (draft: AccessGroupInput, others: AccessItem[]): string | null => {
+    if (!draft.bucketId) return "Choose a bucket.";
+    if (!draft.name.trim()) return "Name is required.";
+    const dup = others.some(
+      (o) =>
+        o.group.bucketId === draft.bucketId &&
+        o.group.name.toLowerCase() === draft.name.trim().toLowerCase(),
+    );
+    if (dup) return `An access list named "${draft.name.trim()}" already exists in that bucket.`;
+    return null;
+  };
+  const groupNormalize = (d: AccessGroupInput): AccessGroupInput => ({
+    bucketId: d.bucketId,
+    name: d.name.trim(),
+    description: d.description.trim(),
+  });
+  const createGroupItem = async (input: AccessGroupInput): Promise<AccessItem> => {
+    const group = await bucketAccessApi.createGroup(input.bucketId, {
+      name: input.name,
+      description: input.description,
+    });
+    return { group, bucketName: bucketNameFor(input.bucketId) };
+  };
+
   const form = useMasterDetailForm<AccessItem, AccessGroupInput>({
     items,
     getId: (i) => i.group.id,
     urlSelection,
-    blank: () => ({ bucketId: buckets[0]?.id ?? "", name: "", description: "" }),
+    blank: groupBlank,
     toInput: (i) => ({
       bucketId: i.group.bucketId,
       name: i.group.name,
       description: i.group.description,
     }),
-    validate: (draft, others) => {
-      if (!draft.bucketId) return "Choose a bucket.";
-      if (!draft.name.trim()) return "Name is required.";
-      const dup = others.some(
-        (o) =>
-          o.group.bucketId === draft.bucketId &&
-          o.group.name.toLowerCase() === draft.name.trim().toLowerCase(),
-      );
-      if (dup) return `An access list named "${draft.name.trim()}" already exists in that bucket.`;
-      return null;
-    },
+    validate: groupValidate,
     differs: (a, b) =>
       a.bucketId !== b.bucketId ||
       a.name.trim() !== b.name.trim() ||
       a.description.trim() !== b.description.trim(),
-    normalize: (d) => ({
-      bucketId: d.bucketId,
-      name: d.name.trim(),
-      description: d.description.trim(),
-    }),
-    create: async (input) => {
-      const group = await bucketAccessApi.createGroup(input.bucketId, {
-        name: input.name,
-        description: input.description,
-      });
-      return { group, bucketName: bucketNameFor(input.bucketId) };
-    },
+    normalize: groupNormalize,
+    create: createGroupItem,
     update: async (id, input) => {
       const group = await bucketAccessApi.updateGroup(id, {
         name: input.name,
@@ -223,6 +241,7 @@ export function AccessPane({
     newLabel: "New access list",
     leaf,
     emptyLabel: items === null ? "Loading…" : "No access lists yet.",
+    onNew: () => setNewOpen(true),
   });
 
   return (
@@ -231,27 +250,18 @@ export function AccessPane({
       <ButtonBar
         actions={form.actions}
         showCreate={false}
-        trailing={
-          form.creating
-            ? renderRecordAffordance?.({
-                method: "POST",
-                path: "/bucket/buckets/{bucketId}/access-groups",
-                pathValues: { bucketId: form.draft?.bucketId },
-                title: "Create access group API",
-              })
-            : renderRecordAffordance?.({
-                path: "/bucket/access-groups/{groupId}",
-                pathValues: { groupId: form.selectedId },
-                title: "Access group API",
-              })
-        }
+        trailing={renderRecordAffordance?.({
+          path: "/bucket/access-groups/{groupId}",
+          pathValues: { groupId: form.selectedId },
+          title: "Access group API",
+        })}
         help={help}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-4">
         {form.editing && form.draft ? (
           <AccessGroupDetail
             key={form.detailKey}
-            title={form.creating ? "New access list" : "Access list"}
+            title="Access list"
             draft={form.draft}
             onChange={form.onChange}
             error={form.error}
@@ -268,6 +278,60 @@ export function AccessPane({
           />
         )}
       </div>
+
+      {/* Create is a scoped modal: bucket + name + description only (members and grants live
+          in the list's real detail, which opens once the created list is selected). */}
+      {newOpen && (
+        <CreateResourceDialog<AccessGroupInput, AccessItem>
+          ariaLabel="New access list"
+          heading="New access list"
+          blank={groupBlank}
+          validate={(d) => groupValidate(d, items ?? [])}
+          create={(d) => createGroupItem(groupNormalize(d))}
+          onClose={() => setNewOpen(false)}
+          onCreated={(item) => {
+            setNewOpen(false);
+            void refresh();
+            if (leaf) leaf.onSelect(item.group.id);
+            else form.select(item.group.id);
+          }}
+          renderForm={(draft, onChange, error) => (
+            <>
+              <Field label="Bucket" hint="The bucket this access list controls.">
+                <Select
+                  value={draft.bucketId}
+                  onChange={(e) => onChange({ ...draft, bucketId: e.target.value })}
+                >
+                  <option value="">Select a bucket…</option>
+                  {buckets.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Name" hint="Unique within the bucket.">
+                <Input
+                  /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first text field on open */
+                  autoFocus
+                  value={draft.name}
+                  placeholder="Editors"
+                  onChange={(e) => onChange({ ...draft, name: e.target.value })}
+                />
+              </Field>
+              <Field label="Description">
+                <Textarea
+                  rows={2}
+                  value={draft.description}
+                  placeholder="What this access list is for."
+                  onChange={(e) => onChange({ ...draft, description: e.target.value })}
+                />
+              </Field>
+              <ErrorText error={error} />
+            </>
+          )}
+        />
+      )}
     </div>
   );
 }

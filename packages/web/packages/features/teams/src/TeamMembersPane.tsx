@@ -15,12 +15,20 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import {
   useStackLevel,
-  useRailExitGuard as useWorkspaceExitGuard,
   useRecordAffordance,
+  CreateResourceDialog,
   type TopicLeaf,
 } from "@agentic-toolkit/resource";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** The create modal's draft: add EITHER an existing customer by email OR one of the caller's
+ *  personas. The two are mutually exclusive — picking one clears the other — and a picked persona
+ *  takes precedence at save (mirrors the backend's two add routes). */
+interface AddMemberDraft {
+  email: string;
+  personaId: string;
+}
 
 /**
  * Members feature for the ACTIVE team — wired to the backend (api/team-members.ts). A member is
@@ -29,9 +37,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * by kind: a customer shows its email + a person icon, a persona shows its name/slug + a Bot icon.
  *
  * In the one-stack model the members list is a PUBLISHED level (selecting a member deep-links it),
- * and the leaf detail is either the member's card (with a Delete button) or — while creating — the
- * add form (an add-by-email field plus an add-a-persona picker). Membership is add/remove, so there
- * is no per-member rename/editor.
+ * and the leaf detail is the member's card (with a Delete button). Adding a member is a MODAL over
+ * the stack (HTD recipe `must-create-in-modal`), not a blank leaf — its `+` opens the two-mode add
+ * (an email field OR a persona picker). Membership is add/remove, so there is no per-member editor.
  */
 export function TeamMembersPane({
   teamId,
@@ -47,22 +55,16 @@ export function TeamMembersPane({
   // a standalone feature site → the trailing slot renders nothing.
   const renderRecordAffordance = useRecordAffordance();
   const [members, setMembers] = useState<TeamMember[] | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState("");
+  // Creating a member is a MODAL over the stack, never a blank leaf (HTD recipe
+  // `must-create-in-modal`): the `+` opens it, and on save the new member is selected.
+  const [newOpen, setNewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // The caller's own personas, for the add-persona picker. The backend enforces which of them
-  // may act for a team (403 on add if not granted), so we list them all rather than pre-filtering.
+  // The caller's own personas, for the add-persona picker in the create modal. The backend enforces
+  // which of them may act for a team (403 on add if not granted), so we list them all.
   const [personas, setPersonas] = useState<Persona[] | null>(null);
   const [personasError, setPersonasError] = useState<string | null>(null);
-  const [personaDraft, setPersonaDraft] = useState("");
-  const [addingPersona, setAddingPersona] = useState(false);
-  // In-flight guard for the email add — mirrors `addingPersona` for the persona add so a
-  // double-submit (a second click, or an Enter while the POST is still in flight) can't
-  // fire a second `teamMembersApi.add`.
-  const [savingMember, setSavingMember] = useState(false);
-  // In-flight guard for the member delete — mirrors `savingMember` so a rapid double-click
-  // can't fire two DELETEs for the selected member.
+  // In-flight guard for the member delete, so a rapid double-click can't fire two DELETEs.
   const [removingMember, setRemovingMember] = useState(false);
 
   // A monotonic request seq + a mounted flag guard the async list fetch: a stale in-flight response
@@ -138,81 +140,6 @@ export function TeamMembersPane({
   const iconFor = (m: TeamMember) =>
     isPersona(m) ? <Bot size={16} aria-hidden /> : <UserRound size={16} aria-hidden />;
 
-  const value = draft.trim().toLowerCase();
-  const canSave = creating && EMAIL_RE.test(value) && !savingMember;
-
-  const startCreate = () => {
-    setError(null);
-    setDraft("");
-    setPersonaDraft("");
-    setCreating(true);
-    // Clear any selected member from the URL so the create form is the only leaf.
-    if (selectedId) leaf?.onSelect(null);
-  };
-
-  // Add the drafted member. Returns true on success so the exit guard can proceed.
-  const save = useCallback(async (): Promise<boolean> => {
-    if (!teamId || !creating) return true;
-    // Already mid-add (a double-submit — a second click or an Enter during the POST):
-    // ignore it so only one `add` fires. Covers the button AND the editorKeyDown Enter.
-    if (savingMember) return false;
-    setError(null);
-    if (!EMAIL_RE.test(draft.trim().toLowerCase())) {
-      setError("Enter a valid email address.");
-      return false;
-    }
-    setSavingMember(true);
-    try {
-      await teamMembersApi.add(teamId, draft.trim().toLowerCase());
-    } catch (e) {
-      // Surface the backend's message (e.g. "no user with email …", "already a member").
-      setError(e instanceof Error ? e.message : "Failed to add member.");
-      return false;
-    } finally {
-      setSavingMember(false);
-    }
-    setCreating(false);
-    setDraft("");
-    await load(false);
-    return true;
-  }, [teamId, creating, savingMember, draft, load]);
-
-  // Add the picked persona as a team member. Mirrors the email add: await the backend (which
-  // gates on may_act 'team' — 403 if the persona lacks it, 404 if unknown), surface the thrown
-  // message inline on failure, otherwise reset the picker and reload the roster. Returns true on
-  // success so the exit guard can proceed (mirrors `save`).
-  const addPersonaMember = useCallback(async (): Promise<boolean> => {
-    if (!teamId || !personaDraft) return false;
-    setError(null);
-    setAddingPersona(true);
-    try {
-      await teamMembersApi.addPersona(teamId, personaDraft);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add persona.");
-      setAddingPersona(false);
-      return false;
-    }
-    setAddingPersona(false);
-    setPersonaDraft("");
-    setCreating(false);
-    await load(false);
-    return true;
-  }, [teamId, personaDraft, load]);
-
-  // Route the exit-guard's save to the matching create action: a picked persona → add the
-  // persona; otherwise → add the email draft. Both return a success boolean the guard proceeds on.
-  const saveDraft = useCallback((): Promise<boolean> => {
-    if (personaDraft !== "") return addPersonaMember();
-    return save();
-  }, [personaDraft, addPersonaMember, save]);
-
-  const cancelCreate = () => {
-    setError(null);
-    setCreating(false);
-    setDraft("");
-    setPersonaDraft("");
-  };
-
   async function del() {
     if (!teamId || !selected) return;
     if (removingMember) return;
@@ -240,32 +167,16 @@ export function TeamMembersPane({
     id: "members-list",
     title: "Members",
     items: rows,
-    selectedId: creating ? null : selectedId,
+    selectedId,
     onSelect: (id) => leaf?.onSelect(id),
     onClear: () => leaf?.onSelect(null),
     emptyLabel: members === null ? "Loading…" : "No members yet.",
-    // "New member" is a right-justified `+` in the list header; gold while creating.
-    onNew: startCreate,
+    // "New member" is a right-justified `+` in the list header; it opens the create modal. Gated on
+    // a team being active — there's nothing to add a member to otherwise.
+    onNew: teamId ? () => setNewOpen(true) : undefined,
     newLabel: "New member",
-    newActive: creating,
-    // While the add-member form is open the pane body IS the detail — without this
-    // the automatic TopicOverview (unselected frontier) covers the open form.
-    overview: creating ? false : undefined,
   };
   useStackLevel(level);
-  // The create form is the only "dirty" state here (members have no editor) — guard it when
-  // EITHER the email draft or the persona picker holds a value, so a picked-but-unsaved persona
-  // is no longer silently discarded on exit. save routes to the matching action (saveDraft).
-  useWorkspaceExitGuard(
-    creating && (draft.trim() !== "" || personaDraft !== "")
-      ? { isDirty: () => true, save: saveDraft }
-      : null,
-  );
-
-  function editorKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") void save();
-    if (e.key === "Escape") cancelCreate();
-  }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -282,80 +193,7 @@ export function TeamMembersPane({
         )}
         <ErrorText error={error} />
         <ErrorText error={loadError} />
-        {creating ? (
-          // The create leaf: add an existing customer by email, OR one of the caller's personas.
-          <div className="flex max-w-md flex-col gap-6">
-            <div className="flex flex-col gap-3">
-              <label htmlFor="tm-new-member-email" className="font-mono text-sm text-apt-gold">
-                New member
-              </label>
-              <Input
-                id="tm-new-member-email"
-                /* eslint-disable-next-line jsx-a11y/no-autofocus -- intentional focus-on-open for the new-member field */
-                autoFocus
-                value={draft}
-                onChange={(e) => {
-                  setError(null);
-                  setDraft(e.target.value);
-                }}
-                onKeyDown={editorKeyDown}
-                placeholder="name@example.com"
-                type="email"
-              />
-              <p className="text-xs text-apt-text-dim">
-                Add an existing customer by email — the backend resolves them to their account.
-              </p>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={cancelCreate}>
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={() => void save()} disabled={!canSave}>
-                  Add member
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 border-t border-apt-border pt-6">
-              {personas === null ? (
-                <p className="text-sm text-apt-text-muted">Loading personas…</p>
-              ) : personasError ? (
-                <ErrorText error={personasError} />
-              ) : personas.length === 0 ? (
-                <p className="text-sm text-apt-text-muted">You have no personas to add.</p>
-              ) : (
-                <>
-                  <Field label="Add a persona">
-                    <Select
-                      value={personaDraft}
-                      onChange={(e) => {
-                        setError(null);
-                        setPersonaDraft(e.target.value);
-                      }}
-                    >
-                      <option value="">Choose a persona…</option>
-                      {personas.map((persona) => (
-                        <option key={persona.id} value={persona.id}>
-                          {persona.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <p className="text-xs text-apt-text-dim">
-                    Add one of your personas. It must be allowed to act for a team, or the add is
-                    rejected.
-                  </p>
-                  <Button
-                    size="sm"
-                    onClick={() => void addPersonaMember()}
-                    disabled={!personaDraft || addingPersona}
-                  >
-                    Add persona
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        ) : selected ? (
+        {selected ? (
           // The member-detail leaf: the member's identity + a Delete action (no rename).
           <div className="flex max-w-md flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -395,6 +233,81 @@ export function TeamMembersPane({
           />
         )}
       </section>
+
+      {/* Create is a scoped modal: add an existing customer by email, OR one of the caller's
+          personas. The two are mutually exclusive (picking one clears the other); a picked persona
+          wins at save, matching the backend's two add routes. */}
+      {newOpen && (
+        <CreateResourceDialog<AddMemberDraft, TeamMember>
+          ariaLabel="New member"
+          heading="New member"
+          blank={() => ({ email: "", personaId: "" })}
+          validate={(d) =>
+            d.personaId
+              ? null
+              : EMAIL_RE.test(d.email.trim().toLowerCase())
+                ? null
+                : "Enter a valid email address, or pick a persona."
+          }
+          create={(d) =>
+            d.personaId
+              ? teamMembersApi.addPersona(teamId ?? "", d.personaId)
+              : teamMembersApi.add(teamId ?? "", d.email.trim().toLowerCase())
+          }
+          onClose={() => setNewOpen(false)}
+          onCreated={(member) => {
+            setNewOpen(false);
+            void load(false);
+            leaf?.onSelect(member.id);
+          }}
+          renderForm={(draft, onChange, formError) => (
+            <div className="flex flex-col gap-6">
+              <Field
+                label="Member email"
+                hint="Add an existing customer by email — the backend resolves them to their account."
+              >
+                <Input
+                  /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
+                  autoFocus
+                  type="email"
+                  value={draft.email}
+                  placeholder="name@example.com"
+                  // Picking a persona takes precedence, so typing an email clears any picked persona.
+                  onChange={(e) => onChange({ email: e.target.value, personaId: "" })}
+                />
+              </Field>
+              <div className="border-t border-apt-border pt-6">
+                {personas === null ? (
+                  <p className="text-sm text-apt-text-muted">Loading personas…</p>
+                ) : personasError ? (
+                  <ErrorText error={personasError} />
+                ) : personas.length === 0 ? (
+                  <p className="text-sm text-apt-text-muted">You have no personas to add.</p>
+                ) : (
+                  <Field
+                    label="…or add a persona"
+                    hint="Add one of your personas. It must be allowed to act for a team, or the add is rejected."
+                  >
+                    <Select
+                      value={draft.personaId}
+                      // A picked persona clears the email (they're mutually exclusive; persona wins).
+                      onChange={(e) => onChange({ email: "", personaId: e.target.value })}
+                    >
+                      <option value="">Choose a persona…</option>
+                      {personas.map((persona) => (
+                        <option key={persona.id} value={persona.id}>
+                          {persona.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
+              </div>
+              {formError && <p className="text-sm text-apt-red">{formError}</p>}
+            </div>
+          )}
+        />
+      )}
     </div>
   );
 }

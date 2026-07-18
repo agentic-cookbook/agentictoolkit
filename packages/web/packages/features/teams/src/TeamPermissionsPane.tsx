@@ -12,6 +12,7 @@ import {
 } from "@agentic-toolkit/data/access";
 import {
   ButtonBar,
+  CreateResourceDialog,
   DetailSection,
   useMasterDetailForm,
   useMasterDetailLevel,
@@ -130,6 +131,10 @@ export function TeamPermissionsPane({
 }) {
   const [roles, setRoles] = useState<AccessRoleRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Creating a role is a MODAL over the stack, never a blank leaf (HTD recipe
+  // `must-create-in-modal`): the `+` opens it, and on save the new role is selected so its
+  // REAL detail (the per-feature permission matrix + default-for) opens.
+  const [newOpen, setNewOpen] = useState(false);
 
   // Latest-wins guard: a stale in-flight list (from a previous slug) never clobbers the current one.
   const gen = useRef(0);
@@ -159,11 +164,54 @@ export function TeamPermissionsPane({
 
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
 
+  // The role draft's placement rules — slug + name + description — extracted so the form (edit)
+  // and the create MODAL share one source of truth. `defaultFor` and the permission matrix are
+  // NOT placement; they live in the detail that opens once the created role is selected, so a new
+  // role is created with no grants and the user configures them there.
+  const roleBlank = (): RoleInput => ({
+    slug: "",
+    name: "",
+    description: "",
+    defaultFor: "",
+    grants: blankGrants(),
+  });
+  const roleValidate = (draft: RoleInput, others: AccessRoleRow[]): string | null => {
+    // Slug is validated unconditionally (not just while creating): existing slugs already
+    // satisfy this, and `others` excludes the selected row so a role never collides with
+    // itself. The slug field only SHOWS while creating (it's immutable afterwards).
+    const slug = draft.slug.trim().toLowerCase();
+    if (!slug) return "Slug is required.";
+    if (!SLUG_RE.test(slug)) return "Slug must be lowercase letters, numbers, and dashes.";
+    if (others.some((o) => o.slug === slug))
+      return `A role with the slug "${slug}" already exists.`;
+    if (!draft.name.trim()) return "Name is required.";
+    return null;
+  };
+  const roleNormalize = (d: RoleInput): RoleInput => ({
+    slug: d.slug.trim().toLowerCase(),
+    name: d.name.trim(),
+    description: d.description.trim(),
+    defaultFor: d.defaultFor,
+    grants: d.grants,
+  });
+  const createRole = async (input: RoleInput): Promise<AccessRoleRow> => {
+    // Guarded for safety — the pane is unreachable for create without a workspace, but a
+    // clear rejection beats a thrown `enc(undefined)` if that ever changes.
+    if (!workspaceSlug) throw new Error("Open Teams from your hub workspace to manage roles.");
+    return accessApi.createRole(workspaceSlug, {
+      slug: input.slug,
+      name: input.name,
+      description: input.description,
+      defaultFor: input.defaultFor,
+      grants: input.grants,
+    });
+  };
+
   const form = useMasterDetailForm<AccessRoleRow, RoleInput>({
     items: roles,
     getId: (r) => r.id,
     urlSelection,
-    blank: () => ({ slug: "", name: "", description: "", defaultFor: "", grants: blankGrants() }),
+    blank: roleBlank,
     toInput: (r) => ({
       slug: r.slug,
       name: r.name,
@@ -171,43 +219,15 @@ export function TeamPermissionsPane({
       defaultFor: (r.defaultFor === "customer" || r.defaultFor === "persona" ? r.defaultFor : ""),
       grants: grantsFor(r),
     }),
-    validate: (draft, others) => {
-      // Slug is validated unconditionally (not just while creating): existing slugs already
-      // satisfy this, and `others` excludes the selected row so a role never collides with
-      // itself. The slug field only SHOWS while creating (it's immutable afterwards).
-      const slug = draft.slug.trim().toLowerCase();
-      if (!slug) return "Slug is required.";
-      if (!SLUG_RE.test(slug)) return "Slug must be lowercase letters, numbers, and dashes.";
-      if (others.some((o) => o.slug === slug))
-        return `A role with the slug "${slug}" already exists.`;
-      if (!draft.name.trim()) return "Name is required.";
-      return null;
-    },
+    validate: roleValidate,
     differs: (a, b) =>
       a.slug !== b.slug ||
       a.name.trim() !== b.name.trim() ||
       a.description.trim() !== b.description.trim() ||
       a.defaultFor !== b.defaultFor ||
       grantsDiffer(a.grants, b.grants),
-    normalize: (d) => ({
-      slug: d.slug.trim().toLowerCase(),
-      name: d.name.trim(),
-      description: d.description.trim(),
-      defaultFor: d.defaultFor,
-      grants: d.grants,
-    }),
-    create: async (input) => {
-      // Guarded for safety — the pane is unreachable for create without a workspace, but a
-      // clear rejection beats a thrown `enc(undefined)` if that ever changes.
-      if (!workspaceSlug) throw new Error("Open Teams from your hub workspace to manage roles.");
-      return accessApi.createRole(workspaceSlug, {
-        slug: input.slug,
-        name: input.name,
-        description: input.description,
-        defaultFor: input.defaultFor,
-        grants: input.grants,
-      });
-    },
+    normalize: roleNormalize,
+    create: createRole,
     update: async (id, input) => {
       if (!workspaceSlug) throw new Error("Open Teams from your hub workspace to manage roles.");
       return accessApi.updateRole(workspaceSlug, id, {
@@ -247,6 +267,9 @@ export function TeamPermissionsPane({
         : !workspaceSlug
           ? "Open Teams from your hub workspace to manage roles."
           : "No roles yet.",
+    // No workspace ⇒ no create affordance (the pane is only usable from a hub workspace; the
+    // empty state says so). Elsewhere the `+` opens the scoped create modal.
+    onNew: workspaceSlug ? () => setNewOpen(true) : undefined,
   });
 
   const selected = form.selected;
@@ -277,7 +300,7 @@ export function TeamPermissionsPane({
         {form.editing && form.draft ? (
           <RoleDetail
             key={form.detailKey}
-            title={form.creating ? "New role" : "Role"}
+            title="Role"
             draft={form.draft}
             onChange={form.onChange}
             error={form.error}
@@ -296,6 +319,54 @@ export function TeamPermissionsPane({
           />
         )}
       </div>
+
+      {/* Create is a scoped modal: slug + name + description only (the permission matrix and
+          default-for live in the role's real detail, which opens once the role is selected). */}
+      {newOpen && (
+        <CreateResourceDialog<RoleInput, AccessRoleRow>
+          ariaLabel="New role"
+          heading="New role"
+          blank={roleBlank}
+          validate={(d) => roleValidate(d, roles ?? [])}
+          create={(d) => createRole(roleNormalize(d))}
+          onClose={() => setNewOpen(false)}
+          onCreated={(role) => {
+            setNewOpen(false);
+            void refresh();
+            if (leaf) leaf.onSelect(role.id);
+            else form.select(role.id);
+          }}
+          renderForm={(draft, onChange, error) => (
+            <>
+              <Field label="Slug" hint="Lowercase letters, numbers, and dashes. Can't change later.">
+                <Input
+                  /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
+                  autoFocus
+                  value={draft.slug}
+                  placeholder="reviewer"
+                  onChange={(e) => onChange({ ...draft, slug: e.target.value.toLowerCase() })}
+                />
+              </Field>
+              <Field label="Name">
+                <Input
+                  value={draft.name}
+                  placeholder="Reviewer"
+                  onChange={(e) => onChange({ ...draft, name: e.target.value })}
+                />
+              </Field>
+              <Field label="Description">
+                <Textarea
+                  rows={2}
+                  value={draft.description}
+                  placeholder="What this role is for."
+                  onChange={(e) => onChange({ ...draft, description: e.target.value })}
+                />
+              </Field>
+              <ErrorText error={error} />
+            </>
+          )}
+        />
+      )}
     </div>
   );
 }

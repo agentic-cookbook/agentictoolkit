@@ -5,9 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { readTokenSubject } from "@agentic-toolkit/data";
-import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView, Field, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { Input } from "@agentic-toolkit/ui/components/input";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
-import { StackLevels, useRailHost } from "@agentic-toolkit/resource";
+import { slugify } from "@agentic-toolkit/ui/lib/slug";
+import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { StackLevels, useRailHost, CreateResourceDialog } from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api, type Persona, type UserService } from "@agentic-toolkit/data/personas";
 import { PersonaEditor } from "./PersonaEditor";
@@ -99,10 +102,10 @@ export function PersonasSection({
       ? loadError.message
       : "Failed to load personas."
     : null;
-  // `creating` (a new draft, no id yet) stays LOCAL in both modes — a draft has no URL/id to address,
-  // so we never route on create (matches useMasterDetailForm.create). The OPEN persona's id lives in
-  // the URL (URL-driven) or internal state (embedded), via useDualModeSelection below.
-  const [creating, setCreating] = useState(false);
+  // Creating a persona is a MODAL over the stack, never a blank editor leaf (HTD recipe
+  // `must-create-in-modal`): the `+` opens it, and on save the created persona is selected so its
+  // full editor (personality, purpose, abilities, …) opens.
+  const [newOpen, setNewOpen] = useState(false);
   // Dual-mode selection: URL-driven (deep-linkable) when `urlSelection` is passed, else internal
   // state (the embedded /home launcher / ecosystem rail).
   const { selectedId: openPersonaId, select } = useDualModeSelection(
@@ -114,7 +117,6 @@ export function PersonasSection({
 
   // Open a persona (or null to close): URL-driven callers navigate, embedded callers set local state.
   const selectPersona = (id: string | null) => {
-    setCreating(false);
     select(id);
   };
 
@@ -141,23 +143,15 @@ export function PersonasSection({
       id: "personas",
       title: "Personas",
       items,
-      // While creating a new draft the master list highlights nothing (any previously-open id is
-      // still tracked; we don't change selection on create).
-      selectedId: creating ? null : openPersona?.id ?? null,
+      selectedId: openPersona?.id ?? null,
       onSelect: (id) => selectPersona(id),
       onClear: () => selectPersona(null),
       emptyLabel: "No personas yet.",
-      // "New Persona" is a right-justified `+` in the list header; gold while creating. Embedded, we
-      // also clear the open persona so cancelling the draft returns to the All table (the pre-change
-      // behavior); URL-driven, the URL is left put (creating masks it) so Cancel returns to it.
-      onNew: () => {
-        if (!urlSelection) select(null);
-        setCreating(true);
-      },
+      // "New Persona" is a right-justified `+` in the list header; it opens the create modal.
+      onNew: () => setNewOpen(true),
       newLabel: "New Persona",
-      newActive: creating,
-      // This level's unselected state is a REAL landing (the All table below — and,
-      // while creating, the blank editor), never the automatic TopicOverview grid.
+      // This level's unselected state is a REAL landing (the All table below), never the automatic
+      // TopicOverview grid.
       overview: false,
     },
   ];
@@ -169,24 +163,6 @@ export function PersonasSection({
   const content =
     personasQuery.isPending ? (
       <p className="p-6 text-sm text-apt-text-muted">Loading…</p>
-    ) : creating ? (
-      // A new draft has no id/URL yet; sub-tabs select in local state (no subtab props). On save,
-      // open the created persona (matches useMasterDetailForm.save routing to the new id).
-      <PersonaEditor
-        key="__new__"
-        persona={null}
-        services={services}
-        workspaceSlug={workspaceSlug}
-        onSaved={(saved) => {
-          selectPersona(saved.id);
-          reload();
-        }}
-        onCancel={() => setCreating(false)}
-        renderChatPane={renderChatPane}
-        profileUrlFor={profileUrlFor}
-        renderKnowledgeBases={renderKnowledgeBases}
-        renderProject={renderProject}
-      />
     ) : openPersona ? (
       <PersonaEditor
         key={openPersona.id}
@@ -211,12 +187,83 @@ export function PersonasSection({
       </>
     );
 
+  // Create is a scoped modal: name + slug only (HTD recipe `must-create-in-modal`). Everything else
+  // — description, personality, purpose, avatar, abilities, permissions — lives in the full editor
+  // that opens once the created persona is selected. The backend accepts an empty purpose on create,
+  // so the persona exists immediately and the editor's Purpose facet guides completing it.
+  const newDialog = newOpen ? (
+    <CreateResourceDialog<{ name: string; slug: string }, Persona>
+      ariaLabel="New persona"
+      heading="New persona"
+      blank={() => ({ name: "", slug: "" })}
+      validate={(d) =>
+        !d.name.trim()
+          ? "A name is required."
+          : !d.slug.trim()
+            ? "A slug is required."
+            : validateLeaf(d.slug) ?? null
+      }
+      create={(d) =>
+        api.personas.create(
+          { name: d.name.trim(), slug: d.slug.trim(), modelPrompt: "", visibility: "private" },
+          { workspace: workspaceSlug },
+        )
+      }
+      onClose={() => setNewOpen(false)}
+      onCreated={(saved) => {
+        setNewOpen(false);
+        selectPersona(saved.id);
+        reload();
+      }}
+      renderForm={(draft, onChange, error) => (
+        <>
+          <Field label="Name">
+            <Input
+              /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
+              autoFocus
+              value={draft.name}
+              placeholder="Bob"
+              onChange={(e) => {
+                const name = e.target.value;
+                // Keep the slug synced to the name until the user hand-edits it (breaking the
+                // equality), after which name edits leave their chosen slug alone.
+                const keepInSync = draft.slug === "" || draft.slug === slugify(draft.name);
+                onChange({ name, slug: keepInSync ? slugify(name) : draft.slug });
+              }}
+            />
+          </Field>
+          <Field
+            label="Slug"
+            hint="URL-safe id (lowercase, digits, hyphens). The persona's public URL."
+            error={draft.slug ? validateLeaf(draft.slug) ?? undefined : undefined}
+          >
+            <Input
+              value={draft.slug}
+              placeholder="bob"
+              onChange={(e) => onChange({ ...draft, slug: e.target.value })}
+            />
+          </Field>
+          {error && <p className="text-sm text-apt-red">{error}</p>}
+        </>
+      )}
+    />
+  ) : null;
+
   // Under a rail host: PUBLISH the persona level (StackLevels advances the depth so the editor's
   // topics land after it) and render the leaf. Standalone: own HTD.
-  if (railHost) return <StackLevels levels={levels}>{content}</StackLevels>;
+  if (railHost)
+    return (
+      <>
+        <StackLevels levels={levels}>{content}</StackLevels>
+        {newDialog}
+      </>
+    );
   return (
-    <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
-      {content}
-    </HierarchicalDetailView>
+    <>
+      <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
+        {content}
+      </HierarchicalDetailView>
+      {newDialog}
+    </>
   );
 }

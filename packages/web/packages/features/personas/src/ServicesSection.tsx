@@ -16,7 +16,13 @@ import {
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
-import { StackLevels, ToolbarPortal, useRailHost, useRecordAffordance } from "@agentic-toolkit/resource";
+import {
+  StackLevels,
+  ToolbarPortal,
+  useRailHost,
+  useRecordAffordance,
+  CreateResourceDialog,
+} from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { fmtDate } from "./format";
 import {
@@ -24,7 +30,6 @@ import {
   type UserService,
   type ModelInfo,
   type Template,
-  type CreateServiceBody,
   type PatchServiceBody,
 } from "@agentic-toolkit/data/personas";
 
@@ -213,9 +218,151 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 /**
- * The service editor — one shared-component form (grouped Fields + a ButtonBar),
- * for both create (`service === null`) and edit. The caller owns the list; this
- * pane owns the draft, validation, save, delete, connect, and refresh.
+ * The service's editable fields (name, provider, base URL, API key) — one shared FieldGroup used by
+ * BOTH the "New service" create modal and the edit editor, so the field set lives in one place
+ * (DRY). The provider is fixed after creation, so the edit editor passes `providerDisabled`; the
+ * API-key hint/placeholder differ between create and edit (an existing key is masked, not shown).
+ */
+function ServiceFields({
+  draft,
+  onChange,
+  providerDisabled,
+  apiKeyHint,
+  apiKeyPlaceholder,
+  autoFocusName,
+}: {
+  draft: ServiceDraft;
+  onChange: (next: ServiceDraft) => void;
+  /** Provider can't change after creation, so the edit form disables it. */
+  providerDisabled?: boolean;
+  apiKeyHint?: string;
+  apiKeyPlaceholder?: string;
+  /** Focus the Name field on mount (the create modal opens straight into it). */
+  autoFocusName?: boolean;
+}) {
+  return (
+    <FieldGroup title="Service">
+      <Field label="Name">
+        <Input
+          /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field when the modal opens */
+          autoFocus={autoFocusName}
+          value={draft.name}
+          onChange={(e) => onChange({ ...draft, name: e.target.value })}
+          placeholder="My OpenAI service"
+        />
+      </Field>
+      <Field label="Provider" hint={providerDisabled ? "Cannot change after creation." : undefined}>
+        <Select
+          value={draft.providerKind}
+          onChange={(e) => onChange({ ...draft, providerKind: e.target.value })}
+          disabled={providerDisabled}
+        >
+          <option value="">Select a provider</option>
+          {Object.entries(PROVIDER_LABELS).map(([val, label]) => (
+            <option key={val} value={val}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field label="Base URL">
+        <Input
+          value={draft.baseUrl}
+          onChange={(e) => onChange({ ...draft, baseUrl: e.target.value })}
+          placeholder="https://api.openai.com/v1"
+        />
+      </Field>
+      <Field label="API key" hint={apiKeyHint}>
+        <Input
+          type="password"
+          value={draft.apiKeyInput}
+          onChange={(e) => onChange({ ...draft, apiKeyInput: e.target.value })}
+          placeholder={apiKeyPlaceholder ?? "sk-…"}
+        />
+      </Field>
+    </FieldGroup>
+  );
+}
+
+/** Returns an error message, or null when the create draft is valid. */
+function validateServiceDraft(d: ServiceDraft): string | null {
+  if (d.name.trim() === "") return "A name is required.";
+  if (d.providerKind === "") return "Select a provider.";
+  if (d.baseUrl.trim() === "") return "A base URL is required.";
+  return null;
+}
+
+/** The "New service" modal's form: an optional template picker (which prefills the fields) above the
+ *  shared {@link ServiceFields}. A component (not inline JSX) so its template-catalog fetch hook is
+ *  stable across the dialog's renders. */
+function NewServiceForm({
+  draft,
+  onChange,
+  error,
+}: {
+  draft: ServiceDraft;
+  onChange: (next: ServiceDraft) => void;
+  error: string | null;
+}) {
+  const [templates, setTemplates] = useState<Template[]>([]);
+  useEffect(() => {
+    api
+      .templates()
+      .then(setTemplates)
+      .catch((err) => {
+        reportUnexpectedAuthError(err, { feature: "services", step: "templates" });
+      });
+  }, []);
+
+  // Apply a template: prefill name, providerKind, baseUrl.
+  function applyTemplate(templateId: string) {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl) {
+      onChange({ ...draft, templateId: undefined });
+      return;
+    }
+    onChange({
+      ...draft,
+      templateId,
+      name: tpl.name,
+      providerKind: tpl.providerKind,
+      baseUrl: tpl.baseUrl,
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {templates.length > 0 && (
+        <FieldGroup title="Start from a template">
+          <Field label="Template">
+            <Select
+              value={draft.templateId ?? ""}
+              onChange={(e) => {
+                if (e.target.value) applyTemplate(e.target.value);
+                else onChange({ ...draft, templateId: undefined });
+              }}
+            >
+              <option value="">Custom (no template)</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </FieldGroup>
+      )}
+      <ServiceFields draft={draft} onChange={onChange} autoFocusName />
+      {error && <ErrorText error={error} />}
+    </div>
+  );
+}
+
+/**
+ * The service editor — the shared {@link ServiceFields} plus a Connection + Models section and a
+ * ButtonBar, for EDITING an existing service. Creating is a modal now (see the CreateResourceDialog
+ * in ServicesSection), so this always has a real service. The caller owns the list; this pane owns
+ * the draft, validation, save, delete, connect, and refresh.
  */
 function ServiceEditor({
   service,
@@ -223,57 +370,23 @@ function ServiceEditor({
   onDeleted,
   onCancel,
 }: {
-  /** The service to edit, or null to create a new one. */
-  service: UserService | null;
+  /** The service to edit (never null — create is a modal). */
+  service: UserService;
   onSaved: (saved: UserService) => void;
   onDeleted: () => void;
   onCancel: () => void;
 }) {
-  const isNew = service === null;
   const renderRecordAffordance = useRecordAffordance();
 
   // Derive the initial draft from the service prop; keyed remount per id in the
   // parent gives each service a fresh editor, so seeding state here is safe.
-  const [draft, setDraft] = useState<ServiceDraft>(() =>
-    service ? fromService(service) : BLANK_DRAFT,
-  );
+  const [draft, setDraft] = useState<ServiceDraft>(() => fromService(service));
   // Live service state: updated after connect/refresh without a full remount.
-  const [liveService, setLiveService] = useState<UserService | null>(service);
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [liveService, setLiveService] = useState<UserService>(service);
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-  const set = <K extends keyof ServiceDraft>(key: K, value: ServiceDraft[K]) =>
-    setDraft((d) => ({ ...d, [key]: value }));
-
-  // Load the template catalog on mount — create flow only.
-  useEffect(() => {
-    if (!isNew) return;
-    api
-      .templates()
-      .then(setTemplates)
-      .catch((err) => {
-        reportUnexpectedAuthError(err, { feature: "services", step: "templates" });
-      });
-  }, [isNew]);
-
-  // Apply a template: prefill name, providerKind, baseUrl.
-  function applyTemplate(templateId: string) {
-    const tpl = templates.find((t) => t.id === templateId);
-    if (!tpl) {
-      set("templateId", undefined);
-      return;
-    }
-    setDraft((d) => ({
-      ...d,
-      templateId,
-      name: tpl.name,
-      providerKind: tpl.providerKind,
-      baseUrl: tpl.baseUrl,
-    }));
-  }
 
   const valid =
     draft.name.trim() !== "" && draft.providerKind !== "" && draft.baseUrl.trim() !== "";
@@ -283,24 +396,12 @@ function ServiceEditor({
     setSaving(true);
     setFormError(null);
     try {
-      let saved: UserService;
-      if (isNew) {
-        const body: CreateServiceBody = {
-          name: draft.name.trim(),
-          providerKind: draft.providerKind as UserService["providerKind"],
-          baseUrl: draft.baseUrl.trim(),
-          ...(draft.templateId ? { templateId: draft.templateId } : {}),
-          ...(draft.apiKeyInput ? { apiKey: draft.apiKeyInput } : {}),
-        };
-        saved = await api.services.create(body);
-      } else {
-        const body: PatchServiceBody = {
-          name: draft.name.trim(),
-          baseUrl: draft.baseUrl.trim(),
-          ...(draft.apiKeyInput ? { apiKey: draft.apiKeyInput } : {}),
-        };
-        saved = await api.services.patch(service.id, body);
-      }
+      const body: PatchServiceBody = {
+        name: draft.name.trim(),
+        baseUrl: draft.baseUrl.trim(),
+        ...(draft.apiKeyInput ? { apiKey: draft.apiKeyInput } : {}),
+      };
+      const saved = await api.services.patch(service.id, body);
       onSaved(saved);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "services", step: "save" });
@@ -310,7 +411,6 @@ function ServiceEditor({
   }
 
   async function handleDelete() {
-    if (isNew || !service) return;
     if (!window.confirm(`Delete service "${draft.name}"? This cannot be undone.`)) return;
     setSaving(true);
     setFormError(null);
@@ -325,7 +425,6 @@ function ServiceEditor({
   }
 
   async function handleConnect() {
-    if (!service) return;
     setConnecting(true);
     try {
       const updated = await api.services.connect(service.id);
@@ -339,7 +438,6 @@ function ServiceEditor({
   }
 
   async function handleRefreshModels() {
-    if (!service) return;
     setRefreshing(true);
     try {
       const updated = await api.services.refreshModels(service.id);
@@ -355,19 +453,12 @@ function ServiceEditor({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex items-center justify-between gap-2 px-6 pt-4 pb-2">
-        <SectionHeader title={isNew ? "New service" : draft.name || "Service"} />
-        {isNew
-          ? renderRecordAffordance?.({
-              method: "POST",
-              path: "/persona/services",
-              pathValues: {},
-              title: "Create service API",
-            })
-          : renderRecordAffordance?.({
-              path: "/persona/services/{id}",
-              pathValues: { id: service?.id },
-              title: "Service API",
-            })}
+        <SectionHeader title={draft.name || "Service"} />
+        {renderRecordAffordance?.({
+          path: "/persona/services/{id}",
+          pathValues: { id: service.id },
+          title: "Service API",
+        })}
       </div>
       <ToolbarPortal>
         <ButtonBar
@@ -379,7 +470,7 @@ function ServiceEditor({
             canSave: valid,
             saving,
             onDelete: () => void handleDelete(),
-            canDelete: !isNew,
+            canDelete: true,
           }}
           showCreate={false}
         />
@@ -387,130 +478,52 @@ function ServiceEditor({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
         <ErrorText error={formError} />
 
-        {/* Template picker — create flow only */}
-        {isNew && templates.length > 0 && (
-          <FieldGroup title="Start from a template">
-            <Field label="Template">
-              <Select
-                value={draft.templateId ?? ""}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    applyTemplate(e.target.value);
-                  } else {
-                    setDraft((d) => ({ ...d, templateId: undefined }));
-                  }
-                }}
-              >
-                <option value="">Custom (no template)</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </FieldGroup>
-        )}
+        <ServiceFields
+          draft={draft}
+          onChange={setDraft}
+          providerDisabled
+          apiKeyHint={liveService.hasApiKey ? "Leave blank to keep the existing key." : undefined}
+          apiKeyPlaceholder={liveService.hasApiKey ? "•••• set" : "sk-…"}
+        />
 
-        <FieldGroup title="Service">
-          <Field label="Name">
-            <Input
-              value={draft.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="My OpenAI service"
-            />
-          </Field>
-          <Field
-            label="Provider"
-            hint={!isNew ? "Cannot change after creation." : undefined}
-          >
-            <Select
-              value={draft.providerKind}
-              onChange={(e) => set("providerKind", e.target.value)}
-              disabled={!isNew}
-            >
-              <option value="">Select a provider</option>
-              {Object.entries(PROVIDER_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Base URL">
-            <Input
-              value={draft.baseUrl}
-              onChange={(e) => set("baseUrl", e.target.value)}
-              placeholder="https://api.openai.com/v1"
-            />
-          </Field>
-          <Field
-            label="API key"
-            hint={
-              !isNew && liveService?.hasApiKey ? "Leave blank to keep the existing key." : undefined
-            }
-          >
-            <Input
-              type="password"
-              value={draft.apiKeyInput}
-              onChange={(e) => set("apiKeyInput", e.target.value)}
-              placeholder={!isNew && liveService?.hasApiKey ? "•••• set" : "sk-…"}
-            />
-          </Field>
+        <FieldGroup
+          title="Connection"
+          trailing={
+            liveService.lastConnectedAt ? (
+              <span className="font-mono text-[0.65rem] text-apt-text-dim">
+                Last: {fmtDate(liveService.lastConnectedAt)}
+              </span>
+            ) : undefined
+          }
+        >
+          <div className="flex flex-col gap-2">
+            <Button size="sm" onClick={() => void handleConnect()} disabled={connecting}>
+              {connecting ? "Connecting…" : "Connect"}
+            </Button>
+            {liveService.connectStatus === "failed" && liveService.connectError && (
+              <ErrorText error={liveService.connectError} />
+            )}
+            {liveService.connectStatus === "connected" && (
+              <p className="text-sm text-apt-green">Connected successfully.</p>
+            )}
+          </div>
         </FieldGroup>
 
-        {/* Edit-only: Connection */}
-        {!isNew && liveService && (
-          <FieldGroup
-            title="Connection"
-            trailing={
-              liveService.lastConnectedAt ? (
-                <span className="font-mono text-[0.65rem] text-apt-text-dim">
-                  Last: {fmtDate(liveService.lastConnectedAt)}
-                </span>
-              ) : undefined
-            }
-          >
-            <div className="flex flex-col gap-2">
-              <Button
-                size="sm"
-                onClick={() => void handleConnect()}
-                disabled={connecting}
-              >
-                {connecting ? "Connecting…" : "Connect"}
-              </Button>
-              {liveService.connectStatus === "failed" && liveService.connectError && (
-                <ErrorText error={liveService.connectError} />
-              )}
-              {liveService.connectStatus === "connected" && (
-                <p className="text-sm text-apt-green">Connected successfully.</p>
-              )}
-            </div>
-          </FieldGroup>
-        )}
-
-        {/* Edit-only: Models */}
-        {!isNew && liveService && (
-          <FieldGroup
-            title="Models"
-            trailing={
-              liveService.modelsFetchedAt ? (
-                <span className="font-mono text-[0.65rem] text-apt-text-dim">
-                  Fetched: {fmtDate(liveService.modelsFetchedAt)}
-                </span>
-              ) : undefined
-            }
-          >
-            <Button
-              size="sm"
-              onClick={() => void handleRefreshModels()}
-              disabled={refreshing}
-            >
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </Button>
-            <ModelsTable models={liveService.models} />
-          </FieldGroup>
-        )}
+        <FieldGroup
+          title="Models"
+          trailing={
+            liveService.modelsFetchedAt ? (
+              <span className="font-mono text-[0.65rem] text-apt-text-dim">
+                Fetched: {fmtDate(liveService.modelsFetchedAt)}
+              </span>
+            ) : undefined
+          }
+        >
+          <Button size="sm" onClick={() => void handleRefreshModels()} disabled={refreshing}>
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+          <ModelsTable models={liveService.models} />
+        </FieldGroup>
       </div>
     </div>
   );
@@ -545,10 +558,10 @@ export function ServicesSection({
 } = {}) {
   const [services, setServices] = useState<UserService[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // `creating` (a new draft, no id yet) stays LOCAL in both modes — a draft has no URL/id to
-  // address, so we never route on create. The OPEN service's id lives in the URL (URL-driven) or
-  // internal state (embedded), via useDualModeSelection below.
-  const [creating, setCreating] = useState(false);
+  // Creating a service is a MODAL over the stack, never a blank editor leaf (HTD recipe
+  // `must-create-in-modal`): the `+` opens it, and on save the created service is selected so its
+  // editor (Connection, Models) opens.
+  const [newOpen, setNewOpen] = useState(false);
   // Dual-mode selection: URL-driven (deep-linkable) when `urlSelection` is passed, else internal.
   const { selectedId: openServiceId, select } = useDualModeSelection(
     urlSelection && {
@@ -559,7 +572,6 @@ export function ServicesSection({
 
   // Open a service (or null to close): URL-driven callers navigate, embedded callers set state.
   const selectService = (id: string | null) => {
-    setCreating(false);
     select(id);
   };
 
@@ -594,25 +606,15 @@ export function ServicesSection({
       id: "services",
       title,
       items,
-      // While creating a new draft the master list highlights nothing (any previously-open id is
-      // still tracked; we don't change selection on create).
-      selectedId: creating ? null : openService?.id ?? null,
+      selectedId: openService?.id ?? null,
       onSelect: (id) => selectService(id),
       onClear: () => selectService(null),
       emptyLabel: "No services yet.",
-      // "New Service" is a right-justified `+` in the list header; gold while creating. Embedded, we
-      // also clear the open service so cancelling the draft returns to the All table (the pre-change
-      // behavior); URL-driven, the URL is left put (creating masks it) so Cancel returns to it.
-      onNew: () => {
-        if (!urlSelection) select(null);
-        setCreating(true);
-      },
+      // "New Service" is a right-justified `+` in the list header; it opens the create modal.
+      onNew: () => setNewOpen(true),
       newLabel: "New Service",
-      newActive: creating,
-      // This level's unselected state is a REAL landing (the All table below — and, while
-      // creating, the blank editor), never the automatic TopicOverview grid (mirrors
-      // PersonasSection). Without it, when any service already exists the frontier overview
-      // masks the inline create editor, so clicking "+" appears to do nothing.
+      // This level's unselected state is a REAL landing (the All table below), never the automatic
+      // TopicOverview grid (mirrors PersonasSection).
       overview: false,
     },
   ];
@@ -624,18 +626,6 @@ export function ServicesSection({
   const content =
     services === null ? (
       <p className="p-6 text-sm text-apt-text-muted">Loading…</p>
-    ) : creating ? (
-      // A new draft has no id/URL yet; on save, open the created service.
-      <ServiceEditor
-        key="__new__"
-        service={null}
-        onSaved={(saved) => {
-          selectService(saved.id);
-          void reload();
-        }}
-        onDeleted={() => {}}
-        onCancel={() => setCreating(false)}
-      />
     ) : openService ? (
       <ServiceEditor
         key={openService.id}
@@ -657,11 +647,50 @@ export function ServicesSection({
       </>
     );
 
+  // Create is a scoped modal: an optional template picker + the service's fields (HTD recipe
+  // `must-create-in-modal`). Connecting and refreshing models live in the service's editor, which
+  // opens once the created service is selected.
+  const newDialog = newOpen ? (
+    <CreateResourceDialog<ServiceDraft, UserService>
+      ariaLabel="New service"
+      heading="New service"
+      blank={() => ({ ...BLANK_DRAFT })}
+      validate={validateServiceDraft}
+      create={(d) =>
+        api.services.create({
+          name: d.name.trim(),
+          providerKind: d.providerKind as UserService["providerKind"],
+          baseUrl: d.baseUrl.trim(),
+          ...(d.templateId ? { templateId: d.templateId } : {}),
+          ...(d.apiKeyInput ? { apiKey: d.apiKeyInput } : {}),
+        })
+      }
+      onClose={() => setNewOpen(false)}
+      onCreated={(saved) => {
+        setNewOpen(false);
+        selectService(saved.id);
+        void reload();
+      }}
+      renderForm={(draft, onChange, error) => (
+        <NewServiceForm draft={draft} onChange={onChange} error={error} />
+      )}
+    />
+  ) : null;
+
   // Under a rail host: PUBLISH the service level and render the leaf. Standalone: own stack.
-  if (railHost) return <StackLevels levels={levels}>{content}</StackLevels>;
+  if (railHost)
+    return (
+      <>
+        <StackLevels levels={levels}>{content}</StackLevels>
+        {newDialog}
+      </>
+    );
   return (
-    <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
-      {content}
-    </HierarchicalDetailView>
+    <>
+      <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
+        {content}
+      </HierarchicalDetailView>
+      {newDialog}
+    </>
   );
 }

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { Field } from "@agentic-toolkit/ui/blocks";
+import { Input } from "@agentic-toolkit/ui/components/input";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { slugify } from "@agentic-toolkit/ui/lib/slug";
 import {
@@ -12,6 +14,7 @@ import {
   useRailExitGuard as useWorkspaceExitGuard,
   MasterDetailLeaf,
   useRecordAffordance,
+  CreateResourceDialog,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
 import {
@@ -21,7 +24,6 @@ import {
 } from "@agentic-toolkit/data/markdown";
 import {
   categoriesOf,
-  researchBlank,
   researchDiffers,
   researchNormalize,
   researchToInput,
@@ -35,11 +37,16 @@ import { ResearchDetail } from "./ResearchDetail";
 import { ResearchFilters, type FilterState } from "./ResearchFilters";
 import { PublishSection } from "./PublishSection";
 
-// Synthetic selection id for the unsaved "new document" draft, so EditorSection
-// (which derives `editing` from a non-null selectedId) shows the editor while no
-// real row is selected. It can never collide with a row id (rows are UUIDs).
-const DRAFT_ID = "__draft__";
 const EMPTY_FILTERS: FilterState = { q: "", category: "", tag: "" };
+
+/** The create modal's PLACEMENT draft (HTD recipe `must-create-in-modal` +
+ *  `must-scope-create-modal-to-placement`): only what NAMES/classifies the new document.
+ *  The body is written in the full editor that opens once the created doc is selected — the
+ *  backend accepts an empty body on create (content is optional), so create-then-write works. */
+interface ResearchPlacement {
+  title: string;
+  category: string;
+}
 
 function errorText(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
@@ -150,12 +157,14 @@ export function ResearchPane({
 
   // ── Selection + draft ─────────────────────────────────────────────────────
   // Dual-mode selection: the open document's id lives in the URL (URL-driven, deep-linkable) when
-  // `urlSelection` is passed, else internal state (embedded). `creating` (a new draft, no id yet)
-  // stays LOCAL in both modes — a draft has no URL/id to address, so we never route on create.
+  // `urlSelection` is passed, else internal state (embedded).
   const { selectedId, select: openDoc } = useDualModeSelection(
     urlSelection && { selectedId: urlSelection.docId ?? null, onSelect: urlSelection.onSelectDoc },
   );
-  const [creating, setCreating] = useState(false);
+  // Creating a document is a MODAL over the stack, never a blank leaf (HTD recipe
+  // `must-create-in-modal`): the `+` opens it, and on save the created doc is selected so its
+  // full editor (body, publish) opens.
+  const [newOpen, setNewOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<ResearchDocument | null>(null);
   const [draft, setDraft] = useState<ResearchInput | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
@@ -170,15 +179,11 @@ export function ResearchPane({
   // just-opened doc doesn't flash to "Loading…" + issue a redundant GET.
   const loadedIdRef = useRef<string | null>(null);
 
-  const baseline: ResearchInput | null = creating
-    ? researchBlank()
-    : selectedDoc
-      ? researchToInput(selectedDoc)
-      : null;
+  const baseline: ResearchInput | null = selectedDoc ? researchToInput(selectedDoc) : null;
   const dirty = Boolean(draft && baseline && researchDiffers(draft, baseline));
   const validationError = draft ? researchValidate(draft) : null;
   const canSave = Boolean(draft && baseline) && dirty && validationError === null && !saving && !loadingDoc;
-  const canDelete = selectedId !== null && !creating && !saving && !deleting;
+  const canDelete = selectedId !== null && !saving && !deleting;
 
   // Load a document's body into the form (or clear it when id is null). Token-guarded so an
   // out-of-order fetch can't clobber a newer selection. Shared by the embedded `select` (which
@@ -213,11 +218,8 @@ export function ResearchPane({
 
   const select = useCallback(
     async (id: string) => {
-      // Clearing `creating` too, so clicking a row while a new draft is open opens that doc (the
-      // effect is gated on !creating). URL-driven: `openDoc` navigates and the effect below loads
-      // the body for the new URL id. Embedded: `openDoc` set the local selection — load the body
-      // synchronously now (legacy behavior).
-      setCreating(false);
+      // URL-driven: `openDoc` navigates and the effect below loads the body for the new URL id.
+      // Embedded: `openDoc` set the local selection — load the body synchronously now (legacy).
       openDoc(id);
       if (!urlSelection) await loadBody(id);
     },
@@ -225,31 +227,17 @@ export function ResearchPane({
   );
 
   // URL-driven mode only: load (or clear) the document body when the open id in the URL changes — a
-  // deep-link landing, reload, browser back/forward, or an in-app navigation. Never disturbs an
-  // in-progress create (a new draft owns the form until it is saved or cancelled). Inert when
-  // embedded, where `select` loads synchronously instead.
+  // deep-link landing, reload, browser back/forward, or an in-app navigation. Inert when embedded,
+  // where `select` loads synchronously instead.
   useEffect(() => {
-    if (!urlSelection || creating) return;
+    if (!urlSelection) return;
     const docId = urlSelection.docId ?? null;
     // Skip when the form is already bound to this id (e.g. create just seeded the returned doc, or
     // loadBody already ran for it) — avoids a redundant GET + a "Loading…" flash.
     if (loadedIdRef.current === docId) return;
     void loadBody(docId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlSelection ? urlSelection.docId : null, creating, loadBody]);
-
-  function onNew(): void {
-    selectToken.current++; // cancel any in-flight body fetch
-    setCreating(true);
-    // A new draft has no id/URL to address, so we don't route on create (matches PersonasSection).
-    // URL-driven mode keeps the current URL put; `creating` masks it (the master list shows the
-    // draft slot). Embedded mode clears its own selection here.
-    if (!urlSelection) openDoc(null);
-    setSelectedDoc(null);
-    setDraft(researchBlank());
-    setFormError(null);
-    setLoadingDoc(false);
-  }
+  }, [urlSelection ? urlSelection.docId : null, loadBody]);
 
   function onChange(next: ResearchInput): void {
     setDraft(next);
@@ -258,7 +246,6 @@ export function ResearchPane({
 
   function onCancel(): void {
     selectToken.current++;
-    setCreating(false);
     openDoc(null);
     setSelectedDoc(null);
     setDraft(null);
@@ -279,19 +266,9 @@ export function ResearchPane({
     setSaving(true);
     setFormError(null);
     try {
-      if (creating) {
-        const created = await markdownApi.create(toCreateBody(input), {
-          workspace: workspaceSlug,
-        });
-        await refresh();
-        setCreating(false);
-        // Open the created doc: URL-driven navigates to /research/<id>, embedded sets local state.
-        // Seed doc/draft + mark it loaded so the URL-sync effect skips re-fetching it (no flash).
-        loadedIdRef.current = created.id;
-        openDoc(created.id);
-        setSelectedDoc(created);
-        setDraft(researchToInput(created));
-      } else if (selectedId) {
+      // Create is a modal now (see the CreateResourceDialog below); onSave only ever UPDATES the
+      // open document.
+      if (selectedId) {
         const updated = await markdownApi.update(selectedId, toUpdateBody(input), {
           workspace: workspaceSlug,
         });
@@ -352,7 +329,7 @@ export function ResearchPane({
       (d.tags.length > 0 ? d.tags.join(", ") : undefined),
   }));
   const validationHint = draft && dirty ? validationError : null;
-  const editing = creating || selectedId !== null;
+  const editing = selectedId !== null;
 
   // PUBLISH the documents list into the workspace shell's ONE merged stack (like the sibling
   // ecosystem panes) instead of a self-contained nested EditorSection: the list is a rail LEVEL
@@ -361,12 +338,11 @@ export function ResearchPane({
     id: "research-documents",
     title: "Documents",
     items,
-    selectedId: creating ? DRAFT_ID : selectedId,
+    selectedId,
     onSelect: (id) => void select(id),
     onClear: onCancel,
-    onNew,
+    onNew: () => setNewOpen(true),
     newLabel: "New document",
-    newActive: creating,
     emptyLabel: docs === null ? "Loading…" : "No documents yet.",
     railSlot: (
       <ResearchFilters
@@ -389,7 +365,7 @@ export function ResearchPane({
   // The frontier leaf: a portaled Save/Cancel/Delete bar over the editor (or a placeholder). The
   // list itself lives in the published rail above, so this renders ONLY the editor half.
   const actions: MasterDetailActions = {
-    onCreate: onNew,
+    onCreate: () => setNewOpen(true),
     createLabel: "New document",
     onCancel,
     canCancel: editing,
@@ -407,20 +383,11 @@ export function ResearchPane({
     <>
       <MasterDetailLeaf
         form={{ actions, editing, draft }}
-        trailing={
-          creating
-            ? renderRecordAffordance?.({
-                method: "POST",
-                path: "/content/markdown",
-                pathValues: {},
-                title: "Create document API",
-              })
-            : renderRecordAffordance?.({
-                path: "/content/markdown/{id}",
-                pathValues: { id: selectedId },
-                title: "Research document API",
-              })
-        }
+        trailing={renderRecordAffordance?.({
+          path: "/content/markdown/{id}",
+          pathValues: { id: selectedId },
+          title: "Research document API",
+        })}
         error={listError ?? formError}
         emptyTitle={
           loadingDoc || docs === null
@@ -440,7 +407,7 @@ export function ResearchPane({
                   tagOptions={accountTags}
                   error={validationHint}
                 />
-                {!creating && selectedDoc && (
+                {selectedDoc && (
                   <PublishSection
                     key={selectedDoc.id}
                     doc={selectedDoc}
@@ -454,6 +421,63 @@ export function ResearchPane({
           </div>
         )}
       />
+
+      {/* Create is a scoped modal: title + category only (HTD recipe `must-create-in-modal`). The
+          body is written in the editor that opens once the created doc is selected — the backend
+          accepts an empty body on create, so the doc exists immediately and the editor fills it. */}
+      {newOpen && (
+        <CreateResourceDialog<ResearchPlacement, ResearchDocument>
+          ariaLabel="New document"
+          heading="New document"
+          blank={() => ({ title: "", category: "" })}
+          validate={(d) =>
+            !d.title.trim()
+              ? "A title is required."
+              : d.category.length > 200
+                ? "Category must be 200 characters or fewer."
+                : null
+          }
+          create={(d) =>
+            markdownApi.create(
+              toCreateBody(researchNormalize({ title: d.title, content: "", category: d.category, tags: [] })),
+              { workspace: workspaceSlug },
+            )
+          }
+          onClose={() => setNewOpen(false)}
+          onCreated={(created) => {
+            setNewOpen(false);
+            void refresh();
+            // Open the created doc: URL-driven navigates to /research/<id>, embedded sets local
+            // state. Seed doc/draft + mark it loaded so the URL-sync effect skips re-fetching it.
+            loadedIdRef.current = created.id;
+            openDoc(created.id);
+            setSelectedDoc(created);
+            setDraft(researchToInput(created));
+            setFormError(null);
+          }}
+          renderForm={(draft, onChange, error) => (
+            <>
+              <Field label="Title">
+                <Input
+                  /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
+                  autoFocus
+                  value={draft.title}
+                  placeholder="Untitled document"
+                  onChange={(e) => onChange({ ...draft, title: e.target.value })}
+                />
+              </Field>
+              <Field label="Category" hint="Optional — group the document; you can change it later.">
+                <Input
+                  value={draft.category}
+                  placeholder="e.g. Research notes"
+                  onChange={(e) => onChange({ ...draft, category: e.target.value })}
+                />
+              </Field>
+              {error && <p className="text-sm text-apt-red">{error}</p>}
+            </>
+          )}
+        />
+      )}
 
       <AlertModal
         open={pendingDelete}
