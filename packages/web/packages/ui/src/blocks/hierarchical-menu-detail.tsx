@@ -700,12 +700,27 @@ const cascadeMemory = new Map<
      *  `seenKeys`: choosing a row IS the param change that remounts the subtree, so component state
      *  would forget on precisely the transition that must animate. */
     detailToken: string | null
+    /** The width-pressure covering (`pressure` + off-screen `hidden`) observed with the stack SETTLED
+     *  — i.e. the last time the pointer was OUT of the menus. Held and reused while the pointer is IN
+     *  the menus, for the SAME reason as `groundRight`: choosing a row that publishes a NEW level
+     *  re-covers the leftmost lists to make room, sliding the whole cascade LEFT under the pointer
+     *  mid-gesture. `groundRight` alone can't stop it — it pins the root's WIDTH and the detail's edge,
+     *  not the columns' x. This is the column analogue: `mayMoveGround`'s rule is that the layout
+     *  settles only once the pointer has left, and this holds the covering to that same rule. `null`
+     *  until a settled paint has been seen. */
+    heldCover: { pressure: number; hidden: number } | null
   }
 >()
 const cascadeMemoryFor = (key: string) => {
   const existing = cascadeMemory.get(key)
   if (existing) return existing
-  const fresh = { seenKeys: null, groundRight: null, detailToken: null, pointerInMenus: false }
+  const fresh = {
+    seenKeys: null,
+    groundRight: null,
+    detailToken: null,
+    pointerInMenus: false,
+    heldCover: null,
+  }
   cascadeMemory.set(key, fresh)
   return fresh
 }
@@ -2182,11 +2197,20 @@ function CascadingStack({
   // child always overlaps. Never let the advance invert on a hand-dragged-narrow rail.
   const disclosedAdvance = (l: TopicLevel) => Math.max(CASCADE_INDENT, railWidth(l) - CASCADE_INDENT)
 
+  // Hold the covering under the pointer, exactly as `mayMoveGround` holds the ground (see `heldCover`):
+  // while the pointer is in the menus we REUSE the covering last seen with the stack settled, so a
+  // select that publishes a new level can't re-cover the root and slide the cascade left mid-gesture.
+  // Null (→ fresh compute) whenever the pointer is out or nothing settled has been recorded yet.
+  const heldCover = mem.pointerInMenus ? mem.heldCover : null
+
   // COVER LAYER 2 — width pressure: cover MORE lists, leftmost-first, until the disclosed cascade
   // plus the detail minimum fits the container. Only ever ADDS a cover — never discloses one the
-  // user pinned shut.
+  // user pinned shut. Frozen at the settled count (clamped to what is coverable now — the frontier may
+  // have moved) while the pointer is in the menus.
   let pressure = 0
-  if (containerW > 0) {
+  if (heldCover) {
+    pressure = Math.min(heldCover.pressure, coverableCount)
+  } else if (containerW > 0) {
     const listsWidth = (n: number) =>
       rendered.reduce(
         (w, l, i) =>
@@ -2207,7 +2231,13 @@ function CascadingStack({
   // off the left edge, whole lists at a time (see CoveredStack).
   let hidden = 0
   let offshift = 0
-  if (containerW > 0) {
+  if (heldCover) {
+    // Frozen alongside `pressure` (an unheld off-screen phase would slide the leftmost lists off the
+    // left edge — the same move under the pointer, by a different lever). Recompute `offshift` from the
+    // current widths so a rail resize while held stays consistent.
+    hidden = Math.min(heldCover.hidden, coverableCount)
+    for (let i = 0; i < hidden; i++) offshift += widthOf(i)
+  } else if (containerW > 0) {
     // Extent, not the sum of advances: every list but the LAST contributes only its advance (its
     // child overdraws the rest); the LAST is overdrawn by nothing, so it contributes its FULL width.
     const widthFrom = (h: number) =>
@@ -2220,6 +2250,14 @@ function CascadingStack({
       hidden++
     }
   }
+
+  // Record the covering whenever the stack is SETTLED (pointer OUT), so the hold above has a value to
+  // freeze at across the remount a select triggers — the column analogue of the `groundRight` latch
+  // below. Guarded on `mem.pointerInMenus` so a held frame never overwrites the settled value with the
+  // frozen one it is currently replaying.
+  useEffect(() => {
+    if (!mem.pointerInMenus) mem.heldCover = { pressure, hidden }
+  }, [mem, pressure, hidden])
 
   // IMMERSION — the detail strip's `«`: the detail takes the WHOLE surface, every list (root
   // included) sliding off the left edge; the strip's `»` brings the stack back. Stored under the
