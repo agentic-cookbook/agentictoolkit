@@ -282,3 +282,47 @@
   border-radius: var(--shape-corner-small, 8px);
   border: 1px solid var(--mdv-border);
 }
+
+/* ── Alerts / callouts (remark-adh-alerts) ─────────────────────────────────────
+ * `> [!WARNING] …` blockquotes become these. The per-type accent is a LOCAL var that
+ * points at a palette `--mdv-*` value — so this stays within the "colors are var(--mdv-*)"
+ * rule (concrete values live only in palettes.ts). Differentiated by accent + title word,
+ * no icon font needed — restrained, consistent with the rest of ADH. */
+.adh-mv-prose .adh-mv-alert {
+  margin: 1.25em 0;
+  padding: 0.75em 1em;
+  border: 1px solid var(--mdv-border);
+  border-left: 3px solid var(--mdv-alert-accent, var(--mdv-accent));
+  border-radius: var(--shape-corner-small, 8px);
+  background: var(--mdv-surface);
+}
+
+.adh-mv-prose .adh-mv-alert > :first-child {
+  margin-top: 0;
+}
+
+.adh-mv-prose .adh-mv-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.adh-mv-prose .adh-mv-alert-title {
+  margin: 0 0 0.4em;
+  font-weight: 600;
+  color: var(--mdv-alert-accent, var(--mdv-accent));
+}
+
+.adh-mv-prose .adh-mv-alert--note {
+  --mdv-alert-accent: var(--mdv-link);
+}
+.adh-mv-prose .adh-mv-alert--tip {
+  --mdv-alert-accent: var(--mdv-accent);
+}
+.adh-mv-prose .adh-mv-alert--important {
+  --mdv-alert-accent: var(--mdv-link);
+}
+.adh-mv-prose .adh-mv-alert--warning {
+  --mdv-alert-accent: var(--mdv-accent);
+}
+.adh-mv-prose .adh-mv-alert--caution {
+  --mdv-alert-accent: var(--mdv-danger);
+}

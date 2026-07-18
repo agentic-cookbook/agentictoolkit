@@ -13,6 +13,11 @@ export type { MarkdownViewerProps } from './components/MarkdownViewer'
 export { MarkdownRenderer } from './components/MarkdownRenderer'
 export type { MarkdownRendererProps } from './components/MarkdownRenderer'
 
+// Server-rendered markdown (RSC) — SSR/crawlable, no client "Rendering…" flash. Same engine +
+// CSS as MarkdownRenderer; use this in server components / prerendered docs routes.
+export { MarkdownContent } from './components/MarkdownContent'
+export type { MarkdownContentProps } from './components/MarkdownContent'
+
 export { MarkdownThemeSwitcher } from './components/MarkdownThemeSwitcher'
 export type { MarkdownThemeSwitcherProps } from './components/MarkdownThemeSwitcher'
 

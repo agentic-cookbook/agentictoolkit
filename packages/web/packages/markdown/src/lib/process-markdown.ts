@@ -32,6 +32,7 @@ import rehypeSanitize from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'
 import rehypeShikiFromHighlighter from '@shikijs/rehype/core'
 import type { Highlighter } from 'shiki'
+import { remarkAdhAlerts } from './remark-adh-alerts'
 
 // ── Shiki singleton ────────────────────────────────────────────────────────────
 
@@ -163,6 +164,9 @@ function buildProcessor(highlighter: Highlighter) {
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
+    // GitHub alert blockquotes (> [!WARNING] …) → ADH callout divs (ours, styled like the
+    // rest of ADH). Runs on mdast before remark-rehype reads its data.hName/hProperties.
+    .use(remarkAdhAlerts)
     // allowDangerousHtml:false → embedded raw HTML/script is dropped, not passed.
     .use(remarkRehype)
     .use(rehypeSlug)
