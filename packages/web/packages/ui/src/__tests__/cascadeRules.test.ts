@@ -317,18 +317,51 @@ describe("must-hold-the-detail-until-the-final-choice", () => {
     expect(shouldShowHeldDetail({ holding: false, frontierUnselected: true })).toBe(false)
   })
 
-  it("T58: the hold settles on the first render where the path is complete and the selection moved", () => {
-    // ONE swap, old content → new content: the final choice releases the hold.
-    expect(
-      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: true, autoHide: true })
-        .settle,
-    ).toBe(true)
+  it("T58: a settled-looking render ARMS, and the consecutive one settles — the final choice releases the hold", () => {
+    // ONE swap, old content → new content — confirmed across two renders (see the next test for why
+    // one is not enough).
+    const first = planChoiceSettle({
+      holding: true,
+      pathComplete: true,
+      selectionChanged: true,
+      armed: false,
+      autoHide: true,
+    })
+    expect(first).toEqual({ arm: true, settle: false, autoCollapse: false })
+    const second = planChoiceSettle({
+      holding: true,
+      pathComplete: true,
+      selectionChanged: true,
+      armed: true,
+      autoHide: true,
+    })
+    expect(second.settle).toBe(true)
+  })
+
+  it("a merged stack's late-registered deeper list DISARMS the confirmation — never a false settle", () => {
+    // A merged stack publishes its deeper list from components living in `children` (effects), one
+    // commit behind — so the first render after an intermediate select can be missing the very
+    // choosing list that select disclosed, and read as complete. The armed render that turns out
+    // NOT settled disarms; nothing releases and nothing collapses.
+    const lateList = planChoiceSettle({
+      holding: true,
+      pathComplete: false, // the deeper list registered — the path was never complete
+      selectionChanged: true,
+      armed: true,
+      autoHide: true,
+    })
+    expect(lateList).toEqual({ arm: false, settle: false, autoCollapse: false })
   })
 
   it("an intermediate select does NOT settle — the host disclosed another choosing list", () => {
     expect(
-      planChoiceSettle({ holding: true, pathComplete: false, selectionChanged: true, autoHide: true })
-        .settle,
+      planChoiceSettle({
+        holding: true,
+        pathComplete: false,
+        selectionChanged: true,
+        armed: false,
+        autoHide: true,
+      }).settle,
     ).toBe(false)
   })
 
@@ -337,15 +370,25 @@ describe("must-hold-the-detail-until-the-final-choice", () => {
     // move may land renders later; until the chain actually changes, the complete-looking path is
     // the OLD one and settling on it would release (and auto-collapse) on the arming click itself.
     expect(
-      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: false, autoHide: true })
-        .settle,
-    ).toBe(false)
+      planChoiceSettle({
+        holding: true,
+        pathComplete: true,
+        selectionChanged: false,
+        armed: false,
+        autoHide: true,
+      }),
+    ).toEqual({ arm: false, settle: false, autoCollapse: false })
   })
 
   it("with no hold armed there is nothing to settle", () => {
     expect(
-      planChoiceSettle({ holding: false, pathComplete: true, selectionChanged: true, autoHide: true })
-        .settle,
+      planChoiceSettle({
+        holding: false,
+        pathComplete: true,
+        selectionChanged: true,
+        armed: true,
+        autoHide: true,
+      }).settle,
     ).toBe(false)
   })
 })
@@ -354,24 +397,42 @@ describe("must-auto-collapse-menus-on-final-choice", () => {
   it("T59: in auto-collapse mode the final choice closes the menus on the click itself", () => {
     // Without waiting for the pointer to leave: settling IS the requested action.
     expect(
-      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: true, autoHide: true }),
-    ).toEqual({ settle: true, autoCollapse: true })
+      planChoiceSettle({
+        holding: true,
+        pathComplete: true,
+        selectionChanged: true,
+        armed: true,
+        autoHide: true,
+      }),
+    ).toEqual({ arm: false, settle: true, autoCollapse: true })
   })
 
   it("T60: with auto-collapse OFF only the detail swaps — no select collapses anything", () => {
     // The workspace stacks' standing rule (`autoHideTopics={false}`): the menus stay exactly as the
     // user arranged them.
     expect(
-      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: true, autoHide: false }),
-    ).toEqual({ settle: true, autoCollapse: false })
+      planChoiceSettle({
+        holding: true,
+        pathComplete: true,
+        selectionChanged: true,
+        armed: true,
+        autoHide: false,
+      }),
+    ).toEqual({ arm: false, settle: true, autoCollapse: false })
   })
 
   it("an intermediate select collapses nothing, in either mode", () => {
     for (const autoHide of [true, false])
-      expect(
-        planChoiceSettle({ holding: true, pathComplete: false, selectionChanged: true, autoHide })
-          .autoCollapse,
-      ).toBe(false)
+      for (const armed of [true, false])
+        expect(
+          planChoiceSettle({
+            holding: true,
+            pathComplete: false,
+            selectionChanged: true,
+            armed,
+            autoHide,
+          }).autoCollapse,
+        ).toBe(false)
   })
 
   it("nothing may re-open until the pointer next ENTERS — presence in the trigger rect is not entry", () => {

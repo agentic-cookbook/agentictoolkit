@@ -658,9 +658,13 @@ arguments — the measuring stays in the component, the deciding is tested.
   select still fires the level's `onSelect`, still clears the deeper selections and still moves the
   URL — so must-guard-unsaved-on-exit still runs on the select that clears a dirty leaf, and the held
   content MUST survive the remount that select causes (must-keep-view-state-across-a-selection: held
-  per surface, exactly like the ground). Abandoning the menus without completing the path (the
-  pointer leaves) leaves the held detail in place — the detail changes when a final choice replaces
-  it, and not before.
+  per surface, exactly like the ground). Whether a row "leads to another topic list" is the HOST's
+  answer, delivered as a render — and a merged stack delivers it a commit LATE (its deeper levels are
+  published from components living in `children`, in effects), so a single settled-looking render
+  MUST NOT count as the final choice: the release requires CONSECUTIVE settled renders
+  (`planChoiceSettle`'s arm-then-confirm), giving the host one commit to disclose the deeper list.
+  Abandoning the menus without completing the path (the pointer leaves) leaves the held detail in
+  place — the detail changes when a final choice replaces it, and not before.
 - **must-auto-collapse-menus-on-final-choice** (v1.15.0): When the final choice is made in auto-collapse mode (`autoHideTopics` on),
   the menus MUST auto-collapse on the click itself: the open submenus collapse progressively
   (must-animate-every-menu-closure, must-collapse-inward) as the final choice's detail shows, WITHOUT

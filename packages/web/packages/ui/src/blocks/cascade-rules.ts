@@ -314,6 +314,8 @@ export function shouldShowHeldDetail({
 
 /** What a render does about an armed detail hold. */
 export type ChoiceSettlePlan = {
+  /** This render LOOKS settled — start the confirmation (see below); no release yet. */
+  arm: boolean
   /** Release the hold: the final choice's detail replaces the held content — the ONE swap. */
   settle: boolean
   /** Also close the reveal on the click itself (auto-collapse mode only). */
@@ -324,12 +326,18 @@ export type ChoiceSettlePlan = {
  * The final choice, decided retrospectively (**must-hold-the-detail-until-the-final-choice** T58,
  * **must-auto-collapse-menus-on-final-choice** T59/T60).
  *
- * Whether a chosen row "leads to another topic list" is the HOST's answer, delivered as the next
- * render: an intermediate select discloses another choosing list (the path is incomplete), the final
- * choice completes it. So the hold settles on the first render where the path is complete AND the
- * selection has actually changed since the hold was armed — `selectionChanged` is what keeps the
- * click's own pre-navigation renders (the host's route move may land several renders later) from
- * settling a hold that hasn't gone anywhere yet.
+ * Whether a chosen row "leads to another topic list" is the HOST's answer, delivered as a render:
+ * an intermediate select discloses another choosing list (the path is incomplete), the final choice
+ * completes it. Two guards keep a premature answer from settling the hold:
+ *
+ *   - `selectionChanged` — the click's own pre-navigation renders still show the OLD (complete)
+ *     path; until the chain actually changes, there is nothing to settle.
+ *   - `armed` — a MERGED stack registers its deeper list from components living in `children`
+ *     (effects), so the first render after an intermediate select can be missing the very list that
+ *     select disclosed and read as complete. A settled-looking render therefore only ARMS the
+ *     confirmation (`arm`); the release needs a CONSECUTIVE settled render (`armed: true`), which
+ *     gives the host exactly one commit to disclose the deeper list. A render that is not settled
+ *     any more disarms.
  *
  * `autoCollapse` is the carve-out named in must-collapse-from-one-pointer-authority: in auto-collapse
  * mode the settling click itself closes the menus, exactly as the disclosure toggles settle the stack
@@ -340,6 +348,7 @@ export function planChoiceSettle({
   holding,
   pathComplete,
   selectionChanged,
+  armed,
   autoHide,
 }: {
   /** Is a detail hold armed (a rail interaction captured the pane)? */
@@ -348,11 +357,14 @@ export function planChoiceSettle({
   pathComplete: boolean
   /** Has the selection chain changed at any point since the hold was armed? */
   selectionChanged: boolean
+  /** Did the PREVIOUS render already look settled (the confirmation started)? */
+  armed: boolean
   /** Auto-collapse mode (`autoHideTopics`) — gates the collapse, never the settle. */
   autoHide: boolean
 }): ChoiceSettlePlan {
-  const settle = holding && pathComplete && selectionChanged
-  return { settle, autoCollapse: settle && autoHide }
+  const settled = holding && pathComplete && selectionChanged
+  const settle = settled && armed
+  return { arm: settled && !armed, settle, autoCollapse: settle && autoHide }
 }
 
 /**

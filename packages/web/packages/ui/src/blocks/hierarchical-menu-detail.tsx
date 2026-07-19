@@ -265,6 +265,10 @@ type SurfaceState = {
   /** Has the selection chain differed from `heldSig` at any point while holding? Lets a walk that
    *  wanders and re-picks the exact starting leaf still read as a final choice. */
   heldMoved: boolean
+  /** The settle confirmation (see `planChoiceSettle`): true once a render has LOOKED settled; the
+   *  release needs a consecutive one, so a merged stack's late-registered deeper list (published
+   *  from `children` effects, one commit behind) never reads as a final choice. */
+  heldSettleArmed: boolean
 }
 
 /**
@@ -441,6 +445,7 @@ export function HierarchicalMenuDetail({
     heldDetail: null,
     heldSig: null,
     heldMoved: false,
+    heldSettleArmed: false,
   }
   const { autoHide, pins, hoverId, hoverAll } = surface
   // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
@@ -458,6 +463,7 @@ export function HierarchicalMenuDetail({
         heldDetail: null,
         heldSig: null,
         heldMoved: false,
+        heldSettleArmed: false,
       }
       surfaceStates.set(surfaceKey, update(prev))
       bumpSurface()
@@ -616,12 +622,16 @@ export function HierarchicalMenuDetail({
           },
     )
   }, [patchSurface])
-  // Settle the hold: the first render whose path is complete AND whose selection moved since arming
-  // is the final choice (see `planChoiceSettle` for why both clauses). Release the hold there — and
-  // in auto-collapse mode close the reveal on that same click (the ONE click-driven closure,
-  // must-auto-collapse-menus-on-final-choice); with auto-collapse off, no select collapses anything.
-  // Not `pointerInMenus`-gated and not cascade-gated on release: a hold armed in the cascade must
-  // still release if the surface later settles under another layout.
+  // Settle the hold: a render whose path is complete AND whose selection moved since arming looks
+  // like the final choice — and a CONSECUTIVE such render confirms it (see `planChoiceSettle`: a
+  // merged stack registers its deeper list from `children` effects a commit late, so the first
+  // settled-looking render after an intermediate select can be missing the very list that select
+  // disclosed; arming forces the extra render that gives the host its commit to disclose). The
+  // confirmed render releases the hold — ONE swap — and in auto-collapse mode closes the reveal on
+  // that same click (the ONE click-driven closure, must-auto-collapse-menus-on-final-choice); with
+  // auto-collapse off, no select collapses anything. Not `pointerInMenus`-gated and not
+  // cascade-gated on release: a hold armed in the cascade must still release if the surface later
+  // settles under another layout.
   useEffect(() => {
     const s = surfaceStates.get(surfaceKey)
     if (!s || s.heldDetail == null) return
@@ -629,14 +639,27 @@ export function HierarchicalMenuDetail({
       holding: true,
       pathComplete: firstUnselected === -1,
       selectionChanged: s.heldSig !== selectionSig || s.heldMoved,
+      armed: s.heldSettleArmed,
       autoHide,
     })
     if (plan.settle) {
-      patchSurface((p) => ({ ...p, heldDetail: null, heldSig: null, heldMoved: false }))
+      patchSurface((p) => ({
+        ...p,
+        heldDetail: null,
+        heldSig: null,
+        heldMoved: false,
+        heldSettleArmed: false,
+      }))
       if (plan.autoCollapse && cascading) setHoverId(null)
-    } else if (s.heldSig !== selectionSig && !s.heldMoved) {
-      patchSurface((p) => ({ ...p, heldMoved: true }))
+      return
     }
+    const moved = s.heldSig !== selectionSig && !s.heldMoved
+    if (plan.arm !== s.heldSettleArmed || moved)
+      patchSurface((p) => ({
+        ...p,
+        heldSettleArmed: plan.arm,
+        heldMoved: p.heldMoved || moved,
+      }))
   })
 
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
