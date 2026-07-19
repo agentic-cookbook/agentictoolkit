@@ -143,8 +143,17 @@
   font-size: 0.72rem;
 }
 
-/* Mobile: swap the sticky sidebar for a native <details> disclosure (no JS). */
-.adh-api-ref__mobile {
+/* One nav for both layouts. Desktop: the toggle + its label are hidden and the nav is always shown
+   as the sticky sidebar. Mobile: a CSS-only checkbox toggles the single nav (no JS, no duplicate
+   endpoint list). */
+.adh-api-ref__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.adh-api-ref__toggle,
+.adh-api-ref__toggle-label {
   display: none;
 }
 
@@ -153,21 +162,35 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .adh-api-ref__sidebar {
-    display: none;
-  }
-  .adh-api-ref__mobile {
-    display: block;
+    position: static;
+    max-height: none;
+    overflow: visible;
     padding: 0.5rem 1rem;
+    border-right: 0;
     border-bottom: 1px solid var(--color-apt-border);
   }
-  .adh-api-ref__mobile-summary {
+  /* Visually hidden but focusable and toggleable via its label. */
+  .adh-api-ref__toggle {
+    display: inline-block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .adh-api-ref__toggle-label {
+    display: inline-block;
     cursor: pointer;
-    padding: 0.5rem 0;
+    padding: 0.5rem 0.6rem;
     font-weight: 600;
     color: var(--color-apt-text);
   }
-  .adh-api-ref__mobile .adh-api-nav {
+  .adh-api-nav {
+    display: none;
     padding: 0.5rem 0;
+  }
+  .adh-api-ref__toggle:checked ~ .adh-api-nav {
+    display: block;
   }
   .adh-api-ref__main {
     padding: 1.5rem 1.25rem 3rem;

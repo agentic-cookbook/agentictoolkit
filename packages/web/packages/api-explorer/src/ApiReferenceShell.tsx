@@ -61,15 +61,26 @@ export function ApiReferenceShell({ basePath, currentKey, title = 'API Reference
   return (
     <div className="adh-api-ref">
       <aside className="adh-api-ref__sidebar" aria-label={`${title} navigation`}>
-        <Link href={homeHref} className="adh-api-ref__title">
-          {title}
-        </Link>
+        {/* One nav for both layouts (not duplicated into a separate mobile <details>): a CSS-only
+            checkbox reveals it on small screens, so every prerendered endpoint page carries the
+            endpoint list once, not twice. On desktop the toggle + label are hidden and the nav shows
+            as a sticky sidebar. */}
+        <input
+          type="checkbox"
+          id="adh-api-ref-nav"
+          className="adh-api-ref__toggle"
+          aria-label={`Toggle ${title} navigation`}
+        />
+        <div className="adh-api-ref__head">
+          <Link href={homeHref} className="adh-api-ref__title">
+            {title}
+          </Link>
+          <label htmlFor="adh-api-ref-nav" className="adh-api-ref__toggle-label">
+            {title} menu
+          </label>
+        </div>
         {nav}
       </aside>
-      <details className="adh-api-ref__mobile">
-        <summary className="adh-api-ref__mobile-summary">{title} menu</summary>
-        {nav}
-      </details>
       <main className="adh-api-ref__main">{children}</main>
     </div>
   )
