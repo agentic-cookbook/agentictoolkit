@@ -31,9 +31,30 @@ import {
   type ModelInfo,
   type Template,
   type PatchServiceBody,
+  type ConnectionSpecUrlVar,
 } from "@agentic-toolkit/data/personas";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+
+/** Replace `{name}` tokens in a base-URL pattern with the user's url-var values.
+ *  Unfilled vars stay as `{name}` so the resolved URL visibly prompts for them. */
+function substituteUrlVars(pattern: string, values: Record<string, string>): string {
+  return pattern.replace(/\{(\w+)\}/g, (m, name: string) => {
+    const v = values[name];
+    return v && v.trim() !== "" ? v.trim() : m;
+  });
+}
+
+/** A one-line hint about how a template authenticates, shown in the connect form
+ *  (only for the non-obvious, non-bearer cases). */
+function authHintFor(spec: Template["connectionSpec"]): string | undefined {
+  const auth = spec?.auth;
+  if (!auth || auth.type === "bearer") return undefined;
+  if (auth.type === "header") return `Authenticates via the \`${auth.header}\` header.`;
+  if (auth.type === "sigv4") return "Uses AWS SigV4 signing — not yet supported by this client.";
+  if (auth.type === "oauth2") return "Uses OAuth — not yet supported by this client.";
+  return undefined;
+}
 
 function fmtNum(n: number | undefined): string {
   if (n === undefined || n === null) return "—";
@@ -191,6 +212,14 @@ type ServiceDraft = {
   providerKind: string;
   baseUrl: string;
   apiKeyInput: string;
+  /** When the chosen template parameterizes its URL, the pattern (with
+   *  `{placeholders}`) plus the vars to prompt for and the user's values; baseUrl
+   *  is kept in sync as the resolved URL. Absent for plain templates. */
+  baseUrlPattern?: string;
+  urlVars?: ConnectionSpecUrlVar[];
+  urlVarValues: Record<string, string>;
+  /** One-line hint about non-bearer auth, shown under the fields. */
+  authHint?: string;
 };
 
 const BLANK_DRAFT: ServiceDraft = {
@@ -199,6 +228,16 @@ const BLANK_DRAFT: ServiceDraft = {
   providerKind: "",
   baseUrl: "",
   apiKeyInput: "",
+  urlVarValues: {},
+};
+
+/** Fields to reset when a template is de-selected (back to a custom connection). */
+const CLEAR_TEMPLATE: Partial<ServiceDraft> = {
+  templateId: undefined,
+  baseUrlPattern: undefined,
+  urlVars: undefined,
+  urlVarValues: {},
+  authHint: undefined,
 };
 
 function fromService(s: UserService): ServiceDraft {
@@ -208,6 +247,9 @@ function fromService(s: UserService): ServiceDraft {
     providerKind: s.providerKind,
     baseUrl: s.baseUrl,
     apiKeyInput: "",
+    // Edit mode works on the already-resolved base URL (url vars can't be
+    // recovered from a concrete URL), so no url-var prompting here.
+    urlVarValues: {},
   };
 }
 
@@ -265,13 +307,45 @@ function ServiceFields({
           ))}
         </Select>
       </Field>
-      <Field label="Base URL">
-        <Input
-          value={draft.baseUrl}
-          onChange={(e) => onChange({ ...draft, baseUrl: e.target.value })}
-          placeholder="https://api.openai.com/v1"
-        />
-      </Field>
+      {draft.urlVars && draft.urlVars.length > 0 ? (
+        <>
+          {draft.urlVars.map((v) => (
+            <Field
+              key={v.name}
+              label={v.label ?? v.name}
+              hint={v.example ? `e.g. ${v.example}` : undefined}
+            >
+              <Input
+                value={draft.urlVarValues[v.name] ?? ""}
+                onChange={(e) => {
+                  const urlVarValues = { ...draft.urlVarValues, [v.name]: e.target.value };
+                  onChange({
+                    ...draft,
+                    urlVarValues,
+                    baseUrl: substituteUrlVars(
+                      draft.baseUrlPattern ?? draft.baseUrl,
+                      urlVarValues,
+                    ),
+                  });
+                }}
+                placeholder={v.example}
+              />
+            </Field>
+          ))}
+          <Field label="Base URL" hint="Filled in from the values above.">
+            <Input value={draft.baseUrl} readOnly />
+          </Field>
+        </>
+      ) : (
+        <Field label="Base URL">
+          <Input
+            value={draft.baseUrl}
+            onChange={(e) => onChange({ ...draft, baseUrl: e.target.value })}
+            placeholder="https://api.openai.com/v1"
+          />
+        </Field>
+      )}
+      {draft.authHint && <p className="text-xs text-apt-text-muted">{draft.authHint}</p>}
       <Field label="API key" hint={apiKeyHint}>
         <Input
           type="password"
@@ -289,6 +363,7 @@ function validateServiceDraft(d: ServiceDraft): string | null {
   if (d.name.trim() === "") return "A name is required.";
   if (d.providerKind === "") return "Select a provider.";
   if (d.baseUrl.trim() === "") return "A base URL is required.";
+  if (/\{\w+\}/.test(d.baseUrl)) return "Fill in all the URL fields.";
   return null;
 }
 
@@ -314,19 +389,26 @@ function NewServiceForm({
       });
   }, []);
 
-  // Apply a template: prefill name, providerKind, baseUrl.
+  // Apply a template: prefill name, providerKind, baseUrl — and, when the
+  // template parameterizes its URL, the url-var prompts + auth hint.
   function applyTemplate(templateId: string) {
     const tpl = templates.find((t) => t.id === templateId);
     if (!tpl) {
-      onChange({ ...draft, templateId: undefined });
+      onChange({ ...draft, ...CLEAR_TEMPLATE });
       return;
     }
+    const urlVars = tpl.connectionSpec?.urlVars ?? [];
+    const hasVars = urlVars.length > 0;
     onChange({
       ...draft,
       templateId,
       name: tpl.name,
       providerKind: tpl.providerKind,
       baseUrl: tpl.baseUrl,
+      baseUrlPattern: hasVars ? tpl.baseUrl : undefined,
+      urlVars: hasVars ? urlVars : undefined,
+      urlVarValues: {},
+      authHint: authHintFor(tpl.connectionSpec),
     });
   }
 
@@ -339,7 +421,7 @@ function NewServiceForm({
               value={draft.templateId ?? ""}
               onChange={(e) => {
                 if (e.target.value) applyTemplate(e.target.value);
-                else onChange({ ...draft, templateId: undefined });
+                else onChange({ ...draft, ...CLEAR_TEMPLATE });
               }}
             >
               <option value="">Custom (no template)</option>

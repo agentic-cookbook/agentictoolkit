@@ -174,6 +174,35 @@ export interface PublicUserRow {
   personas: PublicPersonaSummaryRow[];
 }
 
+/** A base_url placeholder the connect UI prompts for and substitutes (e.g.
+ *  `{account_id}`, `{region}`, `{resource}`). */
+export interface ConnectionSpecUrlVar {
+  name: string;
+  label?: string;
+  example?: string;
+  secret?: boolean;
+}
+
+/** How the API credential is attached. `bearer`/`header` are enforced by the
+ *  backend OpenAI-compat client; `sigv4`/`oauth2` are reserved (stored, not yet
+ *  enforced). Mirrors the backend `llm/connectionSpec.ts` union. */
+export type ConnectionSpecAuth =
+  | { type: "bearer" }
+  | { type: "header"; header: string; scheme: "bearer" | "raw" }
+  | { type: "sigv4"; region?: string }
+  | { type: "oauth2"; tokenUrl?: string };
+
+/** Transport/auth spec for an OpenAI-wire provider — orthogonal to providerKind
+ *  (the wire format). Carries URL placeholders + credential placement so Azure /
+ *  cloud gateways ride the same client. Null = plain `Authorization: Bearer`. */
+export interface ConnectionSpec {
+  specVersion: 1;
+  urlVars?: ConnectionSpecUrlVar[];
+  auth?: ConnectionSpecAuth;
+  defaultQuery?: Record<string, string>;
+  extraHeaders?: Record<string, string>;
+}
+
 /** Backend row for `GET /persona/service-templates` (a plain catalog table). */
 export interface ServiceTemplateRow {
   id: string;
@@ -182,6 +211,7 @@ export interface ServiceTemplateRow {
   baseUrl: string;
   documentationUrl: string | null;
   statusUrl: string | null;
+  connectionSpec: ConnectionSpec | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -197,6 +227,7 @@ export interface ServiceRow {
   name: string;
   baseUrl: string;
   hasApiKey: boolean;
+  connectionSpec?: ConnectionSpec | null;
   connectStatus: string;
   connectError?: string | null;
   lastConnectedAt?: string | null;

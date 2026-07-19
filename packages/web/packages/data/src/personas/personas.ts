@@ -21,6 +21,7 @@ import type {
   ServiceRow,
   PersonaRow,
   PublicPersonaRow,
+  ConnectionSpec,
 } from "./wire";
 
 // The backend returns the /me payload UNWRAPPED (no `{ data }` envelope): GET and
@@ -204,14 +205,26 @@ export type ModelInfo = {
 // spec documents PersonaServiceModel loosely (string | object); the registry UI needs
 // the structured ModelInfo, so override just that field.
 export type UserService = Omit<ServiceRow, "models"> & { models: ModelInfo[] };
+// Re-exported so connect-form UIs can read a template's transport/auth spec
+// (url-var placeholders, auth kind) without reaching into ./wire directly.
+export type { ConnectionSpec, ConnectionSpecAuth, ConnectionSpecUrlVar } from "./wire";
 export type CreateServiceBody = {
   templateId?: string;
   name: string;
   providerKind: UserService["providerKind"];
   baseUrl: string;
   apiKey?: string;
+  // Usually omitted: when templateId is set the backend copies the template's
+  // spec onto the connection. Supply it only to override or for a template-less
+  // connection. The UI has already substituted url vars into baseUrl.
+  connectionSpec?: ConnectionSpec | null;
 };
-export type PatchServiceBody = { name?: string; baseUrl?: string; apiKey?: string };
+export type PatchServiceBody = {
+  name?: string;
+  baseUrl?: string;
+  apiKey?: string;
+  connectionSpec?: ConnectionSpec | null;
+};
 // The persona row exactly as GET /persona/personas returns it (spec-typed) + the
 // display-only `serviceName` join (no DB column). A backend column change now fails
 // registry's tsc instead of at runtime.
