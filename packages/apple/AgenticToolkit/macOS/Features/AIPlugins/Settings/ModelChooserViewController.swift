@@ -121,7 +121,6 @@ public final class ModelChooserViewController: NSViewController {
         ])
 
         self.view = root
-        themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
     }
 
     private func configureSearchField() {
@@ -215,8 +214,6 @@ public final class ModelChooserViewController: NSViewController {
         keyboard.onMoveSelection = { [weak self] delta in self?.moveSelection(by: delta) }
         keyboard.onChoose = { [weak self] in self?.chooseTapped() }
         keyboard.onCancel = { [weak self] in self?.cancelTapped() }
-        tableView.doubleAction = #selector(chooseTapped)
-        tableView.target = self
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
         Task { await loadLiveModels() }
     }
@@ -282,14 +279,10 @@ public final class ModelChooserViewController: NSViewController {
         let title = ThemedLabel(string: item.id, role: .primaryText, textRole: .heading)
         detailStack.addArrangedSubview(title)
         let badges = ModelChooserContent.capabilityBadges(item: item, metadata: meta)
-        if let spec = ModelChooserContent.specLine(meta) ?? (badges.isEmpty ? nil : "") {
-            let line = ([badges.map { "\($0) ✓" }.joined(separator: " · "), spec]
-                .filter { !$0.isEmpty }).joined(separator: " · ")
-            detailStack.addArrangedSubview(ThemedLabel(string: line, role: .secondaryText, textRole: .caption))
-        } else if !badges.isEmpty {
-            detailStack.addArrangedSubview(ThemedLabel(
-                string: badges.map { "\($0) ✓" }.joined(separator: " · "),
-                role: .secondaryText, textRole: .caption))
+        let parts = badges.map { "\($0) ✓" } + [ModelChooserContent.specLine(meta)].compactMap { $0 }
+        if !parts.isEmpty {
+            detailStack.addArrangedSubview(
+                ThemedLabel(string: parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
         }
         let desc = ThemedLabel(string: ModelChooserContent.descriptionText(item: item),
                                role: .primaryText, textRole: .body)
@@ -316,8 +309,17 @@ public final class ModelChooserViewController: NSViewController {
         tableView.reloadData()
     }
 
-    @objc private func chooseTapped() { completion?(selectedModel.isEmpty ? nil : selectedModel) }
-    @objc private func cancelTapped() { completion?(nil) }
+    @objc private func chooseTapped() {
+        let done = completion
+        completion = nil
+        done?(selectedModel.isEmpty ? nil : selectedModel)
+    }
+
+    @objc private func cancelTapped() {
+        let done = completion
+        completion = nil
+        done?(nil)
+    }
 }
 
 extension ModelChooserViewController: NSTableViewDataSource, NSTableViewDelegate {

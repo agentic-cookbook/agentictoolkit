@@ -75,12 +75,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private let keyboard = PickerKeyboardController()
 
     /// Live model lists fetched for OpenAI-shaped (local/compatible) providers,
-    /// keyed by `row.available.pluginIdentifier`. Populated lazily on selection
-    /// so the details pane shows the provider's real, current models instead of
+    /// keyed by `cacheKey(for:)` — plugin identifier + template id. The
+    /// OpenAI-compatible plugin exposes many templates (Ollama, Groq, DeepSeek,
+    /// xAI, …) under one shared plugin identifier, each its own picker row;
+    /// keying by plugin identifier alone would let one template's live models
+    /// leak into every sibling template's row. Populated lazily on selection so
+    /// the details pane shows the provider's real, current models instead of
     /// the static snapshot baked into the descriptor. Absent entries (remote
     /// providers, or a fetch still in flight / failed) fall back to
     /// `template.models` — see `resolvedModels(for:)`.
-    private var liveModelsByPlugin: [String: [String]] = [:]
+    private var liveModelsByTemplate: [String: [String]] = [:]
 
     /// Frame-persistence key, shared with the presenter, so the picker window's
     /// size + location go through the app's `WindowManager` like every other window.
@@ -356,11 +360,19 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         infoTextView.textStorage?.setAttributedString(content)
     }
 
+    /// Per-template cache key: plugin identifier + template id. The
+    /// OpenAI-compatible plugin exposes many templates under one plugin
+    /// identifier, each its own picker row, so the plugin identifier alone is
+    /// not unique enough to key a live-model cache.
+    private func cacheKey(for row: ProviderPickerRow) -> String {
+        "\(row.available.pluginIdentifier)|\(row.available.template.id)"
+    }
+
     /// The models to render for `row`: a live-fetched list if one is cached
     /// (local/OpenAI-compatible providers, once `fetchLiveModelsIfNeeded` has
     /// resolved), else the static snapshot baked into the descriptor.
     private func resolvedModels(for row: ProviderPickerRow) -> [String] {
-        liveModelsByPlugin[row.available.pluginIdentifier] ?? row.available.template.models
+        liveModelsByTemplate[cacheKey(for: row)] ?? row.available.template.models
     }
 
     /// Kicks an async fetch of the real, live model list for OpenAI-shaped
@@ -371,15 +383,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// re-renders the info pane only if the fetched row is still selected.
     private func fetchLiveModelsIfNeeded(for row: ProviderPickerRow) {
         let id = row.available.pluginIdentifier
+        let key = cacheKey(for: row)
         guard ModelChooserContent.supportsLiveModels(pluginIdentifier: id),
-              liveModelsByPlugin[id] == nil else { return }
+              liveModelsByTemplate[key] == nil else { return }
         let baseURL = row.available.template.defaultValues["baseURL"] ?? ""
         guard !baseURL.isEmpty else { return }
         Task { @MainActor in
             let models = await OpenAIModelCatalog.fetch(baseURL: baseURL, apiKey: nil)
             guard !models.isEmpty else { return }
-            liveModelsByPlugin[id] = models
-            if currentRow()?.available.pluginIdentifier == id { updateInfo(for: currentRow()) }
+            liveModelsByTemplate[key] = models
+            if let cur = currentRow(), cacheKey(for: cur) == key { updateInfo(for: cur) }
         }
     }
 

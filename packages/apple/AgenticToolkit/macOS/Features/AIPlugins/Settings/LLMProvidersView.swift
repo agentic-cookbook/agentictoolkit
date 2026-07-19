@@ -127,21 +127,6 @@ struct LLMProviderEditorView: View {
         ModelChooser.present(over: window, context: context) { selectModel($0, template: template) }
     }
 
-    /// The description + capabilities of the currently-selected model.
-    @ViewBuilder
-    private func modelInfo(_ detail: AIPluginDescriptor.ModelDetail) -> some View {
-        let item = ModelPickerItem(id: detail.id, description: detail.description,
-                                   tools: detail.tools, goodFor: detail.goodFor)
-        VStack(alignment: .leading, spacing: 1) {
-            if let description = detail.description, !description.isEmpty {
-                Text(description).font(.caption).foregroundStyle(.secondary)
-            }
-            if let capabilities = item.capabilities {
-                Text(capabilities).font(.caption2).foregroundStyle(.tertiary)
-            }
-        }
-    }
-
     /// Commits a model choice: persist it, refresh the label, and — if a chat is
     /// under way — post a "Model changed to …" notice into the transcript.
     /// `currentModel` (@State) is the single source of truth for display; the store
@@ -151,15 +136,6 @@ struct LLMProviderEditorView: View {
         AIProviderConfigStore.modelSetting(config: configuration.id, template: template).value = model
         currentModel = model
         if model != previous { chat.viewModel.noteModelChanged(to: model) }
-    }
-
-    /// Picker contents: `listed` plus `current` when it isn't already present, so a
-    /// since-retired stored selection stays visible/re-selectable instead of
-    /// silently absent. An empty `current` (no default) adds nothing. Pure so the
-    /// picker's fallback behaviour is unit-testable without a live view.
-    nonisolated static func offeredModels(listed: [String], current: String) -> [String] {
-        guard !current.isEmpty, !listed.contains(current) else { return listed }
-        return listed + [current]
     }
 
     private func fieldBinding(_ field: AIPluginDescriptor.Field) -> Binding<String> {
