@@ -86,20 +86,24 @@ public enum DaemonAIChat {
     /// the model for the CLI path only (the plugin path uses its config's model).
     /// `settings` reads the host's synced provider-registry values by key.
     ///
-    /// Loopback providers pass the local-model memory guard first: a model over
-    /// the RAM budget is refused (and any local inference deferred under system
-    /// memory pressure) BEFORE the plugin is loaded or a request built — aborting
-    /// later cannot stop the server-side model load. Allowed local requests are
-    /// serialized process-wide so two host features can't trigger two model loads
-    /// at once. Remote providers and the CLI path bypass the guard; pass
-    /// `inferenceGuard: nil` to opt out entirely.
+    /// Loopback providers pass the local-model memory guard at two points. First,
+    /// the configuration's STORED model is verdicted BEFORE the plugin is loaded or
+    /// a request built — aborting later cannot stop the server-side model load.
+    /// Second, when no model is stored (the descriptor default applies), the
+    /// EFFECTIVE model is verdicted again inside `completeViaPlugin` the moment it
+    /// is known — otherwise an empty stored model would fail open while a possibly
+    /// huge default loads. The pressure component is also re-checked once the
+    /// process-wide inference lock is held, since the wait can outlive the pre-park
+    /// verdict. Allowed local requests are serialized process-wide so two host
+    /// features can't trigger two model loads at once. Remote providers and the
+    /// CLI path bypass the guard; pass `inferenceGuard: nil` to opt out entirely.
     public static func complete(
         systemPrompt: String,
         userPrompt: String,
         maxTokens: Int,
         cliModel: String = "haiku",
         timeout: TimeInterval = defaultTimeout,
-        settings: ProviderSettingsReader,
+        settings: @escaping ProviderSettingsReader,
         runtime: PluginRuntime = .live,
         cliRunner: CLIRunner = liveCLIRunner,
         secretStore: any SecretStoring = KeychainSecretStore(),
@@ -108,10 +112,10 @@ public enum DaemonAIChat {
         if let config = DaemonProviderResolver.selectedConfiguration(settings) {
             if let inferenceGuard,
                let baseURL = localBaseURL(config: config, settings: settings) {
-                // Guard on the configuration's STORED model. When none is stored
-                // (the descriptor default would apply), the size lookup misses and
-                // the guard fails open — local providers are configured through
-                // the picker, which stores an explicit model.
+                // First guard point: the configuration's STORED model. When none is
+                // stored ("" — the descriptor default will apply), the size lookup
+                // misses and this check passes; `completeViaPlugin` verdicts the
+                // effective model once descriptor resolution names it.
                 let model = DaemonProviderResolver.model(config: config.id, settings)
                 switch await inferenceGuard.verdict(
                     model: model, baseURL: baseURL, settings: settings) {
@@ -121,17 +125,24 @@ public enum DaemonAIChat {
                     throw AIGuardError.deferred(reason)
                 case .allow:
                     return try await inferenceGuard.runExclusive {
-                        try await completeViaPlugin(
+                        // The verdict above ran before parking on the lock; the wait
+                        // may have outlived it. Re-check the live-pressure component
+                        // now that the critical section is actually entered.
+                        if case .deferred(let reason) = await inferenceGuard.pressureVerdict() {
+                            throw AIGuardError.deferred(reason)
+                        }
+                        return try await completeViaPlugin(
                             config: config, systemPrompt: systemPrompt, userPrompt: userPrompt,
                             maxTokens: maxTokens, settings: settings, runtime: runtime,
-                            secretStore: secretStore
+                            secretStore: secretStore, inferenceGuard: inferenceGuard
                         )
                     }
                 }
             }
             return try await completeViaPlugin(
                 config: config, systemPrompt: systemPrompt, userPrompt: userPrompt,
-                maxTokens: maxTokens, settings: settings, runtime: runtime, secretStore: secretStore
+                maxTokens: maxTokens, settings: settings, runtime: runtime,
+                secretStore: secretStore, inferenceGuard: inferenceGuard
             )
         }
         return try await completeViaCLI(
@@ -197,7 +208,9 @@ public enum DaemonAIChat {
     /// Loads the selected configuration's plugin, resolves its config-keyed values
     /// (plain fields from the host's settings, secrets from its Keychain namespace,
     /// model from `AIProviderConfigKeys.modelKey(config:)`), asks it to describe a
-    /// one-shot request, and accumulates the streamed text.
+    /// one-shot request, and accumulates the streamed text. When no model is stored,
+    /// re-verdicts the descriptor's default against the memory guard (the second
+    /// guard point — see `complete`) before any request is built.
     private static func completeViaPlugin(
         config: AIProviderConfiguration,
         systemPrompt: String,
@@ -205,7 +218,8 @@ public enum DaemonAIChat {
         maxTokens: Int,
         settings: ProviderSettingsReader,
         runtime: PluginRuntime,
-        secretStore: any SecretStoring
+        secretStore: any SecretStoring,
+        inferenceGuard: LocalInferenceGuard?
     ) async throws -> String {
         let pluginId = config.pluginIdentifier
         let (plugin, descriptor): (any AIPlugin, AIPluginDescriptor)
@@ -215,6 +229,28 @@ public enum DaemonAIChat {
             throw error
         } catch {
             throw ChatError.providerError("Failed to load AI plugin '\(pluginId)': \(error.localizedDescription)")
+        }
+
+        // The AI-Log ok-row model column shows the pluginIdentifier for an
+        // empty-stored config, not this resolved default — accepted residual
+        // (fixing it means changing `complete`'s return type).
+        let stored = DaemonProviderResolver.model(config: config.id, settings)
+        let model = stored.isEmpty ? descriptor.resolvedDefaultModel : stored
+        // Second guard point: `complete`'s early verdict saw the STORED model ("",
+        // here), so a loopback config with no stored model would fail open while
+        // the descriptor's default — possibly huge — loads. Verdict the effective
+        // model the moment descriptor resolution names it, before the request is
+        // built or dispatched.
+        if stored.isEmpty, let inferenceGuard,
+           let baseURL = localBaseURL(config: config, settings: settings) {
+            switch await inferenceGuard.verdict(model: model, baseURL: baseURL, settings: settings) {
+            case .block(let reason):
+                throw AIGuardError.blocked(reason)
+            case .deferred(let reason):
+                throw AIGuardError.deferred(reason)
+            case .allow:
+                break
+            }
         }
 
         // Rebuild the `AIPluginConfig` bag from exactly what the host forwarded and
@@ -250,8 +286,6 @@ public enum DaemonAIChat {
             let key = AIProviderConfigKeys.fieldKey(config: config.id, field: field.key)
             values[field.key] = secretStore.get(forKey: key) ?? ""
         }
-        let stored = DaemonProviderResolver.model(config: config.id, settings)
-        let model = stored.isEmpty ? descriptor.resolvedDefaultModel : stored
         // `model` is a key reserved by `AIPluginConfig` (read back as `config.model`).
         // Inject the resolved model last so it is authoritative over any same-named
         // descriptor field — a plugin should not declare a field keyed `model`.

@@ -75,6 +75,13 @@ public actor LocalInferenceGuard {
         )
     }
 
+    /// The live-pressure component of the verdict alone — for re-checking inside the
+    /// critical section: the wait for the lock can outlive the pre-park `verdict`,
+    /// and pressure that arose meanwhile must still defer.
+    public func pressureVerdict() -> ModelFitPolicy.Verdict {
+        ModelFitPolicy.pressureVerdict(memory.pressureLevel)
+    }
+
     /// Runs `operation` with local inference serialized process-wide. Actor methods
     /// are reentrant across `await`, so exclusivity needs a real async mutex:
     /// acquirers park in FIFO order and ownership is handed off directly — a

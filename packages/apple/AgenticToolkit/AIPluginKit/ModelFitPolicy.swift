@@ -53,6 +53,14 @@ public enum ModelFitPolicy {
         return .ok
     }
 
+    /// The pressure-only component of `verdict`, exposed on its own so the guard can
+    /// re-check it inside the critical section — the wait for the inference lock can
+    /// outlive a pre-park verdict.
+    public static func pressureVerdict(_ pressure: MemoryPressureLevel) -> Verdict {
+        guard pressure != .normal else { return .allow }
+        return .deferred(reason: "memory pressure is \(pressure.rawValue); deferring local inference")
+    }
+
     /// The inference-time decision. Pressure comes first: under warning/critical even
     /// a small (or unknown-size) model is deferred — the machine is already short.
     /// Then the size tiers: block refuses; warn and ok proceed (warn-tier footprint
@@ -61,8 +69,8 @@ public enum ModelFitPolicy {
         model: String, diskBytes: Int?, physicalRAM: UInt64,
         warnPct: Int, blockPct: Int, pressure: MemoryPressureLevel
     ) -> Verdict {
-        if pressure != .normal {
-            return .deferred(reason: "memory pressure is \(pressure.rawValue); deferring local inference")
+        if case .deferred(let reason) = pressureVerdict(pressure) {
+            return .deferred(reason: reason)
         }
         let tier = tier(diskBytes: diskBytes, physicalRAM: physicalRAM,
                         warnPct: warnPct, blockPct: blockPct)
