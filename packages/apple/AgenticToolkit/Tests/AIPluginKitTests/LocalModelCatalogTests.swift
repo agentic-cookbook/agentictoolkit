@@ -44,9 +44,38 @@ struct LocalModelCatalogTests {
         let size = await catalog.sizeBytes(model: "other", baseURL: "http://localhost:11434/v1")
         #expect(size == nil)
     }
+
+    @Test("a failed refetch keeps the last known-good sizes, on the failure cadence")
+    func failedRefetchKeepsKnownSizes() async {
+        let base = "http://localhost:11434/v1"
+        let counter = FetchCounter()
+        // First fetch succeeds; every refetch fails. successTTL 0 forces an
+        // immediate refetch; failureTTL is long so the failure entry is served.
+        let catalog = LocalModelCatalog(
+            fetcher: { _ in
+                if await counter.increment() == 1 { return Self.tagsJSON }
+                throw URLError(.cannotConnectToHost)
+            },
+            successTTL: 0, failureTTL: 3600)
+        let seeded = await catalog.sizeBytes(model: "small:latest", baseURL: base)
+        #expect(seeded == 4_900_000_000)
+        // The expired entry is refetched and the fetch FAILS: the known size must
+        // survive — failing open here would run a model known to be over budget.
+        let afterFailure = await catalog.sizeBytes(model: "small:latest", baseURL: base)
+        #expect(afterFailure == 4_900_000_000)
+        #expect(await counter.value == 2)
+        // Within the failure TTL nothing is re-fetched, and the size still serves.
+        let cached = await catalog.sizeBytes(model: "small:latest", baseURL: base)
+        #expect(cached == 4_900_000_000)
+        #expect(await counter.value == 2)
+    }
 }
 
 private actor FetchCounter {
     var value = 0
-    func increment() { value += 1 }
+    @discardableResult
+    func increment() -> Int {
+        value += 1
+        return value
+    }
 }
