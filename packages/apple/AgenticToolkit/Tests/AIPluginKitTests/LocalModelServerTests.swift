@@ -45,4 +45,21 @@ struct LocalModelServerTests {
     func parseSizesToleratesGarbage() {
         #expect(LocalModelServer.parseSizes(Data("not json".utf8)) == [:])
     }
+
+    @Test("one malformed entry doesn't discard the rest of the listing")
+    func parseSizesSkipsMalformedEntries() {
+        // The middle entry has wrong-TYPE fields; failing the whole decode over it
+        // would blank every size — and fail the guard open server-wide.
+        let json = """
+        {"models":[
+          {"name":"good:latest","size":4920000000},
+          {"name":123,"size":"garbage"},
+          {"name":"also-good:latest","size":51000000000}
+        ]}
+        """
+        let sizes = LocalModelServer.parseSizes(Data(json.utf8))
+        #expect(sizes["good:latest"] == 4_920_000_000)
+        #expect(sizes["also-good:latest"] == 51_000_000_000)
+        #expect(sizes.count == 2)
+    }
 }

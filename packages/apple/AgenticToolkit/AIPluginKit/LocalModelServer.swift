@@ -29,8 +29,10 @@ public enum LocalModelServer {
 
     /// Parses `/api/tags` JSON (`{"models":[{"name":…,"model":…,"size":…}]}`) into
     /// `model id → size bytes`. Both `name` and the newer `model` key index the same
-    /// entry so lookups succeed whichever form a config stored. [:] on undecodable
-    /// input.
+    /// entry so lookups succeed whichever form a config stored. Entries are decoded
+    /// individually — one malformed entry (a wrong-typed field) is skipped rather
+    /// than discarding the whole listing, which would fail the guard open
+    /// server-wide. [:] on wholly undecodable input.
     public static func parseSizes(_ data: Data) -> [String: Int] {
         struct Tags: Decodable {
             struct Model: Decodable {
@@ -38,11 +40,18 @@ public enum LocalModelServer {
                 let model: String?
                 let size: Int?
             }
-            let models: [Model]
+            /// Failable element: `nil` for an entry that doesn't decode.
+            struct Element: Decodable {
+                let value: Model?
+                init(from decoder: Decoder) {
+                    value = try? Model(from: decoder)
+                }
+            }
+            let models: [Element]
         }
         guard let tags = try? JSONDecoder().decode(Tags.self, from: data) else { return [:] }
         var sizes: [String: Int] = [:]
-        for entry in tags.models {
+        for entry in tags.models.compactMap(\.value) {
             guard let size = entry.size else { continue }
             if let name = entry.name { sizes[name] = size }
             if let model = entry.model { sizes[model] = size }
