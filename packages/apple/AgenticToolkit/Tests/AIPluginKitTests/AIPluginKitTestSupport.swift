@@ -116,3 +116,42 @@ func failingCLIRunner() -> DaemonAIChat.CLIRunner {
         return ""
     }
 }
+
+/// A one-shot async latch: `wait()` parks until `raise()` — for sequencing a test
+/// against a critical section (e.g. "the holder is inside", "the test says go").
+actor Flag {
+    private var raised = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    var isRaised: Bool { raised }
+
+    func raise() {
+        raised = true
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
+    }
+
+    func wait() async {
+        if raised { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+}
+
+/// A `SystemMemoryMonitoring` whose pressure a test can flip mid-flight — for
+/// exercising the guard's in-lock pressure re-check.
+final class MutableMemory: SystemMemoryMonitoring, @unchecked Sendable {
+    let physicalRAM: UInt64
+    private let lock = NSLock()
+    private var level: MemoryPressureLevel
+
+    init(physicalRAM: UInt64, level: MemoryPressureLevel) {
+        self.physicalRAM = physicalRAM
+        self.level = level
+    }
+
+    var pressureLevel: MemoryPressureLevel { lock.withLock { level } }
+
+    func set(_ newLevel: MemoryPressureLevel) {
+        lock.withLock { level = newLevel }
+    }
+}

@@ -71,7 +71,7 @@ struct LocalInferenceGuardTests {
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<4 {
                 group.addTask {
-                    await guardActor.runExclusive {
+                    try? await guardActor.runExclusive {
                         await tracker.enter()
                         try? await Task.sleep(nanoseconds: 20_000_000)
                         await tracker.exit()
@@ -81,6 +81,97 @@ struct LocalInferenceGuardTests {
         }
         #expect(await tracker.maxConcurrent == 1)
     }
+
+    @Test("waiters run in FIFO order via direct handoff")
+    func waitersRunInFIFOOrder() async throws {
+        let guardActor = makeGuard(tags: nil, pressure: .normal)
+        let entered = Flag()
+        let release = Flag()
+        let order = OrderLog()
+        let holder = Task {
+            try await guardActor.runExclusive {
+                await entered.raise()
+                await release.wait()
+            }
+        }
+        await entered.wait()
+        // Park three waiters in a known order (each is confirmed parked before
+        // the next starts), then let the holder finish.
+        var waiters: [Task<Void, Error>] = []
+        for index in 0..<3 {
+            waiters.append(Task {
+                try await guardActor.runExclusive { await order.append(index) }
+            })
+            while await guardActor.waiterCount < index + 1 {
+                try await Task.sleep(nanoseconds: 1_000_000)
+            }
+        }
+        await release.raise()
+        for waiter in waiters { try await waiter.value }
+        try await holder.value
+        #expect(await order.values == [0, 1, 2])
+    }
+
+    @Test("a cancelled parked waiter throws promptly without running its operation")
+    func cancelledParkedWaiterThrowsWithoutRunning() async throws {
+        let guardActor = makeGuard(tags: nil, pressure: .normal)
+        let entered = Flag()
+        let release = Flag()
+        let ran = Flag()
+        let holder = Task {
+            try await guardActor.runExclusive {
+                await entered.raise()
+                await release.wait()
+            }
+        }
+        await entered.wait()
+        let waiter = Task {
+            try await guardActor.runExclusive { await ran.raise() }
+        }
+        while await guardActor.waiterCount < 1 {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+        waiter.cancel()
+        // The cancelled waiter unparks and throws while the holder still holds
+        // the lock — no waiting for the critical section to end.
+        let result = await waiter.result
+        guard case .failure(let error) = result, error is CancellationError else {
+            Issue.record("expected CancellationError, got \(result)")
+            return
+        }
+        #expect(await guardActor.waiterCount == 0)
+        #expect(await ran.isRaised == false)
+        await release.raise()
+        try await holder.value
+    }
+
+    @Test("the deadline cuts off a hung operation and the next waiter proceeds")
+    func deadlineCutsOffHungOperation() async throws {
+        let guardActor = makeGuard(tags: nil, pressure: .normal)
+        let entered = Flag()
+        let hung = Task {
+            try await guardActor.runExclusive(deadline: 0.1) {
+                await entered.raise()
+                try await Task.sleep(nanoseconds: 60_000_000_000)  // "never" returns
+            }
+        }
+        await entered.wait()
+        let waiter = Task {
+            try await guardActor.runExclusive { "ran" }
+        }
+        // The deadline fires, the hung op is cancelled, and the handoff still runs.
+        #expect(try await waiter.value == "ran")
+        let result = await hung.result
+        guard case .failure(let error as AIGuardError) = result, case .deferred = error else {
+            Issue.record("expected AIGuardError.deferred, got \(result)")
+            return
+        }
+    }
+}
+
+private actor OrderLog {
+    private(set) var values: [Int] = []
+    func append(_ value: Int) { values.append(value) }
 }
 
 private actor OverlapTracker {

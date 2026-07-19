@@ -27,10 +27,19 @@ public actor LocalInferenceGuard {
     private static let logger = Logger(
         subsystem: "com.agentic-cookbook.AIPluginKit", category: "LocalInferenceGuard")
 
+    /// Default wall-clock bound on one exclusive operation: a hung local server
+    /// must not hold the process-wide inference lock forever.
+    public static let defaultDeadline: TimeInterval = 600
+
     private let catalog: LocalModelCatalog
     private let memory: any SystemMemoryMonitoring
     private var busy = false
-    private var waiters: [CheckedContinuation<Void, Never>] = []
+    /// Parked acquirers, FIFO. Resumed with `true` when ownership is handed off,
+    /// `false` when the waiter was cancelled while parked (it then throws).
+    private var waiters: [(id: UUID, continuation: CheckedContinuation<Bool, Never>)] = []
+
+    /// Test seam: how many acquirers are currently parked on the lock.
+    var waiterCount: Int { waiters.count }
 
     public init(
         catalog: LocalModelCatalog = .shared,
@@ -66,20 +75,82 @@ public actor LocalInferenceGuard {
         )
     }
 
-    /// Runs `operation` with local inference serialized process-wide. Actor methods are
-    /// reentrant across `await`, so exclusivity needs a real async mutex: waiters
-    /// park in FIFO continuations until the current op finishes.
+    /// Runs `operation` with local inference serialized process-wide. Actor methods
+    /// are reentrant across `await`, so exclusivity needs a real async mutex:
+    /// acquirers park in FIFO order and ownership is handed off directly — a
+    /// finishing operation resumes the head waiter as the new owner, with `busy`
+    /// staying true across the handoff (it falls only when no waiters remain), so
+    /// a late arrival can never barge ahead of the queue.
+    ///
+    /// A parked waiter that is cancelled leaves the queue and throws
+    /// `CancellationError` without running `operation`. `deadline` bounds the
+    /// operation's wall-clock run: on expiry the operation's task is cancelled,
+    /// `AIGuardError.deferred` is thrown, and the lock is handed off as usual.
     public func runExclusive<T: Sendable>(
-        _ operation: @Sendable () async throws -> T
-    ) async rethrows -> T {
-        while busy {
-            await withCheckedContinuation { waiters.append($0) }
+        deadline: TimeInterval = defaultDeadline,
+        _ operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await acquire()
+        defer { release() }
+        try Task.checkCancellation()
+        return try await Self.withDeadline(deadline, run: operation)
+    }
+
+    // MARK: - Async mutex
+
+    private func acquire() async throws {
+        if !busy {
+            busy = true
+            return
         }
-        busy = true
-        defer {
+        let id = UUID()
+        let granted = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                waiters.append((id: id, continuation: continuation))
+            }
+        } onCancel: {
+            Task { await self.cancelWaiter(id) }
+        }
+        guard granted else { throw CancellationError() }
+    }
+
+    private func cancelWaiter(_ id: UUID) {
+        // Still parked (a handoff would have removed it): leave the queue and
+        // unpark so `acquire` can throw. If the handoff won the race, the waiter
+        // already owns the lock and `runExclusive`'s cancellation check releases it.
+        guard let index = waiters.firstIndex(where: { $0.id == id }) else { return }
+        waiters.remove(at: index).continuation.resume(returning: false)
+    }
+
+    private func release() {
+        if waiters.isEmpty {
             busy = false
-            if !waiters.isEmpty { waiters.removeFirst().resume() }
+        } else {
+            // Direct handoff: the head waiter becomes the owner; `busy` never dips
+            // to false in between, so no arrival can slip past the queue.
+            waiters.removeFirst().continuation.resume(returning: true)
         }
-        return try await operation()
+    }
+
+    /// Races `operation` against a wall-clock timer; on expiry cancels it and
+    /// throws `AIGuardError.deferred` so hosts record the refusal like any other.
+    private static func withDeadline<T: Sendable>(
+        _ deadline: TimeInterval, run operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(max(0, deadline) * 1_000_000_000))
+                throw AIGuardError.deferred(
+                    "local inference exceeded its \(Int(deadline))s deadline; deferring")
+            }
+            defer { group.cancelAll() }
+            // The first finisher wins: the operation's value/error, or the timer's
+            // deferral. The loser is cancelled and its outcome discarded.
+            guard let result = try await group.next() else {
+                throw CancellationError()  // unreachable: the group has two children
+            }
+            return result
+        }
     }
 }
