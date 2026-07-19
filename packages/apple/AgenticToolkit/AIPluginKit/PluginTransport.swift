@@ -12,41 +12,49 @@ import Foundation
 public enum PluginTransport {
 
     /// A provider-level failure raised after the plugin described the request:
-    /// a non-2xx HTTP response or a non-zero subprocess exit. The message is the
-    /// plugin's own `describeError` text when it offers one, else a generic
-    /// fallback.
+    /// a non-2xx HTTP response, a non-zero subprocess exit, or the request
+    /// exceeding its wall-clock budget. The message is the plugin's own
+    /// `describeError` text when it offers one, else a generic fallback.
     public enum TransportError: Error, LocalizedError {
         case http(status: Int, message: String)
         case commandFailed(status: Int32, message: String)
         case invalidResponse
+        case timedOut(after: TimeInterval)
 
         public var errorDescription: String? {
             switch self {
             case .http(_, let message): return message
             case .commandFailed(_, let message): return message
             case .invalidResponse: return "The server returned an invalid response."
+            case .timedOut(let seconds):
+                return "The request exceeded its \(String(format: "%g", seconds))s budget."
             }
         }
     }
 
     /// Performs `spec` and streams decoded events. Cancelling the consuming task
     /// cancels the underlying transfer or terminates the subprocess.
+    /// `spec.timeout` is enforced as a WALL-CLOCK bound on the whole request, per
+    /// its contract — `URLRequest.timeoutInterval` alone is an idle timeout that
+    /// resets on every byte, so a trickling response would never end.
     public static func run(spec: AIRequestSpec, plugin: any AIPlugin) -> AsyncThrowingStream<AIStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    switch spec.transport {
-                    case let .http(method, url, headers, body):
-                        try await runHTTP(
-                            method: method, url: url, headers: headers, body: body,
-                            timeout: spec.timeout, plugin: plugin, into: continuation
-                        )
-                    case let .command(executableURL, arguments, stdin, environment):
-                        try await runCommand(
-                            executableURL: executableURL, arguments: arguments,
-                            stdin: stdin, environment: environment,
-                            plugin: plugin, into: continuation
-                        )
+                    try await withWallClockBudget(spec.timeout) {
+                        switch spec.transport {
+                        case let .http(method, url, headers, body):
+                            try await runHTTP(
+                                method: method, url: url, headers: headers, body: body,
+                                timeout: spec.timeout, plugin: plugin, into: continuation
+                            )
+                        case let .command(executableURL, arguments, stdin, environment):
+                            try await runCommand(
+                                executableURL: executableURL, arguments: arguments,
+                                stdin: stdin, environment: environment,
+                                plugin: plugin, into: continuation
+                            )
+                        }
                     }
                     continuation.finish()
                 } catch {
@@ -54,6 +62,25 @@ public enum PluginTransport {
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Races `operation` against a wall-clock timer: on expiry the transfer (or
+    /// subprocess) is cancelled and `TransportError.timedOut` is thrown.
+    private static func withWallClockBudget(
+        _ seconds: TimeInterval,
+        _ operation: @escaping @Sendable () async throws -> Void
+    ) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(max(0, seconds) * 1_000_000_000))
+                throw TransportError.timedOut(after: seconds)
+            }
+            defer { group.cancelAll() }
+            // The first finisher wins; the loser is cancelled and its outcome
+            // (typically CancellationError) discarded by the group.
+            _ = try await group.next()
         }
     }
 
@@ -116,14 +143,27 @@ public enum PluginTransport {
         process.standardInput = stdinPipe
 
         try process.run()
-        // Cancellation (or any thrown error) terminates a still-running child.
+        // Any thrown error terminates a still-running child.
         defer { if process.isRunning { process.terminate() } }
 
         // Feed stdin, then close it so the child sees EOF and can finish.
         if let stdin { stdinPipe.fileHandleForWriting.write(stdin) }
         try? stdinPipe.fileHandleForWriting.close()
 
-        try await pump(bytes: stdoutPipe.fileHandleForReading.bytes, through: plugin.makeDecoder(), into: continuation)
+        // Task cancellation (consumer went away, or the wall-clock budget lapsed)
+        // must terminate the child EAGERLY: the pump's read only observes
+        // cancellation on the next byte, which a silent child never sends —
+        // terminating closes its stdout so the read wakes with EOF.
+        let box = ProcessBox(process)
+        try await withTaskCancellationHandler {
+            try await pump(
+                bytes: stdoutPipe.fileHandleForReading.bytes,
+                through: plugin.makeDecoder(), into: continuation
+            )
+            try Task.checkCancellation()
+        } onCancel: {
+            box.terminateIfRunning()
+        }
 
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
@@ -131,6 +171,16 @@ public enum PluginTransport {
             let message = plugin.describeError(status: Int(process.terminationStatus), body: errorBody)
                 ?? "Command exited with status \(process.terminationStatus)"
             throw TransportError.commandFailed(status: process.terminationStatus, message: message)
+        }
+    }
+
+    /// `Process` isn't `Sendable`; the cancellation handler only touches the
+    /// thread-safe `isRunning`/`terminate`.
+    private final class ProcessBox: @unchecked Sendable {
+        private let process: Process
+        init(_ process: Process) { self.process = process }
+        func terminateIfRunning() {
+            if process.isRunning { process.terminate() }
         }
     }
 
