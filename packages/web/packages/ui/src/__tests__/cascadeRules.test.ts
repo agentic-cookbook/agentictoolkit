@@ -302,19 +302,18 @@ describe("the reveal closes on exactly three things — never an intermediate se
 })
 
 describe("must-hold-the-detail-until-the-final-choice", () => {
-  it("T57: an intermediate select shows the HELD content at the unselected frontier, not the overview", () => {
-    // The click disclosed another choosing list; the pane must keep showing exactly what it showed
-    // before the click — never the newly selected topic's overview, a landing, or a blank.
-    expect(shouldShowHeldDetail({ holding: true, frontierUnselected: true })).toBe(true)
-  })
-
-  it("shows the live detail once the path is complete — the hold never outlives the final choice's paint", () => {
-    expect(shouldShowHeldDetail({ holding: true, frontierUnselected: false })).toBe(false)
+  it("T57: while a hold is armed the HELD content shows — never the overview, a landing, or a blank", () => {
+    // An intermediate select disclosed another choosing list; the pane keeps showing exactly what it
+    // showed before the click. This also covers the complete-looking render BEFORE the settle is
+    // confirmed (a merged stack's late-registered list): gating on "the frontier is unselected"
+    // would flash the host's landing for the commit the list takes to arrive. Only the release
+    // (planChoiceSettle's confirmed settle) reveals the live detail — the ONE swap.
+    expect(shouldShowHeldDetail({ holding: true })).toBe(true)
   })
 
   it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {
     // No pointer, no gesture, no captured content: the overview rule stands.
-    expect(shouldShowHeldDetail({ holding: false, frontierUnselected: true })).toBe(false)
+    expect(shouldShowHeldDetail({ holding: false })).toBe(false)
   })
 
   it("T58: a settled-looking render ARMS, and the consecutive one settles — the final choice releases the hold", () => {

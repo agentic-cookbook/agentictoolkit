@@ -591,12 +591,7 @@ export function HierarchicalMenuDetail({
   const cascading = disclosureStyle === "cascading"
   const selectionSig = levels.map((l) => l.selectedId ?? "").join("|")
   const showHeld =
-    cascading &&
-    !narrow &&
-    shouldShowHeldDetail({
-      holding: surface.heldDetail != null,
-      frontierUnselected: firstUnselected !== -1,
-    })
+    cascading && !narrow && shouldShowHeldDetail({ holding: surface.heldDetail != null })
   // What the pane is showing NOW — what a capture snapshots. When the overview (or the held node
   // itself) is up, that is the pane; otherwise it is the host's children, wrapped exactly as the
   // visible wrapper below wraps them so the held copy lays out identically.

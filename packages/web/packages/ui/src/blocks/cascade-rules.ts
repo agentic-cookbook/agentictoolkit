@@ -292,24 +292,22 @@ export function revealClosedBy(e: RevealEvent): boolean {
 // ─── The final choice: the cascade's settling event (v1.15.0) ──────────────────────────────────────
 
 /**
- * Does the detail pane show the HELD content instead of the frontier overview / the host's landing?
- * (**must-hold-the-detail-until-the-final-choice**, T57)
+ * Does the detail pane show the HELD content instead of the frontier overview / the host's landing /
+ * the incoming live detail? (**must-hold-the-detail-until-the-final-choice**, T57)
  *
  * A select is the FINAL CHOICE when the chosen row does not lead to another topic list; until one is
  * made, an intermediate select must leave the detail showing exactly what it showed before the click.
- * `holding` is "a rail interaction captured the pane's content and no final choice has released it";
- * `frontierUnselected` is the state in which the overview/landing flip would otherwise happen. A deep
- * link that lands on an unselected frontier has no held content (`holding: false`) and still shows
- * the overview — there is no held detail and no pointer.
+ * `holding` is "a rail interaction captured the pane's content and no final choice has released it",
+ * and while it is true the held content shows, PERIOD — the release (`planChoiceSettle`'s confirmed
+ * settle) is the one thing that reveals the live detail, which is what makes the swap ONE swap. In
+ * particular a complete-looking render before the settle is confirmed still shows the held content:
+ * on a merged stack that render is usually MISSING the late-registered choosing list, and gating the
+ * display on "the frontier is unselected" would flash the host's landing for the commit it takes the
+ * list to arrive. A deep link that lands on an unselected frontier has no held content
+ * (`holding: false`) and still shows the overview — there is no held detail and no pointer.
  */
-export function shouldShowHeldDetail({
-  holding,
-  frontierUnselected,
-}: {
-  holding: boolean
-  frontierUnselected: boolean
-}): boolean {
-  return holding && frontierUnselected
+export function shouldShowHeldDetail({ holding }: { holding: boolean }): boolean {
+  return holding
 }
 
 /** What a render does about an armed detail hold. */
