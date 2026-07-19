@@ -10,7 +10,10 @@ public protocol SystemMemoryMonitoring: Sendable {
 /// Live implementation: total RAM from `ProcessInfo`, and the OS's own
 /// memory-pressure signal latched from a DispatchSource for the process's lifetime.
 /// The source fires on transitions, so the last event IS the current level
-/// (`normal` until told otherwise).
+/// (`normal` until told otherwise). A delivery can coalesce several transitions
+/// into one mask; a `.normal` bit then means the window ENDED at normal (a fall is
+/// always the later event when raise+fall coalesce), so `.normal` wins the latch —
+/// otherwise a raise+fall pair would latch warning/critical forever.
 public final class SystemMemoryMonitor: SystemMemoryMonitoring, @unchecked Sendable {
     public static let shared = SystemMemoryMonitor()
 
@@ -38,6 +41,7 @@ public final class SystemMemoryMonitor: SystemMemoryMonitoring, @unchecked Senda
     }
 
     static func level(for event: DispatchSource.MemoryPressureEvent) -> MemoryPressureLevel {
+        if event.contains(.normal) { return .normal }
         if event.contains(.critical) { return .critical }
         if event.contains(.warning) { return .warning }
         return .normal
