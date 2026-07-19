@@ -60,8 +60,11 @@ import {
   exitKeyframes,
   mayMoveGround,
   menuRegion,
+  planChoiceSettle,
   planRailSelect,
   pointInRegion,
+  shouldShowHeldDetail,
+  triggerFires,
   triggerRectArmed,
   type MenuRect,
 } from "./cascade-rules"
@@ -248,6 +251,20 @@ type SurfaceState = {
    *  reason everything else here does: clearing the row IS a route change, so a per-instance memory
    *  would forget it was ever fired and immediately re-select the row the user just cleared. */
   autoSelected: Record<string, string>
+  /** THE DETAIL HOLD (must-hold-the-detail-until-the-final-choice, cascade only): the detail-pane
+   *  content captured by the first rail interaction of a choosing gesture, shown in place of the
+   *  frontier overview / the host's landing until the FINAL CHOICE releases it — ONE swap, old
+   *  content → new. It lives HERE for the ground's reason: an intermediate select is a route change
+   *  that remounts the subtree, and the hold must survive exactly that remount
+   *  (must-keep-view-state-across-a-selection). `null` = no hold armed (a deep link therefore still
+   *  shows the overview — nothing was ever captured). */
+  heldDetail: ReactNode | null
+  /** The selection chain (`selectedId`s joined) when the hold was armed — with `heldMoved`, how a
+   *  render tells "the host applied a navigation" from "the click's own pre-navigation renders". */
+  heldSig: string | null
+  /** Has the selection chain differed from `heldSig` at any point while holding? Lets a walk that
+   *  wanders and re-picks the exact starting leaf still read as a final choice. */
+  heldMoved: boolean
 }
 
 /**
@@ -421,6 +438,9 @@ export function HierarchicalMenuDetail({
     hoverAll: false,
     narrowTop: null,
     autoSelected: {},
+    heldDetail: null,
+    heldSig: null,
+    heldMoved: false,
   }
   const { autoHide, pins, hoverId, hoverAll } = surface
   // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
@@ -435,6 +455,9 @@ export function HierarchicalMenuDetail({
         hoverAll: false,
         narrowTop: null,
         autoSelected: {},
+        heldDetail: null,
+        heldSig: null,
+        heldMoved: false,
       }
       surfaceStates.set(surfaceKey, update(prev))
       bumpSurface()
@@ -548,18 +571,88 @@ export function HierarchicalMenuDetail({
         onSelect={(id) => frontierLevel.onSelect(id)}
       />
     ) : null
+  // THE DETAIL HOLD (must-hold-the-detail-until-the-final-choice, cascade only): until the FINAL
+  // CHOICE — a select whose row leads to no further topic list — the detail pane must not change.
+  // The first rail interaction of a gesture CAPTURES what the pane is showing (the last final
+  // choice's content, or the overview/landing the gesture began over) into the surface store, and
+  // every render at an unselected frontier shows that held content instead of flipping to the new
+  // topic's overview or the host's landing. The hold is a DISPLAY hold only — the select still
+  // navigates — and it settles retrospectively: the host answers "did that row lead to another
+  // list?" with its next render, so the first render whose path is complete (and whose selection has
+  // actually moved) is the final choice. That render releases the hold (ONE swap, old → new) and, in
+  // auto-collapse mode, closes the reveal on the click itself
+  // (must-auto-collapse-menus-on-final-choice) — see `planChoiceSettle`.
+  const cascading = disclosureStyle === "cascading"
+  const selectionSig = levels.map((l) => l.selectedId ?? "").join("|")
+  const showHeld =
+    cascading &&
+    !narrow &&
+    shouldShowHeldDetail({
+      holding: surface.heldDetail != null,
+      frontierUnselected: firstUnselected !== -1,
+    })
+  // What the pane is showing NOW — what a capture snapshots. When the overview (or the held node
+  // itself) is up, that is the pane; otherwise it is the host's children, wrapped exactly as the
+  // visible wrapper below wraps them so the held copy lays out identically.
+  const paneShowing: ReactNode = showHeld
+    ? surface.heldDetail
+    : (overview ?? <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>)
+  const paneShowingRef = useRef(paneShowing)
+  paneShowingRef.current = paneShowing
+  const selectionSigRef = useRef(selectionSig)
+  selectionSigRef.current = selectionSig
+  // Arm the hold — called by the cascade on every rail select/clear/close, BEFORE it navigates. The
+  // first interaction of a gesture captures; the rest are no-ops (the pane is already held, and the
+  // original content must ride through the whole walk).
+  const holdDetailForChoice = useCallback(() => {
+    patchSurface((p) =>
+      p.heldDetail != null
+        ? p
+        : {
+            ...p,
+            heldDetail: paneShowingRef.current,
+            heldSig: selectionSigRef.current,
+            heldMoved: false,
+          },
+    )
+  }, [patchSurface])
+  // Settle the hold: the first render whose path is complete AND whose selection moved since arming
+  // is the final choice (see `planChoiceSettle` for why both clauses). Release the hold there — and
+  // in auto-collapse mode close the reveal on that same click (the ONE click-driven closure,
+  // must-auto-collapse-menus-on-final-choice); with auto-collapse off, no select collapses anything.
+  // Not `pointerInMenus`-gated and not cascade-gated on release: a hold armed in the cascade must
+  // still release if the surface later settles under another layout.
+  useEffect(() => {
+    const s = surfaceStates.get(surfaceKey)
+    if (!s || s.heldDetail == null) return
+    const plan = planChoiceSettle({
+      holding: true,
+      pathComplete: firstUnselected === -1,
+      selectionChanged: s.heldSig !== selectionSig || s.heldMoved,
+      autoHide,
+    })
+    if (plan.settle) {
+      patchSurface((p) => ({ ...p, heldDetail: null, heldSig: null, heldMoved: false }))
+      if (plan.autoCollapse && cascading) setHoverId(null)
+    } else if (s.heldSig !== selectionSig && !s.heldMoved) {
+      patchSurface((p) => ({ ...p, heldMoved: true }))
+    }
+  })
+
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
   // the deeper levels are PUBLISHED by components living in children (StackLevels), so unmounting
   // them would unregister the very frontier level this overview is for. The wrapper is therefore
   // ALWAYS present and only its visibility toggles — conditionally re-parenting children into it
   // IS a remount (React reconciles by position), which resets their state and unregisters their
   // levels, looping the stack between the two states (a mount/fetch storm, found live). Inline
-  // display (not the `hidden` attribute) so the flex utility class can't override it.
+  // display (not the `hidden` attribute) so the flex utility class can't override it. The HELD
+  // node renders in the overview's slot for the same reason — the wrapper (and the levels its
+  // children publish) must ride through the hold untouched.
   const detail = (
     <>
-      {overview}
+      {showHeld ? surface.heldDetail : overview}
       <div
-        style={overview ? { display: "none" } : undefined}
+        style={showHeld || overview ? { display: "none" } : undefined}
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {children}
@@ -588,6 +681,7 @@ export function HierarchicalMenuDetail({
     narrowTop: surface.narrowTop,
     setNarrowTop,
     containerW,
+    holdDetailForChoice,
   }
 
   return (
@@ -1130,6 +1224,10 @@ interface StackProps {
   setNarrowTop: (i: number) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
+  /** Arm the detail hold (must-hold-the-detail-until-the-final-choice): capture what the detail pane
+   *  is showing before this rail interaction navigates. The frame owns the capture and the settle;
+   *  the cascade only reports the clicks. First interaction captures, the rest no-op. */
+  holdDetailForChoice: () => void
   children: ReactNode
 }
 
@@ -2159,6 +2257,7 @@ function CascadingStack({
   hoverAll,
   setHoverId,
   containerW,
+  holdDetailForChoice,
   children,
 }: StackProps) {
   // Per-level rail width, resizable by the trailing-border handle within a readable range (same
@@ -2511,12 +2610,22 @@ function CascadingStack({
       clearTimeout(settle)
     }
   }, [triggerSig])
-  // Open the cascade the moment the pointer enters the trigger rectangle.
+  // Open the cascade the moment the pointer ENTERS the trigger rectangle — the outside→inside
+  // crossing, not mere presence (`triggerFires`). Presence used to be enough, and it broke the
+  // final-choice collapse's re-open clause (must-auto-collapse-menus-on-final-choice): the click
+  // that settles the cascade leaves the pointer parked where the menus were — inside the freshly
+  // armed trigger — so the first stray pixel of movement re-disclosed everything the click had just
+  // closed. The ref starts as "inside" on every mount (a select remounts this stack with the
+  // pointer parked over it) so an ambiguous first observation can only ever fail closed: a pointer
+  // genuinely approaching from outside proves it with its first move.
+  const triggerPointerInside = useRef(true)
   useEffect(() => {
-    if (!triggerArmed || !triggerRect) return
+    if (!triggerRect) return
     const onMove = (e: PointerEvent) => {
-      if (pointInRegion(triggerRect, e.clientX, e.clientY))
+      const isInside = pointInRegion(triggerRect, e.clientX, e.clientY)
+      if (triggerFires({ armed: triggerArmed, wasInside: triggerPointerInside.current, isInside }))
         setHoverId(rendered[frontier]?.id ?? null, true)
+      triggerPointerInside.current = isInside
     }
     document.addEventListener("pointermove", onMove)
     return () => document.removeEventListener("pointermove", onMove)
@@ -2915,6 +3024,10 @@ function CascadingStack({
                 // rows that opened them before the clear lands. Without this the ✕ was the only
                 // animated close and a re-click just made the menu vanish.
                 onSelect={(id) => {
+                  // Arm the detail hold BEFORE anything navigates: this click may be intermediate,
+                  // and the pane must ride through it showing what it shows right now
+                  // (must-hold-the-detail-until-the-final-choice).
+                  holdDetailForChoice()
                   setHoverId(level.id, hoverAll && inGroup(i))
                   railOnSelect(level, attemptExit, (clear) => exitBranch(i + 1, clear))(id)
                 }}
@@ -2948,6 +3061,9 @@ function CascadingStack({
                 onClose={
                   i === frontier && !isRootList
                     ? () => {
+                        // The ✕ clears the parent's selection, disclosing its choosing list — the
+                        // user is still choosing, so the detail holds through it too.
+                        holdDetailForChoice()
                         const parent = rendered[i - 1]!
                         setHoverId(hoverIndex >= 0 ? parent.id : null, hoverAll)
                         // Re-rooting the reveal above cannot move anything (`hoverAll` groups from

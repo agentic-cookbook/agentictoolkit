@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 import { describe, it, expect, vi } from "vitest"
 // `fireEvent`, not `userEvent` — this package's house style (see button.test.tsx): full input
 // fidelity is covered by app-level Playwright, and these assertions are about which callback a click
@@ -157,5 +159,141 @@ describe("must-draw-one-chain-line (drawing)", () => {
     // (The width/colour parity above is the assertion that actually holds in jsdom.)
     const svg = container.querySelector("[data-htd-connectors]")
     if (svg) expect(svg.getAttribute("shape-rendering")).toBe("crispEdges")
+  })
+})
+
+/** A stateful three-level host (workspaces ▸ features ▸ topics) whose deeper lists appear as their
+ *  parents are chosen and whose children track the selection — the shape the hold's retrospective
+ *  final-choice detection exists for. The detail text names the full path so the assertions can
+ *  tell "held the old content" from "flipped to the new". */
+function Walk({ rootId }: { rootId: string }) {
+  const [ws, setWs] = useState<string | null>("acme")
+  const [feat, setFeat] = useState<string | null>("integrations")
+  const [topic, setTopic] = useState<string | null>("hooks")
+  const levels: TopicLevel[] = [
+    level({
+      id: rootId,
+      title: "Workspaces",
+      items: [
+        { id: "acme", label: "Acme" },
+        { id: "mine", label: "My Workspace" },
+      ],
+      selectedId: ws,
+      onSelect: (id) => {
+        setWs(id)
+        setFeat(null)
+        setTopic(null)
+      },
+      onClear: () => {
+        setWs(null)
+        setFeat(null)
+        setTopic(null)
+      },
+    }),
+    ...(ws
+      ? [
+          level({
+            id: "features",
+            title: "Features",
+            items: [
+              { id: "integrations", label: "Integrations" },
+              { id: "settings", label: "Settings" },
+            ],
+            selectedId: feat,
+            onSelect: (id) => {
+              setFeat(id)
+              setTopic(null)
+            },
+            onClear: () => {
+              setFeat(null)
+              setTopic(null)
+            },
+          }),
+        ]
+      : []),
+    ...(ws && feat
+      ? [
+          level({
+            id: "topics",
+            title: "Topics",
+            items: [
+              { id: "hooks", label: "Hooks" },
+              { id: "keys", label: "Keys" },
+            ],
+            selectedId: topic,
+            onSelect: setTopic,
+            onClear: () => setTopic(null),
+          }),
+        ]
+      : []),
+  ]
+  return (
+    <HierarchicalMenuDetail levels={levels} disclosureStyle="cascading">
+      <div>{topic ? `DETAIL ${feat}/${topic}` : `LANDING ${feat ?? ws ?? "root"}`}</div>
+    </HierarchicalMenuDetail>
+  )
+}
+
+/** Is the element hidden by an inline `display: none` on itself or an ancestor? (The frame hides
+ *  the always-mounted children wrapper exactly that way; jest-dom's types aren't wired into this
+ *  package, so the check is spelled out.) */
+const displayHidden = (el: HTMLElement | null): boolean => {
+  for (let n = el; n; n = n.parentElement) if (n.style.display === "none") return true
+  return false
+}
+
+describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
+  it("T57/T58: the detail rides through an intermediate select and swaps ONCE at the final choice", async () => {
+    const root = freshRootId()
+    const { container } = render(<Walk rootId={root} />)
+    const detailPane = () => within(container.querySelector("section")!)
+    expect(displayHidden(detailPane().getByText("DETAIL integrations/hooks"))).toBe(false)
+
+    // T57 — the INTERMEDIATE select: choosing Settings discloses the Topics choosing list. The pane
+    // must keep showing the last final choice's content — not the Topics overview (its cards would
+    // put "Hooks"/"Keys" inside the detail section) and not the host's landing.
+    const features = within(container.querySelector<HTMLElement>('[data-htd-col="1"]')!)
+    fireEvent.click(features.getByRole("button", { name: /Settings/ }))
+    await waitFor(() =>
+      expect(displayHidden(detailPane().getByText("DETAIL integrations/hooks"))).toBe(false),
+    )
+    expect(displayHidden(detailPane().getByText(/LANDING/))).toBe(true) // the host's landing stays hidden
+    expect(detailPane().queryByText("Hooks")).toBeNull() // no overview card at the frontier
+    expect(detailPane().queryByText("Keys")).toBeNull()
+
+    // T58 — the FINAL CHOICE: Keys leads to no further topic list, so the detail changes ONCE,
+    // straight to the final choice's detail; the held content is gone.
+    const topics = within(container.querySelector<HTMLElement>('[data-htd-col="2"]')!)
+    fireEvent.click(topics.getByRole("button", { name: /Keys/ }))
+    await waitFor(() =>
+      expect(displayHidden(detailPane().getByText("DETAIL settings/keys"))).toBe(false),
+    )
+    expect(detailPane().queryByText("DETAIL integrations/hooks")).toBeNull()
+  })
+
+  it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {
+    const root = freshRootId()
+    // Mount mid-path with no gesture: workspaces chosen, features not — the frontier overview rule
+    // stands (there is no held detail and no pointer).
+    const { container } = render(
+      <HierarchicalMenuDetail
+        levels={[
+          workspaces("acme", { id: root }),
+          level({
+            id: "features",
+            title: "Features",
+            items: [{ id: "integrations", label: "Integrations" }],
+            selectedId: null,
+          }),
+        ]}
+        disclosureStyle="cascading"
+      >
+        <div>LANDING</div>
+      </HierarchicalMenuDetail>,
+    )
+    // The overview card for the frontier's rows renders inside the detail section.
+    expect(
+      displayHidden(within(container.querySelector("section")!).getByText("Integrations")),
+    ).toBe(false)
   })
 })

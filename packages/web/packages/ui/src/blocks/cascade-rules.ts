@@ -252,17 +252,22 @@ export const NO_REVEAL: RevealState = { root: null, all: false }
 /**
  * The COMPLETE set of things that may change the reveal — the whole point of naming them.
  *
- * A `root` is the ONLY opener, and a SELECT dispatches exactly that: choosing a row RE-ROOTS the
- * reveal at the list clicked in, it never closes it. The only two closers are the pointer leaving the
- * menus and an explicit disclosure toggle. There is deliberately no "select" or "click" event here:
- * that a click cannot close a reveal is the invariant whose absence let a click collapse the menus,
- * so it is encoded as an unrepresentable state. A future edit that wants to close on select has to
- * add a new event, and `revealClosedBy`'s test will reject it.
+ * A `root` is the ONLY opener, and an INTERMEDIATE select dispatches exactly that: choosing a row
+ * that leaves the user still choosing RE-ROOTS the reveal at the list clicked in, it never closes
+ * it. The closers are the pointer leaving the menus, an explicit disclosure toggle, and — in
+ * auto-collapse mode only — the FINAL CHOICE (v1.15.0, must-auto-collapse-menus-on-final-choice):
+ * the click that completes the path, where settling IS the requested action. `finalChoice` is the
+ * ONE click-driven closure, carved out of must-collapse-from-one-pointer-authority; there is still
+ * deliberately no generic "select" event here — that an intermediate click cannot close a reveal is
+ * the invariant whose absence let a click collapse the menus, so it stays unrepresentable. A future
+ * edit that wants any OTHER click to close has to add a new event, and `revealClosedBy`'s test will
+ * reject it.
  */
 export type RevealEvent =
   | { type: "root"; id: string; all: boolean } // hover-enter (all) OR covering-select (branch)
-  | { type: "pointerLeftMenus" } // the pointer left the region — the ONE auto-collapse
+  | { type: "pointerLeftMenus" } // the pointer left the region — the standing auto-collapse
   | { type: "settle" } // a «/» or immersion toggle: settle the layout NOW (an explicit action)
+  | { type: "finalChoice" } // the path-completing click (auto-collapse mode) — the ONE click closer
 
 export function reduceReveal(_prev: RevealState, e: RevealEvent): RevealState {
   switch (e.type) {
@@ -270,17 +275,103 @@ export function reduceReveal(_prev: RevealState, e: RevealEvent): RevealState {
       return { root: e.id, all: e.all }
     case "pointerLeftMenus":
     case "settle":
+    case "finalChoice":
       return NO_REVEAL
   }
 }
 
 /**
- * Does this event CLOSE the reveal? True for exactly the pointer-leave and the explicit toggle;
- * false for a root. "Auto-collapse is `pointerLeftMenus` and nothing else" is this function, and a
- * click never reaches it — which is what "clicking does nothing wrt auto-collapse" means in code.
+ * Does this event CLOSE the reveal? True for exactly the pointer-leave, the explicit toggle and the
+ * final choice; false for a root. An INTERMEDIATE click never reaches here — which is what
+ * "an intermediate select does nothing wrt auto-collapse" means in code.
  */
 export function revealClosedBy(e: RevealEvent): boolean {
-  return e.type === "pointerLeftMenus" || e.type === "settle"
+  return e.type === "pointerLeftMenus" || e.type === "settle" || e.type === "finalChoice"
+}
+
+// ─── The final choice: the cascade's settling event (v1.15.0) ──────────────────────────────────────
+
+/**
+ * Does the detail pane show the HELD content instead of the frontier overview / the host's landing?
+ * (**must-hold-the-detail-until-the-final-choice**, T57)
+ *
+ * A select is the FINAL CHOICE when the chosen row does not lead to another topic list; until one is
+ * made, an intermediate select must leave the detail showing exactly what it showed before the click.
+ * `holding` is "a rail interaction captured the pane's content and no final choice has released it";
+ * `frontierUnselected` is the state in which the overview/landing flip would otherwise happen. A deep
+ * link that lands on an unselected frontier has no held content (`holding: false`) and still shows
+ * the overview — there is no held detail and no pointer.
+ */
+export function shouldShowHeldDetail({
+  holding,
+  frontierUnselected,
+}: {
+  holding: boolean
+  frontierUnselected: boolean
+}): boolean {
+  return holding && frontierUnselected
+}
+
+/** What a render does about an armed detail hold. */
+export type ChoiceSettlePlan = {
+  /** Release the hold: the final choice's detail replaces the held content — the ONE swap. */
+  settle: boolean
+  /** Also close the reveal on the click itself (auto-collapse mode only). */
+  autoCollapse: boolean
+}
+
+/**
+ * The final choice, decided retrospectively (**must-hold-the-detail-until-the-final-choice** T58,
+ * **must-auto-collapse-menus-on-final-choice** T59/T60).
+ *
+ * Whether a chosen row "leads to another topic list" is the HOST's answer, delivered as the next
+ * render: an intermediate select discloses another choosing list (the path is incomplete), the final
+ * choice completes it. So the hold settles on the first render where the path is complete AND the
+ * selection has actually changed since the hold was armed — `selectionChanged` is what keeps the
+ * click's own pre-navigation renders (the host's route move may land several renders later) from
+ * settling a hold that hasn't gone anywhere yet.
+ *
+ * `autoCollapse` is the carve-out named in must-collapse-from-one-pointer-authority: in auto-collapse
+ * mode the settling click itself closes the menus, exactly as the disclosure toggles settle the stack
+ * (settling IS the requested action). With auto-collapse OFF no select collapses anything — the menus
+ * stay as the user arranged them (T60).
+ */
+export function planChoiceSettle({
+  holding,
+  pathComplete,
+  selectionChanged,
+  autoHide,
+}: {
+  /** Is a detail hold armed (a rail interaction captured the pane)? */
+  holding: boolean
+  /** Does every rendered level have a selection (no choosing list is disclosed)? */
+  pathComplete: boolean
+  /** Has the selection chain changed at any point since the hold was armed? */
+  selectionChanged: boolean
+  /** Auto-collapse mode (`autoHideTopics`) — gates the collapse, never the settle. */
+  autoHide: boolean
+}): ChoiceSettlePlan {
+  const settle = holding && pathComplete && selectionChanged
+  return { settle, autoCollapse: settle && autoHide }
+}
+
+/**
+ * Does a pointer move fire the disclose trigger? Entry-only (**must-auto-collapse-menus-on-final-
+ * choice**'s re-open clause): after the final choice closes the menus the pointer has not moved, so
+ * nothing may re-open them until it next ENTERS a peek or menu — merely BEING inside the trigger
+ * rect (which now covers where the click landed) must not re-disclose the cascade on the first
+ * stray pixel of movement. Only the outside→inside crossing opens.
+ */
+export function triggerFires({
+  armed,
+  wasInside,
+  isInside,
+}: {
+  armed: boolean
+  wasInside: boolean
+  isInside: boolean
+}): boolean {
+  return armed && isInside && !wasInside
 }
 
 // ─── The disclose trigger frame ─────────────────────────────────────────────────────────────────────

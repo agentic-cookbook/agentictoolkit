@@ -12,10 +12,13 @@ import {
   exitKeyframes,
   mayMoveGround,
   menuRegion,
+  planChoiceSettle,
   planRailSelect,
   pointInRegion,
   reduceReveal,
   revealClosedBy,
+  shouldShowHeldDetail,
+  triggerFires,
   triggerRectArmed,
   type MenuRect,
   type RevealEvent,
@@ -249,9 +252,10 @@ describe("menu region — the ONE authority for pointer-in-menus", () => {
   })
 })
 
-describe("the reveal closes on exactly two things — never a select", () => {
-  it("a root (a select or a hover-enter) OPENS, and can never close", () => {
-    // The invariant whose absence let a click collapse the menus. A select dispatches `root`.
+describe("the reveal closes on exactly three things — never an intermediate select", () => {
+  it("a root (an intermediate select or a hover-enter) OPENS, and can never close", () => {
+    // The invariant whose absence let a click collapse the menus. An intermediate select dispatches
+    // `root`.
     expect(reduceReveal(NO_REVEAL, { type: "root", id: "features", all: false })).toEqual({
       root: "features",
       all: false,
@@ -266,7 +270,7 @@ describe("the reveal closes on exactly two things — never a select", () => {
     expect(state).toEqual({ root: "b", all: false })
   })
 
-  it("closes on the pointer leaving the menus — the ONE auto-collapse", () => {
+  it("closes on the pointer leaving the menus — the standing auto-collapse", () => {
     expect(reduceReveal({ root: "features", all: false }, { type: "pointerLeftMenus" })).toBe(NO_REVEAL)
     expect(revealClosedBy({ type: "pointerLeftMenus" })).toBe(true)
   })
@@ -276,12 +280,107 @@ describe("the reveal closes on exactly two things — never a select", () => {
     expect(revealClosedBy({ type: "settle" })).toBe(true)
   })
 
-  it("has NO event that closes on a select — it is unrepresentable", () => {
-    // The whole set of events, and which close. If a future edit wants a click to collapse, it has to
-    // add an event here, and this test will make that choice loud instead of silent.
-    const closers = (["pointerLeftMenus", "settle"] as const).map((type) => revealClosedBy({ type }))
+  it("closes on the FINAL CHOICE — the ONE click-driven closure (v1.15.0)", () => {
+    // The carve-out named in must-collapse-from-one-pointer-authority: the click that completes the
+    // path settles the cascade, exactly as the disclosure toggles do. Whether it fires at all is
+    // auto-collapse mode's call — see planChoiceSettle — but as an event it closes, always.
+    expect(reduceReveal({ root: "features", all: false }, { type: "finalChoice" })).toBe(NO_REVEAL)
+    expect(revealClosedBy({ type: "finalChoice" })).toBe(true)
+  })
+
+  it("has NO event that closes on an INTERMEDIATE select — it is unrepresentable", () => {
+    // The whole set of events, and which close. `finalChoice` is the one spec'd click closer
+    // (v1.15.0); if a future edit wants any OTHER click to collapse, it has to add an event here,
+    // and this test will make that choice loud instead of silent.
+    const closers = (["pointerLeftMenus", "settle", "finalChoice"] as const).map((type) =>
+      revealClosedBy({ type }),
+    )
     const opener = revealClosedBy({ type: "root", id: "x", all: false })
-    expect(closers).toEqual([true, true])
+    expect(closers).toEqual([true, true, true])
     expect(opener).toBe(false)
+  })
+})
+
+describe("must-hold-the-detail-until-the-final-choice", () => {
+  it("T57: an intermediate select shows the HELD content at the unselected frontier, not the overview", () => {
+    // The click disclosed another choosing list; the pane must keep showing exactly what it showed
+    // before the click — never the newly selected topic's overview, a landing, or a blank.
+    expect(shouldShowHeldDetail({ holding: true, frontierUnselected: true })).toBe(true)
+  })
+
+  it("shows the live detail once the path is complete — the hold never outlives the final choice's paint", () => {
+    expect(shouldShowHeldDetail({ holding: true, frontierUnselected: false })).toBe(false)
+  })
+
+  it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {
+    // No pointer, no gesture, no captured content: the overview rule stands.
+    expect(shouldShowHeldDetail({ holding: false, frontierUnselected: true })).toBe(false)
+  })
+
+  it("T58: the hold settles on the first render where the path is complete and the selection moved", () => {
+    // ONE swap, old content → new content: the final choice releases the hold.
+    expect(
+      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: true, autoHide: true })
+        .settle,
+    ).toBe(true)
+  })
+
+  it("an intermediate select does NOT settle — the host disclosed another choosing list", () => {
+    expect(
+      planChoiceSettle({ holding: true, pathComplete: false, selectionChanged: true, autoHide: true })
+        .settle,
+    ).toBe(false)
+  })
+
+  it("the click's own pre-navigation renders do NOT settle — the selection hasn't moved yet", () => {
+    // The select still navigates (a DISPLAY hold, not a deferred navigation), but the host's route
+    // move may land renders later; until the chain actually changes, the complete-looking path is
+    // the OLD one and settling on it would release (and auto-collapse) on the arming click itself.
+    expect(
+      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: false, autoHide: true })
+        .settle,
+    ).toBe(false)
+  })
+
+  it("with no hold armed there is nothing to settle", () => {
+    expect(
+      planChoiceSettle({ holding: false, pathComplete: true, selectionChanged: true, autoHide: true })
+        .settle,
+    ).toBe(false)
+  })
+})
+
+describe("must-auto-collapse-menus-on-final-choice", () => {
+  it("T59: in auto-collapse mode the final choice closes the menus on the click itself", () => {
+    // Without waiting for the pointer to leave: settling IS the requested action.
+    expect(
+      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: true, autoHide: true }),
+    ).toEqual({ settle: true, autoCollapse: true })
+  })
+
+  it("T60: with auto-collapse OFF only the detail swaps — no select collapses anything", () => {
+    // The workspace stacks' standing rule (`autoHideTopics={false}`): the menus stay exactly as the
+    // user arranged them.
+    expect(
+      planChoiceSettle({ holding: true, pathComplete: true, selectionChanged: true, autoHide: false }),
+    ).toEqual({ settle: true, autoCollapse: false })
+  })
+
+  it("an intermediate select collapses nothing, in either mode", () => {
+    for (const autoHide of [true, false])
+      expect(
+        planChoiceSettle({ holding: true, pathComplete: false, selectionChanged: true, autoHide })
+          .autoCollapse,
+      ).toBe(false)
+  })
+
+  it("nothing may re-open until the pointer next ENTERS — presence in the trigger rect is not entry", () => {
+    // After the final choice collapses the menus the pointer is parked inside the freshly armed
+    // trigger; a stray pixel of movement there must not re-disclose what the click just closed.
+    expect(triggerFires({ armed: true, wasInside: true, isInside: true })).toBe(false)
+    // The outside→inside crossing is what opens.
+    expect(triggerFires({ armed: true, wasInside: false, isInside: true })).toBe(true)
+    expect(triggerFires({ armed: true, wasInside: false, isInside: false })).toBe(false)
+    expect(triggerFires({ armed: false, wasInside: false, isInside: true })).toBe(false)
   })
 })
