@@ -85,6 +85,14 @@ public enum DaemonAIChat {
     /// configuration; otherwise the zero-config `claude -p` default. `cliModel` is
     /// the model for the CLI path only (the plugin path uses its config's model).
     /// `settings` reads the host's synced provider-registry values by key.
+    ///
+    /// Loopback providers pass the local-model memory guard first: a model over
+    /// the RAM budget is refused (and any local inference deferred under system
+    /// memory pressure) BEFORE the plugin is loaded or a request built — aborting
+    /// later cannot stop the server-side model load. Allowed local requests are
+    /// serialized process-wide so two host features can't trigger two model loads
+    /// at once. Remote providers and the CLI path bypass the guard; pass
+    /// `inferenceGuard: nil` to opt out entirely.
     public static func complete(
         systemPrompt: String,
         userPrompt: String,
@@ -94,9 +102,33 @@ public enum DaemonAIChat {
         settings: ProviderSettingsReader,
         runtime: PluginRuntime = .live,
         cliRunner: CLIRunner = liveCLIRunner,
-        secretStore: any SecretStoring = KeychainSecretStore()
+        secretStore: any SecretStoring = KeychainSecretStore(),
+        inferenceGuard: LocalInferenceGuard? = .shared
     ) async throws -> String {
         if let config = DaemonProviderResolver.selectedConfiguration(settings) {
+            if let inferenceGuard,
+               let baseURL = localBaseURL(config: config, settings: settings) {
+                // Guard on the configuration's STORED model. When none is stored
+                // (the descriptor default would apply), the size lookup misses and
+                // the guard fails open — local providers are configured through
+                // the picker, which stores an explicit model.
+                let model = DaemonProviderResolver.model(config: config.id, settings)
+                switch await inferenceGuard.verdict(
+                    model: model, baseURL: baseURL, settings: settings) {
+                case .block(let reason):
+                    throw AIGuardError.blocked(reason)
+                case .deferred(let reason):
+                    throw AIGuardError.deferred(reason)
+                case .allow:
+                    return try await inferenceGuard.runExclusive {
+                        try await completeViaPlugin(
+                            config: config, systemPrompt: systemPrompt, userPrompt: userPrompt,
+                            maxTokens: maxTokens, settings: settings, runtime: runtime,
+                            secretStore: secretStore
+                        )
+                    }
+                }
+            }
             return try await completeViaPlugin(
                 config: config, systemPrompt: systemPrompt, userPrompt: userPrompt,
                 maxTokens: maxTokens, settings: settings, runtime: runtime, secretStore: secretStore
@@ -106,6 +138,19 @@ public enum DaemonAIChat {
             prompt: userPrompt, systemPrompt: systemPrompt, model: cliModel,
             timeout: timeout, cliRunner: cliRunner
         )
+    }
+
+    /// The selected configuration's base URL when — and only when — it points at
+    /// this machine (a loopback model server); nil for remote providers and
+    /// CLI-shaped plugins that have no base URL. Read from the synced field values
+    /// (which include template defaults) — the same store `completeViaPlugin` reads.
+    private static func localBaseURL(
+        config: AIProviderConfiguration, settings: ProviderSettingsReader
+    ) -> String? {
+        let stored = settings(AIProviderConfigKeys.fieldKey(config: config.id, field: "baseURL")) ?? ""
+        let base = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !base.isEmpty, LocalModelServer.isLoopback(baseURL: base) else { return nil }
+        return base
     }
 
     // MARK: - Claude CLI

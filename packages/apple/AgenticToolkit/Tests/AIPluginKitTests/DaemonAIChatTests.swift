@@ -329,39 +329,6 @@ struct DaemonAIChatTests {
 
     // MARK: - Helpers
 
-    private func makeRuntime(
-        captured: CapturingPlugin.Captured,
-        events: [AIStreamEvent],
-        error: FakeError? = nil,
-        descriptor: AIPluginDescriptor? = nil
-    ) -> DaemonAIChat.PluginRuntime {
-        let plugin = CapturingPlugin(captured: captured)
-        let resolvedDescriptor = descriptor ?? AIPluginDescriptor(
-            identifier: pluginId,
-            displayName: "Test Fake",
-            version: "1.0",
-            models: ["fake-small", "fake-large"],
-            defaultModel: "fake-small",
-            fields: [
-                AIPluginDescriptor.Field(key: "apiKey", label: "API Key", kind: .secret),
-                AIPluginDescriptor.Field(key: "baseURL", label: "Base URL", kind: .text)
-            ]
-        )
-        return DaemonAIChat.PluginRuntime(
-            load: { _, _ in (plugin, resolvedDescriptor) },
-            run: { _, _ in
-                AsyncThrowingStream { continuation in
-                    if let error {
-                        continuation.finish(throwing: error)
-                    } else {
-                        for event in events { continuation.yield(event) }
-                        continuation.finish()
-                    }
-                }
-            }
-        )
-    }
-
     /// A descriptor with two templates mirroring the real OpenAI-compatible shape:
     /// a keyless "ollama" (its `fields` override drops the shared apiKey secret,
     /// `secretRequired: false`) and a keyed "api-key" (`fields: nil` inherits the
@@ -407,15 +374,6 @@ struct DaemonAIChatTests {
         )
     }
 
-    /// A CLI runner that fails the test if it is ever called — used on the plugin
-    /// path to prove the subprocess fallback is not invoked.
-    private func failingCLIRunner() -> DaemonAIChat.CLIRunner {
-        { _, _, _, _ in
-            Issue.record("plugin path must not invoke the CLI runner")
-            return ""
-        }
-    }
-
     /// Runs the block, expecting it to throw a `DaemonAIChat.ChatError`, and returns it
     /// for the caller to match on (recording an issue — and returning nil — when nothing
     /// or something else was thrown).
@@ -433,36 +391,6 @@ struct DaemonAIChatTests {
 }
 
 // MARK: - Fakes
-
-private enum FakeError: Error, LocalizedError {
-    case boom
-    // A stable, predictable description so a test can assert it propagates through
-    // the error mapping (the default Error string would be opaque).
-    var errorDescription: String? { "boom" }
-}
-
-/// In-memory `SecretStoring` so no test touches the real login keychain.
-private final class InMemorySecretStore: SecretStoring, @unchecked Sendable {
-    private let lock = NSLock()
-    private var store: [String: String] = [:]
-
-    func get(forKey key: String) -> String? { lock.withLock { store[key] } }
-
-    @discardableResult
-    func set(_ value: String, forKey key: String) -> Bool {
-        lock.withLock { store[key] = value }
-        return true
-    }
-
-    @discardableResult
-    func delete(forKey key: String) -> Bool {
-        lock.withLock { store[key] = nil }
-        return true
-    }
-
-    @discardableResult
-    func deleteLegacy(forKey key: String) -> Bool { true }
-}
 
 /// Records the arguments passed to the injected CLI runner so tests can assert model
 /// selection, system prompt, and prompt content without a subprocess.
@@ -486,35 +414,4 @@ private final class CLICaptured: @unchecked Sendable {
             return reply
         }
     }
-}
-
-/// An `AIPlugin` that records the context it was asked to build a request for, so tests
-/// can assert what `complete` resolved. Returns a throwaway HTTP spec; the stream itself
-/// comes from the injected `PluginRuntime.run`, not the transport.
-private final class CapturingPlugin: AIPlugin {
-
-    final class Captured: @unchecked Sendable {
-        private let lock = NSLock()
-        private var stored: AIChatContext?
-        var context: AIChatContext? {
-            get { lock.withLock { stored } }
-            set { lock.withLock { stored = newValue } }
-        }
-    }
-
-    let captured: Captured
-
-    init() { self.captured = Captured() }
-    init(captured: Captured) { self.captured = captured }
-
-    func buildRequest(_ context: AIChatContext) throws -> AIRequestSpec {
-        captured.context = context
-        return .http(url: URL(string: "https://example.invalid/v1")!)
-    }
-
-    func makeDecoder() -> any AIStreamDecoder { NoopDecoder() }
-}
-
-private final class NoopDecoder: AIStreamDecoder {
-    func consume(_ data: Data) -> [AIStreamEvent] { [] }
 }
