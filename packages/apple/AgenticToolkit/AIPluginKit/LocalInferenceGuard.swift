@@ -66,7 +66,7 @@ public actor LocalInferenceGuard {
         )
     }
 
-    /// Runs `op` with local inference serialized process-wide. Actor methods are
+    /// Runs `operation` with local inference serialized process-wide. Actor methods are
     /// reentrant across `await`, so exclusivity needs a real async mutex: waiters
     /// park in FIFO continuations until the current op finishes.
     public func runExclusive<T: Sendable>(
