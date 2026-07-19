@@ -51,4 +51,27 @@ struct ModelChooserContentTests {
         let item2 = ModelPickerItem(id: "m")
         #expect(ModelChooserContent.descriptionText(item: item2) == "No description yet.")
     }
+
+    @Test("fitLine renders ok/warn/block tiers, nil for unknown size")
+    func fitLine() {
+        let ram: UInt64 = 64_000_000_000
+        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: 8_900_000_000, physicalRAM: ram)
+            == "8.9 GB (~17% of RAM)")
+        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: 20_000_000_000, physicalRAM: ram)
+            == "20.0 GB ⚠ large: ~38% of RAM")
+        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: 51_000_000_000, physicalRAM: ram)
+            == "51.0 GB — won't run: exceeds memory budget")
+        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: nil, physicalRAM: ram) == nil)
+    }
+
+    @Test("warnPrompt only fires for warn-tier selections")
+    func warnPromptTest() {
+        let ram: UInt64 = 64_000_000_000
+        let text = ModelChooserContent.warnPrompt(model: "m", sizeBytes: 20_000_000_000, physicalRAM: ram)
+        #expect(text?.contains("24.0 GB") == true)
+        #expect(text?.contains("38% of RAM") == true)
+        #expect(ModelChooserContent.warnPrompt(model: "m", sizeBytes: 8_900_000_000, physicalRAM: ram) == nil)
+        #expect(ModelChooserContent.warnPrompt(model: "m", sizeBytes: 51_000_000_000, physicalRAM: ram) == nil)
+        #expect(ModelChooserContent.warnPrompt(model: "m", sizeBytes: nil, physicalRAM: ram) == nil)
+    }
 }

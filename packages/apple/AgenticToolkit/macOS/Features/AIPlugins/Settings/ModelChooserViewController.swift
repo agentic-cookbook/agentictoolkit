@@ -32,6 +32,10 @@ public final class ModelChooserViewController: NSViewController {
     private var filtered: [ModelPickerItem]
     private var selectedModel: String
     private var metadataByModel: [String: OllamaModelMetadata] = [:]
+    /// model id -> on-disk size bytes, from Ollama's native `/api/tags` (loopback
+    /// providers only). Feeds the memory-fit line and the warn-tier confirmation.
+    private var sizesByModel: [String: Int] = [:]
+    private var physicalRAM: UInt64 { ProcessInfo.processInfo.physicalMemory }
 
     private let searchField = NSSearchField()
     private let tableView = NSTableView()
@@ -240,6 +244,11 @@ public final class ModelChooserViewController: NSViewController {
                 applyFilter()
             }
         }
+        if LocalProviderModelStore.isLocal(baseURL: context.baseURL) {
+            sizesByModel = await LocalProviderModelStore.fetchSizes(baseURL: context.baseURL)
+                ?? LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
+            renderDetail()
+        }
         await loadMetadata(for: selectedModel)
     }
 
@@ -284,6 +293,12 @@ public final class ModelChooserViewController: NSViewController {
             detailStack.addArrangedSubview(
                 ThemedLabel(string: parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
         }
+        let size = LocalModelServer.size(of: item.id, in: sizesByModel)
+        if let fit = ModelChooserContent.fitLine(model: item.id, sizeBytes: size, physicalRAM: physicalRAM) {
+            let tier = ModelFitPolicy.tier(diskBytes: size, physicalRAM: physicalRAM)
+            let role: ThemeRole = tier == .block ? .danger : tier == .warn ? .warning : .secondaryText
+            detailStack.addArrangedSubview(ThemedLabel(string: fit, role: role, textRole: .caption))
+        }
         let desc = ThemedLabel(string: ModelChooserContent.descriptionText(item: item),
                                role: .primaryText, textRole: .body)
         desc.lineBreakMode = .byWordWrapping
@@ -310,15 +325,37 @@ public final class ModelChooserViewController: NSViewController {
     }
 
     @objc private func chooseTapped() {
-        let done = completion
-        completion = nil
-        done?(selectedModel.isEmpty ? nil : selectedModel)
+        guard !selectedModel.isEmpty else { finish(with: nil); return }
+        let size = LocalModelServer.size(of: selectedModel, in: sizesByModel)
+        if let prompt = ModelChooserContent.warnPrompt(
+            model: selectedModel, sizeBytes: size, physicalRAM: physicalRAM),
+           !confirmLargeModel(prompt) {
+            return   // Cancel: stay in the chooser, selection unchanged.
+        }
+        finish(with: selectedModel)
     }
 
     @objc private func cancelTapped() {
+        finish(with: nil)
+    }
+
+    private func finish(with model: String?) {
         let done = completion
         completion = nil
-        done?(nil)
+        done?(model)
+    }
+
+    /// One confirmation before accepting a warn-tier selection. Block-tier models
+    /// stay selectable with no dialog — the daemon refuses them at inference time
+    /// and the fit line already reads "won't run".
+    private func confirmLargeModel(_ informativeText: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Large model"
+        alert.informativeText = informativeText
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Use Model")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 }
 
