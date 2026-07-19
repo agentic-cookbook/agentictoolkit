@@ -56,6 +56,10 @@ extension ComposableSettings {
         @objc private func popupChanged(_ sender: NSPopUpButton) {
             guard let value = sender.selectedItem?.representedObject as? Value else { return }
             if viewModel.settingObserver.value != value {
+                if let confirmChange = viewModel.confirmChange, !confirmChange(value) {
+                    self.syncSelection()
+                    return
+                }
                 viewModel.settingObserver.value = value
             }
         }

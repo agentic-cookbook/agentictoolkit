@@ -6,6 +6,13 @@ extension ComposableSettings {
 
         public let choices: [Choice]
 
+        /// Consulted when the USER picks a new value in a rendering view, before the
+        /// setting is written. Return false to veto: the view restores the previous
+        /// selection and nothing is written. Programmatic/setting-driven updates never
+        /// consult this — it scopes confirmation to the selection gesture, so writes
+        /// from other surfaces sharing the same setting can't trigger it.
+        public var confirmChange: ((Value) -> Bool)?
+
         public init(
             title: String,
             setting: UserSetting<Value>,
