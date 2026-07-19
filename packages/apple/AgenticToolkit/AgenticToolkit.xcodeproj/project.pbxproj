@@ -273,7 +273,6 @@
 		6896BC5559FFE5093EE00AA6 /* FileTreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A9343C36100629E2F39BDF /* FileTreeManager.swift */; };
 		68AF2FA88B3D062B2F31F9F8 /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613E348B1C944564A269BD31 /* ThemeStore.swift */; };
 		68E5AABD3AE353705371E2A0 /* PickerKeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */; };
-		690165398B6915CB2591816B /* ModelPickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED234B6F128987D24A658F /* ModelPickerViewController.swift */; };
 		69586F910669C1E535DCBEA7 /* ThemedControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC04BC71763BEEC723F0791 /* ThemedControlsTests.swift */; };
 		6977E8701F7260E6B1882CF3 /* SystemWindowSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C6E0E9EF8CC1D3E7E865B5 /* SystemWindowSettingsWindowController.swift */; };
 		697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */; };
@@ -1412,7 +1411,6 @@
 		86AADA6CE6B185B5BA934378 /* AIChatContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatContext.swift; sourceTree = "<group>"; };
 		86FEFB54F5560AB6533F4379 /* NotesCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCommands.swift; sourceTree = "<group>"; };
 		88CC81802D37F9BE7A21B1E7 /* AIPluginDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginDescriptor.swift; sourceTree = "<group>"; };
-		88ED234B6F128987D24A658F /* ModelPickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerViewController.swift; sourceTree = "<group>"; };
 		894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigPopover.swift; sourceTree = "<group>"; };
 		896AEE008F661A1C4FAA1A23 /* ChoiceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceViewModel.swift; sourceTree = "<group>"; };
 		8B07B6ADDBA75DF064352068 /* TypingIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingIndicatorView.swift; sourceTree = "<group>"; };
@@ -2653,7 +2651,6 @@
 				BC4ADCA6FB8E027F279BB653 /* ModelChooserContent.swift */,
 				962244B2D3951AB26A2E95E4 /* ModelChooserViewController.swift */,
 				9F3F290E11EDE126F6A99DD9 /* ModelPickerItem.swift */,
-				88ED234B6F128987D24A658F /* ModelPickerViewController.swift */,
 				B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */,
 				5F2D8CD502813330AE5AEC77 /* PluginLoadFailuresPanel.swift */,
 				7B7939675F83E77AF61D9C68 /* ProviderPickerViewController.swift */,
@@ -4240,7 +4237,6 @@
 				CE5267C7925E07FA262DEB56 /* ModelChooserContent.swift in Sources */,
 				6764183D53E272C742AB5FE6 /* ModelChooserViewController.swift in Sources */,
 				EAF90C9B6B0322555869BC8B /* ModelPickerItem.swift in Sources */,
-				690165398B6915CB2591816B /* ModelPickerViewController.swift in Sources */,
 				96541B499E4F6C8328CEC8C7 /* MultiTabbedViewController.swift in Sources */,
 				24B34FACDE15F9F3180FB988 /* MultiTabbedViewControllerDelegate.swift in Sources */,
 				A39BB9F6BAA6D4F2515CAB77 /* NSView+AccessibilityID.swift in Sources */,

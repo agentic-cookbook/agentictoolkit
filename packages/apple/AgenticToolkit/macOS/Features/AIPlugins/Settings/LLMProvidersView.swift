@@ -17,17 +17,6 @@ struct LLMProviderEditorView: View {
     /// The displayed model, mirrored into view state so picking one updates the
     /// label immediately (the underlying store is not SwiftUI-observable).
     @State private var currentModel: String
-    @State private var showModelPicker = false
-    /// Models the provider's `/models` endpoint actually serves, when reachable;
-    /// empty falls back to the template's static list.
-    @State private var fetchedModels: [String] = []
-    /// The base URL `fetchedModels` was fetched for, so a repeat appear/open with an
-    /// unchanged endpoint skips the network.
-    @State private var fetchedBaseURL: String?
-    /// True while a live `/models` fetch is in flight, so the Model row can show a
-    /// "finding models" hint instead of an empty picker (the fetch can lag a few
-    /// seconds when the local server is busy serving other requests).
-    @State private var isFetchingModels = false
 
     init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, chat: ChatTestSession) {
         self.configuration = configuration
@@ -86,11 +75,12 @@ struct LLMProviderEditorView: View {
                     }
 
                 // Show the Model row whenever the provider can offer a model: a live-fetch
-                // provider (Ollama etc.) always shows it so the fetched list can populate the
-                // picker even though its static list is empty; others show it when they ship a
-                // static list, a fetch resolved, or a model is already chosen.
+                // provider (Ollama etc.) always shows it so the modal chooser's live fetch can
+                // populate it even though its static list is empty; others show it when they
+                // ship a static list or a model is already chosen.
                 if let template,
-                   supportsLiveModels || !template.models.isEmpty || !fetchedModels.isEmpty || !currentModel.isEmpty {
+                   ModelChooserContent.supportsLiveModels(pluginIdentifier: configuration.pluginIdentifier)
+                    || !template.models.isEmpty || !currentModel.isEmpty {
                     modelRow(template)
                 }
 
@@ -113,49 +103,28 @@ struct LLMProviderEditorView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .task { await refreshModels() }
     }
 
-    /// The Model row: a "popdown" button showing the current model (with its
-    /// descriptive info beneath, when known) that opens a filterable,
-    /// keyboard-navigable model picker.
     @ViewBuilder
     private func modelRow(_ template: AIPluginDescriptor.ProviderTemplate) -> some View {
         let resolved = currentModel.isEmpty ? template.resolvedDefaultModel : currentModel
         LabeledContent("Model") {
-            VStack(alignment: .leading, spacing: 4) {
-                Button {
-                    Task { await refreshModels() }
-                    showModelPicker = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(resolved.isEmpty ? "Choose a model…" : resolved)
-                            .foregroundStyle(resolved.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .buttonStyle(.bordered)
-                .popover(isPresented: $showModelPicker, arrowEdge: .bottom) {
-                    ModelPickerHost(
-                        items: modelItems(template),
-                        selected: resolved,
-                        onSelect: { selectModel($0, template: template) },
-                        onDismiss: { showModelPicker = false }
-                    )
-                    .frame(width: 380, height: modelPickerHeight(template))
-                }
-
-                if isFetchingModels && fetchedModels.isEmpty {
-                    Text("Finding installed models…")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if let detail = template.modelDetail(for: resolved) {
-                    modelInfo(detail)
-                }
+            HStack(spacing: 8) {
+                Text(resolved.isEmpty ? "None chosen" : resolved)
+                    .foregroundStyle(resolved.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                Button("Choose…") { presentChooser(template) }
             }
         }
+    }
+
+    private func presentChooser(_ template: AIPluginDescriptor.ProviderTemplate) {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
+        let values = AIProviderConfigStore.configValues(for: configuration, template: template, fields: fields)
+        let context = ModelChooserContext(
+            pluginIdentifier: configuration.pluginIdentifier, template: template,
+            baseURL: values["baseURL"] ?? "", apiKey: values["apiKey"],
+            currentModel: currentModel.isEmpty ? template.resolvedDefaultModel : currentModel)
+        ModelChooser.present(over: window, context: context) { selectModel($0, template: template) }
     }
 
     /// The description + capabilities of the currently-selected model.
@@ -182,17 +151,6 @@ struct LLMProviderEditorView: View {
         AIProviderConfigStore.modelSetting(config: configuration.id, template: template).value = model
         currentModel = model
         if model != previous { chat.viewModel.noteModelChanged(to: model) }
-        showModelPicker = false
-    }
-
-    /// Models to offer: the provider's live list when reachable, else the
-    /// template's static list — always including the active selection so a model
-    /// dropped from the list (e.g. one retired since it was chosen) stays visible
-    /// and re-selectable rather than vanishing from the picker.
-    private func availableModels(_ template: AIPluginDescriptor.ProviderTemplate) -> [String] {
-        let listed = fetchedModels.isEmpty ? template.models : fetchedModels
-        let current = currentModel.isEmpty ? template.resolvedDefaultModel : currentModel
-        return Self.offeredModels(listed: listed, current: current)
     }
 
     /// Picker contents: `listed` plus `current` when it isn't already present, so a
@@ -202,49 +160,6 @@ struct LLMProviderEditorView: View {
     nonisolated static func offeredModels(listed: [String], current: String) -> [String] {
         guard !current.isEmpty, !listed.contains(current) else { return listed }
         return listed + [current]
-    }
-
-    private func modelItems(_ template: AIPluginDescriptor.ProviderTemplate) -> [ModelPickerItem] {
-        availableModels(template).map { model in
-            let detail = template.modelDetail(for: model)
-            return ModelPickerItem(id: model, description: detail?.description,
-                                   tools: detail?.tools, goodFor: detail?.goodFor)
-        }
-    }
-
-    private func modelPickerHeight(_ template: AIPluginDescriptor.ProviderTemplate) -> CGFloat {
-        let rows = min(max(availableModels(template).count, 1), 6)
-        return min(16 + 24 + 8 + CGFloat(rows) * 56 + 12, 440)
-    }
-
-    /// Only OpenAI-shaped endpoints serve `GET {baseURL}/models`; other providers
-    /// (Anthropic, Google, local CLI) have static model lists, so probing them would
-    /// just fire a doomed request. Gate live fetching on the plugin identity.
-    private var supportsLiveModels: Bool {
-        let id = configuration.pluginIdentifier
-        return id.hasSuffix(".openai-compatible") || id.hasSuffix(".openai")
-    }
-
-    /// Best-effort fetch of the provider's live model list from its `/models`
-    /// endpoint. No-op when the provider isn't OpenAI-shaped, has no base URL, or was
-    /// already fetched for this exact base URL (avoids re-hitting the network on
-    /// every editor appear + picker open).
-    @MainActor
-    private func refreshModels() async {
-        guard supportsLiveModels, let template else { return }
-        let values = AIProviderConfigStore.configValues(
-            for: configuration, template: template, fields: fields
-        )
-        let baseURL = values["baseURL"] ?? ""
-        guard !baseURL.isEmpty else { return }
-        guard baseURL != fetchedBaseURL || fetchedModels.isEmpty else { return }
-        isFetchingModels = true
-        defer { isFetchingModels = false }
-        let models = await OpenAIModelCatalog.fetch(baseURL: baseURL, apiKey: values["apiKey"])
-        if !models.isEmpty {
-            fetchedModels = models
-            fetchedBaseURL = baseURL
-        }
     }
 
     private func fieldBinding(_ field: AIPluginDescriptor.Field) -> Binding<String> {
