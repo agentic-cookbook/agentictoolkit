@@ -74,6 +74,14 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private var didSetInitialSplit = false
     private let keyboard = PickerKeyboardController()
 
+    /// Live model lists fetched for OpenAI-shaped (local/compatible) providers,
+    /// keyed by `row.available.pluginIdentifier`. Populated lazily on selection
+    /// so the details pane shows the provider's real, current models instead of
+    /// the static snapshot baked into the descriptor. Absent entries (remote
+    /// providers, or a fetch still in flight / failed) fall back to
+    /// `template.models` — see `resolvedModels(for:)`.
+    private var liveModelsByPlugin: [String: [String]] = [:]
+
     /// Frame-persistence key, shared with the presenter, so the picker window's
     /// size + location go through the app's `WindowManager` like every other window.
     static let windowID = "provider-picker"
@@ -100,7 +108,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         let palette = ThemePaletteObserver.currentPalette
         let textWidth = infoWidth - 26 /* text-container insets + line padding */
         let detailsHeight = rows.map { row in
-            Self.attributedInfo(for: row, palette: palette).boundingRect(
+            // No live models are cached yet at init time — measure against the
+            // static snapshot, same as `resolvedModels(for:)`'s fallback.
+            Self.attributedInfo(for: row, models: row.available.template.models, palette: palette).boundingRect(
                 with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
                 options: [.usesLineFragmentOrigin, .usesFontLeading]).height
         }.max() ?? 0
@@ -314,6 +324,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         tableView.selectRowIndexes([clamped], byExtendingSelection: false)
         tableView.scrollRowToVisible(clamped)
         updateInfo(for: filteredRows[clamped])
+        fetchLiveModelsIfNeeded(for: filteredRows[clamped])
     }
 
     private func moveSelection(by delta: Int) {
@@ -340,9 +351,36 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             .underlineStyle: NSUnderlineStyle.single.rawValue,
             .cursor: NSCursor.pointingHand
         ]
-        let content = row.map { Self.attributedInfo(for: $0, palette: palette) }
+        let content = row.map { Self.attributedInfo(for: $0, models: resolvedModels(for: $0), palette: palette) }
             ?? NSAttributedString(string: "")
         infoTextView.textStorage?.setAttributedString(content)
+    }
+
+    /// The models to render for `row`: a live-fetched list if one is cached
+    /// (local/OpenAI-compatible providers, once `fetchLiveModelsIfNeeded` has
+    /// resolved), else the static snapshot baked into the descriptor.
+    private func resolvedModels(for row: ProviderPickerRow) -> [String] {
+        liveModelsByPlugin[row.available.pluginIdentifier] ?? row.available.template.models
+    }
+
+    /// Kicks an async fetch of the real, live model list for OpenAI-shaped
+    /// providers (e.g. Ollama) so the details pane stops showing the stale
+    /// static snapshot baked into the descriptor. No-op for remote providers
+    /// (`ModelChooserContent.supportsLiveModels` false), providers already
+    /// cached, or providers with no configured base URL yet. On success,
+    /// re-renders the info pane only if the fetched row is still selected.
+    private func fetchLiveModelsIfNeeded(for row: ProviderPickerRow) {
+        let id = row.available.pluginIdentifier
+        guard ModelChooserContent.supportsLiveModels(pluginIdentifier: id),
+              liveModelsByPlugin[id] == nil else { return }
+        let baseURL = row.available.template.defaultValues["baseURL"] ?? ""
+        guard !baseURL.isEmpty else { return }
+        Task { @MainActor in
+            let models = await OpenAIModelCatalog.fetch(baseURL: baseURL, apiKey: nil)
+            guard !models.isEmpty else { return }
+            liveModelsByPlugin[id] = models
+            if currentRow()?.available.pluginIdentifier == id { updateInfo(for: currentRow()) }
+        }
     }
 
     /// A `location`-based tab stop so every label row's value starts at the same x,
@@ -365,7 +403,15 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// Builds the structured details pane for a provider: header, provider/LLM
     /// blurbs, an aligned label/value block (with a clickable base URL), and one
     /// line per model with its description / tool support / strengths when known.
-    private static func attributedInfo(for row: ProviderPickerRow, palette: SemanticPalette) -> NSAttributedString {
+    ///
+    /// `models` is the RESOLVED model list to render — the caller's
+    /// `resolvedModels(for:)` for a live-fetched list on local/OpenAI-compatible
+    /// providers, else `row.available.template.models`. Kept as a parameter
+    /// (rather than read from `row` here) because this method is `static` and
+    /// has no access to the instance's live-model cache.
+    private static func attributedInfo(
+        for row: ProviderPickerRow, models: [String], palette: SemanticPalette
+    ) -> NSAttributedString {
         let primary = palette.primaryTextColor
         let secondary = palette.secondaryTextColor
         let tertiary = palette.nsColor(.tertiaryText)
@@ -407,9 +453,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         if !template.resolvedDefaultModel.isEmpty { labelRow("Default model", template.resolvedDefaultModel) }
         labelRow("API key", template.secretRequired ? "Required" : "Not required")
 
-        if !template.models.isEmpty {
+        if !models.isEmpty {
             add("\nModels\n", NSFont.boldSystemFont(ofSize: 12), primary)
-            for model in template.models {
+            for model in models {
                 add("  \(model)\n", NSFont.systemFont(ofSize: 12, weight: .semibold), primary)
                 guard let detail = template.modelDetail(for: model) else { continue }
                 if let text = detail.description, !text.isEmpty {
@@ -500,6 +546,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
 
     public func tableViewSelectionDidChange(_ notification: Notification) {
         updateInfo(for: currentRow())
+        if let row = currentRow() { fetchLiveModelsIfNeeded(for: row) }
     }
 
     private func cell(for id: NSUserInterfaceItemIdentifier, text: String, color: NSColor) -> NSTableCellView {
