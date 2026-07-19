@@ -412,6 +412,7 @@
 		A6E8DA5A4B884A29692EC4AA /* SystemWindowContextsState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F16132D7316C1AB971B57ACD /* SystemWindowContextsState.swift */; };
 		A754BA62575AB6986CA5905B /* SyncGRDBSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8BFA956ECF26D7CD7AFD93E /* SyncGRDBSmokeTests.swift */; };
 		A7CB53AD9111F5F7F7884E40 /* WindowActivationStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6679191B22E56A29D220A762 /* WindowActivationStrategy.swift */; };
+		A7D549C8D76CCE558D9CF699 /* LocalProviderModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2E8A29E2F1C824D79827D /* LocalProviderModelStore.swift */; };
 		A8015051FAA788EF06396405 /* PanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EABE94D62696BD3C3A96CAA /* PanelView.swift */; };
 		A8B81D65929971EF934C04E7 /* AIPluginKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FD467D736FA5B431DD30B091 /* AIPluginKit.framework */; };
 		A90C41BDF8FFD1BD7DD2A1D9 /* ProjectHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4D63AE8BFB6DB277DD4091 /* ProjectHost.swift */; };
@@ -1475,6 +1476,7 @@
 		9EC4AE464CD78AC3BCC36370 /* BoundedDatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedDatabaseTests.swift; sourceTree = "<group>"; };
 		9F3F290E11EDE126F6A99DD9 /* ModelPickerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerItem.swift; sourceTree = "<group>"; };
 		9F660C80736D52BE380955C0 /* ThemeBinding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeBinding.swift; sourceTree = "<group>"; };
+		A1A2E8A29E2F1C824D79827D /* LocalProviderModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProviderModelStore.swift; sourceTree = "<group>"; };
 		A57011263424E4AA2CE87F54 /* ColorPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPickerView.swift; sourceTree = "<group>"; };
 		A5AB7B995521327485428570 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		A5C4C6929FAC8A8A1FFD7675 /* ScreenInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenInfo.swift; sourceTree = "<group>"; };
@@ -2274,6 +2276,7 @@
 				B9F802CE87AAB4F3411BE1A5 /* LocalInferenceGuard.swift */,
 				6C768913C2E67B08FB03FB83 /* LocalModelCatalog.swift */,
 				CE7CD1AA3878CBD31E245D04 /* LocalModelServer.swift */,
+				A1A2E8A29E2F1C824D79827D /* LocalProviderModelStore.swift */,
 				CCC51F4D1A780A54D23DC5E1 /* ModelFitPolicy.swift */,
 				0A772B2A0F39CC6E0A4D12FB /* PluginTransport.swift */,
 				77F936C990586064FBEEDBA5 /* SecretStoring.swift */,
@@ -4597,6 +4600,7 @@
 				F6F2511A8F3871D3EF729E6C /* LocalInferenceGuard.swift in Sources */,
 				EEF997E6E95D4F75736DCC4F /* LocalModelCatalog.swift in Sources */,
 				9B7DB0A7C7F50F2091D7231A /* LocalModelServer.swift in Sources */,
+				A7D549C8D76CCE558D9CF699 /* LocalProviderModelStore.swift in Sources */,
 				90BF1F5B69D0263EC3D97B88 /* ModelFitPolicy.swift in Sources */,
 				57CCF71133800DA6C6E9F53A /* PluginTransport.swift in Sources */,
 				682A0177AA57196EB999C4A1 /* SecretStoring.swift in Sources */,
