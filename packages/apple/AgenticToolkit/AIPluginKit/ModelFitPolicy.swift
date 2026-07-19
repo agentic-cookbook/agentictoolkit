@@ -35,6 +35,19 @@ public enum ModelFitPolicy {
         case deferred(reason: String)
     }
 
+    /// The structured "how does this model fit" answer: the human text (sans model
+    /// name) plus the tier that produced it, so render sites style by tier without
+    /// re-deriving it (or reverse-parsing `pickerLabel`).
+    public struct FitInfo: Equatable, Sendable {
+        public let text: String
+        public let tier: Tier
+
+        public init(text: String, tier: Tier) {
+            self.text = text
+            self.tier = tier
+        }
+    }
+
     /// Estimated resident bytes for a model of `diskBytes` on disk.
     public static func estimatedBytes(diskBytes: Int) -> Int {
         Int(Double(diskBytes) * residentOverheadMultiplier)
@@ -77,29 +90,54 @@ public enum ModelFitPolicy {
         guard tier == .block, let diskBytes else { return .allow }
         let est = estimatedBytes(diskBytes: diskBytes)
         return .block(reason:
-            "\(model) needs ~\(gbString(est)) est. (\(ramPct(est, of: physicalRAM))% of RAM); "
+            "\(model) needs \(footprintDescription(estimatedBytes: est, physicalRAM: physicalRAM)) est.; "
             + "block threshold is \(blockPct)% of \(gbString(Int(physicalRAM)))")
+    }
+
+    /// The shared "~X GB (~Y% of RAM)" footprint core — computed from ESTIMATED
+    /// resident bytes — that the block reason, the guard's warn-tier log line, and
+    /// the chooser's warn prompt all build their sentences around.
+    public static func footprintDescription(estimatedBytes: Int, physicalRAM: UInt64) -> String {
+        "~\(gbString(estimatedBytes)) (~\(ramPct(estimatedBytes, of: physicalRAM))% of RAM)"
+    }
+
+    /// The fit text + tier for a local model of known size; nil when the size (or
+    /// tier) is unknown — callers render nothing. Hosts that store threshold
+    /// overrides pass warnPct/blockPct; stenographer has no override UI yet, so it
+    /// relies on the defaults.
+    public static func fitInfo(
+        diskBytes: Int?, physicalRAM: UInt64,
+        warnPct: Int = defaultWarnPct, blockPct: Int = defaultBlockPct
+    ) -> FitInfo? {
+        guard let diskBytes,
+              let tier = tier(diskBytes: diskBytes, physicalRAM: physicalRAM,
+                              warnPct: warnPct, blockPct: blockPct)
+        else { return nil }
+        let est = estimatedBytes(diskBytes: diskBytes)
+        switch tier {
+        case .ok:
+            return FitInfo(
+                text: "\(gbString(diskBytes)) (~\(ramPct(est, of: physicalRAM))% of RAM)", tier: .ok)
+        case .warn:
+            return FitInfo(
+                text: "\(gbString(diskBytes)) ⚠ large: ~\(ramPct(est, of: physicalRAM))% of RAM", tier: .warn)
+        case .block:
+            return FitInfo(
+                text: "\(gbString(diskBytes)) — won't run: exceeds memory budget", tier: .block)
+        }
     }
 
     /// The Model-popup label for a local model: plain size for ok, a warning for
     /// warn, "won't run" for block, the bare name when the size is unknown.
+    /// Composed as "model — fit text" from `fitInfo`.
     public static func pickerLabel(
         model: String, diskBytes: Int?, physicalRAM: UInt64,
         warnPct: Int = defaultWarnPct, blockPct: Int = defaultBlockPct
     ) -> String {
-        guard let diskBytes,
-              let tier = tier(diskBytes: diskBytes, physicalRAM: physicalRAM,
-                              warnPct: warnPct, blockPct: blockPct)
+        guard let info = fitInfo(diskBytes: diskBytes, physicalRAM: physicalRAM,
+                                 warnPct: warnPct, blockPct: blockPct)
         else { return model }
-        let est = estimatedBytes(diskBytes: diskBytes)
-        switch tier {
-        case .ok:
-            return "\(model) — \(gbString(diskBytes)) (~\(ramPct(est, of: physicalRAM))% of RAM)"
-        case .warn:
-            return "\(model) — \(gbString(diskBytes)) ⚠ large: ~\(ramPct(est, of: physicalRAM))% of RAM"
-        case .block:
-            return "\(model) — \(gbString(diskBytes)) — won't run: exceeds memory budget"
-        }
+        return "\(model) — \(info.text)"
     }
 
     public static func gbString(_ bytes: Int) -> String {

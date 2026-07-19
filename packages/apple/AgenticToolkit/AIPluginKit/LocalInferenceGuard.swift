@@ -65,8 +65,9 @@ public actor LocalInferenceGuard {
            ModelFitPolicy.tier(diskBytes: diskBytes, physicalRAM: memory.physicalRAM,
                                warnPct: warnPct, blockPct: blockPct) == .warn {
             let est = ModelFitPolicy.estimatedBytes(diskBytes: diskBytes)
-            let message = "Local model \(model) is warn-tier: ~\(ModelFitPolicy.gbString(est)) est. "
-                + "(\(ModelFitPolicy.ramPct(est, of: memory.physicalRAM))% of RAM)"
+            let message = "Local model \(model) is warn-tier: "
+                + ModelFitPolicy.footprintDescription(estimatedBytes: est, physicalRAM: memory.physicalRAM)
+                + " est."
             Self.logger.notice("\(message, privacy: .public)")
         }
         return ModelFitPolicy.verdict(

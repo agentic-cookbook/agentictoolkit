@@ -37,8 +37,27 @@ struct ModelFitPolicyTests {
             return
         }
         #expect(reason.contains("qwen3-coder-next:latest"))
-        #expect(reason.contains("61.2 GB"))
+        // The size+pct core comes from the shared footprintDescription helper.
+        #expect(reason.contains("~61.2 GB (~96% of RAM)"))
         #expect(reason.contains("50% of 64.0 GB"))
+    }
+
+    @Test("footprintDescription is the shared size+pct core")
+    func footprintDescriptionSharedCore() {
+        #expect(ModelFitPolicy.footprintDescription(estimatedBytes: 24_000_000_000, physicalRAM: ram)
+            == "~24.0 GB (~38% of RAM)")
+    }
+
+    @Test("fitInfo returns text + tier in one structured answer")
+    func fitInfoStructured() {
+        let okInfo = ModelFitPolicy.fitInfo(diskBytes: 8_900_000_000, physicalRAM: ram)
+        #expect(okInfo == ModelFitPolicy.FitInfo(text: "8.9 GB (~17% of RAM)", tier: .ok))
+        let warnInfo = ModelFitPolicy.fitInfo(diskBytes: 20_000_000_000, physicalRAM: ram)
+        #expect(warnInfo == ModelFitPolicy.FitInfo(text: "20.0 GB ⚠ large: ~38% of RAM", tier: .warn))
+        let blockInfo = ModelFitPolicy.fitInfo(diskBytes: 51_000_000_000, physicalRAM: ram)
+        #expect(blockInfo == ModelFitPolicy.FitInfo(
+            text: "51.0 GB — won't run: exceeds memory budget", tier: .block))
+        #expect(ModelFitPolicy.fitInfo(diskBytes: nil, physicalRAM: ram) == nil)
     }
 
     @Test("pressure defers even small or unknown-size models")
