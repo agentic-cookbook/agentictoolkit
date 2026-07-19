@@ -95,7 +95,8 @@ public enum ModelFitPolicy {
     }
 
     public static func gbString(_ bytes: Int) -> String {
-        String(format: "%.1f GB", Double(bytes) / 1_000_000_000)
+        String(format: "%.1f GB", locale: Locale(identifier: "en_US_POSIX"),
+               Double(bytes) / 1_000_000_000)
     }
 
     public static func ramPct(_ bytes: Int, of physicalRAM: UInt64) -> Int {
