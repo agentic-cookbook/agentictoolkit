@@ -48,30 +48,37 @@ public enum ModelChooserContent {
         return "No description yet."
     }
 
-    /// The memory-fit line for a loopback model of known on-disk size: reuses
-    /// `ModelFitPolicy.pickerLabel` and drops the leading "model — " so the chooser
-    /// can render it as its own spec-style line (ok: "8.9 GB (~17% of RAM)", warn:
-    /// "20.0 GB ⚠ large: ~38% of RAM", block: "51.0 GB — won't run: exceeds memory
-    /// budget"). `nil` when the size is unknown — an unfetched loopback model or a
-    /// remote provider, which never has a size to pass in.
-    public static func fitLine(model: String, sizeBytes: Int?, physicalRAM: UInt64) -> String? {
-        guard let sizeBytes else { return nil }
-        let label = ModelFitPolicy.pickerLabel(model: model, diskBytes: sizeBytes, physicalRAM: physicalRAM)
-        let prefix = "\(model) — "
-        guard label.hasPrefix(prefix) else { return nil }
-        return String(label.dropFirst(prefix.count))
+    /// The memory-fit line for a loopback model of known on-disk size — the text
+    /// the chooser renders as its own spec-style line PLUS the tier that styles it,
+    /// in one call (ok: "8.9 GB (~17% of RAM)", warn: "20.0 GB ⚠ large: ~38% of
+    /// RAM", block: "51.0 GB — won't run: exceeds memory budget"). `nil` when the
+    /// size is unknown — an unfetched loopback model or a remote provider, which
+    /// never has a size to pass in. Hosts with stored threshold overrides pass
+    /// warnPct/blockPct (stenographer has no override UI yet, so defaults apply).
+    public static func fitLine(
+        sizeBytes: Int?, physicalRAM: UInt64,
+        warnPct: Int = ModelFitPolicy.defaultWarnPct,
+        blockPct: Int = ModelFitPolicy.defaultBlockPct
+    ) -> ModelFitPolicy.FitInfo? {
+        ModelFitPolicy.fitInfo(diskBytes: sizeBytes, physicalRAM: physicalRAM,
+                               warnPct: warnPct, blockPct: blockPct)
     }
 
     /// The confirmation-dialog body for a warn-tier selection; `nil` for ok/block
     /// tiers or an unknown size. Block-tier models stay silently selectable — the
     /// daemon refuses them at inference time and the fit line already says
     /// "won't run" — so only warn-tier prompts before accepting.
-    public static func warnPrompt(model: String, sizeBytes: Int?, physicalRAM: UInt64) -> String? {
+    public static func warnPrompt(
+        model: String, sizeBytes: Int?, physicalRAM: UInt64,
+        warnPct: Int = ModelFitPolicy.defaultWarnPct,
+        blockPct: Int = ModelFitPolicy.defaultBlockPct
+    ) -> String? {
         guard let sizeBytes,
-              ModelFitPolicy.tier(diskBytes: sizeBytes, physicalRAM: physicalRAM) == .warn else { return nil }
+              ModelFitPolicy.tier(diskBytes: sizeBytes, physicalRAM: physicalRAM,
+                                  warnPct: warnPct, blockPct: blockPct) == .warn else { return nil }
         let estimated = ModelFitPolicy.estimatedBytes(diskBytes: sizeBytes)
-        let pct = ModelFitPolicy.ramPct(estimated, of: physicalRAM)
-        return "\(model) will hold ~\(ModelFitPolicy.gbString(estimated)) resident (~\(pct)% of RAM) "
-            + "while it works. Use it anyway?"
+        return "\(model) will hold "
+            + ModelFitPolicy.footprintDescription(estimatedBytes: estimated, physicalRAM: physicalRAM)
+            + " resident while it works. Use it anyway?"
     }
 }

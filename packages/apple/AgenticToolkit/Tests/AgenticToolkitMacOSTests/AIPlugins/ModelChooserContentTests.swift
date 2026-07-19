@@ -52,26 +52,44 @@ struct ModelChooserContentTests {
         #expect(ModelChooserContent.descriptionText(item: item2) == "No description yet.")
     }
 
-    @Test("fitLine renders ok/warn/block tiers, nil for unknown size")
+    @Test("fitLine returns text and tier in one call, nil for unknown size")
     func fitLine() {
         let ram: UInt64 = 64_000_000_000
-        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: 8_900_000_000, physicalRAM: ram)
-            == "8.9 GB (~17% of RAM)")
-        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: 20_000_000_000, physicalRAM: ram)
-            == "20.0 GB ⚠ large: ~38% of RAM")
-        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: 51_000_000_000, physicalRAM: ram)
-            == "51.0 GB — won't run: exceeds memory budget")
-        #expect(ModelChooserContent.fitLine(model: "m", sizeBytes: nil, physicalRAM: ram) == nil)
+        let okInfo = ModelChooserContent.fitLine(sizeBytes: 8_900_000_000, physicalRAM: ram)
+        #expect(okInfo?.text == "8.9 GB (~17% of RAM)")
+        #expect(okInfo?.tier == .ok)
+        let warnInfo = ModelChooserContent.fitLine(sizeBytes: 20_000_000_000, physicalRAM: ram)
+        #expect(warnInfo?.text == "20.0 GB ⚠ large: ~38% of RAM")
+        #expect(warnInfo?.tier == .warn)
+        let blockInfo = ModelChooserContent.fitLine(sizeBytes: 51_000_000_000, physicalRAM: ram)
+        #expect(blockInfo?.text == "51.0 GB — won't run: exceeds memory budget")
+        #expect(blockInfo?.tier == .block)
+        #expect(ModelChooserContent.fitLine(sizeBytes: nil, physicalRAM: ram) == nil)
+    }
+
+    @Test("threshold overrides flip a model's tier in fitLine output")
+    func fitLineThresholdOverrides() {
+        let ram: UInt64 = 64_000_000_000
+        // 20 GB disk → 24 GB est = 37.5% of RAM: warn at the defaults, block once
+        // an overridden blockPct drops to 30.
+        let overridden = ModelChooserContent.fitLine(
+            sizeBytes: 20_000_000_000, physicalRAM: ram, warnPct: 10, blockPct: 30)
+        #expect(overridden?.tier == .block)
+        #expect(overridden?.text == "20.0 GB — won't run: exceeds memory budget")
     }
 
     @Test("warnPrompt only fires for warn-tier selections")
     func warnPromptTest() {
         let ram: UInt64 = 64_000_000_000
         let text = ModelChooserContent.warnPrompt(model: "m", sizeBytes: 20_000_000_000, physicalRAM: ram)
-        #expect(text?.contains("24.0 GB") == true)
-        #expect(text?.contains("38% of RAM") == true)
+        // The size+pct core comes from the shared footprintDescription helper.
+        #expect(text?.contains("~24.0 GB (~38% of RAM)") == true)
         #expect(ModelChooserContent.warnPrompt(model: "m", sizeBytes: 8_900_000_000, physicalRAM: ram) == nil)
         #expect(ModelChooserContent.warnPrompt(model: "m", sizeBytes: 51_000_000_000, physicalRAM: ram) == nil)
         #expect(ModelChooserContent.warnPrompt(model: "m", sizeBytes: nil, physicalRAM: ram) == nil)
+        // Overridden thresholds flow through: 8.9 GB (16.7% est) turns warn-tier
+        // when warnPct drops to 10.
+        #expect(ModelChooserContent.warnPrompt(
+            model: "m", sizeBytes: 8_900_000_000, physicalRAM: ram, warnPct: 10, blockPct: 50) != nil)
     }
 }

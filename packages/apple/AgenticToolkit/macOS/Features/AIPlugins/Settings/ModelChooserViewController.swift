@@ -8,13 +8,21 @@ public struct ModelChooserContext {
     public let baseURL: String
     public let apiKey: String?
     public let currentModel: String
+    /// Memory-guard thresholds (% of RAM) for the fit line and warn prompt. Hosts
+    /// that store overrides pass them; the defaults match `ModelFitPolicy`'s.
+    public let warnPct: Int
+    public let blockPct: Int
     public init(pluginIdentifier: String, template: AIPluginDescriptor.ProviderTemplate,
-                baseURL: String, apiKey: String?, currentModel: String) {
+                baseURL: String, apiKey: String?, currentModel: String,
+                warnPct: Int = ModelFitPolicy.defaultWarnPct,
+                blockPct: Int = ModelFitPolicy.defaultBlockPct) {
         self.pluginIdentifier = pluginIdentifier
         self.template = template
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.currentModel = currentModel
+        self.warnPct = warnPct
+        self.blockPct = blockPct
     }
 }
 
@@ -35,7 +43,9 @@ public final class ModelChooserViewController: NSViewController {
     /// model id -> on-disk size bytes, from Ollama's native `/api/tags` (loopback
     /// providers only). Feeds the memory-fit line and the warn-tier confirmation.
     private var sizesByModel: [String: Int] = [:]
-    private var physicalRAM: UInt64 { ProcessInfo.processInfo.physicalMemory }
+    /// Same RAM source as the guard (`SystemMemoryMonitor`), so the chooser's fit
+    /// labels can never disagree with what the daemon enforces.
+    private let physicalRAM = SystemMemoryMonitor.shared.physicalRAM
 
     private let searchField = NSSearchField()
     private let tableView = NSTableView()
@@ -218,6 +228,9 @@ public final class ModelChooserViewController: NSViewController {
         keyboard.onMoveSelection = { [weak self] delta in self?.moveSelection(by: delta) }
         keyboard.onChoose = { [weak self] in self?.chooseTapped() }
         keyboard.onCancel = { [weak self] in self?.cancelTapped() }
+        // Seed last-known sizes SYNCHRONOUSLY so OK/Return/double-click during the
+        // live-fetch window still sees them; the fetch below overwrites.
+        sizesByModel = LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
         Task { await loadLiveModels() }
     }
@@ -234,18 +247,27 @@ public final class ModelChooserViewController: NSViewController {
 
     /// Replace the seeded list with the provider's live `/models` (for OpenAI-shaped
     /// providers), always keeping the current selection; then load metadata for the
-    /// selected model.
+    /// selected model. The catalog and size fetches hit independent endpoints, so
+    /// they run concurrently — the worst case is the slower of the two, not the sum.
     private func loadLiveModels() async {
-        if ModelChooserContent.supportsLiveModels(pluginIdentifier: context.pluginIdentifier) {
-            let live = await OpenAIModelCatalog.fetch(baseURL: context.baseURL, apiKey: context.apiKey)
-            if !live.isEmpty {
-                let listed = ModelChooserContent.offeredModels(listed: live, current: selectedModel)
-                items = listed.map { Self.item(for: $0, template: context.template) }
-                applyFilter()
-            }
+        let supportsLive = ModelChooserContent.supportsLiveModels(pluginIdentifier: context.pluginIdentifier)
+        let isLocal = LocalProviderModelStore.isLocal(baseURL: context.baseURL)
+        let baseURL = context.baseURL
+        let apiKey = context.apiKey
+        async let liveList: [String] = supportsLive
+            ? OpenAIModelCatalog.fetch(baseURL: baseURL, apiKey: apiKey)
+            : []
+        async let liveSizes: [String: Int]? = isLocal
+            ? LocalProviderModelStore.fetchSizes(baseURL: baseURL)
+            : nil
+        let live = await liveList
+        if supportsLive, !live.isEmpty {
+            let listed = ModelChooserContent.offeredModels(listed: live, current: selectedModel)
+            items = listed.map { Self.item(for: $0, template: context.template) }
+            applyFilter()
         }
-        if LocalProviderModelStore.isLocal(baseURL: context.baseURL) {
-            sizesByModel = await LocalProviderModelStore.fetchSizes(baseURL: context.baseURL)
+        if isLocal {
+            sizesByModel = await liveSizes
                 ?? LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
             renderDetail()
         }
@@ -294,10 +316,11 @@ public final class ModelChooserViewController: NSViewController {
                 ThemedLabel(string: parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
         }
         let size = LocalModelServer.size(of: item.id, in: sizesByModel)
-        if let fit = ModelChooserContent.fitLine(model: item.id, sizeBytes: size, physicalRAM: physicalRAM) {
-            let tier = ModelFitPolicy.tier(diskBytes: size, physicalRAM: physicalRAM)
-            let role: ThemeRole = tier == .block ? .danger : tier == .warn ? .warning : .secondaryText
-            detailStack.addArrangedSubview(ThemedLabel(string: fit, role: role, textRole: .caption))
+        if let fit = ModelChooserContent.fitLine(
+            sizeBytes: size, physicalRAM: physicalRAM,
+            warnPct: context.warnPct, blockPct: context.blockPct) {
+            let role: ThemeRole = fit.tier == .block ? .danger : fit.tier == .warn ? .warning : .secondaryText
+            detailStack.addArrangedSubview(ThemedLabel(string: fit.text, role: role, textRole: .caption))
         }
         let desc = ThemedLabel(string: ModelChooserContent.descriptionText(item: item),
                                role: .primaryText, textRole: .body)
@@ -328,7 +351,8 @@ public final class ModelChooserViewController: NSViewController {
         guard !selectedModel.isEmpty else { finish(with: nil); return }
         let size = LocalModelServer.size(of: selectedModel, in: sizesByModel)
         if let prompt = ModelChooserContent.warnPrompt(
-            model: selectedModel, sizeBytes: size, physicalRAM: physicalRAM),
+            model: selectedModel, sizeBytes: size, physicalRAM: physicalRAM,
+            warnPct: context.warnPct, blockPct: context.blockPct),
            !confirmLargeModel(prompt) {
             return   // Cancel: stay in the chooser, selection unchanged.
         }
