@@ -629,17 +629,52 @@ arguments — the measuring stays in the component, the deciding is tested.
 - **must-collapse-from-one-pointer-authority**: Whether the menus are held open MUST be decided by a
   SINGLE authority — "is the pointer inside the menu region?" — read FRESH from the DOM at pointer-event
   time, and that same authority MUST govern BOTH the reveal's held-state AND the ground latch. It is the
-  ONLY thing (besides an explicit `«/»` toggle) that may close a reveal. A row select MUST only ever
-  RE-ROOT the reveal at the list clicked in — never close it; a remount, a width change and a selection
-  MUST NOT close it. Equivalently: the only two events that close a reveal are "the pointer left the
-  menus" and "an explicit disclosure toggle", and a click is neither. This rule exists because the
+  ONLY thing (besides an explicit `«/»` toggle, and the FINAL CHOICE below) that may close a reveal. An
+  INTERMEDIATE select — one that leaves the user still choosing — MUST only ever RE-ROOT the reveal at
+  the list clicked in — never close it; a remount, a width change and a selection
+  MUST NOT close it. Equivalently: the only events that close a reveal are "the pointer left the
+  menus", "an explicit disclosure toggle" and — in auto-collapse mode only — "the FINAL CHOICE"
+  (v1.15.0, see must-auto-collapse-menus-on-final-choice: the click that completes the path, where
+  settling IS the requested action); no other click closes anything. This rule exists because the
   hold used to be computed two ways at once, both from stale sources — `hoverIndex >= 0` (which trails
   width pressure, measured a beat after the click) tested against an effect-measured rect (a render
   behind) — on exactly the remount a click triggers; the result was untraceable and regressed
   repeatedly. Reading the region fresh means only a real pointer move outside what is painted NOW can
-  collapse anything: if the pointer does not move after a click, nothing collapses. This subsumes the
+  collapse anything: if the pointer does not move after a click, nothing collapses — the final-choice
+  auto-collapse (below) being the one specified exception. This subsumes the
   covered stack's blind-root document watcher — a reveal that revealed nothing is still an open root,
   and it too clears the moment the pointer is proven outside.
+- **must-hold-the-detail-until-the-final-choice** (v1.15.0 — specified ahead of code; the executable
+  vectors are pending): A select is the FINAL CHOICE when the chosen row does not lead to another
+  topic list — the click that completes the path, whether it lands in the top (root) menu or any
+  submenu. Until a final choice is made, the detail pane MUST NOT change: an INTERMEDIATE select (one
+  that discloses another choosing list) leaves the detail showing exactly what it showed before the
+  click — the last final choice's content, or the landing/overview the gesture began over — never the
+  newly selected topic's overview, a landing placeholder, or a blank. The next thing the detail shows
+  is the new final choice's detail: ONE swap, old content → new content. For the cascade this
+  overrides must-show-topic-overview-at-unselected-frontier while the user is choosing (a deep link
+  that lands on an unselected frontier still shows the overview — there is no held detail and no
+  pointer) and the "showing the chosen item's detail" clause of must-pure-select-from-reveal for
+  intermediate selects. The hold is a DISPLAY hold, not a deferred navigation: the intermediate
+  select still fires the level's `onSelect`, still clears the deeper selections and still moves the
+  URL — so must-guard-unsaved-on-exit still runs on the select that clears a dirty leaf, and the held
+  content MUST survive the remount that select causes (must-keep-view-state-across-a-selection: held
+  per surface, exactly like the ground). Abandoning the menus without completing the path (the
+  pointer leaves) leaves the held detail in place — the detail changes when a final choice replaces
+  it, and not before.
+- **must-auto-collapse-menus-on-final-choice** (v1.15.0 — specified ahead of code; the executable
+  vectors are pending): When the final choice is made in auto-collapse mode (`autoHideTopics` on),
+  the menus MUST auto-collapse on the click itself: the open submenus collapse progressively
+  (must-animate-every-menu-closure, must-collapse-inward) as the final choice's detail shows, WITHOUT
+  waiting for the pointer to leave the menu region. This is the ONE click that closes the menus — the
+  carve-out named in must-collapse-from-one-pointer-authority — and it closes them for the same
+  reason the disclosure toggles settle the stack (must-apply-disclosure-toggles-immediately): the
+  user has finished choosing, so settling IS the requested action, and menus held open under a
+  pointer that is done with them bury the detail the click just asked for. The pointer has not moved,
+  so nothing may re-open the menus until it next ENTERS a covered peek or menu. An INTERMEDIATE
+  select still collapses nothing, and with auto-collapse OFF no select collapses anything — the menus
+  stay exactly as the user arranged them (the workspace stacks' standing rule, via their
+  `autoHideTopics={false}`).
 - **must-draw-every-detection-frame**: With the "Show Mouse Detection Frames" debug switch on, EVERY
   region MUST be drawn — the menu region (blue) that is the single authority above, and the disclose
   (green) trigger rect — whether or not it is currently ARMED. A disarmed region MUST render dashed and
@@ -784,6 +819,10 @@ arguments — the measuring stays in the component, the deciding is tested.
 | T54 | must-apply-disclosure-toggles-immediately | hover a covered peek so the reveal opens, then (without moving the pointer out) click a header's `«`/`»`, and separately the root header's auto-hide toggle | the reveal DROPS on the click and the stack settles to the new pin / mode state immediately — the layout visibly changes on the click itself, not later when the pointer happens to leave |
 | T55 | must-fit-overview-cards | a frontier list whose rows carry long unbreakable labels (full reverse-domain ids), narrow the pane | each label wraps across lines inside its card (icon on the first line); no card overflows or clips its content at the edge |
 | T56 | may-render-overview-help | a level with `overviewHelp` set, at its unselected frontier | the detail shows ONE centered help blurb (not the card grid); with `overview: false` the blurb is suppressed and the host's `children` show |
+| T57 | must-hold-the-detail-until-the-final-choice | cascade: a final choice's detail is showing; click a topic (top menu or submenu) that discloses another topic list | the submenu opens and the detail pane is UNCHANGED — still the previous detail, not the new topic's overview or a landing |
+| T58 | must-hold-the-detail-until-the-final-choice | continue from T57: click a row that leads to no further topic list (the final choice) | the detail changes ONCE, straight to the final choice's detail — no intermediate overview/landing/blank ever showed during the walk |
+| T59 | must-auto-collapse-menus-on-final-choice | cascade, auto-collapse ON: make a final choice and leave the pointer where it clicked | the open menus collapse inward (animated) on the click itself — before the pointer leaves the menu region — and the final choice's detail shows |
+| T60 | must-auto-collapse-menus-on-final-choice | cascade, auto-collapse OFF: make a final choice with submenus open | only the detail swaps; every open menu stays exactly as arranged (no select collapses anything) |
 
 ## Edge Cases
 
@@ -988,6 +1027,7 @@ arguments — the measuring stays in the component, the deciding is tested.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.15.0 | 2026-07-19 | Mike Fullerton | **The FINAL CHOICE is the cascade's settling event — the detail holds until it, then swaps once; the menus auto-collapse on it.** Interaction REVISION (a spec change, not a bug fix). A select whose row leads to no further topic list — in the top (root) menu or any submenu — is the FINAL CHOICE, and the cascade's settling now keys off it. (1) `must-hold-the-detail-until-the-final-choice`: an intermediate select (one that discloses another choosing list) no longer touches the detail pane — no overview flip, no landing, no blank; the detail keeps its previous content until the final choice's detail replaces it in ONE swap. Display hold only: the select still navigates (`onSelect`, URL, clears deeper levels, unsaved guard), and the hold survives the select's remount per must-keep-view-state-across-a-selection. (2) `must-auto-collapse-menus-on-final-choice`: in auto-collapse mode the final choice collapses the menus on the click itself (progressively, per must-animate-every-menu-closure / must-collapse-inward) instead of waiting for the pointer to leave — the ONE click-driven closure, carved out of must-collapse-from-one-pointer-authority (amended); with auto-collapse off, no select collapses anything. Vectors T57–T60. Specified ahead of code on `hmdv-updates`: cascadeRules/cascadeInteraction do not carry these ids yet. |
 | 1.14.0 | 2026-07-14 | Mike Fullerton | **Overview cards fit their contents + a per-level help-blurb overview.** (1) `must-fit-overview-cards`: the overview `CardTitle` lays out `flex items-start` with a break-anywhere label span, so a long unbreakable label (a full reverse-domain id) wraps INSIDE the card instead of clipping at its edge (found on the status board's endpoint cards). (2) `may-render-overview-help` + exported `TopicOverviewHelp`: a level MAY set `TopicLevel.overviewHelp` (string or nodes) to swap the card grid for a single centered help blurb at its unselected frontier — for a list of one KIND of thing (Sites, Groups), where 100+ near-identical cards are noise and the landing should instead explain what the items are and how to choose one. Wins over the grid; ignored under `overview: false`. Vectors T55–T56. |
 | 1.13.3 | 2026-07-13 | Mike Fullerton | **The disclosure toggles settle the stack on the click itself.** Clicking a `«`/`»` pin or the root header's auto-hide toggle inside an open hover reveal changed nothing on screen: the revealed group renders its members at full width regardless of pins or the mode, and nothing closed the reveal (the pointer never left it), so the click read as dead — the pin "turned up later" when the pointer happened to move away, and flipping auto-hide off looked like the mode was stuck on. The toggles now DROP any open reveal as part of the click, so the stack settles to the new state immediately; the pointer hasn't moved, so nothing re-opens the reveal until it next enters a covered peek. (A row SELECT still deliberately roots a reveal — must-root-reveal-on-covering-select — because there, settling would snap the clicked list shut under the pointer; for the explicit toggles, settling IS the requested action.) New requirement `must-apply-disclosure-toggles-immediately`; vector T54. Note the fit rules are unchanged: with auto-hide OFF, width pressure still covers the lists that don't fit, and those peeks still hover-reveal — turning the mode off discloses what FITS, it does not disable the covered style. |
 | 1.13.2 | 2026-07-13 | Mike Fullerton | **Title-row actions + the create modal moves down to ui.** (1) `TopicLevel.titleActions` — extra compact controls right-justified in the TITLE row ahead of the `+` (new requirement `may-offer-title-actions`); first consumer is the status board's Sites list, whose Auto Configure action moves up from the `headerSlot` `ListHeader` so the filter field can take the whole header row (`ListHeader` `search.grow` drops its `max-w-xs` cap). (2) `CreateResourceDialog` relocates from `@agentic-toolkit/resource` to `@agentic-toolkit/ui/blocks` so consumers that vendor only ui (the self-enclosed status/builds backends) can obey **must-create-in-modal**; ui can't import auth (auth depends on ui), so the auth telemetry became an `onSaveError` seam and the resource package re-exports the dialog with it pre-wired — the resource-feature API — including 1.13.x's `saveEnabled` Save gate — is unchanged. Applied must-create-in-modal to all six status/builds config sections (Groups/Sites-Endpoints/Platforms ×2 apps), whose `+` had opened an inline create form in the leaf: creation is now a scoped modal (URL+group for a monitored site; name/slug for a group; platform wiring for an integration), the selection underneath never moves, and save selects the created row. |
