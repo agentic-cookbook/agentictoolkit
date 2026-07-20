@@ -10,7 +10,9 @@ import Foundation
 @MainActor
 public enum ModelCatalogStore {
 
-    /// Both catalogs from one fetch round; a side is empty when its fetch failed.
+    /// Both catalogs. As returned by `catalog()` a failed side carries its
+    /// previous good data (per-side fallback), so a side is empty only when
+    /// it has never fetched successfully.
     public struct Catalog: Sendable {
         public let openRouter: [String: String]
         public let modelsDev: [String: String]
