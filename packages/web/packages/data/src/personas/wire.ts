@@ -183,6 +183,17 @@ export interface ConnectionSpecUrlVar {
   secret?: boolean;
 }
 
+/** A header the connect UI prompts a per-connection value for and writes into
+ *  `extraHeaders` (e.g. Portkey's `x-portkey-provider`). The `extraHeaders`
+ *  counterpart of {@link ConnectionSpecUrlVar}: the header NAME is fixed by the
+ *  template, only its value is entered per connection. */
+export interface ConnectionSpecHeaderVar {
+  header: string;
+  label?: string;
+  example?: string;
+  secret?: boolean;
+}
+
 /** How the API credential is attached. `bearer`/`header` are enforced by the
  *  backend OpenAI-compat client; `sigv4`/`oauth2` are reserved (stored, not yet
  *  enforced). Mirrors the backend `llm/connectionSpec.ts` union. */
@@ -198,6 +209,7 @@ export type ConnectionSpecAuth =
 export interface ConnectionSpec {
   specVersion: 1;
   urlVars?: ConnectionSpecUrlVar[];
+  headerVars?: ConnectionSpecHeaderVar[];
   auth?: ConnectionSpecAuth;
   defaultQuery?: Record<string, string>;
   extraHeaders?: Record<string, string>;

@@ -31,7 +31,9 @@ import {
   type ModelInfo,
   type Template,
   type PatchServiceBody,
+  type ConnectionSpec,
   type ConnectionSpecUrlVar,
+  type ConnectionSpecHeaderVar,
 } from "@agentic-toolkit/data/personas";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -218,6 +220,15 @@ type ServiceDraft = {
   baseUrlPattern?: string;
   urlVars?: ConnectionSpecUrlVar[];
   urlVarValues: Record<string, string>;
+  /** When the chosen template parameterizes headers (Portkey's provider header, a
+   *  gateway virtual key), the headers to prompt for and the user's values — folded
+   *  into the connection's extraHeaders on submit. Absent for plain templates. */
+  headerVars?: ConnectionSpecHeaderVar[];
+  headerVarValues: Record<string, string>;
+  /** The chosen template's full spec, carried so submit can send it verbatim (an
+   *  explicit spec REPLACES the template's copy server-side, so auth/urlVars must
+   *  ride along) with the collected header values merged in. Absent for custom. */
+  templateSpec?: ConnectionSpec | null;
   /** One-line hint about non-bearer auth, shown under the fields. */
   authHint?: string;
 };
@@ -229,6 +240,7 @@ const BLANK_DRAFT: ServiceDraft = {
   baseUrl: "",
   apiKeyInput: "",
   urlVarValues: {},
+  headerVarValues: {},
 };
 
 /** Fields to reset when a template is de-selected (back to a custom connection). */
@@ -237,6 +249,9 @@ const CLEAR_TEMPLATE: Partial<ServiceDraft> = {
   baseUrlPattern: undefined,
   urlVars: undefined,
   urlVarValues: {},
+  headerVars: undefined,
+  headerVarValues: {},
+  templateSpec: undefined,
   authHint: undefined,
 };
 
@@ -248,8 +263,10 @@ function fromService(s: UserService): ServiceDraft {
     baseUrl: s.baseUrl,
     apiKeyInput: "",
     // Edit mode works on the already-resolved base URL (url vars can't be
-    // recovered from a concrete URL), so no url-var prompting here.
+    // recovered from a concrete URL), so no url-var prompting here. Header vars are
+    // likewise not re-prompted on edit — the stored extraHeaders already carry them.
     urlVarValues: {},
+    headerVarValues: {},
   };
 }
 
@@ -345,6 +362,25 @@ function ServiceFields({
           />
         </Field>
       )}
+      {draft.headerVars?.map((v) => (
+        <Field
+          key={v.header}
+          label={v.label ?? v.header}
+          hint={v.example ? `e.g. ${v.example}` : undefined}
+        >
+          <Input
+            type={v.secret ? "password" : "text"}
+            value={draft.headerVarValues[v.header] ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...draft,
+                headerVarValues: { ...draft.headerVarValues, [v.header]: e.target.value },
+              })
+            }
+            placeholder={v.example}
+          />
+        </Field>
+      ))}
       {draft.authHint && <p className="text-xs text-apt-text-muted">{draft.authHint}</p>}
       <Field label="API key" hint={apiKeyHint}>
         <Input
@@ -358,12 +394,32 @@ function ServiceFields({
   );
 }
 
+/** Build the per-connection spec to POST when a template parameterizes headers.
+ *  Returns undefined for a plain template (submit sends no spec → the backend copies
+ *  the template's). When header vars ARE present, an explicit spec REPLACES the
+ *  template's copy server-side, so the template's whole spec is sent verbatim (auth,
+ *  urlVars, defaultQuery) with the collected header values folded into extraHeaders.
+ *  extraHeaders is built fresh from the entered values — a template's own static
+ *  extraHeaders would arrive redacted, so it is not forwarded (no template today
+ *  carries both). */
+function connectionSpecForCreate(d: ServiceDraft): ConnectionSpec | undefined {
+  if (!d.headerVars || d.headerVars.length === 0) return undefined;
+  const extraHeaders: Record<string, string> = {};
+  for (const v of d.headerVars) {
+    const value = (d.headerVarValues[v.header] ?? "").trim();
+    if (value) extraHeaders[v.header] = value;
+  }
+  return { ...(d.templateSpec ?? { specVersion: 1 }), specVersion: 1, extraHeaders };
+}
+
 /** Returns an error message, or null when the create draft is valid. */
 function validateServiceDraft(d: ServiceDraft): string | null {
   if (d.name.trim() === "") return "A name is required.";
   if (d.providerKind === "") return "Select a provider.";
   if (d.baseUrl.trim() === "") return "A base URL is required.";
   if (/\{\w+\}/.test(d.baseUrl)) return "Fill in all the URL fields.";
+  if (d.headerVars?.some((v) => (d.headerVarValues[v.header] ?? "").trim() === ""))
+    return "Fill in all the header fields.";
   return null;
 }
 
@@ -399,6 +455,8 @@ function NewServiceForm({
     }
     const urlVars = tpl.connectionSpec?.urlVars ?? [];
     const hasVars = urlVars.length > 0;
+    const headerVars = tpl.connectionSpec?.headerVars ?? [];
+    const hasHeaderVars = headerVars.length > 0;
     onChange({
       ...draft,
       templateId,
@@ -408,6 +466,9 @@ function NewServiceForm({
       baseUrlPattern: hasVars ? tpl.baseUrl : undefined,
       urlVars: hasVars ? urlVars : undefined,
       urlVarValues: {},
+      headerVars: hasHeaderVars ? headerVars : undefined,
+      headerVarValues: {},
+      templateSpec: tpl.connectionSpec,
       authHint: authHintFor(tpl.connectionSpec),
     });
   }
@@ -738,15 +799,17 @@ export function ServicesSection({
       heading="New service"
       blank={() => ({ ...BLANK_DRAFT })}
       validate={validateServiceDraft}
-      create={(d) =>
-        api.services.create({
+      create={(d) => {
+        const connectionSpec = connectionSpecForCreate(d);
+        return api.services.create({
           name: d.name.trim(),
           providerKind: d.providerKind as UserService["providerKind"],
           baseUrl: d.baseUrl.trim(),
           ...(d.templateId ? { templateId: d.templateId } : {}),
           ...(d.apiKeyInput ? { apiKey: d.apiKeyInput } : {}),
-        })
-      }
+          ...(connectionSpec ? { connectionSpec } : {}),
+        });
+      }}
       onClose={() => setNewOpen(false)}
       onCreated={(saved) => {
         setNewOpen(false);

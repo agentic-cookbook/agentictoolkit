@@ -207,7 +207,12 @@ export type ModelInfo = {
 export type UserService = Omit<ServiceRow, "models"> & { models: ModelInfo[] };
 // Re-exported so connect-form UIs can read a template's transport/auth spec
 // (url-var placeholders, auth kind) without reaching into ./wire directly.
-export type { ConnectionSpec, ConnectionSpecAuth, ConnectionSpecUrlVar } from "./wire";
+export type {
+  ConnectionSpec,
+  ConnectionSpecAuth,
+  ConnectionSpecUrlVar,
+  ConnectionSpecHeaderVar,
+} from "./wire";
 export type CreateServiceBody = {
   templateId?: string;
   name: string;
