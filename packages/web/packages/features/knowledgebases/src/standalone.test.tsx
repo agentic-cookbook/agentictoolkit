@@ -42,9 +42,11 @@ const TABLES: CrudTableMeta[] = [
 describe("KnowledgeBasesFeature standalone (no rail host)", () => {
   it("self-hosts the tables rail instead of silently no-opping", async () => {
     render(<KnowledgeBasesFeature basePath="/home" tables={TABLES} />);
-    // The rail row for the table must exist — without RailHostBoundary the publisher
-    // no-ops and only the "Select a table…" hint would render.
-    expect(await screen.findByText("blocks")).toBeTruthy();
+    // The rail ROW for the table must exist — without RailHostBoundary the publisher
+    // no-ops and only the "Select a table…" hint would render. The unselected frontier's
+    // topic overview repeats the label as a card, so pin the match to the rail row.
+    const labels = await screen.findAllByText("blocks");
+    expect(labels.some((el) => el.closest("[data-htd-row]"))).toBe(true);
     expect(screen.getByText(/select a table/i)).toBeTruthy();
   });
 });

@@ -218,7 +218,9 @@ describe('centralEmailLogin', () => {
     expect(calls[0]!.url).toBe('https://api.hub.example.com/oauth/signin/login')
     expect(calls[0]!.init?.credentials).toBe('include') // so the central cookie is stored
     expect(JSON.parse(calls[0]!.init!.body as string)).toMatchObject({
-      email: 'a@b.com',
+      // The generic `identifier` wire key (never the legacy `email`, which would pin the
+      // AS lookup to email-only) — the AS classifies email / slug / phone itself.
+      identifier: 'a@b.com',
       password: 'pw',
       clientId: 'adh',
       return: 'https://bitbag.example.com/auth/callback',

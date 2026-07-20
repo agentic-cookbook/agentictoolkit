@@ -84,6 +84,15 @@ const enter = (el: HTMLElement, from: Element | null = document.body) =>
 const leave = (el: HTMLElement, to: Element | null) =>
   fireEvent.pointerOut(el, { relatedTarget: to })
 
+/** The RAIL row for a label. An unselected frontier also renders the same labels as overview
+ *  CARDS (role button too), so a bare getByRole is ambiguous — the rail row is the one that
+ *  carries `data-htd-row`. */
+const railRow = (name: RegExp): HTMLElement => {
+  const rows = screen.getAllByRole('button', { name }).filter((b) => b.hasAttribute('data-htd-row'))
+  if (rows.length !== 1) throw new Error(`expected exactly one rail row for ${name}, got ${rows.length}`)
+  return rows[0]!
+}
+
 describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
   it('opens the hovered list AND its children, chained side by side', () => {
     render(
@@ -239,13 +248,17 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(overlayZ).toBeGreaterThan(Math.max(...columnZ))
   })
 
-  it('gives the open branch an edge on BOTH sides — leading and trailing', () => {
+  it('gives the click-rooted branch an edge on BOTH sides — leading and trailing', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    enter(col(1)) // open the branch at the MIDDLE list: a peek sits behind it, the detail ahead of it
+    // A CLICK roots the classic branch at the clicked list (a pointer ENTER opens everything, so
+    // only the click-rooted group ever has a peek left standing behind it). Click a row in the
+    // MIDDLE covered list: the branch opens at it, list 0 stays a peek behind it.
+    fireEvent.click(railRow(/Temporal/))
+    expect(boxWidth(0)).toBe('40px') // a click must never spring the user's collapsed parents open
 
     // Leading edge: the peek's own border is clipped away with its rail, so this shadow is the only
     // boundary between the opened list and the icon strip behind it (it used to be dropped on reveal,
@@ -257,19 +270,18 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(col(2).style.boxShadow).not.toContain('-10px')
   })
 
-  it('walking LEFT into a shallower peek grows the branch — it does not collapse it', () => {
+  it('walking LEFT through the open cascade never collapses it', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    // Open the branch at the middle list, then keep moving left into the peek beside it — the way you
-    // walk back up the stack. The shallower list joins the cascade as its new root and pushes the
-    // already-open lists to the right; collapsing the lot (which is what happened while the document
-    // watcher overruled the enter) throws away everything the user just opened.
+    // A pointer ENTER opens every on-screen list at once, so the shallower lists are already part
+    // of the cascade. Walking left into one of them must keep the group exactly as it is —
+    // collapsing it (which is what happened while the document watcher overruled the enter) throws
+    // away everything the user just opened.
     enter(col(1))
     expect(boxWidth(1)).toBe('240px')
-    expect(boxLeft(1)).toBe('40px')
 
     leave(col(1), col(0))
     enter(col(0))
@@ -277,23 +289,25 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     expect(boxWidth(1)).toBe('240px')
     expect(boxWidth(2)).toBe('240px')
     expect(boxLeft(0)).toBe('0px')
-    expect(boxLeft(1)).toBe('240px') // pushed right by the list that just joined
+    expect(boxLeft(1)).toBe('240px')
     expect(boxLeft(2)).toBe('480px')
   })
 
-  it('re-roots the branch when the pointer enters a different covered list', () => {
+  it('a pointer ENTER on any covered list opens EVERY on-screen list — parents included', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    enter(col(1)) // hover the SECOND list: it opens with its child, but list 0 stays a peek
-    expect(boxWidth(0)).toBe('40px')
+    enter(col(1)) // hover the SECOND list: the whole stack opens, not just the branch below it
+    // Walking the stack leftwards peek-by-peek is what this replaces: the parents open too, in one
+    // cascade chained from the left edge.
+    expect(boxWidth(0)).toBe('240px')
     expect(boxWidth(1)).toBe('240px')
     expect(boxWidth(2)).toBe('240px')
-    // The branch starts where the hovered list already sat (list 0 still peeks to its left).
-    expect(boxLeft(1)).toBe('40px')
-    expect(boxLeft(2)).toBe('280px')
+    expect(boxLeft(0)).toBe('0px')
+    expect(boxLeft(1)).toBe('240px')
+    expect(boxLeft(2)).toBe('480px')
   })
 })
 
@@ -346,7 +360,7 @@ describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choo
     render(<Stack />)
     expect(boxWidth(0)).toBe('240px') // the sole list, disclosed, waiting to be chosen from
 
-    fireEvent.click(screen.getByRole('button', { name: /us-west-1/ }))
+    fireEvent.click(railRow(/us-west-1/))
     expect(boxWidth(0)).toBe('240px') // covered in LAYOUT, held open by the reveal
     expect(boxLeft(0)).toBe('0px')
     expect(boxWidth(1)).toBe('240px')
@@ -389,7 +403,7 @@ describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choo
       )
     }
     render(<Stack />)
-    fireEvent.click(screen.getByRole('button', { name: /Core Platform/ }))
+    fireEvent.click(railRow(/Core Platform/))
     expect(boxWidth(0)).toBe('40px')
     expect(boxWidth(1)).toBe('240px')
     // The resting layered-stack shadow (its parent peeks under it) — but no floating trailing
@@ -442,7 +456,7 @@ describe('HierarchicalTopicDetail — a level’s default selection', () => {
       </HierarchicalTopicDetail>
     )
   }
-  const row = (name: RegExp) => screen.getByRole('button', { name })
+  const row = railRow
 
   it('selects the default the moment the list appears, and not before', () => {
     const onSelectTopic = vi.fn()

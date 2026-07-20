@@ -13,7 +13,7 @@
 // also compose the registered exit guards the way the shell's WorkspaceChromeProvider
 // does, since this pane is the one that publishes one via useRailExitGuard).
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, cleanup, act } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
@@ -159,7 +159,8 @@ function Harness({ children }: { children: ReactNode }) {
       : {
           isDirty: () => [...guards.values()].some((g) => g.isDirty()),
           save: async () => {
-            for (const g of guards.values()) await g.save();
+            for (const g of guards.values()) if (!(await g.save())) return false;
+            return true;
           },
         };
   return (
@@ -216,8 +217,10 @@ describe("TeamMembersPane", () => {
     await screen.findByText("ada@example.com");
     fireEvent.click(screen.getByRole("button", { name: "New member" }));
 
-    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "p1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add persona" }));
+    // The add is a scoped create modal (`must-create-in-modal`): pick the persona, Save.
+    const dialog = within(screen.getByRole("dialog", { name: "New member" }));
+    fireEvent.change(await dialog.findByRole("combobox"), { target: { value: "p1" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(addPersona).toHaveBeenCalledWith("t1", "p1"));
     // The reload surfaces the new persona member as a roster row.
@@ -231,8 +234,9 @@ describe("TeamMembersPane", () => {
 
     await screen.findByText("ada@example.com");
     fireEvent.click(screen.getByRole("button", { name: "New member" }));
-    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "p1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add persona" }));
+    const dialog = within(screen.getByRole("dialog", { name: "New member" }));
+    fireEvent.change(await dialog.findByRole("combobox"), { target: { value: "p1" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText(/not granted may_act 'team'/)).not.toBeNull();
     // The rejected add adds no roster row (the "Bitbag" in the still-open picker is an <option>,
@@ -252,13 +256,15 @@ describe("TeamMembersPane", () => {
     render(<TestHarness />);
 
     fireEvent.click(screen.getByRole("button", { name: "New member" }));
-    const input = await screen.findByPlaceholderText("name@example.com");
+    const dialog = within(screen.getByRole("dialog", { name: "New member" }));
+    const input = await dialog.findByPlaceholderText("name@example.com");
     fireEvent.change(input, { target: { value: "ada@example.com" } });
 
-    const addBtn = screen.getByRole("button", { name: "Add member" });
-    fireEvent.click(addBtn); // first submit → add(...) in flight, savingMember true
-    // A second click (button now disabled) AND an Enter (guarded by the early-return)
-    // while the first add is still in flight must not fire a second POST.
+    // Hold the button element: while the add is in flight its label flips to "Saving…".
+    const addBtn = dialog.getByRole("button", { name: "Save" });
+    fireEvent.click(addBtn); // first submit → add(...) in flight, dialog saving
+    // A second click (button now disabled) AND an Enter while the first add is still
+    // in flight must not fire a second POST.
     fireEvent.click(addBtn);
     fireEvent.keyDown(input, { key: "Enter" });
 
@@ -279,10 +285,11 @@ describe("TeamMembersPane", () => {
     render(<TestHarness />);
 
     fireEvent.click(screen.getByRole("button", { name: "New member" }));
-    const input = await screen.findByPlaceholderText("name@example.com");
+    const dialog = within(screen.getByRole("dialog", { name: "New member" }));
+    const input = await dialog.findByPlaceholderText("name@example.com");
     fireEvent.change(input, { target: { value: "ada@example.com" } });
 
-    const addBtn = screen.getByRole("button", { name: "Add member" });
+    const addBtn = dialog.getByRole("button", { name: "Save" });
     fireEvent.click(addBtn); // first attempt rejects
     expect(await screen.findByText("no user with that email")).not.toBeNull();
 
@@ -295,22 +302,23 @@ describe("TeamMembersPane", () => {
     await waitFor(() => expect(screen.queryByText("no user with that email")).toBeNull());
   });
 
-  it("the exit guard fires (and its save adds the persona) when a persona is picked but no email typed", async () => {
+  it("a dirty modal guards its close, and the guard's Save routes to the add-persona action", async () => {
+    // The create modal owns its unsaved-work protection (no pane-level exit guard): a picked
+    // persona with no email typed is still a dirty draft, so closing prompts instead of
+    // silently discarding it — and saving from the prompt routes to add-persona, not the
+    // empty email path.
     list.mockResolvedValue([]);
     render(<TestHarness />);
 
-    // Open the create form and pick a persona WITHOUT typing an email.
     fireEvent.click(screen.getByRole("button", { name: "New member" }));
-    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "p1" } });
+    const dialog = within(screen.getByRole("dialog", { name: "New member" }));
+    fireEvent.change(await dialog.findByRole("combobox"), { target: { value: "p1" } });
 
-    // The guard is now registered as dirty even though the email draft is empty, so navigating
-    // away would prompt/save rather than silently discarding the picked persona.
-    await waitFor(() => expect(guardRef.current).not.toBeNull());
-    expect(guardRef.current?.isDirty()).toBe(true);
+    fireEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    const confirm = within(await screen.findByRole("alertdialog", { name: "Unsaved changes" }));
 
-    // Its save routes to the add-persona action (not the empty email path).
     await act(async () => {
-      await guardRef.current!.save();
+      fireEvent.click(confirm.getByRole("button", { name: "Save" }));
     });
     expect(addPersona).toHaveBeenCalledWith("t1", "p1");
   });

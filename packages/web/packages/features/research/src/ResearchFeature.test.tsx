@@ -12,7 +12,7 @@
 // Rail) renders the published level's "New document" affordance AND its items, standing in for
 // the hub's workspace shell.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   RailHostContext,
@@ -167,19 +167,22 @@ describe("ResearchFeature", () => {
       </Harness>,
     );
 
-    // Open the editor from the published rail affordance (mirrors the "New Project" dialog
-    // affordance, but the Research editor opens inline — no dialog).
+    // The rail affordance opens the CREATE MODAL (HTD `must-create-in-modal`): title + category
+    // only. The body is written in the editor once the created doc opens — the backend accepts
+    // an empty body on create, so the doc exists immediately.
     fireEvent.click(await screen.findByRole("button", { name: "New document" }));
 
-    // The body is the only required field; title/category/tags stay blank.
-    fireEvent.change(screen.getByLabelText("Markdown body"), {
-      target: { value: "# Hello research" },
+    // Scope to the dialog: the editor's portaled action bar has its own Save button.
+    const dialog = within(screen.getByRole("dialog", { name: "New document" }));
+    fireEvent.change(dialog.getByLabelText("Title"), {
+      target: { value: "Hello research" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(dialog.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(create).toHaveBeenCalledWith(
-        { content: "# Hello research" },
+        // Blank category/tags are omitted from the create body; the content starts empty.
+        { content: "", title: "Hello research" },
         // No workspaceSlug prop in this harness → creator-owned (workspace undefined).
         { workspace: undefined },
       ),
