@@ -64,6 +64,7 @@ import {
   planChoiceSettle,
   planRailSelect,
   pointInRegion,
+  pointerInMenusAfterMove,
   ratchetFrozenFrontier,
   shouldShowHeldDetail,
   triggerFires,
@@ -962,7 +963,15 @@ function usePointerInMenus(
       raf = 0
       if (!last) return
       const region = readRegion()
-      const inside = region != null && pointInRegion(region, last.x, last.y)
+      // A null region is "nothing measurable" — the remount a select causes detaches the old
+      // container and the new one hasn't painted, and a real mouse always moves in that window.
+      // That is NOT evidence the pointer left (`pointerInMenusAfterMove`): writing `false` here is
+      // exactly how the holds kept dying under a real pointer while surviving synthetic clicks.
+      const inside = pointerInMenusAfterMove({
+        measurable: region != null,
+        inside: region != null && pointInRegion(region, last.x, last.y),
+        previous: mem.pointerInMenus,
+      })
       mem.pointerInMenus = inside // survives the remount; the state only drives THIS render
       setPointerInMenus((prev) => (prev === inside ? prev : inside))
     }
@@ -2956,10 +2965,20 @@ function CascadingStack({
           <div
             key={level.id}
             data-htd-col={i}
-            // Hover open/close is NOT per-column here: the auto-DISCLOSE trigger rect (left of the
-            // topmost menu, below the breadcrumbs) opens the cascade, and the tracking rect governs
-            // the auto-collapse — both measured on the container above. So the columns carry no
-            // pointer-enter/leave of their own.
+            // Hover CLOSE is not per-column (the tracking rect governs the auto-collapse), and the
+            // approach-lane disclose is the trigger rect — but a COVERED column does carry its own
+            // pointer-ENTER: entering a covered peek opens its branch (the re-open clause of
+            // must-auto-collapse-menus-on-final-choice — "until the pointer next ENTERS a covered
+            // peek or menu"). `pointerenter` fires only on the outside→inside crossing, so a
+            // pointer parked by the final-choice collapse opens nothing until it actually moves
+            // onto a peek — and with the disclose trigger entry-gated, this is what discloses a
+            // settled cascade approached from over the menus themselves (without it, the covered
+            // root's rows sat unreachable under its child and could never be re-clicked).
+            onPointerEnter={
+              !offscreen && !immersed && isCovered(i)
+                ? () => setHoverId(level.id, true)
+                : undefined
+            }
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
             style={{

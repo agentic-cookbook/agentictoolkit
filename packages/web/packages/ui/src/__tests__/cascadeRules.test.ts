@@ -16,6 +16,7 @@ import {
   planChoiceSettle,
   planRailSelect,
   pointInRegion,
+  pointerInMenusAfterMove,
   ratchetFrozenFrontier,
   reduceReveal,
   revealClosedBy,
@@ -219,6 +220,22 @@ describe("must-draw-every-detection-frame", () => {
     expect(triggerRectArmed({ ...base, immersed: true })).toBe(false)
     // A reveal already open means the cascade is disclosed — nothing left to trigger.
     expect(triggerRectArmed({ ...base, revealOpen: true })).toBe(false)
+  })
+})
+
+describe("must-collapse-from-one-pointer-authority — the evidence clause", () => {
+  it("a measurable move answers from the region — inside is inside, outside is outside", () => {
+    expect(pointerInMenusAfterMove({ measurable: true, inside: true, previous: false })).toBe(true)
+    expect(pointerInMenusAfterMove({ measurable: true, inside: false, previous: true })).toBe(false)
+  })
+
+  it("an UNMEASURABLE move keeps the last answer — absence of evidence is not leaving", () => {
+    // The remount a select causes has a window where nothing is measurable (the old container is
+    // detached, the new one unpainted) and a real mouse always moves in it. Writing "outside" there
+    // released the ground latch, the covering freeze and the reveal on exactly the click every hold
+    // exists to survive — reproducible only with a real pointer, which is why it kept shipping.
+    expect(pointerInMenusAfterMove({ measurable: false, inside: false, previous: true })).toBe(true)
+    expect(pointerInMenusAfterMove({ measurable: false, inside: false, previous: false })).toBe(false)
   })
 })
 

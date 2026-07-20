@@ -238,6 +238,34 @@ export function pointInRegion(r: MenuRect, x: number, y: number): boolean {
   return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
 }
 
+/**
+ * What a pointer move does to "is the pointer in the menus?"
+ * (**must-collapse-from-one-pointer-authority**'s evidence clause).
+ *
+ * The authority reads the region FRESH from the DOM at pointer-event time — and during the remount
+ * a select causes there is a window where NOTHING is measurable: the old container is detached (its
+ * rects are zeros) and the new one hasn't painted, so the region reads null. A real mouse always
+ * moves during that window, and treating "nothing measurable" as "outside" wrote `false` into the
+ * surviving memory on exactly the click every hold exists to survive — the ground jumped, the
+ * covering freeze released and the clicked menu snapped shut, intermittently, only under a real
+ * pointer. Absence of evidence is not evidence of leaving: an unmeasurable move keeps the PREVIOUS
+ * answer, and only a move provably outside what is painted NOW collapses anything.
+ */
+export function pointerInMenusAfterMove({
+  measurable,
+  inside,
+  previous,
+}: {
+  /** Could a menu region be measured for this move (the region read non-null)? */
+  measurable: boolean
+  /** If measurable: was the move inside it? */
+  inside: boolean
+  /** The last known answer. */
+  previous: boolean
+}): boolean {
+  return measurable ? inside : previous
+}
+
 // ─── The reveal: what is open, and the ONLY two things that may close it ────────────────────────────
 
 /**
