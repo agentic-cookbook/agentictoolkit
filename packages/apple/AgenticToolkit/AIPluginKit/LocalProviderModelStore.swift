@@ -37,8 +37,10 @@ public enum LocalProviderModelStore {
     private static let metadataCache = UserSetting<[String: [String: OllamaModelMetadata]]>(
         "aiplugin.localModelMetadataCache", default: [:])
 
-    /// model id -> the model's ollama.com page blurb. Keyed by model name alone —
-    /// the description comes from ollama.com, not from any particular server.
+    /// model id -> the model's live-fetched description: its ollama.com page
+    /// blurb when substantial, else hosted-catalog (OpenRouter / models.dev)
+    /// text — remote models only ever get catalog text. Keyed by model name
+    /// alone, not by server.
     private static let descriptionCache = UserSetting<[String: String]>(
         "aiplugin.ollamaModelDescriptionCache", default: [:])
 
@@ -68,7 +70,8 @@ public enum LocalProviderModelStore {
         metadataCache.value[baseURL] ?? [:]
     }
 
-    /// The last ollama.com descriptions fetched, or empty if none cached yet.
+    /// The last live descriptions fetched (ollama.com page or hosted-catalog
+    /// text), or empty if none cached yet.
     public static func cachedDescriptions() -> [String: String] {
         descriptionCache.value
     }

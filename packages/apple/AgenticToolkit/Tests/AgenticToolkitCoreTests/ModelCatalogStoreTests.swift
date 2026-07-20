@@ -81,6 +81,21 @@ struct ModelCatalogStoreTests {
         #expect(ModelCatalogStore.bestMatch(for: "llama3.1", in: [:]) == nil)
     }
 
+    @Test("merged falls back per side: one failed catalog never blanks the other")
+    func mergedPerSideFallback() {
+        let previous = ModelCatalogStore.Catalog(
+            openRouter: ["old/or": "or"], modelsDev: ["old-md": "md"])
+        let halfRound = ModelCatalogStore.Catalog(
+            openRouter: ["new/or": "fresh"], modelsDev: [:])
+        let merged = ModelCatalogStore.merged(halfRound, lastGood: previous)
+        #expect(merged.openRouter == ["new/or": "fresh"])
+        #expect(merged.modelsDev == ["old-md": "md"])
+
+        let bothFailed = ModelCatalogStore.Catalog(openRouter: [:], modelsDev: [:])
+        #expect(ModelCatalogStore.merged(bothFailed, lastGood: previous).openRouter == ["old/or": "or"])
+        #expect(ModelCatalogStore.merged(halfRound, lastGood: nil).modelsDev.isEmpty)
+    }
+
     @Test("isSubstantial rejects bare URLs and single words, accepts real blurbs")
     func substantiality() {
         #expect(!ModelCatalogStore.isSubstantial("www.vaultbox.ai"))

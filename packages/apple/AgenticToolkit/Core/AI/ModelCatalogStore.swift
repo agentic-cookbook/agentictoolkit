@@ -34,22 +34,35 @@ public enum ModelCatalogStore {
 
     /// The catalogs, fetched concurrently — ALWAYS a live round, never a timed
     /// cache: an open round is joined (so a chooser refreshing N models at once
-    /// triggers one round, not N), and the next burst fetches fresh. A failed
-    /// round returns the previous good catalog (stale beats empty).
+    /// triggers one round, not N), and the next burst fetches fresh. Each side
+    /// that fails falls back to its own previous good data independently
+    /// (stale beats empty, per catalog), and the merge happens inside the
+    /// shared task so starter and joiners alike see the merged result.
     public static func catalog() async -> Catalog {
         if let inflight { return await inflight.value }
         let task = Task { () -> Catalog in
             async let openRouter = fetchData("https://openrouter.ai/api/v1/models")
             async let modelsDev = fetchData("https://models.dev/api.json")
-            return Catalog(openRouter: (await openRouter).map(parseOpenRouter) ?? [:],
-                           modelsDev: (await modelsDev).map(parseModelsDev) ?? [:])
+            let fresh = Catalog(openRouter: (await openRouter).map(parseOpenRouter) ?? [:],
+                                modelsDev: (await modelsDev).map(parseModelsDev) ?? [:])
+            let result = merged(fresh, lastGood: lastGood)
+            if !result.isEmpty { lastGood = result }
+            return result
         }
         inflight = task
         let result = await task.value
         inflight = nil
-        if !result.isEmpty { lastGood = result }
-        if result.isEmpty, let lastGood { return lastGood }
         return result
+    }
+
+    /// `fresh` with each empty (failed) side replaced by that side's last good
+    /// data — one catalog timing out must never blank the other's fallback nor
+    /// poison `lastGood` with a half-empty round.
+    nonisolated public static func merged(_ fresh: Catalog, lastGood: Catalog?) -> Catalog {
+        guard let lastGood else { return fresh }
+        return Catalog(
+            openRouter: fresh.openRouter.isEmpty ? lastGood.openRouter : fresh.openRouter,
+            modelsDev: fresh.modelsDev.isEmpty ? lastGood.modelsDev : fresh.modelsDev)
     }
 
     /// True when `text` is a real blurb rather than a token like a bare URL or

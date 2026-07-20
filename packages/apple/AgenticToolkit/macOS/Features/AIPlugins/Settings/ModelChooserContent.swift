@@ -66,8 +66,9 @@ public enum ModelChooserContent {
         String(format: value == value.rounded() ? "%.0f" : "%.1f", value)
     }
 
-    /// The curated blurb, else the model's ollama.com page description (`fetched`,
-    /// discovered live and cached for local providers), else the curated
+    /// The curated blurb, else the live-fetched description (`fetched`: the
+    /// ollama.com page blurb for local models, hosted-catalog text for remote
+    /// ones — see `LocalProviderModelStore.fetchModelInfo`), else the curated
     /// good-for line, else a plain placeholder.
     public static func descriptionText(item: ModelPickerItem, fetched: String? = nil) -> String {
         if let text = item.description, !text.isEmpty { return text }

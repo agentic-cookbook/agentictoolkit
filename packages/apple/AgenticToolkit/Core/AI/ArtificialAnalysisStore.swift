@@ -59,18 +59,21 @@ public enum ArtificialAnalysisStore {
     }
 
     /// slug -> rank for the whole leaderboard, join-or-start like
-    /// `ModelCatalogStore.catalog()`.
+    /// `ModelCatalogStore.catalog()`. The last-good fallback lives inside the
+    /// shared task so a failed round hands the previous leaderboard to every
+    /// awaiter — starter and joiners alike.
     private static func allRanks() async -> [String: ModelRank] {
         if let inflight { return await inflight.value }
         let key = apiKey.value
         let task = Task { () -> [String: ModelRank] in
-            await fetchData(key: key).map(parse) ?? [:]
+            let result = await fetchData(key: key).map(parse) ?? [:]
+            if !result.isEmpty { lastGood = result }
+            if result.isEmpty, let lastGood { return lastGood }
+            return result
         }
         inflight = task
         let result = await task.value
         inflight = nil
-        if !result.isEmpty { lastGood = result }
-        if result.isEmpty, let lastGood { return lastGood }
         return result
     }
 
