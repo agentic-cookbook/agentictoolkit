@@ -50,8 +50,9 @@ public final class ModelChooserViewController: NSViewController {
     private let searchField = NSSearchField()
     private let tableView = NSTableView()
     private let tableScroll = NSScrollView()
-    private let detailStack = NSStackView()   // themed labels, rebuilt per selection
-    private let detailScroll = NSScrollView()
+    /// Canonical composable-settings scroll host: top-anchored, width pinned to
+    /// the viewport so rebuilt detail content can never tug the split divider.
+    private let detailScroll = ComposableSettings.PanelScrollView()
     private let splitView = NSSplitView()
     private let cancelButton = NSButton()
     private let okButton = NSButton()
@@ -93,7 +94,6 @@ public final class ModelChooserViewController: NSViewController {
 
         configureSearchField()
         configureTable()
-        configureDetail()
         configureSplit()
         configureButtons()
 
@@ -116,6 +116,10 @@ public final class ModelChooserViewController: NSViewController {
 
         splitView.addArrangedSubview(container)     // left: search + table
         splitView.addArrangedSubview(detailScroll)   // right: details
+        // The table keeps its width when the window resizes; the detail pane
+        // absorbs the change. (Indices only exist once both panes are added.)
+        splitView.setHoldingPriority(NSLayoutConstraint.Priority(261), forSubviewAt: 0)
+        splitView.setHoldingPriority(NSLayoutConstraint.Priority(260), forSubviewAt: 1)
 
         [splitView, cancelButton, okButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
@@ -171,39 +175,11 @@ public final class ModelChooserViewController: NSViewController {
         tableScroll.drawsBackground = true
     }
 
-    private func configureDetail() {
-        detailStack.orientation = .vertical
-        detailStack.alignment = .leading
-        detailStack.spacing = 6
-        detailStack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        detailStack.translatesAutoresizingMaskIntoConstraints = false
-
-        let clipView = NSView()
-        clipView.translatesAutoresizingMaskIntoConstraints = false
-        clipView.addSubview(detailStack)
-        NSLayoutConstraint.activate([
-            detailStack.topAnchor.constraint(equalTo: clipView.topAnchor),
-            detailStack.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
-            detailStack.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
-            detailStack.bottomAnchor.constraint(lessThanOrEqualTo: clipView.bottomAnchor)
-        ])
-
-        detailScroll.documentView = clipView
-        detailScroll.hasVerticalScroller = true
-        detailScroll.autohidesScrollers = true
-        detailScroll.borderType = .noBorder
-        detailScroll.drawsBackground = true
-
-        // Keep the document's width pinned to the scroll view's clip width so the
-        // labels wrap instead of growing horizontally.
-        NSLayoutConstraint.activate([
-            clipView.widthAnchor.constraint(equalTo: detailScroll.contentView.widthAnchor)
-        ])
-    }
-
     private func configureSplit() {
         splitView.isVertical = true           // vertical divider → left/right panes
         splitView.dividerStyle = .thin
+        splitView.delegate = self             // min/max pane floors while dragging
+        splitView.autosaveName = "model-chooser.split"   // divider position persists
     }
 
     private func configureButtons() {
@@ -228,9 +204,11 @@ public final class ModelChooserViewController: NSViewController {
         keyboard.onMoveSelection = { [weak self] delta in self?.moveSelection(by: delta) }
         keyboard.onChoose = { [weak self] in self?.chooseTapped() }
         keyboard.onCancel = { [weak self] in self?.cancelTapped() }
-        // Seed last-known sizes SYNCHRONOUSLY so OK/Return/double-click during the
-        // live-fetch window still sees them; the fetch below overwrites.
+        // Seed last-known sizes and metadata SYNCHRONOUSLY so the first render
+        // (and OK/Return/double-click during the live-fetch window) sees them;
+        // the fetches below overwrite (stale-while-revalidate).
         sizesByModel = LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
+        metadataByModel = LocalProviderModelStore.cachedMetadata(baseURL: context.baseURL)
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
         Task { await loadLiveModels() }
     }
@@ -271,17 +249,24 @@ public final class ModelChooserViewController: NSViewController {
                 ?? LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
             renderDetail()
         }
-        await loadMetadata(for: selectedModel)
+        refreshAllMetadata()
     }
 
-    /// Fetch `/api/show` metadata for a model (loopback only), cache it in-session,
-    /// and refresh the detail pane if that model is still selected.
-    private func loadMetadata(for model: String) async {
-        guard !model.isEmpty, metadataByModel[model] == nil,
-              LocalModelMetadataStore.isLoopback(baseURL: context.baseURL) else { return }
-        if let meta = await LocalModelMetadataStore.fetch(openAIBaseURL: context.baseURL, model: model) {
-            metadataByModel[model] = meta
-            if selectedModel == model { renderDetail() }
+    /// Re-fetch `/api/show` metadata for EVERY listed model on every open (local
+    /// providers only) — the cache painted the details instantly; the live data
+    /// overwrites it and re-renders whenever the selected model's row lands. One
+    /// independent task per model, so a slow model can't delay the others.
+    private func refreshAllMetadata() {
+        guard LocalProviderModelStore.isLocal(baseURL: context.baseURL) else { return }
+        let baseURL = context.baseURL
+        for model in items.map(\.id) where !model.isEmpty {
+            Task { [weak self] in
+                guard let meta = await LocalProviderModelStore.fetchMetadata(
+                    baseURL: baseURL, model: model) else { return }
+                guard let self else { return }
+                self.metadataByModel[model] = meta
+                if self.selectedModel == model { self.renderDetail() }
+            }
         }
     }
 
@@ -297,36 +282,51 @@ public final class ModelChooserViewController: NSViewController {
         tableView.selectRowIndexes([index], byExtendingSelection: false)
         tableView.scrollRowToVisible(index)
         renderDetail()
-        Task { await loadMetadata(for: selectedModel) }
     }
 
-    /// Rebuild the detail pane (ThemedLabels) for the selected model from
-    /// `ModelChooserContent` + any loaded metadata.
+    /// Rebuild the detail pane for the selected model from `ModelChooserContent`
+    /// + any loaded metadata, as a composable-settings panel (standard insets and
+    /// spacing) headed by the model name.
     private func renderDetail() {
-        detailStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        let panel = ComposableSettings.PanelView()
+        defer { detailScroll.setContent(panel) }
         guard let item = filtered.first(where: { $0.id == selectedModel })
             ?? items.first(where: { $0.id == selectedModel }) else { return }
         let meta = metadataByModel[selectedModel]
-        let title = ThemedLabel(string: item.id, role: .primaryText, textRole: .heading)
-        detailStack.addArrangedSubview(title)
+
+        let group = ComposableSettings.GroupView(
+            withHeaderView: Self.wrappingLabel(item.id, role: .primaryText, textRole: .heading))
         let badges = ModelChooserContent.capabilityBadges(item: item, metadata: meta)
         let parts = badges.map { "\($0) ✓" } + [ModelChooserContent.specLine(meta)].compactMap { $0 }
         if !parts.isEmpty {
-            detailStack.addArrangedSubview(
-                ThemedLabel(string: parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
+            group.addSettingSubview(Self.wrappingLabel(
+                parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
         }
         let size = LocalModelServer.size(of: item.id, in: sizesByModel)
         if let fit = ModelChooserContent.fitLine(
             sizeBytes: size, physicalRAM: physicalRAM,
             warnPct: context.warnPct, blockPct: context.blockPct) {
             let role: ThemeRole = fit.tier == .block ? .danger : fit.tier == .warn ? .warning : .secondaryText
-            detailStack.addArrangedSubview(ThemedLabel(string: fit.text, role: role, textRole: .caption))
+            group.addSettingSubview(Self.wrappingLabel(fit.text, role: role, textRole: .caption))
         }
-        let desc = ThemedLabel(string: ModelChooserContent.descriptionText(item: item),
-                               role: .primaryText, textRole: .body)
-        desc.lineBreakMode = .byWordWrapping
-        desc.maximumNumberOfLines = 0
-        detailStack.addArrangedSubview(desc)
+        group.addSettingSubview(Self.wrappingLabel(
+            ModelChooserContent.descriptionText(item: item), role: .primaryText, textRole: .body))
+        panel.addGroup(group)
+    }
+
+    /// A themed label configured like `ComposableSettings.ExplanationView`'s: it
+    /// wraps to the available width and yields horizontally, so a long line can
+    /// never push the detail pane (or the divider) wider.
+    private static func wrappingLabel(
+        _ string: String, role: ThemeRole, textRole: TextRole
+    ) -> ThemedLabel {
+        let label = ThemedLabel(string: string, role: role, textRole: textRole)
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        return label
     }
 
     private func applyFilter() {
@@ -340,10 +340,9 @@ public final class ModelChooserViewController: NSViewController {
         view.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
         tableView.backgroundColor = palette.surfaceColor
         tableScroll.backgroundColor = palette.surfaceColor
-        detailScroll.backgroundColor = palette.surfaceColor
         cancelButton.bezelColor = palette.nsColor(.elevatedSurface)
         cancelButton.contentTintColor = palette.primaryTextColor
-        renderDetail()   // ThemedLabels re-theme themselves; rebuild to be safe
+        renderDetail()   // ThemedLabels/PanelView re-theme themselves; rebuild to be safe
         tableView.reloadData()
     }
 
@@ -423,6 +422,23 @@ extension ModelChooserViewController: NSSearchFieldDelegate {
     public func control(_ control: NSControl, textView: NSTextView,
                         doCommandBy commandSelector: Selector) -> Bool {
         keyboard.handle(commandSelector)
+    }
+}
+
+// MARK: - Split view (min pane sizes while dragging)
+
+extension ModelChooserViewController: NSSplitViewDelegate {
+
+    public func splitView(_ splitView: NSSplitView,
+                          constrainMinCoordinate proposedMin: CGFloat,
+                          ofSubviewAt dividerIndex: Int) -> CGFloat {
+        200   // never shrink the model list into uselessness
+    }
+
+    public func splitView(_ splitView: NSSplitView,
+                          constrainMaxCoordinate proposedMax: CGFloat,
+                          ofSubviewAt dividerIndex: Int) -> CGFloat {
+        max(200, splitView.bounds.width - 240)   // keep at least 240pt for the details pane
     }
 }
 

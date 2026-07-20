@@ -242,11 +242,9 @@ extension ComposableSettings {
 
             // Nested splits manage their own layout and self-scrolling panels
             // scroll themselves — both are hosted directly. Every other panel is
-            // wrapped in a scroll view whose document fills the viewport width and
-            // scrolls vertically (the canonical NSScrollView + Auto Layout setup),
-            // so content fills the detail, wrapping labels wrap, tall content
-            // scrolls, and the content's fitting size never drives the window — its
-            // size is the user's alone.
+            // wrapped in a `PanelScrollView`, so content fills the detail,
+            // wrapping labels wrap, tall content scrolls, and the content's
+            // fitting size never drives the window — its size is the user's alone.
             if panel is SplitViewController || panel.hostsOwnScroll {
                 container.addSubview(panel.view)
                 NSLayoutConstraint.activate([
@@ -258,46 +256,15 @@ extension ComposableSettings {
                 return
             }
 
-            let scroll = NSScrollView()
-            scroll.translatesAutoresizingMaskIntoConstraints = false
-            scroll.drawsBackground = false
-            scroll.hasVerticalScroller = true
-            scroll.hasHorizontalScroller = true
-            scroll.autohidesScrollers = true
-
-            let document = FlippedDocumentView()
-            document.translatesAutoresizingMaskIntoConstraints = false
-            document.addSubview(panel.view)
-            scroll.documentView = document
+            let scroll = PanelScrollView()
+            scroll.setContent(panel.view)
             container.addSubview(scroll)
-
-            let clip = scroll.contentView
             NSLayoutConstraint.activate([
                 scroll.topAnchor.constraint(equalTo: container.topAnchor),
                 scroll.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 scroll.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-                scroll.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-
-                document.topAnchor.constraint(equalTo: clip.topAnchor),
-                document.leadingAnchor.constraint(equalTo: clip.leadingAnchor),
-
-                panel.view.topAnchor.constraint(equalTo: document.topAnchor),
-                panel.view.leadingAnchor.constraint(equalTo: document.leadingAnchor),
-                panel.view.trailingAnchor.constraint(equalTo: document.trailingAnchor),
-                panel.view.bottomAnchor.constraint(equalTo: document.bottomAnchor),
-
-                // Exactly the viewport width (content fills + wrapping labels wrap;
-                // wider content is clipped, never resizing the window) and at least
-                // the viewport height (fills, or scrolls vertically when taller).
-                panel.view.widthAnchor.constraint(equalTo: clip.widthAnchor),
-                panel.view.heightAnchor.constraint(greaterThanOrEqualTo: clip.heightAnchor)
+                scroll.bottomAnchor.constraint(equalTo: container.bottomAnchor)
             ])
         }
     }
-}
-
-/// Flipped so a scroll view's document top-aligns its content (settings read
-/// top-to-bottom) instead of AppKit's default bottom-up origin.
-private final class FlippedDocumentView: NSView {
-    override var isFlipped: Bool { true }
 }

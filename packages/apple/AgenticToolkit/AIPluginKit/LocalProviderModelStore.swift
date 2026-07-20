@@ -22,6 +22,10 @@ public enum LocalProviderModelStore {
     private static let sizeCache = UserSetting<[String: [String: Int]]>(
         "aiplugin.localModelSizeCache", default: [:])
 
+    /// baseURL string -> model id -> live `/api/show` metadata (capabilities/specs).
+    private static let metadataCache = UserSetting<[String: [String: OllamaModelMetadata]]>(
+        "aiplugin.localModelMetadataCache", default: [:])
+
     /// True when `baseURL` points at this machine, i.e. a local model server.
     public static func isLocal(baseURL: String) -> Bool {
         LocalModelServer.isLoopback(baseURL: baseURL)
@@ -35,6 +39,28 @@ public enum LocalProviderModelStore {
     /// The last sizes fetched for `baseURL`, or empty if none cached yet.
     public static func cachedSizes(baseURL: String) -> [String: Int] {
         sizeCache.value[baseURL] ?? [:]
+    }
+
+    /// The last `/api/show` metadata fetched for `baseURL`'s models, or empty if
+    /// none cached yet.
+    public static func cachedMetadata(baseURL: String) -> [String: OllamaModelMetadata] {
+        metadataCache.value[baseURL] ?? [:]
+    }
+
+    /// `POST {origin}/api/show` for one model (Ollama's native route, the only
+    /// one that reports capabilities and specs), cached per base URL like the ids
+    /// and sizes. Returns nil on any failure so callers keep showing cached
+    /// metadata instead of blanking it.
+    public static func fetchMetadata(baseURL: String, model: String) async -> OllamaModelMetadata? {
+        guard let meta = await LocalModelMetadataStore.fetch(openAIBaseURL: baseURL, model: model) else {
+            return nil
+        }
+        var dict = metadataCache.value
+        var models = dict[baseURL] ?? [:]
+        models[model] = meta
+        dict[baseURL] = models
+        metadataCache.value = dict
+        return meta
     }
 
     /// `GET {baseURL}/models` (the OpenAI-compatible listing Ollama also serves),

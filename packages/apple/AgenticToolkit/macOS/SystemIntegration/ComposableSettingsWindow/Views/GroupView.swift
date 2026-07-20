@@ -7,7 +7,13 @@ extension ComposableSettings {
 
         private let stackView: NSStackView
 
-        public init(withTitle title: String) {
+        public convenience init(withTitle title: String) {
+            self.init(withHeaderView: HeaderView(title: title))
+        }
+
+        /// A group headed by an arbitrary view instead of the standard caption
+        /// header — e.g. a picker's detail pane leading with a heading-role label.
+        public init(withHeaderView header: NSView) {
             self.stackView = NSStackView()
 
             super.init(frame: .zero)
@@ -19,7 +25,7 @@ extension ComposableSettings {
             self.stackView.orientation = .vertical
             self.stackView.alignment = .leading
 
-            self.addSettingSubview(HeaderView(title: title))
+            self.addSettingSubview(header)
         }
 
         public required init?(coder: NSCoder) {
