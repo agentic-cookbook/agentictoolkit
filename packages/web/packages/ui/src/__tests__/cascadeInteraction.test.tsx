@@ -271,6 +271,27 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
     expect(detailPane().queryByText("DETAIL integrations/hooks")).toBeNull()
   })
 
+  it("T61: an intermediate select does not move the menus — the submenu discloses BESIDE the clicked list", async () => {
+    // must-not-move-the-menus-on-an-intermediate-select. The regression this pins: the select
+    // advances the frontier, auto-hide covering computed against the new frontier covered the very
+    // list being clicked in (its child slid over it at the CASCADE_INDENT), and only the pointer
+    // reveal — dead here, as in any remount it loses the race to — held it open. The rail click now
+    // ratchets the frozen cover frontier structurally, with no pointer movement required.
+    const root = freshRootId()
+    const { container } = render(<Walk rootId={root} />)
+    const col = (i: number) => container.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)!
+    // Settled with auto-hide on: ancestors covered to the indent, the deepest list disclosed.
+    expect(col(1).style.left).toBe("32px")
+    const features = within(col(1))
+    fireEvent.click(features.getByRole("button", { name: /Settings/ }))
+    await waitFor(() => expect(container.querySelector('[data-htd-col="2"]')).not.toBeNull())
+    // The clicked list has not moved…
+    expect(col(1).style.left).toBe("32px")
+    // …and the disclosed Topics list sits BESIDE it at the full disclosed advance
+    // (32 + (240 − 32) = 240), not slid over it at the covered indent (which would be 64).
+    expect(col(2).style.left).toBe("240px")
+  })
+
   it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {
     const root = freshRootId()
     // Mount mid-path with no gesture: workspaces chosen, features not — the frontier overview rule

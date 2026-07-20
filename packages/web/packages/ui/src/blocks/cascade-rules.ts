@@ -366,6 +366,50 @@ export function planChoiceSettle({
 }
 
 /**
+ * The auto-hide covering an intermediate select renders under (**must-not-move-the-menus-on-an-
+ * intermediate-select**, v1.15.1, T61).
+ *
+ * Auto-hide covers every list left of the frontier — and an intermediate select ADVANCES the
+ * frontier, so the moment the new choosing list appeared, the list just clicked in fell behind the
+ * frontier and covered itself out from under the pointer. The hover-branch reveal was supposed to
+ * counteract exactly that (must-root-reveal-on-covering-select), but it is pointer-state riding a
+ * route remount, and every time it lost the race the clicked menu visibly snapped to its peek —
+ * the regression that kept coming back.
+ *
+ * So the stay-open is STRUCTURAL now, not reveal-dependent: while the user is choosing, the
+ * covering is computed against a FROZEN frontier held in the surface's remount-surviving memory.
+ * A rail click RATCHETS it down to the clicked list's index (`ratchetFrozenFrontier` — the clicked
+ * list and everything the user already walked open stay exactly where they are; parents the user
+ * had covered stay covered, must-not-expand-parents-on-select), and it advances again only at the
+ * standing settle points: the pointer leaving the menus, or the final choice
+ * (must-auto-collapse-menus-on-final-choice). `coverFrontierWhileChoosing` also follows a RETREAT
+ * (a clear/✕ pulls the real frontier below the frozen one) so an up-navigation never leaves stale
+ * covering behind.
+ */
+export function coverFrontierWhileChoosing({
+  frozenFrontier,
+  frontier,
+}: {
+  /** The frontier the covering was last settled at (the surface memory's held value). */
+  frozenFrontier: number
+  /** The real frontier this render. */
+  frontier: number
+}): number {
+  return Math.min(frozenFrontier, frontier)
+}
+
+/** A rail click in list `clickedIndex` pins the frozen frontier at that list — see above. */
+export function ratchetFrozenFrontier({
+  frozenFrontier,
+  clickedIndex,
+}: {
+  frozenFrontier: number
+  clickedIndex: number
+}): number {
+  return Math.min(frozenFrontier, clickedIndex)
+}
+
+/**
  * Does a pointer move fire the disclose trigger? Entry-only (**must-auto-collapse-menus-on-final-
  * choice**'s re-open clause): after the final choice closes the menus the pointer has not moved, so
  * nothing may re-open them until it next ENTERS a peek or menu — merely BEING inside the trigger

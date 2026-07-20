@@ -58,11 +58,13 @@ import {
   EXIT_MS,
   enterKeyframes,
   exitKeyframes,
+  coverFrontierWhileChoosing,
   mayMoveGround,
   menuRegion,
   planChoiceSettle,
   planRailSelect,
   pointInRegion,
+  ratchetFrozenFrontier,
   shouldShowHeldDetail,
   triggerFires,
   triggerRectArmed,
@@ -645,7 +647,15 @@ export function HierarchicalMenuDetail({
         heldMoved: false,
         heldSettleArmed: false,
       }))
-      if (plan.autoCollapse && cascading) setHoverId(null)
+      if (plan.autoCollapse && cascading) {
+        setHoverId(null)
+        // The gesture's covering freeze (must-not-move-the-menus-on-an-intermediate-select) holds
+        // while the pointer is still parked in the menus — so the final choice, whose whole point
+        // is settling on the click itself, writes the frozen frontier FORWARD: the ancestors cover
+        // now, not at the next pointer exit.
+        const cm = cascadeMemoryFor(surfaceKey)
+        if (cm.heldCover) cm.heldCover = { ...cm.heldCover, frontier }
+      }
       return
     }
     const moved = s.heldSig !== selectionSig && !s.heldMoved
@@ -812,15 +822,20 @@ const cascadeMemory = new Map<
      *  `seenKeys`: choosing a row IS the param change that remounts the subtree, so component state
      *  would forget on precisely the transition that must animate. */
     detailToken: string | null
-    /** The width-pressure covering (`pressure` + off-screen `hidden`) observed with the stack SETTLED
-     *  — i.e. the last time the pointer was OUT of the menus. Held and reused while the pointer is IN
-     *  the menus, for the SAME reason as `groundRight`: choosing a row that publishes a NEW level
-     *  re-covers the leftmost lists to make room, sliding the whole cascade LEFT under the pointer
-     *  mid-gesture. `groundRight` alone can't stop it — it pins the root's WIDTH and the detail's edge,
-     *  not the columns' x. This is the column analogue: `mayMoveGround`'s rule is that the layout
-     *  settles only once the pointer has left, and this holds the covering to that same rule. `null`
-     *  until a settled paint has been seen. */
-    heldCover: { pressure: number; hidden: number } | null
+    /** The covering (`pressure` + off-screen `hidden` + the auto-hide `frontier`) observed with the
+     *  stack SETTLED — i.e. the last time the pointer was OUT of the menus. Held and reused while
+     *  the pointer is IN the menus, for the SAME reason as `groundRight`: choosing a row that
+     *  publishes a NEW level re-covers the leftmost lists to make room, sliding the whole cascade
+     *  LEFT under the pointer mid-gesture. `groundRight` alone can't stop it — it pins the root's
+     *  WIDTH and the detail's edge, not the columns' x. This is the column analogue: `mayMoveGround`'s
+     *  rule is that the layout settles only once the pointer has left, and this holds the covering to
+     *  that same rule. `frontier` is the auto-hide half of the same freeze
+     *  (must-not-move-the-menus-on-an-intermediate-select): a rail click RATCHETS it down to the
+     *  clicked list's index so an intermediate select — which advances the real frontier — cannot
+     *  cover the very list it was clicked in; it advances again on the settle (pointer out), or the
+     *  final choice writes it forward (must-auto-collapse-menus-on-final-choice). `null` until a
+     *  settled paint has been seen. */
+    heldCover: { pressure: number; hidden: number; frontier: number } | null
   }
 >()
 const cascadeMemoryFor = (key: string) => {
@@ -2319,11 +2334,29 @@ function CascadingStack({
   // while it has no selection (must-not-hide-frontier-choosing-list).
   const coverableCount = firstUnselected === -1 ? rendered.length : frontier
 
+  // Hold the covering under the pointer, exactly as `mayMoveGround` holds the ground (see
+  // `heldCover` in `cascadeMemory`): while the pointer is in the menus we REUSE the covering last
+  // seen with the stack settled, so a select that publishes a new level can't re-cover the root and
+  // slide the cascade left mid-gesture. Null (→ fresh compute) whenever the pointer is out or
+  // nothing settled has been recorded yet. Read HERE because the auto-hide layer below needs its
+  // frozen `frontier` too, not only the pressure/off-screen counts.
+  const heldCover = mem.pointerInMenus ? mem.heldCover : null
+
   // COVER LAYER 1 — intent: the user's pin (`«`), else auto-hide's default for every list above
-  // the frontier.
+  // the frontier. The frontier auto-hide covers against is the FROZEN one while the user is
+  // choosing (must-not-move-the-menus-on-an-intermediate-select): an intermediate select advances
+  // the real frontier, which used to cover the clicked list out from under the pointer the moment
+  // its child appeared — with only the pointer-reveal (must-root-reveal-on-covering-select) to
+  // save it, and every time that raced the remount and lost, the menu visibly snapped shut. The
+  // rail click ratchets the frozen frontier down to the clicked list (see the select wrapper), so
+  // the stay-open is structural; the covering catches up when the pointer leaves, or when the
+  // final choice writes the freeze forward (the frame's settle effect).
+  const coverFrontier = heldCover
+    ? coverFrontierWhileChoosing({ frozenFrontier: heldCover.frontier, frontier })
+    : frontier
   const pinnedOrAutoHidden = (i: number): boolean => {
     if (i >= coverableCount) return false
-    return pins[rendered[i]!.id] ?? (autoHide && i < frontier)
+    return pins[rendered[i]!.id] ?? (autoHide && i < coverFrontier)
   }
 
   // The leaf detail sits BESIDE the frontier list; reserve its minimum so width pressure covers
@@ -2336,12 +2369,6 @@ function CascadingStack({
   // showing (everything but the last CASCADE_INDENT, vs. only CASCADE_INDENT when covered); the
   // child always overlaps. Never let the advance invert on a hand-dragged-narrow rail.
   const disclosedAdvance = (l: TopicLevel) => Math.max(CASCADE_INDENT, railWidth(l) - CASCADE_INDENT)
-
-  // Hold the covering under the pointer, exactly as `mayMoveGround` holds the ground (see `heldCover`):
-  // while the pointer is in the menus we REUSE the covering last seen with the stack settled, so a
-  // select that publishes a new level can't re-cover the root and slide the cascade left mid-gesture.
-  // Null (→ fresh compute) whenever the pointer is out or nothing settled has been recorded yet.
-  const heldCover = mem.pointerInMenus ? mem.heldCover : null
 
   // COVER LAYER 2 — width pressure: cover MORE lists, leftmost-first, until the disclosed cascade
   // plus the detail minimum fits the container. Only ever ADDS a cover — never discloses one the
@@ -2402,8 +2429,8 @@ function CascadingStack({
   // whose pointer is already in the menus), so even its very first select is held.
   const coverFresh = heldCover === null
   useEffect(() => {
-    if (coverFresh) mem.heldCover = { pressure, hidden }
-  }, [mem, coverFresh, pressure, hidden])
+    if (coverFresh) mem.heldCover = { pressure, hidden, frontier }
+  }, [mem, coverFresh, pressure, hidden, frontier])
 
   // IMMERSION — the detail strip's `«`: the detail takes the WHOLE surface, every list (root
   // included) sliding off the left edge; the strip's `»` brings the stack back. Stored under the
@@ -3046,6 +3073,21 @@ function CascadingStack({
                   // and the pane must ride through it showing what it shows right now
                   // (must-hold-the-detail-until-the-final-choice).
                   holdDetailForChoice()
+                  // The click IS proof the pointer is in the menus — record it in the surviving
+                  // memory so the remount this select causes seeds every hold (ground, covering,
+                  // reveal) from "inside", even if no pointermove was ever observed (a fresh
+                  // surface, synthetic input). And RATCHET the frozen cover frontier down to this
+                  // list (must-not-move-the-menus-on-an-intermediate-select): the select advances
+                  // the real frontier, and without the freeze that covers the very list being
+                  // clicked in the moment its child appears.
+                  mem.pointerInMenus = true
+                  mem.heldCover = {
+                    ...(mem.heldCover ?? { pressure, hidden }),
+                    frontier: ratchetFrozenFrontier({
+                      frozenFrontier: mem.heldCover?.frontier ?? frontier,
+                      clickedIndex: i,
+                    }),
+                  }
                   setHoverId(level.id, hoverAll && inGroup(i))
                   railOnSelect(level, attemptExit, (clear) => exitBranch(i + 1, clear))(id)
                 }}
@@ -3080,8 +3122,11 @@ function CascadingStack({
                   i === frontier && !isRootList
                     ? () => {
                         // The ✕ clears the parent's selection, disclosing its choosing list — the
-                        // user is still choosing, so the detail holds through it too.
+                        // user is still choosing, so the detail holds through it too, and the click
+                        // is the same in-the-menus proof as a select (the covering must not shift
+                        // under it; the frontier RETREAT is followed by coverFrontierWhileChoosing).
                         holdDetailForChoice()
+                        mem.pointerInMenus = true
                         const parent = rendered[i - 1]!
                         setHoverId(hoverIndex >= 0 ? parent.id : null, hoverAll)
                         // Re-rooting the reveal above cannot move anything (`hoverAll` groups from

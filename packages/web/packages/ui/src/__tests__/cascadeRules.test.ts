@@ -8,6 +8,7 @@ import {
   EXIT_EASE,
   EXIT_MS,
   NO_REVEAL,
+  coverFrontierWhileChoosing,
   enterKeyframes,
   exitKeyframes,
   mayMoveGround,
@@ -15,6 +16,7 @@ import {
   planChoiceSettle,
   planRailSelect,
   pointInRegion,
+  ratchetFrozenFrontier,
   reduceReveal,
   revealClosedBy,
   shouldShowHeldDetail,
@@ -434,6 +436,13 @@ describe("must-auto-collapse-menus-on-final-choice", () => {
         ).toBe(false)
   })
 
+  it("the final choice writes the frozen cover frontier forward — the collapse lands on the click", () => {
+    // The gesture's covering freeze (below) holds while the pointer is parked in the menus, so the
+    // settle advances it explicitly; without this the "auto-collapse on the final choice" would
+    // silently wait for the next pointer exit.
+    expect(coverFrontierWhileChoosing({ frozenFrontier: 3, frontier: 3 })).toBe(3)
+  })
+
   it("nothing may re-open until the pointer next ENTERS — presence in the trigger rect is not entry", () => {
     // After the final choice collapses the menus the pointer is parked inside the freshly armed
     // trigger; a stray pixel of movement there must not re-disclose what the click just closed.
@@ -442,5 +451,36 @@ describe("must-auto-collapse-menus-on-final-choice", () => {
     expect(triggerFires({ armed: true, wasInside: false, isInside: true })).toBe(true)
     expect(triggerFires({ armed: true, wasInside: false, isInside: false })).toBe(false)
     expect(triggerFires({ armed: false, wasInside: false, isInside: true })).toBe(false)
+  })
+})
+
+describe("must-not-move-the-menus-on-an-intermediate-select", () => {
+  it("T61: a rail click ratchets the frozen frontier to the clicked list — the select cannot cover it", () => {
+    // The failure this forbids: the select advances the real frontier, and auto-hide covering
+    // computed against it covers the very list being clicked in the moment its child appears —
+    // with only the pointer-reveal (racing the select's own remount) to hold it open. Frozen at the
+    // clicked index, the covering cannot touch the clicked list or anything right of it.
+    const frozen = ratchetFrozenFrontier({ frozenFrontier: 0, clickedIndex: 0 }) // click the root
+    expect(frozen).toBe(0)
+    // The intermediate select advanced the real frontier to 1 — the root (i=0) must stay uncovered:
+    // covered set is i < coverFrontier, and it is EMPTY.
+    expect(coverFrontierWhileChoosing({ frozenFrontier: frozen, frontier: 1 })).toBe(0)
+  })
+
+  it("keeps the parents the user had covered COVERED — a click never springs them open", () => {
+    // must-not-expand-parents-on-select: clicking in a mid-stack list (i=1) with the covering
+    // settled deeper (frontier 2) ratchets to 1 — list 0 stays covered, list 1 and everything the
+    // user walked open stay disclosed.
+    expect(ratchetFrozenFrontier({ frozenFrontier: 2, clickedIndex: 1 })).toBe(1)
+  })
+
+  it("follows a RETREAT — a clear/✕ that pulls the real frontier below the freeze is not fought", () => {
+    // Up-navigation must never leave stale covering: the effective frontier is the smaller of the
+    // frozen and the real one.
+    expect(coverFrontierWhileChoosing({ frozenFrontier: 2, frontier: 1 })).toBe(1)
+  })
+
+  it("holds against an ADVANCE — deeper disclosure while choosing covers nothing", () => {
+    expect(coverFrontierWhileChoosing({ frozenFrontier: 0, frontier: 3 })).toBe(0)
   })
 })
