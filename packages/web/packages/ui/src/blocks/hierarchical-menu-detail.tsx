@@ -987,7 +987,16 @@ function useCascadePointerAuthority({
       if (engaged) onExit()
     }
     const onOut = (e: PointerEvent) => {
-      if (e.relatedTarget === null) settleOut()
+      // A `pointerout` with a null relatedTarget is EITHER "the pointer left the document" OR
+      // "the hovered node was just REMOVED" — and a route navigation removes the hovered node
+      // mid-gesture with the pointer parked in the menus, which is exactly the click every hold
+      // exists to survive. The two are indistinguishable by event type, so treat it as one more
+      // coordinate sample and let the region query decide: provably outside settles, inside is
+      // not a transition (the unmount artifact). Hard-settling here was the last stream-inference
+      // reflex left in this file, and it re-collapsed the menus on a clear's navigation. A
+      // genuine departure still settles — via these coordinates when they test outside, via the
+      // next move after re-entry, or via `blur` (an app/tab switch, below) as the backstop.
+      if (e.relatedTarget === null) onMove(e)
     }
     document.addEventListener("pointermove", onMove)
     document.addEventListener("pointerout", onOut)
