@@ -40,6 +40,8 @@ public final class ModelChooserViewController: NSViewController {
     private var filtered: [ModelPickerItem]
     private var selectedModel: String
     private var metadataByModel: [String: OllamaModelMetadata] = [:]
+    /// model id -> ollama.com page blurb, for models without a curated one.
+    private var descriptionsByModel: [String: String] = [:]
     /// model id -> on-disk size bytes, from Ollama's native `/api/tags` (loopback
     /// providers only). Feeds the memory-fit line and the warn-tier confirmation.
     private var sizesByModel: [String: Int] = [:]
@@ -209,6 +211,7 @@ public final class ModelChooserViewController: NSViewController {
         // the fetches below overwrite (stale-while-revalidate).
         sizesByModel = LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
         metadataByModel = LocalProviderModelStore.cachedMetadata(baseURL: context.baseURL)
+        descriptionsByModel = LocalProviderModelStore.cachedDescriptions()
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
         Task { await loadLiveModels() }
     }
@@ -249,14 +252,15 @@ public final class ModelChooserViewController: NSViewController {
                 ?? LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
             renderDetail()
         }
-        refreshAllMetadata()
+        refreshAllModelInfo()
     }
 
-    /// Re-fetch `/api/show` metadata for EVERY listed model on every open (local
-    /// providers only) — the cache painted the details instantly; the live data
-    /// overwrites it and re-renders whenever the selected model's row lands. One
-    /// independent task per model, so a slow model can't delay the others.
-    private func refreshAllMetadata() {
+    /// Re-fetch `/api/show` metadata AND the ollama.com page description for
+    /// EVERY listed model on every open (local providers only) — the caches
+    /// painted the details instantly; the live data overwrites them and
+    /// re-renders whenever the selected model's row lands. One independent task
+    /// per fetch, so a slow model or a slow ollama.com can't delay the others.
+    private func refreshAllModelInfo() {
         guard LocalProviderModelStore.isLocal(baseURL: context.baseURL) else { return }
         let baseURL = context.baseURL
         for model in items.map(\.id) where !model.isEmpty {
@@ -265,6 +269,14 @@ public final class ModelChooserViewController: NSViewController {
                     baseURL: baseURL, model: model) else { return }
                 guard let self else { return }
                 self.metadataByModel[model] = meta
+                if self.selectedModel == model { self.renderDetail() }
+            }
+            Task { [weak self] in
+                guard let text = await LocalProviderModelStore.fetchDescription(model: model) else {
+                    return
+                }
+                guard let self else { return }
+                self.descriptionsByModel[model] = text
                 if self.selectedModel == model { self.renderDetail() }
             }
         }
@@ -310,7 +322,8 @@ public final class ModelChooserViewController: NSViewController {
             group.addSettingSubview(Self.wrappingLabel(fit.text, role: role, textRole: .caption))
         }
         group.addSettingSubview(Self.wrappingLabel(
-            ModelChooserContent.descriptionText(item: item), role: .primaryText, textRole: .body))
+            ModelChooserContent.descriptionText(item: item, fetched: descriptionsByModel[item.id]),
+            role: .primaryText, textRole: .body))
         panel.addGroup(group)
     }
 

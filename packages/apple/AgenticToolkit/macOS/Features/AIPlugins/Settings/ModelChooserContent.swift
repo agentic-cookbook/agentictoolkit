@@ -41,9 +41,12 @@ public enum ModelChooserContent {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// The curated blurb, or a plain placeholder for models with none.
-    public static func descriptionText(item: ModelPickerItem) -> String {
+    /// The curated blurb, else the model's ollama.com page description (`fetched`,
+    /// discovered live and cached for local providers), else the curated
+    /// good-for line, else a plain placeholder.
+    public static func descriptionText(item: ModelPickerItem, fetched: String? = nil) -> String {
         if let text = item.description, !text.isEmpty { return text }
+        if let fetched, !fetched.isEmpty { return fetched }
         if let goodFor = item.goodFor, !goodFor.isEmpty { return "Good for: \(goodFor)" }
         return "No description yet."
     }

@@ -26,6 +26,11 @@ public enum LocalProviderModelStore {
     private static let metadataCache = UserSetting<[String: [String: OllamaModelMetadata]]>(
         "aiplugin.localModelMetadataCache", default: [:])
 
+    /// model id -> the model's ollama.com page blurb. Keyed by model name alone —
+    /// the description comes from ollama.com, not from any particular server.
+    private static let descriptionCache = UserSetting<[String: String]>(
+        "aiplugin.ollamaModelDescriptionCache", default: [:])
+
     /// True when `baseURL` points at this machine, i.e. a local model server.
     public static func isLocal(baseURL: String) -> Bool {
         LocalModelServer.isLoopback(baseURL: baseURL)
@@ -45,6 +50,22 @@ public enum LocalProviderModelStore {
     /// none cached yet.
     public static func cachedMetadata(baseURL: String) -> [String: OllamaModelMetadata] {
         metadataCache.value[baseURL] ?? [:]
+    }
+
+    /// The last ollama.com descriptions fetched, or empty if none cached yet.
+    public static func cachedDescriptions() -> [String: String] {
+        descriptionCache.value
+    }
+
+    /// The model's ollama.com page description, cached on success like the ids,
+    /// sizes, and metadata. Returns nil on any failure so callers keep showing
+    /// the cached blurb instead of blanking it.
+    public static func fetchDescription(model: String) async -> String? {
+        guard let text = await OllamaModelPageStore.fetch(model: model) else { return nil }
+        var dict = descriptionCache.value
+        dict[model] = text
+        descriptionCache.value = dict
+        return text
     }
 
     /// `POST {origin}/api/show` for one model (Ollama's native route, the only
