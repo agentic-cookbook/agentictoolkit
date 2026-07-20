@@ -48,4 +48,24 @@ struct OllamaModelPageStoreTests {
         #expect(OllamaModelPageStore.parseDescription(
             "<meta property=\"og:description\" content=\"\">") == nil)
     }
+
+    @Test("parseStats reads the downloads and updated spans")
+    func parsesStats() {
+        let html = """
+        <span >117.4M</span>
+        <span class="hidden sm:flex">&nbsp;Downloads</span>
+        <span class="hidden sm:flex">Updated&nbsp;</span>
+        <span >1 year ago</span>
+        """
+        let stats = OllamaModelPageStore.parseStats(html)
+        #expect(stats.downloads == "117.4M")
+        #expect(stats.updated == "1 year ago")
+    }
+
+    @Test("parseStats degrades to nils when the markup is absent")
+    func parsesStatsEmpty() {
+        let stats = OllamaModelPageStore.parseStats("<html></html>")
+        #expect(stats.downloads == nil)
+        #expect(stats.updated == nil)
+    }
 }

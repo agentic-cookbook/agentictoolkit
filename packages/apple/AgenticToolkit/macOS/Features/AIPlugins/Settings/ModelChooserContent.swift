@@ -41,6 +41,31 @@ public enum ModelChooserContent {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
+    /// "117.4M downloads on ollama.com · updated 1 year ago" from the model's
+    /// live page stats; nil when neither stat is known.
+    public static func popularityLine(_ stats: LocalProviderModelStore.LocalModelPageStats?) -> String? {
+        guard let stats else { return nil }
+        var parts: [String] = []
+        if let downloads = stats.downloads { parts.append("\(downloads) downloads on ollama.com") }
+        if let updated = stats.updated { parts.append("updated \(updated)") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// "Artificial Analysis: intelligence 62.9 · coding 55.8 · 153.8 tok/s"
+    /// from the live leaderboard entry; nil when no rank (or no API key).
+    public static func rankLine(_ rank: ArtificialAnalysisStore.ModelRank?) -> String? {
+        guard let rank else { return nil }
+        var parts: [String] = []
+        if let index = rank.intelligenceIndex { parts.append("intelligence \(formatted(index))") }
+        if let index = rank.codingIndex { parts.append("coding \(formatted(index))") }
+        if let speed = rank.outputTokensPerSecond { parts.append("\(formatted(speed)) tok/s") }
+        return parts.isEmpty ? nil : "Artificial Analysis: " + parts.joined(separator: " · ")
+    }
+
+    private static func formatted(_ value: Double) -> String {
+        String(format: value == value.rounded() ? "%.0f" : "%.1f", value)
+    }
+
     /// The curated blurb, else the model's ollama.com page description (`fetched`,
     /// discovered live and cached for local providers), else the curated
     /// good-for line, else a plain placeholder.

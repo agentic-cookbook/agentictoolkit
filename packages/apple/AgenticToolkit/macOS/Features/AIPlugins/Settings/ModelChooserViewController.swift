@@ -42,6 +42,10 @@ public final class ModelChooserViewController: NSViewController {
     private var metadataByModel: [String: OllamaModelMetadata] = [:]
     /// model id -> ollama.com page blurb, for models without a curated one.
     private var descriptionsByModel: [String: String] = [:]
+    /// model id -> ollama.com page popularity (downloads + last update).
+    private var pageStatsByModel: [String: LocalProviderModelStore.LocalModelPageStats] = [:]
+    /// model id -> Artificial Analysis leaderboard entry (empty without a key).
+    private var ranksByModel: [String: ArtificialAnalysisStore.ModelRank] = [:]
     /// model id -> on-disk size bytes, from Ollama's native `/api/tags` (loopback
     /// providers only). Feeds the memory-fit line and the warn-tier confirmation.
     private var sizesByModel: [String: Int] = [:]
@@ -212,6 +216,8 @@ public final class ModelChooserViewController: NSViewController {
         sizesByModel = LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
         metadataByModel = LocalProviderModelStore.cachedMetadata(baseURL: context.baseURL)
         descriptionsByModel = LocalProviderModelStore.cachedDescriptions()
+        pageStatsByModel = LocalProviderModelStore.cachedPageStats()
+        ranksByModel = ArtificialAnalysisStore.cachedRanks()
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
         Task { await loadLiveModels() }
     }
@@ -255,12 +261,13 @@ public final class ModelChooserViewController: NSViewController {
         refreshAllModelInfo()
     }
 
-    /// Re-fetch `/api/show` metadata (local providers) AND the best description
-    /// (ollama.com page for local models, hosted-model catalogs for all) for
-    /// EVERY listed model on every open — the caches painted the details
-    /// instantly; the live data overwrites them and re-renders whenever the
-    /// selected model's row lands. One independent task per fetch, so a slow
-    /// model or a slow catalog can't delay the others.
+    /// Re-fetch `/api/show` metadata (local providers) AND the live description
+    /// + popularity + rank sources for EVERY listed model on every open — the
+    /// caches painted the details instantly; the LIVE data overwrites them and
+    /// re-renders whenever the selected model's row lands. One independent task
+    /// per fetch, so a slow model or a slow catalog can't delay the others; the
+    /// shared sources (catalogs, leaderboard) are single-flighted inside their
+    /// stores so N tasks still mean one live round each.
     private func refreshAllModelInfo() {
         let isLocal = LocalProviderModelStore.isLocal(baseURL: context.baseURL)
         let baseURL = context.baseURL
@@ -275,11 +282,14 @@ public final class ModelChooserViewController: NSViewController {
                 }
             }
             Task { [weak self] in
-                guard let text = await LocalProviderModelStore.fetchDescription(
-                    model: model, viaOllamaPage: isLocal) else { return }
+                let info = await LocalProviderModelStore.fetchModelInfo(
+                    model: model, viaOllamaPage: isLocal)
                 guard let self else { return }
-                self.descriptionsByModel[model] = text
-                if self.selectedModel == model { self.renderDetail() }
+                var changed = false
+                if let text = info.description { descriptionsByModel[model] = text; changed = true }
+                if let stats = info.stats { pageStatsByModel[model] = stats; changed = true }
+                if let rank = info.rank { ranksByModel[model] = rank; changed = true }
+                if changed, selectedModel == model { renderDetail() }
             }
         }
     }
@@ -322,6 +332,14 @@ public final class ModelChooserViewController: NSViewController {
             warnPct: context.warnPct, blockPct: context.blockPct) {
             let role: ThemeRole = fit.tier == .block ? .danger : fit.tier == .warn ? .warning : .secondaryText
             group.addSettingSubview(Self.wrappingLabel(fit.text, role: role, textRole: .caption))
+        }
+        if let popularity = ModelChooserContent.popularityLine(pageStatsByModel[item.id]) {
+            group.addSettingSubview(Self.wrappingLabel(
+                popularity, role: .secondaryText, textRole: .caption))
+        }
+        if let rank = ModelChooserContent.rankLine(ranksByModel[item.id]) {
+            group.addSettingSubview(Self.wrappingLabel(
+                rank, role: .secondaryText, textRole: .caption))
         }
         group.addSettingSubview(Self.wrappingLabel(
             ModelChooserContent.descriptionText(item: item, fetched: descriptionsByModel[item.id]),

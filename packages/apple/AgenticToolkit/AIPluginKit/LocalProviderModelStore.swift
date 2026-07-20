@@ -14,6 +14,17 @@ import AgenticToolkitCore
 @MainActor
 public enum LocalProviderModelStore {
 
+    /// The ollama.com page's popularity stats for one model, as displayed
+    /// ("117.4M" downloads, updated "1 year ago").
+    public struct LocalModelPageStats: Codable, Sendable, Equatable {
+        public let downloads: String?
+        public let updated: String?
+        public init(downloads: String?, updated: String?) {
+            self.downloads = downloads
+            self.updated = updated
+        }
+    }
+
     /// baseURL string -> last successfully fetched model ids.
     private static let cache = UserSetting<[String: [String]]>(
         "aiplugin.localModelCache", default: [:])
@@ -30,6 +41,11 @@ public enum LocalProviderModelStore {
     /// the description comes from ollama.com, not from any particular server.
     private static let descriptionCache = UserSetting<[String: String]>(
         "aiplugin.ollamaModelDescriptionCache", default: [:])
+
+    /// model id -> the model's ollama.com page popularity stats (downloads +
+    /// last update), keyed like the descriptions.
+    private static let pageStatsCache = UserSetting<[String: LocalModelPageStats]>(
+        "aiplugin.ollamaModelPageStatsCache", default: [:])
 
     /// True when `baseURL` points at this machine, i.e. a local model server.
     public static func isLocal(baseURL: String) -> Bool {
@@ -57,27 +73,49 @@ public enum LocalProviderModelStore {
         descriptionCache.value
     }
 
-    /// The model's best available description, cached on success like the ids,
-    /// sizes, and metadata. For local (ollama) models the model's ollama.com
-    /// page blurb wins, upgraded via the hosted-model catalogs (OpenRouter,
-    /// models.dev) when the page text is missing or trivially thin — some
-    /// community pages carry blurbs as thin as a bare URL. Remote models skip
-    /// the ollama.com page and go straight to the catalogs. Returns nil on
-    /// total failure so callers keep showing the cached blurb instead of
-    /// blanking it.
-    public static func fetchDescription(model: String, viaOllamaPage: Bool) async -> String? {
-        let page = viaOllamaPage ? await OllamaModelPageStore.fetch(model: model) : nil
-        var text = page
-        if page == nil || !ModelCatalogStore.isSubstantial(page ?? "") {
-            if let catalogText = await ModelCatalogStore.description(for: model) {
-                text = catalogText
-            }
+    /// The last ollama.com page stats fetched, or empty if none cached yet.
+    public static func cachedPageStats() -> [String: LocalModelPageStats] {
+        pageStatsCache.value
+    }
+
+    /// Everything the live sources say about one model, in one call — each
+    /// side nil on failure so callers keep showing cached values:
+    /// - description: for local (ollama) models the model's ollama.com page
+    ///   blurb wins, upgraded via the hosted-model catalogs (OpenRouter,
+    ///   models.dev) when the page text is missing or trivially thin — some
+    ///   community pages carry blurbs as thin as a bare URL. Remote models
+    ///   skip the page and go straight to the catalogs.
+    /// - stats: the ollama.com page's downloads + last-update (local only).
+    /// - rank: the Artificial Analysis leaderboard entry (needs an API key).
+    /// The catalog and rank awaits come FIRST so a chooser's N per-model tasks
+    /// all join the same live round of each before fanning out to N page
+    /// fetches. Every non-nil result is cached for the next instant paint.
+    public static func fetchModelInfo(
+        model: String, viaOllamaPage: Bool
+    ) async -> (description: String?, stats: LocalModelPageStats?,
+                rank: ArtificialAnalysisStore.ModelRank?) {
+        let catalogDescription = await ModelCatalogStore.description(for: model)
+        let rank = await ArtificialAnalysisStore.rank(for: model)
+        let page = viaOllamaPage ? await OllamaModelPageStore.fetchInfo(model: model) : nil
+
+        var description = page?.description
+        if description == nil || !ModelCatalogStore.isSubstantial(description ?? "") {
+            if let catalogDescription { description = catalogDescription }
         }
-        guard let text else { return nil }
-        var dict = descriptionCache.value
-        dict[model] = text
-        descriptionCache.value = dict
-        return text
+        if let description {
+            var dict = descriptionCache.value
+            dict[model] = description
+            descriptionCache.value = dict
+        }
+
+        var stats: LocalModelPageStats?
+        if let page, page.downloads != nil || page.updated != nil {
+            stats = LocalModelPageStats(downloads: page.downloads, updated: page.updated)
+            var dict = pageStatsCache.value
+            dict[model] = stats
+            pageStatsCache.value = dict
+        }
+        return (description, stats, rank)
     }
 
     /// `POST {origin}/api/show` for one model (Ollama's native route, the only

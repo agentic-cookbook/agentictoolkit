@@ -21,10 +21,8 @@ public enum ModelCatalogStore {
         public var isEmpty: Bool { openRouter.isEmpty && modelsDev.isEmpty }
     }
 
-    private static var cached: Catalog?
-    private static var fetchedAt: Date?
+    private static var lastGood: Catalog?
     private static var inflight: Task<Catalog, Never>?
-    private static let ttl: TimeInterval = 15 * 60
 
     /// The best catalog description for `model` — OpenRouter first (richer
     /// prose), then models.dev — or nil when neither has a confident match.
@@ -34,12 +32,11 @@ public enum ModelCatalogStore {
             ?? bestMatch(for: model, in: catalog.modelsDev)
     }
 
-    /// The catalogs, fetched concurrently at most once per TTL per app run and
-    /// single-flighted, so a chooser refreshing N models triggers one round of
-    /// fetches, not N. A failed round returns the previous good catalog (stale
-    /// beats empty) without caching the failure.
+    /// The catalogs, fetched concurrently — ALWAYS a live round, never a timed
+    /// cache: an open round is joined (so a chooser refreshing N models at once
+    /// triggers one round, not N), and the next burst fetches fresh. A failed
+    /// round returns the previous good catalog (stale beats empty).
     public static func catalog() async -> Catalog {
-        if let cached, let fetchedAt, Date().timeIntervalSince(fetchedAt) < ttl { return cached }
         if let inflight { return await inflight.value }
         let task = Task { () -> Catalog in
             async let openRouter = fetchData("https://openrouter.ai/api/v1/models")
@@ -50,11 +47,8 @@ public enum ModelCatalogStore {
         inflight = task
         let result = await task.value
         inflight = nil
-        if !result.isEmpty {
-            cached = result
-            fetchedAt = Date()
-        }
-        if result.isEmpty, let cached { return cached }
+        if !result.isEmpty { lastGood = result }
+        if result.isEmpty, let lastGood { return lastGood }
         return result
     }
 
@@ -112,26 +106,32 @@ public enum ModelCatalogStore {
     /// then the shortest id (fewest extra qualifiers) wins. A bare "-latest"
     /// suffix on the id itself is retried stripped ("grok-2-latest").
     nonisolated public static func bestMatch(for model: String, in catalog: [String: String]) -> String? {
+        bestMatchKey(for: model, in: Array(catalog.keys)).flatMap { catalog[$0] }
+    }
+
+    /// `bestMatch` over bare ids: the catalog KEY that best matches `model`,
+    /// for callers whose values aren't strings (e.g. rank records keyed by slug).
+    nonisolated public static func bestMatchKey(for model: String, in keys: [String]) -> String? {
         let name = model.split(separator: "/").last.map(String.init) ?? model
         let parts = name.split(separator: ":", maxSplits: 1).map(String.init)
         let base = normalize(parts.first ?? "")
         guard !base.isEmpty else { return nil }
         let size = parts.count > 1 ? sizeTokens(inRawSegment: parts[1]).sorted().first : nil
-        if let match = match(base, size: size, in: catalog) { return match }
+        if let key = matchKey(base, size: size, in: keys) { return key }
         if base.hasSuffix("latest"), base != "latest" {
-            return match(String(base.dropLast("latest".count)), size: size, in: catalog)
+            return matchKey(String(base.dropLast("latest".count)), size: size, in: keys)
         }
         return nil
     }
 
-    nonisolated private static func match(
-        _ base: String, size: String?, in catalog: [String: String]
+    nonisolated private static func matchKey(
+        _ base: String, size: String?, in keys: [String]
     ) -> String? {
         var candidates: [(key: String, norm: String, sizes: Set<String>)] = []
-        for key in catalog.keys {
+        for key in keys {
             let segment = key.split(separator: "/").last.map(String.init) ?? key
             let last = normalize(segment)
-            if last == base { return catalog[key] }
+            if last == base { return key }
             if last.hasPrefix(base) {
                 candidates.append((key, last, sizeTokens(inRawSegment: segment)))
             }
@@ -141,7 +141,7 @@ public enum ModelCatalogStore {
             candidates = sized.isEmpty ? candidates.filter { $0.sizes.isEmpty } : sized
         }
         let best = candidates.min { ($0.norm.count, $0.key) < ($1.norm.count, $1.key) }
-        return best.flatMap { catalog[$0.key] }
+        return best?.key
     }
 
     nonisolated private static func normalize(_ text: String) -> String {
