@@ -57,11 +57,23 @@ public enum LocalProviderModelStore {
         descriptionCache.value
     }
 
-    /// The model's ollama.com page description, cached on success like the ids,
-    /// sizes, and metadata. Returns nil on any failure so callers keep showing
-    /// the cached blurb instead of blanking it.
-    public static func fetchDescription(model: String) async -> String? {
-        guard let text = await OllamaModelPageStore.fetch(model: model) else { return nil }
+    /// The model's best available description, cached on success like the ids,
+    /// sizes, and metadata. For local (ollama) models the model's ollama.com
+    /// page blurb wins, upgraded via the hosted-model catalogs (OpenRouter,
+    /// models.dev) when the page text is missing or trivially thin — some
+    /// community pages carry blurbs as thin as a bare URL. Remote models skip
+    /// the ollama.com page and go straight to the catalogs. Returns nil on
+    /// total failure so callers keep showing the cached blurb instead of
+    /// blanking it.
+    public static func fetchDescription(model: String, viaOllamaPage: Bool) async -> String? {
+        let page = viaOllamaPage ? await OllamaModelPageStore.fetch(model: model) : nil
+        var text = page
+        if page == nil || !ModelCatalogStore.isSubstantial(page ?? "") {
+            if let catalogText = await ModelCatalogStore.description(for: model) {
+                text = catalogText
+            }
+        }
+        guard let text else { return nil }
         var dict = descriptionCache.value
         dict[model] = text
         descriptionCache.value = dict

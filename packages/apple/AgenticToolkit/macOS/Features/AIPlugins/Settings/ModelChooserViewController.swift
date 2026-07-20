@@ -255,26 +255,28 @@ public final class ModelChooserViewController: NSViewController {
         refreshAllModelInfo()
     }
 
-    /// Re-fetch `/api/show` metadata AND the ollama.com page description for
-    /// EVERY listed model on every open (local providers only) — the caches
-    /// painted the details instantly; the live data overwrites them and
-    /// re-renders whenever the selected model's row lands. One independent task
-    /// per fetch, so a slow model or a slow ollama.com can't delay the others.
+    /// Re-fetch `/api/show` metadata (local providers) AND the best description
+    /// (ollama.com page for local models, hosted-model catalogs for all) for
+    /// EVERY listed model on every open — the caches painted the details
+    /// instantly; the live data overwrites them and re-renders whenever the
+    /// selected model's row lands. One independent task per fetch, so a slow
+    /// model or a slow catalog can't delay the others.
     private func refreshAllModelInfo() {
-        guard LocalProviderModelStore.isLocal(baseURL: context.baseURL) else { return }
+        let isLocal = LocalProviderModelStore.isLocal(baseURL: context.baseURL)
         let baseURL = context.baseURL
         for model in items.map(\.id) where !model.isEmpty {
-            Task { [weak self] in
-                guard let meta = await LocalProviderModelStore.fetchMetadata(
-                    baseURL: baseURL, model: model) else { return }
-                guard let self else { return }
-                self.metadataByModel[model] = meta
-                if self.selectedModel == model { self.renderDetail() }
+            if isLocal {
+                Task { [weak self] in
+                    guard let meta = await LocalProviderModelStore.fetchMetadata(
+                        baseURL: baseURL, model: model) else { return }
+                    guard let self else { return }
+                    self.metadataByModel[model] = meta
+                    if self.selectedModel == model { self.renderDetail() }
+                }
             }
             Task { [weak self] in
-                guard let text = await LocalProviderModelStore.fetchDescription(model: model) else {
-                    return
-                }
+                guard let text = await LocalProviderModelStore.fetchDescription(
+                    model: model, viaOllamaPage: isLocal) else { return }
                 guard let self else { return }
                 self.descriptionsByModel[model] = text
                 if self.selectedModel == model { self.renderDetail() }
