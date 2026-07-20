@@ -42,6 +42,12 @@ export interface TopicDetailItem {
    *  collapsible, so every row is guaranteed an icon — a neutral ring fills in
    *  when omitted — so the collapsed icon-only strip never shows a blank slot. */
   icon?: ReactNode
+  /** What choosing this row leads to — another topic LIST, or the DETAIL (a FINAL CHOICE).
+   *  Overrides the level's `leadsTo` default for this one row; unset on both means `"detail"`.
+   *  Declared, not inferred: the cascading view's detail hold and final-choice auto-collapse
+   *  (must-hold-the-detail-until-the-final-choice) key off it at click time. `"detail"` is the
+   *  fail-safe — an undeclared row swaps the pane immediately, it can never hold it hostage. */
+  leadsTo?: "list" | "detail"
   /** Render a separator row after this item (hub: before Settings). */
   dividerAfter?: boolean
   /** Render a flexible spacer after this item, pushing every following item to the

@@ -7,24 +7,24 @@ import {
   ENTER_MS,
   EXIT_EASE,
   EXIT_MS,
-  NO_REVEAL,
-  coverFrontierWhileChoosing,
+  SETTLED,
+  engageOnEnter,
+  engageOnRailClick,
   enterKeyframes,
   exitKeyframes,
-  mayMoveGround,
+  itemLeadsTo,
   menuRegion,
-  planChoiceSettle,
+  planLeafSettle,
+  planRailHold,
   planRailSelect,
   pointInRegion,
-  pointerInMenusAfterMove,
-  ratchetFrozenFrontier,
-  reduceReveal,
-  revealClosedBy,
-  shouldShowHeldDetail,
+  settleModeOn,
   triggerFires,
   triggerRectArmed,
+  type CascadeMode,
+  type EngagedBase,
   type MenuRect,
-  type RevealEvent,
+  type SettleReason,
 } from "../blocks/cascade-rules"
 
 /**
@@ -129,42 +129,75 @@ describe("must-not-wiggle-the-exit", () => {
   })
 })
 
-describe("must-hold-the-ground-under-the-pointer", () => {
-  it("holds the root list's width while the pointer is in the menus", () => {
-    // Both reported symptoms: clicking Integrations resized the root list, and unselecting it resized
-    // the root list. In both the pointer is still in the menus, so the ground must not move.
-    expect(mayMoveGround({ pointerInMenus: true, latched: true })).toBe(false)
+/** A frozen base for the machine tests: three columns, the first two covered, none off-screen. */
+const baseFixture = (over: Partial<EngagedBase> = {}): EngagedBase => ({
+  lefts: [0, 32, 64],
+  covered: [true, true, false],
+  hidden: 0,
+  groundRight: 240,
+  ...over,
+})
+
+describe("the cascade's mode is a STORED machine — a click cannot settle or move it", () => {
+  it("engaging from settled captures the resting base ONCE, rooted at the clicked list", () => {
+    expect(engageOnRailClick(SETTLED, baseFixture(), 1)).toEqual({
+      kind: "engaged",
+      root: 1,
+      base: baseFixture(),
+    })
   })
 
-  it("releases once the pointer has left the menus", () => {
-    expect(mayMoveGround({ pointerInMenus: false, latched: true })).toBe(true)
+  it("T61 (must-not-move-the-menus-on-an-intermediate-select): a rail click NEVER replaces an existing base", () => {
+    // The failure the stored base forbids: the select advances the frontier and the covering /
+    // pressure / ground all recompute, moving the very list being clicked in the moment its child
+    // appears. Engaged geometry paints from the captured VALUE, and no click can touch it.
+    const first = engageOnRailClick(SETTLED, baseFixture(), 2)
+    const second = engageOnRailClick(first, baseFixture({ lefts: [999], groundRight: 1 }), 1)
+    expect(second.kind).toBe("engaged")
+    if (second.kind === "engaged") {
+      expect(second.base).toEqual(baseFixture())
+      expect(second.root).toBe(1)
+    }
   })
 
-  it("takes the real width on a first paint, when there is nothing latched to hold", () => {
-    // Without this the stack renders at a held width of nothing.
-    expect(mayMoveGround({ pointerInMenus: true, latched: false })).toBe(true)
+  it("must-not-expand-parents-on-select: the reveal root only ever RATCHETS shallower on a click", () => {
+    // Clicking deeper keeps the shallower root (everything walked open stays open); it never
+    // springs covered parents open (engageOnEnter is the only all-revealer).
+    const at1 = engageOnRailClick(SETTLED, baseFixture(), 1)
+    const deeper = engageOnRailClick(at1, baseFixture(), 2)
+    if (deeper.kind === "engaged") expect(deeper.root).toBe(1)
+    // Engaged with nothing revealed (root null — a click in an uncovered stack): the next click
+    // roots at its own list, protecting it from the child's arrival.
+    const engagedNull: CascadeMode = { kind: "engaged", root: null, base: baseFixture() }
+    const clicked = engageOnRailClick(engagedNull, baseFixture(), 2)
+    if (clicked.kind === "engaged") expect(clicked.root).toBe(2)
   })
 
-  it("stays held across a remount, because the pointer has not moved — only the component has", () => {
-    // Choosing a row is a route-param change, so React discards and remounts the whole subtree ON
-    // THE CLICK the hold has to survive. If the remounted component reports `pointerInMenus: false`
-    // (a fresh `useState(false)` rather than a seed from the surface's memory), the ground frees
-    // itself on exactly that frame and jumps — the reported bug, reintroduced through the back door.
-    // The pointer is still in the menus, so the answer is unchanged:
-    expect(mayMoveGround({ pointerInMenus: true, latched: true })).toBe(false)
+  it("entering an open zone reveals EVERYTHING on screen — rooted at the first on-screen column", () => {
+    const b = baseFixture({ hidden: 1 })
+    expect(engageOnEnter(SETTLED, b)).toEqual({ kind: "engaged", root: 1, base: b })
+    // Idempotent while engaged: the base is KEPT (the menus cannot move, only reveal further).
+    const reEntered = engageOnEnter(engageOnRailClick(SETTLED, b, 2), baseFixture({ hidden: 0 }))
+    if (reEntered.kind === "engaged") {
+      expect(reEntered.root).toBe(1)
+      expect(reEntered.base).toEqual(b)
+    }
   })
 
-  it("shares its one input with the reveal — the SAME `pointerInMenus` governs both", () => {
-    // The unification this refactor is: the ground latch and the reveal's held-state are no longer
-    // two separately-computed (and separately-stale) things. Both are `pointerInMenus`. This rule
-    // takes exactly that plus the first-paint latch, and nothing else — no cover/reveal/selection
-    // term that could switch it off behind the layout's back.
-    expect(Object.keys({ pointerInMenus: false, latched: true })).toEqual([
-      "pointerInMenus",
-      "latched",
-    ])
-    expect(mayMoveGround({ pointerInMenus: true, latched: true })).toBe(false)
-    expect(mayMoveGround({ pointerInMenus: false, latched: true })).toBe(true)
+  it("must-collapse-from-one-pointer-authority: pointer-exit, toggle and the final choice are the ONLY settles", () => {
+    const reasons: SettleReason[] = ["pointer-exit", "toggle", "final-choice"]
+    for (const r of reasons) expect(settleModeOn(r)).toEqual({ kind: "settled" })
+    // A rail click is not a settle reason — unrepresentable, and the type rejects it:
+    // @ts-expect-error — a click cannot settle the cascade
+    settleModeOn("rail-click")
+  })
+
+  it("must-hold-the-ground-under-the-pointer: the ground is DATA in the frozen base", () => {
+    // The root's width and the detail's position hang off `groundRight`; engaged geometry reads it
+    // from the base, so nothing a gesture causes (select, clear, disclose, remount) can move it —
+    // it recomputes only at the settle transitions above.
+    const engaged = engageOnRailClick(SETTLED, baseFixture({ groundRight: 240 }), 0)
+    if (engaged.kind === "engaged") expect(engaged.base.groundRight).toBe(240)
   })
 })
 
@@ -212,30 +245,14 @@ describe("must-guard-unsaved-on-exit", () => {
 
 describe("must-draw-every-detection-frame", () => {
   it("arms the disclose region only when something is covered to disclose", () => {
-    const base = { revealOpen: false, immersed: false, anyCovered: true }
-    expect(triggerRectArmed(base)).toBe(true)
+    const state = { engaged: false, immersed: false, anyCovered: true }
+    expect(triggerRectArmed(state)).toBe(true)
     // The exact state that made the debug switch look broken: autoHideTopics={false} covers nothing,
     // so the region is legitimately dead — and must therefore be DRAWN dead, not omitted.
-    expect(triggerRectArmed({ ...base, anyCovered: false })).toBe(false)
-    expect(triggerRectArmed({ ...base, immersed: true })).toBe(false)
-    // A reveal already open means the cascade is disclosed — nothing left to trigger.
-    expect(triggerRectArmed({ ...base, revealOpen: true })).toBe(false)
-  })
-})
-
-describe("must-collapse-from-one-pointer-authority — the evidence clause", () => {
-  it("a measurable move answers from the region — inside is inside, outside is outside", () => {
-    expect(pointerInMenusAfterMove({ measurable: true, inside: true, previous: false })).toBe(true)
-    expect(pointerInMenusAfterMove({ measurable: true, inside: false, previous: true })).toBe(false)
-  })
-
-  it("an UNMEASURABLE move keeps the last answer — absence of evidence is not leaving", () => {
-    // The remount a select causes has a window where nothing is measurable (the old container is
-    // detached, the new one unpainted) and a real mouse always moves in it. Writing "outside" there
-    // released the ground latch, the covering freeze and the reveal on exactly the click every hold
-    // exists to survive — reproducible only with a real pointer, which is why it kept shipping.
-    expect(pointerInMenusAfterMove({ measurable: false, inside: false, previous: true })).toBe(true)
-    expect(pointerInMenusAfterMove({ measurable: false, inside: false, previous: false })).toBe(false)
+    expect(triggerRectArmed({ ...state, anyCovered: false })).toBe(false)
+    expect(triggerRectArmed({ ...state, immersed: true })).toBe(false)
+    // Already engaged means the cascade is disclosed — nothing left to trigger.
+    expect(triggerRectArmed({ ...state, engaged: true })).toBe(false)
   })
 })
 
@@ -271,233 +288,95 @@ describe("menu region — the ONE authority for pointer-in-menus", () => {
   })
 })
 
-describe("the reveal closes on exactly three things — never an intermediate select", () => {
-  it("a root (an intermediate select or a hover-enter) OPENS, and can never close", () => {
-    // The invariant whose absence let a click collapse the menus. An intermediate select dispatches
-    // `root`.
-    expect(reduceReveal(NO_REVEAL, { type: "root", id: "features", all: false })).toEqual({
-      root: "features",
-      all: false,
+describe("must-hold-the-detail-until-the-final-choice — DECLARED leafness (v1.16.0)", () => {
+  it("resolves a row's leafness: item over level over the fail-safe `detail` default", () => {
+    expect(itemLeadsTo(undefined, undefined)).toBe("detail")
+    expect(itemLeadsTo("list", undefined)).toBe("list")
+    expect(itemLeadsTo("list", "detail")).toBe("detail")
+    expect(itemLeadsTo("detail", "list")).toBe("list")
+  })
+
+  it("T57: an intermediate select (a row declared to lead to a list) CAPTURES the pane", () => {
+    // The pane keeps showing exactly what it showed before the click — never the new topic's
+    // overview, a landing, or a blank — until the gesture ends.
+    expect(planRailHold({ action: "select", leadsTo: "list" })).toEqual({
+      capture: true,
+      release: false,
+      finalChoice: false,
     })
-    expect(revealClosedBy({ type: "root", id: "features", all: false })).toBe(false)
   })
 
-  it("re-roots from one open reveal to another without ever passing through closed", () => {
-    const open: RevealEvent = { type: "root", id: "a", all: true }
-    const reRoot: RevealEvent = { type: "root", id: "b", all: false }
-    const state = reduceReveal(reduceReveal(NO_REVEAL, open), reRoot)
-    expect(state).toEqual({ root: "b", all: false })
+  it("a CLEAR releases the hold immediately — up-navigation is not a choosing gesture", () => {
+    // The release edge v1.15.x was missing: its hold armed on clears but could only release on a
+    // COMPLETE path, which an unselect makes false forever — so it never released, and the stale
+    // pane haunted /home and every partial path the navigation landed on.
+    for (const leadsTo of ["list", "detail"] as const)
+      expect(planRailHold({ action: "clear", leadsTo })).toEqual({
+        capture: false,
+        release: true,
+        finalChoice: false,
+      })
   })
 
-  it("closes on the pointer leaving the menus — the standing auto-collapse", () => {
-    expect(reduceReveal({ root: "features", all: false }, { type: "pointerLeftMenus" })).toBe(NO_REVEAL)
-    expect(revealClosedBy({ type: "pointerLeftMenus" })).toBe(true)
+  it("a FINAL CHOICE (a leaf row) arms the ONE swap — no capture, no release yet", () => {
+    expect(planRailHold({ action: "select", leadsTo: "detail" })).toEqual({
+      capture: false,
+      release: false,
+      finalChoice: true,
+    })
   })
 
-  it("closes on an explicit toggle — settling IS the requested action there", () => {
-    expect(reduceReveal({ root: "features", all: true }, { type: "settle" })).toBe(NO_REVEAL)
-    expect(revealClosedBy({ type: "settle" })).toBe(true)
-  })
-
-  it("closes on the FINAL CHOICE — the ONE click-driven closure (v1.15.0)", () => {
-    // The carve-out named in must-collapse-from-one-pointer-authority: the click that completes the
-    // path settles the cascade, exactly as the disclosure toggles do. Whether it fires at all is
-    // auto-collapse mode's call — see planChoiceSettle — but as an event it closes, always.
-    expect(reduceReveal({ root: "features", all: false }, { type: "finalChoice" })).toBe(NO_REVEAL)
-    expect(revealClosedBy({ type: "finalChoice" })).toBe(true)
-  })
-
-  it("has NO event that closes on an INTERMEDIATE select — it is unrepresentable", () => {
-    // The whole set of events, and which close. `finalChoice` is the one spec'd click closer
-    // (v1.15.0); if a future edit wants any OTHER click to collapse, it has to add an event here,
-    // and this test will make that choice loud instead of silent.
-    const closers = (["pointerLeftMenus", "settle", "finalChoice"] as const).map((type) =>
-      revealClosedBy({ type }),
+  it("T58: the swap lands when the navigation APPLIES — never on the click's own pre-navigation renders", () => {
+    // The click declared itself final, so nothing is inferred and nothing is confirmed across
+    // consecutive renders; the only question is when the host's navigation has landed.
+    expect(planLeafSettle({ sigChanged: false, pathComplete: true, autoHide: true }).settle).toBe(
+      false,
     )
-    const opener = revealClosedBy({ type: "root", id: "x", all: false })
-    expect(closers).toEqual([true, true, true])
-    expect(opener).toBe(false)
-  })
-})
-
-describe("must-hold-the-detail-until-the-final-choice", () => {
-  it("T57: while a hold is armed the HELD content shows — never the overview, a landing, or a blank", () => {
-    // An intermediate select disclosed another choosing list; the pane keeps showing exactly what it
-    // showed before the click. This also covers the complete-looking render BEFORE the settle is
-    // confirmed (a merged stack's late-registered list): gating on "the frontier is unselected"
-    // would flash the host's landing for the commit the list takes to arrive. Only the release
-    // (planChoiceSettle's confirmed settle) reveals the live detail — the ONE swap.
-    expect(shouldShowHeldDetail({ holding: true })).toBe(true)
-  })
-
-  it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {
-    // No pointer, no gesture, no captured content: the overview rule stands.
-    expect(shouldShowHeldDetail({ holding: false })).toBe(false)
-  })
-
-  it("T58: a settled-looking render ARMS, and the consecutive one settles — the final choice releases the hold", () => {
-    // ONE swap, old content → new content — confirmed across two renders (see the next test for why
-    // one is not enough).
-    const first = planChoiceSettle({
-      holding: true,
-      pathComplete: true,
-      selectionChanged: true,
-      armed: false,
-      autoHide: true,
-    })
-    expect(first).toEqual({ arm: true, settle: false, autoCollapse: false })
-    const second = planChoiceSettle({
-      holding: true,
-      pathComplete: true,
-      selectionChanged: true,
-      armed: true,
-      autoHide: true,
-    })
-    expect(second.settle).toBe(true)
-  })
-
-  it("a merged stack's late-registered deeper list DISARMS the confirmation — never a false settle", () => {
-    // A merged stack publishes its deeper list from components living in `children` (effects), one
-    // commit behind — so the first render after an intermediate select can be missing the very
-    // choosing list that select disclosed, and read as complete. The armed render that turns out
-    // NOT settled disarms; nothing releases and nothing collapses.
-    const lateList = planChoiceSettle({
-      holding: true,
-      pathComplete: false, // the deeper list registered — the path was never complete
-      selectionChanged: true,
-      armed: true,
-      autoHide: true,
-    })
-    expect(lateList).toEqual({ arm: false, settle: false, autoCollapse: false })
-  })
-
-  it("an intermediate select does NOT settle — the host disclosed another choosing list", () => {
-    expect(
-      planChoiceSettle({
-        holding: true,
-        pathComplete: false,
-        selectionChanged: true,
-        armed: false,
-        autoHide: true,
-      }).settle,
-    ).toBe(false)
-  })
-
-  it("the click's own pre-navigation renders do NOT settle — the selection hasn't moved yet", () => {
-    // The select still navigates (a DISPLAY hold, not a deferred navigation), but the host's route
-    // move may land renders later; until the chain actually changes, the complete-looking path is
-    // the OLD one and settling on it would release (and auto-collapse) on the arming click itself.
-    expect(
-      planChoiceSettle({
-        holding: true,
-        pathComplete: true,
-        selectionChanged: false,
-        armed: false,
-        autoHide: true,
-      }),
-    ).toEqual({ arm: false, settle: false, autoCollapse: false })
-  })
-
-  it("with no hold armed there is nothing to settle", () => {
-    expect(
-      planChoiceSettle({
-        holding: false,
-        pathComplete: true,
-        selectionChanged: true,
-        armed: true,
-        autoHide: true,
-      }).settle,
-    ).toBe(false)
+    // A merged stack may still be un-registering the old branch's deeper lists for a commit.
+    expect(planLeafSettle({ sigChanged: true, pathComplete: false, autoHide: true }).settle).toBe(
+      false,
+    )
+    expect(planLeafSettle({ sigChanged: true, pathComplete: true, autoHide: true }).settle).toBe(
+      true,
+    )
   })
 })
 
 describe("must-auto-collapse-menus-on-final-choice", () => {
-  it("T59: in auto-collapse mode the final choice closes the menus on the click itself", () => {
+  it("T59: in auto-collapse mode the final choice's landing closes the menus on the click itself", () => {
     // Without waiting for the pointer to leave: settling IS the requested action.
-    expect(
-      planChoiceSettle({
-        holding: true,
-        pathComplete: true,
-        selectionChanged: true,
-        armed: true,
-        autoHide: true,
-      }),
-    ).toEqual({ arm: false, settle: true, autoCollapse: true })
+    expect(planLeafSettle({ sigChanged: true, pathComplete: true, autoHide: true })).toEqual({
+      settle: true,
+      autoCollapse: true,
+    })
   })
 
   it("T60: with auto-collapse OFF only the detail swaps — no select collapses anything", () => {
     // The workspace stacks' standing rule (`autoHideTopics={false}`): the menus stay exactly as the
     // user arranged them.
-    expect(
-      planChoiceSettle({
-        holding: true,
-        pathComplete: true,
-        selectionChanged: true,
-        armed: true,
-        autoHide: false,
-      }),
-    ).toEqual({ arm: false, settle: true, autoCollapse: false })
+    expect(planLeafSettle({ sigChanged: true, pathComplete: true, autoHide: false })).toEqual({
+      settle: true,
+      autoCollapse: false,
+    })
   })
 
-  it("an intermediate select collapses nothing, in either mode", () => {
+  it("an intermediate select collapses nothing, in either mode — it never even arms a settle", () => {
+    expect(planRailHold({ action: "select", leadsTo: "list" }).finalChoice).toBe(false)
     for (const autoHide of [true, false])
-      for (const armed of [true, false])
-        expect(
-          planChoiceSettle({
-            holding: true,
-            pathComplete: false,
-            selectionChanged: true,
-            armed,
-            autoHide,
-          }).autoCollapse,
-        ).toBe(false)
+      expect(planLeafSettle({ sigChanged: true, pathComplete: false, autoHide }).autoCollapse).toBe(
+        false,
+      )
   })
 
-  it("the final choice writes the frozen cover frontier forward — the collapse lands on the click", () => {
-    // The gesture's covering freeze (below) holds while the pointer is parked in the menus, so the
-    // settle advances it explicitly; without this the "auto-collapse on the final choice" would
-    // silently wait for the next pointer exit.
-    expect(coverFrontierWhileChoosing({ frozenFrontier: 3, frontier: 3 })).toBe(3)
-  })
-
-  it("nothing may re-open until the pointer next ENTERS — presence in the trigger rect is not entry", () => {
+  it("nothing may re-open until the pointer next ENTERS — presence in an open zone is not entry", () => {
     // After the final choice collapses the menus the pointer is parked inside the freshly armed
-    // trigger; a stray pixel of movement there must not re-disclose what the click just closed.
+    // zones (the trigger lane, a covered peek); a stray pixel of movement there must not
+    // re-disclose what the click just closed. The outside→inside crossing is what opens — and in
+    // v1.16.0 the covered peeks route through this same gate (the browser's own `pointerenter`
+    // fires when layout moves under a stationary pointer, which a final-choice collapse does).
     expect(triggerFires({ armed: true, wasInside: true, isInside: true })).toBe(false)
-    // The outside→inside crossing is what opens.
     expect(triggerFires({ armed: true, wasInside: false, isInside: true })).toBe(true)
     expect(triggerFires({ armed: true, wasInside: false, isInside: false })).toBe(false)
     expect(triggerFires({ armed: false, wasInside: false, isInside: true })).toBe(false)
-  })
-})
-
-describe("must-not-move-the-menus-on-an-intermediate-select", () => {
-  it("T61: a rail click ratchets the frozen frontier to the clicked list — the select cannot cover it", () => {
-    // The failure this forbids: the select advances the real frontier, and auto-hide covering
-    // computed against it covers the very list being clicked in the moment its child appears —
-    // with only the pointer-reveal (racing the select's own remount) to hold it open. Frozen at the
-    // clicked index, the covering cannot touch the clicked list or anything right of it.
-    const frozen = ratchetFrozenFrontier({ frozenFrontier: 0, clickedIndex: 0 }) // click the root
-    expect(frozen).toBe(0)
-    // The intermediate select advanced the real frontier to 1 — the root (i=0) must stay uncovered:
-    // covered set is i < coverFrontier, and it is EMPTY.
-    expect(coverFrontierWhileChoosing({ frozenFrontier: frozen, frontier: 1 })).toBe(0)
-  })
-
-  it("keeps the parents the user had covered COVERED — a click never springs them open", () => {
-    // must-not-expand-parents-on-select: clicking in a mid-stack list (i=1) with the covering
-    // settled deeper (frontier 2) ratchets to 1 — list 0 stays covered, list 1 and everything the
-    // user walked open stay disclosed.
-    expect(ratchetFrozenFrontier({ frozenFrontier: 2, clickedIndex: 1 })).toBe(1)
-  })
-
-  it("follows a RETREAT — a clear/✕ that pulls the real frontier below the freeze is not fought", () => {
-    // Up-navigation must never leave stale covering: the effective frontier is the smaller of the
-    // frozen and the real one.
-    expect(coverFrontierWhileChoosing({ frozenFrontier: 2, frontier: 1 })).toBe(1)
-  })
-
-  it("holds against an ADVANCE — deeper disclosure while choosing covers nothing", () => {
-    expect(coverFrontierWhileChoosing({ frozenFrontier: 0, frontier: 3 })).toBe(0)
   })
 })

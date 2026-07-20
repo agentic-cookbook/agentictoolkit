@@ -35,6 +35,10 @@ export interface ResourceTopic {
   /** What this topic is for — feeds the standard no-selection TopicOverview cards. */
   description?: string;
   dividerAfter?: boolean;
+  /** Declare `"list"` for a topic whose pane publishes a deeper rail (a master/detail list, a
+   *  grouping topic), so the cascading view treats choosing it as an INTERMEDIATE select (the
+   *  detail holds). Default `"detail"`: choosing the topic IS the final choice. */
+  leadsTo?: "list" | "detail";
   /** Render the topic's pane for the active resource id (undefined while "All"). `leaf`
    *  carries the deep-linkable leaf selection for master/detail topics; `subLeafFor` builds the
    *  deeper leaf for a grouping topic's member (…/<topic>/<member>/<entity>), so the member's own
@@ -202,11 +206,15 @@ export function ResourceExplorer<T>({
     icon: t.icon,
     description: t.description,
     dividerAfter: t.dividerAfter,
+    leadsTo: t.leadsTo,
   }));
 
   const resourceLevel: TopicLevel = {
     id: "resource",
     title: landing?.title ?? "",
+    // Choosing an entity always discloses its TOPICS list — every row is an intermediate select
+    // for the cascading view's detail hold (must-hold-the-detail-until-the-final-choice).
+    leadsTo: "list",
     items: entityItems,
     // The entity list's unselected state is the REAL card landing below (searchable, with New) —
     // opt out of the frame's automatic topic overview so it isn't replaced by plain cards.

@@ -163,9 +163,11 @@ describe("must-draw-one-chain-line (drawing)", () => {
 })
 
 /** A stateful three-level host (workspaces ▸ features ▸ topics) whose deeper lists appear as their
- *  parents are chosen and whose children track the selection — the shape the hold's retrospective
- *  final-choice detection exists for. The detail text names the full path so the assertions can
- *  tell "held the old content" from "flipped to the new". */
+ *  parents are chosen and whose children track the selection — the shape the DECLARED-leafness
+ *  hold exists for: the first two levels declare `leadsTo: "list"` (their rows disclose deeper
+ *  lists), the topics rows take the `detail` default (each is a final choice). The detail text
+ *  names the full path so the assertions can tell "held the old content" from "flipped to the
+ *  new". */
 function Walk({ rootId }: { rootId: string }) {
   const [ws, setWs] = useState<string | null>("acme")
   const [feat, setFeat] = useState<string | null>("integrations")
@@ -179,6 +181,7 @@ function Walk({ rootId }: { rootId: string }) {
         { id: "mine", label: "My Workspace" },
       ],
       selectedId: ws,
+      leadsTo: "list",
       onSelect: (id) => {
         setWs(id)
         setFeat(null)
@@ -200,6 +203,7 @@ function Walk({ rootId }: { rootId: string }) {
               { id: "settings", label: "Settings" },
             ],
             selectedId: feat,
+            leadsTo: "list",
             onSelect: (id) => {
               setFeat(id)
               setTopic(null)
@@ -276,7 +280,8 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
     // advances the frontier, auto-hide covering computed against the new frontier covered the very
     // list being clicked in (its child slid over it at the CASCADE_INDENT), and only the pointer
     // reveal — dead here, as in any remount it loses the race to — held it open. The rail click now
-    // ratchets the frozen cover frontier structurally, with no pointer movement required.
+    // ENGAGES the stored machine (engageOnRailClick): geometry freezes at the captured base and the
+    // reveal roots at the clicked list, structurally, with no pointer movement required.
     const root = freshRootId()
     const { container } = render(<Walk rootId={root} />)
     const col = (i: number) => container.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)!
@@ -290,6 +295,29 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
     // …and the disclosed Topics list sits BESIDE it at the full disclosed advance
     // (32 + (240 − 32) = 240), not slid over it at the covered indent (which would be 64).
     expect(col(2).style.left).toBe("240px")
+  })
+
+  it("T62: a CLEAR releases the hold with the navigation — no stale pane haunts the walk", async () => {
+    // must-release-the-hold-when-the-gesture-ends: the live regression this pins is the v1.15.x
+    // hold arming on clears but releasing only on a COMPLETE path — an unselect made the path
+    // incomplete forever, so the captured pane showed indefinitely ("unselect doesn't work") and
+    // followed the user across surfaces (read as phantom auto-selection).
+    const root = freshRootId()
+    const { container } = render(<Walk rootId={root} />)
+    const detailPane = () => within(container.querySelector("section")!)
+    // Arm a hold with an intermediate select in the features list…
+    const features = within(container.querySelector<HTMLElement>('[data-htd-col="1"]')!)
+    fireEvent.click(features.getByRole("button", { name: /Settings/ }))
+    await waitFor(() =>
+      expect(displayHidden(detailPane().getByText("DETAIL integrations/hooks"))).toBe(false),
+    )
+    // …then UNSELECT the root (re-click its selected row). The clear must release the hold: the
+    // pane shows the real frontier state (the workspaces overview), never the captured detail.
+    const rail = within(container.querySelector<HTMLElement>('[data-htd-col="0"]')!)
+    fireEvent.click(rail.getByRole("button", { name: /Acme/ }))
+    await waitFor(() =>
+      expect(detailPane().queryByText("DETAIL integrations/hooks")).toBeNull(),
+    )
   })
 
   it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {

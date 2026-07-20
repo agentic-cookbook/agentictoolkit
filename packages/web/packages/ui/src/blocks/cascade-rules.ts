@@ -3,14 +3,20 @@
  *
  * Why this file exists: every rule in here was reported as a bug, fixed, and then REGRESSED by a
  * later fix — because each one lived as a boolean expression tangled into a 3000-line component
- * where nothing named it and nothing could test it. `mayMoveGround` was `hoverIndex < 0 && …`, which
- * quietly became "always true" the day `autoHideTopics` went false and no list was ever covered
- * again; that single silent change broke the ground latch AND both mouse-detection frames at once,
- * and none of it was visible at the call site.
+ * where nothing named it and nothing could test it. A behaviour that has a rule id here cannot
+ * silently regress: it fails a test (`cascadeRules.test.ts`, citing the recipe rule it implements —
+ * `recipes/hierarchical-topic-detail.md`, "Cascading view — motion, ground and the selection
+ * chain").
  *
- * So the rules are HERE, named, and each one is pinned by a test that cites the recipe rule it
- * implements (`recipes/hierarchical-topic-detail.md`, "Cascading view — motion, ground and the
- * selection chain"). A behaviour that has a rule id here cannot silently regress: it fails a test.
+ * v1.16.0 rebuilt the interaction layer around the STORED state machine below (`CascadeMode`).
+ * The previous architecture re-derived the menu geometry on every render and defended the
+ * derivation with six accumulated freeze mechanisms (a ground latch, a covering pressure freeze, a
+ * frozen-frontier ratchet, an entry-gated trigger, a pointer-evidence clause, a covered-column
+ * enter) whose release edges raced each other, the route remount and the live animations — each
+ * fix regressed a neighbouring path, which is exactly the history the paragraph above describes.
+ * Now the mode is a VALUE: while a gesture is engaged the base geometry is frozen data, a click is
+ * not a settling event (unrepresentable, not intercepted), and the final choice is DECLARED by the
+ * host rather than inferred from renders.
  *
  * Nothing in this module touches the DOM or React — it is the arithmetic and the policy only, so
  * `cascadeRules.test.ts` covers it exhaustively without a layout engine (jsdom has none, which is
@@ -121,42 +127,102 @@ export function exitKeyframes(): Keyframe[] {
   ]
 }
 
-// ─── The ground: the root list's width, and when it is allowed to move ────────────────────────────
+// ─── The cascade's MODE: ONE stored state machine per surface (v1.16.0) ───────────────────────────
 
 /**
- * May the ground (the root list's right edge, which is also the detail's left edge) move to the
- * stack's current extent? (**must-hold-the-ground-under-the-pointer**)
+ * The geometry a surface was RESTING at when a gesture engaged it — captured ONCE, at the
+ * transition, from the settled layout the user is looking at.
  *
- * The ground is load-bearing: the root's width AND the detail's position both hang off it, so moving
- * it moves everything. Moving it WHILE THE USER IS IN THE MENUS shoves the UI around under the
- * pointer mid-gesture — which is what "clicking Integrations resized the root list" and "unselecting
- * Integrations resized the root list" both were.
- *
- * The rule is therefore about the POINTER, not about the selection: the layout may settle once the
- * user has moved out of the menus, and not before. Selecting, unselecting, opening and closing
- * submenus all leave it exactly where it is.
- *
- * `latched` distinguishes "held at a remembered width" from "never measured" — on a first paint
- * there is nothing to hold and the ground must take the real width, or the stack renders at zero.
- *
- * This USED to read `hoverIndex < 0 && (rootHasSelection || !pointerInRoot)`, i.e. "no hover reveal
- * is open". That was a proxy for "the submenus are collapsed", and it silently stopped meaning that:
- * a reveal only exists when some list is COVERED, and once `autoHideTopics` went false nothing was
- * ever covered, so `hoverIndex` was pinned at −1 and the ground was pinned at "always free to move".
- * The lesson is in the shape of the fix — this asks about the pointer, which is what the rule was
- * always about, instead of inferring it from a mechanism that can switch itself off.
+ * While the gesture lasts, every column keeps painting from these values: columns left of the
+ * reveal root at exactly their frozen lefts and covered flags, columns from the root rightward
+ * revealed at their full widths chained from the root's frozen left. So NOTHING the gesture causes
+ * — a select advancing the frontier, a new level registering a commit late, width pressure
+ * recomputing, the remount a route-param change triggers — can move a menu that is already on
+ * screen: the numbers it paints from cannot change, because they are data, not a derivation
+ * (**must-hold-the-ground-under-the-pointer**, **must-not-move-the-menus-on-an-intermediate-
+ * select**). This single frozen value replaces the ground latch (`mayMoveGround`), the covering
+ * pressure/hidden freeze (`heldCover`), and the frozen-frontier ratchet
+ * (`ratchetFrozenFrontier`/`coverFrontierWhileChoosing`) of v1.15.x — three interceptors whose
+ * release edges raced each other on exactly the clicks they existed to survive.
  */
-export function mayMoveGround({
-  pointerInMenus,
-  latched,
-}: {
-  /** Is the pointer inside the menu region (`menuRegion`) — the same authority the reveal uses? */
-  pointerInMenus: boolean
-  /** Has a ground width ever been recorded for this surface? */
-  latched: boolean
-}): boolean {
-  if (!latched) return true // first paint: nothing to hold, so take the real width
-  return !pointerInMenus
+export type EngagedBase = {
+  /** Each on-screen column's resting left edge (container px), in column order. */
+  lefts: number[]
+  /** Each column's resting covered flag (peeked under its child vs disclosed). */
+  covered: boolean[]
+  /** How many leftmost columns were slid off-screen at rest. */
+  hidden: number
+  /** The GROUND — the root list's right edge, which is also the detail's left edge. */
+  groundRight: number
+}
+
+/**
+ * The cascade's TWO states, stored per surface (they must survive the remount a selection causes —
+ * **must-keep-view-state-across-a-selection**):
+ *
+ *   - `settled` — the resting layout: covering, width pressure, off-screen drilling and the ground
+ *     all compute LIVE. This is the only state in which base geometry may move.
+ *   - `engaged` — a gesture is in progress: geometry is frozen at `base`, and columns from `root`
+ *     rightward are revealed at their full widths. `root: null` is engaged-with-nothing-revealed —
+ *     the frozen-ground-only state (a stack with nothing covered has nothing to reveal, but its
+ *     ground still must not move under the gesture).
+ *
+ * A CLICK IS NOT A SETTLING EVENT (**must-collapse-from-one-pointer-authority**): the only
+ * transitions back to `settled` are the three `SettleReason`s — the pointer provably leaving the
+ * menus, an explicit `«/»`/auto-hide/immersion toggle, and (auto-collapse mode only) the FINAL
+ * CHOICE. A rail click can only `engageOnRailClick`, which never changes `base` and never returns
+ * `settled` — a click that moves the menus is unrepresentable, not intercepted.
+ */
+export type CascadeMode =
+  | { kind: "settled" }
+  | { kind: "engaged"; root: number | null; base: EngagedBase }
+
+export const SETTLED: CascadeMode = { kind: "settled" }
+
+/**
+ * The pointer ENTERS an open zone — the disclose trigger's approach lane, or a covered peek
+ * (**must-auto-collapse-menus-on-final-choice**'s re-open clause: entering IS how a settled
+ * cascade re-opens). Engage and reveal EVERYTHING on screen: the reveal roots at the first
+ * on-screen column (`hidden`). Idempotent while already engaged — re-entering keeps the existing
+ * base (the menus cannot move, only reveal further leftward).
+ */
+export function engageOnEnter(prev: CascadeMode, base: EngagedBase): CascadeMode {
+  if (prev.kind === "engaged") return { ...prev, root: prev.base.hidden }
+  return { kind: "engaged", root: base.hidden, base }
+}
+
+/**
+ * A RAIL CLICK — select, clear or ✕ — anywhere in the menus (**must-not-move-the-menus-on-an-
+ * intermediate-select**, T61): engage if not already engaged (capturing the resting layout the
+ * click landed on), and root the reveal no deeper than the clicked list. The clicked list and
+ * everything the user already walked open stay exactly where they are; parents the user had
+ * covered stay covered (**must-not-expand-parents-on-select** — the root only ever RATCHETS
+ * shallower, it never springs a covered parent open on a click). An existing base is NEVER
+ * replaced and the mode NEVER settles here.
+ */
+export function engageOnRailClick(
+  prev: CascadeMode,
+  base: EngagedBase,
+  clickedIndex: number,
+): CascadeMode {
+  if (prev.kind === "engaged")
+    return { ...prev, root: prev.root == null ? clickedIndex : Math.min(prev.root, clickedIndex) }
+  return { kind: "engaged", root: clickedIndex, base }
+}
+
+/**
+ * The COMPLETE set of reasons the cascade may settle — the whole point of naming them
+ * (**must-collapse-from-one-pointer-authority**). `pointer-exit` is the standing auto-collapse
+ * (the pointer provably left the menu region); `toggle` is an explicit `«/»` / auto-hide /
+ * immersion click (settling IS the requested action, must-apply-disclosure-toggles-immediately);
+ * `final-choice` is the ONE click-driven closure (v1.15.0, auto-collapse mode only). There is
+ * deliberately no "rail-click" member: an intermediate select cannot close the menus, and a future
+ * edit that wants one has to add it HERE, where the test will make that choice loud.
+ */
+export type SettleReason = "pointer-exit" | "toggle" | "final-choice"
+
+export function settleModeOn(_reason: SettleReason): CascadeMode {
+  return SETTLED
 }
 
 // ─── Choosing a row ───────────────────────────────────────────────────────────────────────────────
@@ -195,15 +261,18 @@ export type MenuRect = { left: number; top: number; right: number; bottom: numbe
 
 /**
  * The union of the on-screen menu column rects into ONE region — the single authority for whether
- * the pointer is "in the menus", which governs BOTH the reveal's held-state AND the ground latch.
+ * the pointer is "in the menus", which decides the `pointer-exit` settle.
  *
- * This exists because the two were computed separately and both fragilely: the reveal's held-state
- * was `hoverIndex >= 0` (which depends on width pressure, measured a beat after the click) tested
- * against an EFFECT-measured `revealRect` (a render behind whenever the layout was still settling),
- * and the ground had its own `stackRect`. Choosing a row remounts the whole subtree, so "a beat
- * late" and "a render behind" are the norm on exactly the interaction that must not collapse — and
- * the result was untraceable. One region, read FRESH from the DOM at pointer-event time (never from
- * React state), removes the staleness entirely: the test is always against what is painted now.
+ * v1.16.0: the rects fed in here come from the LAYOUT MODEL — the lefts/tops the layout assigned
+ * and the columns' untransformed layout sizes — NEVER from `getBoundingClientRect` of an animating
+ * box. The v1.15.x authority hit-tested every pointermove against whatever was painted at that
+ * instant, and that stream inference had window after window: during the remount a select causes
+ * nothing is measurable (the 1.15.2 evidence clause patched that one), and during the 300–460ms
+ * entrance/exit SCALE animations the painted boxes are shrunk, so a real hand's pixel of drift
+ * tested "provably outside" and released every hold at once — invisible to synthetic input, which
+ * never moves mid-animation. Settled model rects close the whole class: animation state cannot
+ * feed the decision, and a query that cannot be answered (no container, no columns) is simply not
+ * a transition.
  *
  * The region HUGS THE MENUS' CONTENT — it must NOT drop to the container's bottom. The detail pane
  * shows below and beside the menus, so a region that ran the container's full height would swallow it,
@@ -238,211 +307,95 @@ export function pointInRegion(r: MenuRect, x: number, y: number): boolean {
   return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
 }
 
+// ─── The final choice: DECLARED leafness, not retrospective inference (v1.16.0) ──────────────────
+
+/** What a row leads to when chosen: another topic list, or the detail (a FINAL CHOICE). */
+export type LeadsTo = "list" | "detail"
+
 /**
- * What a pointer move does to "is the pointer in the menus?"
- * (**must-collapse-from-one-pointer-authority**'s evidence clause).
+ * Resolve a row's declared leafness (**must-hold-the-detail-until-the-final-choice**): the item's
+ * own `leadsTo`, else its level's default, else `"detail"`.
  *
- * The authority reads the region FRESH from the DOM at pointer-event time — and during the remount
- * a select causes there is a window where NOTHING is measurable: the old container is detached (its
- * rects are zeros) and the new one hasn't painted, so the region reads null. A real mouse always
- * moves during that window, and treating "nothing measurable" as "outside" wrote `false` into the
- * surviving memory on exactly the click every hold exists to survive — the ground jumped, the
- * covering freeze released and the clicked menu snapped shut, intermittently, only under a real
- * pointer. Absence of evidence is not evidence of leaving: an unmeasurable move keeps the PREVIOUS
- * answer, and only a move provably outside what is painted NOW collapses anything.
+ * Whether a chosen row "leads to another topic list" is a fact of the HOST's data, so the host
+ * declares it on the data. v1.15.x instead inferred it retrospectively from renders — "the path
+ * looks complete, twice in a row" — which needed a two-render confirmation (merged stacks register
+ * their deeper list a commit late) and had NO answer for gestures that never complete: a clear
+ * made the path incomplete forever, so the hold it had armed never released and the stale pane
+ * haunted every surface the navigation landed on. `"detail"` is the FAIL-SAFE default: an
+ * undeclared row is a final choice, so the worst a missing declaration can produce is an early
+ * pane swap — never a hold without a release edge.
  */
-export function pointerInMenusAfterMove({
-  measurable,
-  inside,
-  previous,
+export function itemLeadsTo(
+  levelDefault: LeadsTo | undefined,
+  item: LeadsTo | undefined,
+): LeadsTo {
+  return item ?? levelDefault ?? "detail"
+}
+
+/** What a rail interaction does to the DETAIL HOLD — decided AT the click, from declared data. */
+export type RailHoldPlan = {
+  /** Capture the pane's current content (the first interaction of a choosing gesture): the chosen
+   *  row discloses another choosing list, so the pane must ride through unchanged (T57). */
+  capture: boolean
+  /** Release the hold NOW: up-navigation (a clear / ✕ / breadcrumb) is not a choosing gesture —
+   *  the pane shows the real frontier state immediately (v1.16.0; the v1.15.x hold armed on clears
+   *  but could only release on a complete path, so an unselect never released it). */
+  release: boolean
+  /** The chosen row IS the final choice: arm the ONE swap, which lands when the click's navigation
+   *  applies (`planLeafSettle`). */
+  finalChoice: boolean
+}
+
+export function planRailHold({
+  action,
+  leadsTo,
 }: {
-  /** Could a menu region be measured for this move (the region read non-null)? */
-  measurable: boolean
-  /** If measurable: was the move inside it? */
-  inside: boolean
-  /** The last known answer. */
-  previous: boolean
-}): boolean {
-  return measurable ? inside : previous
-}
-
-// ─── The reveal: what is open, and the ONLY two things that may close it ────────────────────────────
-
-/**
- * The open reveal: which list's branch is held open (`root`), and whether it spans EVERY on-screen
- * list (a pointer ENTER — `all: true`) or only the rooted list's own branch (a covering SELECT —
- * `all: false`, so a click never springs the user's collapsed parents open,
- * must-not-expand-parents-on-select).
- */
-export type RevealState = { root: string | null; all: boolean }
-export const NO_REVEAL: RevealState = { root: null, all: false }
-
-/**
- * The COMPLETE set of things that may change the reveal — the whole point of naming them.
- *
- * A `root` is the ONLY opener, and an INTERMEDIATE select dispatches exactly that: choosing a row
- * that leaves the user still choosing RE-ROOTS the reveal at the list clicked in, it never closes
- * it. The closers are the pointer leaving the menus, an explicit disclosure toggle, and — in
- * auto-collapse mode only — the FINAL CHOICE (v1.15.0, must-auto-collapse-menus-on-final-choice):
- * the click that completes the path, where settling IS the requested action. `finalChoice` is the
- * ONE click-driven closure, carved out of must-collapse-from-one-pointer-authority; there is still
- * deliberately no generic "select" event here — that an intermediate click cannot close a reveal is
- * the invariant whose absence let a click collapse the menus, so it stays unrepresentable. A future
- * edit that wants any OTHER click to close has to add a new event, and `revealClosedBy`'s test will
- * reject it.
- */
-export type RevealEvent =
-  | { type: "root"; id: string; all: boolean } // hover-enter (all) OR covering-select (branch)
-  | { type: "pointerLeftMenus" } // the pointer left the region — the standing auto-collapse
-  | { type: "settle" } // a «/» or immersion toggle: settle the layout NOW (an explicit action)
-  | { type: "finalChoice" } // the path-completing click (auto-collapse mode) — the ONE click closer
-
-export function reduceReveal(_prev: RevealState, e: RevealEvent): RevealState {
-  switch (e.type) {
-    case "root":
-      return { root: e.id, all: e.all }
-    case "pointerLeftMenus":
-    case "settle":
-    case "finalChoice":
-      return NO_REVEAL
-  }
+  /** `planRailSelect`'s verdict for this click. */
+  action: "select" | "clear"
+  /** The clicked row's resolved leafness (`itemLeadsTo`). */
+  leadsTo: LeadsTo
+}): RailHoldPlan {
+  if (action === "clear") return { capture: false, release: true, finalChoice: false }
+  if (leadsTo === "list") return { capture: true, release: false, finalChoice: false }
+  return { capture: false, release: false, finalChoice: true }
 }
 
 /**
- * Does this event CLOSE the reveal? True for exactly the pointer-leave, the explicit toggle and the
- * final choice; false for a root. An INTERMEDIATE click never reaches here — which is what
- * "an intermediate select does nothing wrt auto-collapse" means in code.
+ * When does an ARMED final choice land? (T58/T59/T60.) The click already declared itself final
+ * (`planRailHold`), so there is nothing to infer and nothing to confirm across consecutive
+ * renders — the only question is WHEN to swap: once the click's navigation has actually applied
+ * (the selection chain changed from the one captured at the click) and the path is complete
+ * (a merged stack may still be un-registering the old branch's deeper lists for a commit).
+ * Pre-navigation renders keep whatever the pane is showing; the landing render swaps ONCE and, in
+ * auto-collapse mode, settles the menus on that same click
+ * (**must-auto-collapse-menus-on-final-choice** — with auto-collapse OFF nothing collapses, T60).
  */
-export function revealClosedBy(e: RevealEvent): boolean {
-  return e.type === "pointerLeftMenus" || e.type === "settle" || e.type === "finalChoice"
-}
-
-// ─── The final choice: the cascade's settling event (v1.15.0) ──────────────────────────────────────
-
-/**
- * Does the detail pane show the HELD content instead of the frontier overview / the host's landing /
- * the incoming live detail? (**must-hold-the-detail-until-the-final-choice**, T57)
- *
- * A select is the FINAL CHOICE when the chosen row does not lead to another topic list; until one is
- * made, an intermediate select must leave the detail showing exactly what it showed before the click.
- * `holding` is "a rail interaction captured the pane's content and no final choice has released it",
- * and while it is true the held content shows, PERIOD — the release (`planChoiceSettle`'s confirmed
- * settle) is the one thing that reveals the live detail, which is what makes the swap ONE swap. In
- * particular a complete-looking render before the settle is confirmed still shows the held content:
- * on a merged stack that render is usually MISSING the late-registered choosing list, and gating the
- * display on "the frontier is unselected" would flash the host's landing for the commit it takes the
- * list to arrive. A deep link that lands on an unselected frontier has no held content
- * (`holding: false`) and still shows the overview — there is no held detail and no pointer.
- */
-export function shouldShowHeldDetail({ holding }: { holding: boolean }): boolean {
-  return holding
-}
-
-/** What a render does about an armed detail hold. */
-export type ChoiceSettlePlan = {
-  /** This render LOOKS settled — start the confirmation (see below); no release yet. */
-  arm: boolean
-  /** Release the hold: the final choice's detail replaces the held content — the ONE swap. */
-  settle: boolean
-  /** Also close the reveal on the click itself (auto-collapse mode only). */
-  autoCollapse: boolean
-}
-
-/**
- * The final choice, decided retrospectively (**must-hold-the-detail-until-the-final-choice** T58,
- * **must-auto-collapse-menus-on-final-choice** T59/T60).
- *
- * Whether a chosen row "leads to another topic list" is the HOST's answer, delivered as a render:
- * an intermediate select discloses another choosing list (the path is incomplete), the final choice
- * completes it. Two guards keep a premature answer from settling the hold:
- *
- *   - `selectionChanged` — the click's own pre-navigation renders still show the OLD (complete)
- *     path; until the chain actually changes, there is nothing to settle.
- *   - `armed` — a MERGED stack registers its deeper list from components living in `children`
- *     (effects), so the first render after an intermediate select can be missing the very list that
- *     select disclosed and read as complete. A settled-looking render therefore only ARMS the
- *     confirmation (`arm`); the release needs a CONSECUTIVE settled render (`armed: true`), which
- *     gives the host exactly one commit to disclose the deeper list. A render that is not settled
- *     any more disarms.
- *
- * `autoCollapse` is the carve-out named in must-collapse-from-one-pointer-authority: in auto-collapse
- * mode the settling click itself closes the menus, exactly as the disclosure toggles settle the stack
- * (settling IS the requested action). With auto-collapse OFF no select collapses anything — the menus
- * stay as the user arranged them (T60).
- */
-export function planChoiceSettle({
-  holding,
+export function planLeafSettle({
+  sigChanged,
   pathComplete,
-  selectionChanged,
-  armed,
   autoHide,
 }: {
-  /** Is a detail hold armed (a rail interaction captured the pane)? */
-  holding: boolean
-  /** Does every rendered level have a selection (no choosing list is disclosed)? */
+  /** Has the selection chain changed since the final-choice click captured it? */
+  sigChanged: boolean
+  /** Does every rendered level have a selection? */
   pathComplete: boolean
-  /** Has the selection chain changed at any point since the hold was armed? */
-  selectionChanged: boolean
-  /** Did the PREVIOUS render already look settled (the confirmation started)? */
-  armed: boolean
-  /** Auto-collapse mode (`autoHideTopics`) — gates the collapse, never the settle. */
+  /** Auto-collapse mode (`autoHideTopics`) — gates the collapse, never the swap. */
   autoHide: boolean
-}): ChoiceSettlePlan {
-  const settled = holding && pathComplete && selectionChanged
-  const settle = settled && armed
-  return { arm: settled && !armed, settle, autoCollapse: settle && autoHide }
+}): { settle: boolean; autoCollapse: boolean } {
+  const settle = sigChanged && pathComplete
+  return { settle, autoCollapse: settle && autoHide }
 }
 
 /**
- * The auto-hide covering an intermediate select renders under (**must-not-move-the-menus-on-an-
- * intermediate-select**, v1.15.1, T61).
- *
- * Auto-hide covers every list left of the frontier — and an intermediate select ADVANCES the
- * frontier, so the moment the new choosing list appeared, the list just clicked in fell behind the
- * frontier and covered itself out from under the pointer. The hover-branch reveal was supposed to
- * counteract exactly that (must-root-reveal-on-covering-select), but it is pointer-state riding a
- * route remount, and every time it lost the race the clicked menu visibly snapped to its peek —
- * the regression that kept coming back.
- *
- * So the stay-open is STRUCTURAL now, not reveal-dependent: while the user is choosing, the
- * covering is computed against a FROZEN frontier held in the surface's remount-surviving memory.
- * A rail click RATCHETS it down to the clicked list's index (`ratchetFrozenFrontier` — the clicked
- * list and everything the user already walked open stay exactly where they are; parents the user
- * had covered stay covered, must-not-expand-parents-on-select), and it advances again only at the
- * standing settle points: the pointer leaving the menus, or the final choice
- * (must-auto-collapse-menus-on-final-choice). `coverFrontierWhileChoosing` also follows a RETREAT
- * (a clear/✕ pulls the real frontier below the frozen one) so an up-navigation never leaves stale
- * covering behind.
- */
-export function coverFrontierWhileChoosing({
-  frozenFrontier,
-  frontier,
-}: {
-  /** The frontier the covering was last settled at (the surface memory's held value). */
-  frozenFrontier: number
-  /** The real frontier this render. */
-  frontier: number
-}): number {
-  return Math.min(frozenFrontier, frontier)
-}
-
-/** A rail click in list `clickedIndex` pins the frozen frontier at that list — see above. */
-export function ratchetFrozenFrontier({
-  frozenFrontier,
-  clickedIndex,
-}: {
-  frozenFrontier: number
-  clickedIndex: number
-}): number {
-  return Math.min(frozenFrontier, clickedIndex)
-}
-
-/**
- * Does a pointer move fire the disclose trigger? Entry-only (**must-auto-collapse-menus-on-final-
- * choice**'s re-open clause): after the final choice closes the menus the pointer has not moved, so
- * nothing may re-open them until it next ENTERS a peek or menu — merely BEING inside the trigger
- * rect (which now covers where the click landed) must not re-disclose the cascade on the first
- * stray pixel of movement. Only the outside→inside crossing opens.
+ * Does a pointer move fire an OPEN ZONE (the disclose trigger's approach lane, or a covered peek)?
+ * Entry-only (**must-auto-collapse-menus-on-final-choice**'s re-open clause): after the final
+ * choice closes the menus the pointer has not moved, so nothing may re-open them until it next
+ * ENTERS a peek or menu — merely BEING inside a zone (which now covers where the click landed)
+ * must not re-disclose the cascade on the first stray pixel of movement. Only the outside→inside
+ * crossing opens (`engageOnEnter`). v1.16.0 runs the covered peeks through this same edge gate:
+ * the v1.15.2 covered-column `pointerenter` relied on the browser's own boundary events, which
+ * Chrome also fires when LAYOUT moves under a stationary pointer — exactly what a final-choice
+ * collapse does.
  */
 export function triggerFires({
   armed,
@@ -469,14 +422,14 @@ export function triggerFires({
  * nothing, and the second is the diagnosis.
  */
 export function triggerRectArmed({
-  revealOpen,
+  engaged,
   immersed,
   anyCovered,
 }: {
-  /** Is a reveal already open? (Then there is nothing to trigger — the cascade is already disclosed.) */
-  revealOpen: boolean
+  /** Is the surface already engaged? (Then there is nothing to trigger — the cascade is disclosed.) */
+  engaged: boolean
   immersed: boolean
   anyCovered: boolean
 }): boolean {
-  return !revealOpen && !immersed && anyCovered
+  return !engaged && !immersed && anyCovered
 }

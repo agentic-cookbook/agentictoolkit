@@ -68,6 +68,12 @@ export interface TopicLevel {
   title?: string
   items: TopicDetailItem[]
   selectedId: string | null
+  /** Default answer for every row in this list: does choosing one lead to another topic LIST, or
+   *  to the DETAIL (a final choice)? A row's own `leadsTo` overrides it; unset on both means
+   *  `"detail"`. Declare `"list"` on levels whose rows disclose deeper lists (a workspaces list, a
+   *  features list) so the cascading view can hold the detail pane through intermediate selects
+   *  (must-hold-the-detail-until-the-final-choice). */
+  leadsTo?: "list" | "detail"
   /** OPT-IN landing selection: the item to select the moment this level APPEARS with nothing chosen
    *  — i.e. when the parent topic that opens this list is picked (Work Items → List). It fires this
    *  level's own `onSelect`, so the consumer's state/URL owns the selection exactly as if the row had

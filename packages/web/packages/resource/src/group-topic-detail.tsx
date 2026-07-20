@@ -18,6 +18,10 @@ export interface GroupTopicItem {
    *  standard TopicOverview (one card per member) instead of the `emptyHint` placeholder — an
    *  opt-in through the data, so entity rosters without descriptions keep the plain hint. */
   description?: string;
+  /** Declare `"list"` for a member whose pane publishes deeper rails (a schema browser, an entity
+   *  list), so the cascading view treats choosing it as an INTERMEDIATE select (the detail holds).
+   *  Default `"detail"`: choosing the member IS the final choice (a settings pane). */
+  leadsTo?: "list" | "detail";
   /** The member's detail pane (it may itself publish deeper rails). `subLeaf` carries the
    *  deep-linkable inner entity (the segment AFTER this member) for members that URL-drive their
    *  own selection — a persona list, a master/detail config pane; members without one ignore it. */
@@ -78,6 +82,7 @@ export function StackGroupDetail({
     label: i.label,
     icon: i.icon,
     description: i.description,
+    leadsTo: i.leadsTo,
   }));
   const level: TopicLevel = {
     id: levelId,

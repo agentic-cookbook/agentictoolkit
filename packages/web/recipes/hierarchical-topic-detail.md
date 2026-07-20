@@ -7,7 +7,7 @@ version: 1.16.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: 2026-07-15
+modified: 2026-07-20
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -612,64 +612,72 @@ arguments — the measuring stays in the component, the deciding is tested.
   shrinks into ITS OWN parent's chosen row, and the selection connectors MUST retract WITH them
   (the entrance run backwards) rather than hanging at full length until the end.
 - **must-hold-the-ground-under-the-pointer**: The GROUND — the root list's right edge, which is also
-  the detail's left edge — MUST NOT move while the pointer is inside the menus. It is load-bearing:
-  the root's width and the detail's position both hang off it, so moving it mid-gesture shoves the UI
-  around under the pointer. Selecting a row, unselecting one, and opening or closing submenus MUST
-  ALL leave it exactly where it is; it may settle only once the pointer has left the menu region (the
-  union of the root list and every open menu — measured from the DOM, so a hover reveal fanning out
-  over the detail still counts as being in the menus). The rule MUST be expressed in terms of the
-  POINTER and nothing else. It once read "no hover reveal is open" as a proxy for "the submenus are
-  collapsed", and a reveal only exists while some list is COVERED — so the day `autoHideTopics` went
-  false nothing was ever covered, the proxy pinned itself to "always free to move", and the ground
-  tracked every click. A rule about the pointer MUST ask about the pointer.
-  Both halves of the latch — the held width AND whether the pointer is in the menus — MUST survive a
-  remount (**must-keep-view-state-across-a-selection**): choosing a row IS the route-param change that
-  remounts the stack, so component state would report "the pointer left" on precisely the frame the
-  click lands, free the ground and let it jump. The pointer has not moved; only the component has.
-- **must-collapse-from-one-pointer-authority**: Whether the menus are held open MUST be decided by a
-  SINGLE authority — "is the pointer inside the menu region?" — read FRESH from the DOM at pointer-event
-  time, and that same authority MUST govern BOTH the reveal's held-state AND the ground latch. It is the
-  ONLY thing (besides an explicit `«/»` toggle, and the FINAL CHOICE below) that may close a reveal. An
-  INTERMEDIATE select — one that leaves the user still choosing — MUST only ever RE-ROOT the reveal at
-  the list clicked in — never close it; a remount, a width change and a selection
-  MUST NOT close it. Equivalently: the only events that close a reveal are "the pointer left the
-  menus", "an explicit disclosure toggle" and — in auto-collapse mode only — "the FINAL CHOICE"
-  (v1.15.0, see must-auto-collapse-menus-on-final-choice: the click that completes the path, where
-  settling IS the requested action); no other click closes anything. This rule exists because the
-  hold used to be computed two ways at once, both from stale sources — `hoverIndex >= 0` (which trails
-  width pressure, measured a beat after the click) tested against an effect-measured rect (a render
-  behind) — on exactly the remount a click triggers; the result was untraceable and regressed
-  repeatedly. Reading the region fresh means only a real pointer move outside what is painted NOW can
-  collapse anything: if the pointer does not move after a click, nothing collapses — the final-choice
-  auto-collapse (below) being the one specified exception. And when NOTHING is measurable — the
-  remount a select causes has a window where the old container is detached and the new one has not
-  painted, and a real mouse always moves in it — there is NO evidence the pointer left: the last
-  answer stands (v1.15.2, `pointerInMenusAfterMove`). Treating "nothing measurable" as "outside"
-  is how every pointer-keyed hold kept dying under a real mouse while surviving synthetic clicks.
-  This subsumes the
-  covered stack's blind-root document watcher — a reveal that revealed nothing is still an open root,
-  and it too clears the moment the pointer is proven outside.
-- **must-hold-the-detail-until-the-final-choice** (v1.15.0): A select is the FINAL CHOICE when the chosen row does not lead to another
-  topic list — the click that completes the path, whether it lands in the top (root) menu or any
-  submenu. Until a final choice is made, the detail pane MUST NOT change: an INTERMEDIATE select (one
-  that discloses another choosing list) leaves the detail showing exactly what it showed before the
-  click — the last final choice's content, or the landing/overview the gesture began over — never the
-  newly selected topic's overview, a landing placeholder, or a blank. The next thing the detail shows
-  is the new final choice's detail: ONE swap, old content → new content. For the cascade this
-  overrides must-show-topic-overview-at-unselected-frontier while the user is choosing (a deep link
-  that lands on an unselected frontier still shows the overview — there is no held detail and no
-  pointer) and the "showing the chosen item's detail" clause of must-pure-select-from-reveal for
-  intermediate selects. The hold is a DISPLAY hold, not a deferred navigation: the intermediate
-  select still fires the level's `onSelect`, still clears the deeper selections and still moves the
-  URL — so must-guard-unsaved-on-exit still runs on the select that clears a dirty leaf, and the held
-  content MUST survive the remount that select causes (must-keep-view-state-across-a-selection: held
-  per surface, exactly like the ground). Whether a row "leads to another topic list" is the HOST's
-  answer, delivered as a render — and a merged stack delivers it a commit LATE (its deeper levels are
-  published from components living in `children`, in effects), so a single settled-looking render
-  MUST NOT count as the final choice: the release requires CONSECUTIVE settled renders
-  (`planChoiceSettle`'s arm-then-confirm), giving the host one commit to disclose the deeper list.
-  Abandoning the menus without completing the path (the pointer leaves) leaves the held detail in
-  place — the detail changes when a final choice replaces it, and not before.
+  the detail's left edge — MUST NOT move while a gesture is engaged. It is load-bearing: the root's
+  width and the detail's position both hang off it, so moving it mid-gesture shoves the UI around
+  under the pointer. Selecting a row, unselecting one, and opening or closing submenus MUST ALL
+  leave it exactly where it is. As of v1.16.0 the mechanism is STORAGE, not interception: the ground
+  is a field of the frozen `EngagedBase` the engage transition captures, so while the machine is
+  engaged the painted value literally cannot change — it recomputes only at the settle transitions
+  (must-collapse-from-one-pointer-authority). The frozen value lives in the surface store and so
+  survives the remount a selection causes (**must-keep-view-state-across-a-selection**).
+- **must-collapse-from-one-pointer-authority**: The cascade's disclosure MUST be a STORED two-state
+  machine per surface (v1.16.0, `CascadeMode` in `cascade-rules.ts`) — `settled` (the resting
+  layout computes live) and `engaged` (geometry frozen at the base captured on the way in; columns
+  from the reveal root rightward revealed at full width) — never a value re-derived per render and
+  defended by interceptors. The COMPLETE set of transitions back to `settled` is: the pointer
+  provably leaving the menu region (`pointer-exit`), an explicit `«/»`/auto-hide/immersion toggle
+  (`toggle`), and — in auto-collapse mode only — the FINAL CHOICE (v1.15.0,
+  must-auto-collapse-menus-on-final-choice). A rail click is NOT a settling event and MUST stay
+  unrepresentable as one: a click can only ENGAGE (capturing the resting base if settled) and
+  ratchet the reveal root shallower — which is exactly why no click can ever move or collapse the
+  menus, structurally.
+  The pointer half MUST be an IDEMPOTENT QUERY, not stream inference: the document-level
+  pointermove handler only records coordinates, and the decision is evaluated against SETTLED
+  MODEL rects — the lefts/tops the layout assigned plus untransformed layout sizes — never against
+  `getBoundingClientRect` of an animating box. Both of v1.15.x's failure windows are instances of
+  the same defect class this forbids: the remount null-region window (patched by 1.15.2's evidence
+  clause) and the mid-animation shrunk-rect window (the 300–460ms entrance/exit scales contracted
+  the painted union, so a real hand's pixel of drift tested "provably outside" and released every
+  hold — invisible to synthetic input, which never moves mid-animation). A query that cannot be
+  answered (nothing measurable) is simply NOT a transition.
+- **must-hold-the-detail-until-the-final-choice** (v1.15.0, rebuilt v1.16.0 on DECLARED leafness):
+  A select is the FINAL CHOICE when the chosen row does not lead to another topic list — the click
+  that completes the path, whether it lands in the top (root) menu or any submenu. Until a final
+  choice is made, the detail pane MUST NOT change: an INTERMEDIATE select (one that discloses
+  another choosing list) leaves the detail showing exactly what it showed before the click — the
+  last final choice's content, or the landing/overview the gesture began over — never the newly
+  selected topic's overview, a landing placeholder, or a blank. The next thing the detail shows on
+  the walk's completion is the final choice's detail: ONE swap, old content → new content. For the
+  cascade this overrides must-show-topic-overview-at-unselected-frontier while the user is choosing
+  (a deep link that lands on an unselected frontier still shows the overview — there is no held
+  detail and no pointer) and the "showing the chosen item's detail" clause of
+  must-pure-select-from-reveal for intermediate selects. The hold is a DISPLAY hold, not a deferred
+  navigation: the intermediate select still fires the level's `onSelect`, still clears the deeper
+  selections and still moves the URL — so must-guard-unsaved-on-exit still runs on the select that
+  clears a dirty leaf, and the held content MUST survive the remount that select causes
+  (must-keep-view-state-across-a-selection: held per surface, exactly like the ground).
+  Whether a row "leads to another topic list" is a fact of the HOST's DATA and MUST be DECLARED on
+  it (v1.16.0): per item (`TopicDetailItem.leadsTo: "list" | "detail"`) or per level
+  (`TopicLevel.leadsTo`), resolving item → level → the `"detail"` fail-safe (an undeclared row is a
+  final choice, so a missing declaration can only produce an early swap — never a hold without a
+  release). The final choice is therefore known AT THE CLICK (`planRailHold`), and the swap lands
+  when that click's navigation applies (`planLeafSettle`: the selection chain changed and the path
+  is complete — a merged stack's late (un)registration only delays the swap by the commit it
+  needs). v1.15.x instead inferred the final choice retrospectively from renders, which required a
+  two-render confirmation and had no answer for gestures that never complete — see
+  must-release-the-hold-when-the-gesture-ends.
+- **must-release-the-hold-when-the-gesture-ends** (v1.16.0, T62): The detail hold ends with the
+  GESTURE, along exactly three edges — (1) the FINAL CHOICE's landing (the one swap above); (2) any
+  UP-NAVIGATION — a re-click clear, the frontier menu's ✕, a breadcrumb — releases it IMMEDIATELY,
+  because up-navigation is not a choosing gesture: the pane shows the real frontier state (the
+  overview / the host's landing) as the clear lands; (3) the POINTER leaving the menus (the
+  `pointer-exit` settle) — an abandoned walk releases, so held content can never outlive the
+  gesture that captured it. This rule exists because the v1.15.x hold armed on every rail
+  interaction (clears included) but could only release on a COMPLETE path — an unselect makes the
+  path incomplete forever, so the hold never released: the stale pane haunted `/home` and every
+  partial path the navigation landed on, reading as "unselect doesn't work" and as phantom
+  re-selection. An explicit `«/»`/immersion toggle settles GEOMETRY only and does not release the
+  hold (the user is still mid-gesture until the pointer leaves or a choice lands).
 - **must-auto-collapse-menus-on-final-choice** (v1.15.0): When the final choice is made in auto-collapse mode (`autoHideTopics` on),
   the menus MUST auto-collapse on the click itself: the open submenus collapse progressively
   (must-animate-every-menu-closure, must-collapse-inward) as the final choice's detail shows, WITHOUT
@@ -677,35 +685,31 @@ arguments — the measuring stays in the component, the deciding is tested.
   carve-out named in must-collapse-from-one-pointer-authority — and it closes them for the same
   reason the disclosure toggles settle the stack (must-apply-disclosure-toggles-immediately): the
   user has finished choosing, so settling IS the requested action, and menus held open under a
-  pointer that is done with them bury the detail the click just asked for. The pointer has not moved,
-  so nothing may re-open the menus until it next ENTERS a covered peek or menu — and entering IS
-  how a settled cascade re-opens: the disclose trigger fires only on the outside→inside crossing of
-  its approach lane, and a COVERED column's own pointer-enter opens its branch reveal (v1.15.2),
-  so approaching a covered list from over the menus discloses it before any row has to be clicked
-  (without that, a covered root's rows sat unreachable under the child overdrawing them and could
-  never be re-clicked to unselect). An INTERMEDIATE
-  select still collapses nothing, and with auto-collapse OFF no select collapses anything — the menus
-  stay exactly as the user arranged them (the workspace stacks' standing rule, via their
-  `autoHideTopics={false}`).
-- **must-not-move-the-menus-on-an-intermediate-select** (v1.15.1): An INTERMEDIATE select MUST NOT
-  move, resize or re-cover ANY list on screen: the clicked list stays exactly where it is and the
-  new choosing list simply appears beside it (growing out of the chosen row per
+  pointer that is done with them bury the detail the click just asked for. The pointer has not
+  moved, so nothing may re-open the menus until it next ENTERS a covered peek or the trigger's
+  approach lane — and entering IS how a settled cascade re-opens. As of v1.16.0 EVERY open zone
+  (the trigger lane AND the covered peeks/headers) routes through the same edge gate
+  (`triggerFires` inside the one pointer authority): only the outside→inside crossing of a zone
+  opens, evaluated against settled model rects. The browser's own boundary events are deliberately
+  NOT used — Chrome fires `pointerenter` when LAYOUT moves under a stationary pointer, which is
+  exactly what the final-choice collapse does, so v1.15.2's covered-column `pointerenter` was
+  itself a re-open hole. An INTERMEDIATE select still collapses nothing, and with auto-collapse OFF
+  no select collapses anything — the menus stay exactly as the user arranged them (the workspace
+  stacks' standing rule, via their `autoHideTopics={false}`).
+- **must-not-move-the-menus-on-an-intermediate-select** (v1.15.1, rebuilt v1.16.0): An INTERMEDIATE
+  select MUST NOT move, resize or re-cover ANY list on screen: the clicked list stays exactly where
+  it is and the new choosing list simply appears beside it (growing out of the chosen row per
   must-bounce-the-entrance). The stay-open MUST be STRUCTURAL, not a pointer-reveal side effect.
   The failure this forbids: the select advances the frontier, auto-hide covers every list left of
   the frontier, so the moment the new list appeared the clicked list fell behind the frontier and
-  covered itself out from under the pointer — with only the hover-branch reveal
-  (must-root-reveal-on-covering-select) to hold it open, and that is pointer-state racing the
-  remount the select itself causes; every lost race was a menu visibly snapping to its peek on the
-  click (the regression that kept coming back). The covering is therefore computed against a
-  FROZEN frontier held in the surface's remount-surviving memory: a rail click RATCHETS it down to
-  the clicked list's index (`ratchetFrozenFrontier` — lists the user had covered stay covered,
-  must-not-expand-parents-on-select), a clear/✕ that RETREATS the real frontier is followed down
-  (`coverFrontierWhileChoosing`), and the freeze advances again only at the standing settle points:
-  the pointer leaving the menus, or the final choice (whose settle writes the frozen frontier
-  forward so must-auto-collapse-menus-on-final-choice still lands on the click). A rail click is
-  also recorded as pointer-in-the-menus EVIDENCE in that same memory — a click can only happen
-  inside the menus, so every hold that keys off the pointer (the ground, the covering) survives the
-  remount even when no pointermove was ever observed (a fresh surface, synthetic input).
+  covered itself out from under the pointer. As of v1.16.0 the structure is the stored machine's
+  frozen base (must-collapse-from-one-pointer-authority): a rail click ENGAGES at the clicked list
+  (`engageOnRailClick`, capturing the resting layout if the surface was settled) and only ever
+  RATCHETS the reveal root shallower — lists the user had covered stay covered
+  (must-not-expand-parents-on-select) — while every already-on-screen column keeps painting from
+  the captured lefts/covered flags/ground. Nothing the select causes (the frontier advancing, a
+  level registering, pressure recomputing, the route remount — the mode lives in the surface
+  store) can move a menu, because engaged geometry is read from a value no click can write.
 - **must-draw-every-detection-frame**: With the "Show Mouse Detection Frames" debug switch on, EVERY
   region MUST be drawn — the menu region (blue) that is the single authority above, and the disclose
   (green) trigger rect — whether or not it is currently ARMED. A disarmed region MUST render dashed and
@@ -855,6 +859,7 @@ arguments — the measuring stays in the component, the deciding is tested.
 | T59 | must-auto-collapse-menus-on-final-choice | cascade, auto-collapse ON: make a final choice and leave the pointer where it clicked | the open menus collapse inward (animated) on the click itself — before the pointer leaves the menu region — and the final choice's detail shows |
 | T60 | must-auto-collapse-menus-on-final-choice | cascade, auto-collapse OFF: make a final choice with submenus open | only the detail swaps; every open menu stays exactly as arranged (no select collapses anything) |
 | T61 | must-not-move-the-menus-on-an-intermediate-select | cascade, auto-collapse ON: click a row in a disclosed list whose select discloses a submenu (the frontier advances) | the clicked list does not move or re-cover — the submenu appears beside it at the disclosed advance; every list already on screen stays exactly where it was, with no pointer movement required to hold it |
+| T62 | must-release-the-hold-when-the-gesture-ends | cascade: a detail is showing; re-click the selected root row (a clear), or the frontier menu's ✕, or a breadcrumb | the hold releases WITH the clear — the pane shows the real frontier state (overview / landing) as the navigation lands, on this surface and every one navigated to next; no stale pane follows the walk |
 
 ## Edge Cases
 
@@ -1059,6 +1064,7 @@ arguments — the measuring stays in the component, the deciding is tested.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.16.0 | 2026-07-20 | Mike Fullerton | **The cascade's interaction layer REBUILT on a stored state machine, declared leafness, and query-based containment** (the architecture review's proposal, replacing the 1.15.x freeze mechanisms wholesale). (1) `CascadeMode` — settled vs engaged — is STORED per surface: engaging captures the resting geometry as a frozen `EngagedBase` (lefts, covered flags, off-screen count, the ground), a rail click can only engage/ratchet (never settle, never touch the base), and the only settles are pointer-exit, an explicit toggle, and the final choice. Deletes the ground latch (`mayMoveGround`), the covering freeze (`heldCover`), the frozen-frontier ratchet (`ratchetFrozenFrontier`/`coverFrontierWhileChoosing`), and the reveal-event reducer — must-hold-the-ground-under-the-pointer and must-not-move-the-menus-on-an-intermediate-select are now facts about data, not emergent properties of six cooperating interceptors. (2) Leafness is DECLARED (`TopicDetailItem.leadsTo`/`TopicLevel.leadsTo`, default `"detail"` fail-safe): the final choice is known at click time (`planRailHold`/`planLeafSettle`), deleting the retrospective two-render confirmation (`planChoiceSettle`/`heldSig`/`heldMoved`/`heldSettleArmed`). New rule `must-release-the-hold-when-the-gesture-ends` (T62): clears/✕/breadcrumbs release the hold IMMEDIATELY and pointer-exit releases it too — fixing the live regression where an unselect never released the hold (armed on clears, releasable only by a complete path) and the stale pane haunted every surface. (3) Containment is an IDEMPOTENT QUERY against settled MODEL rects (assigned lefts/tops + untransformed layout sizes), never an animating box's client rect — closing the whole stream-inference defect class (the remount null-region window AND the mid-animation shrunk-rect window that kept releasing holds under a real mouse while passing under synthetic input). The covered peeks now route through the same entry gate as the trigger lane (`pointerenter` is no longer used — Chrome fires it when layout moves under a stationary pointer, so 1.15.2's covered-column enter was itself a re-open hole). Hub: workspace/feature levels declare leafness; switching workspace lands on the new workspace's `/home` (never carries the active feature — nothing auto-selects without a declared default). |
 | 1.15.2 | 2026-07-20 | Mike Fullerton | **The pointer authority acts only on EVIDENCE, and entering a covered peek is how a settled cascade re-opens.** Two fixes to the closers contract ("the menus close only on the pointer leaving the blue region, an explicit `«/»`, and the final choice"). (1) Evidence clause on must-collapse-from-one-pointer-authority (`pointerInMenusAfterMove`): the remount a select causes has a window where no menu is measurable (detached old container, unpainted new one) and a real mouse always moves in it — a null region keeps the LAST answer instead of writing "outside", which had been releasing the ground/covering/reveal holds on exactly the click they exist to survive (reproducible with a real pointer, invisible to synthetic clicks). (2) The re-open clause of must-auto-collapse-menus-on-final-choice is now implementable as stated: with the disclose trigger entry-gated, a COVERED column carries its own pointer-ENTER that opens its branch reveal — entering a peek discloses it, so a covered root's rows are reachable again (re-click-to-unselect had gone dead: the rows sat under the child overdrawing them with nothing left to disclose the branch). |
 | 1.15.1 | 2026-07-20 | Mike Fullerton | **An intermediate select must not move the menus — the clicked list's stay-open is now STRUCTURAL, not reveal-dependent.** New rule `must-not-move-the-menus-on-an-intermediate-select` (vector T61), fixing the recurring "first menu auto-collapses on click" regression: a select advances the frontier, auto-hide covering computed against the new frontier covered the clicked list out from under the pointer, and only the pointer-reveal (must-root-reveal-on-covering-select) — racing the remount the select causes — held it open. The covering now computes against a FROZEN frontier in the surface's remount-surviving memory (`heldCover.frontier`): a rail click ratchets it to the clicked list's index (`ratchetFrozenFrontier`), a clear/✕ retreat is followed (`coverFrontierWhileChoosing`), and it advances only on the standing settles — pointer exit, or the final choice writing it forward so must-auto-collapse-menus-on-final-choice still lands on the click. A rail click is also recorded as pointer-in-the-menus evidence, so every pointer-keyed hold survives the remount with no pointermove ever observed. |
 | 1.15.0 | 2026-07-19 | Mike Fullerton | **The FINAL CHOICE is the cascade's settling event — the detail holds until it, then swaps once; the menus auto-collapse on it.** Interaction REVISION (a spec change, not a bug fix). A select whose row leads to no further topic list — in the top (root) menu or any submenu — is the FINAL CHOICE, and the cascade's settling now keys off it. (1) `must-hold-the-detail-until-the-final-choice`: an intermediate select (one that discloses another choosing list) no longer touches the detail pane — no overview flip, no landing, no blank; the detail keeps its previous content until the final choice's detail replaces it in ONE swap. Display hold only: the select still navigates (`onSelect`, URL, clears deeper levels, unsaved guard), and the hold survives the select's remount per must-keep-view-state-across-a-selection. (2) `must-auto-collapse-menus-on-final-choice`: in auto-collapse mode the final choice collapses the menus on the click itself (progressively, per must-animate-every-menu-closure / must-collapse-inward) instead of waiting for the pointer to leave — the ONE click-driven closure, carved out of must-collapse-from-one-pointer-authority (amended); with auto-collapse off, no select collapses anything. Vectors T57–T60, executable: the decisions are `shouldShowHeldDetail` / `planChoiceSettle` / `triggerFires` + the `finalChoice` reveal event in `cascade-rules.ts` (pinned in cascadeRules.test.ts), the hold/settle plumbing lives in the frame (`surfaceStates.heldDetail`, surviving the remount like the ground), and cascadeInteraction.test.tsx walks T57/T58 against the DOM. |

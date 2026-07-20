@@ -56,19 +56,22 @@ import {
   CHAIN_STROKE_PX,
   ENTER_MS,
   EXIT_MS,
+  SETTLED,
+  engageOnEnter,
+  engageOnRailClick,
   enterKeyframes,
   exitKeyframes,
-  coverFrontierWhileChoosing,
-  mayMoveGround,
+  itemLeadsTo,
   menuRegion,
-  planChoiceSettle,
+  planLeafSettle,
+  planRailHold,
   planRailSelect,
   pointInRegion,
-  pointerInMenusAfterMove,
-  ratchetFrozenFrontier,
-  shouldShowHeldDetail,
+  settleModeOn,
   triggerFires,
   triggerRectArmed,
+  type CascadeMode,
+  type EngagedBase,
   type MenuRect,
 } from "./cascade-rules"
 
@@ -101,6 +104,12 @@ interface TopicLevel {
   title?: string
   items: TopicDetailItem[]
   selectedId: string | null
+  /** Default answer for every row in this list: does choosing one lead to another topic LIST, or
+   *  to the DETAIL (a final choice)? A row's own `leadsTo` overrides it; unset on both means
+   *  `"detail"` — the fail-safe (an undeclared row swaps the pane immediately; it can never hold
+   *  it hostage). The cascade's detail hold and final-choice auto-collapse key off this AT CLICK
+   *  TIME (must-hold-the-detail-until-the-final-choice) — declared data, not render inference. */
+  leadsTo?: "list" | "detail"
   /** OPT-IN landing selection: the item to select the moment this level APPEARS with nothing chosen
    *  — i.e. when the parent topic that opens this list is picked (Work Items → List). It fires this
    *  level's own `onSelect`, so the consumer's state/URL owns the selection exactly as if the row had
@@ -255,23 +264,25 @@ type SurfaceState = {
    *  would forget it was ever fired and immediately re-select the row the user just cleared. */
   autoSelected: Record<string, string>
   /** THE DETAIL HOLD (must-hold-the-detail-until-the-final-choice, cascade only): the detail-pane
-   *  content captured by the first rail interaction of a choosing gesture, shown in place of the
-   *  frontier overview / the host's landing until the FINAL CHOICE releases it — ONE swap, old
-   *  content → new. It lives HERE for the ground's reason: an intermediate select is a route change
-   *  that remounts the subtree, and the hold must survive exactly that remount
-   *  (must-keep-view-state-across-a-selection). `null` = no hold armed (a deep link therefore still
-   *  shows the overview — nothing was ever captured). */
+   *  content captured by an INTERMEDIATE rail select (one whose row is declared to lead to another
+   *  list), shown in place of the frontier overview / the host's landing until the gesture ends —
+   *  the FINAL CHOICE's landing releases it (ONE swap, old content → new), and so do the other
+   *  gesture-ending edges: a clear/✕/breadcrumb (up-navigation is not a choosing gesture) and the
+   *  pointer leaving the menus. It lives HERE for the ground's reason: an intermediate select is a
+   *  route change that remounts the subtree, and the hold must survive exactly that remount
+   *  (must-keep-view-state-across-a-selection). `null` = no hold armed (a deep link therefore
+   *  still shows the overview — nothing was ever captured). */
   heldDetail: ReactNode | null
-  /** The selection chain (`selectedId`s joined) when the hold was armed — with `heldMoved`, how a
-   *  render tells "the host applied a navigation" from "the click's own pre-navigation renders". */
-  heldSig: string | null
-  /** Has the selection chain differed from `heldSig` at any point while holding? Lets a walk that
-   *  wanders and re-picks the exact starting leaf still read as a final choice. */
-  heldMoved: boolean
-  /** The settle confirmation (see `planChoiceSettle`): true once a render has LOOKED settled; the
-   *  release needs a consecutive one, so a merged stack's late-registered deeper list (published
-   *  from `children` effects, one commit behind) never reads as a final choice. */
-  heldSettleArmed: boolean
+  /** An ARMED FINAL CHOICE: the selection chain captured when a leaf row was clicked. The swap
+   *  lands on the first render whose chain has changed from this with a complete path
+   *  (`planLeafSettle`) — the click DECLARED itself final, so nothing is inferred and nothing is
+   *  confirmed across renders. `null` = no final choice in flight. */
+  pendingLeafSig: string | null
+  /** THE CASCADE'S MODE (see `CascadeMode` in cascade-rules): settled (resting layout computes
+   *  live) vs engaged (geometry frozen at the captured base; columns from `root` revealed). Stored
+   *  HERE — not derived, and surviving the remount a selection causes — is the v1.16.0 rebuild's
+   *  core: no click can move the menus, because a click is not a settling transition. */
+  mode: CascadeMode
 }
 
 /**
@@ -413,10 +424,8 @@ export function HierarchicalMenuDetail({
     ...(trailingCrumbs ?? []).map((c) => ({ levelIndex: null, label: c.label, interactive: false })),
   ]
 
-  // Breadcrumb navigation, package-owned via onClear (gated by the exit guard): the root crumb
-  // clears level 0 (deselect all); a level crumb clears the level below it (deselect deeper).
-  const onCrumbNavigate = (levelIndex: number | null) =>
-    attemptExit(() => (levelIndex === null ? levels[0]?.onClear() : levels[levelIndex + 1]?.onClear()))
+  // (Breadcrumb navigation is defined below the hold callbacks — it releases the detail hold, an
+  // up-navigation like every other clear.)
 
   // Disclosure INTENT, owned here so both layouts share one contract (they differ only in how a
   // hidden list is drawn — a peek vs an icon strip):
@@ -446,9 +455,8 @@ export function HierarchicalMenuDetail({
     narrowTop: null,
     autoSelected: {},
     heldDetail: null,
-    heldSig: null,
-    heldMoved: false,
-    heldSettleArmed: false,
+    pendingLeafSig: null,
+    mode: SETTLED,
   }
   const { autoHide, pins, hoverId, hoverAll } = surface
   // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
@@ -464,9 +472,8 @@ export function HierarchicalMenuDetail({
         narrowTop: null,
         autoSelected: {},
         heldDetail: null,
-        heldSig: null,
-        heldMoved: false,
-        heldSettleArmed: false,
+        pendingLeafSig: null,
+        mode: SETTLED,
       }
       surfaceStates.set(surfaceKey, update(prev))
       bumpSurface()
@@ -486,6 +493,9 @@ export function HierarchicalMenuDetail({
         pins: {},
         hoverId: null,
         hoverAll: false,
+        // An explicit toggle SETTLES the cascade's machine too (must-apply-disclosure-toggles-
+        // immediately): the new mode must show its work on the click, not at the next pointer exit.
+        mode: settleModeOn("toggle"),
       })),
     [patchSurface],
   )
@@ -581,20 +591,17 @@ export function HierarchicalMenuDetail({
       />
     ) : null
   // THE DETAIL HOLD (must-hold-the-detail-until-the-final-choice, cascade only): until the FINAL
-  // CHOICE — a select whose row leads to no further topic list — the detail pane must not change.
-  // The first rail interaction of a gesture CAPTURES what the pane is showing (the last final
-  // choice's content, or the overview/landing the gesture began over) into the surface store, and
-  // every render at an unselected frontier shows that held content instead of flipping to the new
-  // topic's overview or the host's landing. The hold is a DISPLAY hold only — the select still
-  // navigates — and it settles retrospectively: the host answers "did that row lead to another
-  // list?" with its next render, so the first render whose path is complete (and whose selection has
-  // actually moved) is the final choice. That render releases the hold (ONE swap, old → new) and, in
-  // auto-collapse mode, closes the reveal on the click itself
-  // (must-auto-collapse-menus-on-final-choice) — see `planChoiceSettle`.
+  // CHOICE — a select whose row is DECLARED to lead to no further topic list (`leadsTo`) — the
+  // detail pane must not change. An intermediate select (a row declared `leadsTo: "list"`)
+  // CAPTURES what the pane is showing into the surface store, and every later render shows that
+  // held content instead of flipping to the new topic's overview or the host's landing. The hold
+  // is a DISPLAY hold only — the select still navigates — and it ends with the GESTURE: the final
+  // choice's landing releases it (ONE swap, old → new — `planLeafSettle` below), a clear/✕/
+  // breadcrumb releases it immediately (up-navigation is not a choosing gesture), and the pointer
+  // leaving the menus releases it (an abandoned gesture must not haunt the next surface).
   const cascading = disclosureStyle === "cascading"
   const selectionSig = levels.map((l) => l.selectedId ?? "").join("|")
-  const showHeld =
-    cascading && !narrow && shouldShowHeldDetail({ holding: surface.heldDetail != null })
+  const showHeld = cascading && !narrow && surface.heldDetail != null
   // What the pane is showing NOW — what a capture snapshots. When the overview (or the held node
   // itself) is up, that is the pane; otherwise it is the host's children, wrapped exactly as the
   // visible wrapper below wraps them so the held copy lays out identically.
@@ -605,67 +612,66 @@ export function HierarchicalMenuDetail({
   paneShowingRef.current = paneShowing
   const selectionSigRef = useRef(selectionSig)
   selectionSigRef.current = selectionSig
-  // Arm the hold — called by the cascade on every rail select/clear/close, BEFORE it navigates. The
-  // first interaction of a gesture captures; the rest are no-ops (the pane is already held, and the
-  // original content must ride through the whole walk).
-  const holdDetailForChoice = useCallback(() => {
+  // THE HOLD'S THREE EDGES, decided AT the click from declared data (`planRailHold`) — the cascade
+  // calls these from its rail wiring, inside the guarded/animated action so a cancelled unsaved-
+  // work prompt changes nothing:
+  //   captureHold   — an intermediate select (row leads to a list): first capture wins, the
+  //                   original content rides through the whole walk.
+  //   releaseHold   — up-navigation (clear/✕/breadcrumb): the pane shows the real frontier state
+  //                   NOW. This is the release the v1.15.x hold was missing — it armed on clears
+  //                   but could only release on a complete path, so an unselect never released it
+  //                   and the stale pane haunted every surface the navigation landed on.
+  //   armLeafSettle — the FINAL CHOICE: remember the chain at the click; the effect below lands
+  //                   the ONE swap when the navigation applies.
+  const captureHold = useCallback(() => {
     patchSurface((p) =>
-      p.heldDetail != null
-        ? p
-        : {
-            ...p,
-            heldDetail: paneShowingRef.current,
-            heldSig: selectionSigRef.current,
-            heldMoved: false,
-          },
+      p.heldDetail != null ? p : { ...p, heldDetail: paneShowingRef.current, pendingLeafSig: null },
     )
   }, [patchSurface])
-  // Settle the hold: a render whose path is complete AND whose selection moved since arming looks
-  // like the final choice — and a CONSECUTIVE such render confirms it (see `planChoiceSettle`: a
-  // merged stack registers its deeper list from `children` effects a commit late, so the first
-  // settled-looking render after an intermediate select can be missing the very list that select
-  // disclosed; arming forces the extra render that gives the host its commit to disclose). The
-  // confirmed render releases the hold — ONE swap — and in auto-collapse mode closes the reveal on
-  // that same click (the ONE click-driven closure, must-auto-collapse-menus-on-final-choice); with
-  // auto-collapse off, no select collapses anything. Not `pointerInMenus`-gated and not
-  // cascade-gated on release: a hold armed in the cascade must still release if the surface later
-  // settles under another layout.
+  const releaseHold = useCallback(() => {
+    patchSurface((p) =>
+      p.heldDetail == null && p.pendingLeafSig == null
+        ? p
+        : { ...p, heldDetail: null, pendingLeafSig: null },
+    )
+  }, [patchSurface])
+  const armLeafSettle = useCallback(() => {
+    patchSurface((p) => ({ ...p, pendingLeafSig: selectionSigRef.current }))
+  }, [patchSurface])
+  // Breadcrumb navigation, package-owned via onClear (gated by the exit guard): the root crumb
+  // clears level 0 (deselect all); a level crumb clears the level below it (deselect deeper).
+  // Either way it is an up-navigation, so it releases the detail hold with the clear.
+  const onCrumbNavigate = (levelIndex: number | null) =>
+    attemptExit(() => {
+      releaseHold()
+      if (levelIndex === null) levels[0]?.onClear()
+      else levels[levelIndex + 1]?.onClear()
+    })
+  // Land an armed final choice (`planLeafSettle`): the first render where the click's navigation
+  // has applied (the chain changed) and the path is complete releases the hold — ONE swap — and in
+  // auto-collapse mode SETTLES the machine on that same click (the one click-driven closure,
+  // must-auto-collapse-menus-on-final-choice); with auto-collapse off, no select collapses
+  // anything (T60). Nothing is confirmed across renders: the click DECLARED itself final, so a
+  // merged stack's late (un)registration only delays the swap by the commit it needs, never
+  // mis-reads it. Not cascade-gated on release: a choice armed in the cascade still lands if the
+  // surface later settles under another layout.
   useEffect(() => {
     const s = surfaceStates.get(surfaceKey)
-    if (!s || s.heldDetail == null) return
-    const plan = planChoiceSettle({
-      holding: true,
+    if (!s || s.pendingLeafSig == null) return
+    const plan = planLeafSettle({
+      sigChanged: s.pendingLeafSig !== selectionSig,
       pathComplete: firstUnselected === -1,
-      selectionChanged: s.heldSig !== selectionSig || s.heldMoved,
-      armed: s.heldSettleArmed,
       autoHide,
     })
-    if (plan.settle) {
-      patchSurface((p) => ({
-        ...p,
-        heldDetail: null,
-        heldSig: null,
-        heldMoved: false,
-        heldSettleArmed: false,
-      }))
-      if (plan.autoCollapse && cascading) {
-        setHoverId(null)
-        // The gesture's covering freeze (must-not-move-the-menus-on-an-intermediate-select) holds
-        // while the pointer is still parked in the menus — so the final choice, whose whole point
-        // is settling on the click itself, writes the frozen frontier FORWARD: the ancestors cover
-        // now, not at the next pointer exit.
-        const cm = cascadeMemoryFor(surfaceKey)
-        if (cm.heldCover) cm.heldCover = { ...cm.heldCover, frontier }
-      }
-      return
-    }
-    const moved = s.heldSig !== selectionSig && !s.heldMoved
-    if (plan.arm !== s.heldSettleArmed || moved)
-      patchSurface((p) => ({
-        ...p,
-        heldSettleArmed: plan.arm,
-        heldMoved: p.heldMoved || moved,
-      }))
+    if (!plan.settle) return
+    patchSurface((p) => ({
+      ...p,
+      heldDetail: null,
+      pendingLeafSig: null,
+      ...(plan.autoCollapse && cascading
+        ? { mode: settleModeOn("final-choice"), hoverId: null, hoverAll: false }
+        : {}),
+    }))
   })
 
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
@@ -689,6 +695,50 @@ export function HierarchicalMenuDetail({
     </>
   )
 
+  // THE MACHINE'S TRANSITIONS, owned by the frame (the mode lives in the surface store so it
+  // survives the remount a selection causes). Each is a named event — the cascade reports what
+  // happened, the store applies the pure transition from cascade-rules:
+  //   engageEnter  — the pointer crossed into an open zone (trigger lane / covered peek).
+  //   engageClick  — a rail interaction at column `clickedIndex` (select, clear or ✕): engages if
+  //                  settled (capturing the resting base) and ratchets the reveal root; can never
+  //                  move the menus, structurally.
+  //   pointerExit  — the pointer provably left the menu region: settle AND end the gesture (the
+  //                  detail hold releases — an abandoned walk must not haunt the next surface).
+  //   settleToggle — an explicit «/»/immersion click: settle the geometry NOW; the hold (if any)
+  //                  keeps riding until the gesture actually ends.
+  const engageEnter = useCallback(
+    (base: EngagedBase) => patchSurface((p) => ({ ...p, mode: engageOnEnter(p.mode, base) })),
+    [patchSurface],
+  )
+  const engageClick = useCallback(
+    (clickedIndex: number, base: EngagedBase) =>
+      patchSurface((p) => ({ ...p, mode: engageOnRailClick(p.mode, base, clickedIndex) })),
+    [patchSurface],
+  )
+  const pointerExit = useCallback(
+    () =>
+      patchSurface((p) =>
+        p.mode.kind === "settled" &&
+        p.heldDetail == null &&
+        p.pendingLeafSig == null &&
+        p.hoverId === null
+          ? p
+          : {
+              ...p,
+              mode: settleModeOn("pointer-exit"),
+              heldDetail: null,
+              pendingLeafSig: null,
+              hoverId: null,
+              hoverAll: false,
+            },
+      ),
+    [patchSurface],
+  )
+  const settleToggle = useCallback(
+    () => patchSurface((p) => (p.mode.kind === "settled" ? p : { ...p, mode: settleModeOn("toggle") })),
+    [patchSurface],
+  )
+
   // The layouts share the same selection / breadcrumb / exit-guard semantics above and differ ONLY in
   // how the lists yield room to the detail — so each is its own subcomponent owning its layout state
   // (kept distinct so any one can evolve or be deleted independently).
@@ -710,7 +760,14 @@ export function HierarchicalMenuDetail({
     narrowTop: surface.narrowTop,
     setNarrowTop,
     containerW,
-    holdDetailForChoice,
+    mode: surface.mode,
+    engageEnter,
+    engageClick,
+    pointerExit,
+    settleToggle,
+    captureHold,
+    releaseHold,
+    armLeafSettle,
   }
 
   return (
@@ -789,54 +846,31 @@ const DETAIL_PIN = "__detail__"
 // (The selection chain's weight, the entrance bounce, the exit curve, the ground's release rule and
 // the rail-click decision are imported from `cascade-rules` at the top of this file.)
 
-/** Per-surface cascade memory that MUST SURVIVE A REMOUNT, keyed by the root level's id exactly like
- *  `surfaceStates`.
+/** Per-surface RENDER CACHES that must survive a remount, keyed by the root level's id exactly
+ *  like `surfaceStates`.
  *
  *  Next remounts the whole page subtree when a ROUTE PARAM changes — and choosing a different
  *  workspace in the root list IS a param change (`/[slug]/…`). React state therefore resets in the
- *  middle of one continuous interaction, which is invisible in the code but very visible on screen:
- *  the entrance loses all knowledge of which menus were already open and concludes "first mount,
- *  animate nothing", and the ground latch re-seeds from whatever the layout happens to be at mount
- *  and snaps the root's width. Both bugs are the same bug, so both live here.
+ *  middle of one continuous interaction: the entrance would lose all knowledge of which menus were
+ *  already open and conclude "first mount, animate nothing", and the detail fade would forget what
+ *  it last painted. Both live here.
  *
- *  Deliberately NOT folded into `surfaceStates`: that store is React state and every write re-renders
- *  the surface. These two are a cache read during render and written from effects — they must never
- *  drive a render of their own. */
+ *  Deliberately NOT folded into `surfaceStates`: that store is React state and every write
+ *  re-renders the surface. These are caches read during render and written from effects — they
+ *  must never drive a render of their own. (The INTERACTION state that used to live here too —
+ *  the ground latch, the pointer boolean, the covering freeze — is gone in v1.16.0: it is all one
+ *  stored `CascadeMode` in `surfaceStates`, written only by named transitions.) */
 const cascadeMemory = new Map<
   string,
   {
     /** Menu keys on screen at the last commit — `null` until primed. Primed-but-empty and never-primed
      *  must stay distinguishable: on a genuine first load nothing was "opened", so nothing animates. */
     seenKeys: Set<string> | null
-    /** Last ground right edge observed with the stack settled; `null` until one has been seen. */
-    groundRight: number | null
-    /** Was the pointer last seen inside the menu region? Out here for the same reason as `groundRight`
-     *  — and it is load-bearing WITH it, not merely adjacent. The menus are held open while the pointer
-     *  is in the region, and the click that must hold them is USUALLY THE REMOUNT ITSELF (choosing a
-     *  row is a route-param change). Component state would therefore reset to "outside" on exactly the
-     *  frame the hold matters, freeing the ground AND dropping the reveal — the bug this whole layer
-     *  exists to stop. `false` before any pointer has been seen: a deep link has no pointer in the
-     *  stack, and its first paint must take the real width. */
-    pointerInMenus: boolean
     /** The selection the detail pane last painted, so its fade can tell "became a different detail"
      *  from "mounted". `null` until first painted — and it must live out here for the same reason as
      *  `seenKeys`: choosing a row IS the param change that remounts the subtree, so component state
      *  would forget on precisely the transition that must animate. */
     detailToken: string | null
-    /** The covering (`pressure` + off-screen `hidden` + the auto-hide `frontier`) observed with the
-     *  stack SETTLED — i.e. the last time the pointer was OUT of the menus. Held and reused while
-     *  the pointer is IN the menus, for the SAME reason as `groundRight`: choosing a row that
-     *  publishes a NEW level re-covers the leftmost lists to make room, sliding the whole cascade
-     *  LEFT under the pointer mid-gesture. `groundRight` alone can't stop it — it pins the root's
-     *  WIDTH and the detail's edge, not the columns' x. This is the column analogue: `mayMoveGround`'s
-     *  rule is that the layout settles only once the pointer has left, and this holds the covering to
-     *  that same rule. `frontier` is the auto-hide half of the same freeze
-     *  (must-not-move-the-menus-on-an-intermediate-select): a rail click RATCHETS it down to the
-     *  clicked list's index so an intermediate select — which advances the real frontier — cannot
-     *  cover the very list it was clicked in; it advances again on the settle (pointer out), or the
-     *  final choice writes it forward (must-auto-collapse-menus-on-final-choice). `null` until a
-     *  settled paint has been seen. */
-    heldCover: { pressure: number; hidden: number; frontier: number } | null
   }
 >()
 const cascadeMemoryFor = (key: string) => {
@@ -844,10 +878,7 @@ const cascadeMemoryFor = (key: string) => {
   if (existing) return existing
   const fresh = {
     seenKeys: null,
-    groundRight: null,
     detailToken: null,
-    pointerInMenus: false,
-    heldCover: null,
   }
   cascadeMemory.set(key, fresh)
   return fresh
@@ -875,125 +906,85 @@ const EXIT_RESTORE_GIVEUP_MS = 2000
 // the gold selection chain still crosses the branch it links.
 const REVEAL_Z = 50
 
-/** The union of every on-screen MENU box, in viewport coords — the one measurement BOTH mouse
- *  -detection rects in `CascadingStack` are built from, so they can never disagree about where the
- *  menus end. `right`/`bottom` are the union's far edges: as wide as the widest and AS TALL AS THE
- *  TALLEST menu (Mike), spanning the gaps between them (a bounding box over the boxes — crossing a
- *  seam must not flicker the stack).
- *
- *  The full-height ROOT (`data-htd-col="0"`) is EXCLUDED: it runs to the container's bottom, so
- *  including it would drag the union down to the window's edge — a vast dead region below the menus.
- *  Nothing is lost, because both rects start at the container's top-left and the root's ROWS sit at
- *  the very top with the submenus always hanging lower; only the root's empty ground below the
- *  deepest menu falls outside, which is exactly the region that should read as "out".
- *
- *  Null when no menu is measurable. */
-function menuUnion(cont: HTMLElement): { right: number; bottom: number } | null {
-  let right = -Infinity
-  let bottom = -Infinity
-  cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
-    if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns don't count
-    if (col.getAttribute("data-htd-col") === "0") return // the full-height root — see above
-    const rc = col.getBoundingClientRect()
-    // A zero-size box is a menu mid-entrance (scaled to a point) — it would drag the union in to its
-    // origin, so let the caller's settle re-measure pick it up at full size instead.
-    if (rc.width === 0 || rc.height === 0) return
-    right = Math.max(right, rc.right)
-    bottom = Math.max(bottom, rc.bottom)
-  })
-  return right === -Infinity ? null : { right, bottom }
+/** The rects the pointer authority tests against — ALL built from the LAYOUT MODEL (the lefts and
+ *  tops the layout assigned, plus untransformed layout sizes), never from `getBoundingClientRect`
+ *  of an animating column. */
+type PointerRegions = {
+  /** The menu region — what the `pointer-exit` settle tests against. Null = unanswerable. */
+  menu: MenuRect | null
+  /** The OPEN ZONES (meaningful while settled): the disclose trigger's approach lane plus each
+   *  covered column's visible peek strip and header band. Crossing INTO one engages the cascade
+   *  (reveal all). Empty = nothing to disclose (disarmed). */
+  zones: MenuRect[]
 }
 
 /**
- * THE SINGLE AUTHORITY for "is the pointer in the menus?" — the layer whose absence made choosing a
- * row auto-collapse the cascade (Mike). It governs both the ground latch and whether the reveal is
- * held, and it is the ONE thing (with the explicit `«/»` toggles) that may close a reveal. See
- * `cascade-rules`' `menuRegion` for the full why; in short, the two used to be computed separately
- * and both from stale sources — `hoverIndex >= 0` (width pressure, a beat late) against an
- * effect-measured `revealRect` (a render behind) — on precisely the remount a click triggers.
+ * THE POINTER AUTHORITY (must-collapse-from-one-pointer-authority), v1.16.0: an IDEMPOTENT QUERY,
+ * not stream inference. The document-level pointermove handler only RECORDS the last coordinates;
+ * the decision is evaluated (rAF-coalesced) against SETTLED model rects supplied by `getRegions` —
+ * so remounts and live scale animations cannot feed it. That closes both of v1.15.x's windows at
+ * once: the null-region remount window (nothing measurable → the old code inferred "outside") and
+ * the mid-animation shrunk-rect window (the 300–460ms entrance/exit scales contracted the painted
+ * union, so a real hand's pixel of drift tested "provably outside" and released every hold —
+ * invisible to synthetic input, which never moves mid-animation).
  *
- * The fix is to read the region FRESH from the DOM inside the pointer handler, so the test is never
- * against a stale rect: only a real `pointermove` whose coordinates fall outside what is painted NOW
- * can report "left the menus". If the pointer never moves after a click, nothing ever closes — which
- * is exactly "clicking does nothing; only the mouse leaving collapses".
+ *   - engaged: a move provably OUTSIDE the menu region fires `onExit` — the pointer-exit settle.
+ *     An unanswerable query (null region) is simply NOT a transition.
+ *   - settled: a move CROSSING INTO an open zone fires `onEnter` (`triggerFires`, entry-gated:
+ *     after a final-choice collapse the pointer is parked where the menus were, and mere presence
+ *     must not re-open what the click just closed — only the outside→inside crossing opens). The
+ *     gate re-arms "inside" on every settle, so an ambiguous first observation fails closed.
  *
- * Seeded from `mem` across the remount (a fresh `false` would report "left" on the click's own frame),
- * and it keeps a measured rect in state PURELY for the debug overlay to draw — never for hit-testing.
+ * Leaving the window entirely (a `pointerout` to null / `blur`) fires no move inside the page, so
+ * it settles directly — and counts as proof of "outside" for the entry gate.
  */
-function usePointerInMenus(
-  containerRef: RefObject<HTMLDivElement | null>,
-  mem: { pointerInMenus: boolean },
-  regionSig: string,
-): { pointerInMenus: boolean; regionRect: MenuRect | null } {
-  const readRegion = useCallback((): MenuRect | null => {
-    const cont = containerRef.current
-    if (!cont) return null
-    const rects: MenuRect[] = []
-    cont.querySelectorAll<HTMLElement>("[data-htd-col]").forEach((col) => {
-      if (col.getAttribute("aria-hidden")) return // off-screen / immersed columns are not "the menus"
-      const r = col.getBoundingClientRect()
-      if (r.width === 0 || r.height === 0) return // a menu mid-entrance (scaled to a point)
-      if (col.getAttribute("data-htd-col") === "0") {
-        // The ROOT column is FULL HEIGHT (it is the ground the cascade sits on), but the menus occupy
-        // only its ROWS — everything below is empty ground where the detail shows through. Contribute
-        // the rows' bottom, not the box's, so the region ends where the menus end and moving down onto
-        // the detail reads as leaving them. Clamp to the box bottom so a long, scrolling root (whose
-        // last row is scrolled past the cut) still counts only to where it is actually cut off.
-        const rows = col.querySelectorAll<HTMLElement>("[data-htd-row]")
-        const last = rows[rows.length - 1]
-        const bottom = last ? Math.min(last.getBoundingClientRect().bottom, r.bottom) : r.top
-        rects.push({ left: r.left, top: r.top, right: r.right, bottom })
-        return
-      }
-      rects.push(r) // a submenu already hugs its rows (height-capped), so its box IS its content
-    })
-    return menuRegion(rects, cont.getBoundingClientRect())
-  }, [containerRef])
-
-  const [pointerInMenus, setPointerInMenus] = useState(() => mem.pointerInMenus)
+function useCascadePointerAuthority({
+  engaged,
+  getRegions,
+  onExit,
+  onEnter,
+}: {
+  engaged: boolean
+  /** Reads the CURRENT model rects — a ref holding the latest per-render closure, so the query is
+   *  always against what this commit painted, with zero stream-carried state. */
+  getRegions: RefObject<() => PointerRegions>
+  onExit: () => void
+  onEnter: () => void
+}): void {
+  const wasInside = useRef(true)
   useEffect(() => {
-    // Coalesce to ONE region read per animation frame: this is a document-wide pointermove, and
-    // `readRegion` calls `getBoundingClientRect`, which forces a synchronous reflow while the cascade
-    // is animating. Reading once per frame bounds that to at most one reflow per frame no matter how
-    // fast the pointer moves — and it is still FRESH (the frame reads live layout, never a React state
-    // value that lags a render), which is the whole reason the old effect-measured rect raced.
+    // Fail closed on every settle: the pointer must be SEEN outside the zones once before an entry
+    // can fire (the re-open clause of must-auto-collapse-menus-on-final-choice).
+    if (!engaged) wasInside.current = true
+  }, [engaged])
+  useEffect(() => {
     let raf = 0
     let last: { x: number; y: number } | null = null
     const flush = () => {
       raf = 0
       if (!last) return
-      const region = readRegion()
-      // A null region is "nothing measurable" — the remount a select causes detaches the old
-      // container and the new one hasn't painted, and a real mouse always moves in that window.
-      // That is NOT evidence the pointer left (`pointerInMenusAfterMove`): writing `false` here is
-      // exactly how the holds kept dying under a real pointer while surviving synthetic clicks.
-      const inside = pointerInMenusAfterMove({
-        measurable: region != null,
-        inside: region != null && pointInRegion(region, last.x, last.y),
-        previous: mem.pointerInMenus,
-      })
-      mem.pointerInMenus = inside // survives the remount; the state only drives THIS render
-      setPointerInMenus((prev) => (prev === inside ? prev : inside))
+      const { x, y } = last
+      const { menu, zones } = getRegions.current()
+      if (engaged) {
+        if (menu && !pointInRegion(menu, x, y)) onExit()
+        return
+      }
+      const isInside = zones.some((z) => pointInRegion(z, x, y))
+      if (triggerFires({ armed: zones.length > 0, wasInside: wasInside.current, isInside })) onEnter()
+      wasInside.current = isInside
     }
     const onMove = (e: PointerEvent) => {
       last = { x: e.clientX, y: e.clientY }
       if (raf === 0) raf = requestAnimationFrame(flush)
     }
-    // The pointer leaving the VIEWPORT entirely (flung out a window edge, or focus lost to another
-    // app) fires no `pointermove` inside the page, so a fling out OVER the menus would otherwise leave
-    // `pointerInMenus` stuck TRUE and the whole layout latched until the pointer returns and moves.
-    // Treat leaving the window as leaving the menus — the same "settle once the pointer is out" the
-    // move handler enforces. A `pointerout` with a null `relatedTarget` is "left the document"; `blur`
-    // covers tab/app switches, where no such event fires. Neither can fire during a click (the pointer
-    // is inside), so the held-select gesture is untouched.
     const settleOut = () => {
       if (raf !== 0) {
         cancelAnimationFrame(raf)
         raf = 0
       }
       last = null
-      mem.pointerInMenus = false
-      setPointerInMenus((prev) => (prev === false ? prev : false))
+      wasInside.current = false
+      if (engaged) onExit()
     }
     const onOut = (e: PointerEvent) => {
       if (e.relatedTarget === null) settleOut()
@@ -1007,34 +998,7 @@ function usePointerInMenus(
       window.removeEventListener("blur", settleOut)
       if (raf !== 0) cancelAnimationFrame(raf)
     }
-  }, [readRegion, mem])
-
-  // A measured rect for the DEBUG overlay ONLY (never hit-testing — that reads fresh above). Re-measured
-  // when the layout signature changes and once more after the width transition settles.
-  const [regionRect, setRegionRect] = useState<MenuRect | null>(null)
-  useLayoutEffect(() => {
-    const measure = () =>
-      setRegionRect((prev) => {
-        const next = readRegion()
-        return prev &&
-          next &&
-          prev.left === next.left &&
-          prev.top === next.top &&
-          prev.right === next.right &&
-          prev.bottom === next.bottom
-          ? prev
-          : next
-      })
-    measure()
-    const raf = requestAnimationFrame(measure)
-    const settle = setTimeout(measure, 340)
-    return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(settle)
-    }
-  }, [readRegion, regionSig])
-
-  return { pointerInMenus, regionRect }
+  }, [engaged, getRegions, onExit, onEnter])
 }
 
 /**
@@ -1266,10 +1230,20 @@ interface StackProps {
   setNarrowTop: (i: number) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
-  /** Arm the detail hold (must-hold-the-detail-until-the-final-choice): capture what the detail pane
-   *  is showing before this rail interaction navigates. The frame owns the capture and the settle;
-   *  the cascade only reports the clicks. First interaction captures, the rest no-op. */
-  holdDetailForChoice: () => void
+  /** THE CASCADE'S STORED MODE (surface store — survives the remount a selection causes) and its
+   *  named transitions; see the frame. Only CascadingStack consumes these — the covered/minimized
+   *  layouts keep their own (hoverId-based) disclosure plumbing. */
+  mode: CascadeMode
+  engageEnter: (base: EngagedBase) => void
+  engageClick: (clickedIndex: number, base: EngagedBase) => void
+  pointerExit: () => void
+  settleToggle: () => void
+  /** The detail hold's edges (must-hold-the-detail-until-the-final-choice), decided at the click
+   *  from declared leafness: capture on an intermediate select, release on any up-navigation, arm
+   *  the one swap on a final choice. The frame owns the store; the cascade reports the clicks. */
+  captureHold: () => void
+  releaseHold: () => void
+  armLeafSettle: () => void
   children: ReactNode
 }
 
@@ -2295,11 +2269,15 @@ function CascadingStack({
   toggleAutoHide,
   pins,
   setPins,
-  hoverId,
-  hoverAll,
-  setHoverId,
   containerW,
-  holdDetailForChoice,
+  mode,
+  engageEnter,
+  engageClick,
+  pointerExit,
+  settleToggle,
+  captureHold,
+  releaseHold,
+  armLeafSettle,
   children,
 }: StackProps) {
   // Per-level rail width, resizable by the trailing-border handle within a readable range (same
@@ -2312,8 +2290,8 @@ function CascadingStack({
   const onResizeLevel = (level: TopicLevel, w: number) =>
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
   const containerRef = useRef<HTMLDivElement>(null)
-  // This surface's remount-surviving memory (see `cascadeMemory`). Read FIRST, because the pointer
-  // state below has to seed from it on the very first render of a remount.
+  // This surface's remount-surviving render caches (see `cascadeMemory`): the entrance's seen-keys
+  // and the detail fade's token. All INTERACTION state lives in the surface store's `mode`.
   const mem = cascadeMemoryFor(rendered[0]?.id ?? "")
   // DEV-ONLY debug switches (both default off; see `debug-options`).
   const showDebugFrames = useShowDebugFrames()
@@ -2336,36 +2314,29 @@ function CascadingStack({
     [],
   )
 
-  // COVERING — CoveredStack's intent rules (see there for the rationale of each layer), with two
-  // cascade differences: the indent is the tighter CASCADE_INDENT, and the pressure/off-screen
-  // budgets contain only the LISTS — the detail sits beside the root UNDER the deeper lists (see
-  // `detailLeft`), so it no longer competes with them for width. The frontier stays uncovered
-  // while it has no selection (must-not-hide-frontier-choosing-list).
+  // COVERING — the RESTING (settled) layout, computed fresh every render: intent (pins /
+  // auto-hide against the REAL frontier), width pressure, off-screen drilling. This is what paints
+  // while the mode is SETTLED — and what an engage transition CAPTURES as its frozen `EngagedBase`.
+  // While a gesture is engaged, the painted geometry below reads from that captured VALUE, so
+  // nothing this derivation does — the frontier advancing on an intermediate select, a new level
+  // registering, pressure recomputing — can move a menu that is on screen. That single stored base
+  // replaces v1.15.x's ground latch, covering freeze and frozen-frontier ratchet outright.
+  // The indent is the tighter CASCADE_INDENT, and the pressure/off-screen budgets contain only the
+  // LISTS — the detail sits beside the root UNDER the deeper lists (see `detailLeft`). The
+  // frontier stays uncovered while it has no selection (must-not-hide-frontier-choosing-list).
   const coverableCount = firstUnselected === -1 ? rendered.length : frontier
 
-  // Hold the covering under the pointer, exactly as `mayMoveGround` holds the ground (see
-  // `heldCover` in `cascadeMemory`): while the pointer is in the menus we REUSE the covering last
-  // seen with the stack settled, so a select that publishes a new level can't re-cover the root and
-  // slide the cascade left mid-gesture. Null (→ fresh compute) whenever the pointer is out or
-  // nothing settled has been recorded yet. Read HERE because the auto-hide layer below needs its
-  // frozen `frontier` too, not only the pressure/off-screen counts.
-  const heldCover = mem.pointerInMenus ? mem.heldCover : null
+  // THE MODE — the stored machine (see `CascadeMode` in cascade-rules), read from the surface
+  // store so it survives the remount a selection causes.
+  const engaged = mode.kind === "engaged"
+  const base = engaged ? mode.base : null
+  const engRoot = engaged ? mode.root : null
 
   // COVER LAYER 1 — intent: the user's pin (`«`), else auto-hide's default for every list above
-  // the frontier. The frontier auto-hide covers against is the FROZEN one while the user is
-  // choosing (must-not-move-the-menus-on-an-intermediate-select): an intermediate select advances
-  // the real frontier, which used to cover the clicked list out from under the pointer the moment
-  // its child appeared — with only the pointer-reveal (must-root-reveal-on-covering-select) to
-  // save it, and every time that raced the remount and lost, the menu visibly snapped shut. The
-  // rail click ratchets the frozen frontier down to the clicked list (see the select wrapper), so
-  // the stay-open is structural; the covering catches up when the pointer leaves, or when the
-  // final choice writes the freeze forward (the frame's settle effect).
-  const coverFrontier = heldCover
-    ? coverFrontierWhileChoosing({ frozenFrontier: heldCover.frontier, frontier })
-    : frontier
+  // the real frontier.
   const pinnedOrAutoHidden = (i: number): boolean => {
     if (i >= coverableCount) return false
-    return pins[rendered[i]!.id] ?? (autoHide && i < coverFrontier)
+    return pins[rendered[i]!.id] ?? (autoHide && i < frontier)
   }
 
   // The leaf detail sits BESIDE the frontier list; reserve its minimum so width pressure covers
@@ -2381,12 +2352,9 @@ function CascadingStack({
 
   // COVER LAYER 2 — width pressure: cover MORE lists, leftmost-first, until the disclosed cascade
   // plus the detail minimum fits the container. Only ever ADDS a cover — never discloses one the
-  // user pinned shut. Frozen at the settled count (clamped to what is coverable now — the frontier may
-  // have moved) while the pointer is in the menus.
+  // user pinned shut.
   let pressure = 0
-  if (heldCover) {
-    pressure = Math.min(heldCover.pressure, coverableCount)
-  } else if (containerW > 0) {
+  if (containerW > 0) {
     const listsWidth = (n: number) =>
       rendered.reduce(
         (w, l, i) =>
@@ -2397,68 +2365,85 @@ function CascadingStack({
       )
     while (pressure < coverableCount && listsWidth(pressure) + detailMin > containerW) pressure++
   }
-  const isCovered = (i: number) => pinnedOrAutoHidden(i) || i < pressure
+  const restingCovered = (i: number) => pinnedOrAutoHidden(i) || i < pressure
   // A COVERED list advances x by only the tight CASCADE_INDENT peek (its child slides left over it,
   // overdrawing it in the back-to-front z-order). Covering vs disclosing IS this horizontal
-  // difference — the very thing the `«`/`»` toggle, auto-hide and the hover reveal act on.
-  const widthOf = (i: number) => (isCovered(i) ? CASCADE_INDENT : disclosedAdvance(rendered[i]!))
+  // difference — the very thing the `«`/`»` toggle, auto-hide and the reveal act on.
+  const restingAdvance = (i: number) =>
+    restingCovered(i) ? CASCADE_INDENT : disclosedAdvance(rendered[i]!)
 
   // PHASE 2 — OFF-SCREEN: every list at its indent STILL doesn't fit — slide the leftmost lists
   // off the left edge, whole lists at a time (see CoveredStack).
-  let hidden = 0
+  let restingHidden = 0
   let offshift = 0
-  if (heldCover) {
-    // Frozen alongside `pressure` (an unheld off-screen phase would slide the leftmost lists off the
-    // left edge — the same move under the pointer, by a different lever). Recompute `offshift` from the
-    // current widths so a rail resize while held stays consistent.
-    hidden = Math.min(heldCover.hidden, coverableCount)
-    for (let i = 0; i < hidden; i++) offshift += widthOf(i)
-  } else if (containerW > 0) {
+  if (containerW > 0) {
     // Extent, not the sum of advances: every list but the LAST contributes only its advance (its
     // child overdraws the rest); the LAST is overdrawn by nothing, so it contributes its FULL width.
     const widthFrom = (h: number) =>
       rendered.reduce(
-        (w, l, i) => (i < h ? w : i === rendered.length - 1 ? w + railWidth(l) : w + widthOf(i)),
+        (w, l, i) =>
+          i < h ? w : i === rendered.length - 1 ? w + railWidth(l) : w + restingAdvance(i),
         0,
       ) + detailMin
-    while (hidden < coverableCount && widthFrom(hidden) > containerW) {
-      offshift += widthOf(hidden)
-      hidden++
+    while (restingHidden < coverableCount && widthFrom(restingHidden) > containerW) {
+      offshift += restingAdvance(restingHidden)
+      restingHidden++
     }
   }
-
-  // Record the covering whenever it was computed FRESH this render (`heldCover` null → the pointer is
-  // OUT, or it is IN but nothing settled has been recorded yet), so the hold above has a value to
-  // freeze at across the remount a select triggers — the column analogue of the `groundRight` latch
-  // below. Deriving the guard from the same render-time `heldCover` that fed `pressure`/`hidden` —
-  // rather than re-reading `mem.pointerInMenus`, which the rAF pointer flush can flip between this
-  // render and the effect's commit — means the effect only ever stores values it actually PAINTED,
-  // never the frozen ones it is currently replaying. Recording on the pointer-in-but-unseeded case
-  // bootstraps the hold on the FIRST paint of a surface entered before it ever settled (a deep link
-  // whose pointer is already in the menus), so even its very first select is held.
-  const coverFresh = heldCover === null
-  useEffect(() => {
-    if (coverFresh) mem.heldCover = { pressure, hidden, frontier }
-  }, [mem, coverFresh, pressure, hidden, frontier])
 
   // IMMERSION — the detail strip's `«`: the detail takes the WHOLE surface, every list (root
   // included) sliding off the left edge; the strip's `»` brings the stack back. Stored under the
   // reserved DETAIL_PIN key in `pins`, so it persists per-surface exactly like the per-list pins.
   const immersed = pins[DETAIL_PIN] ?? false
 
-  // HORIZONTAL layout pass (running x): EVERY list advances x by just its indent (round 8 #2), so
-  // each child slides left over its parent. Each list keeps its FULL box (no resize, no clip; see
-  // `boxWidth`) and the child, painted above it in the back-to-front z-order, simply overdraws it.
-  const left: number[] = []
-  let x = 0
-  rendered.forEach((_l, i) => {
-    left.push(x)
-    x += widthOf(i)
-  })
+  // HORIZONTAL layout pass (running x) — the RESTING positions: EVERY list advances x by just its
+  // indent (round 8 #2), so each child slides left over its parent. Each list keeps its FULL box
+  // (no resize, no clip; see `boxWidth`) and the child, painted above it in the back-to-front
+  // z-order, simply overdraws it.
+  const restingLeft: number[] = []
+  {
+    let x = 0
+    rendered.forEach((_l, i) => {
+      restingLeft.push(x)
+      x += restingAdvance(i)
+    })
+  }
 
   // The detail begins at the frontier list's RIGHT edge (it sits beside the cascade). Covered
   // ancestors advance by only their peek, so the disclosed frontier + the detail stay on-screen.
-  const stackRight = (left[frontier] ?? 0) + railWidth(rendered[frontier] ?? rendered[0]!)
+  const restingStackRight =
+    (restingLeft[frontier] ?? 0) + railWidth(rendered[frontier] ?? rendered[0]!)
+
+  // THE PAINTED GEOMETRY. Settled: the resting layout above (off-screen shift applied). Engaged:
+  // the frozen base — columns left of the reveal root at exactly their captured lefts and covered
+  // flags, columns from the root rightward revealed at full width, chained from the root's
+  // captured left (each landing over its parent's right edge by the indent, per
+  // `disclosedAdvance`). A column born after the capture (the select that disclosed it is the
+  // gesture itself) chains onto its parent. `base.lefts` are FINAL positions (the off-screen
+  // shift was applied at capture), so no `offshift` while engaged.
+  const hidden = engaged ? Math.min(base!.hidden, rendered.length) : restingHidden
+  const isCovered = (i: number): boolean => {
+    if (!engaged) return restingCovered(i)
+    if (engRoot != null && i >= engRoot) return false
+    return base!.covered[i] ?? restingCovered(i)
+  }
+  const columnLeft: number[] = []
+  rendered.forEach((_l, i) => {
+    if (!engaged) {
+      columnLeft.push(restingLeft[i]! - offshift)
+      return
+    }
+    const chained = (engRoot != null && i > engRoot) || (base!.lefts[i] == null && i > 0)
+    columnLeft.push(
+      chained ? columnLeft[i - 1]! + disclosedAdvance(rendered[i - 1]!) : (base!.lefts[i] ?? 0),
+    )
+  })
+
+  // THE GROUND — the root list's right edge, where the detail begins. Settled: tracks the resting
+  // stack live. Engaged: frozen at the captured base (must-hold-the-ground-under-the-pointer) —
+  // it recomputes only at the machine's settle transitions, never mid-gesture, and the frozen
+  // value survives the remount because the mode lives in the surface store.
+  const groundRight = engaged ? base!.groundRight : restingStackRight
 
   // VERTICAL cascade. Each non-root list's TOP is its parent's top plus the parent's HEADER
   // height — the child discloses immediately under the parent's header bar, measured (not assumed)
@@ -2509,77 +2494,41 @@ function CascadingStack({
     topOf.push(i === 0 ? 0 : (topOf[i - 1] ?? 0) + (rowOffset[i - 1] ?? 0))
   })
 
-  // THE REVEAL GROUP — CoveredStack's hover branch reveal, ported verbatim (see there for the full
-  // story: enter-vs-covering-click rooting, the z-lift that lingers through the wipe-shut, the
-  // group-scoped close rules). Hovering a COVERED submenu opens its branch: the members disclose at
-  // their FULL widths chained horizontally from the group start (fanning right so they become
-  // readable — each still landing OVER its parent's right edge by the indent, per `disclosedAdvance`),
-  // while their TOPS stay the cascade's — revealing is horizontal. This IS the auto-expand; leaving
-  // auto-collapses the branch back to its covered peeks.
-  const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
-  const groupFrom = (root: number) => (hoverAll ? hidden : root)
-  const hoverIndex =
-    hoverRoot >= 0 && rendered.some((_, i) => i >= groupFrom(hoverRoot) && isCovered(i))
-      ? hoverRoot
-      : -1
-  const effectiveHoverId = hoverIndex >= 0 ? hoverId : null
-  const groupStart = hoverIndex >= 0 ? groupFrom(hoverIndex) : -1
-  const inGroup = (i: number) => hoverIndex >= 0 && i >= groupStart
-
-  const [zLiftId, setZLiftId] = useState<string | null>(effectiveHoverId)
+  // THE REVEAL, as visuals only — the GEOMETRY of revealed columns is already in `columnLeft`
+  // (the machine's engaged chain); what remains here is the floating-card treatment: while the
+  // reveal uncovers something, the members from the root rightward float over the detail (z-lift +
+  // card shadows). A root that reveals NOTHING (no member was covered at capture) keeps the ground
+  // frozen but earns no lift — a stack at rest must not cast floating-card shadows (the blind-root
+  // no-op, unchanged from the covered style).
+  const revealOpen =
+    engaged &&
+    engRoot != null &&
+    rendered.some((_, i) => i >= engRoot && (base!.covered[i] ?? false))
+  const groupStart = revealOpen ? engRoot! : -1
+  const inGroup = (i: number) => groupStart >= 0 && i >= groupStart
+  // The lift LINGERS through the wipe-shut (z-index can't animate): `zFrom` trails the open reveal
+  // by the transition duration when it closes, and SEEDS from the store-derived value so a remount
+  // mid-reveal re-lifts the branch on its first frame instead of flashing it behind the detail.
+  const [zFrom, setZFrom] = useState(groupStart)
   useEffect(() => {
-    if (effectiveHoverId !== null) {
-      setZLiftId(effectiveHoverId)
+    if (groupStart >= 0) {
+      setZFrom(groupStart)
       return
     }
-    const t = setTimeout(() => setZLiftId(null), 300)
+    const t = setTimeout(() => setZFrom(-1), 300)
     return () => clearTimeout(t)
-  }, [effectiveHoverId])
-  const zRoot = zLiftId === null ? -1 : rendered.findIndex((l) => l.id === zLiftId)
-  const [zStart, setZStart] = useState<number>(groupStart)
-  useEffect(() => {
-    if (groupStart >= 0) setZStart(groupStart)
   }, [groupStart])
-  const zFrom = zRoot === -1 ? -1 : zStart >= 0 ? zStart : zRoot
-  const revealLeft: number[] = []
-  if (hoverIndex >= 0) {
-    let rx = left[groupStart] ?? 0
-    for (let i = groupStart; i < rendered.length; i++) {
-      revealLeft[i] = rx
-      rx += disclosedAdvance(rendered[i]!)
-    }
-  }
   // Immersed, every list parks fully past the left edge (right edge ≤ 0): shift the whole resting
   // layout left by the rightmost box edge. Boxes stay full width — nothing pokes back into view.
+  // (Immersion is a toggle, and toggles settle the machine — immersed implies settled.)
   const immersedShift = immersed
-    ? Math.max(0, ...rendered.map((l, i) => (left[i] ?? 0) + railWidth(l)))
+    ? Math.max(0, ...rendered.map((l, i) => (restingLeft[i] ?? 0) + railWidth(l)))
     : 0
-  const leftOf = (i: number) =>
-    immersed ? left[i]! - immersedShift : (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
+  const leftOf = (i: number) => (immersed ? restingLeft[i]! - immersedShift : columnLeft[i]!)
   // Covering never resizes a box — the child overdrawing it IS the covered drawing (so a reveal
   // only SLIDES members right; nothing wipes open). The one exception: an OFF-SCREEN list narrows
   // to its indent so it parks fully past the left edge (`leftOf` shifts it by only the indents,
   // so a full-width box would poke back into view below the survivors' hugged bottoms).
-  // THE ONE AUTHORITY — "is the pointer in the menus?" — read fresh from the DOM (see
-  // `usePointerInMenus`). It governs the ground latch below AND whether the reveal is held (further
-  // down), which used to be two separate, both-stale computations; unifying them onto one fresh
-  // measurement is the layer whose absence let choosing a row collapse the cascade. `regionRect` is
-  // for the debug overlay only.
-  const regionSig = `${rendered.length}:${hoverIndex}:${groupStart}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
-  const { pointerInMenus, regionRect } = usePointerInMenus(containerRef, mem, regionSig)
-
-  // THE GROUND'S RIGHT EDGE — where the root list ends and the detail begins. It tracks the resting
-  // stack (`stackRight`), but it is HELD while the pointer is in the menus, because moving it moves
-  // EVERYTHING: the root's width and the detail's position both hang off it, so any change
-  // mid-interaction shoves the UI around under the pointer. `mayMoveGround` owns the rule; this is
-  // only the plumbing. The held width lives in `cascadeMemory` so a route-param REMOUNT cannot reset
-  // it mid-interaction (the pointer half lives there too — see the hook). `mem` is read at the top.
-  const groundFree = mayMoveGround({ pointerInMenus, latched: mem.groundRight !== null })
-  const groundRight = groundFree ? stackRight : (mem.groundRight ?? stackRight)
-  useEffect(() => {
-    if (groundFree) mem.groundRight = stackRight
-  }, [groundFree, stackRight, mem])
-
   // (#1, Mike) THE ROOT LIST IS AS WIDE AS THE WHOLE MENU STACK — it spans x=0 to the ground's right
   // edge, exactly where the detail begins. The root is the GROUND the cascade sits on, so it must
   // paint every pixel under the stack. At its own rail width it stopped at 240 while the stack ran to
@@ -2595,101 +2544,165 @@ function CascadingStack({
   const rootWidth = groundRight
 
   const boxWidth = (i: number) =>
-    i < hidden ? widthOf(i) : i === 0 ? rootWidth : railWidth(rendered[i]!)
+    i < hidden
+      ? isCovered(i)
+        ? CASCADE_INDENT
+        : disclosedAdvance(rendered[i]!)
+      : i === 0
+        ? rootWidth
+        : railWidth(rendered[i]!)
 
   // THE DETAIL SITS BESIDE THE MENU STACK — pinned at the ground's right edge, never pushed by the
-  // cascade; a hover branch reveal fans lists rightward OVER it (they float at REVEAL_Z), like menus
+  // cascade; an engaged reveal fans lists rightward OVER it (they float at REVEAL_Z), like menus
   // dropping over content. Immersed, it takes the whole surface.
   const detailLeft = immersed ? 0 : rendered.length > 0 ? groundRight : 0
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
-  // AUTO-COLLAPSE — the ONE closer of the reveal, and the whole point of this refactor. A reveal is
-  // held open while `pointerInMenus`; the instant that authority reports the pointer OUTSIDE the menu
-  // region, the reveal closes (`reduceReveal`'s `pointerLeftMenus`, the only auto-close there is). No
-  // click, remount, width change or selection reaches here — choosing a row RE-ROOTS the reveal, it
-  // never closes it, so a click can no longer collapse the menus. If the pointer never moves after a
-  // click, `pointerInMenus` stays true and nothing collapses, which is exactly "clicking does nothing
-  // wrt auto-collapse". This also subsumes the covered stack's old blind-root document watcher: a
-  // reveal that revealed nothing is still an open `hoverId`, and it too clears the moment the pointer
-  // is proven outside.
-  useEffect(() => {
-    if (hoverId !== null && !pointerInMenus) setHoverId(null)
-  }, [pointerInMenus, hoverId, setHoverId])
+  // THE ENGAGE CAPTURE: the resting layout as painted right now — final positions (off-screen
+  // shift applied), covered flags, off-screen count, the ground. Handed to the machine when a
+  // settled surface engages (a zone entry or a rail click); an already-engaged surface keeps its
+  // existing base, so this is only ever read at the settled→engaged edge.
+  const captureBase = (): EngagedBase => ({
+    lefts: rendered.map((_, i) => restingLeft[i]! - offshift),
+    covered: rendered.map((_, i) => restingCovered(i)),
+    hidden: restingHidden,
+    groundRight: restingStackRight,
+  })
+  const captureBaseRef = useRef(captureBase)
+  captureBaseRef.current = captureBase
 
-  // AUTO-DISCLOSE via a TRIGGER RECTANGLE (Mike): at rest (nothing disclosed), moving the pointer into
-  // the area to the LEFT of the topmost (frontier) menu — below the breadcrumbs (the container's top)
-  // down to the BOTTOM OF THE TALLEST MENU — discloses the whole cascade. Only armed when there IS a
-  // covered ancestor to disclose (a fully-disclosed or single-level cascade has nothing to open).
+  // AUTO-DISCLOSE + AUTO-COLLAPSE, one authority (see `useCascadePointerAuthority`). The MODEL
+  // RECTS it queries are built from the layout this render painted — `leftOf`/`topOf`/`boxWidth`
+  // plus untransformed layout HEIGHTS (`offsetHeight`; a WAAPI scale animation never changes
+  // layout size) — never a column's `getBoundingClientRect`, which reports the shrunk box
+  // mid-animation (1.15.x's containment hole).
   //
-  // The height is the UNION of every menu (Mike), not the frontier's own: the frontier is whichever
-  // menu opened last, so keying off it made the trigger as short as THAT card — a deep-but-short menu
-  // (an "Areas" of four rows) left the tall list beside it outside the region, and sweeping the
-  // pointer in alongside it did nothing. The menus are one stack; the region that opens them is one
-  // rect over all of them. Only the RIGHT edge is still the frontier's — the trigger is the approach
-  // lane BESIDE the cascade, so it must stop where the topmost menu starts.
+  // The TRIGGER rect (Mike): the approach lane LEFT of the topmost (frontier) menu — below the
+  // breadcrumbs (the container's top) down to the bottom of the TALLEST menu (the menus are one
+  // stack; the region that opens them is one rect over all of them). Measuring and arming stay
+  // separate questions (must-draw-every-detection-frame): the rect always exists for the debug
+  // overlay; `triggerArmed` decides whether entering opens anything — with nothing covered the
+  // region is correctly DEAD, drawn dashed.
   //
-  // Measured whenever the frontier is measurable, armed only when there is something to disclose.
-  // Measuring and arming are separate questions (must-draw-every-detection-frame): the rect exists so
-  // the debug overlay can always show where the region is, while `triggerArmed` decides whether
-  // entering it opens anything. `anyCovered` is exactly why that matters: with nothing covered the
-  // region is correctly DEAD, and drawing it dashed is the only way that answer is ever visible.
+  // The OPEN ZONES (settled only): the armed trigger lane, plus each covered column's visible
+  // face — its peek strip (the indent its child leaves showing) and its full header band (the
+  // child's top starts below it). Entering one engages the cascade; the covered peeks route
+  // through the same entry gate as the trigger, so a final-choice collapse that leaves covered
+  // columns under the parked pointer cannot self-re-open (the browser's own `pointerenter` fires
+  // on layout moving under a stationary pointer, which is why v1.15.2's covered-column enter was
+  // itself a re-open hole).
   const anyCovered = rendered.some((_, i) => isCovered(i))
-  const triggerArmed = triggerRectArmed({ revealOpen: hoverIndex >= 0, immersed, anyCovered })
-  const [triggerRect, setTriggerRect] = useState<MenuRect | null>(null)
-  const triggerSig = `${hoverIndex}:${anyCovered}:${frontier}:${offshift}:${immersed}:${containerW}:${left.join(",")}:${topOf.join(",")}`
-  useEffect(() => {
+  const triggerArmed = triggerRectArmed({ engaged, immersed, anyCovered })
+  const getRegions = (): PointerRegions & { trigger: MenuRect | null } => {
     const cont = containerRef.current
-    if (!cont) {
-      setTriggerRect(null)
-      return
-    }
-    const measure = () => {
-      const cr = cont.getBoundingClientRect()
-      const topEl = cont.querySelector<HTMLElement>(`[data-htd-col="${frontier}"]`)
-      if (!topEl) {
-        setTriggerRect(null)
-        return
+    if (!cont) return { menu: null, zones: [], trigger: null }
+    const cr = cont.getBoundingClientRect()
+    const colRects: (MenuRect | null)[] = rendered.map((_l, i) => {
+      if (immersed || i < hidden) return null
+      const col = cont.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)
+      if (!col) return null
+      const h = col.offsetHeight
+      if (h === 0) return null
+      const l = cr.left + leftOf(i)
+      const t = cr.top + (topOf[i] ?? 0)
+      let bottom = t + h
+      if (i === 0) {
+        // The ROOT is full height (it is the ground the cascade sits on), but the menus occupy
+        // only its ROWS: clamp to the last row's bottom so moving down onto the detail reads as
+        // leaving the menus. (The root never scale-animates, so its rows' client rects are layout
+        // truth; clamp to the box bottom for a long, scrolling root.)
+        const rows = col.querySelectorAll<HTMLElement>("[data-htd-row]")
+        const lastRow = rows[rows.length - 1]
+        bottom = lastRow ? Math.min(lastRow.getBoundingClientRect().bottom, bottom) : t
       }
-      const tr = topEl.getBoundingClientRect()
-      // Falling back to the frontier's own bottom keeps the trigger armed for the one case the union
-      // can't measure (every menu mid-entrance at zero size); the settle re-measure below corrects it.
-      const u = menuUnion(cont)
-      setTriggerRect({ left: cr.left, top: cr.top, right: tr.left, bottom: u?.bottom ?? tr.bottom })
+      return { left: l, top: t, right: l + boxWidth(i), bottom }
+    })
+    const menu = menuRegion(colRects.filter((r): r is MenuRect => r != null), {
+      left: cr.left,
+      top: cr.top,
+      right: cr.right,
+      bottom: cr.bottom,
+    })
+    const frontierRect = colRects[frontier] ?? null
+    const unionBottom = colRects.reduce(
+      (b, r, i) => (r && i > 0 ? Math.max(b, r.bottom) : b),
+      -Infinity,
+    )
+    const trigger = frontierRect
+      ? {
+          left: cr.left,
+          top: cr.top,
+          right: frontierRect.left,
+          bottom: unionBottom === -Infinity ? frontierRect.bottom : unionBottom,
+        }
+      : null
+    const zones: MenuRect[] = []
+    if (!engaged && !immersed) {
+      if (triggerArmed && trigger) zones.push(trigger)
+      rendered.forEach((_l, i) => {
+        const r = colRects[i]
+        if (!r || i < hidden || !isCovered(i)) return
+        // The peek strip: the CASCADE_INDENT sliver the child leaves showing.
+        zones.push({ left: r.left, top: r.top, right: r.left + CASCADE_INDENT, bottom: r.bottom })
+        // The header band: the child's top starts one header-height below, so the header is visible.
+        zones.push({
+          left: r.left,
+          top: r.top,
+          right: r.right,
+          bottom: cr.top + (topOf[i] ?? 0) + (rowOffset[i] ?? 0),
+        })
+      })
     }
+    return { menu, zones, trigger }
+  }
+  const getRegionsRef = useRef(getRegions)
+  getRegionsRef.current = getRegions
+  const onZoneEnter = useCallback(
+    () => engageEnter(captureBaseRef.current()),
+    [engageEnter],
+  )
+  useCascadePointerAuthority({
+    engaged,
+    getRegions: getRegionsRef,
+    onExit: pointerExit,
+    onEnter: onZoneEnter,
+  })
+
+  // Rects for the DEBUG overlay only (never hit-testing — the authority queries the model fresh).
+  // Re-measured when the layout signature changes and once more after the transitions settle.
+  const [debugRects, setDebugRects] = useState<{ menu: MenuRect | null; trigger: MenuRect | null }>(
+    { menu: null, trigger: null },
+  )
+  const debugSig = `${rendered.length}:${engaged}:${engRoot}:${groupStart}:${offshift}:${immersed}:${containerW}:${restingLeft.join(",")}:${topOf.join(",")}:${hidden}`
+  useEffect(() => {
+    if (!showDebugFrames) return
+    const measure = () =>
+      setDebugRects((prev) => {
+        const { menu, trigger } = getRegionsRef.current()
+        const same = (a: MenuRect | null, b: MenuRect | null) =>
+          a === b ||
+          (a != null &&
+            b != null &&
+            a.left === b.left &&
+            a.top === b.top &&
+            a.right === b.right &&
+            a.bottom === b.bottom)
+        return same(prev.menu, menu) && same(prev.trigger, trigger) ? prev : { menu, trigger }
+      })
     measure()
     const raf = requestAnimationFrame(measure)
-    const settle = setTimeout(measure, 320)
+    const settle = setTimeout(measure, 340)
     return () => {
       cancelAnimationFrame(raf)
       clearTimeout(settle)
     }
-  }, [triggerSig])
-  // Open the cascade the moment the pointer ENTERS the trigger rectangle — the outside→inside
-  // crossing, not mere presence (`triggerFires`). Presence used to be enough, and it broke the
-  // final-choice collapse's re-open clause (must-auto-collapse-menus-on-final-choice): the click
-  // that settles the cascade leaves the pointer parked where the menus were — inside the freshly
-  // armed trigger — so the first stray pixel of movement re-disclosed everything the click had just
-  // closed. The ref starts as "inside" on every mount (a select remounts this stack with the
-  // pointer parked over it) so an ambiguous first observation can only ever fail closed: a pointer
-  // genuinely approaching from outside proves it with its first move.
-  const triggerPointerInside = useRef(true)
-  useEffect(() => {
-    if (!triggerRect) return
-    const onMove = (e: PointerEvent) => {
-      const isInside = pointInRegion(triggerRect, e.clientX, e.clientY)
-      if (triggerFires({ armed: triggerArmed, wasInside: triggerPointerInside.current, isInside }))
-        setHoverId(rendered[frontier]?.id ?? null, true)
-      triggerPointerInside.current = isInside
-    }
-    document.addEventListener("pointermove", onMove)
-    return () => document.removeEventListener("pointermove", onMove)
-  }, [triggerArmed, triggerRect])
+  }, [debugSig, showDebugFrames])
 
-  // The `«`/`»` toggle — ported verbatim, including dropping any open reveal on the click so the
-  // stack settles immediately (must-apply-disclosure-toggles-immediately).
+  // The `«`/`»` toggle — an explicit toggle SETTLES the machine on the click, so the stack shows
+  // the new pin state immediately (must-apply-disclosure-toggles-immediately).
   const setCover = (parentIndex: number, e: ReactMouseEvent) => {
     const target = !isCovered(parentIndex)
-    setHoverId(null)
+    settleToggle()
     if (e.metaKey || e.ctrlKey) {
       setPins(Object.fromEntries(rendered.map((l) => [l.id, target])))
       return
@@ -2729,7 +2742,7 @@ function CascadingStack({
     <button
       type="button"
       onClick={() => {
-        setHoverId(null)
+        settleToggle()
         setPins((prev) => ({ ...prev, [DETAIL_PIN]: !immersed }))
       }}
       aria-label={immersionLabel}
@@ -2748,7 +2761,7 @@ function CascadingStack({
   // row, reinforcing the cascade. The signature is everything that moves a selected row — the
   // per-level selection, the column left edges, the vertical tops, the off-screen shift, the
   // reveal group and immersion.
-  const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${left.join(",")}::${topOf.join(",")}::${offshift}::${containerW}::${hoverIndex}::${immersed}`
+  const connectorSig = `${rendered.map((l) => l.selectedId ?? "").join("|")}::${columnLeft.join(",")}::${topOf.join(",")}::${containerW}::${groupStart}::${immersed}`
   const connectorsPossible = rendered.length >= 2 && rendered.some((l) => l.selectedId != null)
   // THE CONNECTOR RETRACTS WITH THE MENU IT POINTS AT (Mike). The hook re-measures on a rAF loop for a
   // window after `sig` changes, so the entrance was always tracked — a structural change starts it. An
@@ -2821,7 +2834,7 @@ function CascadingStack({
     // animating here would play an unasked-for intro. A REMOUNT is not this case: `mem` survives it,
     // so the menus that were already on screen are still known and only the re-disclosed ones fire.
     if (!cont || prev === null) return
-    rendered.forEach((level, i) => {
+    rendered.forEach((_level, i) => {
       if (i === 0 || prev.has(enterKey(i))) return
       const col = cont.querySelector<HTMLElement>(`[data-htd-col="${i}"]`)
       const row = cont.querySelector<HTMLElement>(
@@ -2965,20 +2978,12 @@ function CascadingStack({
           <div
             key={level.id}
             data-htd-col={i}
-            // Hover CLOSE is not per-column (the tracking rect governs the auto-collapse), and the
-            // approach-lane disclose is the trigger rect — but a COVERED column does carry its own
-            // pointer-ENTER: entering a covered peek opens its branch (the re-open clause of
-            // must-auto-collapse-menus-on-final-choice — "until the pointer next ENTERS a covered
-            // peek or menu"). `pointerenter` fires only on the outside→inside crossing, so a
-            // pointer parked by the final-choice collapse opens nothing until it actually moves
-            // onto a peek — and with the disclose trigger entry-gated, this is what discloses a
-            // settled cascade approached from over the menus themselves (without it, the covered
-            // root's rows sat unreachable under its child and could never be re-clicked).
-            onPointerEnter={
-              !offscreen && !immersed && isCovered(i)
-                ? () => setHoverId(level.id, true)
-                : undefined
-            }
+            // No per-column pointer handlers: BOTH halves of the pointer contract — collapse on
+            // leaving the menus, disclose on entering a covered peek / the approach lane — live in
+            // the ONE authority (`useCascadePointerAuthority`), which queries the settled model
+            // rects and entry-gates every open zone. The browser's own boundary events are
+            // deliberately unused here: Chrome fires `pointerenter` when LAYOUT moves under a
+            // stationary pointer, which is exactly what a final-choice collapse does.
             aria-hidden={offscreen || undefined}
             inert={offscreen || undefined}
             style={{
@@ -3072,43 +3077,43 @@ function CascadingStack({
                 selectionStyle="marker"
                 items={level.items}
                 selectedId={level.selectedId}
-                // A select from a list at rest roots a branch reveal here, exactly as in
-                // CoveredStack (must-root-reveal-on-covering-select): the select that covers this
-                // list must not snap it shut under the pointer.
+                // A rail click ENGAGES the machine at this column (engageOnRailClick): if the
+                // surface was settled, the click captures the resting layout as the frozen base;
+                // either way the reveal root ratchets no deeper than this list, so the select that
+                // discloses a child cannot cover or move the list it was clicked in
+                // (must-not-move-the-menus-on-an-intermediate-select) — structurally, with no
+                // pointer movement required. The machine lives in the surface store, so the freeze
+                // survives the remount this select causes.
                 //
-                // ALWAYS re-root at the list being selected IN, even when it is already part of an
-                // open reveal. `hoverId` is rooted at the FRONTIER, and a selection here REBUILDS
-                // everything below this list — so the frontier it points at is usually the level the
-                // selection is about to destroy. Leaving it there strands `hoverId` on a level that
-                // no longer exists, the reveal silently dies, and with it the `groundRight` latch:
-                // the root's width would snap and shove the whole UI sideways mid-interaction. The
-                // list clicked in always survives, so it is the one safe anchor.
+                // The DETAIL HOLD's edge is decided HERE, at the click, from the row's DECLARED
+                // leafness (`planRailHold`): an intermediate select captures the pane, a clear
+                // releases it immediately (up-navigation is not a choosing gesture), and a final
+                // choice arms the one swap. The hold action runs INSIDE the guarded navigation, so
+                // a cancelled unsaved-work prompt changes nothing.
                 // UN-selecting reverses the entrance (Mike): re-clicking this list's selected row
                 // clears it, which takes the menus BELOW (`i+1`…) away — so they shrink back into the
                 // rows that opened them before the clear lands. Without this the ✕ was the only
                 // animated close and a re-click just made the menu vanish.
                 onSelect={(id) => {
-                  // Arm the detail hold BEFORE anything navigates: this click may be intermediate,
-                  // and the pane must ride through it showing what it shows right now
-                  // (must-hold-the-detail-until-the-final-choice).
-                  holdDetailForChoice()
-                  // The click IS proof the pointer is in the menus — record it in the surviving
-                  // memory so the remount this select causes seeds every hold (ground, covering,
-                  // reveal) from "inside", even if no pointermove was ever observed (a fresh
-                  // surface, synthetic input). And RATCHET the frozen cover frontier down to this
-                  // list (must-not-move-the-menus-on-an-intermediate-select): the select advances
-                  // the real frontier, and without the freeze that covers the very list being
-                  // clicked in the moment its child appears.
-                  mem.pointerInMenus = true
-                  mem.heldCover = {
-                    ...(mem.heldCover ?? { pressure, hidden }),
-                    frontier: ratchetFrozenFrontier({
-                      frozenFrontier: mem.heldCover?.frontier ?? frontier,
-                      clickedIndex: i,
-                    }),
+                  engageClick(i, captureBaseRef.current())
+                  const plan = planRailSelect(level.selectedId ?? null, id)
+                  const hold = planRailHold({
+                    action: plan.action,
+                    leadsTo: itemLeadsTo(
+                      level.leadsTo,
+                      level.items.find((it) => it.id === id)?.leadsTo,
+                    ),
+                  })
+                  const navigate = () => {
+                    if (hold.release) releaseHold()
+                    else if (hold.capture) captureHold()
+                    else if (hold.finalChoice) armLeafSettle()
+                    if (plan.action === "clear") level.onClear()
+                    else level.onSelect(id)
                   }
-                  setHoverId(level.id, hoverAll && inGroup(i))
-                  railOnSelect(level, attemptExit, (clear) => exitBranch(i + 1, clear))(id)
+                  const run = () => (plan.collapse ? exitBranch(i + 1, navigate) : navigate())
+                  if (plan.guarded) attemptExit(run)
+                  else run()
                 }}
                 emptyLabel={level.emptyLabel ?? "Nothing here yet."}
                 onNew={level.onNew}
@@ -3129,29 +3134,23 @@ function CascadingStack({
                 // PARENT list that opened it (the root, with no parent, never qualifies); the clear
                 // routes through the exit guard like every other de-selection.
                 //
-                // CLOSING MUST NOT AUTO-COLLAPSE THE MENUS LEFT OPEN (Mike). Two things would snap
-                // a fully-disclosed stack shut, so the reveal has to be carried across the close:
-                // dropping `hoverId` outright, and — since the disclose trigger roots `hoverId` at
-                // the FRONTIER, the very list this ✕ removes — leaving it dangling on a level that
-                // no longer exists. So re-root the reveal at the list that BECOMES the frontier,
-                // keeping its `hoverAll` scope. Only when no reveal is open do we clear (matching
-                // the old behaviour, where it was a no-op). The tracking rect still collapses the
-                // stack once the pointer actually leaves it — that is the one thing that should.
+                // CLOSING MUST NOT AUTO-COLLAPSE THE MENUS LEFT OPEN (Mike): the ✕ is a rail
+                // interaction at the PARENT — `engageOnRailClick` ratchets the reveal root no
+                // deeper than the list that BECOMES the frontier and keeps the frozen base, so
+                // every remaining menu stays exactly where it is. The pointer authority still
+                // settles the stack once the pointer actually leaves — the one thing that should.
+                // And the ✕ is an UP-navigation, so it releases the detail hold: the pane shows
+                // the real frontier state (the parent's choosing list / overview) immediately.
                 onClose={
                   i === frontier && !isRootList
                     ? () => {
-                        // The ✕ clears the parent's selection, disclosing its choosing list — the
-                        // user is still choosing, so the detail holds through it too, and the click
-                        // is the same in-the-menus proof as a select (the covering must not shift
-                        // under it; the frontier RETREAT is followed by coverFrontierWhileChoosing).
-                        holdDetailForChoice()
-                        mem.pointerInMenus = true
+                        engageClick(i - 1, captureBaseRef.current())
                         const parent = rendered[i - 1]!
-                        setHoverId(hoverIndex >= 0 ? parent.id : null, hoverAll)
-                        // Re-rooting the reveal above cannot move anything (`hoverAll` groups from
-                        // `hidden` either way), so the box the exit measures is the box on screen.
                         // This ✕ is only ever on the frontier, so the branch here is this one menu.
-                        attemptExit(() => exitBranch(i, () => parent.onClear()))
+                        attemptExit(() => {
+                          releaseHold()
+                          exitBranch(i, () => parent.onClear())
+                        })
                       }
                     : undefined
                 }
@@ -3207,22 +3206,28 @@ function CascadingStack({
           Frames" is on. They are the ONLY way to see these regions: both are invisible by
           construction, and a rect that is one frame STALE looks identical to a correct one. Drawn in
           viewport coords (they are measured that way), `position: fixed`, inert, above everything.
-            BLUE   = the MENU REGION — the ONE authority. While the pointer is inside it the ground is
-                     latched AND any open reveal is held; the moment it leaves, both release. This is
-                     the single rect that used to be two (a separate "collapse" and "ground held"),
-                     which is exactly the unification this refactor is.
-            GREEN  = the DISCLOSE/trigger rect — entering it opens the cascade.
+            BLUE   = the MENU REGION — what the pointer-exit settle tests against, built from the
+                     SETTLED layout model (never an animating box's client rect). Solid while the
+                     machine is ENGAGED (geometry frozen, reveal held); the pointer provably
+                     leaving it is what settles the stack.
+            GREEN  = the DISCLOSE/trigger rect — the approach lane; crossing INTO it (or a covered
+                     peek) engages the cascade.
           Both are drawn whether or not ARMED (must-draw-every-detection-frame) — dashed and "(off)"
           when inert rather than omitted. Omitting them is how the switch came to look broken: with
           `autoHideTopics={false}` nothing is covered, so the trigger has nothing to disclose; a
           dashed frame says that out loud, an empty screen doesn't. */}
       {showDebugFrames && (
         <>
-          {regionRect && (
-            <DebugFrame rect={regionRect} color="#3b82f6" label="menus held" armed={pointerInMenus} />
+          {debugRects.menu && (
+            <DebugFrame rect={debugRects.menu} color="#3b82f6" label="menus held" armed={engaged} />
           )}
-          {triggerRect && (
-            <DebugFrame rect={triggerRect} color="#22c55e" label="disclose" armed={triggerArmed} />
+          {debugRects.trigger && (
+            <DebugFrame
+              rect={debugRects.trigger}
+              color="#22c55e"
+              label="disclose"
+              armed={triggerArmed}
+            />
           )}
         </>
       )}
