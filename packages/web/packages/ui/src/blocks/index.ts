@@ -32,6 +32,9 @@ export {
   useSlowAnimations,
   setSlowAnimations,
   getSlowAnimations,
+  useCascadeLog,
+  setCascadeLog,
+  getCascadeLog,
   slowAnimationVars,
   SLOW_ANIM_FACTOR,
 } from "./debug-options"

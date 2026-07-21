@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react"
 
 /**
- * DEV-ONLY debug switches for the hierarchical views. Two today:
+ * DEV-ONLY debug switches for the hierarchical views. Three today:
  *
  *  - SHOW MOUSE FRAMES — draw the mouse-detection rectangles the menus hit-test against. They are
  *    invisible by construction, so anything depending on them (auto-disclose, auto-collapse) is
@@ -13,16 +13,22 @@ import { useSyncExternalStore } from "react"
  *    Scope is deliberate: TRANSITIONS and one-shot animations stretch, but indeterminate loops
  *    (spinners, skeleton sweeps, ambient pulses) do NOT. A loop has no choreography to study — every
  *    frame is already on screen — and at 10x a spinner reads as a hang rather than a slow spinner.
+ *  - CASCADE LOG — one console line per cascade interaction event (machine transitions with their
+ *    reasons, rail-click decisions with the resolved leafness, hold edges, pointer-authority
+ *    verdicts, paint changes). The mouse frames show WHERE the regions are; this shows WHICH rule
+ *    fired and WHY — the difference between "it moved" and a pasteable trace of what moved it.
+ *    See `cascade-log.ts`.
  *
  * They live HERE rather than in a consuming app because this package owns the behaviour; an app's
  * Debug panel just flips them. Storage/notification mirrors the app-side `envOverride` store: the
  * values are in localStorage (shared across every copy of this module and every tab), and the
  * subscriber set is pinned on `globalThis` so a write from a Debug panel in one bundle chunk still
- * notifies a menu in another. Both default OFF.
+ * notifies a menu in another. All default OFF.
  */
 const KEYS = {
   frames: "apt:debug:show-mouse-frames",
   slowAnim: "apt:debug:slow-animations",
+  cascadeLog: "apt:debug:cascade-log",
 } as const
 
 /** How much longer everything takes with SLOW ANIMATIONS on. */
@@ -76,6 +82,7 @@ function subscribe(onChange: () => void): () => void {
 
 const readFrames = () => read(KEYS.frames)
 const readSlow = () => read(KEYS.slowAnim)
+const readCascadeLog = () => read(KEYS.cascadeLog)
 const serverFalse = () => false
 
 /** Whether to draw the debug mouse-detection frames. */
@@ -94,6 +101,14 @@ export function getSlowAnimations(): boolean {
 export function setSlowAnimations(on: boolean): void {
   write(KEYS.slowAnim, on)
 }
+/** Whether the cascade interaction log is on (see `cascade-log.ts`). */
+export function getCascadeLog(): boolean {
+  return readCascadeLog()
+}
+/** Turn the cascade interaction log on/off. */
+export function setCascadeLog(on: boolean): void {
+  write(KEYS.cascadeLog, on)
+}
 
 /**
  * Subscribe to a flag. `false` on the server and the first client render, so a stored `true` can
@@ -104,6 +119,9 @@ export function useShowDebugFrames(): boolean {
 }
 export function useSlowAnimations(): boolean {
   return useSyncExternalStore(subscribe, readSlow, serverFalse)
+}
+export function useCascadeLog(): boolean {
+  return useSyncExternalStore(subscribe, readCascadeLog, serverFalse)
 }
 
 /**

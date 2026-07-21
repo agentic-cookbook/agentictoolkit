@@ -74,6 +74,7 @@ import {
   type EngagedBase,
   type MenuRect,
 } from "./cascade-rules"
+import { clog } from "./cascade-log"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -302,6 +303,30 @@ type SurfaceState = {
  */
 const surfaceStates = new Map<string, SurfaceState>()
 
+// ─── Cascade interaction log helpers (see cascade-log.ts; every call is a no-op while the
+//     `apt:debug:cascade-log` switch is off) ──────────────────────────────────────────────────────
+
+/** Monotonic instance counter: distinguishes the remount a selection causes (a new instance
+ *  adopting the same surface, `i1` → `i2`) from a surface reset in the trace. */
+let hmdvInstanceSeq = 0
+
+const modeTag = (m: CascadeMode): string =>
+  m.kind === "engaged" ? `engaged@${m.root ?? "·"}` : "settled"
+
+const baseTag = (b: EngagedBase): Record<string, unknown> => ({
+  lefts: b.lefts.map(Math.round),
+  covered: b.covered,
+  hidden: b.hidden,
+  ground: Math.round(b.groundRight),
+})
+
+const rectTag = (r: MenuRect): Record<string, number> => ({
+  l: Math.round(r.left),
+  t: Math.round(r.top),
+  r: Math.round(r.right),
+  b: Math.round(r.bottom),
+})
+
 export function HierarchicalMenuDetail({
   levels,
   rootLabel,
@@ -459,6 +484,45 @@ export function HierarchicalMenuDetail({
     mode: SETTLED,
   }
   const { autoHide, pins, hoverId, hoverAll } = surface
+
+  // CASCADE INTERACTION LOG (dev-only, `apt:debug:cascade-log`; see cascade-log.ts). Scope is
+  // surface + instance: the instance bumps on the remount a selection causes, so surface state
+  // riding through a remount is visible in the trace as `i2` continuing `i1`'s story.
+  const logInstRef = useRef(0)
+  if (logInstRef.current === 0) logInstRef.current = ++hmdvInstanceSeq
+  const logScope = `${surfaceKey || "?"}·i${logInstRef.current}`
+  const logScopeRef = useRef(logScope)
+  logScopeRef.current = logScope
+  useEffect(() => {
+    clog(logScopeRef.current, "mount", {
+      style: disclosureStyle,
+      autoHideTopics,
+      layout: layoutMode,
+    })
+    return () => clog(logScopeRef.current, "unmount")
+    // Mount/unmount only — the values logged are for identification, not tracking.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // Log the LEVELS the host is publishing whenever the set or a selection changes — the late
+  // (un)registration of a merged stack's deeper levels is load-bearing for the leaf-settle timing,
+  // and this line is what makes that window visible in a pasted trace.
+  const levelsSig = levels
+    .map((l) => `${l.id}${l.selectedId != null ? `:${l.selectedId}` : ""}`)
+    .join(" | ")
+  const prevLevelsSigRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevLevelsSigRef.current === levelsSig) return
+    prevLevelsSigRef.current = levelsSig
+    clog(logScopeRef.current, "levels", {
+      levels: levelsSig || "(none)",
+      frontier,
+      firstUnselected,
+      mode: modeTag(surface.mode),
+      held: surface.heldDetail != null,
+      pendingLeaf: surface.pendingLeafSig,
+    })
+  })
+
   // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
   // component around state that outlived it, so a closed-over `surface` can be a render behind.
   const patchSurface = useCallback(
@@ -487,16 +551,19 @@ export function HierarchicalMenuDetail({
   // (must-apply-disclosure-toggles-immediately).
   const toggleAutoHide = useCallback(
     () =>
-      patchSurface((p) => ({
-        ...p,
-        autoHide: !p.autoHide,
-        pins: {},
-        hoverId: null,
-        hoverAll: false,
-        // An explicit toggle SETTLES the cascade's machine too (must-apply-disclosure-toggles-
-        // immediately): the new mode must show its work on the click, not at the next pointer exit.
-        mode: settleModeOn("toggle"),
-      })),
+      patchSurface((p) => {
+        clog(logScopeRef.current, "toggle-autohide", { to: !p.autoHide, from: modeTag(p.mode) })
+        return {
+          ...p,
+          autoHide: !p.autoHide,
+          pins: {},
+          hoverId: null,
+          hoverAll: false,
+          // An explicit toggle SETTLES the cascade's machine too (must-apply-disclosure-toggles-
+          // immediately): the new mode must show its work on the click, not at the next pointer exit.
+          mode: settleModeOn("toggle"),
+        }
+      }),
     [patchSurface],
   )
   const setPins: Dispatch<SetStateAction<Record<string, boolean>>> = useCallback(
@@ -623,27 +690,46 @@ export function HierarchicalMenuDetail({
   //                   and the stale pane haunted every surface the navigation landed on.
   //   armLeafSettle — the FINAL CHOICE: remember the chain at the click; the effect below lands
   //                   the ONE swap when the navigation applies.
-  const captureHold = useCallback(() => {
-    patchSurface((p) =>
-      p.heldDetail != null ? p : { ...p, heldDetail: paneShowingRef.current, pendingLeafSig: null },
-    )
-  }, [patchSurface])
-  const releaseHold = useCallback(() => {
-    patchSurface((p) =>
-      p.heldDetail == null && p.pendingLeafSig == null
-        ? p
-        : { ...p, heldDetail: null, pendingLeafSig: null },
-    )
-  }, [patchSurface])
-  const armLeafSettle = useCallback(() => {
-    patchSurface((p) => ({ ...p, pendingLeafSig: selectionSigRef.current }))
-  }, [patchSurface])
+  const captureHold = useCallback(
+    (trigger?: string) => {
+      patchSurface((p) => {
+        if (p.heldDetail != null) return p
+        clog(logScopeRef.current, "hold-capture", { trigger })
+        return { ...p, heldDetail: paneShowingRef.current, pendingLeafSig: null }
+      })
+    },
+    [patchSurface],
+  )
+  const releaseHold = useCallback(
+    (trigger?: string) => {
+      patchSurface((p) => {
+        if (p.heldDetail == null && p.pendingLeafSig == null) return p
+        clog(logScopeRef.current, "hold-release", {
+          trigger,
+          held: p.heldDetail != null,
+          pendingLeaf: p.pendingLeafSig,
+        })
+        return { ...p, heldDetail: null, pendingLeafSig: null }
+      })
+    },
+    [patchSurface],
+  )
+  const armLeafSettle = useCallback(
+    (trigger?: string) => {
+      patchSurface((p) => {
+        clog(logScopeRef.current, "leaf-arm", { trigger, sig: selectionSigRef.current })
+        return { ...p, pendingLeafSig: selectionSigRef.current }
+      })
+    },
+    [patchSurface],
+  )
   // Breadcrumb navigation, package-owned via onClear (gated by the exit guard): the root crumb
   // clears level 0 (deselect all); a level crumb clears the level below it (deselect deeper).
   // Either way it is an up-navigation, so it releases the detail hold with the clear.
   const onCrumbNavigate = (levelIndex: number | null) =>
     attemptExit(() => {
-      releaseHold()
+      clog(logScopeRef.current, "crumb-nav", { level: levelIndex ?? "root" })
+      releaseHold("crumb")
       if (levelIndex === null) levels[0]?.onClear()
       else levels[levelIndex + 1]?.onClear()
     })
@@ -658,20 +744,35 @@ export function HierarchicalMenuDetail({
   useEffect(() => {
     const s = surfaceStates.get(surfaceKey)
     if (!s || s.pendingLeafSig == null) return
-    const plan = planLeafSettle({
-      sigChanged: s.pendingLeafSig !== selectionSig,
-      pathComplete: firstUnselected === -1,
+    const sigChanged = s.pendingLeafSig !== selectionSig
+    const pathComplete = firstUnselected === -1
+    const plan = planLeafSettle({ sigChanged, pathComplete, autoHide })
+    clog(logScopeRef.current, "leaf-settle-eval", {
+      pending: s.pendingLeafSig,
+      sig: selectionSig,
+      sigChanged,
+      pathComplete,
       autoHide,
+      settle: plan.settle,
+      autoCollapse: plan.autoCollapse,
     })
     if (!plan.settle) return
-    patchSurface((p) => ({
-      ...p,
-      heldDetail: null,
-      pendingLeafSig: null,
-      ...(plan.autoCollapse && cascading
-        ? { mode: settleModeOn("final-choice"), hoverId: null, hoverAll: false }
-        : {}),
-    }))
+    patchSurface((p) => {
+      clog(logScopeRef.current, "settle", {
+        reason: "final-choice",
+        from: modeTag(p.mode),
+        autoCollapse: plan.autoCollapse && cascading,
+        heldReleased: p.heldDetail != null,
+      })
+      return {
+        ...p,
+        heldDetail: null,
+        pendingLeafSig: null,
+        ...(plan.autoCollapse && cascading
+          ? { mode: settleModeOn("final-choice"), hoverId: null, hoverAll: false }
+          : {}),
+      }
+    })
   })
 
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
@@ -707,35 +808,66 @@ export function HierarchicalMenuDetail({
   //   settleToggle — an explicit «/»/immersion click: settle the geometry NOW; the hold (if any)
   //                  keeps riding until the gesture actually ends.
   const engageEnter = useCallback(
-    (base: EngagedBase) => patchSurface((p) => ({ ...p, mode: engageOnEnter(p.mode, base) })),
+    (base: EngagedBase) =>
+      patchSurface((p) => {
+        const next = engageOnEnter(p.mode, base)
+        clog(logScopeRef.current, "engage-enter", {
+          from: modeTag(p.mode),
+          to: modeTag(next),
+          ...(p.mode.kind === "settled" ? { base: baseTag(base) } : {}),
+        })
+        return { ...p, mode: next }
+      }),
     [patchSurface],
   )
   const engageClick = useCallback(
     (clickedIndex: number, base: EngagedBase) =>
-      patchSurface((p) => ({ ...p, mode: engageOnRailClick(p.mode, base, clickedIndex) })),
+      patchSurface((p) => {
+        const next = engageOnRailClick(p.mode, base, clickedIndex)
+        clog(logScopeRef.current, "engage-click", {
+          col: clickedIndex,
+          from: modeTag(p.mode),
+          to: modeTag(next),
+          ...(p.mode.kind === "settled" ? { base: baseTag(base) } : {}),
+        })
+        return { ...p, mode: next }
+      }),
     [patchSurface],
   )
   const pointerExit = useCallback(
     () =>
-      patchSurface((p) =>
-        p.mode.kind === "settled" &&
-        p.heldDetail == null &&
-        p.pendingLeafSig == null &&
-        p.hoverId === null
-          ? p
-          : {
-              ...p,
-              mode: settleModeOn("pointer-exit"),
-              heldDetail: null,
-              pendingLeafSig: null,
-              hoverId: null,
-              hoverAll: false,
-            },
-      ),
+      patchSurface((p) => {
+        if (
+          p.mode.kind === "settled" &&
+          p.heldDetail == null &&
+          p.pendingLeafSig == null &&
+          p.hoverId === null
+        )
+          return p
+        clog(logScopeRef.current, "settle", {
+          reason: "pointer-exit",
+          from: modeTag(p.mode),
+          heldReleased: p.heldDetail != null,
+          pendingDropped: p.pendingLeafSig,
+        })
+        return {
+          ...p,
+          mode: settleModeOn("pointer-exit"),
+          heldDetail: null,
+          pendingLeafSig: null,
+          hoverId: null,
+          hoverAll: false,
+        }
+      }),
     [patchSurface],
   )
   const settleToggle = useCallback(
-    () => patchSurface((p) => (p.mode.kind === "settled" ? p : { ...p, mode: settleModeOn("toggle") })),
+    () =>
+      patchSurface((p) => {
+        if (p.mode.kind === "settled") return p
+        clog(logScopeRef.current, "settle", { reason: "toggle", from: modeTag(p.mode) })
+        return { ...p, mode: settleModeOn("toggle") }
+      }),
     [patchSurface],
   )
 
@@ -943,6 +1075,7 @@ function useCascadePointerAuthority({
   getRegions,
   onExit,
   onEnter,
+  logTag,
 }: {
   engaged: boolean
   /** Reads the CURRENT model rects — a ref holding the latest per-render closure, so the query is
@@ -950,8 +1083,13 @@ function useCascadePointerAuthority({
   getRegions: RefObject<() => PointerRegions>
   onExit: () => void
   onEnter: () => void
+  /** Scope tag for the cascade interaction log (see cascade-log.ts). */
+  logTag: string
 }): void {
   const wasInside = useRef(true)
+  // Log the unanswerable-region state once per streak, not per move (it is a normal transient
+  // during a remount; a LONG streak while engaged is itself a finding).
+  const loggedNullRegion = useRef(false)
   useEffect(() => {
     // Fail closed on every settle: the pointer must be SEEN outside the zones once before an entry
     // can fire (the re-open clause of must-auto-collapse-menus-on-final-choice).
@@ -966,11 +1104,25 @@ function useCascadePointerAuthority({
       const { x, y } = last
       const { menu, zones } = getRegions.current()
       if (engaged) {
-        if (menu && !pointInRegion(menu, x, y)) onExit()
+        if (!menu) {
+          if (!loggedNullRegion.current) {
+            loggedNullRegion.current = true
+            clog(logTag, "pointer-region-unanswerable", { x, y })
+          }
+          return
+        }
+        loggedNullRegion.current = false
+        if (!pointInRegion(menu, x, y)) {
+          clog(logTag, "pointer-exit", { x, y, menu: rectTag(menu) })
+          onExit()
+        }
         return
       }
       const isInside = zones.some((z) => pointInRegion(z, x, y))
-      if (triggerFires({ armed: zones.length > 0, wasInside: wasInside.current, isInside })) onEnter()
+      if (triggerFires({ armed: zones.length > 0, wasInside: wasInside.current, isInside })) {
+        clog(logTag, "zone-enter", { x, y, zones: zones.length })
+        onEnter()
+      }
       wasInside.current = isInside
     }
     const onMove = (e: PointerEvent) => {
@@ -984,7 +1136,10 @@ function useCascadePointerAuthority({
       }
       last = null
       wasInside.current = false
-      if (engaged) onExit()
+      if (engaged) {
+        clog(logTag, "settle-blur")
+        onExit()
+      }
     }
     const onOut = (e: PointerEvent) => {
       // A `pointerout` with a null relatedTarget is EITHER "the pointer left the document" OR
@@ -996,7 +1151,10 @@ function useCascadePointerAuthority({
       // reflex left in this file, and it re-collapsed the menus on a clear's navigation. A
       // genuine departure still settles — via these coordinates when they test outside, via the
       // next move after re-entry, or via `blur` (an app/tab switch, below) as the backstop.
-      if (e.relatedTarget === null) onMove(e)
+      if (e.relatedTarget === null) {
+        clog(logTag, "pointer-null-out", { x: e.clientX, y: e.clientY, engaged })
+        onMove(e)
+      }
     }
     document.addEventListener("pointermove", onMove)
     document.addEventListener("pointerout", onOut)
@@ -1007,7 +1165,7 @@ function useCascadePointerAuthority({
       window.removeEventListener("blur", settleOut)
       if (raf !== 0) cancelAnimationFrame(raf)
     }
-  }, [engaged, getRegions, onExit, onEnter])
+  }, [engaged, getRegions, onExit, onEnter, logTag])
 }
 
 /**
@@ -1250,9 +1408,9 @@ interface StackProps {
   /** The detail hold's edges (must-hold-the-detail-until-the-final-choice), decided at the click
    *  from declared leafness: capture on an intermediate select, release on any up-navigation, arm
    *  the one swap on a final choice. The frame owns the store; the cascade reports the clicks. */
-  captureHold: () => void
-  releaseHold: () => void
-  armLeafSettle: () => void
+  captureHold: (trigger?: string) => void
+  releaseHold: (trigger?: string) => void
+  armLeafSettle: (trigger?: string) => void
   children: ReactNode
 }
 
@@ -2296,8 +2454,12 @@ function CascadingStack({
   const [widths, setWidths] = useState<Record<string, number>>({})
   const [dragging, setDragging] = useState(false)
   const railWidth = (l: TopicLevel) => widths[l.id] ?? l.width ?? FULL_RAIL
-  const onResizeLevel = (level: TopicLevel, w: number) =>
+  // Interaction-log tag for this stack's lines (the frame's mount/unmount lines carry the instance).
+  const logTag = rendered[0]?.id ?? "stack"
+  const onResizeLevel = (level: TopicLevel, w: number) => {
+    clog(logTag, "rail-resize", { level: level.id, w: Math.round(w) })
     setWidths((wd) => ({ ...wd, [level.id]: Math.max(MIN_DRAG_RAIL, Math.min(w, MAX_DRAG_RAIL)) }))
+  }
   const containerRef = useRef<HTMLDivElement>(null)
   // This surface's remount-surviving render caches (see `cascadeMemory`): the entrance's seen-keys
   // and the detail fade's token. All INTERACTION state lives in the surface store's `mode`.
@@ -2485,9 +2647,11 @@ function CascadingStack({
         const r = anchor.getBoundingClientRect()
         next[i] = (header ? r.bottom : r.top) - col.getBoundingClientRect().top
       }
-      setRowOffset((prev) =>
-        prev.length === next.length && prev.every((v, k) => v === next[k]) ? prev : next,
-      )
+      setRowOffset((prev) => {
+        if (prev.length === next.length && prev.every((v, k) => v === next[k])) return prev
+        clog(logTag, "measure-tops", { from: prev.map(Math.round), to: next.map(Math.round) })
+        return next
+      })
     }
     rowMeasureRef.current = measure
     measure()
@@ -2579,6 +2743,49 @@ function CascadingStack({
   })
   const captureBaseRef = useRef(captureBase)
   captureBaseRef.current = captureBase
+
+  // PAINT-INVARIANT DETECTOR (interaction log): one `paint` line whenever the painted geometry
+  // vector changes — and a `!! ENGAGED-PAINT-MOVED` line when a column that ALREADY EXISTED moves
+  // (or the ground moves) while the machine is ENGAGED with the SAME frozen base, which is the one
+  // thing v1.16.0 promises is structurally impossible. Observation only; nothing reads it back.
+  const paintRef = useRef<{
+    engaged: boolean
+    base: EngagedBase | null
+    ground: number
+    byId: Record<string, { left: number; top: number }>
+    sig: string
+  } | null>(null)
+  useEffect(() => {
+    const byId: Record<string, { left: number; top: number }> = {}
+    rendered.forEach((l, i) => {
+      byId[l.id] = { left: Math.round(leftOf(i)), top: Math.round(topOf[i] ?? 0) }
+    })
+    const ground = Math.round(groundRight)
+    const cols = rendered.map(
+      (l, i) => `${l.id}@${byId[l.id]!.left},${byId[l.id]!.top}${isCovered(i) ? "(cov)" : ""}`,
+    )
+    const sig = `${modeTag(mode)}|${immersed}|${hidden}|${ground}|${cols.join(" ")}|w${containerW}`
+    const prev = paintRef.current
+    if (prev?.sig === sig) return
+    const moved: string[] = []
+    if (prev && prev.engaged && engaged && prev.base === base) {
+      for (const [id, p] of Object.entries(prev.byId)) {
+        const n = byId[id]
+        if (n && (n.left !== p.left || n.top !== p.top))
+          moved.push(`${id}:${p.left},${p.top}→${n.left},${n.top}`)
+      }
+      if (prev.ground !== ground) moved.push(`ground:${prev.ground}→${ground}`)
+    }
+    paintRef.current = { engaged, base, ground, byId, sig }
+    clog(logTag, moved.length > 0 ? "!! ENGAGED-PAINT-MOVED" : "paint", {
+      mode: modeTag(mode),
+      ground,
+      hidden,
+      w: containerW,
+      cols,
+      ...(moved.length > 0 ? { moved } : {}),
+    })
+  })
 
   // AUTO-DISCLOSE + AUTO-COLLAPSE, one authority (see `useCascadePointerAuthority`). The MODEL
   // RECTS it queries are built from the layout this render painted — `leftOf`/`topOf`/`boxWidth`
@@ -2675,6 +2882,7 @@ function CascadingStack({
     getRegions: getRegionsRef,
     onExit: pointerExit,
     onEnter: onZoneEnter,
+    logTag,
   })
 
   // Rects for the DEBUG overlay only (never hit-testing — the authority queries the model fresh).
@@ -2950,10 +3158,14 @@ function CascadingStack({
       done()
       return
     }
+    clog(logTag, "exit-anim-start", { from, count: cols.length, staggerMs: exitStaggerMs })
     setExitTick((n) => n + 1) // restart the connector's measure loop so the lines retract WITH the menus
     let pending = cols.length
     const oneDone = () => {
-      if (--pending === 0) done()
+      if (--pending === 0) {
+        clog(logTag, "exit-anim-done")
+        done()
+      }
     }
     // `done` (the real clear) waits for the LAST menu, so the whole stack is gone before the levels
     // change and React unmounts the columns out from under the animation.
@@ -3106,17 +3318,32 @@ function CascadingStack({
                 onSelect={(id) => {
                   engageClick(i, captureBaseRef.current())
                   const plan = planRailSelect(level.selectedId ?? null, id)
-                  const hold = planRailHold({
+                  const itemDecl = level.items.find((it) => it.id === id)?.leadsTo
+                  const leadsTo = itemLeadsTo(level.leadsTo, itemDecl)
+                  // The log names WHERE the leafness came from — item / level / the `"detail"`
+                  // fail-safe — because an undeclared row that actually leads to a list is
+                  // indistinguishable from a real final choice everywhere else.
+                  clog(logTag, "rail-click", {
+                    col: i,
+                    level: level.id,
+                    row: id,
                     action: plan.action,
-                    leadsTo: itemLeadsTo(
-                      level.leadsTo,
-                      level.items.find((it) => it.id === id)?.leadsTo,
-                    ),
+                    collapse: plan.collapse,
+                    guarded: plan.guarded,
+                    leadsTo: `${leadsTo}(${
+                      itemDecl != null ? "item" : level.leadsTo != null ? "level" : "fail-safe"
+                    })`,
                   })
+                  const hold = planRailHold({ action: plan.action, leadsTo })
                   const navigate = () => {
-                    if (hold.release) releaseHold()
-                    else if (hold.capture) captureHold()
-                    else if (hold.finalChoice) armLeafSettle()
+                    clog(logTag, "rail-nav", {
+                      row: id,
+                      action: plan.action,
+                      hold: hold.release ? "release" : hold.capture ? "capture" : "final",
+                    })
+                    if (hold.release) releaseHold("rail-clear")
+                    else if (hold.capture) captureHold("rail-select")
+                    else if (hold.finalChoice) armLeafSettle(`rail-final:${id}`)
                     if (plan.action === "clear") level.onClear()
                     else level.onSelect(id)
                   }
@@ -3153,11 +3380,12 @@ function CascadingStack({
                 onClose={
                   i === frontier && !isRootList
                     ? () => {
+                        clog(logTag, "rail-close-x", { col: i, level: level.id })
                         engageClick(i - 1, captureBaseRef.current())
                         const parent = rendered[i - 1]!
                         // This ✕ is only ever on the frontier, so the branch here is this one menu.
                         attemptExit(() => {
-                          releaseHold()
+                          releaseHold("close-x")
                           exitBranch(i, () => parent.onClear())
                         })
                       }
