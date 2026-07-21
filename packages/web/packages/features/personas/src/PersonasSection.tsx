@@ -5,8 +5,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { readTokenSubject } from "@agentic-toolkit/data";
-import { HierarchicalDetailView, Field, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
+import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
+import { Label } from "@agentic-toolkit/ui/components/label";
+import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { slugify } from "@agentic-toolkit/ui/lib/slug";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
@@ -187,15 +190,20 @@ export function PersonasSection({
       </>
     );
 
-  // Create is a scoped modal: name + slug only (HTD recipe `must-create-in-modal`). Everything else
-  // — description, personality, purpose, avatar, abilities, permissions — lives in the full editor
-  // that opens once the created persona is selected. The backend accepts an empty purpose on create,
-  // so the persona exists immediately and the editor's Purpose facet guides completing it.
+  // Create is a scoped modal (HTD recipe `must-create-in-modal`): Name + Slug identify the persona;
+  // Description and Prompt are optional here and — like everything else (personality, avatar,
+  // abilities, permissions, and the model it runs on) — can be filled in the full editor that opens
+  // once the created persona is selected. `model` is a required column with no default, so create
+  // sends an empty string (as it does for the prompt): the persona exists immediately and the editor
+  // guides completing it.
   const newDialog = newOpen ? (
-    <CreateResourceDialog<{ name: string; slug: string }, Persona>
+    <CreateResourceDialog<
+      { name: string; slug: string; description: string; modelPrompt: string },
+      Persona
+    >
       ariaLabel="New persona"
       heading="New persona"
-      blank={() => ({ name: "", slug: "" })}
+      blank={() => ({ name: "", slug: "", description: "", modelPrompt: "" })}
       validate={(d) =>
         !d.name.trim()
           ? "A name is required."
@@ -203,9 +211,22 @@ export function PersonasSection({
             ? "A slug is required."
             : validateLeaf(d.slug) ?? null
       }
+      saveEnabled={(d) =>
+        d.name.trim() !== "" && d.slug.trim() !== "" && validateLeaf(d.slug) === null
+      }
       create={(d) =>
         api.personas.create(
-          { name: d.name.trim(), slug: d.slug.trim(), modelPrompt: "", visibility: "private" },
+          {
+            name: d.name.trim(),
+            slug: d.slug.trim(),
+            description: d.description.trim() || undefined,
+            modelPrompt: d.modelPrompt,
+            // `model` is a required (NOT NULL) column with no default and no field in this quick
+            // modal — send an empty string so the create validates; the real model is chosen later
+            // in the editor's LLM Settings.
+            model: "",
+            visibility: "private",
+          },
           { workspace: workspaceSlug },
         )
       }
@@ -216,9 +237,13 @@ export function PersonasSection({
         reload();
       }}
       renderForm={(draft, onChange, error) => (
-        <>
-          <Field label="Name">
+        <Card>
+          <CardContent className="grid grid-cols-[max-content_1fr] items-center gap-x-3 gap-y-5">
+            <Label htmlFor="new-persona-name" className="justify-self-end">
+              Name:
+            </Label>
             <Input
+              id="new-persona-name"
               /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
               autoFocus
               value={draft.name}
@@ -228,23 +253,59 @@ export function PersonasSection({
                 // Keep the slug synced to the name until the user hand-edits it (breaking the
                 // equality), after which name edits leave their chosen slug alone.
                 const keepInSync = draft.slug === "" || draft.slug === slugify(draft.name);
-                onChange({ name, slug: keepInSync ? slugify(name) : draft.slug });
+                onChange({ ...draft, name, slug: keepInSync ? slugify(name) : draft.slug });
               }}
             />
-          </Field>
-          <Field
-            label="Slug"
-            hint="URL-safe id (lowercase, digits, hyphens). The persona's public URL."
-            error={draft.slug ? validateLeaf(draft.slug) ?? undefined : undefined}
-          >
+
+            <Label htmlFor="new-persona-slug" className="justify-self-end">
+              Slug:
+            </Label>
             <Input
+              id="new-persona-slug"
               value={draft.slug}
               placeholder="bob"
-              onChange={(e) => onChange({ ...draft, slug: e.target.value })}
+              onChange={(e) => onChange({ ...draft, slug: e.target.value.toLowerCase() })}
             />
-          </Field>
-          {error && <p className="text-sm text-apt-red">{error}</p>}
-        </>
+            <div className="col-start-2 flex flex-col gap-1">
+              <span className="text-xs text-apt-text-muted">
+                URL-safe id (lowercase, digits, hyphens). The persona&apos;s public URL.
+              </span>
+              {draft.slug && validateLeaf(draft.slug) && (
+                <span className="text-xs text-apt-red">{validateLeaf(draft.slug)}</span>
+              )}
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-2">
+              <Label htmlFor="new-persona-description">Description:</Label>
+              <Textarea
+                id="new-persona-description"
+                rows={2}
+                placeholder="A one-line summary of this persona."
+                value={draft.description}
+                onChange={(e) => onChange({ ...draft, description: e.target.value })}
+              />
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-2">
+              <Label htmlFor="new-persona-prompt">Prompt:</Label>
+              <Textarea
+                id="new-persona-prompt"
+                rows={4}
+                placeholder="You are Bob, an expert at naming dogs…"
+                value={draft.modelPrompt}
+                onChange={(e) => onChange({ ...draft, modelPrompt: e.target.value })}
+              />
+            </div>
+
+            <p className="col-span-2 text-sm text-apt-text-muted">
+              Description and prompt are optional — you can add them later.
+            </p>
+
+            <div className="col-span-2">
+              <ErrorText error={error} />
+            </div>
+          </CardContent>
+        </Card>
       )}
     />
   ) : null;
