@@ -8,6 +8,12 @@
 export interface ProviderCatalogEntryRow {
   providerId: string;
   displayName: string;
+  /** Short one-line tagline shown under the display name. */
+  subtitle: string;
+  /** Longer marketing/help copy for the provider. */
+  description: string;
+  /** Related links (docs, sign-up, dashboard) rendered as anchors. */
+  links: { label: string; url: string }[];
   authMethod: "oauth" | "oauth_instance" | "plaid_link" | "api_key" | "app_password";
   serviceTypes: string[];
   /** read | write | auth */
@@ -31,6 +37,10 @@ export interface MaskedProviderConfigRow {
   /** Ecosystem id (the RLS owner) */
   ecosystemId: string;
   providerId: string;
+  /** Human-facing name for this config. */
+  name: string;
+  /** Resource id addressing this config (an `integration.*` rdid). */
+  rdid: string;
   /** Non-secret config: clientId, scopes, URLs, endpoints, credentialStyle */
   config: Record<string, unknown>;
   /** Whether a client secret is stored (the value is never returned) */
@@ -59,6 +69,11 @@ export interface ProviderConfigInputBody {
   /** api_key providers: false pauses the provider without deleting its secret. */
   enabled?: boolean;
 }
+
+/** The POST (create) body for a new provider config: names the target provider and
+ *  a human-facing config name, plus the same non-secret/secret input fields as the
+ *  PUT upsert body. */
+export type CreateProviderConfigBody = { providerId: string; name: string } & ProviderConfigInputBody;
 
 /** A caller's own connection (linked account), secrets redacted. */
 export interface SafeConnectionRow {

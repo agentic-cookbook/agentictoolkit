@@ -8,6 +8,9 @@ export const RDID_TYPE_TO_ENTITY_TYPE = {
   app: 'application',
   persona: 'persona',
   token: 'token',
+  // integration instances (integration_provider_configs) are rdid-addressed like apps/personas:
+  // `integration.<ecosystem-slug>.<name>` (entity_type 'integration'). Mirrors the backend map.
+  integration: 'integration',
 } as const;
 
 export type RdidType = keyof typeof RDID_TYPE_TO_ENTITY_TYPE;

@@ -22,6 +22,7 @@ import { enc } from "../client-helpers";
 import type {
   AuthUrlResultRow,
   ConnectRequestBody,
+  CreateProviderConfigBody,
   LinkTokenBodyType,
   MaskedProviderConfigRow,
   ProviderCatalogEntryRow,
@@ -45,6 +46,10 @@ export type MaskedProviderConfig = MaskedProviderConfigRow;
 /** The PUT (upsert) body for a provider config — a blank/absent
  *  `clientSecret` preserves the stored secret. */
 export type ProviderConfigInput = ProviderConfigInputBody;
+
+/** The POST (create) body for a new provider config — names the target provider
+ *  and a human-facing config name, plus the same input fields as the upsert body. */
+export type CreateProviderConfig = CreateProviderConfigBody;
 
 /** A caller's own connection (linked account), secrets redacted. */
 export type SafeConnection = SafeConnectionRow;
@@ -91,6 +96,10 @@ const configPath = (ecosystemId: string, providerId?: string) =>
     ? `${BASE}/ecosystems/${enc(ecosystemId)}/provider-configs/${enc(providerId)}`
     : `${BASE}/ecosystems/${enc(ecosystemId)}/provider-configs`;
 
+/** The id/rdid-addressed path for one provider config within an ecosystem. */
+const configByIdPath = (ecosystemId: string, configId: string) =>
+  `${BASE}/ecosystems/${enc(ecosystemId)}/provider-configs/${enc(configId)}`;
+
 export const integrationsApi = {
   /** The provider catalog — every provider the platform can integrate. */
   async listProviders(): Promise<ProviderCatalogEntry[]> {
@@ -136,6 +145,52 @@ export const integrationsApi = {
 
   async deleteProviderConfig(ecosystemId: string, providerId: string): Promise<void> {
     await authedRequest(configPath(ecosystemId, providerId), { method: "DELETE" });
+  },
+
+  // ── id/rdid-addressed provider-config CRUD ───────────────────────────────────
+
+  /** Create a new provider config under the ecosystem. POSTs to the collection path
+   *  with a `providerId` + `name` and the config input fields; returns the masked row. */
+  async createProviderConfig(
+    ecosystemId: string,
+    body: CreateProviderConfigBody,
+  ): Promise<MaskedProviderConfig> {
+    return authedJson<MaskedProviderConfig>(configPath(ecosystemId), {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** One masked config addressed by its id/rdid, or null when it doesn't exist
+   *  (backend 404). */
+  async getProviderConfigById(
+    ecosystemId: string,
+    configId: string,
+  ): Promise<MaskedProviderConfig | null> {
+    try {
+      return await authedJson<MaskedProviderConfig>(configByIdPath(ecosystemId, configId));
+    } catch (err) {
+      if (isNotFound(err)) return null;
+      throw err;
+    }
+  },
+
+  /** Update an existing provider config addressed by its id/rdid. A blank/absent
+   *  `clientSecret` in `body` preserves the stored secret. Returns the masked row. */
+  async updateProviderConfig(
+    ecosystemId: string,
+    configId: string,
+    body: ProviderConfigInput & { name?: string },
+  ): Promise<MaskedProviderConfig> {
+    return authedJson<MaskedProviderConfig>(configByIdPath(ecosystemId, configId), {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** Delete a provider config addressed by its id/rdid. */
+  async deleteProviderConfigById(ecosystemId: string, configId: string): Promise<void> {
+    await authedRequest(configByIdPath(ecosystemId, configId), { method: "DELETE" });
   },
 
   // ── connections (linked accounts for the caller's active ecosystem) ──────────
