@@ -109,7 +109,7 @@ export function PermissionsPanel({ personaId }: { personaId: string }) {
       <FieldGroup
         title="Permissions"
         trailing={renderRecordAffordance?.({
-          path: "/registry/personas/{id}/may-act",
+          path: "/access/personas/{id}/may-act",
           pathValues: { id: personaId },
           title: "Persona permissions API",
         })}

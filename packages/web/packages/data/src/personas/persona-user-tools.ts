@@ -20,17 +20,17 @@ type SetAllowedResult = UserToolListRow;
 
 export const personaUserToolsApi = {
   async listActable(): Promise<UserActablePersona[]> {
-    const body = await authedJson<UserActableList>("/api/registry/personas/user-actable");
+    const body = await authedJson<UserActableList>("/api/access/personas/user-actable");
     return body.personas;
   },
   async listTools(personaId: string): Promise<UserTool[]> {
-    const body = await authedJson<UserToolList>(`/api/registry/personas/${enc(personaId)}/user-tools`);
+    const body = await authedJson<UserToolList>(`/api/access/personas/${enc(personaId)}/user-tools`);
     return body.tools;
   },
   async setAllowed(personaId: string, allowed: string[]): Promise<UserTool[]> {
     const input: SetAllowedBody = { allowed };
     const body = await authedJson<SetAllowedResult>(
-      `/api/registry/personas/${enc(personaId)}/user-tools`,
+      `/api/access/personas/${enc(personaId)}/user-tools`,
       { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
     );
     return body.tools;

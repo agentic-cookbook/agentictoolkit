@@ -27,9 +27,15 @@ const grant = vi.mocked(personaToolsApi.grant);
 const revoke = vi.mocked(personaToolsApi.revoke);
 const setAutonomy = vi.mocked(personaToolsApi.setAutonomy);
 
+// Most mocks below carry displayName === toolName (+ empty description): the fail-soft state a
+// tool with no catalog row renders in, which keeps each row's accessible name equal to its tool
+// name so the `box(toolName)` queries below stay stable. Rich displayName/description rendering
+// gets its own dedicated test.
 const SEARCH_THREADS: ToolCatalogItem = {
   toolName: "searchThreads",
   source: null,
+  displayName: "searchThreads",
+  description: "",
   readOnly: true,
   granted: false,
   autonomous: false,
@@ -37,6 +43,8 @@ const SEARCH_THREADS: ToolCatalogItem = {
 const WEB_SEARCH: ToolCatalogItem = {
   toolName: "web.search",
   source: "web",
+  displayName: "web.search",
+  description: "",
   readOnly: true,
   granted: true,
   autonomous: false,
@@ -48,6 +56,8 @@ const CATALOG: ToolCatalogItem[] = [SEARCH_THREADS, WEB_SEARCH];
 const ALPHA: ToolCatalogItem = {
   toolName: "alpha",
   source: null,
+  displayName: "alpha",
+  description: "",
   readOnly: true,
   granted: false,
   autonomous: false,
@@ -55,6 +65,8 @@ const ALPHA: ToolCatalogItem = {
 const BETA: ToolCatalogItem = {
   toolName: "beta",
   source: null,
+  displayName: "beta",
+  description: "",
   readOnly: true,
   granted: false,
   autonomous: false,
@@ -64,6 +76,8 @@ const BETA: ToolCatalogItem = {
 const TOOL_A: ToolCatalogItem = {
   toolName: "toolA",
   source: null,
+  displayName: "toolA",
+  description: "",
   readOnly: true,
   granted: false,
   autonomous: false,
@@ -71,6 +85,8 @@ const TOOL_A: ToolCatalogItem = {
 const TOOL_B: ToolCatalogItem = {
   toolName: "toolB",
   source: null,
+  displayName: "toolB",
+  description: "",
   readOnly: true,
   granted: false,
   autonomous: false,
@@ -97,6 +113,26 @@ const isDisabled = (el: HTMLElement) =>
   el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true";
 
 describe("AbilitiesPanel", () => {
+  it("renders the human displayName + description, demoting the raw tool name to a mono caption", async () => {
+    const rich: ToolCatalogItem = {
+      toolName: "dataKvSet",
+      source: null,
+      displayName: "Save a value",
+      description: "Store a value under a key for the current user.",
+      readOnly: false,
+      granted: false,
+      autonomous: false,
+    };
+    list.mockResolvedValue([rich]);
+    render(<AbilitiesPanel personaId="p1" />);
+    // The human copy leads and is the checkbox's accessible name…
+    await screen.findByText("Save a value");
+    expect(screen.getByRole("checkbox", { name: "Save a value" })).not.toBeNull();
+    expect(screen.getByText("Store a value under a key for the current user.")).not.toBeNull();
+    // …and the raw camelCase tool name is still present (demoted caption), never hidden.
+    expect(screen.getByText("dataKvSet")).not.toBeNull();
+  });
+
   it("renders a catalog row per tool for the given persona", async () => {
     render(<AbilitiesPanel personaId="p1" />);
     await screen.findByRole("checkbox", { name: "searchThreads" });
@@ -286,6 +322,8 @@ describe("AbilitiesPanel", () => {
     const staleMcp: ToolCatalogItem = {
       toolName: "mcp.acme.doThing",
       source: "mcp.acme",
+      displayName: "mcp.acme.doThing",
+      description: "",
       readOnly: false,
       granted: true,
       autonomous: false,
@@ -293,6 +331,8 @@ describe("AbilitiesPanel", () => {
     const staleIntegration: ToolCatalogItem = {
       toolName: "integration.gmail.conn123.sendEmail",
       source: "integration.gmail.conn123",
+      displayName: "integration.gmail.conn123.sendEmail",
+      description: "",
       readOnly: false,
       granted: true,
       autonomous: false,

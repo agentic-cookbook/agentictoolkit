@@ -202,19 +202,33 @@ export function AssistantsPanel() {
                         {rows.map((tool) => {
                           const rowId = `${rowIdPrefix}-${tool.toolName}`;
                           return (
-                            <ListItem key={tool.toolName}>
+                            <ListItem key={tool.toolName} className="items-start">
                               <Checkbox
                                 id={rowId}
                                 checked={tool.allowed}
                                 disabled={busy}
                                 onCheckedChange={(checked) => toggleTool(tool, checked)}
+                                aria-label={`allow ${tool.displayName || tool.toolName}`}
                               />
-                              <label
-                                htmlFor={rowId}
-                                className="min-w-0 flex-1 font-mono text-sm text-apt-text"
-                              >
-                                {tool.toolName}
-                              </label>
+                              {/* Human-readable label leads (the checkbox's accessible name); the
+                                  description + raw mono tool name are demoted siblings OUTSIDE the
+                                  label. displayName falls back to toolName for an uncataloged tool. */}
+                              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                <label htmlFor={rowId} className="text-sm text-apt-text">
+                                  {tool.displayName || tool.toolName}
+                                </label>
+                                {tool.description && (
+                                  <span className="text-[0.75rem] text-apt-text-muted">
+                                    {tool.description}
+                                  </span>
+                                )}
+                                <span
+                                  className="font-mono text-[0.7rem] text-apt-text-dim"
+                                  title={tool.toolName}
+                                >
+                                  {tool.toolName}
+                                </span>
+                              </div>
                             </ListItem>
                           );
                         })}

@@ -1,6 +1,6 @@
-// Persona ability + permission-grant API client — the hand-written /registry/personas/:id/tools
-// (Abilities: grant/revoke/autonomy), /registry/personas/:id/may-act (Permissions: context grants),
-// and /registry/personas/approvals (Permissions: the human-in-the-loop decision queue) routes.
+// Persona ability + permission-grant API client — the hand-written /access/personas/:id/tools
+// (Abilities: grant/revoke/autonomy), /access/personas/:id/may-act (Permissions: context grants),
+// and /processing/personas/approvals (Permissions: the human-in-the-loop decision queue) routes.
 // All are hand-written, NOT generic CRUD; typed via package-local wire types mirroring the
 // OpenAPI-derived backend schema (see ./wire) so a backend contract change breaks the
 // type-check here rather than at runtime.
@@ -34,19 +34,19 @@ export const personaApprovalsApi = {
     const query = personaId
       ? `status=${enc(status)}&personaId=${enc(personaId)}`
       : `status=${enc(status)}`;
-    const body = await authedJson<ApprovalList>(`/api/registry/personas/approvals?${query}`);
+    const body = await authedJson<ApprovalList>(`/api/processing/personas/approvals?${query}`);
     return body.approvals;
   },
   async approve(id: string): Promise<Approval> {
     const body = await authedJson<{ approval: Approval }>(
-      `/api/registry/personas/approvals/${enc(id)}/approve`,
+      `/api/processing/personas/approvals/${enc(id)}/approve`,
       { method: "POST" },
     );
     return body.approval;
   },
   async reject(id: string): Promise<Approval> {
     const body = await authedJson<{ approval: Approval }>(
-      `/api/registry/personas/approvals/${enc(id)}/reject`,
+      `/api/processing/personas/approvals/${enc(id)}/reject`,
       { method: "POST" },
     );
     return body.approval;
@@ -61,7 +61,7 @@ export type MayActGrantableKind = "user" | "team";
 
 export const personaMayActApi = {
   async list(personaId: string): Promise<MayActKind[]> {
-    const body = await authedJson<MayActList>(`/api/registry/personas/${enc(personaId)}/may-act`);
+    const body = await authedJson<MayActList>(`/api/access/personas/${enc(personaId)}/may-act`);
     return body.kinds;
   },
   // `kind`-parameterized grant/revoke (#12) — collapses the former grantUser/grantTeam and
@@ -69,35 +69,35 @@ export const personaMayActApi = {
   async grant(personaId: string, kind: MayActGrantableKind): Promise<MayActKind[]> {
     const input: MayActGrantBody = { kind };
     const body = await authedJson<MayActList>(
-      `/api/registry/personas/${enc(personaId)}/may-act`,
+      `/api/access/personas/${enc(personaId)}/may-act`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
     );
     return body.kinds;
   },
   async revoke(personaId: string, kind: MayActGrantableKind): Promise<void> {
-    await authedRequest(`/api/registry/personas/${enc(personaId)}/may-act/${kind}`, { method: "DELETE" });
+    await authedRequest(`/api/access/personas/${enc(personaId)}/may-act/${kind}`, { method: "DELETE" });
   },
 };
 
 export const personaToolsApi = {
   async list(personaId: string): Promise<ToolCatalogItem[]> {
-    const body = await authedJson<ToolCatalogList>(`/api/registry/personas/${enc(personaId)}/tools`);
+    const body = await authedJson<ToolCatalogList>(`/api/access/personas/${enc(personaId)}/tools`);
     return body.tools;
   },
   async grant(personaId: string, toolName: string): Promise<ToolCatalogItem> {
     const body = await authedJson<GrantToolResult>(
-      `/api/registry/personas/${enc(personaId)}/tools`,
+      `/api/access/personas/${enc(personaId)}/tools`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toolName }) },
     );
     return body.tool;
   },
   async revoke(personaId: string, toolName: string): Promise<void> {
-    await authedRequest(`/api/registry/personas/${enc(personaId)}/tools/${enc(toolName)}`, { method: "DELETE" });
+    await authedRequest(`/api/access/personas/${enc(personaId)}/tools/${enc(toolName)}`, { method: "DELETE" });
   },
   async setAutonomy(personaId: string, toolName: string, autonomous: boolean): Promise<ToolGrant> {
     const input: SetAutonomyBody = { autonomous };
     const body = await authedJson<SetAutonomyResult>(
-      `/api/registry/personas/${enc(personaId)}/tools/${enc(toolName)}`,
+      `/api/access/personas/${enc(personaId)}/tools/${enc(toolName)}`,
       { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
     );
     return body.tool;

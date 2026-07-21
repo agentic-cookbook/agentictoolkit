@@ -76,7 +76,7 @@ export function AbilitiesPanel({ personaId }: { personaId: string }) {
     <FieldGroup
       title="Abilities"
       trailing={renderRecordAffordance?.({
-        path: "/registry/personas/{id}/tools",
+        path: "/access/personas/{id}/tools",
         pathValues: { id: personaId },
         title: "Persona tools API",
       })}
@@ -102,22 +102,36 @@ export function AbilitiesPanel({ personaId }: { personaId: string }) {
                   return (
                     <li
                       key={tool.toolName}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-apt-border p-3"
+                      className="flex items-start justify-between gap-3 rounded-lg border border-apt-border p-3"
                     >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <div className="flex min-w-0 flex-1 items-start gap-2">
                         <Checkbox
                           id={rowId}
                           checked={tool.granted}
                           disabled={rowBusy}
                           onCheckedChange={(checked) => toggleGrant(tool, checked)}
-                          aria-label={`grant ${tool.toolName}`}
+                          aria-label={`grant ${tool.displayName || tool.toolName}`}
                         />
-                        <label
-                          htmlFor={rowId}
-                          className="min-w-0 flex-1 font-mono text-sm text-apt-text"
-                        >
-                          {tool.toolName}
-                        </label>
+                        {/* Human-readable label leads (the checkbox's accessible name); the
+                            description + raw mono tool name are demoted siblings OUTSIDE the label
+                            so the row reads as product copy, not an identifier. displayName falls
+                            back to toolName for an uncataloged tool. */}
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <label htmlFor={rowId} className="text-sm text-apt-text">
+                            {tool.displayName || tool.toolName}
+                          </label>
+                          {tool.description && (
+                            <span className="text-[0.75rem] text-apt-text-muted">
+                              {tool.description}
+                            </span>
+                          )}
+                          <span
+                            className="font-mono text-[0.7rem] text-apt-text-dim"
+                            title={tool.toolName}
+                          >
+                            {tool.toolName}
+                          </span>
+                        </div>
                       </div>
                       {tool.granted && (
                         <div className="flex shrink-0 items-center gap-2">

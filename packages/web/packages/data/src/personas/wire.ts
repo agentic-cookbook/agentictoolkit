@@ -1,8 +1,10 @@
 // Wire types for the personas domain — package-local mirrors of the OpenAPI-generated
 // request/response shapes the hub previously imported as `RequestBody`/`SuccessBody` from
-// `@adh-shared/api-types` (for /registry/personas/*). These carry full backend-schema
-// fidelity (not just the fields today's call sites touch) so the toolkit stays decoupled
-// from the hub's generated types without narrowing what a caller can rely on.
+// `@adh-shared/api-types`. The persona GRANT surfaces (tools/user-tools/may-act) now live under
+// `/access/personas/*`, approvals under `/processing/personas/*`, token-mint under
+// `/persona/personas/*` (moved out of the old `/registry/personas/*` base by the schema reorg).
+// These carry full backend-schema fidelity (not just the fields today's call sites touch) so the
+// toolkit stays decoupled from the hub's generated types without narrowing what a caller can rely on.
 
 /** A persona-action approval row (the human-in-the-loop decision queue). */
 export interface ApprovalRow {
@@ -35,6 +37,10 @@ export interface ToolCatalogItemRow {
   toolName: string;
   /** null for curated internal tools; else the source id (e.g. "web", "mcp.<server>") */
   source: string | null;
+  /** human-readable label from the tool catalog; falls back to `toolName` when uncataloged */
+  displayName: string;
+  /** human-readable description from the tool catalog; '' when uncataloged */
+  description: string;
   readOnly: boolean;
   /** true iff this persona currently holds the tool */
   granted: boolean;
@@ -84,6 +90,10 @@ export interface UserToolRow {
   toolName: string;
   /** null for curated internal tools; else the source id (e.g. "web", "mcp.<server>") */
   source: string | null;
+  /** human-readable label from the tool catalog; falls back to `toolName` when uncataloged */
+  displayName: string;
+  /** human-readable description from the tool catalog; '' when uncataloged */
+  description: string;
   readOnly: boolean;
   /** true iff the calling user has allowed the persona to invoke this tool for them */
   allowed: boolean;

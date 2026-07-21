@@ -28,9 +28,25 @@ const setAllowed = vi.mocked(personaUserToolsApi.setAllowed);
 const PERSONAS: UserActablePersona[] = [{ id: "a1", slug: "bit", name: "Bitbag" }];
 
 // An ungranted-by-me built-in and a web tool I already allow — so the checklist shows both
-// an off and an on toggle (default off).
-const SEARCH: UserTool = { toolName: "searchThreads", source: null, readOnly: true, allowed: false };
-const WEB: UserTool = { toolName: "web.search", source: "web", readOnly: true, allowed: true };
+// an off and an on toggle (default off). displayName === toolName (+ empty description) is the
+// fail-soft state that keeps each row's accessible name equal to its tool name, so the
+// `box(toolName)` queries stay stable; rich copy rendering has its own dedicated test.
+const SEARCH: UserTool = {
+  toolName: "searchThreads",
+  source: null,
+  displayName: "searchThreads",
+  description: "",
+  readOnly: true,
+  allowed: false,
+};
+const WEB: UserTool = {
+  toolName: "web.search",
+  source: "web",
+  displayName: "web.search",
+  description: "",
+  readOnly: true,
+  allowed: true,
+};
 const TOOLS: UserTool[] = [SEARCH, WEB];
 
 beforeEach(() => {
@@ -83,6 +99,28 @@ describe("AssistantsPanel", () => {
     // Default off: the ungranted-by-me built-in is unchecked; the one I allow is checked.
     expect(box("searchThreads").getAttribute("aria-checked")).toBe("false");
     expect(box("web.search").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("renders the human displayName + description, demoting the raw tool name to a mono caption", async () => {
+    listTools.mockResolvedValue([
+      {
+        toolName: "dataKvSet",
+        source: null,
+        displayName: "Save a value",
+        description: "Store a value under a key for the current user.",
+        readOnly: false,
+        allowed: false,
+      },
+    ]);
+    render(<AssistantsPanel />);
+    await screen.findByRole("option", { name: "Bitbag" });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "a1" } });
+    // The human copy leads and is the checkbox's accessible name…
+    await screen.findByText("Save a value");
+    expect(screen.getByRole("checkbox", { name: "Save a value" })).not.toBeNull();
+    expect(screen.getByText("Store a value under a key for the current user.")).not.toBeNull();
+    // …and the raw camelCase tool name is still present (demoted caption), never hidden.
+    expect(screen.getByText("dataKvSet")).not.toBeNull();
   });
 
   it("ticking an unchecked tool PUTs the new allowed set with it added", async () => {
@@ -153,8 +191,8 @@ describe("AssistantsPanel", () => {
     // Both tools start allowed, so unticking one must leave a NON-empty reduced set (proving the
     // payload is the derived remaining set, not a blanket all-off).
     const BOTH_ON: UserTool[] = [
-      { toolName: "searchThreads", source: null, readOnly: true, allowed: true },
-      { toolName: "web.search", source: "web", readOnly: true, allowed: true },
+      { toolName: "searchThreads", source: null, displayName: "searchThreads", description: "", readOnly: true, allowed: true },
+      { toolName: "web.search", source: "web", displayName: "web.search", description: "", readOnly: true, allowed: true },
     ];
     listTools.mockResolvedValue(structuredClone(BOTH_ON));
     setAllowed.mockImplementation(async (_id: string, allowed: string[]) =>
@@ -181,10 +219,10 @@ describe("AssistantsPanel", () => {
     ];
     listActable.mockResolvedValue(structuredClone(TWO));
     const A1_TOOLS: UserTool[] = [
-      { toolName: "onlyA1", source: null, readOnly: true, allowed: false },
+      { toolName: "onlyA1", source: null, displayName: "onlyA1", description: "", readOnly: true, allowed: false },
     ];
     const A2_TOOLS: UserTool[] = [
-      { toolName: "onlyA2", source: null, readOnly: true, allowed: false },
+      { toolName: "onlyA2", source: null, displayName: "onlyA2", description: "", readOnly: true, allowed: false },
     ];
     // a1's list stays pending until we release it; a2's resolves immediately.
     let resolveA1: (() => void) | undefined;
