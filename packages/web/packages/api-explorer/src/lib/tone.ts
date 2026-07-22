@@ -22,6 +22,14 @@ export function methodBadgeClass(method: string): string {
   return METHOD_BADGE[method] ?? 'text-apt-text-muted border-apt-border'
 }
 
+/** The method's text-color class ALONE — the leading `text-apt-*` token of {@link methodBadgeClass},
+ *  no border. For anything that wants the method tint without the badge chrome (a rail glyph, an
+ *  inline label): it reads from the same METHOD_BADGE palette, so it can never drift from the badge
+ *  and a re-theme still touches only the map above. */
+export function methodTextClass(method: string): string {
+  return methodBadgeClass(method).split(' ')[0]!
+}
+
 export function methodDotClass(method: string): string {
   return METHOD_DOT[method] ?? 'bg-apt-text-dim'
 }

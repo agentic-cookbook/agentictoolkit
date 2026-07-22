@@ -14,3 +14,8 @@ export type { StaticCodeBlockProps } from './StaticCodeBlock'
 export { endpointSlug, endpointForSlug, allEndpoints } from './lib/slug'
 export { allTags, endpointsForTag, getEndpoint, endpointKey } from './lib/getEndpoint'
 export type { EndpointMeta, EndpointRef } from './types'
+
+// The authoritative HTTP-method palette (pure string helpers), so a consumer that renders its own
+// method-tinted affordance — e.g. a per-method rail glyph — reads the method color from the same
+// source as this package's method badge instead of mirroring it.
+export { methodTextClass } from './lib/tone'
