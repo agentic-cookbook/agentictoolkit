@@ -24,9 +24,14 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
     private let queue = DispatchQueue(label: "GRDBSyncStore")
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    /// Resources this host may pull but never push. `stage(_:)` refuses them
+    /// up front with `SyncStoreFailure.pullOnlyResource` (twin of
+    /// `InMemorySyncStore.pullOnlyResources`).
+    private let pullOnlyResources: Set<String>
 
-    public init(database: BoundedDatabase) {
+    public init(database: BoundedDatabase, pullOnlyResources: Set<String> = []) {
         self.boundedDatabase = database
+        self.pullOnlyResources = pullOnlyResources
     }
 
     public var database: BoundedDatabase { boundedDatabase }
@@ -183,6 +188,12 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
     /// against a mirror table that was never created (sync fix-wave item
     /// p2o).
     public func stage(_ mutation: LocalMutation) async throws {
+        // Pull-only guard first, before any DB work — twin-identical ordering
+        // to InMemorySyncStore.stage (pull-only refusal precedes the
+        // unknown-resource check).
+        guard !pullOnlyResources.contains(mutation.resource) else {
+            throw SyncStoreFailure.pullOnlyResource(mutation.resource)
+        }
         let boundedDatabase = self.boundedDatabase
         let encoder = self.encoder
         let decoder = self.decoder
@@ -382,6 +393,55 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                     try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
                 }
                 try conn.execute(sql: "DELETE FROM _sync_state")
+            }
+        }
+    }
+
+    /// resource -> registered schema_version, the twin of
+    /// `InMemorySyncStore.registrations()`. Bootstraps the bookkeeping schema
+    /// first (same cold-start rationale as `cursor()`): on a never-prepared
+    /// store this returns `[:]` rather than throwing "no such table:
+    /// _sync_resources".
+    public func registrations() async throws -> [String: Int] {
+        let boundedDatabase = self.boundedDatabase
+        return try await onQueue {
+            try boundedDatabase.write { conn in
+                try conn.execute(sql: Self.bookkeepingSchema)
+                var out: [String: Int] = [:]
+                let rows = try Row.fetchAll(
+                    conn, sql: "SELECT resource, schema_version FROM _sync_resources")
+                for row in rows { out[row["resource"]] = row["schema_version"] }
+                return out
+            }
+        }
+    }
+
+    /// Enrollment-disable transition (twin of
+    /// `InMemorySyncStore.purgeResources`): for each named resource, empty its
+    /// mirror table, move its `pending`/`inflight` outbox ops to
+    /// `quarantined` (never dropped — a fixed retry must re-`stage` for a
+    /// fresh opId; already-`quarantined`/completed rows untouched), and remove
+    /// its registration. The cursor (`_sync_state`) is deliberately left
+    /// untouched. Like the other recovery paths this only ever `DELETE`s rows
+    /// — it never drops a table or touches the database file.
+    public func purgeResources(_ resources: [String]) async throws {
+        guard !resources.isEmpty else { return }
+        let boundedDatabase = self.boundedDatabase
+        try await onQueue {
+            try boundedDatabase.write { conn in
+                for resource in resources {
+                    try conn.execute(
+                        sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
+                    try conn.execute(
+                        sql: """
+                            UPDATE _sync_outbox SET status = 'quarantined'
+                            WHERE resource = ? AND status IN ('pending', 'inflight')
+                            """,
+                        arguments: [resource])
+                    try conn.execute(
+                        sql: "DELETE FROM _sync_resources WHERE resource = ?",
+                        arguments: [resource])
+                }
             }
         }
     }

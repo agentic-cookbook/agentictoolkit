@@ -18,8 +18,8 @@ final class GRDBSyncStoreTests: XCTestCase {
         }
     }
 
-    private func makeStore() throws -> GRDBSyncStore {
-        GRDBSyncStore(database: try BoundedDatabase(path: path))
+    private func makeStore(pullOnlyResources: Set<String> = []) throws -> GRDBSyncStore {
+        GRDBSyncStore(database: try BoundedDatabase(path: path), pullOnlyResources: pullOnlyResources)
     }
 
     private let notes = SyncResource(resource: "personal.notes", schemaVersion: 1)
@@ -335,6 +335,44 @@ final class GRDBSyncStoreTests: XCTestCase {
         let opsAfterPurge = try await store.pendingOps(limit: 10)
         XCTAssertEqual(opsAfterPurge.count, 1)
         XCTAssertEqual(opsAfterPurge[0].rowId, "r3")
+    }
+
+    func testStageRefusesPullOnlyResource() async throws {
+        let store = try makeStore(pullOnlyResources: ["social.follows"])
+        try await store.prepare(resources: [SyncResource(resource: "social.follows", schemaVersion: 1)])
+        do {
+            try await store.stage(LocalMutation(
+                resource: "social.follows", rowId: "r1", type: .upsert, data: [:]))
+            XCTFail("expected pullOnlyResource")
+        } catch SyncStoreFailure.pullOnlyResource(let resource) {
+            XCTAssertEqual(resource, "social.follows")
+        }
+    }
+
+    func testRegistrationsAndPurgeResources() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [
+            SyncResource(resource: "a.x", schemaVersion: 1),
+            SyncResource(resource: "b.y", schemaVersion: 2)
+        ])
+        try await store.apply([
+            SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:]),
+            SyncChange(resource: "b.y", id: "2", op: .upsert, syncVersion: "1", data: [:])
+        ], advancingTo: SyncCursor(rawValue: "c1"))
+        try await store.stage(LocalMutation(resource: "a.x", rowId: "1", type: .upsert, data: [:]))
+        let regsBefore = try await store.registrations()
+        XCTAssertEqual(regsBefore, ["a.x": 1, "b.y": 2])
+
+        try await store.purgeResources(["a.x"])
+        XCTAssertEqual(try store.liveRows(resource: "b.y").count, 1)
+        XCTAssertThrowsError(try store.liveRows(resource: "a.x"))   // deregistered
+        let pendingAfter = try await store.pendingOps(limit: 10)
+        XCTAssertTrue(pendingAfter.isEmpty)
+        XCTAssertEqual(try store.status().quarantinedDepth, 1)
+        let regsAfter = try await store.registrations()
+        XCTAssertEqual(regsAfter.keys.sorted(), ["b.y"])
+        let cursorAfter = try await store.cursor()
+        XCTAssertEqual(cursorAfter?.rawValue, "c1")     // cursor untouched
     }
 }
 
