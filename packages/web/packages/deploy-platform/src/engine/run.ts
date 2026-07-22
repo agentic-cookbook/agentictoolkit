@@ -36,7 +36,10 @@ export interface StatusAddApi {
   listAllEndpoints(): Promise<EndpointLite[]>;
   updateEndpoint(id: string, body: Record<string, unknown>): Promise<unknown>;
   createSite(body: { name: string; slug: string; groupId: string }): Promise<{ id: string }>;
-  createEndpoint(siteId: string, body: Record<string, unknown>): Promise<unknown>;
+  // Returns the CREATED endpoint as an `EndpointLite` — the adapter maps whatever the
+  // server returns (a full endpoint row) onto the lite view. Its REAL server id is what
+  // later intra-run variants chain against, so it must be the actual id, not synthesized.
+  createEndpoint(siteId: string, body: Record<string, unknown>): Promise<EndpointLite>;
   // Only used to ROLL BACK a just-created site when its endpoint fails to create —
   // so a half-made (endpoint-less) site can't strand the project (its slug would
   // 409 every future retry). Never used to delete a site that already has endpoints.
@@ -100,23 +103,6 @@ interface Working {
   endpoints: EndpointLite[];
 }
 
-// The created endpoint reflected into the working snapshot from the PLAN — the injected
-// `createEndpoint` returns `unknown`, so we rebuild the lite view from what we asked for.
-// Chaining only needs siteId + platform + deployProject + a wireable kind so a later
-// variant of the same project resolves onto this same site; the synthetic id just has to
-// avoid aliasing a real endpoint's wiring target (real ids are never `created:*`).
-function reflectCreated(siteId: string, plan: { url: string; environment: string; platform: string; deployProject: string }): EndpointLite {
-  return {
-    id: `created:${siteId}:${plan.url}`,
-    siteId,
-    url: plan.url,
-    kind: "frontend", // a deploy-backed (wireable) kind, so a later same-project variant groups here
-    environment: plan.environment,
-    platform: plan.platform,
-    deployProject: plan.deployProject,
-  };
-}
-
 /** Match one deploy project to the EXISTING site that monitors its domain and wire it
  *  (set platform + deployProject). When `create` is supplied, a project no site
  *  monitors is also turned into a new endpoint (on the site that owns its apex) or a
@@ -139,10 +125,11 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
   // (no `create`) leaves it for the operator; with `create` we add the monitor.
   if (!create) return { kind: "skipped", reason: "no site monitors this domain yet" };
   if (plan.kind === "add-endpoint") {
-    await api.createEndpoint(plan.siteId, { url: plan.url, environment: plan.environment, platform: plan.platform, deployProject: plan.deployProject });
-    // Reflect the new endpoint in the working snapshot so a later project's variant
-    // (e.g. this project's staging host) sees it and resolves against the same site.
-    working.endpoints = [...working.endpoints, reflectCreated(plan.siteId, plan)];
+    const ep = await api.createEndpoint(plan.siteId, { url: plan.url, environment: plan.environment, platform: plan.platform, deployProject: plan.deployProject });
+    // Reflect the new endpoint (with its real server id) in the working snapshot so a
+    // later project's variant (e.g. this project's staging host) sees it and resolves
+    // against the same site.
+    working.endpoints = [...working.endpoints, ep];
     return { kind: "created" };
   }
   // new-site: nobody owns the apex → create the site, then its endpoint. If the
@@ -150,13 +137,14 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
   // useless, its (group, slug) would 409 every future Auto Configure run and strand
   // the project permanently. Rolling back lets the next run re-create it cleanly.
   const site = await api.createSite({ name: plan.siteName, slug: plan.siteSlug, groupId: create.groupId });
+  let ep: EndpointLite;
   try {
-    await api.createEndpoint(site.id, { url: plan.url, environment: plan.environment, platform: plan.platform, deployProject: plan.deployProject });
+    ep = await api.createEndpoint(site.id, { url: plan.url, environment: plan.environment, platform: plan.platform, deployProject: plan.deployProject });
   } catch (e) {
     await api.deleteSite(site.id).catch(() => {}); // best-effort rollback; report the original failure
     throw e;
   }
-  working.endpoints = [...working.endpoints, reflectCreated(site.id, plan)];
+  working.endpoints = [...working.endpoints, ep];
   return { kind: "created" };
 }
 
