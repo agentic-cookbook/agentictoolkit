@@ -64,6 +64,13 @@ final class SyncEngineGRDBIntegrationTests: XCTestCase {
         await transport.enqueuePush(.success(SyncPushResponse(
             results: [SyncPushResult(opId: createOpId ?? "", status: .applied)], watermark: "1"
         )))
+        // personal.notes stays enrolled for the second cycle too: hand its pull
+        // the manifest it means, so reconciliation doesn't read the empty-script
+        // default (manifest: []) as "disabled" and purge the row + quarantine the
+        // coalesced op this test is about to push.
+        await transport.enqueuePull(
+            .success(SyncPullResponse(manifest: [notes], changes: [], cursor: "c1", hasMore: false))
+        )
 
         // Second cycle: pushes the (coalesced) outbox.
         await engine.syncNow(reason: .manual)

@@ -54,7 +54,16 @@ final class SyncEngineTests: XCTestCase {
             "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(9),
             "sync_stamped_at": .string("2026-07-16T00:00:00Z"), "deleted_at": .null
         ]
-        let transport = ScriptedSyncTransport(pushes: [
+        // personal.notes stays enrolled for this push cycle: hand the pull the
+        // manifest it means, so reconciliation doesn't read ScriptedSyncTransport's
+        // empty-script default (manifest: []) as "everything disabled" and purge
+        // the prepared resource out from under the push assertions.
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
+                changes: [], cursor: "c0", hasMore: false
+            ))
+        ], pushes: [
             .success(SyncPushResponse(
                 results: [
                     SyncPushResult(
@@ -83,7 +92,16 @@ final class SyncEngineTests: XCTestCase {
             LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("mine")])
         )
         let ops = try await store.pendingOps(limit: 10)
-        let transport = ScriptedSyncTransport(pushes: [
+        // personal.notes stays enrolled for this push cycle: hand the pull the
+        // manifest it means, so reconciliation doesn't read ScriptedSyncTransport's
+        // empty-script default (manifest: []) as "everything disabled" and purge
+        // the prepared resource out from under the push assertions.
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
+                changes: [], cursor: "c0", hasMore: false
+            ))
+        ], pushes: [
             .success(SyncPushResponse(
                 results: [
                     SyncPushResult(opId: ops[0].opId, status: .conflict, reason: "server_row_missing", current: nil)
@@ -111,7 +129,16 @@ final class SyncEngineTests: XCTestCase {
         let serverRow: [String: JSONValue] = [
             "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(.infinity), "deleted_at": .null
         ]
-        let transport = ScriptedSyncTransport(pushes: [
+        // personal.notes stays enrolled for this push cycle: hand the pull the
+        // manifest it means, so reconciliation doesn't read ScriptedSyncTransport's
+        // empty-script default (manifest: []) as "everything disabled" and purge
+        // the prepared resource out from under the push assertions.
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
+                changes: [], cursor: "c0", hasMore: false
+            ))
+        ], pushes: [
             .success(SyncPushResponse(
                 results: [
                     SyncPushResult(
@@ -520,6 +547,218 @@ final class SyncEngineTests: XCTestCase {
         await engine.kick(reason: .manual)
         let cursors = await transport.pullCursors
         XCTAssertEqual(cursors.count, 1)
+    }
+
+    // MARK: - enrollment manifest reconciliation
+
+    /// A resource that appears in the effective manifest AFTER an earlier
+    /// pull already advanced the cursor is an enrollment-enable: the server
+    /// keeps one cursor stream and never re-serves rows behind that cursor,
+    /// so the engine must reset the mirror and re-pull from a nil cursor to
+    /// backfill the newly enrolled resource.
+    func testAppearanceOnNonFreshCursorTriggersFullResync() async throws {
+        let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
+        let beta = SyncResource(resource: "b.y", schemaVersion: 1)
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [alpha],
+                changes: [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+                cursor: "c1", hasMore: false
+            ))
+        ])
+        let (engine, store) = engine(transport: transport)
+        await engine.syncNow(reason: .manual) // registers a.x, cursor now non-fresh
+
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alpha, beta], changes: [], cursor: "c2", hasMore: false
+        )))
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alpha, beta],
+            changes: [
+                SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:]),
+                SyncChange(resource: "b.y", id: "9", op: .upsert, syncVersion: "1", data: [:])
+            ],
+            cursor: "c3", hasMore: false
+        )))
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.resourcesEnabled(["b.y"])))
+        XCTAssertTrue(events.contains(.resyncPerformed))
+
+        let cursorsSent = await transport.pullCursors
+        XCTAssertEqual(cursorsSent.count, 3)
+        guard cursorsSent.count == 3 else { return }
+        XCTAssertNil(cursorsSent[2]) // the resync re-pull restarted from a nil cursor
+
+        let alphaCount = try await store.rowCount(resource: "a.x")
+        let betaCount = try await store.rowCount(resource: "b.y")
+        XCTAssertEqual(alphaCount, 1)
+        XCTAssertEqual(betaCount, 1) // the newly enrolled resource was backfilled
+        let cursor = try await store.cursor()
+        XCTAssertEqual(cursor?.rawValue, "c3")
+    }
+
+    /// A registered resource that leaves the effective manifest is an
+    /// enrollment-disable: its mirror rows are purged and its pending outbox
+    /// ops quarantined, but the cursor is left untouched (no resync — the
+    /// remaining resources' stream is still valid).
+    func testDisappearancePurgesQuarantinesAndKeepsCursor() async throws {
+        let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
+        let beta = SyncResource(resource: "b.y", schemaVersion: 1)
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [alpha, beta],
+                changes: [
+                    SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:]),
+                    SyncChange(resource: "b.y", id: "9", op: .upsert, syncVersion: "1", data: [:])
+                ],
+                cursor: "c1", hasMore: false
+            ))
+        ])
+        let (engine, store) = engine(transport: transport)
+        await engine.syncNow(reason: .manual) // registers a.x + b.y, one row each
+
+        try await store.stage(
+            LocalMutation(resource: "b.y", rowId: "b-local", type: .upsert, data: ["note": .string("mine")])
+        )
+        let stagedOpId = await store.pendingOpId(resource: "b.y", rowId: "b-local")
+        let opId = try XCTUnwrap(stagedOpId)
+
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alpha], changes: [], cursor: "c2", hasMore: false
+        )))
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.resourcesDisabled(["b.y"])))
+        XCTAssertFalse(events.contains(.resyncPerformed)) // disappearance never resyncs
+
+        let alphaCount = try await store.rowCount(resource: "a.x")
+        XCTAssertEqual(alphaCount, 1) // the still-enrolled resource is untouched
+        var betaThrew = false
+        do {
+            _ = try await store.rowCount(resource: "b.y")
+        } catch {
+            betaThrew = true
+        }
+        XCTAssertTrue(betaThrew) // b.y deregistered: rowCount throws unknownResource
+
+        let quarantined = await store.quarantined
+        XCTAssertEqual(quarantined.map(\.opId), [opId]) // the pending op was quarantined, not dropped
+        let cursor = try await store.cursor()
+        XCTAssertEqual(cursor?.rawValue, "c2") // cursor advanced to pull₂'s
+    }
+
+    /// A registered resource whose manifest schemaVersion rises is purged
+    /// (its old-schema rows are stale) and then resynced from a nil cursor to
+    /// re-fetch it under the new schema.
+    func testSchemaBumpPurgesAndResyncs() async throws {
+        let alphaV1 = SyncResource(resource: "a.x", schemaVersion: 1)
+        let alphaV2 = SyncResource(resource: "a.x", schemaVersion: 2)
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [alphaV1],
+                changes: [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+                cursor: "c1", hasMore: false
+            ))
+        ])
+        let (engine, store) = engine(transport: transport)
+        await engine.syncNow(reason: .manual) // registers a.x @ schema 1
+
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alphaV2], changes: [], cursor: "c2", hasMore: false
+        )))
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alphaV2],
+            changes: [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+            cursor: "c3", hasMore: false
+        )))
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.resourcesSchemaBumped(["a.x"])))
+        XCTAssertTrue(events.contains(.resyncPerformed))
+
+        let cursorsSent = await transport.pullCursors
+        XCTAssertEqual(cursorsSent.count, 3)
+        guard cursorsSent.count == 3 else { return }
+        XCTAssertNil(cursorsSent[2]) // the resync re-pull restarted from a nil cursor
+
+        let alphaCount = try await store.rowCount(resource: "a.x")
+        XCTAssertEqual(alphaCount, 1)
+        let registrations = try await store.registrations()
+        XCTAssertEqual(registrations["a.x"], 2) // registration now at the bumped schema_version
+    }
+
+    /// With `hostResources` set, the effective set is manifest ∩ hostResources:
+    /// a manifest resource the host did not register is surfaced via
+    /// `.unregisteredManifestResources` and its changes are skipped, never
+    /// applied, and it is never registered.
+    func testHostSubsetFiltersManifestAndChanges() async throws {
+        let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
+        let beta = SyncResource(resource: "b.y", schemaVersion: 1)
+        let store = InMemorySyncStore()
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5,
+            baseBackoff: 0.01, maxBackoff: 0.05, hostResources: [alpha]
+        )
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [alpha, beta],
+                changes: [
+                    SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:]),
+                    SyncChange(resource: "b.y", id: "9", op: .upsert, syncVersion: "1", data: [:])
+                ],
+                cursor: "c1", hasMore: false
+            ))
+        ])
+        let engine = SyncEngine(store: store, transport: transport, configuration: config)
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.unregisteredManifestResources(["b.y"])))
+
+        let alphaCount = try await store.rowCount(resource: "a.x")
+        XCTAssertEqual(alphaCount, 1) // only the host's own resource was applied
+        let registrations = try await store.registrations()
+        XCTAssertEqual(registrations, ["a.x": 1]) // b.y was never registered
+    }
+
+    /// The initial sync of a fresh store pulls a multi-resource manifest with
+    /// a nil cursor: every resource "appears", but there is no gap to backfill
+    /// (the first pull covers everything), so no resync/enable events fire.
+    func testFreshCursorInitialSyncDoesNotResync() async throws {
+        let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
+        let beta = SyncResource(resource: "b.y", schemaVersion: 1)
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [alpha, beta],
+                changes: [
+                    SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:]),
+                    SyncChange(resource: "b.y", id: "9", op: .upsert, syncVersion: "1", data: [:])
+                ],
+                cursor: "c1", hasMore: false
+            ))
+        ])
+        let (engine, _) = engine(transport: transport)
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertFalse(events.contains { if case .resourcesEnabled = $0 { return true }; return false })
+        XCTAssertFalse(events.contains(.resyncPerformed))
+        let pulledBatchCount = events.filter { if case .pulledBatch = $0 { return true }; return false }.count
+        XCTAssertEqual(pulledBatchCount, 1)
     }
 }
 

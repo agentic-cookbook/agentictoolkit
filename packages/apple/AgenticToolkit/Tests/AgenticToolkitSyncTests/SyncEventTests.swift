@@ -22,6 +22,10 @@ final class SyncEventTests: XCTestCase {
         XCTAssertFalse(SyncEvent.pushed(applied: 1, conflicts: 0, rejected: 0).reachedBackend)
         XCTAssertFalse(SyncEvent.conflictResolved(resource: "widgets", rowId: "1").reachedBackend)
         XCTAssertFalse(SyncEvent.resyncPerformed.reachedBackend)
+        XCTAssertFalse(SyncEvent.resourcesEnabled(["a.x"]).reachedBackend)
+        XCTAssertFalse(SyncEvent.resourcesDisabled(["a.x"]).reachedBackend)
+        XCTAssertFalse(SyncEvent.resourcesSchemaBumped(["a.x"]).reachedBackend)
+        XCTAssertFalse(SyncEvent.unregisteredManifestResources(["a.x"]).reachedBackend)
         XCTAssertFalse(SyncEvent.failed("boom").reachedBackend)
     }
 }

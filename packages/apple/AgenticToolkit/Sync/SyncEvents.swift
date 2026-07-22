@@ -16,6 +16,18 @@ public enum SyncEvent: Sendable, Equatable {
     case pushed(applied: Int, conflicts: Int, rejected: Int)
     case conflictResolved(resource: String, rowId: String)
     case resyncPerformed
+    /// Resources newly in the effective set on a non-fresh cursor — a full
+    /// resync was performed (the server keeps one cursor stream and does not
+    /// re-serve rows behind it on enrollment enable).
+    case resourcesEnabled([String])
+    /// Resources that left the effective set: mirror rows purged, pending
+    /// outbox ops quarantined, registration removed.
+    case resourcesDisabled([String])
+    /// Registered resources whose manifest schemaVersion rose: purged + resynced.
+    case resourcesSchemaBumped([String])
+    /// Manifest resources the host did not register (hostResources set):
+    /// ignored, surfaced for observability.
+    case unregisteredManifestResources([String])
     case authRequired
     case failed(String)     // human-readable; ops remain queued
     case idle
@@ -38,7 +50,9 @@ public extension SyncEvent {
         switch self {
         case .pulledBatch, .idle, .authRequired:
             return true
-        case .started, .pushed, .conflictResolved, .resyncPerformed, .failed:
+        case .started, .pushed, .conflictResolved, .resyncPerformed,
+             .resourcesEnabled, .resourcesDisabled, .resourcesSchemaBumped,
+             .unregisteredManifestResources, .failed:
             return false
         }
     }

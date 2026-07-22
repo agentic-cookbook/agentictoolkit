@@ -6,19 +6,30 @@ public struct SyncEngineConfiguration: Sendable {
     public var pushBatchSize: Int
     public var baseBackoff: TimeInterval
     public var maxBackoff: TimeInterval
+    /// Resources this host mirrors. nil = accept the server's whole manifest
+    /// (the pre-enrollment behavior). When set, the effective set is
+    /// manifest ∩ hostResources and changes outside it are skipped.
+    public var hostResources: [SyncResource]?
+    /// Stage-time refusal set (route-mode resources); forwarded by hosts to
+    /// their store init as well. Kept here so hosts have one config surface.
+    public var pullOnlyResources: Set<String>
 
     public init(
         deviceId: String,
         pullLimit: Int = 500,
         pushBatchSize: Int = 100,
         baseBackoff: TimeInterval = 2,
-        maxBackoff: TimeInterval = 3600
+        maxBackoff: TimeInterval = 3600,
+        hostResources: [SyncResource]? = nil,
+        pullOnlyResources: Set<String> = []
     ) {
         self.deviceId = deviceId
         self.pullLimit = pullLimit
         self.pushBatchSize = pushBatchSize
         self.baseBackoff = baseBackoff
         self.maxBackoff = maxBackoff
+        self.hostResources = hostResources
+        self.pullOnlyResources = pullOnlyResources
     }
 }
 
@@ -177,13 +188,33 @@ public actor SyncEngine {
     private func pullLoop() async throws {
         var hasMore = true
         var consecutiveNoProgress = 0
+        var reconcileResyncs = 0
         while hasMore {
             let cursor = try await store.cursor()
             let response = try await transport.pull(cursor: cursor, limit: config.pullLimit)
-            try await store.prepare(resources: response.manifest)
+            let effective = effectiveResources(from: response.manifest)
+            if try await reconcile(effective: effective, manifest: response.manifest, cursor: cursor) {
+                // Mirror was reset (appearance/schema bump on a non-fresh
+                // cursor): restart the pull from a nil cursor.
+                reconcileResyncs += 1
+                if reconcileResyncs > Self.maxReconcileResyncsPerCycle {
+                    throw SyncEngineError.manifestUnstable
+                }
+                hasMore = true
+                consecutiveNoProgress = 0
+                continue
+            }
+            try await store.prepare(resources: effective)
+            let applicable: [SyncChange]
+            if config.hostResources != nil {
+                let names = Set(effective.map(\.resource))
+                applicable = response.changes.filter { names.contains($0.resource) }
+            } else {
+                applicable = response.changes
+            }
             let next = SyncCursor(rawValue: response.cursor)
-            try await store.apply(response.changes, advancingTo: next)
-            eventContinuation.yield(.pulledBatch(changes: response.changes.count, cursor: next))
+            try await store.apply(applicable, advancingTo: next)
+            eventContinuation.yield(.pulledBatch(changes: applicable.count, cursor: next))
             hasMore = response.hasMore
             // No-progress guard: the server's cohort stall guard legitimately
             // returns empty changes + hasMore=true + an unchanged cursor when
@@ -202,6 +233,59 @@ public actor SyncEngine {
                 consecutiveNoProgress = 0
             }
         }
+    }
+
+    private static let maxReconcileResyncsPerCycle = 3
+
+    private func effectiveResources(from manifest: [SyncResource]) -> [SyncResource] {
+        guard let host = config.hostResources else { return manifest }
+        let wanted = Set(host.map(\.resource))
+        return manifest.filter { wanted.contains($0.resource) }
+    }
+
+    /// Enrollment transitions (recipe: offline-sync-client). Diffs the
+    /// effective manifest against the store's registrations BEFORE prepare.
+    /// Returns true when the mirror was reset and the pull must restart.
+    private func reconcile(
+        effective: [SyncResource],
+        manifest: [SyncResource],
+        cursor: SyncCursor?
+    ) async throws -> Bool {
+        let registered = try await store.registrations()
+        let effectiveNames = Set(effective.map(\.resource))
+
+        if config.hostResources != nil {
+            let unregistered = manifest.map(\.resource)
+                .filter { !effectiveNames.contains($0) }.sorted()
+            if !unregistered.isEmpty {
+                eventContinuation.yield(.unregisteredManifestResources(unregistered))
+            }
+        }
+
+        let disabled = registered.keys.filter { !effectiveNames.contains($0) }.sorted()
+        if !disabled.isEmpty {
+            try await store.purgeResources(disabled)
+            eventContinuation.yield(.resourcesDisabled(disabled))
+        }
+
+        let bumped = effective
+            .filter { resource in registered[resource.resource].map { $0 < resource.schemaVersion } ?? false }
+            .map(\.resource).sorted()
+        if !bumped.isEmpty {
+            try await store.purgeResources(bumped)
+            eventContinuation.yield(.resourcesSchemaBumped(bumped))
+        }
+
+        let appeared = effective.map(\.resource)
+            .filter { registered[$0] == nil }.sorted()
+            .filter { !bumped.contains($0) }
+
+        // Fresh cursor: the initial pull covers everything — no gap, no resync.
+        guard cursor != nil, !(appeared.isEmpty && bumped.isEmpty) else { return false }
+        try await store.resetForResync()
+        if !appeared.isEmpty { eventContinuation.yield(.resourcesEnabled(appeared)) }
+        eventContinuation.yield(.resyncPerformed)
+        return true
     }
 
     /// Bound on consecutive empty+hasMore+unchanged-cursor pull responses
@@ -383,6 +467,13 @@ enum SyncEngineError: Error, Sendable, Equatable {
     /// that never advances; the normal backoff + retry path handles it from
     /// here rather than the engine hot-looping the same request forever.
     case pullMadeNoProgress
+    /// `pullLoop` performed more than `maxReconcileResyncsPerCycle` mirror
+    /// resets in a single cycle — the server manifest keeps flapping a
+    /// resource in and out of the effective set (or its schema_version keeps
+    /// rising) faster than a resync can settle. Surfaced as a regular failure
+    /// so backoff + the normal retry path handle it rather than the engine
+    /// hot-looping reset+re-pull forever.
+    case manifestUnstable
 }
 
 extension SyncEngineError: CustomStringConvertible {
@@ -394,6 +485,7 @@ extension SyncEngineError: CustomStringConvertible {
         switch self {
         case .pushMadeNoProgress: return "push made no progress"
         case .pullMadeNoProgress: return "pull made no progress"
+        case .manifestUnstable: return "manifest unstable"
         }
     }
 }
