@@ -559,15 +559,29 @@ final class SyncEngineTests: XCTestCase {
     func testAppearanceOnNonFreshCursorTriggersFullResync() async throws {
         let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
         let beta = SyncResource(resource: "b.y", schemaVersion: 1)
-        let transport = ScriptedSyncTransport(pulls: [
-            .success(SyncPullResponse(
-                manifest: [alpha],
-                changes: [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
-                cursor: "c1", hasMore: false
-            ))
-        ])
+        let transport = ScriptedSyncTransport(
+            pulls: [
+                .success(SyncPullResponse(
+                    manifest: [alpha],
+                    changes: [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+                    cursor: "c1", hasMore: false
+                ))
+            ],
+            // Empty push results: the staged op is pushed but left unresolved, so it
+            // stays in the outbox for the post-cycle survival assertion below.
+            pushes: [.success(SyncPushResponse(results: [], watermark: "0"))]
+        )
         let (engine, store) = engine(transport: transport)
         await engine.syncNow(reason: .manual) // registers a.x, cursor now non-fresh
+
+        // Stage a local op BEFORE the appearance-triggering pull. The resync's
+        // resetForResync clears the mirror + cursor but must PRESERVE the outbox,
+        // so this op has to survive the cycle (pending, not dropped).
+        try await store.stage(
+            LocalMutation(resource: "a.x", rowId: "a-local", type: .upsert, data: ["note": .string("mine")])
+        )
+        let stagedOpId = await store.pendingOpId(resource: "a.x", rowId: "a-local")
+        let survivingOpId = try XCTUnwrap(stagedOpId)
 
         await transport.enqueuePull(.success(SyncPullResponse(
             manifest: [alpha, beta], changes: [], cursor: "c2", hasMore: false
@@ -581,6 +595,12 @@ final class SyncEngineTests: XCTestCase {
             cursor: "c3", hasMore: false
         )))
         await engine.syncNow(reason: .manual)
+
+        // The op staged before the resync survived resetForResync's mirror/cursor
+        // wipe: it is still in the outbox, owed to the server — not dropped.
+        let survivingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(survivingOps.map(\.opId), [survivingOpId])
+
         await engine.stop()
 
         var events: [SyncEvent] = []
@@ -759,6 +779,57 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertFalse(events.contains(.resyncPerformed))
         let pulledBatchCount = events.filter { if case .pulledBatch = $0 { return true }; return false }.count
         XCTAssertEqual(pulledBatchCount, 1)
+    }
+
+    /// The reconcile-resync flapping bound. A server whose effective manifest
+    /// oscillates a resource in and out on every pull keeps driving the engine
+    /// down the appearance→resetForResync path: each even (flap) pull re-adds
+    /// `beta` on the non-fresh cursor the preceding odd (anchor) pull advanced,
+    /// and the reset clears that cursor so the next anchor pull is fresh again
+    /// (registering only `alpha`, never `beta`). After maxReconcileResyncsPerCycle
+    /// (3) resets the guard (`reconcileResyncs > 3`) trips on the 4th reset and
+    /// throws SyncEngineError.manifestUnstable rather than resetting forever.
+    /// Asserted on the thrown error the failure surfaces (`.failed` carrying that
+    /// exact error) plus a bounded pull count — not by counting resync echoes.
+    func testFlappingManifestTripsReconcileResyncBoundAndFails() async throws {
+        let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
+        let beta = SyncResource(resource: "b.y", schemaVersion: 1)
+        // Fresh-cursor anchor: registers/re-anchors alpha WITHOUT beta and advances
+        // the cursor to non-fresh; the fresh-cursor guard suppresses any resync here.
+        func anchor(_ cursor: String) -> ScriptedSyncTransport.Outcome<SyncPullResponse> {
+            .success(SyncPullResponse(manifest: [alpha], changes: [], cursor: cursor, hasMore: true))
+        }
+        // beta re-appears on the non-fresh cursor → appearance → resetForResync
+        // (the reset path ignores this cursor).
+        func flap() -> ScriptedSyncTransport.Outcome<SyncPullResponse> {
+            .success(SyncPullResponse(manifest: [alpha, beta], changes: [], cursor: "ignored", hasMore: true))
+        }
+        let transport = ScriptedSyncTransport(pulls: [
+            anchor("k1"), flap(), // reset 1
+            anchor("k3"), flap(), // reset 2
+            anchor("k5"), flap(), // reset 3
+            anchor("k7"), flap()  // reset 4 → throw
+        ])
+        // Large backoff so the failure's scheduled retry cannot fire mid-assertion.
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 10, maxBackoff: 10
+        )
+        let engine = SyncEngine(store: InMemorySyncStore(), transport: transport, configuration: config)
+        await engine.syncNow(reason: .manual)
+        await engine.stop() // cancels the (never-fired) retry armed by the failure
+
+        let pullCount = await transport.pullCursors.count
+        XCTAssertEqual(pullCount, 8) // bounded: threw on the 4th reset, not an unbounded reset loop
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        let failures = events.compactMap { event -> String? in
+            if case .failed(let reason) = event { return reason }
+            return nil
+        }
+        // The bound threw SyncEngineError.manifestUnstable; assert on that error
+        // (its canonical string), not on the resync echo events emitted en route.
+        XCTAssertEqual(failures, [String(describing: SyncEngineError.manifestUnstable)])
     }
 }
 
