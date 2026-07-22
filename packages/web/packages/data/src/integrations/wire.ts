@@ -129,9 +129,15 @@ export type ConnectRequestBody =
       providerId: string;
       serviceType: string;
       ecosystemId: string;
-      identifier: string;
-      password: string;
+      /** Inline creds — supply these OR `providerConfigId` (exactly one; the XOR is
+       *  enforced server-side). Omit when the handle + app-password are sourced from a
+       *  saved ecosystem provider-config. */
+      identifier?: string;
+      password?: string;
       instanceUrl?: string;
+      /** Source the handle + app-password from THIS ecosystem provider-config instead of
+       *  inline creds; the resulting connection links it via provider_config_id. */
+      providerConfigId?: string;
     }
   | {
       type: "plaid_link";
@@ -162,6 +168,11 @@ export interface RegisterInstanceBodyType {
   instanceUrl: string;
   redirectUri: string;
   serviceType?: string;
+  /** When set, the per-instance clientId/clientSecret/instanceUrl come from THIS ecosystem
+   *  provider-config (the connection links it via provider_config_id) instead of a dynamic
+   *  per-user app registration. `instanceUrl` is still required by the schema but is ignored
+   *  on this path — the config supplies it. */
+  providerConfigId?: string;
 }
 
 /** `{ state, authorizeUrl, clientId }` from register-instance. */
