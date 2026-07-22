@@ -44,7 +44,7 @@ const article = (noun: string): string =>
  * ("Do you wish to proceed?"), then a type-to-confirm step whose "Permanently
  * Delete" button only enables once the entity's exact identifier is typed
  * (case-sensitive, no extra whitespace). Shared across every FTD route (see
- * websites/shared/recipes/focused-topic-detail.md).
+ * recipes/focused-topic-detail.md).
  */
 export function DeleteEntitySection({
   entityNoun,
