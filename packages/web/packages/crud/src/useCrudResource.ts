@@ -9,7 +9,7 @@ import type { CrudRow, CrudTableMeta } from './types'
 const API_BASE = '/api'
 
 /** Substitute a row's primary-key values into the table's item path template,
- *  e.g. '/persona-memory/links/{srcId}/{dstId}/{relation}' + the row. */
+ *  e.g. '/persona/personas/{id}' + the row. */
 export function itemUrl(meta: CrudTableMeta, row: CrudRow): string {
   let path = meta.itemPath
   for (const param of meta.pkParams) {
