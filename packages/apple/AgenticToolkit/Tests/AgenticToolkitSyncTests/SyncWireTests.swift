@@ -18,12 +18,12 @@ final class SyncWireTests: XCTestCase {
 
     func testDecodesPullResponseFixture() throws {
         let response = try JSONDecoder().decode(SyncPullResponse.self, from: fixture("pull-response"))
-        XCTAssertEqual(response.manifest.count, 7)
+        XCTAssertEqual(response.manifest.count, 6)
         XCTAssertEqual(response.changes.count, 2)
         XCTAssertEqual(response.changes[0].op, .upsert)
         XCTAssertEqual(response.changes[1].op, .delete)
         XCTAssertNil(response.changes[1].data)
-        XCTAssertEqual(response.changes[0].data?["title"]?.stringValue, "Groceries")
+        XCTAssertEqual(response.changes[0].data?["full_name"]?.stringValue, "Groceries")
         XCTAssertFalse(response.hasMore)
     }
 
