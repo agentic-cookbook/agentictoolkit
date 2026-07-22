@@ -155,6 +155,9 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
       {
         id: 'schema',
         title: 'Schemas',
+        // The frontier's select nudge: name the rows and say what choosing one does.
+        itemNoun: 'schema',
+        overviewHelp: 'Each schema groups one area’s tables. Pick the schema whose data you want to browse.',
         items: schemaItems,
         selectedId: schemaSelected,
         onSelect: (id) => {
@@ -170,6 +173,8 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
       {
         id: 'table',
         title: schemaSelected ?? 'Tables',
+        itemNoun: 'table',
+        overviewHelp: 'Pick a table to browse its rows and edit records here.',
         items: tableItems,
         selectedId: tableSelectedId,
         onSelect: (id) => {

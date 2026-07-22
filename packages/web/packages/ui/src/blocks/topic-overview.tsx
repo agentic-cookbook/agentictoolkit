@@ -67,54 +67,61 @@ export function TopicOverview({
   )
 }
 
-/**
- * The no-selection detail for a topic list whose rows are all the SAME KIND of thing
- * (a Sites list, a Groups list) — a card grid of 100+ near-identical rows is noise, so
- * instead show one centered, readable blurb explaining what the items are and how to
- * choose one. Opt in per level with `TopicLevel.overviewHelp` (the blurb content is the
- * host's — a string or richer nodes); this component only owns the centered framing.
- */
-export function TopicOverviewHelp({
-  title,
-  children,
-}: {
-  /** Optional heading (e.g. the list's name), shown above the blurb. */
-  title?: string
-  /** The customizable help content — what these items are and why you'd pick one. */
-  children: ReactNode
-}): ReactElement {
-  return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto p-6">
-      <div className="flex max-w-prose flex-col items-center gap-3 text-center">
-        {title && (
-          <h2 className="font-mono text-sm font-semibold tracking-[0.02em] text-apt-text">
-            {title}
-          </h2>
-        )}
-        <div className="text-sm leading-relaxed text-apt-text-muted [&_strong]:font-semibold [&_strong]:text-apt-text">
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-}
+/** "a"/"an" for the nudge's noun — UI copy only, no attempt at fuller English rules. */
+const article = (noun: string): string => (/^[aeiou]/i.test(noun) ? "an" : "a")
 
 /**
  * The DEFAULT no-selection detail: an almost-empty pane holding one quiet, centered nudge
- * to pick something from the list. The pane owns no content of its own until a real choice
- * is made — a level whose cards are a genuine landing opts back into the `TopicOverview`
- * grid with `overview: "cards"`, and `overviewHelp` still supplies a richer custom blurb.
- * `data-htd-select-hint` is the stable hook for tests, so they never couple to the copy.
+ * to pick something from the list, named as specifically as the level allows —
+ * "Select a workspace" (`TopicLevel.itemNoun`), else "Select an item from Workspaces"
+ * (the level's `title`), else the fully generic line. `children` is the level's bespoke
+ * `overviewHelp` copy — WHAT one of these rows is and WHY to choose one — rendered under
+ * the select line; with `selectable: false` (an empty list) the blurb shows alone, since
+ * there is nothing to select yet and the rail already shows the level's `emptyLabel`.
+ * A level whose cards are a genuine landing opts back into the `TopicOverview` grid with
+ * `overview: "cards"`. `data-htd-select-hint` is the stable hook for tests, so they never
+ * couple to the copy.
  */
-export function TopicSelectHint(): ReactElement {
+export function TopicSelectHint({
+  noun,
+  listTitle,
+  selectable = true,
+  children,
+}: {
+  /** Singular noun for one row ("workspace", "site") — the most specific headline. */
+  noun?: string
+  /** The list's heading, the fallback subject when no noun is declared. */
+  listTitle?: string
+  /** False while the list has no rows: suppress the "Select …" line, show only the blurb. */
+  selectable?: boolean
+  /** The level's bespoke copy (`overviewHelp`): what these rows are and why to pick one. */
+  children?: ReactNode
+}): ReactElement {
+  const subject = noun
+    ? `${article(noun)} ${noun}`
+    : listTitle
+      ? `an item from ${listTitle}`
+      : "an item from the list"
   return (
     <div
       data-htd-select-hint
       className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto p-6"
     >
-      <p className="max-w-prose text-center text-sm leading-relaxed text-apt-text-muted">
-        Select an item from the list to view or edit it here.
-      </p>
+      <div className="flex max-w-prose flex-col items-center gap-2 text-center">
+        {selectable &&
+          (children != null ? (
+            <p className="text-sm font-medium text-apt-text">{`Select ${subject}`}</p>
+          ) : (
+            <p className="text-sm leading-relaxed text-apt-text-muted">
+              {`Select ${subject} to view or edit it here.`}
+            </p>
+          ))}
+        {children != null && (
+          <div className="text-sm leading-relaxed text-apt-text-muted [&_strong]:font-semibold [&_strong]:text-apt-text">
+            {children}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

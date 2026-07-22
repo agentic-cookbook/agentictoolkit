@@ -662,14 +662,56 @@ describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
     return el
   }
 
-  it('defaults to the select-something nudge — no row is duplicated into the pane', () => {
+  it('defaults to the select-something nudge, named after the list — no row is duplicated into the pane', () => {
     const { container } = render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us' })}>
         <p>landing</p>
       </HierarchicalTopicDetail>,
     )
     expect(pane(container).querySelector('[data-htd-select-hint]')).not.toBeNull()
+    // No itemNoun declared → the level's title is the subject.
+    expect(
+      within(pane(container)).getByText('Select an item from Ecosystems to view or edit it here.'),
+    ).toBeInTheDocument()
     expect(within(pane(container)).queryByText('Core Platform')).toBeNull()
+  })
+
+  it('itemNoun + overviewHelp: "Select a(n) <noun>" over the bespoke what-and-why blurb', () => {
+    const levels = levelsFor({ region: 'us' })
+    levels[1] = {
+      ...levels[1]!,
+      itemNoun: 'ecosystem',
+      overviewHelp: 'An ecosystem is one product platform. Pick the one to work in.',
+    }
+    const { container } = render(
+      <HierarchicalTopicDetail levels={levels}>
+        <p>landing</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(within(pane(container)).getByText('Select an ecosystem')).toBeInTheDocument()
+    expect(
+      within(pane(container)).getByText('An ecosystem is one product platform. Pick the one to work in.'),
+    ).toBeInTheDocument()
+    expect(within(pane(container)).queryByText('Core Platform')).toBeNull()
+  })
+
+  it('an EMPTY list with overviewHelp shows the blurb alone — nothing to select yet', () => {
+    const levels = levelsFor({ region: 'us' })
+    levels[1] = {
+      ...levels[1]!,
+      items: [],
+      itemNoun: 'ecosystem',
+      overviewHelp: 'Ecosystems appear here once one is created.',
+    }
+    const { container } = render(
+      <HierarchicalTopicDetail levels={levels}>
+        <p>landing</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(
+      within(pane(container)).getByText('Ecosystems appear here once one is created.'),
+    ).toBeInTheDocument()
+    expect(within(pane(container)).queryByText(/^Select /)).toBeNull()
   })
 
   it('renders the card grid only for a level opted into overview: "cards"', () => {
@@ -684,7 +726,7 @@ describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
     expect(within(pane(container)).getByText('Core Platform')).toBeInTheDocument()
   })
 
-  it('overviewHelp wins over both — one centered blurb, no cards, no nudge', () => {
+  it('the "cards" grid wins over overviewHelp while the list has rows to show as cards', () => {
     const levels = levelsFor({ region: 'us' })
     levels[1] = { ...levels[1]!, overview: 'cards', overviewHelp: 'Pick an ecosystem.' }
     const { container } = render(
@@ -692,8 +734,8 @@ describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
         <p>landing</p>
       </HierarchicalTopicDetail>,
     )
-    expect(within(pane(container)).getByText('Pick an ecosystem.')).toBeInTheDocument()
+    expect(within(pane(container)).getByText('Core Platform')).toBeInTheDocument()
     expect(pane(container).querySelector('[data-htd-select-hint]')).toBeNull()
-    expect(within(pane(container)).queryByText('Core Platform')).toBeNull()
+    expect(within(pane(container)).queryByText('Pick an ecosystem.')).toBeNull()
   })
 })

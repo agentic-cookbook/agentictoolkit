@@ -345,13 +345,14 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
         <div>LANDING</div>
       </HierarchicalMenuDetail>,
     )
-    // The frontier's automatic detail — the default select-something nudge — renders inside the
-    // detail section (and the row labels do NOT: the pane stays almost empty).
+    // The frontier's automatic detail — the select nudge, named after the list — renders inside
+    // the detail section (and the row labels do NOT: the pane stays almost empty).
     const section = container.querySelector("section")!
     expect(
       displayHidden(section.querySelector<HTMLElement>("[data-htd-select-hint]")),
     ).toBe(false)
     expect(section.querySelector("[data-htd-select-hint]")).not.toBeNull()
+    expect(within(section).queryByText(/Select an item from Features/)).not.toBeNull()
     expect(within(section).queryByText("Integrations")).toBeNull()
   })
 })

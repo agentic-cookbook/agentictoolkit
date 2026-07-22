@@ -46,7 +46,7 @@ import {
   DialogDescription,
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
-import { TopicOverview, TopicOverviewHelp, TopicSelectHint } from "./topic-overview"
+import { TopicOverview, TopicSelectHint } from "./topic-overview"
 import { useShowDebugFrames, useSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
 // The cascade's DECISIONS — the selection chain's weight, the entrance bounce, the exit curve, the
 // ground's release rule, the rail-click plan and the detection frames' arming — live there as named,
@@ -123,16 +123,20 @@ interface TopicLevel {
   defaultSelectedId?: string
   /** The AUTOMATIC no-selection detail (default on): while this level is the frontier with
    *  nothing selected, the pane stays almost empty — one quiet, centered nudge to select
-   *  something (`TopicSelectHint`). Pass `"cards"` for a level whose card grid (one card per
+   *  something (`TopicSelectHint`), named as specifically as this level allows (see
+   *  `itemNoun` / `overviewHelp`). Pass `"cards"` for a level whose card grid (one card per
    *  row: icon + label + `description`; clicking selects) IS its landing page (the help
    *  site's topic browser). Pass `false` for a level whose unselected state has a REAL
    *  landing of its own (ResourceExplorer's searchable entity landing). */
   overview?: boolean | "cards"
-  /** Replace the default nudge (or the `"cards"` grid) with ONE centered help blurb —
-   *  e.g. for a list whose rows are all the SAME KIND of thing (Sites, Groups), a blurb
-   *  explaining what the items are and how to pick one. Set this to the blurb content (a
-   *  string or richer nodes); when present it wins at this level's unselected frontier.
-   *  Ignored when `overview` is `false`. */
+  /** Singular noun for one row ("workspace", "site", "work item") — the select nudge names
+   *  it: "Select a workspace …". Omit to fall back to the level's `title` ("Select an item
+   *  from Workspaces …"), or to the fully generic line when neither is set. */
+  itemNoun?: string
+  /** Bespoke nudge copy: WHAT one of these rows is and WHY to choose one (a string or
+   *  richer nodes), shown under the "Select …" line. With an EMPTY list it shows alone —
+   *  the blurb still explains what belongs here while the rail shows `emptyLabel`. Ignored
+   *  when `overview` is `false`, and while the `"cards"` grid is showing (non-empty list). */
   overviewHelp?: ReactNode
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
@@ -648,13 +652,14 @@ export function HierarchicalMenuDetail({
 
   // THE AUTOMATIC FRONTIER DETAIL: while the frontier list has no selection, the detail pane is
   // owned by the package — by default an almost-empty centered nudge to select something
-  // (TopicSelectHint), instead of whatever placeholder the host passed as children. A host blurb
-  // (`overviewHelp`) wins over the default (honored here exactly as in HTDV); a level whose card
-  // grid is a real landing opts into the per-row cards (`overview: "cards"`); a level whose
-  // unselected state has a real landing of its own opts out entirely (`overview: false`). It
-  // exists ONLY in that state: the moment the frontier gains a selection the host's real detail
-  // (children) shows.
-  // Titled by the parent's selected row (the entity whose topics these are), else the level's title.
+  // (TopicSelectHint), named for the level (`itemNoun` → `title` → generic) and carrying the
+  // level's bespoke `overviewHelp` blurb (honored here exactly as in HTDV), instead of whatever
+  // placeholder the host passed as children. A level whose card grid is a real landing opts into
+  // the per-row cards (`overview: "cards"`); a level whose unselected state has a real landing of
+  // its own opts out entirely (`overview: false`). It exists ONLY in that state: the moment the
+  // frontier gains a selection the host's real detail (children) shows.
+  // The cards are titled by the parent's selected row (the entity whose topics these are), else
+  // the level's title.
   const frontierLevel = firstUnselected === -1 ? null : levels[firstUnselected]
   const parentOfFrontier = firstUnselected > 0 ? levels[firstUnselected - 1] : null
   const overviewTitle =
@@ -662,20 +667,25 @@ export function HierarchicalMenuDetail({
     frontierLevel?.title
   const overview =
     frontierLevel && frontierLevel.overview !== false ? (
-      // The blurb shows even for an empty list (it still explains what belongs here). The card
-      // grid and the default nudge only show for a non-empty list — with nothing to select, the
-      // host's own children placeholder stands.
-      frontierLevel.overviewHelp != null ? (
-        <TopicOverviewHelp title={overviewTitle}>{frontierLevel.overviewHelp}</TopicOverviewHelp>
-      ) : frontierLevel.items.length === 0 ? null : frontierLevel.overview === "cards" ? (
+      frontierLevel.overview === "cards" && frontierLevel.items.length > 0 ? (
         <TopicOverview
           title={overviewTitle}
           items={frontierLevel.items}
           onSelect={(id) => frontierLevel.onSelect(id)}
         />
-      ) : (
-        <TopicSelectHint />
-      )
+      ) : frontierLevel.items.length > 0 || frontierLevel.overviewHelp != null ? (
+        // The nudge names the level's rows as specifically as it can (itemNoun → title →
+        // generic) and carries the level's bespoke overviewHelp blurb. An EMPTY list with a
+        // blurb still shows the blurb alone (it explains what belongs here); empty without
+        // one renders nothing — the host's own children placeholder stands.
+        <TopicSelectHint
+          noun={frontierLevel.itemNoun}
+          listTitle={frontierLevel.title}
+          selectable={frontierLevel.items.length > 0}
+        >
+          {frontierLevel.overviewHelp}
+        </TopicSelectHint>
+      ) : null
     ) : null
   // THE DETAIL HOLD (must-hold-the-detail-until-the-final-choice, cascade only): until the FINAL
   // CHOICE — a select whose row is DECLARED to lead to no further topic list (`leadsTo`) — the

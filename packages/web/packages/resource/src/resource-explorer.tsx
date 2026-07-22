@@ -234,6 +234,9 @@ export function ResourceExplorer<T>({
     // The topics list belongs to the selected entity — name it after that entity (falling back to
     // the entity noun in promoteTopics, where a rail header reads "Ecosystem" until the name loads).
     title: entityItems.find((e) => e.id === scopedId)?.label ?? (promoteTopics ? nameSuffix : "Topics"),
+    // The frontier's select nudge: name the rows and say what choosing one does.
+    itemNoun: "topic",
+    overviewHelp: `Each topic is one working area of this ${nameSuffix.toLowerCase()} — its apps, users, settings, and so on. Picking one opens that area's list or pane here.`,
     items: topicItems,
     selectedId: topic,
     onSelect: (id) => {

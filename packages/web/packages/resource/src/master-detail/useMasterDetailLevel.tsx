@@ -34,6 +34,8 @@ export function useMasterDetailLevel<TItem, TInput>({
   leaf,
   emptyLabel,
   onNew,
+  itemNoun,
+  overviewHelp,
 }: {
   /** Stable level id (e.g. "applications-list"). */
   id: string;
@@ -56,6 +58,11 @@ export function useMasterDetailLevel<TItem, TInput>({
    *  create (`form.actions.onCreate`). When set, the `+` never tints gold (there is no in-pane
    *  create-in-progress). Panes that create inline omit it. */
   onNew?: () => void;
+  /** Singular noun for one row, for the frontier's select nudge ("Select a persona …").
+   *  Defaults to the noun inside a "New …" `newLabel` ("New Persona" → "persona"). */
+  itemNoun?: string;
+  /** Bespoke select-nudge copy: what one of these rows is and why to choose one. */
+  overviewHelp?: ReactNode;
 }): void {
   const rows: TopicDetailItem[] = (items ?? []).map((it) => ({
     id: getId(it),
@@ -65,6 +72,12 @@ export function useMasterDetailLevel<TItem, TInput>({
   }));
 
   const newButtonLabel = newLabel.replace(/…+$/, "").trim();
+  // Every converted master/detail names its creator "New <singular noun>", so the select nudge
+  // gets its noun for free ("New Persona" → "persona"); only the leading cap is folded, keeping
+  // acronyms ("New LLM provider" → "LLM provider") intact. An explicit `itemNoun` overrides.
+  const derivedNoun = /^new\s+/i.test(newButtonLabel)
+    ? newButtonLabel.replace(/^new\s+/i, "").replace(/^[A-Z](?=[a-z])/, (c) => c.toLowerCase())
+    : undefined;
 
   const level: TopicLevel = {
     id,
@@ -86,8 +99,10 @@ export function useMasterDetailLevel<TItem, TInput>({
     newActive: onNew ? false : form.creating,
     // While the inline editor is open the pane body IS the detail. CREATE is the
     // critical case: nothing is selected yet, so without this the automatic
-    // TopicOverview (unselected frontier → card grid) covers the open form.
+    // frontier detail (the select nudge) covers the open form.
     overview: form.editing ? false : undefined,
+    itemNoun: itemNoun ?? derivedNoun,
+    overviewHelp,
   };
 
   useStackLevel(level);
