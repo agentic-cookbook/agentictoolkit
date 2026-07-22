@@ -85,6 +85,53 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertNil(row?.data["sync_stamped_at"])
     }
 
+    /// Delete-wins conflict adoption (SyncEngine ~349-361): when a push conflict's
+    /// `current` server row carries a truthy `deleted_at`, the engine adopts it as
+    /// a LOCAL DELETE (`.delete`), tombstoning the mirror row — it must NOT take the
+    /// `.upsert` arm and re-materialize the row from the server's fields. This is
+    /// the sibling of `testPushDrainsOutboxAndAppliesConflictCurrentLocally` for the
+    /// deleted-current case: every other conflict fixture in the suite carries
+    /// `deleted_at: null`, so this is the only test exercising the delete arm.
+    func testPushConflictWithDeletedCurrentAppliesAsLocalDelete() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("mine")])
+        )
+        let ops = try await store.pendingOps(limit: 10)
+        // Server's authoritative row is a tombstone: a non-null deleted_at ⇒ delete-wins.
+        let serverRow: [String: JSONValue] = [
+            "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(9),
+            "sync_stamped_at": .string("2026-07-16T00:00:00Z"),
+            "deleted_at": .string("2026-07-16T00:00:00Z")
+        ]
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
+                changes: [], cursor: "c0", hasMore: false
+            ))
+        ], pushes: [
+            .success(SyncPushResponse(
+                results: [
+                    SyncPushResult(
+                        opId: ops[0].opId, status: .conflict, reason: "stale_base_version", current: serverRow
+                    )
+                ],
+                watermark: "9"
+            ))
+        ])
+        let (engine, _) = engine(store: store, transport: transport)
+        await engine.syncNow(reason: .manual)
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(remainingOps.count, 0) // op resolved, same as the upsert-adoption conflict test
+        let row = await store.row(resource: "personal.notes", id: "r1")
+        XCTAssertEqual(row?.deleted, true) // adopted as a LOCAL DELETE, not re-upserted
+        XCTAssertEqual(row?.syncVersion, "9") // server sync_version adopted (bookkeeping consistent)
+        XCTAssertTrue(row?.data.isEmpty ?? false) // delete carries no data — server's fields dropped
+        let liveRows = try await store.rowCount(resource: "personal.notes")
+        XCTAssertEqual(liveRows, 0) // tombstoned: no live row remains in the mirror
+    }
+
     func testConflictWithoutCurrentIsQuarantinedNotSilentlyDropped() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
