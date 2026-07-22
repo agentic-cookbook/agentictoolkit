@@ -23,7 +23,9 @@ public enum SyncEvent: Sendable, Equatable {
     /// Resources that left the effective set: mirror rows purged, pending
     /// outbox ops quarantined, registration removed.
     case resourcesDisabled([String])
-    /// Registered resources whose manifest schemaVersion rose: purged + resynced.
+    /// Registered resources whose manifest schemaVersion rose: purged, then
+    /// resynced via the appearance path (on a fresh cursor the purge stands
+    /// alone — the initial sync that follows needs no reset).
     case resourcesSchemaBumped([String])
     /// Manifest resources the host did not register (hostResources set):
     /// ignored, surfaced for observability.
