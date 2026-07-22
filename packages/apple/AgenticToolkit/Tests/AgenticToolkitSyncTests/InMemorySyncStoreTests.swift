@@ -160,4 +160,55 @@ final class InMemorySyncStoreTests: XCTestCase {
         let pendingAfterResync = try await store.pendingOps(limit: 10)
         XCTAssertEqual(pendingAfterResync.count, 1) // outbox survives
     }
+
+    func testStageRefusesPullOnlyResource() async throws {
+        let store = InMemorySyncStore(pullOnlyResources: ["social.follows"])
+        try await store.prepare(resources: [SyncResource(resource: "social.follows", schemaVersion: 1)])
+        do {
+            try await store.stage(LocalMutation(
+                resource: "social.follows", rowId: "r1", type: .upsert, data: [:]))
+            XCTFail("expected pullOnlyResource")
+        } catch SyncStoreFailure.pullOnlyResource(let res) {
+            XCTAssertEqual(res, "social.follows")
+        }
+    }
+
+    func testRegistrationsReportsSchemaVersions() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [
+            SyncResource(resource: "a.x", schemaVersion: 1),
+            SyncResource(resource: "b.y", schemaVersion: 2)
+        ])
+        let regs = try await store.registrations()
+        XCTAssertEqual(regs, ["a.x": 1, "b.y": 2])
+    }
+
+    func testPurgeResourcesDropsRowsQuarantinesOpsDeregisters() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [
+            SyncResource(resource: "a.x", schemaVersion: 1),
+            SyncResource(resource: "b.y", schemaVersion: 1)
+        ])
+        try await store.apply([
+            SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:]),
+            SyncChange(resource: "b.y", id: "2", op: .upsert, syncVersion: "1", data: [:])
+        ], advancingTo: SyncCursor(rawValue: "c1"))
+        try await store.stage(LocalMutation(resource: "a.x", rowId: "1", type: .upsert, data: [:]))
+        try await store.purgeResources(["a.x"])
+        let bCount = try await store.rowCount(resource: "b.y")
+        XCTAssertEqual(bCount, 1)
+        do {
+            _ = try await store.rowCount(resource: "a.x")
+            XCTFail("a.x should be deregistered")
+        } catch SyncStoreFailure.unknownResource { }
+        let pending = try await store.pendingOps(limit: 10)
+        XCTAssertTrue(pending.isEmpty)                       // op quarantined, not pending
+        let quarantinedOps = await store.quarantined
+        XCTAssertEqual(quarantinedOps.map(\.resource), ["a.x"])
+        let regs = try await store.registrations()
+        XCTAssertEqual(regs.keys.sorted(), ["b.y"])
+        // cursor untouched by a purge
+        let cursor = try await store.cursor()
+        XCTAssertEqual(cursor?.rawValue, "c1")
+    }
 }

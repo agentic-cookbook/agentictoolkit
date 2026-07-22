@@ -31,6 +31,12 @@ public protocol SyncStore: Sendable {
     /// Resync: clears mirror rows + cursor; PRESERVES the outbox. Never
     /// deletes the database file.
     func resetForResync() async throws
+    /// resource -> registered schema_version, as last passed to `prepare`.
+    func registrations() async throws -> [String: Int]
+    /// Enrollment-disable transition: delete the resources' mirror rows, move
+    /// their pending/inflight outbox ops to quarantine (never dropped, never
+    /// pushed), and remove their registrations. The cursor is untouched.
+    func purgeResources(_ resources: [String]) async throws
 }
 
 public protocol SyncTransport: Sendable {

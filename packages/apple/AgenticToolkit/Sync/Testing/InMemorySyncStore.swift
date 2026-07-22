@@ -30,22 +30,34 @@ public actor InMemorySyncStore: SyncStore {
         var status: OutboxStatus
     }
 
-    private var resources: [SyncResource] = []
+    /// resource -> registered schema_version, upserted by `prepare` and
+    /// removed by `purgeResources`. The single source of registration truth
+    /// (mirrored by `tables` key presence, which `stage`/`apply`/`rowCount`
+    /// consult); `registrations()` returns a copy of this.
+    private var registeredSchemaVersions: [String: Int] = [:]
     private var tables: [String: [String: Row]] = [:]
     private var storedCursor: SyncCursor?
     private var outbox: [OutboxEntry] = []
     public private(set) var conflictLog: [(opId: String, reason: String?)] = []
-    /// Ops the server rejected. These are NOT retried under their original
-    /// opId — the server ledgers push results immutably per opId, so a
-    /// fixed retry must go through `stage(_:)` again to mint a fresh one.
+    /// Ops the server rejected — or whose resource was purged by an
+    /// enrollment-disable `purgeResources`. These are NOT retried under their
+    /// original opId — the server ledgers push results immutably per opId, so
+    /// a fixed retry must go through `stage(_:)` again to mint a fresh one.
     public private(set) var quarantined: [SyncPushOp] = []
+    /// Resources this host may pull but never push. `stage(_:)` refuses them
+    /// up front with `SyncStoreFailure.pullOnlyResource`.
+    private let pullOnlyResources: Set<String>
 
-    public init() {}
+    public init(pullOnlyResources: Set<String> = []) {
+        self.pullOnlyResources = pullOnlyResources
+    }
 
     public func prepare(resources: [SyncResource]) async throws {
-        self.resources = resources
-        for descriptor in resources where tables[descriptor.resource] == nil {
-            tables[descriptor.resource] = [:]
+        for descriptor in resources {
+            registeredSchemaVersions[descriptor.resource] = descriptor.schemaVersion
+            if tables[descriptor.resource] == nil {
+                tables[descriptor.resource] = [:]
+            }
         }
     }
 
@@ -84,6 +96,9 @@ public actor InMemorySyncStore: SyncStore {
     /// empty table for it, matching GRDBSyncStore.stage (sync fix-wave item
     /// p2o).
     public func stage(_ mutation: LocalMutation) async throws {
+        guard !pullOnlyResources.contains(mutation.resource) else {
+            throw SyncStoreFailure.pullOnlyResource(mutation.resource)
+        }
         guard tables[mutation.resource] != nil else {
             throw SyncStoreFailure.unknownResource(mutation.resource)
         }
@@ -170,9 +185,44 @@ public actor InMemorySyncStore: SyncStore {
         storedCursor = nil
     }
 
+    public func registrations() async throws -> [String: Int] {
+        registeredSchemaVersions
+    }
+
+    /// Enrollment-disable transition (sync fix-wave): drop the purged
+    /// resources' mirror rows and registrations, and move any of their
+    /// outbox ops (all `pending`/`inflight` — rejected ops already live in
+    /// `quarantined`) into `quarantined` so they are never pushed under
+    /// their original opId. The cursor is deliberately left untouched.
+    public func purgeResources(_ resources: [String]) async throws {
+        let purged = Set(resources)
+        guard !purged.isEmpty else { return }
+        for resource in purged {
+            tables[resource] = nil
+            registeredSchemaVersions[resource] = nil
+        }
+        var survivors: [OutboxEntry] = []
+        survivors.reserveCapacity(outbox.count)
+        for entry in outbox {
+            if purged.contains(entry.pushOp.resource) {
+                quarantined.append(entry.pushOp)
+            } else {
+                survivors.append(entry)
+            }
+        }
+        outbox = survivors
+    }
+
     // Test conveniences
+    /// Live (non-deleted) row count for a registered resource. Throws
+    /// `SyncStoreFailure.unknownResource` for a resource that was never
+    /// registered — or was deregistered by `purgeResources` — rather than
+    /// reporting a misleading zero.
     public func rowCount(resource: String) throws -> Int {
-        (tables[resource] ?? [:]).values.filter { !$0.deleted }.count
+        guard let table = tables[resource] else {
+            throw SyncStoreFailure.unknownResource(resource)
+        }
+        return table.values.filter { !$0.deleted }.count
     }
     public func row(resource: String, id: String) -> Row? { tables[resource]?[id] }
     /// The current `pending` op's id for (resource, rowId), if any. Unlike
@@ -195,4 +245,8 @@ public enum SyncStoreFailure: Error, Sendable, Equatable {
     /// never switch exhaustively over it (confirmed by grepping the two
     /// host repos), so this doesn't break existing exhaustive handling.
     case invalidChange(String)
+    /// `stage(_:)` was called for a resource enrolled pull-only on this host
+    /// (in the store's `pullOnlyResources`): the host may mirror pulled rows
+    /// for it but must never originate a local mutation to push.
+    case pullOnlyResource(String)
 }
