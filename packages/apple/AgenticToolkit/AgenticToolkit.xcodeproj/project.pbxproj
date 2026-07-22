@@ -200,6 +200,7 @@
 		450F94C2448538A9F7EDA245 /* AgenticToolkitPermissionsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB251437E922B5A8689625BF /* AgenticToolkitPermissionsUI.framework */; };
 		45EAA5980E86BE9C855B3245 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		45EDE783960402B880C0EC15 /* NotesCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F8BF5ECB3A67AF18E4AB7A1 /* NotesCoordinator.swift */; };
+		477B5FD2EE2B6565DA1A3F0F /* ADHSyncCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB253B518D12219E03CC47A3 /* ADHSyncCatalogTests.swift */; };
 		47A0704972B3B67A4F31EEC4 /* NotesDatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD91D0FD8F8302157763BFFE /* NotesDatabaseManager.swift */; };
 		47DC629B2F8EB9F16BC0BF7A /* AIStreamEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0702A9914B6DAC7910A7B156 /* AIStreamEvent.swift */; };
 		47F25205E7B64A45EC24FA8C /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 206C41AEF3C66C803C96D6EC /* GRDB */; };
@@ -326,6 +327,7 @@
 		80A1384C1F7052FF3552AE56 /* AgenticToolkitCoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A6A6F1AF7704D404EE128D5 /* AgenticToolkitCoreUI.framework */; };
 		8143D9EBE532529A67C2C137 /* NestingSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9959DED272E6D5A7DD8E593 /* NestingSplitViewController.swift */; };
 		819205B285AE90E41D527C3E /* HorizontalStackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC220478903118D361CF5A97 /* HorizontalStackView.swift */; };
+		819DF37D82F837428A6108A4 /* ADHSyncCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7557A62B9C5215425A6F65AC /* ADHSyncCatalog.swift */; };
 		81BCC1A948810DDE2FF31ADC /* ChatStreamEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DC304A71DDA7A07E76CB75 /* ChatStreamEvent.swift */; };
 		81C1CEF0731A9F4884B69CB2 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DBBC96379BEBF4C59726ED /* UserSettings.swift */; };
 		823E04CBA2C9A90A0BF4B0A3 /* WindowFrameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5BB28294B4FC8F45F42DBEF /* WindowFrameManager.swift */; };
@@ -1403,6 +1405,7 @@
 		74058B27121A2773814462AA /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		74925FD9DA16DA1C1650F4CE /* MCPChipsBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPChipsBarView.swift; sourceTree = "<group>"; };
 		754CFEB31E6960AC89F45BF4 /* AIProviderResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderResolver.swift; sourceTree = "<group>"; };
+		7557A62B9C5215425A6F65AC /* ADHSyncCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ADHSyncCatalog.swift; sourceTree = "<group>"; };
 		75CA772A1D37DA43E38524AA /* NoteEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorViewController.swift; sourceTree = "<group>"; };
 		768F7C74EBACCA21B475C0B6 /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		77597ACD52332EF3CEE84240 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
@@ -1596,6 +1599,7 @@
 		D8BFA956ECF26D7CD7AFD93E /* SyncGRDBSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncGRDBSmokeTests.swift; sourceTree = "<group>"; };
 		D8F3EAE6ED87E957C4150D19 /* FrameCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameCalculatorTests.swift; sourceTree = "<group>"; };
 		D9880737F7060E9B047C7A98 /* LogLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogLine.swift; sourceTree = "<group>"; };
+		DB253B518D12219E03CC47A3 /* ADHSyncCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ADHSyncCatalogTests.swift; sourceTree = "<group>"; };
 		DBEB58A49782766E3929EC3C /* SettingsPanelSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanelSplitViewController.swift; sourceTree = "<group>"; };
 		DBF568C4E57FFEE3670544C8 /* FileTypesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypesSettingsView.swift; sourceTree = "<group>"; };
 		DD4ED71A3B2B4EAEBE0483F9 /* NotesSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesSplitViewController.swift; sourceTree = "<group>"; };
@@ -2386,6 +2390,7 @@
 			children = (
 				3F64C6356020A29E0637D15A /* Testing */,
 				931A00CCBF0958F882DCAA88 /* Triggers */,
+				7557A62B9C5215425A6F65AC /* ADHSyncCatalog.swift */,
 				BE8834890BAD21FA7B296D5A /* JSONValue.swift */,
 				272360E6187DDD7B78FAF2CC /* SyncEngine.swift */,
 				FAC6D42C2C643FC84352A328 /* SyncEvents.swift */,
@@ -3007,6 +3012,7 @@
 			isa = PBXGroup;
 			children = (
 				BFE64B8865168F56ECCD8352 /* Fixtures */,
+				DB253B518D12219E03CC47A3 /* ADHSyncCatalogTests.swift */,
 				D84EF4A4E5F9F11026827540 /* InMemorySyncStoreTests.swift */,
 				423A4C891F5C97976111EDF5 /* SyncEngineTests.swift */,
 				39525D76AE17B5CCB150CD32 /* SyncEventTests.swift */,
@@ -4598,6 +4604,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				477B5FD2EE2B6565DA1A3F0F /* ADHSyncCatalogTests.swift in Sources */,
 				3C22269B016718B690F889F1 /* InMemorySyncStoreTests.swift in Sources */,
 				5E9DADC2E03CAA7EE6C55291 /* SyncEngineTests.swift in Sources */,
 				8B3874D907B7694B36C29E9B /* SyncEventTests.swift in Sources */,
@@ -4748,6 +4755,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				819DF37D82F837428A6108A4 /* ADHSyncCatalog.swift in Sources */,
 				A014AF7FEA5FF7D75ADF7FC1 /* ConnectivityTriggerSource.swift in Sources */,
 				1C9E7C2D1DD10B024ABA3AEC /* InMemorySyncStore.swift in Sources */,
 				D55F3443B679F8A3B762A49F /* JSONValue.swift in Sources */,
