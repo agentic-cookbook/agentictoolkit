@@ -207,7 +207,9 @@ computes, in order:
 2. **Schema bump** — effective resources whose manifest `schemaVersion` rose
    above the registered version. Same purge, then emits
    `.resourcesSchemaBumped([...])`. A schema bump is deliberately modelled as
-   _disappear then appear_.
+   _disappear then appear_ conceptually — in code the `bumped` set is computed
+   separately from `appeared`; both feed the same purge + resync effects rather
+   than running as a literal two-step transition.
 3. **Appearance** — effective resources with no registration (minus the ones
    just schema-bumped).
 
@@ -265,8 +267,9 @@ have produced.
 
 A manifest that flaps a resource in and out (or keeps bumping its schema
 version) faster than a resync can settle would hot-loop reset + re-pull forever.
-`pullLoop` counts mirror resets per cycle; after `maxReconcileResyncsPerCycle`
-(**3**) it throws `SyncEngineError.manifestUnstable`, surfaced as a `.failed`
+`pullLoop` counts mirror resets per cycle: up to `maxReconcileResyncsPerCycle`
+(**3**) are allowed within a cycle, and it throws `SyncEngineError.manifestUnstable`
+the moment a 4th would be needed (`reconcileResyncs > 3`), surfaced as a `.failed`
 event that routes through the normal exponential backoff. Two sibling bounds
 guard the same class of server misbehavior: `maxConsecutiveNoProgressPulls`
 (**2**) for an empty-but-`hasMore` page whose cursor never advances
@@ -481,7 +484,8 @@ deleted, a `rejected` op or a `purgeResources` casualty becomes `quarantined`.
 Conflicts are additionally recorded in the `_sync_conflicts` audit table (a
 historical record, not live sync state).
 
-Hosts read depth back through `GRDBSyncStore.status()`:
+Hosts read depth back through `GRDBSyncStore.status()` (annotated below — the
+inline comments are added for this doc, not present in the source):
 
 ```swift
 public struct GRDBSyncStoreStatus: Codable, Sendable {
@@ -527,5 +531,3 @@ applied pull batch. See the recipe's conformance vectors (`cursor-is-opaque`,
 - [`repo-pattern.md`](repo-pattern.md) /
   [`consuming-as-submodule.md`](consuming-as-submodule.md) — how the toolkit is
   laid out and embedded by a first-party consumer.
-</content>
-</invoke>
