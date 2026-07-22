@@ -6,17 +6,17 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "development": "./src/index.ts", "import": "./dist/index.js" },
-    "./util": { "types": "./dist/util/index.d.ts", "development": "./src/util/index.ts", "import": "./dist/util/index.js" },
-    "./cooldown": { "types": "./dist/cooldown/index.d.ts", "development": "./src/cooldown/index.ts", "import": "./dist/cooldown/index.js" },
-    "./schema": { "types": "./dist/schema/index.d.ts", "development": "./src/schema/index.ts", "import": "./dist/schema/index.js" },
-    "./conn": { "types": "./dist/conn/index.d.ts", "development": "./src/conn/index.ts", "import": "./dist/conn/index.js" },
-    "./providers": { "types": "./dist/providers/index.d.ts", "development": "./src/providers/index.ts", "import": "./dist/providers/index.js" },
-    "./canon": { "types": "./dist/canon/index.d.ts", "development": "./src/canon/index.ts", "import": "./dist/canon/index.js" },
-    "./enumerate": { "types": "./dist/enumerate/index.d.ts", "development": "./src/enumerate/index.ts", "import": "./dist/enumerate/index.js" },
-    "./engine": { "types": "./dist/engine/index.d.ts", "development": "./src/engine/index.ts", "import": "./dist/engine/index.js" }
+    ".": { "types": "./dist/index.d.ts", "development": "./src/index.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./util": { "types": "./dist/util/index.d.ts", "development": "./src/util/index.ts", "import": "./dist/util/index.js", "default": "./dist/util/index.js" },
+    "./cooldown": { "types": "./dist/cooldown/index.d.ts", "development": "./src/cooldown/index.ts", "import": "./dist/cooldown/index.js", "default": "./dist/cooldown/index.js" },
+    "./schema": { "types": "./dist/schema/index.d.ts", "development": "./src/schema/index.ts", "import": "./dist/schema/index.js", "default": "./dist/schema/index.js" },
+    "./conn": { "types": "./dist/conn/index.d.ts", "development": "./src/conn/index.ts", "import": "./dist/conn/index.js", "default": "./dist/conn/index.js" },
+    "./providers": { "types": "./dist/providers/index.d.ts", "development": "./src/providers/index.ts", "import": "./dist/providers/index.js", "default": "./dist/providers/index.js" },
+    "./canon": { "types": "./dist/canon/index.d.ts", "development": "./src/canon/index.ts", "import": "./dist/canon/index.js", "default": "./dist/canon/index.js" },
+    "./enumerate": { "types": "./dist/enumerate/index.d.ts", "development": "./src/enumerate/index.ts", "import": "./dist/enumerate/index.js", "default": "./dist/enumerate/index.js" },
+    "./engine": { "types": "./dist/engine/index.d.ts", "development": "./src/engine/index.ts", "import": "./dist/engine/index.js", "default": "./dist/engine/index.js" }
   },
-  "files": ["dist"],
+  "files": ["dist", "src"],
   "scripts": {
     "build": "tsup && pnpm run build:types",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
