@@ -13,5 +13,6 @@ packages:
   - './packages/data'
   - './packages/resource'
   - './packages/adh'
+  - './packages/deploy-platform'
   - './packages/features/*'
   - './packages/site-templates/reference-web-site'
