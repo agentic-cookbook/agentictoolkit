@@ -1,0 +1,458 @@
+/* Tokyo Night — enkia's neon-city palette; dark = Night, light = Day.
+ * Cool blue/purple neon accents over deep indigo ink.
+ * Zen Kaku Gothic New (display) + Inter (body) + JetBrains Mono.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* === Tokens ===
+ * Dark is the default (html:root); light overrides under
+ * html:root[data-color-mode]:not(.dark) — matching the appearance system, whose
+ * pre-paint stamps data-color-mode. The leading `html` type selector adds an
+ * element-column point so BOTH blocks outrank the always-on adh base theme (:root,
+ * 0-1-0) AND color-mode-light (:root[data-color-mode]:not(.dark), 0-3-0) regardless
+ * of stylesheet source order — so an active full-palette theme fully reskins the M3
+ * chrome in both modes. Overriding the M3 color roles cascades through apt-*, the
+ * shadcn layer and the compat aliases via var(). */
+
+html:root {
+  color-scheme: dark;
+
+  /* M3 surfaces + text + outline */
+  --color-surface: #1a1b26;
+  --color-surface-dim: #16161e;
+  --color-surface-bright: #414868;
+  --color-surface-container-lowest: #0f0f14;
+  --color-surface-container-low: #20212e;
+  --color-surface-container: #252638;
+  --color-surface-container-high: #2c2e44;
+  --color-surface-container-highest: #383b54;
+  --color-on-surface: #c0caf5;
+  --color-on-surface-variant: #a9b1d6;
+  --color-text-dim: #565f89;
+  --color-outline: #3b4261;
+  --color-outline-variant: #262940;
+  --color-outline-strong: #767da3;
+  --color-inverse-surface: #c0caf5;
+  --color-inverse-on-surface: #1a1b26;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+
+  /* M3 primary / secondary / tertiary */
+  --color-primary: #7aa2f7;
+  --color-on-primary: #1a1b26;
+  --color-primary-container: #203562;
+  --color-on-primary-container: #d6e2fe;
+  --color-primary-bright: #94b2f9;
+  --color-inverse-primary: #94b2f9;
+  --color-primary-dim: rgba(122, 162, 247, 0.14);
+  --color-secondary: #a9b1d6;
+  --color-on-secondary: #1a1b26;
+  --color-secondary-container: #252638;
+  --color-on-secondary-container: #c0caf5;
+  --color-tertiary: #bb9af7;
+  --color-on-tertiary: #1a1b26;
+  --color-tertiary-container: #392a61;
+  --color-on-tertiary-container: #ebe0fe;
+
+  /* M3 status (error / success / warning / info) */
+  --color-error: #f7768e;
+  --color-on-error: #1a1b26;
+  --color-error-container: #55212f;
+  --color-on-error-container: #fddae1;
+  --color-success: #9ece6a;
+  --color-on-success: #1a1b26;
+  --color-success-container: #2b401d;
+  --color-on-success-container: #e4f3d5;
+  --color-warning: #ff9e64;
+  --color-on-warning: #1a1b26;
+  --color-warning-container: #5a3921;
+  --color-on-warning-container: #ffe3d0;
+  --color-info: #7dcfff;
+  --color-on-info: #1a1b26;
+  --color-info-container: #15435a;
+  --color-on-info-container: #d6f0ff;
+
+  /* M3 extras + apt literals */
+  --color-surface-tint: var(--color-primary);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
+  --color-apt-nav: #2c2e44;
+
+  /* COMPAT aliases (legacy names → M3 roles) */
+  --color-surface-raised: var(--color-surface-container);
+  --color-surface-hover: var(--color-surface-container-high);
+  --color-border: var(--color-outline);
+  --color-border-subtle: var(--color-outline-variant);
+  --color-border-strong: var(--color-outline-strong);
+  --color-text-primary: var(--color-on-surface);
+  --color-text-secondary: var(--color-on-surface-variant);
+  --color-accent: var(--color-primary);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-accent-dim: var(--color-primary-dim);
+
+  /* chat (persona-chat component) */
+  --pc-persona-bg: #252638;
+  --pc-persona-text: #c0caf5;
+  --pc-persona-name: #7aa2f7;
+  --pc-persona-time: rgba(192, 202, 245, 0.45);
+  --pc-user-bg: #2c2e44;
+  --pc-user-text: #c0caf5;
+  --pc-user-name: #565f89;
+  --pc-surface: #252638;
+  --pc-input-bg: #1a1b26;
+  --pc-input-border: #3b4261;
+  --pc-input-focus: #7aa2f7;
+  --pc-send-bg: #7aa2f7;
+  --pc-send-bg-hover: #94b2f9;
+  --pc-send-text: #1a1b26;
+  --pc-time-color: rgba(192, 202, 245, 0.32);
+  --pc-avatar-persona-bg: #7aa2f7;
+  --pc-avatar-persona-text: #1a1b26;
+  --pc-avatar-user-bg: #3b4261;
+  --pc-avatar-user-text: #a9b1d6;
+
+  /* code highlighting (Shiki) */
+  --scp-shiki-theme: 'tokyo-night';
+
+  /* fonts (mode-invariant) — --font-serif drives the M3 display/headline roles */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Zen Kaku Gothic New', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-display: 'Zen Kaku Gothic New', ui-sans-serif, system-ui, sans-serif;
+  --pc-font: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --pc-radius: 8px;
+}
+
+html:root[data-color-mode]:not(.dark) {
+  color-scheme: light;
+
+  /* M3 surfaces + text + outline */
+  --color-surface: #e6e7ed;
+  --color-surface-dim: #d6d8df;
+  --color-surface-bright: #f5f6f9;
+  --color-surface-container-lowest: #f7f8fb;
+  --color-surface-container-low: #dfe1e8;
+  --color-surface-container: #d6d8df;
+  --color-surface-container-high: #cccdd5;
+  --color-surface-container-highest: #c1c2c7;
+  --color-on-surface: #343b59;
+  --color-on-surface-variant: #4a5173;
+  --color-text-dim: #7a7e94;
+  --color-outline: #c1c2c7;
+  --color-outline-variant: #d6d8df;
+  --color-outline-strong: #8a8e9d;
+  --color-inverse-surface: #343b59;
+  --color-inverse-on-surface: #e6e7ed;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+
+  /* M3 primary / secondary / tertiary */
+  --color-primary: #2959aa;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #cddbf4;
+  --color-on-primary-container: #12294f;
+  --color-primary-bright: #204a8c;
+  --color-inverse-primary: #204a8c;
+  --color-primary-dim: rgba(41, 89, 170, 0.10);
+  --color-secondary: #4a5173;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d6d8df;
+  --color-on-secondary-container: #343b59;
+  --color-tertiary: #65359d;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #e5daf3;
+  --color-on-tertiary-container: #30164b;
+
+  /* M3 status (error / success / warning / info) */
+  --color-error: #8c4351;
+  --color-on-error: #ffffff;
+  --color-error-container: #f3d8db;
+  --color-on-error-container: #451720;
+  --color-success: #385f0d;
+  --color-on-success: #ffffff;
+  --color-success-container: #d7e7c8;
+  --color-on-success-container: #1b2f06;
+  --color-warning: #965027;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #f3dfcf;
+  --color-on-warning-container: #482412;
+  --color-info: #006c86;
+  --color-on-info: #ffffff;
+  --color-info-container: #cee5ed;
+  --color-on-info-container: #003340;
+
+  /* M3 extras + apt literals */
+  --color-surface-tint: var(--color-primary);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
+  --color-apt-nav: #cccdd5;
+
+  /* COMPAT aliases (legacy names → M3 roles) */
+  --color-surface-raised: var(--color-surface-container);
+  --color-surface-hover: var(--color-surface-container-high);
+  --color-border: var(--color-outline);
+  --color-border-subtle: var(--color-outline-variant);
+  --color-border-strong: var(--color-outline-strong);
+  --color-text-primary: var(--color-on-surface);
+  --color-text-secondary: var(--color-on-surface-variant);
+  --color-accent: var(--color-primary);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-accent-dim: var(--color-primary-dim);
+
+  /* chat (persona-chat component) */
+  --pc-persona-bg: #2959aa;
+  --pc-persona-text: #ffffff;
+  --pc-persona-name: rgba(255, 255, 255, 0.92);
+  --pc-persona-time: rgba(255, 255, 255, 0.45);
+  --pc-user-bg: #cccdd5;
+  --pc-user-text: #343b59;
+  --pc-user-name: #7a7e94;
+  --pc-surface: #d6d8df;
+  --pc-input-bg: #e6e7ed;
+  --pc-input-border: #c1c2c7;
+  --pc-input-focus: #2959aa;
+  --pc-send-bg: #2959aa;
+  --pc-send-bg-hover: #204a8c;
+  --pc-send-text: #ffffff;
+  --pc-time-color: rgba(52, 59, 89, 0.32);
+  --pc-avatar-persona-bg: #2959aa;
+  --pc-avatar-persona-text: #ffffff;
+  --pc-avatar-user-bg: #c1c2c7;
+  --pc-avatar-user-text: #4a5173;
+
+  /* code highlighting (Shiki) */
+  --scp-shiki-theme: 'catppuccin-latte';
+}
+
+/* === Site surface === */
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--color-accent-dim); color: var(--color-accent); }
+
+.prose {
+  --tw-prose-body: var(--color-text-primary);
+  --tw-prose-headings: var(--color-text-primary);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-text-primary);
+  --tw-prose-code: var(--color-accent);
+  --tw-prose-pre-bg: var(--color-surface-raised);
+  --tw-prose-pre-code: var(--color-text-primary);
+  --tw-prose-counters: var(--color-text-secondary);
+  --tw-prose-bullets: var(--color-text-dim);
+  --tw-prose-hr: var(--color-border);
+  --tw-prose-quotes: var(--color-text-secondary);
+  --tw-prose-quote-borders: var(--color-accent);
+  --tw-prose-th-borders: var(--color-border);
+  --tw-prose-td-borders: var(--color-border-subtle);
+  --tw-prose-captions: var(--color-text-dim);
+}
+
+.prose :where(h1, h2, h3, h4):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--color-accent);
+}
+.prose :where(code):not(:where(pre *, [class~='not-prose'], [class~='not-prose'] *)) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-surface-raised);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-subtle);
+}
+.prose :where(pre):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+/* === Chat surface === */
+
+.persona-chat {
+  font-family: var(--pc-font);
+  background: var(--pc-surface);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 3px color-mix(in srgb, var(--color-text-primary) 12%, transparent),
+    0 8px 24px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+}
+
+.persona-chat .pc-transcript::-webkit-scrollbar { width: 5px; }
+.persona-chat .pc-transcript::-webkit-scrollbar-track { background: transparent; }
+.persona-chat .pc-transcript::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.persona-chat .pc-message {
+  animation: pc-slide-up 0.2s ease-out;
+}
+
+@keyframes pc-slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.persona-chat .pc-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.persona-chat .pc-persona .pc-avatar {
+  background: var(--pc-avatar-persona-bg);
+  color: var(--pc-avatar-persona-text);
+}
+
+.persona-chat .pc-user .pc-avatar {
+  background: var(--pc-avatar-user-bg);
+  color: var(--pc-avatar-user-text);
+}
+
+.persona-chat .pc-bubble {
+  padding: 10px 16px;
+  border-radius: var(--pc-radius);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.persona-chat .pc-persona .pc-bubble {
+  background: var(--pc-persona-bg);
+  color: var(--pc-persona-text);
+  border-bottom-left-radius: 4px;
+}
+
+.persona-chat .pc-user .pc-bubble {
+  background: var(--pc-user-bg);
+  color: var(--pc-user-text);
+  border-bottom-right-radius: 4px;
+}
+
+.persona-chat .pc-sender {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.persona-chat .pc-persona .pc-sender { color: var(--pc-persona-name); }
+.persona-chat .pc-user .pc-sender { color: var(--pc-user-name); }
+
+.persona-chat .pc-time { font-size: 10px; margin-top: 4px; }
+.persona-chat .pc-persona .pc-time { color: var(--pc-persona-time); }
+.persona-chat .pc-user .pc-time { color: var(--pc-time-color); }
+
+.persona-chat .pc-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  animation: pc-pulse 1.2s ease-in-out infinite;
+}
+
+.persona-chat .pc-dots span:nth-child(2) { animation-delay: 0.2s; }
+.persona-chat .pc-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pc-pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+.persona-chat .pc-input-area {
+  background: var(--pc-surface);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.persona-chat .pc-input {
+  padding: 11px 16px;
+  border: 1px solid var(--pc-input-border);
+  border-radius: 10px;
+  font-family: var(--pc-font);
+  font-size: 14px;
+  background: var(--pc-input-bg);
+  color: var(--color-text-primary);
+}
+
+.persona-chat .pc-input:focus {
+  border-color: var(--pc-input-focus);
+  box-shadow: 0 0 0 3px var(--color-accent-dim);
+}
+
+.persona-chat .pc-input::placeholder { color: var(--color-text-dim); }
+
+.persona-chat .pc-send-btn {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: var(--pc-send-bg);
+  color: var(--pc-send-text);
+}
+
+.persona-chat .pc-send-btn:hover { background: var(--pc-send-bg-hover); }
+.persona-chat .pc-send-btn:active { transform: scale(0.96); }
+.persona-chat .pc-send-btn:disabled { opacity: 0.4; transform: none; }
+
+/* Rich content */
+.persona-chat .pc-content-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 13px;
+}
+.persona-chat .pc-persona .pc-content-link { color: var(--pc-persona-text); }
+.persona-chat .pc-content-link:hover { opacity: 0.7; }
+.persona-chat .pc-content-image {
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Popover */
+.persona-chat .pc-popover {
+  background: var(--pc-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 24px color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+}
+.persona-chat .pc-popover-title {
+  font-weight: 600;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+.persona-chat .pc-popover-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.persona-chat .pc-popover-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 4px 0;
+  display: block;
+}
+.persona-chat .pc-popover-link:hover { text-decoration: underline; }
+.persona-chat .pc-popover-toggle { color: var(--color-accent); }
+.persona-chat .pc-popover-toggle:hover { color: var(--pc-send-bg-hover); }
+.persona-chat .pc-popover-arrow { border-top-color: var(--color-accent); }

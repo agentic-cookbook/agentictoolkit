@@ -22,6 +22,15 @@ import {
   rosePineCss,
   signalCss,
   solarizedCss,
+  catppuccinCss,
+  cobalt2Css,
+  draculaCss,
+  githubCss,
+  monokaiCss,
+  oneDarkCss,
+  synthwave84Css,
+  tokyoNightCss,
+  vesperCss,
 } from './theme-data'
 
 export type ThemeKey =
@@ -48,6 +57,15 @@ export type ThemeKey =
   | 'rose-pine'
   | 'signal'
   | 'solarized'
+  | 'catppuccin'
+  | 'cobalt2'
+  | 'dracula'
+  | 'github'
+  | 'monokai'
+  | 'one-dark'
+  | 'synthwave84'
+  | 'tokyo-night'
+  | 'vesper'
 
 export interface ThemeEntry {
   id: ThemeKey
@@ -79,6 +97,15 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   'rose-pine': { id: 'rose-pine', label: 'Rosé Pine', css: rosePineCss },
   signal: { id: 'signal', label: 'Signal', css: signalCss },
   solarized: { id: 'solarized', label: 'Solarized', css: solarizedCss },
+  catppuccin: { id: 'catppuccin', label: 'Catppuccin', css: catppuccinCss },
+  cobalt2: { id: 'cobalt2', label: 'Cobalt2', css: cobalt2Css },
+  dracula: { id: 'dracula', label: 'Dracula', css: draculaCss },
+  github: { id: 'github', label: 'GitHub', css: githubCss },
+  monokai: { id: 'monokai', label: 'Monokai', css: monokaiCss },
+  'one-dark': { id: 'one-dark', label: 'One Dark', css: oneDarkCss },
+  synthwave84: { id: 'synthwave84', label: "Synthwave '84", css: synthwave84Css },
+  'tokyo-night': { id: 'tokyo-night', label: 'Tokyo Night', css: tokyoNightCss },
+  vesper: { id: 'vesper', label: 'Vesper', css: vesperCss },
 }
 
 export const themeIds: ThemeKey[] = Object.keys(themes) as ThemeKey[]

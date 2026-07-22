@@ -11,7 +11,11 @@ const REPORT_ONLY = process.argv.includes('--report')
 // themes ship their OWN complete M3 palette in dual blocks — a dark `html:root` and a light
 // `html:root[data-color-mode]:not(.dark)` override — so each is gated in BOTH modes.
 const ADH_THEMES = ['adh', 'adh-manrope']
-const FULL_PALETTE_THEMES = ['signal', 'nord', 'solarized', 'rose-pine', 'gruvbox']
+const FULL_PALETTE_THEMES = [
+  'signal', 'nord', 'solarized', 'rose-pine', 'gruvbox',
+  'github', 'tokyo-night', 'catppuccin', 'one-dark', 'dracula',
+  'monokai', 'cobalt2', 'synthwave84', 'vesper',
+]
 
 // pairs: [foreground role, background role, minRatio, label]
 const TEXT = 4.5
