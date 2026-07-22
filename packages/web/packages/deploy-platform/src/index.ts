@@ -5,3 +5,6 @@ export * from "./util/index.js";
 export * from "./cooldown/index.js";
 export * from "./canon/index.js";
 export * from "./providers/index.js";
+// The auto-configure engine is canon-only (drizzle-free), so it belongs on the root
+// barrel alongside the other non-DB surfaces.
+export * from "./engine/index.js";

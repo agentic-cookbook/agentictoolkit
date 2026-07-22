@@ -10,6 +10,7 @@ export default defineConfig({
     "src/providers/index.ts",
     "src/canon/index.ts",
     "src/enumerate/index.ts",
+    "src/engine/index.ts",
   ],
   format: ["esm"],
   target: "es2022",
