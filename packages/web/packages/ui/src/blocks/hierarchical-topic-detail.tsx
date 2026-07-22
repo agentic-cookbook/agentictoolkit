@@ -37,7 +37,7 @@ import {
   DialogDescription,
 } from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
-import { TopicOverview, TopicOverviewHelp } from "./topic-overview"
+import { TopicOverview, TopicOverviewHelp, TopicSelectHint } from "./topic-overview"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -84,16 +84,18 @@ export interface TopicLevel {
    *  narrow — selecting a row still NEVER auto-selects anything at a deeper level unless that level
    *  asks for it here. Omit for the platform default: nothing is chosen for the user. */
   defaultSelectedId?: string
-  /** The automatic TOPIC OVERVIEW (default on): while this level is the frontier with nothing
-   *  selected, the detail pane shows one card per row (icon + label + `description`) and
-   *  clicking a card selects it. Pass `false` for a level whose unselected state has a REAL
+  /** The AUTOMATIC no-selection detail (default on): while this level is the frontier with
+   *  nothing selected, the pane stays almost empty — one quiet, centered nudge to select
+   *  something (`TopicSelectHint`). Pass `"cards"` for a level whose card grid (one card per
+   *  row: icon + label + `description`; clicking selects) IS its landing page (the help
+   *  site's topic browser). Pass `false` for a level whose unselected state has a REAL
    *  landing of its own (ResourceExplorer's searchable entity landing). */
-  overview?: boolean
-  /** For a list whose rows are all the SAME KIND of thing (Sites, Groups): replace the
-   *  per-row card grid — noise at 100+ near-identical rows — with ONE centered help blurb
+  overview?: boolean | "cards"
+  /** Replace the default nudge (or the `"cards"` grid) with ONE centered help blurb —
+   *  e.g. for a list whose rows are all the SAME KIND of thing (Sites, Groups), a blurb
    *  explaining what the items are and how to pick one. Set this to the blurb content (a
-   *  string or richer nodes); when present it wins over the card overview at this level's
-   *  unselected frontier. Ignored when `overview` is `false`. */
+   *  string or richer nodes); when present it wins at this level's unselected frontier.
+   *  Ignored when `overview` is `false`. */
   overviewHelp?: ReactNode
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
@@ -502,11 +504,13 @@ export function HierarchicalTopicDetail({
     (layoutMode === "auto" &&
       (phone || (containerW > 0 && containerW < minDetailPx(minDetailWidth) + FULL_RAIL)))
 
-  // THE AUTOMATIC TOPIC OVERVIEW: while the frontier list has no selection, the detail pane is the
-  // standard overview — one card per row (icon + label + description); clicking a card selects it —
-  // for EVERY stack, instead of whatever placeholder the host passed as children. It exists ONLY in
-  // that state: the moment the frontier gains a selection the host's real detail (children) shows.
-  // A level whose unselected state has a real landing of its own opts out (`overview: false`).
+  // THE AUTOMATIC FRONTIER DETAIL: while the frontier list has no selection, the detail pane is
+  // owned by the package — by default an almost-empty centered nudge to select something
+  // (TopicSelectHint), instead of whatever placeholder the host passed as children. A host blurb
+  // (`overviewHelp`) wins over the default; a level whose card grid is a real landing opts into
+  // the per-row cards (`overview: "cards"`); a level whose unselected state has a real landing of
+  // its own opts out entirely (`overview: false`). It exists ONLY in that state: the moment the
+  // frontier gains a selection the host's real detail (children) shows.
   // Titled by the parent's selected row (the entity whose topics these are), else the level's title.
   const frontierLevel = firstUnselected === -1 ? null : levels[firstUnselected]
   const parentOfFrontier = firstUnselected > 0 ? levels[firstUnselected - 1] : null
@@ -515,18 +519,20 @@ export function HierarchicalTopicDetail({
     frontierLevel?.title
   const overview =
     frontierLevel && frontierLevel.overview !== false ? (
-      // A homogeneous list (Sites/Groups) opts into a single centered help blurb instead of
-      // a card grid of near-identical rows; it shows even for an empty list (the blurb still
-      // explains what belongs here). Otherwise the standard per-row card grid, when non-empty.
+      // The blurb shows even for an empty list (it still explains what belongs here). The card
+      // grid and the default nudge only show for a non-empty list — with nothing to select, the
+      // host's own children placeholder stands.
       frontierLevel.overviewHelp != null ? (
         <TopicOverviewHelp title={overviewTitle}>{frontierLevel.overviewHelp}</TopicOverviewHelp>
-      ) : frontierLevel.items.length > 0 ? (
+      ) : frontierLevel.items.length === 0 ? null : frontierLevel.overview === "cards" ? (
         <TopicOverview
           title={overviewTitle}
           items={frontierLevel.items}
           onSelect={(id) => frontierLevel.onSelect(id)}
         />
-      ) : null
+      ) : (
+        <TopicSelectHint />
+      )
     ) : null
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
   // the deeper levels are PUBLISHED by components living in children (StackLevels), so unmounting

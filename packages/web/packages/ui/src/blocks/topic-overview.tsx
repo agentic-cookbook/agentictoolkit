@@ -6,11 +6,12 @@ import { Card, CardHeader, CardTitle, CardDescription } from "../components/card
 import type { TopicDetailItem } from "./topic-detail"
 
 /**
- * The STANDARD no-selection detail for a topic list: one card per topic — the topic's
- * icon + label with its `description` under it — laid out in a responsive grid.
- * Clicking a card selects that topic in the list (`onSelect` is the level's own
- * select). Hosts get it for free wherever a topic rail is the frontier with nothing
- * chosen, instead of a bare "Select a topic." placeholder.
+ * The OPT-IN no-selection detail for a topic list (`TopicLevel.overview: "cards"`): one
+ * card per topic — the topic's icon + label with its `description` under it — laid out
+ * in a responsive grid. Clicking a card selects that topic in the list (`onSelect` is
+ * the level's own select). For a level whose card grid IS its landing page (the help
+ * site's topic browser); everywhere else the default no-selection detail is the quiet
+ * `TopicSelectHint` nudge.
  */
 export function TopicOverview({
   title,
@@ -94,6 +95,26 @@ export function TopicOverviewHelp({
           {children}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The DEFAULT no-selection detail: an almost-empty pane holding one quiet, centered nudge
+ * to pick something from the list. The pane owns no content of its own until a real choice
+ * is made — a level whose cards are a genuine landing opts back into the `TopicOverview`
+ * grid with `overview: "cards"`, and `overviewHelp` still supplies a richer custom blurb.
+ * `data-htd-select-hint` is the stable hook for tests, so they never couple to the copy.
+ */
+export function TopicSelectHint(): ReactElement {
+  return (
+    <div
+      data-htd-select-hint
+      className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto p-6"
+    >
+      <p className="max-w-prose text-center text-sm leading-relaxed text-apt-text-muted">
+        Select an item from the list to view or edit it here.
+      </p>
     </div>
   )
 }

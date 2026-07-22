@@ -100,9 +100,10 @@ describe("must-animate-every-menu-closure (wiring)", () => {
         <div>detail</div>
       </HierarchicalMenuDetail>,
     )
-    // Scoped to the RAIL: with nothing selected the frontier's detail is the automatic topic overview
-    // (must-show-topic-overview-at-unselected-frontier), so "Acme" is legitimately on screen twice —
-    // once as a row, once as a card. An unscoped query matches both and fails.
+    // Scoped to the RAIL: a level opted into `overview: "cards"` duplicates every row as a card in
+    // the frontier's detail, so an unscoped name can resolve to 2 elements. The default frontier
+    // detail is now the select-something nudge (no duplication), but the scoping stays — it is
+    // correct regardless of what the pane holds.
     const rail = within(container.querySelector<HTMLElement>('[data-htd-col="0"]')!)
     fireEvent.click(rail.getByRole("button", { name: /Acme/ }))
     await waitFor(() => expect(onSelect).toHaveBeenCalledWith("acme"))
@@ -225,6 +226,9 @@ function Walk({ rootId }: { rootId: string }) {
               { id: "keys", label: "Keys" },
             ],
             selectedId: topic,
+            // The card grid (not the default nudge), so T57 can prove the hold blocks the
+            // frontier overview: without the hold, "Hooks"/"Keys" cards would enter the pane.
+            overview: "cards",
             onSelect: setTopic,
             onClear: () => setTopic(null),
           }),
@@ -312,7 +316,8 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
       expect(displayHidden(detailPane().getByText("DETAIL integrations/hooks"))).toBe(false),
     )
     // …then UNSELECT the root (re-click its selected row). The clear must release the hold: the
-    // pane shows the real frontier state (the workspaces overview), never the captured detail.
+    // pane shows the real frontier state (the workspaces frontier's nudge), never the captured
+    // detail.
     const rail = within(container.querySelector<HTMLElement>('[data-htd-col="0"]')!)
     fireEvent.click(rail.getByRole("button", { name: /Acme/ }))
     await waitFor(() =>
@@ -320,10 +325,10 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
     )
   })
 
-  it("a deep link at an unselected frontier still shows the overview — nothing was ever held", () => {
+  it("a deep link at an unselected frontier still shows the frontier detail — nothing was ever held", () => {
     const root = freshRootId()
-    // Mount mid-path with no gesture: workspaces chosen, features not — the frontier overview rule
-    // stands (there is no held detail and no pointer).
+    // Mount mid-path with no gesture: workspaces chosen, features not — the automatic frontier
+    // detail rule stands (there is no held detail and no pointer).
     const { container } = render(
       <HierarchicalMenuDetail
         levels={[
@@ -340,9 +345,13 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
         <div>LANDING</div>
       </HierarchicalMenuDetail>,
     )
-    // The overview card for the frontier's rows renders inside the detail section.
+    // The frontier's automatic detail — the default select-something nudge — renders inside the
+    // detail section (and the row labels do NOT: the pane stays almost empty).
+    const section = container.querySelector("section")!
     expect(
-      displayHidden(within(container.querySelector("section")!).getByText("Integrations")),
+      displayHidden(section.querySelector<HTMLElement>("[data-htd-select-hint]")),
     ).toBe(false)
+    expect(section.querySelector("[data-htd-select-hint]")).not.toBeNull()
+    expect(within(section).queryByText("Integrations")).toBeNull()
   })
 })

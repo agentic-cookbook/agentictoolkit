@@ -84,9 +84,9 @@ const enter = (el: HTMLElement, from: Element | null = document.body) =>
 const leave = (el: HTMLElement, to: Element | null) =>
   fireEvent.pointerOut(el, { relatedTarget: to })
 
-/** The RAIL row for a label. An unselected frontier also renders the same labels as overview
- *  CARDS (role button too), so a bare getByRole is ambiguous — the rail row is the one that
- *  carries `data-htd-row`. */
+/** The RAIL row for a label. A frontier level opted into `overview: "cards"` renders the same
+ *  labels as overview CARDS (role button too), so a bare getByRole can be ambiguous — the rail
+ *  row is the one that carries `data-htd-row`. */
 const railRow = (name: RegExp): HTMLElement => {
   const rows = screen.getAllByRole('button', { name }).filter((b) => b.hasAttribute('data-htd-row'))
   if (rows.length !== 1) throw new Error(`expected exactly one rail row for ${name}, got ${rows.length}`)
@@ -649,5 +649,51 @@ describe('HierarchicalTopicDetail — narrow (navigation-stack) layout', () => {
     enter(col(0))
     const row = within(col(1)).getByRole('button', { name: /Core Platform/ })
     expect(row.querySelector('.lucide-chevron-right')).not.toBeInTheDocument()
+  })
+})
+
+describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
+  // With a region chosen and no ecosystem, the ecosystems list is the unselected frontier and the
+  // pane belongs to the package. The three modes: default nudge / `overview: "cards"` / a host
+  // `overviewHelp` blurb (which wins over both).
+  const pane = (container: HTMLElement): HTMLElement => {
+    const el = container.querySelector('section')
+    if (!(el instanceof HTMLElement)) throw new Error('no detail pane')
+    return el
+  }
+
+  it('defaults to the select-something nudge — no row is duplicated into the pane', () => {
+    const { container } = render(
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us' })}>
+        <p>landing</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(pane(container).querySelector('[data-htd-select-hint]')).not.toBeNull()
+    expect(within(pane(container)).queryByText('Core Platform')).toBeNull()
+  })
+
+  it('renders the card grid only for a level opted into overview: "cards"', () => {
+    const levels = levelsFor({ region: 'us' })
+    levels[1] = { ...levels[1]!, overview: 'cards' }
+    const { container } = render(
+      <HierarchicalTopicDetail levels={levels}>
+        <p>landing</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(pane(container).querySelector('[data-htd-select-hint]')).toBeNull()
+    expect(within(pane(container)).getByText('Core Platform')).toBeInTheDocument()
+  })
+
+  it('overviewHelp wins over both — one centered blurb, no cards, no nudge', () => {
+    const levels = levelsFor({ region: 'us' })
+    levels[1] = { ...levels[1]!, overview: 'cards', overviewHelp: 'Pick an ecosystem.' }
+    const { container } = render(
+      <HierarchicalTopicDetail levels={levels}>
+        <p>landing</p>
+      </HierarchicalTopicDetail>,
+    )
+    expect(within(pane(container)).getByText('Pick an ecosystem.')).toBeInTheDocument()
+    expect(pane(container).querySelector('[data-htd-select-hint]')).toBeNull()
+    expect(within(pane(container)).queryByText('Core Platform')).toBeNull()
   })
 })
