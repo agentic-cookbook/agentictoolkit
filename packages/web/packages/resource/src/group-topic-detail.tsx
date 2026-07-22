@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { TopicSelectHint, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import type { TopicLeaf } from "./resource-explorer";
 import { StackLevels } from "./rail-host";
@@ -101,11 +101,13 @@ export function StackGroupDetail({
             {active.render(renderSubLeaf ? renderSubLeaf(active.id) : LOCAL_SUBLEAF)}
           </Fragment>
         ) : (
-          // Fallback only — the frame's automatic topic overview replaces this whenever this
-          // group's level is the unselected frontier of the merged stack.
-          <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">
-            {emptyHint}
-          </p>
+          // Fallback only — the frame's automatic frontier nudge replaces this whenever this
+          // group's level is the unselected frontier of the merged stack. The shared card keeps
+          // it identical to every other "pick something" pane; role="status" preserves the
+          // announcement the old <p> made.
+          <div role="status" className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <TopicSelectHint title={emptyHint} />
+          </div>
         )}
       </div>
     </StackLevels>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { ButtonBar } from "./master-detail/MasterDetailLayout";
 import type { MasterDetailForm } from "./master-detail/useMasterDetailForm";
 
@@ -67,9 +68,9 @@ export function RecordSettingsPane<TItem, TInput>({
             {renderDetail(form.draft)}
           </>
         ) : (
-          <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-apt-border p-8 text-center text-sm text-apt-text-muted">
-            {emptyLabel}
-          </div>
+          // The shared select-hint card, so this pane's placeholder matches the stack
+          // frontier's nudge and every other "pick something" pane.
+          <TopicSelectHint title={emptyLabel} />
         )}
       </section>
     </div>

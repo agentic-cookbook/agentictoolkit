@@ -3,7 +3,7 @@
 import { useCallback, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { FolderKanban, ListTodo, Activity, Building2, KeyRound, User } from "lucide-react";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
@@ -266,7 +266,7 @@ export function ProjectsFeature({
       reload={reload}
       leadingLevels={workspaceLevel ? [workspaceLevel] : undefined}
       leadingPlaceholder={
-        <EmptyState title="Select a workspace to see its projects." />
+        <TopicSelectHint title="Select a workspace to see its projects." />
       }
       getId={(p) => p.id}
       getLabel={(p) => p.name}

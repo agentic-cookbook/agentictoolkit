@@ -7,6 +7,7 @@ import { Settings, Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, D
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import {
   ResourceExplorer,
   ResourceLanding,
@@ -170,7 +171,7 @@ function ChildEcosystemsLevel({
   });
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <EmptyState title="Select a child ecosystem to open it, or create a new one." />
+      <TopicSelectHint title="Select a child ecosystem to open it, or create a new one." />
     </div>
   );
 }

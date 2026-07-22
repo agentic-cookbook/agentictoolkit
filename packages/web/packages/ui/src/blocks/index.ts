@@ -4,7 +4,10 @@ export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor"
 export { Field } from "./field"
 export { FieldGroup } from "./field-group"
 export { TopicDetail, type TopicDetailItem, type RailSlot } from "./topic-detail"
-export { TopicOverview } from "./topic-overview"
+// TopicSelectHint is THE "select something" placeholder card — every pane that waits on a
+// choice renders it (the stack frontier does so automatically); EmptyState stays the home
+// for genuinely empty/loading/error panes.
+export { TopicOverview, TopicSelectHint } from "./topic-overview"
 export {
   HierarchicalTopicDetail,
   type TopicLevel,

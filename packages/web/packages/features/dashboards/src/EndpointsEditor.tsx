@@ -18,6 +18,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { DetailFooter, MasterDetailLayout, useRecordAffordance } from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
@@ -109,14 +110,10 @@ export function EndpointsEditor({
               setSelectedId(null);
             }}
           />
+        ) : endpoints === null ? (
+          <EmptyState title="Loading…" />
         ) : (
-          <EmptyState
-            title={
-              endpoints === null
-                ? "Loading…"
-                : "Select an endpoint to edit, or add a new one."
-            }
-          />
+          <TopicSelectHint title="Select an endpoint to edit, or add a new one." />
         )}
       </MasterDetailLayout>
     </>

@@ -7,8 +7,7 @@ import { Bot, Trash2, UserRound } from "lucide-react";
 import { teamMembersApi, type TeamMember } from "@agentic-toolkit/data/teams";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api as personaApi, type Persona } from "@agentic-toolkit/data/personas";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { TopicSelectHint, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -227,10 +226,9 @@ export function TeamMembersPane({
         ) : members === null ? (
           <p className="text-sm text-apt-text-muted">Loading…</p>
         ) : (
-          <EmptyState
-            title="Select a member, or add one."
-            description="Use “New member” to add a customer by email or one of your personas."
-          />
+          <TopicSelectHint title="Select a member, or add one.">
+            Use “New member” to add a customer by email or one of your personas.
+          </TopicSelectHint>
         )}
       </section>
 

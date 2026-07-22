@@ -16,7 +16,7 @@ import {
   GanttChartSquare,
   CalendarDays,
 } from "lucide-react";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
@@ -314,7 +314,7 @@ export function WorkItemsSurface({
         ) : view === null ? (
           // No view chosen yet — the stack never auto-selects, so the leaf holds the hint until the
           // user picks one from the Work Items list.
-          <EmptyState title="Select a view to see this project's work items." />
+          <TopicSelectHint title="Select a view to see this project's work items." />
         ) : (
           <>
             <div className="flex items-center justify-end">

@@ -9,7 +9,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Field } from "@agentic-toolkit/ui/blocks";
+import { Field, TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
@@ -270,12 +270,10 @@ export function AccessPane({
             buckets={buckets}
             principals={principals}
           />
+        ) : items === null ? (
+          <EmptyState title="Loading…" />
         ) : (
-          <EmptyState
-            title={
-              items === null ? "Loading…" : "Select an access list to edit, or create a new one."
-            }
-          />
+          <TopicSelectHint title="Select an access list to edit, or create a new one." />
         )}
       </div>
 

@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   HierarchicalTopicDetail,
+  TopicSelectHint,
   type TopicDetailItem,
   type TopicLevel,
 } from "@agentic-toolkit/ui/blocks";
@@ -300,7 +301,7 @@ export function ResourceExplorer<T>({
   // (keyed by scopedId so a resource switch remounts it).
   const content =
     leadingPending ? (
-      leadingPlaceholder ?? <EmptyState title="Select a workspace." />
+      (leadingPlaceholder ?? <TopicSelectHint title="Select a workspace." />)
     ) : promoteTopics && !scopedId ? (
       // Default resource still resolving (or the tenant has none): hold the frontier.
       <EmptyState title="Loading…" />
@@ -318,9 +319,9 @@ export function ResourceExplorer<T>({
         renderMeta={landing.renderMeta}
       />
     ) : topic == null ? (
-      // Fallback only — the frame's automatic topic overview replaces this whenever the
-      // topics level is the unselected frontier (must-show-topic-overview-at-unselected-frontier).
-      <EmptyState title="Select a topic to view." />
+      // Fallback only — the frame's automatic frontier nudge replaces this whenever the
+      // topics level is the unselected frontier of the merged stack.
+      <TopicSelectHint title="Select a topic to view." />
     ) : (
       <Fragment key={scopedId}>
         {topics.find((t) => t.id === topic)?.render(scopedId, titleFor, leaf, subLeafFor)}

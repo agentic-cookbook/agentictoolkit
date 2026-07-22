@@ -27,7 +27,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
+import { Field, FieldGroup, TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { cn } from "@agentic-toolkit/ui/lib/utils";
 
 // A role slug is lowercase and dash-joined (matches the server's own key). Validated
@@ -307,16 +307,12 @@ export function TeamPermissionsPane({
             creating={form.creating}
             selected={selected}
           />
+        ) : roles === null ? (
+          <EmptyState title="Loading…" />
+        ) : !workspaceSlug ? (
+          <EmptyState title="Open Teams from your hub workspace to manage roles." />
         ) : (
-          <EmptyState
-            title={
-              roles === null
-                ? "Loading…"
-                : !workspaceSlug
-                  ? "Open Teams from your hub workspace to manage roles."
-                  : "Select a role to edit, or create a new one."
-            }
-          />
+          <TopicSelectHint title="Select a role to edit, or create a new one." />
         )}
       </div>
 
