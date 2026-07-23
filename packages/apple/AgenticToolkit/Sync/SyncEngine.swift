@@ -334,6 +334,16 @@ public actor SyncEngine {
 
         let plan = Self.reconcilePlan(registered: registered, effective: effective)
 
+        // Server obligation (fix B1): this purge trusts the manifest as
+        // COMPLETE. A registered resource absent from the effective set is
+        // treated as enrollment-disabled — its mirror rows are purged and its
+        // unpushed edits terminally quarantined, per page, with no empty- or
+        // partial-manifest floor. That is deliberate and frozen: the server
+        // MUST send the full manifest on every pull page. A truncated or
+        // partial manifest is (correctly, by this contract) read as a
+        // disablement and will purge + quarantine the omitted resources; the
+        // client cannot distinguish "server dropped it from the manifest" from
+        // "server forgot to include it", so the omission IS the signal.
         if !plan.disabled.isEmpty {
             try await store.purgeResources(plan.disabled)
             for name in plan.disabled { registered[name] = nil }
