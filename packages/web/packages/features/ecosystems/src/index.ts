@@ -16,12 +16,3 @@ export type {
 // re-exported here: this barrel's dist is a "use client" module, so an RSC page that
 // imported the parse helper from it would throw in prod (render-only client refs).
 export type { EcosystemsPathSelection } from "./parse-path";
-
-// The opt-in per-ecosystem capability gate — also consumed standalone by the hub's
-// /messaging route (no ecosystem in its own URL), so it's exported at top level.
-export {
-  useEcosystemCapabilities,
-  useHasMessaging,
-  MESSAGING_CAPABILITY,
-} from "./use-ecosystem-capabilities";
-export type { EcosystemCapabilities } from "./use-ecosystem-capabilities";

@@ -30,7 +30,6 @@ import {
   ecoCreateValidate,
 } from "./EcosystemForm";
 import { EcoRequestsPane, EcoPendingUsersPane, EcoInvitesPane } from "./EcosystemInvitationPanes";
-import { useEcosystemCapabilities } from "./use-ecosystem-capabilities";
 import { an } from "./lib/an";
 
 /** The host's ecosystem-scoped topic rail config (the hub's `ECOSYSTEM_TOPICS` SSoT),
@@ -44,9 +43,6 @@ export interface EcosystemsTopicConfig {
   /** What this topic is for — feeds the standard no-selection TopicOverview cards. */
   description?: string;
   dividerAfter?: boolean;
-  /** An opt-in capability id — the topic is hidden unless the scoped ecosystem has it
-   *  enabled (see useEcosystemCapabilities). Omitted topics always show. */
-  capability?: string;
 }
 
 /** What `renderTopicPane` needs to reconstruct a host-owned config pane's exact call
@@ -290,9 +286,11 @@ export function EcosystemsFeature({
   const defaultId = defaultIdQuery.data ?? undefined;
   // The scoped ecosystem: the URL id, else the resolved workspace default. listFirst NEVER
   // falls back to the default — its bare path is the list. Guarded on the VALUE (not just the
-  // query's `enabled`): other consumers (useEcosystemCapabilities) share the query key, so a
-  // disabled query can still surface their cached resolution — which then merges the workspace
-  // default into the owned list as a phantom row (hit on hub-testing, 2026-07-10).
+  // query's `enabled`): any other reader of the ["ecosystem-id-for-slug", slug] key would warm
+  // the same cache entry, so a DISABLED query here can still read back their resolution — which
+  // then merges the workspace default into the owned list as a phantom row (hit on hub-testing,
+  // 2026-07-10, via the since-removed useEcosystemCapabilities). This feature is currently the
+  // key's only react-query reader; keep the value guard so re-adding one can't reopen the bug.
   const scopedId = activeEcoId ?? (listFirst ? undefined : defaultId);
 
   // The scoped ecosystem's row may be a hidden default — `list()` omits isDefault ecosystems, so
@@ -372,13 +370,6 @@ export function EcosystemsFeature({
     setNewOpen(true);
   };
 
-  // Opt-in capability gate: hide capability-marked topics (e.g. Messaging) unless the
-  // SCOPED ecosystem has enabled them (default off). Non-gated topics always show.
-  const { capabilities } = useEcosystemCapabilities(scopedId, workspaceSlug);
-  const visibleTopics = topicsConfig.filter(
-    (t) => t.capability == null || capabilities.includes(t.capability),
-  );
-
   // Workspace-scoped lists are MEMBERSHIP-gated, but managing an ecosystem's contents is
   // owner-level control (the org-admin bar) — so a plain org member can see an org product
   // they may not open. `canManage === false` (only ever set in `?workspace=` mode) turns
@@ -394,7 +385,7 @@ export function EcosystemsFeature({
     </div>
   );
 
-  const topics: ResourceTopic[] = visibleTopics.map((t) => ({
+  const topics: ResourceTopic[] = topicsConfig.map((t) => ({
     id: t.id,
     label: t.label,
     icon: t.icon,

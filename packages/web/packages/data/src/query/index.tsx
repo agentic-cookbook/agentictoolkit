@@ -15,8 +15,8 @@
 // ships from here, guaranteed to be the same physical module as the hooks.
 //
 // HOST CONTRACT: mount <ToolkitQueryProvider> once, above any toolkit feature
-// that fetches (EcosystemsFeature, useEcosystemCapabilities, TokensPanel, the
-// ecosystem-invitation hooks). It is independent of any react-query the host
+// that fetches (EcosystemsFeature, TokensPanel, the ecosystem-invitation
+// hooks). It is independent of any react-query the host
 // uses for its own code — separate copy, separate context, separate cache; the
 // two coexist without interference.
 //

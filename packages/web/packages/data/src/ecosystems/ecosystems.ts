@@ -258,17 +258,6 @@ export const ecosystemsApi = {
     );
   },
 
-  /** The opt-in capabilities enabled for an ecosystem (per-ecosystem registry —
-   *  the seam the hub uses to gate optional features like `messaging`, default off).
-   *  `id` is the ecosystem's rdid (or uuid); the backend resolves it at the edge. */
-  async capabilities(id: string): Promise<string[]> {
-    const res = await authedJson<{ capabilities: string[] }>(
-      `/api/ecosystem/capabilities/${enc(id)}`,
-    );
-    // Coerce a malformed/empty response to [] — react-query rejects an undefined queryFn result.
-    return res.capabilities ?? [];
-  },
-
   /** The explicit per-ecosystem AUTH POLICY governing this ecosystem's vended customer
    *  realm. Absent server-side ⇒ documented defaults (invite_only + login enabled); the
    *  route always returns a full object. `id` is the ecosystem's rdid (or uuid). */
