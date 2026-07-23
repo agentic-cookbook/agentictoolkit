@@ -179,7 +179,10 @@ host is obligated to drain it.
 Per-ecosystem enrollment means the set of resources the server will sync for an
 identity can change between pulls — a resource can appear, disappear, or bump
 its schema version. The client reconciles those transitions on **every pull
-iteration, before `apply`**, in `SyncEngine.reconcile(effective:manifest:cursor:)`.
+iteration, before `apply`**, in `SyncEngine.reconcile(…)`. The pure
+classification half is factored out as a testable `SyncEngine.reconcilePlan(registered:effective:)`
+(fix I6) that returns the `(disabled, bumped, appeared)` split; `reconcile`
+itself performs the resulting purge/reset/emit side effects.
 
 ### Effective set
 
@@ -197,17 +200,22 @@ pre-enrollment behavior).
 
 ### Transitions
 
-Given the effective set and the store's `registrations()`, the reconciler
-computes, in order:
+Given the effective set and the store's registrations, the reconciler computes,
+in order (the registrations are read **once per cycle** into a snapshot that the
+reconciler keeps current as it purges and prepares — fix H5+H1 — rather than
+re-reading `registrations()` on every page; reconcile itself still runs per page):
 
 1. **Disappearance** — registered resources no longer in the effective set.
    The reconciler calls `store.purgeResources(disabled)` (mirror rows deleted,
    pending/inflight outbox ops quarantined, registration removed) and emits
    `.resourcesDisabled([...])`. **The cursor is untouched.**
-2. **Schema bump** — effective resources whose manifest `schemaVersion` rose
-   above the registered version. Same purge, then emits
-   `.resourcesSchemaBumped([...])`. A schema bump is deliberately modelled as
-   _disappear then appear_ conceptually — in code the `bumped` set is computed
+2. **Schema bump** — effective resources whose manifest `schemaVersion`
+   *changed* from the registered version, a rise **or** a fall (fix A2: a
+   downgrade — e.g. a server rollback — is as much a schema mismatch as an
+   upgrade; mirror rows written under the old version can't be trusted against
+   the new one, so `bumped` is the `!=` predicate, not `<`). Same purge, then
+   emits `.resourcesSchemaBumped([...])`. A schema bump is deliberately modelled
+   as _disappear then appear_ conceptually — in code the `bumped` set is computed
    separately from `appeared`; both feed the same purge + resync effects rather
    than running as a literal two-step transition.
 3. **Appearance** — effective resources with no registration (minus the ones
@@ -231,14 +239,13 @@ treated as a resync — it cannot be behind a cursor that does not exist yet.
 
 ### Why appearance forces a full resync
 
-Verbatim from the recipe's Design Decisions:
-
-> The server keeps _one_ cursor stream per cohort and does **not** bump row
-> versions or re-serve rows when a resource is enrolled-enabled. So a resource
-> that enters the effective set on a non-fresh cursor has rows that changed
-> while it was outside the set sitting permanently behind the cursor — an
-> incremental pull would never see them. The only correct recovery is to reset
-> the mirror + cursor and re-pull from scratch.
+The rationale has a single home — the recipe's `appearance-forces-full-resync`
+requirement and its "Appearance ⇒ full resync" Design Decision
+([`../recipes/offline-sync-client.md`](../recipes/offline-sync-client.md#design-decisions)).
+In short: the server keeps one cursor stream per cohort and does not re-serve a
+resource's rows when it is enrolled-enabled, so rows that changed while the
+resource sat outside the effective set are permanently behind the cursor; only a
+mirror + cursor reset and a re-pull from scratch recovers them.
 
 A resync clears the mirror and cursor but **preserves the outbox** — the queued
 local edits are still owed to the server, so `performResync` re-pulls the full
@@ -249,19 +256,35 @@ as a silent resumption.
 
 ### Why disappearance quarantines instead of dropping
 
-Verbatim from the recipe's Design Decisions:
-
-> A local op for a resource that left the effective set can neither be pushed
-> (the server would reject it) nor kept live (the host must stop serving that
-> resource). It is moved to quarantine — surfaced to the host, never silently
-> dropped (that would lose the user's edit) and never silently pushed (that
-> would leak data across an enrollment boundary). A fixed retry re-`stage`s for
-> a fresh opId, because the server ledgers results immutably per opId.
+Same single source — the recipe's `disappearance-quarantines-outbox` requirement
+and its "Quarantine over drop or indefinite hold" Design Decision
+([`../recipes/offline-sync-client.md`](../recipes/offline-sync-client.md#design-decisions)).
+In short: a local op for a departed resource can neither be pushed (the server
+would reject it) nor kept live (the host must stop serving it), so it is
+quarantined — surfaced, never silently dropped (that loses the user's edit) and
+never silently pushed (that leaks data across an enrollment boundary); a fixed
+retry re-`stage`s for a fresh opId, because the server ledgers results immutably
+per opId.
 
 If enrollment is disabled while a push for that resource is already in flight,
 the server answers that op with `rejected/not_enrolled` and the client
 quarantines it — the same terminal state the local disable transition would
 have produced.
+
+### Server obligation: a complete manifest on every page
+
+The disappearance purge (transition 1 above) trusts the manifest as **complete**:
+a registered resource absent from a pull page's effective set is read as
+enrollment-disabled and its mirror rows are purged + its unpushed edits terminally
+quarantined, per page, with **no** empty- or partial-manifest floor. This purge
+semantics is deliberate and frozen (recipe: `disappearance-purges-mirror` +
+`disappearance-quarantines-outbox`), which places a hard obligation on the server:
+it MUST send the full manifest on every `/sync/pull` page. The client cannot tell
+"the server dropped this resource from enrollment" from "the server truncated the
+manifest" — the omission *is* the disable signal — so a partial or truncated
+manifest will be (correctly, by this contract) treated as a disablement and will
+purge + quarantine the omitted resources. The same comment lives at the purge
+site in `SyncEngine.reconcile`.
 
 ### The flapping bound
 
@@ -285,8 +308,8 @@ mirrored client-side — the values a host wires into config and store init:
   `64825b107`, all `schemaVersion 1`), passed as `hostResources` and/or to
   `prepare(resources:)`.
 - **`ADHSyncCatalog.pullOnly`** — the **27** `pushMode: 'route'` resources
-  (a subset of `all`), passed as `pullOnlyResources` to **both** the engine
-  config and the store init.
+  (a subset of `all`), passed as `pullOnlyResources` to the **store init** (the
+  sole enforcement point; the engine config carries no such field).
 
 **What it is not: authority.** The catalog is client knowledge — a static
 snapshot of the backend's `SYNC_REGISTRY`. It lets a host register the right
@@ -297,15 +320,17 @@ the registration list are client knowledge precisely because encoding them on
 the pull manifest would bloat every response with data the server already
 enforces authoritatively (it answers a mis-push with `rejected/route_only`).
 
-**Regeneration** — from an adh checkout, the one-liner in the file's own doc
-comment:
+**Regeneration** — from an adh checkout, run the codegen target named in the
+file's own doc comment. It re-emits `ADHSyncCatalog.swift` **and** runs a
+backend-CI-gated semantic-drift check that fails if the checked-in catalog no
+longer matches `SYNC_REGISTRY`:
 
 ```bash
-cd backend/src/adh && npx tsx --eval "
-  import { SYNC_REGISTRY } from './src/sync/registry';
-  for (const e of [...SYNC_REGISTRY].sort((a,b)=>a.resource.localeCompare(b.resource)))
-    console.log(e.resource, e.pushMode, e.schemaVersion)"
+python3 tools/codegen/generate.py sync-catalog
 ```
+
+Keep the catalog's `Generated … against adh main <sha>` provenance line in sync
+with the checkout you regenerate from.
 
 **How hosts wire it** — the catalog is the adoption path for enrollment
 subsetting and config-level pull-only refusal:
@@ -317,8 +342,7 @@ let engine = SyncEngine(
     transport: adapter,
     configuration: SyncEngineConfiguration(
         deviceId: deviceId,
-        hostResources: ADHSyncCatalog.all,        // or a curated subset
-        pullOnlyResources: ADHSyncCatalog.pullOnly
+        hostResources: ADHSyncCatalog.all        // or a curated subset
     )
 )
 ```
@@ -326,17 +350,18 @@ let engine = SyncEngine(
 A host that mirrors only part of the surface passes a subset as `hostResources`;
 the effective set is then `manifest ∩ hostResources` and the rest of the server
 manifest is surfaced as unregistered and ignored (`hostResources = nil`, the
-default, accepts the whole manifest). `pullOnlyResources` must go to **both**
-places — the engine config _and_ the store init — because it is the store's copy
-that enforces the stage-time refusal, and the engine keeps its own copy so a host
-has one config surface.
+default, accepts the whole manifest). `pullOnlyResources` goes **only** to the
+store init — the store's write path is what enforces the stage-time refusal, so
+there is nothing for the engine config to hold (fix E1 removed the dead
+config-level copy that the engine never read).
 
 > The two shipped hosts today (`SyncRuntime` in ADHDaemon, `AppServices` in
 > BitBag) construct `SyncEngineConfiguration(deviceId:)` with the defaults —
-> `hostResources = nil` (whole manifest) and no config-level `pullOnlyResources`.
-> The `ADHSyncCatalog`/`hostResources`/`pullOnly` wiring above is the mechanism
-> for opting into per-ecosystem enrollment subsetting and stage-time refusal; it
-> is exercised end-to-end by the toolkit's own `SyncEngineTests`.
+> `hostResources = nil` (whole manifest). The
+> `ADHSyncCatalog`/`hostResources`/`pullOnly` wiring above is the mechanism for
+> opting into per-ecosystem enrollment subsetting (via the config) and
+> stage-time refusal (via the store init); it is exercised end-to-end by the
+> toolkit's own `SyncEngineTests`.
 
 ## Host adoption guide
 
@@ -459,7 +484,7 @@ per-op in `SyncEngine.pushLoop`:
 | Status | Client reaction |
 |---|---|
 | `applied` | The op succeeded. If the result carries `newVersion`, the store adopts it as the mirror row's base version **before** deleting the outbox row, in the same transaction — closing the stage-during-push self-conflict race (adh `sync.md` §3). Then the outbox row is removed. |
-| `conflict` | Adopt the server's `current` row locally (last-writer-wins, delete-wins): if `current.deleted_at` is set, adopt as a local delete; otherwise adopt its data, stripping the bookkeeping columns `sync_version` / `sync_stamped_at`, and preserve the server's `sync_version` as the new base. Emits `.conflictResolved`. Two edge cases: a `conflict` carrying no `current` row has nothing to adopt and is **treated as a rejection** (quarantined, reason preserved); a `current.sync_version` that is non-finite or out of `Int64` range **skips adoption** but still resolves the op (the server stays authoritative even though the row can't be mirrored). |
+| `conflict` | Adopt the server's `current` row locally (last-writer-wins, delete-wins): if `current.deleted_at` is set, adopt as a local delete; otherwise adopt its data, stripping the bookkeeping columns `sync_version` / `sync_stamped_at`, and preserve the server's `sync_version` as the new base. Emits `.conflictResolved`. Two edge cases **quarantine** instead of adopting (fix A3): a `conflict` carrying no `current` row has nothing to adopt; and a `current.sync_version` that can't yield a numeric version — a non-finite/out-of-`Int64` number OR a non-numeric string (`current` is `z.unknown()`, unvalidated on the wire) — is unadoptable. Both route to the terminal quarantine path (reason preserved) rather than being handed to `apply` (which would throw and wedge the loop); the rest of the batch still `complete`s so the push makes progress. |
 | `rejected` | **Terminal.** Quarantine the op and never retry it under the same opId — the server ledgers results immutably per opId. A fixed retry must mint a fresh opId via a new `stage(_:)`. |
 
 **Every rejected reason** (server-assigned; see the recipe's

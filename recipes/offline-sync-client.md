@@ -86,7 +86,10 @@ new versions on apply.
   that left the effective set MUST move to quarantine — surfaced, never silently
   dropped, never pushed.
 - **schema-bump-is-disappear-then-appear**: A registered resource whose manifest
-  schemaVersion rises MUST be purged and then treated as an appearance.
+  schemaVersion **changes in either direction** — a rise OR a fall — MUST be
+  purged and then treated as an appearance. A downgrade (e.g. a server rollback)
+  is as much a schema mismatch as an upgrade: mirror rows written under the old
+  version cannot be trusted against the new one, so both directions purge + resync.
 - **cursor-is-opaque**: The client MUST treat the cursor as an opaque string —
   never fabricated, parsed, or compared beyond equality — and MUST persist it
   only together with an atomically applied pull batch.
@@ -142,7 +145,7 @@ cite `SyncWireTests` and the vendored fixtures under `Tests/…/Fixtures`.
 | R4 | resync-preserves-outbox | A staged op exists when a 410 forces resync | Op replayed under its original opId after the re-pull — `SyncEngineTests.testResyncRequiredResetsMirrorPreservingOutboxThenRepullsAndReplaysOutbox` |
 | R5 | disappearance-purges-mirror | `b.y` leaves the effective set | Its mirror rows deleted, registration removed, cursor untouched, `.resourcesDisabled(["b.y"])` — `SyncEngineTests.testDisappearancePurgesQuarantinesAndKeepsCursor` |
 | R6 | disappearance-quarantines-outbox | Pending op for the departing `b.y` | Op moved to quarantine, never pushed — `SyncEngineTests.testDisappearancePurgesQuarantinesAndKeepsCursor`; store: `InMemorySyncStoreTests.testPurgeResourcesDropsRowsQuarantinesOpsDeregisters` / `GRDBSyncStoreTests.testRegistrationsAndPurgeResources` |
-| R7 | schema-bump-is-disappear-then-appear | `a.x` manifest schemaVersion rises above the registered version | Purged then resynced, `.resourcesSchemaBumped(["a.x"])` — `SyncEngineTests.testSchemaBumpPurgesAndResyncs` |
+| R7 | schema-bump-is-disappear-then-appear | `a.x` manifest schemaVersion CHANGES from the registered version — a rise (v1→v2) or a fall (v2→v1) | Purged then resynced, `.resourcesSchemaBumped(["a.x"])` — `SyncEngineTests.testSchemaBumpPurgesAndResyncs` (rise) and `SyncEngineTests.testSchemaDowngradePurgesAndResyncs` (fall); pure classification: `SyncEngineTests.testReconcilePlanClassifiesVersionRiseAsBumped` / `testReconcilePlanClassifiesVersionFallAsBumped` |
 | R8 | cursor-is-opaque | Pull response whose cursor is an opaque base64 string; apply throws mid-batch | Cursor persisted only with a fully applied batch; never parsed — `GRDBSyncStoreTests.testApplyIsAtomicWithCursor`; wire: `SyncWireTests.testDecodesPullResponseFixture` (`Fixtures/pull-response.json`) |
 | R9 | tombstones-apply-as-deletes | Pulled change `{op: delete}` with no data | Row soft-deleted locally (drops out of live rows) — `GRDBSyncStoreTests.testDeleteTombstonesLocallyAndResyncPreservesOutbox`; wire: `SyncWireTests.testDecodesPullResponseFixture` (delete row, `Fixtures/pull-response.json`) |
 | R10 | pull-drains-has-more | Two pages, first with `hasMore = true` | Both pages pulled and applied atomically, cursor advanced per batch — `SyncEngineTests.testPullLoopsWhileHasMoreAndAdvancesCursorPerBatch` |
@@ -171,11 +174,20 @@ cite `SyncWireTests` and the vendored fixtures under `Tests/…/Fixtures`.
   has nothing to adopt; it is treated as a rejection — the op is quarantined
   (reason preserved), never silently dropped. Verified by
   `SyncEngineTests.testConflictWithoutCurrentIsQuarantinedNotSilentlyDropped`.
-- **Unparseable server `sync_version`.** A conflict whose `current.sync_version`
-  is non-finite or out of `Int64` range cannot be represented safely: adoption
-  is skipped (the local row is left untouched) but the op still resolves — the
-  server stays authoritative even though the row cannot be mirrored. Verified by
-  `SyncEngineTests.testConflictWithUnrepresentableSyncVersionSkipsAdoptionButStillResolves`.
+- **Unparseable server `sync_version` ⇒ terminal quarantine.** A conflict whose
+  `current.sync_version` cannot yield a numeric version — a non-finite or
+  out-of-`Int64`-range number, OR a non-numeric string (the conflict `current`
+  is `z.unknown()` on the wire, so it is NOT schema-validated to `/^\d+$/`) — is
+  unadoptable: the server row can't be mirrored. The op is routed to the SAME
+  terminal quarantine path as an explicit `rejected` (never retried under its
+  original opId; a fixed retry must re-`stage` for a fresh one), and the rest of
+  the push batch still `complete`s so the loop makes progress. This replaces the
+  earlier "skip adoption but resolve" behavior, under which a non-numeric string
+  was handed to `apply` verbatim, threw before `complete()`, and re-pushed the
+  op forever. Verified by
+  `SyncEngineTests.testConflictWithUnrepresentableSyncVersionQuarantines` (number)
+  and `testConflictWithNonNumericStringSyncVersionQuarantinesWithoutWedging`
+  (string, plus a sibling op that still completes).
 - **Re-enable after disable.** A resource disabled and later re-enabled comes
   back through the appearance rule (full resync on a non-fresh cursor), not as a
   silent resumption — its rows changed while it was outside the effective set
@@ -198,7 +210,10 @@ cite `SyncWireTests` and the vendored fixtures under `Tests/…/Fixtures`.
 | `baseBackoff` | `TimeInterval` | `2` | Base retry delay (seconds) for the exponential backoff. |
 | `maxBackoff` | `TimeInterval` | `3600` | Cap on the retry delay. |
 | `hostResources` | `[SyncResource]?` | `nil` | Resources this host mirrors. `nil` accepts the server's whole manifest (pre-enrollment behavior); when set, the effective set is `manifest ∩ hostResources` and out-of-set changes are skipped. |
-| `pullOnlyResources` | `Set<String>` | `[]` | Stage-time refusal set (route-mode resources). Hosts forward the same set to the store's init so the write-path refusal and the engine share one config surface. |
+
+Pull-only (route-mode) refusal is **not** an engine-config concern: it is
+enforced solely at the store's write path, so the set is passed only to the
+store's init (below), never to `SyncEngineConfiguration`.
 
 **Store init parameters:**
 
@@ -216,7 +231,7 @@ against adh main `64825b107`:
 - `ADHSyncCatalog.all` — every catalog resource (**79**, all `schemaVersion 1`),
   passed as `hostResources` / to `prepare(resources:)`.
 - `ADHSyncCatalog.pullOnly` — the **27** `pushMode: 'route'` resources, passed as
-  `pullOnlyResources` to both the engine config and the store init.
+  `pullOnlyResources` to the store init (the only place that enforces it).
 
 ## Logging
 
