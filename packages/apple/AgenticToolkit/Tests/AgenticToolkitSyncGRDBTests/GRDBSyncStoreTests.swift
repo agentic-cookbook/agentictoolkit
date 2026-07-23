@@ -374,6 +374,27 @@ final class GRDBSyncStoreTests: XCTestCase {
         let cursorAfter = try await store.cursor()
         XCTAssertEqual(cursorAfter?.rawValue, "c1")     // cursor untouched
     }
+
+    /// Fix E3/F5, GRDB twin of `InMemorySyncStoreTests`: purging a resource that
+    /// was never registered is a silent no-op. The shared `deleteMirrorRows`
+    /// helper filters each resource against `_sync_resources` first, so an
+    /// unregistered resource (whose mirror table was never CREATEd) is skipped
+    /// rather than throwing "no such table". The registered resource is left
+    /// completely untouched (rows, registration, cursor).
+    func testPurgeResourcesOnUnregisteredResourceIsSilentNoOp() async throws {
+        let store = try makeStore()
+        try await store.prepare(resources: [SyncResource(resource: "a.x", schemaVersion: 1)])
+        try await store.apply(
+            [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+            advancingTo: SyncCursor(rawValue: "c1")
+        )
+        try await store.purgeResources(["never.prepared"]) // must not throw "no such table"
+        XCTAssertEqual(try store.liveRows(resource: "a.x").count, 1) // untouched
+        let regs = try await store.registrations()
+        XCTAssertEqual(regs, ["a.x": 1]) // untouched
+        let cursor = try await store.cursor()
+        XCTAssertEqual(cursor?.rawValue, "c1") // untouched
+    }
 }
 
 /// Async throwing assertion helper (XCTest lacks one).
