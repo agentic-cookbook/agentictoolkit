@@ -30,6 +30,19 @@ struct ModelCatalogStoreTests {
         #expect(parsed == ["gpt-5": "alpha copy"])
     }
 
+    @Test("parseAdhCatalog maps model names to descriptions and skips empty ones")
+    func parsesAdhCatalog() {
+        let json = """
+        {"items":[{"name":"DeepSeek","models":[
+          {"name":"deepseek-chat","description":"Flagship open-weights chat model."},
+          {"name":"deepseek-reasoner","description":""}]}],
+         "total":1,"page":1,"pageSize":100}
+        """
+        let parsed = ModelCatalogStore.parseAdhCatalog(Data(json.utf8))
+        #expect(parsed["deepseek-chat"] == "Flagship open-weights chat model.")
+        #expect(parsed["deepseek-reasoner"] == nil)
+    }
+
     @Test("bestMatch takes an exact base-name match, ignoring namespace and tag")
     func exactMatch() {
         let catalog = ["qwen/qwen3-coder-next": "the one", "qwen/qwen3-coder": "wrong"]
@@ -84,14 +97,15 @@ struct ModelCatalogStoreTests {
     @Test("merged falls back per side: one failed catalog never blanks the other")
     func mergedPerSideFallback() {
         let previous = ModelCatalogStore.Catalog(
-            openRouter: ["old/or": "or"], modelsDev: ["old-md": "md"])
+            openRouter: ["old/or": "or"], modelsDev: ["old-md": "md"], adh: ["old-adh": "adh"])
         let halfRound = ModelCatalogStore.Catalog(
-            openRouter: ["new/or": "fresh"], modelsDev: [:])
+            openRouter: ["new/or": "fresh"], modelsDev: [:], adh: [:])
         let merged = ModelCatalogStore.merged(halfRound, lastGood: previous)
         #expect(merged.openRouter == ["new/or": "fresh"])
         #expect(merged.modelsDev == ["old-md": "md"])
+        #expect(merged.adh == ["old-adh": "adh"])
 
-        let bothFailed = ModelCatalogStore.Catalog(openRouter: [:], modelsDev: [:])
+        let bothFailed = ModelCatalogStore.Catalog(openRouter: [:], modelsDev: [:], adh: [:])
         #expect(ModelCatalogStore.merged(bothFailed, lastGood: previous).openRouter == ["old/or": "or"])
         #expect(ModelCatalogStore.merged(halfRound, lastGood: nil).modelsDev.isEmpty)
     }

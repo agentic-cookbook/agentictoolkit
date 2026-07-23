@@ -10,29 +10,44 @@ import Foundation
 @MainActor
 public enum ModelCatalogStore {
 
-    /// Both catalogs. As returned by `catalog()` a failed side carries its
+    /// All three catalogs. As returned by `catalog()` a failed side carries its
     /// previous good data (per-side fallback), so a side is empty only when
     /// it has never fetched successfully.
     public struct Catalog: Sendable {
         public let openRouter: [String: String]
         public let modelsDev: [String: String]
-        public init(openRouter: [String: String], modelsDev: [String: String]) {
+        public let adh: [String: String]
+        public init(
+            openRouter: [String: String],
+            modelsDev: [String: String],
+            adh: [String: String]
+        ) {
             self.openRouter = openRouter
             self.modelsDev = modelsDev
+            self.adh = adh
         }
-        public var isEmpty: Bool { openRouter.isEmpty && modelsDev.isEmpty }
+        public var isEmpty: Bool { openRouter.isEmpty && modelsDev.isEmpty && adh.isEmpty }
     }
 
     private static var lastGood: Catalog?
     private static var inflight: Task<Catalog, Never>?
 
-    /// The best catalog description for `model` — OpenRouter first (richer
-    /// prose), then models.dev — or nil when neither has a confident match.
+    /// The best catalog description for `model` — adh first (operator-authored
+    /// curated prose, authoritative where present), then OpenRouter (richer
+    /// third-party prose), then models.dev — or nil when none has a confident
+    /// match.
     public static func description(for model: String) async -> String? {
         let catalog = await self.catalog()
-        return bestMatch(for: model, in: catalog.openRouter)
+        return bestMatch(for: model, in: catalog.adh)
+            ?? bestMatch(for: model, in: catalog.openRouter)
             ?? bestMatch(for: model, in: catalog.modelsDev)
     }
+
+    /// The adh provider-catalog endpoint (spec: provider-catalog-sync). The adh
+    /// catalog is the PRIMARY source: its curated descriptions are operator-
+    /// authored; OpenRouter/models.dev remain the fallback pair.
+    public static var adhCatalogURL =
+        "https://api.agenticdeveloperhub.com/persona/provider-templates?pageSize=100"
 
     /// The catalogs, fetched concurrently — ALWAYS a live round, never a timed
     /// cache: an open round is joined (so a chooser refreshing N models at once
@@ -45,8 +60,10 @@ public enum ModelCatalogStore {
         let task = Task { () -> Catalog in
             async let openRouter = fetchData("https://openrouter.ai/api/v1/models")
             async let modelsDev = fetchData("https://models.dev/api.json")
+            async let adh = fetchData(adhCatalogURL)
             let fresh = Catalog(openRouter: (await openRouter).map(parseOpenRouter) ?? [:],
-                                modelsDev: (await modelsDev).map(parseModelsDev) ?? [:])
+                                modelsDev: (await modelsDev).map(parseModelsDev) ?? [:],
+                                adh: (await adh).map(parseAdhCatalog) ?? [:])
             let result = merged(fresh, lastGood: lastGood)
             if !result.isEmpty { lastGood = result }
             return result
@@ -64,7 +81,8 @@ public enum ModelCatalogStore {
         guard let lastGood else { return fresh }
         return Catalog(
             openRouter: fresh.openRouter.isEmpty ? lastGood.openRouter : fresh.openRouter,
-            modelsDev: fresh.modelsDev.isEmpty ? lastGood.modelsDev : fresh.modelsDev)
+            modelsDev: fresh.modelsDev.isEmpty ? lastGood.modelsDev : fresh.modelsDev,
+            adh: fresh.adh.isEmpty ? lastGood.adh : fresh.adh)
     }
 
     /// True when `text` is a real blurb rather than a token like a bare URL or
@@ -107,6 +125,23 @@ public enum ModelCatalogStore {
                       let description = (value as? [String: Any])?["description"] as? String,
                       !description.isEmpty else { continue }
                 result[id] = description
+            }
+        }
+        return result
+    }
+
+    /// adh's `{"items":[{"models":[{"name":…,"description":…}]}]}` → name → description.
+    nonisolated public static func parseAdhCatalog(_ data: Data) -> [String: String] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = root["items"] as? [[String: Any]] else { return [:] }
+        var result: [String: String] = [:]
+        for template in items {
+            guard let models = template["models"] as? [[String: Any]] else { continue }
+            for model in models {
+                guard let name = model["name"] as? String,
+                      let description = model["description"] as? String, !description.isEmpty,
+                      result[name] == nil else { continue }
+                result[name] = description
             }
         }
         return result
