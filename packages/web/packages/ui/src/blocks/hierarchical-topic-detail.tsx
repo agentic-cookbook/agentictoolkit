@@ -25,8 +25,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  PanelLeftClose,
-  PanelLeftOpen,
   TriangleAlert,
 } from "lucide-react"
 
@@ -223,11 +221,10 @@ function TopBar({
 }
 
 /**
- * What the stack looks like right now, as opposed to what it is showing: the auto-hide toggle, the
- * per-list `«`/`»` pins, and the list whose branch the pointer currently holds open.
+ * What the stack looks like right now, as opposed to what it is showing: the per-list `«`/`»` pins,
+ * and the list whose branch the pointer currently holds open.
  */
 type SurfaceState = {
-  autoHide: boolean
   pins: Record<string, boolean>
   hoverId: string | null
   /** How the open reveal was rooted: a pointer ENTER opens EVERY on-screen list (`true`), the
@@ -415,9 +412,9 @@ class DetailCrossfade extends Component<{
  * Selecting a row inside the stack is a route change, and a route change REMOUNTS the page subtree
  * (Next re-creates it on a param nav). Anything the frame held in component state was therefore
  * destroyed by the user's own click, which produced two bugs that look unrelated and are the same
- * one: the lists you had just opened all snapped shut with the auto-hide toggle flipped back on
- * under you, and a revealed branch collapsed the instant you picked a row inside it — with the
- * pointer still sitting in it, so nothing would reopen it. None of this belongs to a mount: it
+ * one: the lists you had just opened all snapped shut under you, and a revealed branch collapsed
+ * the instant you picked a row inside it — with the pointer still sitting in it, so nothing would
+ * reopen it. None of this belongs to a mount: it
  * belongs to the SURFACE the user is looking at, and it has to outlive the click.
  *
  * Module scope gives exactly that lifetime. It does NOT survive a reload, which is the right seam —
@@ -438,7 +435,6 @@ export function HierarchicalTopicDetail({
   exitGuard = null,
   manualCollapse = true,
   disclosureStyle = "covered",
-  autoHideTopics = true,
   layoutMode = "auto",
   children,
 }: {
@@ -481,19 +477,12 @@ export function HierarchicalTopicDetail({
    *      (covered), with a `«`/`»` cover toggle on each child and a left drop-shadow making the
    *      stack read as physically layered. No Back button. */
   disclosureStyle?: "minimized" | "covered"
-  /** Start with every list above the FRONTIER (the deepest rendered list) covered by its child,
-   *  even when there is room to show it. Default `true`; the first list's header carries a
-   *  toggle so the user can flip it (off ⇒ every list discloses, subject to the fit rules). Pass
-   *  `false` for a surface whose ancestry must stay glanceable (the hub's `/home`). The covered
-   *  style never snaps a list shut under the cursor: the click that covers a list also roots the
-   *  branch reveal at it (the pointer is still inside), so the new choosing list slides out
-   *  floating over the detail, and the stack settles when the pointer leaves. */
-  autoHideTopics?: boolean
   /** WIDE (lists beside the detail, `disclosureStyle` above) vs NARROW (one full-width pane at a
    *  time, pushed/popped like an iOS `UINavigationController`). Default `"auto"`: narrow once the
    *  wide layout's whole shrink sequence is exhausted — every list collapsed, the detail at
    *  `minDetailWidth`, every collapsible list slid off-screen — or when the browser is a phone (a
-   *  phone therefore starts and stays narrow). `"wide"` / `"narrow"` force one (a showcase, a test). */
+   *  phone therefore starts and stays narrow). The threshold does not depend on what is selected, so
+   *  the mode never flips under a click. `"wide"` / `"narrow"` force one (a showcase, a test). */
   layoutMode?: "auto" | "wide" | "narrow"
   /** Innermost detail content for the current selection (lands in the rightmost
    *  detail pane). */
@@ -546,16 +535,11 @@ export function HierarchicalTopicDetail({
     attemptExit(() => (levelIndex === null ? levels[0]?.onClear() : levels[levelIndex + 1]?.onClear()))
 
   // Disclosure INTENT, owned here so both layouts share one contract (they differ only in how a
-  // hidden list is drawn — a peek vs an icon strip):
-  //   autoHide — only the FRONTIER list (the deepest rendered one) stays disclosed; every list
-  //              above it is hidden by its child even when there IS room. The frame's default;
-  //              the root list's header toggles it. (The covered style keeps a freshly covered
-  //              list open under the pointer that clicked it — see the branch reveal.)
-  //   pins     — per-level user intent from the `«`/`»` toggles, overriding autoHide either way
-  //              (true = keep hidden, false = keep disclosed). Width pressure may still hide a list
-  //              the user pinned open — there is no room — but never discloses one they pinned shut.
-  // Flipping autoHide CLEARS the pins: turning it on hides every parent that was disclosed; turning
-  // it off discloses every list that fits (the fit rules then re-hide whatever doesn't).
+  // hidden list is drawn — a peek vs an icon strip): `pins` is per-level user intent from the
+  // `«`/`»` toggles (true = keep hidden, false = keep disclosed). Width pressure may still hide a
+  // list the user pinned open — there is no room — but never discloses one they pinned shut.
+  // Absent a pin a list is DISCLOSED; the standing auto-hide intent that used to cover every
+  // ancestor by default is parked (see the note above `IN_PLACE_SETTLE_MS`).
   //
   // These live in the module store (see `surfaceStates`), NOT in component state, because a click in
   // the stack is a route change and a route change remounts this whole subtree — component state
@@ -566,21 +550,19 @@ export function HierarchicalTopicDetail({
   const surfaceKey = levels[0]?.id ?? ""
   const [, bumpSurface] = useReducer((n: number) => n + 1, 0)
   const surface = surfaceStates.get(surfaceKey) ?? {
-    autoHide: autoHideTopics,
     pins: {},
     hoverId: null,
     hoverAll: false,
     narrowTop: null,
     autoSelected: {},
   }
-  const { autoHide, pins, hoverId, hoverAll } = surface
+  const { pins, hoverId, hoverAll } = surface
   // Always patch from what is IN the store, never from the render's snapshot: a remount replays this
   // component around state that outlived it, so a closed-over `surface` can be a render behind.
   const patchSurface = useCallback(
     (update: (prev: SurfaceState) => SurfaceState) => {
       if (!surfaceKey) return
       const prev = surfaceStates.get(surfaceKey) ?? {
-        autoHide: autoHideTopics,
         pins: {},
         hoverId: null,
         hoverAll: false,
@@ -590,26 +572,7 @@ export function HierarchicalTopicDetail({
       surfaceStates.set(surfaceKey, update(prev))
       bumpSurface()
     },
-    [surfaceKey, autoHideTopics],
-  )
-  // Flipping the mode also DROPS any open reveal: a revealed group renders at full width no
-  // matter what autoHide says, so with the pointer parked inside it the flip would change
-  // nothing on screen until the pointer happened to leave — the toggle read as dead. Closing
-  // the reveal settles the stack to the new mode on the click itself
-  // (must-apply-disclosure-toggles-immediately).
-  const toggleAutoHide = useCallback(
-    () =>
-      patchSurface((p) => {
-        hlog(surfaceKey || "htdv", "toggle-autohide", { to: !p.autoHide })
-        return {
-          ...p,
-          autoHide: !p.autoHide,
-          pins: {},
-          hoverId: null,
-          hoverAll: false,
-        }
-      }),
-    [patchSurface, surfaceKey],
+    [surfaceKey],
   )
   const setPins: Dispatch<SetStateAction<Record<string, boolean>>> = useCallback(
     (update) =>
@@ -673,23 +636,31 @@ export function HierarchicalTopicDetail({
   // inside takes the first measurement before paint, so a narrow container never flashes the wide
   // layout on its first frame.
   const rowRef = useRef<HTMLDivElement>(null)
-  const { width: containerW, resizing } = useContainerWidth(rowRef)
+  const containerW = useContainerWidth(rowRef)
   const phone = usePhoneUserAgent()
-  // NARROW = the wide layout has nothing left to trade: the shrink sequence (collapse the lists,
-  // shrink the detail to its minimum, slide the collapsed lists off-screen one at a time — see the
-  // stacks below) has hidden every list it may hide and the container STILL can't fit what remains.
-  // With every level selected that remainder is the detail at its minimum beside the LAST list's
-  // strip — below that the last strip goes too, and the stack becomes a navigation controller. With
-  // an unselected frontier the remainder is the frontier list itself: it is never hidden, and its
-  // landing placeholder claims no detail minimum. A phone is always narrow regardless of the box it
-  // is given. Until the first measurement lands (containerW === 0) we assume wide — the layout
-  // effect corrects it pre-paint.
+  // NARROW = the wide layout has nothing left to trade: the shrink sequence (cover the lists, shrink
+  // the detail to its minimum, slide the covered lists off-screen one at a time — see the stacks
+  // below) has hidden every list it may hide and the container STILL can't fit what remains, which
+  // is the detail at its minimum beside the last list's strip. Below that the strip goes too and the
+  // stack becomes a navigation controller: ONE full-width pane at a time, exactly one topic list OR
+  // the detail, pushed and popped like an iOS `UINavigationController`. A phone is always narrow
+  // regardless of the box it is given. Until the first measurement lands (containerW === 0) we
+  // assume wide — the layout effect corrects it pre-paint.
   //
-  // This floor is deliberately BELOW the old `minDetail + FULL_RAIL` one, which flipped the stack
-  // to narrow while the wide layout still had collapsed lists to hide progressively — so every list
-  // vanished at once as the window shrank, and the one-strip-at-a-time drill-down never ran (Mike).
+  // The floor is deliberately BELOW the old `minDetail + FULL_RAIL` one, which flipped the stack to
+  // narrow while the wide layout still had lists to cover progressively — so every list vanished at
+  // once as the window shrank, and the one-strip-at-a-time drill-down never ran (Mike).
+  //
+  // And it does NOT vary with the selection, which it used to: an unselected frontier claims no
+  // detail minimum (its pane is only a landing, so the fit math must never squeeze the list the user
+  // is choosing from), and reading that exemption as a lower NARROW floor let the wide layout run
+  // all the way down to a bare 240px rail — leaving a full list beside a detail sliver a few dozen
+  // pixels wide, which is neither usable nor one-thing-at-a-time. The exemption belongs to the fit
+  // math, not to the mode. Selection-independent also makes the mode STABLE across a navigation:
+  // a selection-dependent floor could flip the stack on the click itself, and the lost selection
+  // then lowered the floor the decision was re-made on and bounced it straight back to wide.
   const stripPx = disclosureStyle === "minimized" ? COLLAPSED_RAIL : COVERED_PEEK
-  const wideFloor = firstUnselected === -1 ? minDetailPx(minDetailWidth) + stripPx : FULL_RAIL
+  const wideFloor = minDetailPx(minDetailWidth) + stripPx
   const narrow =
     layoutMode === "narrow" ||
     (layoutMode === "auto" && (phone || (containerW > 0 && containerW < wideFloor)))
@@ -698,9 +669,9 @@ export function HierarchicalTopicDetail({
   // types, and React reconciles by tree position — rendering the detail as a stack's child would
   // REMOUNT it on every wide↔narrow or covered↔minimized flip, resetting whatever state lives in
   // `children` (a data browser's schema/table choice, a half-typed form) and unregistering any
-  // levels those children publish. That loss is what the flip must never cause: with a
-  // selection-dependent `wideFloor` it even bounced the mode straight back to wide (the lost
-  // selection lowered the floor the narrow decision was made on). So the detail renders through a
+  // levels those children publish. That loss is what the flip must never cause: back when
+  // `wideFloor` still varied with the selection it even bounced the mode straight back to wide (the
+  // lost selection lowered the floor the narrow decision was made on). So the detail renders through a
   // PORTAL into this frame-owned, layout-neutral (`display: contents`) element, and the layout
   // effect below re-slots that element into whichever stack is active: the flip MOVES the
   // detail's DOM, React state intact. On the server there is no document and the portal renders
@@ -802,8 +773,6 @@ export function HierarchicalTopicDetail({
     minDetailWidth,
     detailTitle,
     attemptExit,
-    autoHide,
-    toggleAutoHide,
     pins,
     setPins,
     hoverId,
@@ -812,7 +781,6 @@ export function HierarchicalTopicDetail({
     narrowTop: surface.narrowTop,
     setNarrowTop,
     containerW,
-    resizing,
     detailSlot: setDetailSlotEl,
   }
 
@@ -894,8 +862,8 @@ const REVEAL_Z = 50
 const SHADOW_RIGHT = "8px 0 24px -6px var(--color-shadow)"
 const SHADOW_LEFT = "-10px 0 22px -8px var(--color-shadow)"
 
-/** The default `minDetailWidth` — the floor the auto-collapse / auto-hide sequence drives toward
- *  on a DESKTOP. 36rem (576px): fairly small for a desktop pane, but clearly wider than a phone
+/** The default `minDetailWidth` — the floor the shrink sequence (cover, then slide off-screen)
+ *  drives toward on a DESKTOP. 36rem (576px): fairly small for a desktop pane, but clearly wider than a phone
  *  (~390-430px) — a desktop detail squeezed to phone width reads as broken, not compact. Phones
  *  never consult it: a phone is always NARROW, where the detail is the device's full width. */
 const MIN_DETAIL_DEFAULT = "36rem"
@@ -914,57 +882,28 @@ function minDetailPx(minDetailWidth: string): number {
   return MIN_DETAIL_DEFAULT_PX // a relative/viewport unit we can't resolve to fixed px → the default
 }
 
-/** How long after the last width observation the container counts as settled (see `resizing`). */
-const RESIZE_SETTLE_MS = 120
-
-/** The measured width of `ref`'s element, tracked by a ResizeObserver, and whether that width is
- *  CHANGING right now. `useLayoutEffect` (not `useEffect`) takes the FIRST measurement before the
- *  browser paints, so a layout gated on the width — the wide/narrow mode, the covered stack's fit
- *  math — never flashes a wrong first frame.
+/** The measured width of `ref`'s element, tracked by a ResizeObserver. `useLayoutEffect` (not
+ *  `useEffect`) takes the FIRST measurement before the browser paints, so a layout gated on the width
+ *  — the wide/narrow mode, the covered stack's fit math — never flashes a wrong first frame.
  *
- *  `resizing` exists because the stacks animate `left`/`width` over 300ms. Those transitions are
- *  written for DISCRETE changes — a cover toggle, a selection, a reveal — where the pane has one
- *  old geometry and one new one to travel between. Dragging a window edge is not that: it restarts
- *  the transition on every observed frame, so the panes spend the whole drag EASING TOWARD a target
- *  that has already moved again. The visible result is a detail pane whose width wanders instead of
- *  tracking the window, and which lags far enough behind the fit math to look narrower than its
- *  stated minimum while lists are still open. So the stacks drop their transitions while the
- *  container is being resized and simply RENDER the fit for the current width, frame by frame. It
- *  latches off shortly after the last observation, so the next discrete change animates normally. */
-function useContainerWidth(ref: RefObject<HTMLDivElement | null>): {
-  width: number
-  resizing: boolean
-} {
+ *  Note what this width does NOT feed: the detail pane's WIDTH. Every animated value in the stacks is
+ *  discrete (a rail is full or a peek; a list is on-screen or slid off) — the only thing that has to
+ *  follow the container continuously is the detail's right edge, and that is pinned in CSS
+ *  (`right: 0`), not computed here. Deriving it from this measurement instead put a JS value one
+ *  commit behind the container into a 300ms transition, so during a drag the pane chased a target
+ *  that kept moving and its width visibly wandered. */
+function useContainerWidth(ref: RefObject<HTMLDivElement | null>): number {
   const [width, setWidth] = useState(0)
-  const [resizing, setResizing] = useState(false)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    // Compared against the LAST OBSERVED width, not React state: ResizeObserver re-reports the
-    // current size the moment it starts observing, and that echo of the mount measurement must not
-    // read as a resize (it would suppress the very first transitions for no reason).
-    let last = -1
-    let settle: ReturnType<typeof setTimeout> | undefined
-    const measure = () => {
-      const w = el.clientWidth
-      if (w === last) return
-      const mounted = last !== -1
-      last = w
-      setWidth(w)
-      if (!mounted) return
-      setResizing(true)
-      clearTimeout(settle)
-      settle = setTimeout(() => setResizing(false), RESIZE_SETTLE_MS)
-    }
+    const measure = () => setWidth((prev) => (prev === el.clientWidth ? prev : el.clientWidth))
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
-    return () => {
-      clearTimeout(settle)
-      ro.disconnect()
-    }
+    return () => ro.disconnect()
   }, [ref])
-  return { width, resizing }
+  return width
 }
 
 /** A phone browser — iOS or Android. Phones take the NARROW layout at any width: the wide layout's
@@ -1011,8 +950,6 @@ interface StackProps {
   detailTitle?: ReactNode
   attemptExit: (action: () => void) => void
   /** Hide every list but the leaf-most, even when there is room (see HierarchicalTopicDetail). */
-  autoHide: boolean
-  toggleAutoHide: () => void
   /** Per-level user intent from the `«`/`»` toggles: true = pinned hidden, false = pinned disclosed. */
   pins: Record<string, boolean>
   setPins: (next: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
@@ -1030,44 +967,22 @@ interface StackProps {
   setNarrowTop: (i: number) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
-  /** True while {@link StackProps.containerW} is actively CHANGING — a window/split drag in flight.
-   *  The stacks suppress their `left`/`width` transitions for the duration (see `useContainerWidth`)
-   *  so panes track the container frame-for-frame instead of chasing a target that keeps moving. */
-  resizing: boolean
   /** Ref callback for the stack's detail slot: the innermost detail wrapper each stack renders
    *  EMPTY. The frame moves its one persistent detail host (a `display: contents` portal target)
    *  into whichever slot is mounted, so the detail's React subtree survives stack flips. */
   detailSlot: (el: HTMLDivElement | null) => void
 }
 
-/** The root list's header control: flips {@link StackProps.autoHide}. Unlike the `«`/`»` cover
- *  toggles (which name the ACTION they perform on one list) this reports STATE — gold + a closed
- *  panel while auto-hide is on, muted + an open panel while every list is disclosed — so the user
- *  can see at a glance why their parent lists are hidden. */
-function AutoHideToggle({ autoHide, onToggle }: { autoHide: boolean; onToggle: () => void }) {
-  const label = autoHide
-    ? "Auto-hide parent topic lists: on — show them all"
-    : "Auto-hide parent topic lists: off — hide all but the last"
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={label}
-      aria-pressed={autoHide}
-      title={label}
-      className={cn(
-        "rounded px-1 outline-none focus-visible:ring-2 focus-visible:ring-apt-gold/40",
-        autoHide ? "text-apt-gold hover:text-apt-gold/80" : "text-apt-text-muted hover:text-apt-text",
-      )}
-    >
-      {autoHide ? (
-        <PanelLeftClose size={16} aria-hidden className="shrink-0" />
-      ) : (
-        <PanelLeftOpen size={16} aria-hidden className="shrink-0" />
-      )}
-    </button>
-  )
-}
+/* PARKED — the AUTO-HIDE mode and its root-list toggle button were removed here (Mike: "remove the
+ * auto-collapse mode and the button for it for now"). It was a standing INTENT that every list above
+ * the frontier stay covered even when there was room, seeded from an `autoHideTopics` prop, flipped
+ * by an `AutoHideToggle` (PanelLeftClose/PanelLeftOpen) in the root list's `leftControl`, and stored
+ * per surface so it survived the route change a selection causes. Bringing it back = restore that
+ * one intent term in each stack's `pinned` predicate, plus the button.
+ *
+ * What did NOT go with it: the per-list `«`/`»` pins, and the WIDTH PRESSURE that covers lists and
+ * slides them off-screen as the window narrows. Those are the shrink sequence, not this mode — a
+ * list is now covered because there is no room for it, never because a mode says so. */
 
 /** How long transitions stay OFF after a structural change (see below). Longer than any settle
  *  cascade (level registrations, measured rail widths landing over a few commits), and by the time
@@ -1268,18 +1183,15 @@ function MinimizedStack({
   minDetailWidth,
   detailTitle,
   attemptExit,
-  autoHide,
-  toggleAutoHide,
   pins,
   setPins,
   levels,
   manualCollapse,
-  resizing,
   detailSlot,
 }: Omit<StackProps, "containerW"> & { levels: TopicLevel[]; manualCollapse: boolean }) {
-  // `pins` (from the frame) is this stack's manual collapse-to-icon-strip intent, and auto-hide is
-  // its default for every non-leaf list — the same two intent layers the covered stack uses, drawn
-  // as an icon strip instead of a peek. `widths` is a dragged column width (≤ FULL).
+  // `pins` (from the frame) is this stack's manual collapse-to-icon-strip intent; width pressure
+  // adds collapses on top of it — the same two layers the covered stack uses, drawn as an icon strip
+  // instead of a peek. `widths` is a dragged column width (≤ FULL).
   const [widths, setWidths] = useState<Record<string, number>>({})
   const [dragging, setDragging] = useState(false)
   const override = pins
@@ -1299,16 +1211,13 @@ function MinimizedStack({
   const [hidden, setHidden] = useState(0)
 
   const naturalWidth = (level: TopicLevel) => widths[level.id] ?? level.width ?? FULL_RAIL
-  // Intent: the user's pin (`«`) if they set one, else auto-hide's default (every list above the
-  // FRONTIER). This style has no floating reveal — a hidden list is an icon strip, still visible
-  // and clickable — so the parent goes straight to its strip when a selection pushes a new list.
-  // Width pressure (`auto`) only ever ADDS a collapse on top of this.
-  const pinnedOrAutoHidden = (level: TopicLevel, i: number) =>
-    override[level.id] ?? (autoHide && i < frontier)
+  // Intent: the user's pin (`«`) if they set one, else disclosed. Width pressure (`auto`) only ever
+  // ADDS a collapse on top of this.
+  const pinned = (level: TopicLevel) => override[level.id] ?? false
   // A list shows as its icon strip when intent says so OR the window auto-undisclosed it (`auto`).
   // Off-screen drilling (`hidden`) is separate and applied last.
   const isCollapsed = (level: TopicLevel, i: number) =>
-    pinnedOrAutoHidden(level, i) || auto.has(level.id)
+    pinned(level) || auto.has(level.id)
   // The visible width a list occupies in the fit math: 0 if slid off-screen, its icon strip if
   // collapsed, else its full/dragged width.
   const visibleWidth = (level: TopicLevel, i: number) =>
@@ -1330,15 +1239,15 @@ function MinimizedStack({
 
     const collapsed = new Set<string>() // window-undisclosed (icon strip) ids
     let h = 0 // off-screen count
-    const shown = (l: TopicLevel, i: number) => pinnedOrAutoHidden(l, i) || collapsed.has(l.id)
+    const shown = (l: TopicLevel) => collapsed.has(l.id) || pinned(l)
     const widthOf = (l: TopicLevel, i: number) =>
-      i < h ? 0 : shown(l, i) ? COLLAPSED_RAIL : naturalWidth(l)
+      i < h ? 0 : shown(l) ? COLLAPSED_RAIL : naturalWidth(l)
     const total = () => cols.reduce((s, l, i) => s + widthOf(l, i), 0) + minPx
 
     // PHASE 1 — UNDISCLOSE: collapse the leftmost still-full list to its icon strip (general→specific)
     // until everything fits, or every list is already an icon strip.
     while (total() > width) {
-      const target = cols.find((l, i) => !shown(l, i))
+      const target = cols.find((l) => !shown(l))
       if (!target) break
       collapsed.add(target.id)
     }
@@ -1350,7 +1259,7 @@ function MinimizedStack({
       prev.size === collapsed.size && [...collapsed].every((id) => prev.has(id)) ? prev : collapsed,
     )
     setHidden((prev) => (prev === h ? prev : h))
-  }, [rendered, frontier, firstUnselected, override, autoHide, widths, minPx])
+  }, [rendered, frontier, firstUnselected, override, widths, minPx])
 
   // Re-run on container resize (the window) and whenever the rendered lists / manual collapse change.
   useEffect(() => {
@@ -1433,10 +1342,10 @@ function MinimizedStack({
   })
 
   // Choosing a topic must land the detail IN PLACE, never slide it in as the columns re-flow behind
-  // it; only a manual toggle animates the grid. A live resize does NOT: transitioning toward a
-  // target the drag keeps moving leaves every column lagging the container (see `useContainerWidth`).
+  // it; every other change — a manual toggle, and the width pressure that collapses a list to its
+  // icon strip or slides it off-screen as the window narrows — animates the grid.
   const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
-  const animate = !dragging && !inPlace && !resizing
+  const animate = !dragging && !inPlace
 
   // Selection connectors (shared with the covered stack). The signature is the per-level selection
   // plus the grid template (column widths) and off-screen count — everything that moves a row.
@@ -1506,14 +1415,9 @@ function MinimizedStack({
               onResize={(w) => onResizeLevel(level, w)}
               onResizeStart={() => setDragging(true)}
               onResizeEnd={() => setDragging(false)}
-              // The root rail's leading slot carries the auto-hide toggle for the whole stack. Back
-              // only ever lands on a rail to its right (it appears once a rail is hidden), so the two
-              // never contend for the slot.
-              leftControl={
-                i === 0 ? (
-                  <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
-                ) : undefined
-              }
+              // Nothing rides the root rail's leading slot any more (the auto-hide toggle was the
+              // only tenant); Back lands on the leftmost VISIBLE rail via `backSlot` below.
+              leftControl={undefined}
               // The drill-down Back lands top-left of the leftmost-visible rail.
               backSlot={i === backOnRail ? backButton : undefined}
             />
@@ -1571,15 +1475,12 @@ function CoveredStack({
   minDetailWidth,
   detailTitle,
   attemptExit,
-  autoHide,
-  toggleAutoHide,
   pins,
   setPins,
   hoverId,
   hoverAll,
   setHoverId,
   containerW,
-  resizing,
   detailSlot,
 }: StackProps) {
   const minPx = minDetailPx(minDetailWidth)
@@ -1619,16 +1520,15 @@ function CoveredStack({
   const coverableCount = firstUnselected === -1 ? rendered.length : frontier
   const detailMin = firstUnselected === -1 ? minPx : 0
 
-  // COVER LAYER 1 — intent. A list is covered because the user pinned it (`«`), or because auto-hide
-  // is on and it sits ABOVE the frontier. A pin wins either way, so the user can hold a parent open
-  // under auto-hide (until width pressure below takes the room back).
+  // COVER LAYER 1 — intent. A list is covered here only because the user pinned it (`«`); absent a
+  // pin it is disclosed and it is WIDTH PRESSURE below that decides whether it can stay that way.
   //
   // Covering the list the user JUST clicked in is not this layer's problem: the click roots the
   // branch reveal at that list (see the rail's onSelect below), so a freshly covered parent stays
   // open under the pointer — its new child floating over the detail — until the pointer leaves.
-  const pinnedOrAutoHidden = (i: number): boolean => {
+  const pinned = (i: number): boolean => {
     if (i >= coverableCount) return false
-    return pins[rendered[i]!.id] ?? (autoHide && i < frontier)
+    return pins[rendered[i]!.id] ?? false
   }
 
   // COVER LAYER 2 — width pressure. Cover MORE lists, leftmost-first (general → specific), until the
@@ -1638,12 +1538,12 @@ function CoveredStack({
   if (containerW > 0) {
     const listsWidth = (n: number) =>
       rendered.reduce(
-        (w, l, i) => w + (pinnedOrAutoHidden(i) || i < n ? COVERED_PEEK : railWidth(l)),
+        (w, l, i) => w + (pinned(i) || i < n ? COVERED_PEEK : railWidth(l)),
         0,
       )
     while (pressure < coverableCount && listsWidth(pressure) + detailMin > containerW) pressure++
   }
-  const isCovered = (i: number) => pinnedOrAutoHidden(i) || i < pressure
+  const isCovered = (i: number) => pinned(i) || i < pressure
   const widthOf = (i: number) => (isCovered(i) ? COVERED_PEEK : railWidth(rendered[i]!))
 
   // PHASE 2 — OFF-SCREEN. Every list is down to its peek and they STILL don't leave the detail its
@@ -1687,10 +1587,10 @@ function CoveredStack({
   //
   // A reveal that reveals NOTHING is dropped: when no member is covered, the revealed geometry IS
   // the resting layout — but the z-lift and the floating card's shadows are not, and a stack at
-  // rest must not cast them. A select roots a reveal blindly (at click time it cannot know whether
-  // it pushes a choosing list over the clicked one or completes the path — see the rail's
-  // onSelect); this is where a blind root that ended up covering nothing becomes the no-op it
-  // should be.
+  // rest must not cast them. A select roots a reveal blindly (at click time the fit pass for the new
+  // selection has not run, so it cannot know whether the click covers the list it landed in — see
+  // the rail's onSelect); this is where a blind root that ended up covering nothing becomes the
+  // no-op it should be.
   const hoverRoot = hoverId === null ? -1 : rendered.findIndex((l) => l.id === hoverId)
   const groupFrom = (root: number) => (hoverAll ? hidden : root)
   const hoverIndex =
@@ -1861,12 +1761,13 @@ function CoveredStack({
   }
 
   // Choosing a topic must land the detail IN PLACE — never slide it in from the left edge as the
-  // lists re-cover behind it. Only DISCRETE moves (cover toggle, hover reveal) animate: a live
-  // container resize is continuous, and easing toward a target that moves again every frame is what
-  // made the detail's width wander and trail the window edge (see `useContainerWidth`). A cover
-  // toggle doesn't change the container's width, so `resizing` never suppresses those.
+  // lists re-cover behind it. EVERYTHING else animates, and deliberately so: a list sliding onto or
+  // off its parent (width pressure covering it, or the `«`/`»` toggle) and a list sliding off the
+  // left edge are the moves that make the stack read as physically layered rather than teleporting.
+  // They are all discrete — a rail is full or a peek, a list is on-screen or gone — so they animate
+  // cleanly even mid-drag; nothing here eases toward a moving target (see `useContainerWidth`).
   const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
-  const animate = !dragging && !inPlace && !resizing
+  const animate = !dragging && !inPlace
 
   // Selection connectors (shared with the minimized stack). The signature is everything that moves a
   // selected row: the per-level selection and the column layout (left edges + off-screen shift +
@@ -1982,14 +1883,17 @@ function CoveredStack({
               // pick its child, which is the whole point of revealing the branch. The reveal is
               // pointer-scoped, so it collapses when (and only when) the pointer leaves it.
               //
-              // And a select from a list at REST roots a branch here itself: a select that pushes a
-              // new choosing list COVERS this list (auto-hide, or width pressure) with the pointer
-              // still inside it — exactly the state pointer-enter names, except the pointer never
-              // moved, so no enter will ever fire. Without this the list snaps shut under the cursor
-              // on the very click and nothing reopens it; with it, the new list slides out floating
-              // over the detail and the stack settles when the pointer leaves. A select that instead
-              // completes the path covers nothing at/below this list, and the blind root is dropped
-              // as meaningless (see the reveal group above).
+              // And a select from a list at REST roots a branch here itself: a select can COVER the
+              // very list it landed in, with the pointer still inside it — exactly the state
+              // pointer-enter names, except the pointer never moved, so no enter will ever fire.
+              // Usually that is a select that COMPLETES the path: a complete path is what makes the
+              // detail claim its full minimum, and paying for it is what squeezes the lists into
+              // peeks. (A select that only pushes another choosing list can do it too, but that pane
+              // is a landing and claims nothing, so it takes a very deep stack.) Without this the
+              // list snaps shut under the cursor on the very click and nothing reopens it; with it,
+              // it stays open floating over the detail and the stack settles when the pointer
+              // leaves. The root is planted BLIND — the fit pass has not run at click time — so one
+              // that ends up covering nothing is dropped as meaningless (see the reveal group above).
               onSelect={(id) => {
                 if (!inGroup(i)) setHoverId(level.id, false)
                 railOnSelect(level, attemptExit)(id)
@@ -2022,16 +1926,9 @@ function CoveredStack({
               onResizeStart={() => setDragging(true)}
               onResizeEnd={() => setDragging(false)}
               showToggle={false}
-              // The header's leading control slot. On the ROOT list (which has no parent to cover)
-              // it is the auto-hide toggle for the whole stack; on every other list it is the
-              // `«`/`»` that covers/uncovers THIS list's PARENT (the list to its left).
-              leftControl={
-                i === 0 ? (
-                  <AutoHideToggle autoHide={autoHide} onToggle={toggleAutoHide} />
-                ) : (
-                  coverControl(i - 1)
-                )
-              }
+              // The header's leading control slot: the `«`/`»` that covers/uncovers THIS list's
+              // PARENT (the list to its left). The ROOT list has no parent, so it carries nothing.
+              leftControl={i === 0 ? undefined : coverControl(i - 1)}
               // The layered-card left shadow rides the wrapper (the rail's own shadow would be clipped
               // by the wrapper's overflow), so the rail doesn't draw one.
               coveredShadow={false}

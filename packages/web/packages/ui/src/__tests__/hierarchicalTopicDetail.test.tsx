@@ -1,20 +1,22 @@
 /**
- * HierarchicalTopicDetail — the two behaviours that are pure layout/interaction logic (no measured
- * geometry, so jsdom can hold them honestly):
+ * HierarchicalTopicDetail — the behaviours that are layout/interaction logic:
  *
  *  - the WHOLE-BRANCH hover reveal: hovering a covered list opens that list AND its children as one
  *    cascade, and it stays open while the pointer walks between them;
+ *  - the SHRINK sequence: a list slid onto its parent as the container narrows, then off the left
+ *    edge when even the peeks won't fit;
  *  - the NARROW layout: one full-width pane at a time, pushed on select and popped by Back.
  *
- * jsdom reports every element at width 0, so the covered stack's width-pressure layer is inert here
- * and `autoHideTopics` (the default) is what covers the parents — which is exactly the state the
- * reveal exists to serve. Enter/leave are dispatched as `pointerover`/`pointerout` with a
- * `relatedTarget`, because that is what React's synthetic onPointerEnter/onPointerLeave are built
- * from (a raw `pointerenter` doesn't bubble to React's root listener).
+ * Everything that turns on "is this list covered" needs a container width, because width pressure is
+ * the only thing that covers a list — see `installResizeHarness` for the harness that supplies one
+ * and for the arithmetic behind the named widths. Enter/leave are dispatched as
+ * `pointerover`/`pointerout` with a `relatedTarget`, because that is what React's synthetic
+ * onPointerEnter/onPointerLeave are built from (a raw `pointerenter` doesn't bubble to React's root
+ * listener).
  */
 import { useState } from 'react'
 import { act, render, screen, fireEvent, within } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { HierarchicalTopicDetail, type TopicLevel } from '../blocks/hierarchical-topic-detail'
 
 const REGIONS = [
@@ -78,6 +80,15 @@ const col = (i: number): HTMLElement => {
 const boxWidth = (i: number) => col(i).style.width
 const boxLeft = (i: number) => col(i).style.left
 
+/** The WIDE stack's detail pane. Its presence IS the mode: the wide stack gives the detail its own
+ *  section, the narrow one makes it the last pane in the `data-htd-col` sequence instead. */
+const detail = (container: HTMLElement): HTMLElement => {
+  const el = container.querySelector('[data-htd-detail]')
+  if (!(el instanceof HTMLElement)) throw new Error('no detail pane')
+  return el
+}
+const isNarrow = (container: HTMLElement) => container.querySelector('[data-htd-detail]') === null
+
 // React derives onPointerEnter/onPointerLeave from pointerover/pointerout + relatedTarget.
 const enter = (el: HTMLElement, from: Element | null = document.body) =>
   fireEvent.pointerOver(el, { relatedTarget: from })
@@ -93,14 +104,89 @@ const railRow = (name: RegExp): HTMLElement => {
   return rows[0]!
 }
 
+/** Swap in a ResizeObserver whose callbacks the test fires by hand, plus a settable `clientWidth`.
+ *  Those two ARE the component's entire notion of how wide it is and of having just changed size,
+ *  and jsdom supplies neither: it reports every element at width 0 and never runs an observer, so a
+ *  stack rendered raw believes it has no room at all — and since there is no auto-hide mode any
+ *  more, WIDTH PRESSURE is the only thing that covers a list. A test about a covered list therefore
+ *  has to state its container width. Firing the callbacks by hand is also exactly what a window drag
+ *  delivers, so the same harness drives the live-resize block at the bottom of this file.
+ *
+ *  The ladder those widths are read off (the fit math in `CoveredStack`): a list is 240px disclosed
+ *  and 32px covered; once every level is selected the detail reserves `minDetailWidth` = 36rem =
+ *  576px, and while the deepest list is an unselected frontier it reserves nothing (its pane is only
+ *  a landing, so the list must stay pickable). Lists are covered leftmost-first until
+ *  `Σ lists + detail ≤ container`, then slid off the LEFT EDGE if even all-peeks won't fit. */
+function installResizeHarness(initial: number) {
+  let width = initial
+  const observers: (() => void)[] = []
+  const realRO = globalThis.ResizeObserver
+  const realWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
+  globalThis.ResizeObserver = class {
+    constructor(private cb: () => void) {}
+    observe() {
+      observers.push(this.cb)
+    }
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof globalThis.ResizeObserver
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+    configurable: true,
+    get: () => width,
+  })
+  return {
+    /** Move the container. Before a render this just sets the width the first measurement reads;
+     *  after one it is a live resize, i.e. one frame of a window drag. */
+    resizeTo(next: number) {
+      width = next
+      act(() => {
+        observers.forEach((cb) => cb())
+      })
+    },
+    restore() {
+      globalThis.ResizeObserver = realRO
+      if (realWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', realWidth)
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth
+    },
+  }
+}
+
+/** Install the harness for every test in the enclosing describe, and hand back a `resizeTo` the test
+ *  can use before its render (to pick a starting width) or after one (to drag the window). */
+function containerWidth(initial: number) {
+  let harness: ReturnType<typeof installResizeHarness>
+  beforeEach(() => {
+    harness = installResizeHarness(initial)
+  })
+  afterEach(() => harness.restore())
+  return (px: number) => harness.resizeTo(px)
+}
+
+// Widths off the ladder above. THREE selected levels: Σ lists + 576 is 1296 / 1088 / 880 / 672 as
+// 0…3 of them are covered, so these land 0, 2 and 3-covered-plus-one-off-screen respectively.
+const W3_NONE_COVERED = 1400
+const W3_TWO_COVERED = 1000
+const W3_ONE_OFF_SCREEN = 640
+// A stack whose deepest list is the unselected FRONTIER claims no detail minimum at all (that pane
+// is only a landing), so its ladder is just the rails: for THREE lists, 720 / 512 / 304. At 700 that
+// covers exactly one — and the SAME width covers all three the moment a click completes the path and
+// the detail claims its 576 (the selected ladder's third rung, 880, is still over 700). One width,
+// both sides of the click. It stays above the 608px wide floor, under which there is no covered stack
+// left to talk about because the whole layout is a navigation controller.
+const W3_FRONTIER_ONE_COVERED = 700
+// TWO levels, both selected — so the detail does claim its 576: 1056 / 848 / 640.
+const W2_PARENT_COVERED = 900
+
 describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
+  containerWidth(W3_TWO_COVERED)
+
   it('opens the hovered list AND its children, chained side by side', () => {
     render(
       <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    // Auto-hide (the default) covers both parents: each is a 32px peek.
+    // Too narrow to hold three 240px lists beside a 576px detail, so the two parents are peeks.
     expect(boxWidth(0)).toBe('32px')
     expect(boxWidth(1)).toBe('32px')
 
@@ -311,71 +397,70 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
   })
 })
 
-describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choosing frontier', () => {
+describe('HierarchicalTopicDetail — the click that pushes a choosing frontier', () => {
+  const resizeTo = containerWidth(W3_FRONTIER_ONE_COVERED)
+
   it('covers the parent of a choosing frontier on a deep link (no pointer, no reveal)', () => {
-    // Arriving BY URL with a selection whose child list is still unselected: auto-hide covers the
-    // parent as it covers any list above the frontier — no click happened here, so there is no
-    // pointer for a reveal to serve.
+    // Arriving BY URL two levels deep, with the third list still unselected, at a width with room
+    // for two of the three lists: the outermost parent is a peek. No click happened here, so there
+    // is no pointer for a reveal to serve — this is the plain covered layout.
     render(
-      <HierarchicalTopicDetail levels={levelsFor({ region: 'us' }).slice(0, 2)}>
+      <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core' })}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
     expect(boxWidth(0)).toBe('32px')
     expect(boxWidth(1)).toBe('240px')
     expect(boxLeft(1)).toBe('32px')
+    expect(boxWidth(2)).toBe('240px') // the frontier is never the one covered
   })
 
-  it('a click that pushes a new choosing list roots the reveal: the new list floats over the detail until the pointer leaves', () => {
-    // The click covers the list it landed in (auto-hide) with the pointer still inside it — the
-    // exact state pointer-enter names, but the pointer never moved, so no enter will ever fire.
-    // The select roots the branch itself: the clicked list stays open in place and the new
-    // choosing list slides out OVER the detail (at 240px — its resting slot would be 40px).
+  it('a click that covers the list it landed in roots the reveal: that list floats over the detail until the pointer leaves', () => {
+    // Choosing in the frontier COMPLETES the path, and a complete path is what makes the detail
+    // claim its 576px minimum — which at this width squeezes all three lists into peeks, the one the
+    // click landed in included, with the pointer still inside it. That is the exact state
+    // pointer-enter names, but the pointer never moved, so no enter will ever fire. The select roots
+    // the branch itself: the clicked list stays open where it is, floating over the detail, and the
+    // detail is pushed right to clear it.
     function Stack() {
-      const [region, setRegion] = useState<string | null>(null)
-      const levels: TopicLevel[] = [
-        {
-          id: 'push-regions',
-          title: 'Regions',
-          items: REGIONS,
-          selectedId: region,
-          onSelect: setRegion,
-          onClear: () => setRegion(null),
-        },
-        {
-          id: 'push-ecosystems',
-          title: 'Ecosystems',
-          items: ECOSYSTEMS,
-          selectedId: null,
-          onSelect: () => {},
-          onClear: () => {},
-        },
-      ]
+      const [topic, setTopic] = useState<string | null>(null)
       return (
-        <HierarchicalTopicDetail levels={levels}>
+        <HierarchicalTopicDetail
+          levels={levelsFor(
+            { region: 'us', eco: 'core', topic, onSelect: { topics: setTopic } },
+            'push',
+          )}
+        >
           <p>detail</p>
         </HierarchicalTopicDetail>
       )
     }
-    render(<Stack />)
-    expect(boxWidth(0)).toBe('240px') // the sole list, disclosed, waiting to be chosen from
-
-    fireEvent.click(railRow(/us-west-1/))
-    expect(boxWidth(0)).toBe('240px') // covered in LAYOUT, held open by the reveal
-    expect(boxLeft(0)).toBe('0px')
+    const { container } = render(<Stack />)
+    // A frontier reserves no detail width, so two of the three lists are still disclosed.
     expect(boxWidth(1)).toBe('240px')
-    expect(boxLeft(1)).toBe('240px') // floating over the detail, not snugged into the 40px slot
+    expect(boxWidth(2)).toBe('240px')
+
+    fireEvent.click(railRow(/Applications/))
+    expect(boxWidth(0)).toBe('32px') // the detail's 576 lands: every list is covered now
+    expect(boxWidth(1)).toBe('32px')
+    expect(boxWidth(2)).toBe('240px') // covered in LAYOUT, held open by the reveal
+    expect(boxLeft(2)).toBe('64px') // in place, behind the two peeks — it did not travel
+    expect(detail(container).style.left).toBe('304px') // pushed clear of the floating card
 
     // The pointer leaving the branch is what settles the stack into its covered layout.
-    leave(col(0), screen.getByText('detail'))
-    expect(boxWidth(0)).toBe('32px')
-    expect(boxLeft(1)).toBe('32px')
+    leave(col(2), screen.getByText('detail'))
+    expect(boxWidth(2)).toBe('32px')
+    expect(detail(container).style.left).toBe('96px')
   })
 
-  it('a click that completes the path roots nothing — a stack at rest casts no floating card', () => {
-    // Selecting in the LAST level covers nothing at/below the clicked list, so the blind root the
-    // select plants is dropped as meaningless: same geometry as rest, and no trailing card shadow
-    // over the detail (only the resting layered-stack shadow from its covered parent).
+  it('a click that covers nothing roots nothing — a stack at rest casts no floating card', () => {
+    // The same completing click, but with room to spare: it leaves the clicked list disclosed, so the
+    // blind root the select plants is dropped as meaningless — same geometry as rest, and no trailing
+    // card shadow over the detail (only the resting layered-stack shadow from its covered parent).
+    //
+    // Wider than the block's default: completing the path is what makes the detail claim its 576px
+    // minimum, and this needs room for exactly one of the two lists once it does.
+    resizeTo(W2_PARENT_COVERED)
     function Stack() {
       const [eco, setEco] = useState<string | null>(null)
       const levels: TopicLevel[] = [
@@ -596,14 +681,47 @@ describe('HierarchicalTopicDetail — narrow (navigation-stack) layout', () => {
     expect(col(1).style.transform).toBe('translateX(-30%)')
   })
 
-  it('has no cover toggles or auto-hide toggle — there is nothing to cover', () => {
+  it('has no cover toggles — a pane is the whole view, so there is nothing to cover', () => {
     render(
       <HierarchicalTopicDetail layoutMode="narrow" levels={levelsFor({ region: 'us' })}>
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
     expect(screen.queryByRole('button', { name: /cover/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Auto-hide/i })).not.toBeInTheDocument()
+  })
+
+  it('is what `auto` lands on below the wide floor, whatever is selected', () => {
+    // The wide layout is worth keeping only while the detail can hold its 576px minimum beside one
+    // 32px strip; under 608 there is nothing left to trade and one full-width pane at a time is the
+    // better view. The floor does NOT move with the selection: an unselected frontier claims no
+    // detail minimum inside the FIT MATH (so the list you are choosing from is never squeezed), and
+    // reading that as a lower NARROW floor used to leave a 240px list beside a detail sliver a few
+    // dozen pixels wide — two panes, neither usable. A selection-independent floor also means the
+    // mode cannot flip under the click that changes the selection.
+    //
+    // Read off STRUCTURE, not the panes' transforms: which stack rendered is settled on the first
+    // frame, while the narrow panes take an animation frame to slide to their resting offsets.
+    const modeAt = (px: number, levels: TopicLevel[]) => {
+      const harness = installResizeHarness(px)
+      try {
+        const { container, unmount } = render(
+          <HierarchicalTopicDetail levels={levels}>
+            <p>detail</p>
+          </HierarchicalTopicDetail>,
+        )
+        const narrow = isNarrow(container)
+        unmount()
+        return narrow
+      } finally {
+        harness.restore()
+      }
+    }
+    // Frontier unselected (the case whose floor used to be a bare 240px rail) and every level
+    // selected, at the same two widths: one threshold, not two.
+    expect(modeAt(600, levelsFor({ region: 'us' }))).toBe(true)
+    expect(modeAt(600, levelsFor({ region: 'us', eco: 'core', topic: 'apps' }))).toBe(true)
+    expect(modeAt(620, levelsFor({ region: 'us' }))).toBe(false)
+    expect(modeAt(620, levelsFor({ region: 'us', eco: 'core', topic: 'apps' }))).toBe(false)
   })
 
   it('gives every selectable row a trailing disclosure chevron — the pane has no peeking sibling column left to hint that a tap pushes further', () => {
@@ -740,102 +858,55 @@ describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
   })
 })
 
-/** The two things the covered stack must get right while the WINDOW ITSELF is being dragged.
- *
- *  jsdom reports every element at width 0 and never runs a real ResizeObserver, so this block
- *  installs a controllable one plus a settable `clientWidth`: the component's whole notion of
- *  "the container changed size" is that callback, which is exactly what a window drag delivers. */
+/** What the covered stack must get right while the WINDOW ITSELF is being dragged: where the detail's
+ *  edges come from, and the fact that the shrink sequence is ANIMATED the whole way down. */
 describe('HierarchicalTopicDetail — the covered stack during a live container resize', () => {
-  const detail = (container: HTMLElement): HTMLElement => {
-    const el = container.querySelector('[data-htd-detail]')
-    if (!(el instanceof HTMLElement)) throw new Error('no detail pane')
-    return el
-  }
-
-  /** Swap in a ResizeObserver whose callbacks the test fires by hand, and a `clientWidth` the test
-   *  sets. Returns the two knobs; the vitest `restoreAllMocks`/teardown below puts jsdom back. */
-  function installResizeHarness(initial: number) {
-    let width = initial
-    const observers: (() => void)[] = []
-    const realRO = globalThis.ResizeObserver
-    const realWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
-    globalThis.ResizeObserver = class {
-      constructor(private cb: () => void) {}
-      observe() {
-        observers.push(this.cb)
-      }
-      unobserve() {}
-      disconnect() {}
-    } as unknown as typeof globalThis.ResizeObserver
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
-      configurable: true,
-      get: () => width,
-    })
-    return {
-      resizeTo(next: number) {
-        width = next
-        act(() => {
-          observers.forEach((cb) => cb())
-        })
-      },
-      restore() {
-        globalThis.ResizeObserver = realRO
-        if (realWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', realWidth)
-        else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth
-      },
-    }
-  }
+  const resizeTo = containerWidth(W3_NONE_COVERED)
+  const threeLevels = () => (
+    <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+      <p>leaf</p>
+    </HierarchicalTopicDetail>
+  )
 
   it('pins the detail pane to the container’s right edge instead of sizing it from a measurement', () => {
-    const harness = installResizeHarness(1200)
-    try {
-      const { container } = render(
-        <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
-          <p>leaf</p>
-        </HierarchicalTopicDetail>,
-      )
-      // A JS width is a measurement from the PREVIOUS commit — during a drag the pane would trail
-      // the edge it is supposed to sit on. Anchoring both edges makes the browser solve the width
-      // from the live container every frame.
-      expect(detail(container).style.right).toBe('0px')
-      expect(detail(container).style.width).toBe('')
-      expect(detail(container).style.left).not.toBe('')
-    } finally {
-      harness.restore()
-    }
+    const { container } = render(threeLevels())
+    // A JS width is a measurement from the PREVIOUS commit — during a drag the pane would trail the
+    // edge it is supposed to sit on, and its width visibly wandered because of it. Anchoring both
+    // edges makes the browser solve the width from the live container every frame instead.
+    expect(detail(container).style.right).toBe('0px')
+    expect(detail(container).style.width).toBe('')
+    expect(detail(container).style.left).not.toBe('')
   })
 
-  it('drops its slide transitions while the container is resizing, and restores them once it settles', () => {
+  it('animates each step of the shrink — a list sliding onto its parent, then off the left edge', () => {
     vi.useFakeTimers()
-    const harness = installResizeHarness(1200)
     try {
-      const { container } = render(
-        <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
-          <p>leaf</p>
-        </HierarchicalTopicDetail>,
-      )
+      const { container } = render(threeLevels())
       // Past the mount's in-place hold, so what follows is attributable to the resize alone.
       act(() => {
         vi.advanceTimersByTime(400)
       })
+      expect(boxWidth(0)).toBe('240px') // room for all three
 
-      harness.resizeTo(900)
-      expect(detail(container).className).not.toMatch(/transition-\[left/)
+      // STEP ONE — narrow past the rung where three full lists fit: the two leftmost slide onto
+      // their children as peeks. `width` and `left` both carry the transition, so the box wipes shut
+      // and its neighbours travel into the room it gave up rather than snapping there.
+      resizeTo(W3_TWO_COVERED)
+      expect(boxWidth(0)).toBe('32px')
+      expect(col(0).className).toMatch(/transition-\[left,width,box-shadow\]/)
+      expect(col(2).className).toMatch(/transition-\[left,width,box-shadow\]/)
+      expect(detail(container).className).toMatch(/transition-\[left\]/)
 
-      // Still mid-drag a moment later: each observation re-arms the hold.
-      act(() => {
-        vi.advanceTimersByTime(80)
-      })
-      harness.resizeTo(820)
-      expect(detail(container).className).not.toMatch(/transition-\[left/)
-
-      // Released: the next DISCRETE change (a cover toggle, a reveal) animates again.
-      act(() => {
-        vi.advanceTimersByTime(200)
-      })
-      expect(detail(container).className).toMatch(/transition-\[left/)
+      // STEP TWO — narrow past the last rung, where even three peeks leave the detail under its
+      // minimum: the leftmost list leaves the screen, and the stack shifts by exactly its width.
+      // Same transitions, so it TRAVELS off the edge (the root is `overflow-hidden`, which clips it)
+      // instead of vanishing.
+      resizeTo(W3_ONE_OFF_SCREEN)
+      expect(boxLeft(0)).toBe('-32px')
+      expect(boxLeft(1)).toBe('0px')
+      expect(col(0)).toHaveAttribute('aria-hidden', 'true') // gone from the AT tree with the screen
+      expect(col(0).className).toMatch(/transition-\[left,width,box-shadow\]/)
     } finally {
-      harness.restore()
       vi.useRealTimers()
     }
   })
