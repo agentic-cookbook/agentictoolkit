@@ -1050,7 +1050,14 @@ const IN_PLACE_SETTLE_MS = 350
  */
 function useInPlaceOnStructureChange(signature: string): boolean {
   const prev = useRef(signature)
-  const holdUntil = useRef(0)
+  // Seeded to a HELD window, not 0: selecting a row in the app is a route change, which REMOUNTS
+  // this stack (see NarrowStack's `narrowTop` note). On that fresh mount `prev` initialises to the
+  // already-selected signature, so the comparison below can never fire — transitions were live at
+  // first paint and the measured rail widths landing over the next few commits animated `left`,
+  // sliding the detail in from the edge. A mount is exactly the case this hook exists to cover, so
+  // it starts held; by the time the window expires the geometry is at rest and re-enabling
+  // transitions cannot animate anything.
+  const holdUntil = useRef(Date.now() + IN_PLACE_SETTLE_MS)
   const [, bump] = useState(0)
   // Render-time detection, deliberately: the commit that APPLIES the new geometry must go to the
   // browser without the transition classes — an effect is already too late (see above). The ref
