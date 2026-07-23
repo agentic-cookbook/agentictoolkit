@@ -739,3 +739,104 @@ describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
     expect(within(pane(container)).queryByText('Pick an ecosystem.')).toBeNull()
   })
 })
+
+/** The two things the covered stack must get right while the WINDOW ITSELF is being dragged.
+ *
+ *  jsdom reports every element at width 0 and never runs a real ResizeObserver, so this block
+ *  installs a controllable one plus a settable `clientWidth`: the component's whole notion of
+ *  "the container changed size" is that callback, which is exactly what a window drag delivers. */
+describe('HierarchicalTopicDetail — the covered stack during a live container resize', () => {
+  const detail = (container: HTMLElement): HTMLElement => {
+    const el = container.querySelector('[data-htd-detail]')
+    if (!(el instanceof HTMLElement)) throw new Error('no detail pane')
+    return el
+  }
+
+  /** Swap in a ResizeObserver whose callbacks the test fires by hand, and a `clientWidth` the test
+   *  sets. Returns the two knobs; the vitest `restoreAllMocks`/teardown below puts jsdom back. */
+  function installResizeHarness(initial: number) {
+    let width = initial
+    const observers: (() => void)[] = []
+    const realRO = globalThis.ResizeObserver
+    const realWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
+    globalThis.ResizeObserver = class {
+      constructor(private cb: () => void) {}
+      observe() {
+        observers.push(this.cb)
+      }
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof globalThis.ResizeObserver
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get: () => width,
+    })
+    return {
+      resizeTo(next: number) {
+        width = next
+        act(() => {
+          observers.forEach((cb) => cb())
+        })
+      },
+      restore() {
+        globalThis.ResizeObserver = realRO
+        if (realWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', realWidth)
+        else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth
+      },
+    }
+  }
+
+  it('pins the detail pane to the container’s right edge instead of sizing it from a measurement', () => {
+    const harness = installResizeHarness(1200)
+    try {
+      const { container } = render(
+        <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+          <p>leaf</p>
+        </HierarchicalTopicDetail>,
+      )
+      // A JS width is a measurement from the PREVIOUS commit — during a drag the pane would trail
+      // the edge it is supposed to sit on. Anchoring both edges makes the browser solve the width
+      // from the live container every frame.
+      expect(detail(container).style.right).toBe('0px')
+      expect(detail(container).style.width).toBe('')
+      expect(detail(container).style.left).not.toBe('')
+    } finally {
+      harness.restore()
+    }
+  })
+
+  it('drops its slide transitions while the container is resizing, and restores them once it settles', () => {
+    vi.useFakeTimers()
+    const harness = installResizeHarness(1200)
+    try {
+      const { container } = render(
+        <HierarchicalTopicDetail levels={levelsFor({ region: 'us', eco: 'core', topic: 'apps' })}>
+          <p>leaf</p>
+        </HierarchicalTopicDetail>,
+      )
+      // Past the mount's in-place hold, so what follows is attributable to the resize alone.
+      act(() => {
+        vi.advanceTimersByTime(400)
+      })
+
+      harness.resizeTo(900)
+      expect(detail(container).className).not.toMatch(/transition-\[left/)
+
+      // Still mid-drag a moment later: each observation re-arms the hold.
+      act(() => {
+        vi.advanceTimersByTime(80)
+      })
+      harness.resizeTo(820)
+      expect(detail(container).className).not.toMatch(/transition-\[left/)
+
+      // Released: the next DISCRETE change (a cover toggle, a reveal) animates again.
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+      expect(detail(container).className).toMatch(/transition-\[left/)
+    } finally {
+      harness.restore()
+      vi.useRealTimers()
+    }
+  })
+})

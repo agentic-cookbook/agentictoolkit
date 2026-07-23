@@ -673,7 +673,7 @@ export function HierarchicalTopicDetail({
   // inside takes the first measurement before paint, so a narrow container never flashes the wide
   // layout on its first frame.
   const rowRef = useRef<HTMLDivElement>(null)
-  const containerW = useContainerWidth(rowRef)
+  const { width: containerW, resizing } = useContainerWidth(rowRef)
   const phone = usePhoneUserAgent()
   // NARROW = the wide layout has nothing left to trade: the shrink sequence (collapse the lists,
   // shrink the detail to its minimum, slide the collapsed lists off-screen one at a time — see the
@@ -812,6 +812,7 @@ export function HierarchicalTopicDetail({
     narrowTop: surface.narrowTop,
     setNarrowTop,
     containerW,
+    resizing,
     detailSlot: setDetailSlotEl,
   }
 
@@ -913,21 +914,57 @@ function minDetailPx(minDetailWidth: string): number {
   return MIN_DETAIL_DEFAULT_PX // a relative/viewport unit we can't resolve to fixed px → the default
 }
 
-/** The measured width of `ref`'s element, tracked by a ResizeObserver. `useLayoutEffect` (not
- *  `useEffect`) takes the FIRST measurement before the browser paints, so a layout gated on the width
- *  — the wide/narrow mode, the covered stack's fit math — never flashes a wrong first frame. */
-function useContainerWidth(ref: RefObject<HTMLDivElement | null>): number {
+/** How long after the last width observation the container counts as settled (see `resizing`). */
+const RESIZE_SETTLE_MS = 120
+
+/** The measured width of `ref`'s element, tracked by a ResizeObserver, and whether that width is
+ *  CHANGING right now. `useLayoutEffect` (not `useEffect`) takes the FIRST measurement before the
+ *  browser paints, so a layout gated on the width — the wide/narrow mode, the covered stack's fit
+ *  math — never flashes a wrong first frame.
+ *
+ *  `resizing` exists because the stacks animate `left`/`width` over 300ms. Those transitions are
+ *  written for DISCRETE changes — a cover toggle, a selection, a reveal — where the pane has one
+ *  old geometry and one new one to travel between. Dragging a window edge is not that: it restarts
+ *  the transition on every observed frame, so the panes spend the whole drag EASING TOWARD a target
+ *  that has already moved again. The visible result is a detail pane whose width wanders instead of
+ *  tracking the window, and which lags far enough behind the fit math to look narrower than its
+ *  stated minimum while lists are still open. So the stacks drop their transitions while the
+ *  container is being resized and simply RENDER the fit for the current width, frame by frame. It
+ *  latches off shortly after the last observation, so the next discrete change animates normally. */
+function useContainerWidth(ref: RefObject<HTMLDivElement | null>): {
+  width: number
+  resizing: boolean
+} {
   const [width, setWidth] = useState(0)
+  const [resizing, setResizing] = useState(false)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const measure = () => setWidth((prev) => (prev === el.clientWidth ? prev : el.clientWidth))
+    // Compared against the LAST OBSERVED width, not React state: ResizeObserver re-reports the
+    // current size the moment it starts observing, and that echo of the mount measurement must not
+    // read as a resize (it would suppress the very first transitions for no reason).
+    let last = -1
+    let settle: ReturnType<typeof setTimeout> | undefined
+    const measure = () => {
+      const w = el.clientWidth
+      if (w === last) return
+      const mounted = last !== -1
+      last = w
+      setWidth(w)
+      if (!mounted) return
+      setResizing(true)
+      clearTimeout(settle)
+      settle = setTimeout(() => setResizing(false), RESIZE_SETTLE_MS)
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
-    return () => ro.disconnect()
+    return () => {
+      clearTimeout(settle)
+      ro.disconnect()
+    }
   }, [ref])
-  return width
+  return { width, resizing }
 }
 
 /** A phone browser — iOS or Android. Phones take the NARROW layout at any width: the wide layout's
@@ -993,6 +1030,10 @@ interface StackProps {
   setNarrowTop: (i: number) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
+  /** True while {@link StackProps.containerW} is actively CHANGING — a window/split drag in flight.
+   *  The stacks suppress their `left`/`width` transitions for the duration (see `useContainerWidth`)
+   *  so panes track the container frame-for-frame instead of chasing a target that keeps moving. */
+  resizing: boolean
   /** Ref callback for the stack's detail slot: the innermost detail wrapper each stack renders
    *  EMPTY. The frame moves its one persistent detail host (a `display: contents` portal target)
    *  into whichever slot is mounted, so the detail's React subtree survives stack flips. */
@@ -1233,6 +1274,7 @@ function MinimizedStack({
   setPins,
   levels,
   manualCollapse,
+  resizing,
   detailSlot,
 }: Omit<StackProps, "containerW"> & { levels: TopicLevel[]; manualCollapse: boolean }) {
   // `pins` (from the frame) is this stack's manual collapse-to-icon-strip intent, and auto-hide is
@@ -1391,9 +1433,10 @@ function MinimizedStack({
   })
 
   // Choosing a topic must land the detail IN PLACE, never slide it in as the columns re-flow behind
-  // it; only width-driven changes (resize, a manual toggle) animate the grid.
+  // it; only a manual toggle animates the grid. A live resize does NOT: transitioning toward a
+  // target the drag keeps moving leaves every column lagging the container (see `useContainerWidth`).
   const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
-  const animate = !dragging && !inPlace
+  const animate = !dragging && !inPlace && !resizing
 
   // Selection connectors (shared with the covered stack). The signature is the per-level selection
   // plus the grid template (column widths) and off-screen count — everything that moves a row.
@@ -1536,6 +1579,7 @@ function CoveredStack({
   hoverAll,
   setHoverId,
   containerW,
+  resizing,
   detailSlot,
 }: StackProps) {
   const minPx = minDetailPx(minDetailWidth)
@@ -1704,7 +1748,6 @@ function CoveredStack({
   const revealRight =
     hoverIndex >= 0 && lastIdx >= 0 ? revealLeft[lastIdx]! + railWidth(rendered[lastIdx]!) - offshift : -1
   const detailLeft = Math.max(restingDetailLeft, revealRight)
-  const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
   // LAYOUT LOG — the fit pass's discrete outcome (who is covered, how many slid off), on change
   // only, with the width and detail geometry it resolved at (htdv-log.ts).
@@ -1818,9 +1861,12 @@ function CoveredStack({
   }
 
   // Choosing a topic must land the detail IN PLACE — never slide it in from the left edge as the
-  // lists re-cover behind it. Only width-driven moves (resize, cover toggle, hover reveal) animate.
+  // lists re-cover behind it. Only DISCRETE moves (cover toggle, hover reveal) animate: a live
+  // container resize is continuous, and easing toward a target that moves again every frame is what
+  // made the detail's width wander and trail the window edge (see `useContainerWidth`). A cover
+  // toggle doesn't change the container's width, so `resizing` never suppresses those.
   const inPlace = useInPlaceOnStructureChange(structureSignature(rendered))
-  const animate = !dragging && !inPlace
+  const animate = !dragging && !inPlace && !resizing
 
   // Selection connectors (shared with the minimized stack). The signature is everything that moves a
   // selected row: the per-level selection and the column layout (left edges + off-screen shift +
@@ -2005,13 +2051,22 @@ function CoveredStack({
       {/* The detail (leaf) pane — rightmost, highest z-index, fills to the container's right edge
           down to `minDetailWidth`. Its top-left carries the cover toggle for the frontier list. The
           left shadow turns on when its parent (the frontier list) is covered, so the overlap reads
-          as physical (token colour via a CSS var, so the colour checker stays clean). */}
+          as physical (token colour via a CSS var, so the colour checker stays clean).
+
+          Its right edge is PINNED (`right: 0`), not computed: a JS `containerW - detailLeft` width
+          is a measurement from the previous commit, so while the window is being dragged the pane
+          is always one frame behind the edge it is supposed to sit on — the width visibly wanders.
+          Anchoring both edges makes the browser solve `width` from the live container on every
+          frame, for free and exactly. `left` is still the only animated edge; width follows it. */}
       <section
         key="__detail__"
-        style={{ left: detailLeft, width: detailWidth, zIndex: rendered.length + 1 }}
+        // Not `data-htd-col`: that attribute means "this box IS list N" to the pointer→index lookup
+        // (`colFromTarget`), and the detail is not a list.
+        data-htd-detail
+        style={{ left: detailLeft, right: 0, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
-          animate && "transition-[left,width] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
+          animate && "transition-[left] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
           rendered.length > 0 && isCovered(rendered.length - 1) && "shadow-[-10px_0_22px_-8px_var(--color-shadow)]",
         )}
       >
