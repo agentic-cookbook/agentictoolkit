@@ -232,7 +232,8 @@ final class InMemorySyncStoreTests: XCTestCase {
         }
         let rowCount = try await store.rowCount(resource: "personal.notes")
         XCTAssertEqual(rowCount, 0) // the good row was NOT committed
-        XCTAssertNil(await store.row(resource: "personal.notes", id: "good"))
+        let goodRow = await store.row(resource: "personal.notes", id: "good")
+        XCTAssertNil(goodRow)
         let cursor = try await store.cursor()
         XCTAssertNil(cursor) // cursor NOT advanced
     }

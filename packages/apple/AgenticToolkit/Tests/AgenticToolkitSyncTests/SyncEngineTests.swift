@@ -215,8 +215,10 @@ final class SyncEngineTests: XCTestCase {
         try await store.stage(
             LocalMutation(resource: "personal.notes", rowId: "good", type: .upsert, data: ["title": .string("ok")])
         )
-        let badOpId = try XCTUnwrap(await store.pendingOpId(resource: "personal.notes", rowId: "bad"))
-        let goodOpId = try XCTUnwrap(await store.pendingOpId(resource: "personal.notes", rowId: "good"))
+        let badPending = await store.pendingOpId(resource: "personal.notes", rowId: "bad")
+        let badOpId = try XCTUnwrap(badPending)
+        let goodPending = await store.pendingOpId(resource: "personal.notes", rowId: "good")
+        let goodOpId = try XCTUnwrap(goodPending)
         let badCurrent: [String: JSONValue] = [
             "id": .string("bad"), "sync_version": .string("not-a-number"), "deleted_at": .null
         ]
@@ -891,8 +893,10 @@ final class SyncEngineTests: XCTestCase {
         // re-fetched exactly the post-downgrade row "2".
         let alphaCount = try await store.rowCount(resource: "a.x")
         XCTAssertEqual(alphaCount, 1)
-        XCTAssertNil(await store.row(resource: "a.x", id: "1")) // old-schema row gone
-        XCTAssertNotNil(await store.row(resource: "a.x", id: "2")) // new-schema row present
+        let oldRow = await store.row(resource: "a.x", id: "1")
+        XCTAssertNil(oldRow) // old-schema row gone
+        let newRow = await store.row(resource: "a.x", id: "2")
+        XCTAssertNotNil(newRow) // new-schema row present
     }
 
     /// With `hostResources` set, the effective set is manifest ∩ hostResources:
