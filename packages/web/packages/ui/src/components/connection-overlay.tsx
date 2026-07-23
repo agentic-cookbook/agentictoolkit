@@ -55,6 +55,12 @@ export function ConnectionOverlay({ active, onRetry, detail }: ConnectionOverlay
   // fire from the interval body, never from inside a setState updater (which React may
   // run twice under StrictMode/concurrent, double-firing onRetry).
   const remainingRef = useRef(RETRY_SECONDS)
+  // Keep the latest onRetry in a ref so the tick effect below need not list it as a
+  // dependency: a consumer that passes an inline callback (a new identity every
+  // render) would otherwise re-run the effect and reset the countdown on each parent
+  // re-render, so the 15s auto-retry would never actually fire.
+  const onRetryRef = useRef(onRetry)
+  onRetryRef.current = onRetry
 
   // Debounced show: surface only after the feed has stayed dark past a blip; hide
   // immediately when the connection recovers (active → false).
@@ -84,14 +90,14 @@ export function ConnectionOverlay({ active, onRetry, detail }: ConnectionOverlay
       if (next <= 0) {
         remainingRef.current = RETRY_SECONDS
         setCountdown(RETRY_SECONDS)
-        onRetry()
+        onRetryRef.current()
       } else {
         remainingRef.current = next
         setCountdown(next)
       }
     }, 1_000)
     return () => clearInterval(id)
-  }, [shown, onRetry])
+  }, [shown])
 
   if (!shown) return null
 
