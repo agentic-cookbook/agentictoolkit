@@ -46,6 +46,10 @@ public enum ModelCatalogStore {
     /// The adh provider-catalog endpoint (spec: provider-catalog-sync). The adh
     /// catalog is the PRIMARY source: its curated descriptions are operator-
     /// authored; OpenRouter/models.dev remain the fallback pair.
+    /// NOTE: this fetches a single page — pageSize=100 is the ceiling this client
+    /// reads (the endpoint caps pageSize at 100 and we do not paginate). The curated
+    /// provider-template catalog is well under 100 rows; if it ever grows past that,
+    /// this must page through `total` rather than silently truncating at 100.
     public static var adhCatalogURL =
         "https://api.agenticdeveloperhub.com/persona/provider-templates?pageSize=100"
 

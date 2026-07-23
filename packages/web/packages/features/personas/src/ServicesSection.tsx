@@ -520,7 +520,11 @@ function NewServiceForm({
                   {(t.availableVia?.templates ?? []).length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {t.availableVia?.templates.map((name) => {
-                        const target = templates.find((x) => x.name === name);
+                        // Resolve the named gateway within `connectable` only — a
+                        // "Use" button must apply a template that actually has a
+                        // first-party API. A name that resolves to another
+                        // informational row (or nothing) renders no button.
+                        const target = connectable.find((x) => x.name === name);
                         return target ? (
                           <Button
                             key={name}

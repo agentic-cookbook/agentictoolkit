@@ -258,8 +258,12 @@ export interface ServiceTemplateRow {
   availableVia?: TemplateAvailableVia | null;
   /** The provider's supported modalities (e.g. `["chat"]`, `["image"]`,
    *  `["audio"]`). Null/omitted ⇒ chat. Older backends omit it.
-   *  (`syncKeys` is deliberately NOT mirrored — it is operator plumbing that never
-   *  reaches clients.) */
+   *  (`syncKeys` is intentionally not surfaced on this type. The hand-written
+   *  `/persona/provider-templates` payload strips it entirely; this authenticated
+   *  generic-CRUD row (`/persona/service-templates`) *does* carry it on the wire,
+   *  but clients have no use for the operator mapping — non-secret models.dev
+   *  provider ids / OpenRouter prefixes / arena vendor strings — so we omit it
+   *  from the type rather than model a field nothing reads.) */
   modalities?: string[] | null;
   createdAt: string;
   updatedAt: string;
