@@ -54,15 +54,12 @@ final class SyncEngineTests: XCTestCase {
             "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(9),
             "sync_stamped_at": .string("2026-07-16T00:00:00Z"), "deleted_at": .null
         ]
-        // personal.notes stays enrolled for this push cycle: hand the pull the
-        // manifest it means, so reconciliation doesn't read ScriptedSyncTransport's
-        // empty-script default (manifest: []) as "everything disabled" and purge
-        // the prepared resource out from under the push assertions.
+        // personal.notes stays enrolled for this push cycle: the pullPage helper
+        // hands the pull the personal.notes manifest, so reconciliation doesn't
+        // read an empty manifest as "everything disabled" and purge the prepared
+        // resource out from under the push assertions.
         let transport = ScriptedSyncTransport(pulls: [
-            .success(SyncPullResponse(
-                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
-                changes: [], cursor: "c0", hasMore: false
-            ))
+            pullPage([], cursor: "c0", hasMore: false)
         ], pushes: [
             .success(SyncPushResponse(
                 results: [
@@ -106,10 +103,7 @@ final class SyncEngineTests: XCTestCase {
             "deleted_at": .string("2026-07-16T00:00:00Z")
         ]
         let transport = ScriptedSyncTransport(pulls: [
-            .success(SyncPullResponse(
-                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
-                changes: [], cursor: "c0", hasMore: false
-            ))
+            pullPage([], cursor: "c0", hasMore: false)
         ], pushes: [
             .success(SyncPushResponse(
                 results: [
@@ -139,15 +133,12 @@ final class SyncEngineTests: XCTestCase {
             LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: ["title": .string("mine")])
         )
         let ops = try await store.pendingOps(limit: 10)
-        // personal.notes stays enrolled for this push cycle: hand the pull the
-        // manifest it means, so reconciliation doesn't read ScriptedSyncTransport's
-        // empty-script default (manifest: []) as "everything disabled" and purge
-        // the prepared resource out from under the push assertions.
+        // personal.notes stays enrolled for this push cycle: the pullPage helper
+        // hands the pull the personal.notes manifest, so reconciliation doesn't
+        // read an empty manifest as "everything disabled" and purge the prepared
+        // resource out from under the push assertions.
         let transport = ScriptedSyncTransport(pulls: [
-            .success(SyncPullResponse(
-                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
-                changes: [], cursor: "c0", hasMore: false
-            ))
+            pullPage([], cursor: "c0", hasMore: false)
         ], pushes: [
             .success(SyncPushResponse(
                 results: [
@@ -166,7 +157,13 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(row?.data["title"]?.stringValue, "mine") // nothing to adopt: local row untouched
     }
 
-    func testConflictWithUnrepresentableSyncVersionSkipsAdoptionButStillResolves() async throws {
+    /// A conflict whose `current.sync_version` can't become a numeric version
+    /// (here `.infinity`, which `Int(exactly:)` rejects) is unadoptable. Fix A3
+    /// unifies this with the non-numeric-string case: the op routes to the
+    /// terminal QUARANTINE outcome (same path as an explicit `.rejected`) rather
+    /// than the old "resolve-as-conflict, skip adoption" behavior. It must not
+    /// spin, and the local row is left untouched (nothing was adopted).
+    func testConflictWithUnrepresentableSyncVersionQuarantines() async throws {
         let store = InMemorySyncStore()
         try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
         try await store.stage(
@@ -176,15 +173,12 @@ final class SyncEngineTests: XCTestCase {
         let serverRow: [String: JSONValue] = [
             "id": .string("r1"), "title": .string("theirs"), "sync_version": .number(.infinity), "deleted_at": .null
         ]
-        // personal.notes stays enrolled for this push cycle: hand the pull the
-        // manifest it means, so reconciliation doesn't read ScriptedSyncTransport's
-        // empty-script default (manifest: []) as "everything disabled" and purge
-        // the prepared resource out from under the push assertions.
+        // personal.notes stays enrolled for this push cycle: the pullPage helper
+        // hands the pull the personal.notes manifest, so reconciliation doesn't
+        // read an empty manifest as "everything disabled" and purge the prepared
+        // resource out from under the push assertions.
         let transport = ScriptedSyncTransport(pulls: [
-            .success(SyncPullResponse(
-                manifest: [SyncResource(resource: "personal.notes", schemaVersion: 1)],
-                changes: [], cursor: "c0", hasMore: false
-            ))
+            pullPage([], cursor: "c0", hasMore: false)
         ], pushes: [
             .success(SyncPushResponse(
                 results: [
@@ -198,9 +192,57 @@ final class SyncEngineTests: XCTestCase {
         let (engine, _) = engine(store: store, transport: transport)
         await engine.syncNow(reason: .manual)
         let remainingOps = try await store.pendingOps(limit: 10)
-        XCTAssertEqual(remainingOps.count, 0) // op still resolves — no infinite spin
+        XCTAssertEqual(remainingOps.count, 0) // op resolved — no infinite spin
+        let quarantined = await store.quarantined
+        XCTAssertEqual(quarantined.map(\.opId), [ops[0].opId]) // unadoptable ⇒ quarantined
         let row = await store.row(resource: "personal.notes", id: "r1")
         XCTAssertEqual(row?.data["title"]?.stringValue, "mine") // adoption skipped: local row untouched
+    }
+
+    /// Fix A3, the wedge case: a conflict whose `current.sync_version` is a
+    /// NON-NUMERIC STRING ("not-a-number"). The old `adoptedVersion` passed such
+    /// a string through verbatim, so `store.apply` threw before `complete()`
+    /// ran — the op was never resolved and re-pushed forever (an unbounded
+    /// wedge). Now it routes to quarantine. Crucially, a SIBLING op in the same
+    /// batch still completes normally and the cycle reaches `.idle` — one bad
+    /// conflict must not wedge or fail the whole push.
+    func testConflictWithNonNumericStringSyncVersionQuarantinesWithoutWedging() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "bad", type: .upsert, data: ["title": .string("mine")])
+        )
+        try await store.stage(
+            LocalMutation(resource: "personal.notes", rowId: "good", type: .upsert, data: ["title": .string("ok")])
+        )
+        let badOpId = try XCTUnwrap(await store.pendingOpId(resource: "personal.notes", rowId: "bad"))
+        let goodOpId = try XCTUnwrap(await store.pendingOpId(resource: "personal.notes", rowId: "good"))
+        let badCurrent: [String: JSONValue] = [
+            "id": .string("bad"), "sync_version": .string("not-a-number"), "deleted_at": .null
+        ]
+        let transport = ScriptedSyncTransport(pulls: [
+            pullPage([], cursor: "c0", hasMore: false)
+        ], pushes: [
+            .success(SyncPushResponse(
+                results: [
+                    SyncPushResult(opId: badOpId, status: .conflict, reason: "stale_base_version", current: badCurrent),
+                    SyncPushResult(opId: goodOpId, status: .applied, newVersion: "7")
+                ],
+                watermark: "7"
+            ))
+        ])
+        let (engine, _) = engine(store: store, transport: transport)
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertTrue(remainingOps.isEmpty) // neither op left pending — no wedge
+        let quarantined = await store.quarantined
+        XCTAssertEqual(quarantined.map(\.opId), [badOpId]) // the malformed-conflict op quarantined
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.idle)) // cycle completed cleanly
+        XCTAssertFalse(events.contains { if case .failed = $0 { return true }; return false }) // never wedged/failed
     }
 
     func testUnauthorizedPausesUntilManualKick() async throws {
@@ -432,6 +474,43 @@ final class SyncEngineTests: XCTestCase {
         var events: [SyncEvent] = []
         for await event in engine.events { events.append(event) }
         XCTAssertTrue(events.contains { if case .failed = $0 { return true }; return false }) // no hang, no spin
+    }
+
+    /// Fix S2: a server that answers a NON-EMPTY pushed batch with an empty
+    /// `results` array resolved nothing, so the same batch would be re-pushed
+    /// forever. The old `if response.results.isEmpty { return }` short-circuit
+    /// reported `.idle` and stopped draining (masking the stall); now the empty
+    /// results fall through to the spin guard, which surfaces `.failed`
+    /// (pushMadeNoProgress) so the normal backoff/retry path handles it. The
+    /// outbox op stays intact for that retry.
+    func testNonEmptyBatchWithEmptyResultsFailsInsteadOfIdling() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        try await store.stage(LocalMutation(resource: "personal.notes", rowId: "r1", type: .upsert, data: [:]))
+        // Large backoff so the failure's scheduled retry can't fire mid-assertion.
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5, baseBackoff: 10, maxBackoff: 10
+        )
+        let transport = ScriptedSyncTransport(
+            pulls: [pullPage([], cursor: "c0", hasMore: false)],
+            pushes: [.success(SyncPushResponse(results: [], watermark: "0"))] // non-empty batch, empty results
+        )
+        let engine = SyncEngine(store: store, transport: transport, configuration: config)
+        await engine.syncNow(reason: .manual)
+        await engine.stop() // cancels the (never-fired) 10s retry armed by the failure
+
+        let remainingOps = try await store.pendingOps(limit: 10)
+        XCTAssertEqual(remainingOps.count, 1) // outbox intact: nothing was resolved
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertFalse(events.contains(.idle)) // did NOT report a clean cycle
+        guard case .failed(let reason)? = events.first(where: {
+            if case .failed = $0 { return true }; return false
+        }) else {
+            XCTFail("expected a .failed event, not a silent idle")
+            return
+        }
+        XCTAssertEqual(reason, "push made no progress")
     }
 
     /// item (j): a server-rejected push result must land the op in the
@@ -764,6 +843,58 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(registrations["a.x"], 2) // registration now at the bumped schema_version
     }
 
+    /// Fix A2: a registered resource whose manifest schemaVersion FALLS (a
+    /// downgrade, e.g. a server rollback) is as much a schema mismatch as a
+    /// rise — the mirror rows written under the old, higher schema can't be
+    /// trusted against the new one. So a downgrade must take the exact same
+    /// purge + resync path as an upgrade: `.resourcesSchemaBumped`, a nil-cursor
+    /// re-pull, registration left at the LOWER version, and fresh mirror rows.
+    /// Before the fix the bump predicate was `registered < manifest`, so a
+    /// downgrade slipped through silently and left stale higher-schema rows.
+    func testSchemaDowngradePurgesAndResyncs() async throws {
+        let alphaV2 = SyncResource(resource: "a.x", schemaVersion: 2)
+        let alphaV1 = SyncResource(resource: "a.x", schemaVersion: 1)
+        let transport = ScriptedSyncTransport(pulls: [
+            .success(SyncPullResponse(
+                manifest: [alphaV2],
+                changes: [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+                cursor: "c1", hasMore: false
+            ))
+        ])
+        let (engine, store) = engine(transport: transport)
+        await engine.syncNow(reason: .manual) // registers a.x @ schema 2
+
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alphaV1], changes: [], cursor: "c2", hasMore: false // downgrade to schema 1
+        )))
+        await transport.enqueuePull(.success(SyncPullResponse(
+            manifest: [alphaV1],
+            changes: [SyncChange(resource: "a.x", id: "2", op: .upsert, syncVersion: "1", data: [:])],
+            cursor: "c3", hasMore: false
+        )))
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        XCTAssertTrue(events.contains(.resourcesSchemaBumped(["a.x"]))) // downgrade takes the bump path
+        XCTAssertTrue(events.contains(.resyncPerformed))
+
+        let cursorsSent = await transport.pullCursors
+        XCTAssertEqual(cursorsSent.count, 3)
+        guard cursorsSent.count == 3 else { return }
+        XCTAssertNil(cursorsSent[2]) // the resync re-pull restarted from a nil cursor
+
+        let registrations = try await store.registrations()
+        XCTAssertEqual(registrations["a.x"], 1) // registration now at the LOWER schema_version
+        // Fresh rows only: the pre-downgrade row "1" was purged; the resync
+        // re-fetched exactly the post-downgrade row "2".
+        let alphaCount = try await store.rowCount(resource: "a.x")
+        XCTAssertEqual(alphaCount, 1)
+        XCTAssertNil(await store.row(resource: "a.x", id: "1")) // old-schema row gone
+        XCTAssertNotNil(await store.row(resource: "a.x", id: "2")) // new-schema row present
+    }
+
     /// With `hostResources` set, the effective set is manifest ∩ hostResources:
     /// a manifest resource the host did not register is surfaced via
     /// `.unregisteredManifestResources` and its changes are skipped, never
@@ -798,6 +929,44 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(alphaCount, 1) // only the host's own resource was applied
         let registrations = try await store.registrations()
         XCTAssertEqual(registrations, ["a.x": 1]) // b.y was never registered
+    }
+
+    /// Fix H4: `.unregisteredManifestResources` must fire at most once per cycle
+    /// per distinct set, not once per page. A 3-page pull whose every page
+    /// carries the same manifest (`[a.x, b.y]`) against a host that only
+    /// registered `a.x` used to emit `["b.y"]` three times (once per page's
+    /// reconcile); now the engine latches the last-emitted set for the cycle and
+    /// emits it exactly once.
+    func testMultiPageUnregisteredManifestEmitsOncePerCycle() async throws {
+        let alpha = SyncResource(resource: "a.x", schemaVersion: 1)
+        let beta = SyncResource(resource: "b.y", schemaVersion: 1)
+        let store = InMemorySyncStore()
+        let config = SyncEngineConfiguration(
+            deviceId: "test-device", pullLimit: 10, pushBatchSize: 5,
+            baseBackoff: 0.01, maxBackoff: 0.05, hostResources: [alpha]
+        )
+        // Three pages, cursor advancing each time (so the no-progress guard
+        // never trips), same [a.x, b.y] manifest throughout — b.y is
+        // unregistered on the host on every page.
+        func page(_ cursor: String, hasMore: Bool) -> ScriptedSyncTransport.Outcome<SyncPullResponse> {
+            .success(SyncPullResponse(manifest: [alpha, beta], changes: [], cursor: cursor, hasMore: hasMore))
+        }
+        let transport = ScriptedSyncTransport(pulls: [
+            page("c1", hasMore: true), page("c2", hasMore: true), page("c3", hasMore: false)
+        ])
+        let engine = SyncEngine(store: store, transport: transport, configuration: config)
+        await engine.syncNow(reason: .manual)
+        await engine.stop()
+
+        let cursorsSent = await transport.pullCursors
+        XCTAssertEqual(cursorsSent.count, 3) // all three pages were pulled
+
+        var events: [SyncEvent] = []
+        for await event in engine.events { events.append(event) }
+        let unregisteredEvents = events.filter {
+            if case .unregisteredManifestResources = $0 { return true }; return false
+        }
+        XCTAssertEqual(unregisteredEvents, [.unregisteredManifestResources(["b.y"])]) // exactly one, not three
     }
 
     /// The initial sync of a fresh store pulls a multi-resource manifest with
@@ -877,6 +1046,96 @@ final class SyncEngineTests: XCTestCase {
         // The bound threw SyncEngineError.manifestUnstable; assert on that error
         // (its canonical string), not on the resync echo events emitted en route.
         XCTAssertEqual(failures, [String(describing: SyncEngineError.manifestUnstable)])
+    }
+
+    // MARK: - reconcilePlan (pure classification — fix I6)
+
+    /// A registered resource absent from the effective manifest is `disabled`;
+    /// it is neither `bumped` nor `appeared`.
+    func testReconcilePlanClassifiesDisappearance() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 1, "b.y": 1],
+            effective: [SyncResource(resource: "a.x", schemaVersion: 1)]
+        )
+        XCTAssertEqual(plan.disabled, ["b.y"])
+        XCTAssertEqual(plan.bumped, [])
+        XCTAssertEqual(plan.appeared, [])
+    }
+
+    /// An effective resource with no prior registration is `appeared`.
+    func testReconcilePlanClassifiesAppearance() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 1],
+            effective: [
+                SyncResource(resource: "a.x", schemaVersion: 1),
+                SyncResource(resource: "b.y", schemaVersion: 1)
+            ]
+        )
+        XCTAssertEqual(plan.disabled, [])
+        XCTAssertEqual(plan.bumped, [])
+        XCTAssertEqual(plan.appeared, ["b.y"])
+    }
+
+    /// A schema_version RISE is `bumped`.
+    func testReconcilePlanClassifiesVersionRiseAsBumped() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 1],
+            effective: [SyncResource(resource: "a.x", schemaVersion: 2)]
+        )
+        XCTAssertEqual(plan.bumped, ["a.x"])
+        XCTAssertEqual(plan.appeared, [])
+        XCTAssertEqual(plan.disabled, [])
+    }
+
+    /// A schema_version FALL is `bumped` too (fix A2 — the `!=` predicate): a
+    /// downgrade is as much a schema mismatch as an upgrade.
+    func testReconcilePlanClassifiesVersionFallAsBumped() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 2],
+            effective: [SyncResource(resource: "a.x", schemaVersion: 1)]
+        )
+        XCTAssertEqual(plan.bumped, ["a.x"])
+        XCTAssertEqual(plan.appeared, [])
+        XCTAssertEqual(plan.disabled, [])
+    }
+
+    /// A resource at an unchanged schema_version is in none of the three
+    /// buckets — the steady-state page.
+    func testReconcilePlanClassifiesUnchangedAsNothing() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 1],
+            effective: [SyncResource(resource: "a.x", schemaVersion: 1)]
+        )
+        XCTAssertEqual(plan.disabled, [])
+        XCTAssertEqual(plan.bumped, [])
+        XCTAssertEqual(plan.appeared, [])
+    }
+
+    /// `bumped` and `appeared` are disjoint: a registered-but-changed resource
+    /// is bumped, never appeared, so it is counted exactly once.
+    func testReconcilePlanBumpedAndAppearedAreDisjoint() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 1],
+            effective: [
+                SyncResource(resource: "a.x", schemaVersion: 2), // bumped
+                SyncResource(resource: "b.y", schemaVersion: 1)  // appeared
+            ]
+        )
+        XCTAssertEqual(plan.bumped, ["a.x"])
+        XCTAssertEqual(plan.appeared, ["b.y"])
+        XCTAssertTrue(Set(plan.bumped).isDisjoint(with: Set(plan.appeared)))
+    }
+
+    /// An empty effective manifest disables every registration and produces no
+    /// bumped/appeared.
+    func testReconcilePlanEmptyManifestDisablesEverything() {
+        let plan = SyncEngine.reconcilePlan(
+            registered: ["a.x": 1, "b.y": 1, "c.z": 3],
+            effective: []
+        )
+        XCTAssertEqual(plan.disabled, ["a.x", "b.y", "c.z"])
+        XCTAssertEqual(plan.bumped, [])
+        XCTAssertEqual(plan.appeared, [])
     }
 }
 

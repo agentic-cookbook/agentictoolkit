@@ -49,6 +49,25 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         return resource.replacingOccurrences(of: ".", with: "_")
     }
 
+    /// Deletes the mirror rows of the REGISTERED subset of `resources` — each
+    /// one filtered against `_sync_resources` first, so an unregistered resource
+    /// (no mirror table was ever created for it) is silently skipped rather than
+    /// throwing "no such table". This is the shared body of the three per-resource
+    /// mirror-truncation sites (`resetForResync`, `purgeResources`,
+    /// `purgeForIdentityChange`) — one place that "empty a mirror table" lives, so
+    /// purging an unregistered resource is a no-op in every path (twin parity with
+    /// `InMemorySyncStore.purgeResources`, which already no-ops the unknown key).
+    private static func deleteMirrorRows(for resources: [String], in conn: Database) throws {
+        for resource in resources {
+            let isRegistered = try Bool.fetchOne(
+                conn, sql: "SELECT EXISTS(SELECT 1 FROM _sync_resources WHERE resource = ?)",
+                arguments: [resource]
+            ) ?? false
+            guard isRegistered else { continue }
+            try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
+        }
+    }
+
     private func onQueue<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
@@ -129,11 +148,19 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
                         throw SyncStoreFailure.unknownResource(change.resource)
                     }
                     let table = try Self.mirrorTableName(for: change.resource)
-                    // Strict: the wire contract guarantees syncVersion matches
-                    // `/^\d+$/` (adh src/sync/wire.ts), so an unparseable value
-                    // means something upstream is broken — fail loudly rather
-                    // than silently coercing to 0 and corrupting the mirror's
-                    // version ordering.
+                    // Strict: reject an unparseable syncVersion rather than
+                    // silently coercing to 0 and corrupting the mirror's version
+                    // ordering. Two distinct sources feed this guard, and only one
+                    // is wire-validated: a *pulled* change's syncVersion is
+                    // guaranteed `/^\d+$/` by the wire schema (adh src/sync/wire.ts),
+                    // but a change synthesized from a conflict's `current` blob is
+                    // NOT — that blob is unvalidated on the wire. The engine
+                    // pre-screens conflict adoptions numerically (SyncEngine
+                    // `adoptedVersion`, quarantining a non-numeric current before it
+                    // ever reaches apply), so by the time we get here the value is
+                    // either wire-guaranteed (pull) or engine-guaranteed (adoption);
+                    // a failure here therefore means something upstream is genuinely
+                    // broken, hence the loud throw.
                     guard let version = Int(change.syncVersion) else {
                         throw SyncStoreFailure.invalidChange("unparseable syncVersion: \(change.syncVersion)")
                     }
@@ -389,9 +416,7 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         try await onQueue {
             try boundedDatabase.write { conn in
                 let tables = try String.fetchAll(conn, sql: "SELECT resource FROM _sync_resources")
-                for resource in tables {
-                    try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
-                }
+                try Self.deleteMirrorRows(for: tables, in: conn)
                 try conn.execute(sql: "DELETE FROM _sync_state")
             }
         }
@@ -429,9 +454,12 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         let boundedDatabase = self.boundedDatabase
         try await onQueue {
             try boundedDatabase.write { conn in
+                // Empty the mirror rows of the registered subset only — an
+                // unregistered resource has no mirror table, so its purge is a
+                // silent no-op (twin of InMemorySyncStore.purgeResources) rather
+                // than a "no such table" throw.
+                try Self.deleteMirrorRows(for: resources, in: conn)
                 for resource in resources {
-                    try conn.execute(
-                        sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
                     try conn.execute(
                         sql: """
                             UPDATE _sync_outbox SET status = 'quarantined'
@@ -480,9 +508,7 @@ public final class GRDBSyncStore: SyncStore, @unchecked Sendable {
         try await onQueue {
             try boundedDatabase.write { conn in
                 let tables = try String.fetchAll(conn, sql: "SELECT resource FROM _sync_resources")
-                for resource in tables {
-                    try conn.execute(sql: "DELETE FROM \"\(try Self.mirrorTableName(for: resource))\"")
-                }
+                try Self.deleteMirrorRows(for: tables, in: conn)
                 try conn.execute(sql: "DELETE FROM _sync_state")
                 try conn.execute(sql: "DELETE FROM _sync_outbox")
             }

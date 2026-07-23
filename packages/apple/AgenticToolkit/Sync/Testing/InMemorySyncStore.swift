@@ -30,12 +30,19 @@ public actor InMemorySyncStore: SyncStore {
         var status: OutboxStatus
     }
 
-    /// resource -> registered schema_version, upserted by `prepare` and
-    /// removed by `purgeResources`. The single source of registration truth
-    /// (mirrored by `tables` key presence, which `stage`/`apply`/`rowCount`
-    /// consult); `registrations()` returns a copy of this.
-    private var registeredSchemaVersions: [String: Int] = [:]
-    private var tables: [String: [String: Row]] = [:]
+    /// A registered resource's schema_version plus its mirror rows, held as one
+    /// value so the two can never disagree about whether the resource is
+    /// registered — key presence in `resourceStates` IS the registration truth
+    /// that `stage`/`apply`/`rowCount` consult (previously a schema-version dict
+    /// and a rows dict kept hand-locked in step).
+    private struct ResourceState: Sendable {
+        var schemaVersion: Int
+        var rows: [String: Row]
+    }
+    /// resource -> its registered schema_version + mirror rows, upserted by
+    /// `prepare` and removed by `purgeResources`; `registrations()` projects
+    /// out the schema versions.
+    private var resourceStates: [String: ResourceState] = [:]
     private var storedCursor: SyncCursor?
     private var outbox: [OutboxEntry] = []
     public private(set) var conflictLog: [(opId: String, reason: String?)] = []
@@ -54,9 +61,12 @@ public actor InMemorySyncStore: SyncStore {
 
     public func prepare(resources: [SyncResource]) async throws {
         for descriptor in resources {
-            registeredSchemaVersions[descriptor.resource] = descriptor.schemaVersion
-            if tables[descriptor.resource] == nil {
-                tables[descriptor.resource] = [:]
+            if resourceStates[descriptor.resource] != nil {
+                resourceStates[descriptor.resource]!.schemaVersion = descriptor.schemaVersion
+            } else {
+                resourceStates[descriptor.resource] = ResourceState(
+                    schemaVersion: descriptor.schemaVersion, rows: [:]
+                )
             }
         }
     }
@@ -64,8 +74,15 @@ public actor InMemorySyncStore: SyncStore {
     public func cursor() async throws -> SyncCursor? { storedCursor }
 
     public func apply(_ batch: [SyncChange], advancingTo cursor: SyncCursor?) async throws {
+        // Atomic (arch doc §"apply is all-or-nothing", parity with
+        // GRDBSyncStore.apply's single write transaction): stage every change
+        // into a local copy and only commit it — and advance the cursor — once
+        // the whole batch validates. A mid-batch throw (unknown resource,
+        // unparseable syncVersion) must leave the mirror rows AND the cursor
+        // exactly as they were, never a half-applied batch.
+        var staged = resourceStates
         for change in batch {
-            guard tables[change.resource] != nil else {
+            guard staged[change.resource] != nil else {
                 throw SyncStoreFailure.unknownResource(change.resource)
             }
             // Parity with GRDBSyncStore.apply: even though this fake keeps
@@ -75,12 +92,13 @@ public actor InMemorySyncStore: SyncStore {
             guard Int(change.syncVersion) != nil else {
                 throw SyncStoreFailure.invalidChange("unparseable syncVersion: \(change.syncVersion)")
             }
-            tables[change.resource]![change.id] = Row(
+            staged[change.resource]!.rows[change.id] = Row(
                 syncVersion: change.syncVersion,
                 deleted: change.op == .delete,
                 data: change.data ?? [:]
             )
         }
+        resourceStates = staged
         if let cursor { storedCursor = cursor }
     }
 
@@ -99,11 +117,11 @@ public actor InMemorySyncStore: SyncStore {
         guard !pullOnlyResources.contains(mutation.resource) else {
             throw SyncStoreFailure.pullOnlyResource(mutation.resource)
         }
-        guard tables[mutation.resource] != nil else {
+        guard resourceStates[mutation.resource] != nil else {
             throw SyncStoreFailure.unknownResource(mutation.resource)
         }
-        let base = tables[mutation.resource]?[mutation.rowId]?.syncVersion
-        tables[mutation.resource]![mutation.rowId] = Row(
+        let base = resourceStates[mutation.resource]?.rows[mutation.rowId]?.syncVersion
+        resourceStates[mutation.resource]!.rows[mutation.rowId] = Row(
             syncVersion: base ?? "0",
             deleted: mutation.type == .delete,
             data: mutation.data ?? [:]
@@ -160,7 +178,7 @@ public actor InMemorySyncStore: SyncStore {
                 let completedOp = outbox[idx].pushOp
                 if let newVersion = result.newVersion,
                    Int(newVersion) != nil, // skip-if-unparseable: parity with GRDBSyncStore.complete
-                   tables[completedOp.resource]?[completedOp.rowId] != nil {
+                   resourceStates[completedOp.resource]?.rows[completedOp.rowId] != nil {
                     // Adopt the server's post-apply sync_version onto the mirror row
                     // before dropping the outbox entry — mirrors GRDBSyncStore.complete
                     // so the fakes don't lie about the adoption behavior the real store
@@ -168,7 +186,7 @@ public actor InMemorySyncStore: SyncStore {
                     // rather than adopted (or thrown) — same rationale as GRDBSyncStore:
                     // this is completion bookkeeping, not a place to abort and wedge the
                     // outbox row.
-                    tables[completedOp.resource]![completedOp.rowId]!.syncVersion = newVersion
+                    resourceStates[completedOp.resource]!.rows[completedOp.rowId]!.syncVersion = newVersion
                 }
                 outbox.remove(at: idx)
             case .conflict:
@@ -181,12 +199,16 @@ public actor InMemorySyncStore: SyncStore {
     }
 
     public func resetForResync() async throws {
-        tables = tables.mapValues { _ in [:] }
+        // Clear every registered resource's mirror rows but keep its
+        // registration (schema_version) — resync re-fetches data, not enrollment.
+        resourceStates = resourceStates.mapValues {
+            ResourceState(schemaVersion: $0.schemaVersion, rows: [:])
+        }
         storedCursor = nil
     }
 
     public func registrations() async throws -> [String: Int] {
-        registeredSchemaVersions
+        resourceStates.mapValues(\.schemaVersion)
     }
 
     /// Enrollment-disable transition (sync fix-wave): drop the purged
@@ -198,8 +220,10 @@ public actor InMemorySyncStore: SyncStore {
         let purged = Set(resources)
         guard !purged.isEmpty else { return }
         for resource in purged {
-            tables[resource] = nil
-            registeredSchemaVersions[resource] = nil
+            // Silent no-op for a resource that was never registered — twin of
+            // GRDBSyncStore.purgeResources (which skips its mirror DELETE for
+            // unregistered resources rather than throwing "no such table").
+            resourceStates[resource] = nil
         }
         var survivors: [OutboxEntry] = []
         survivors.reserveCapacity(outbox.count)
@@ -219,12 +243,12 @@ public actor InMemorySyncStore: SyncStore {
     /// registered — or was deregistered by `purgeResources` — rather than
     /// reporting a misleading zero.
     public func rowCount(resource: String) throws -> Int {
-        guard let table = tables[resource] else {
+        guard let state = resourceStates[resource] else {
             throw SyncStoreFailure.unknownResource(resource)
         }
-        return table.values.filter { !$0.deleted }.count
+        return state.rows.values.filter { !$0.deleted }.count
     }
-    public func row(resource: String, id: String) -> Row? { tables[resource]?[id] }
+    public func row(resource: String, id: String) -> Row? { resourceStates[resource]?.rows[id] }
     /// The current `pending` op's id for (resource, rowId), if any. Unlike
     /// `pendingOps`, this does NOT mark the op `inflight` — for tests that
     /// need to capture an opId before a later `stage()` call that should

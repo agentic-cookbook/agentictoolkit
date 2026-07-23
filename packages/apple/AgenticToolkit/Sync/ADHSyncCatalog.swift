@@ -3,12 +3,14 @@ import Foundation
 /// The adh backend's sync catalog, mirrored client-side. Source of truth:
 /// `SYNC_REGISTRY` in the adh backend (`backend/src/adh/src/sync/registry.ts`,
 /// derived from the DB schema). Generated 2026-07-22 against adh main
-/// `64825b107`; regenerate from an adh checkout with:
+/// `64825b107`; regenerate from an adh checkout with the codegen tool (which
+/// re-emits this file AND runs the semantic-drift check that fails if the
+/// checked-in catalog no longer matches `SYNC_REGISTRY`):
 ///
-///     cd backend/src/adh && npx tsx --eval "
-///       import { SYNC_REGISTRY } from './src/sync/registry';
-///       for (const e of [...SYNC_REGISTRY].sort((a,b)=>a.resource.localeCompare(b.resource)))
-///         console.log(e.resource, e.pushMode, e.schemaVersion)"
+///     python3 tools/codegen/generate.py sync-catalog
+///
+/// Keep the "Generated … against adh main `<sha>`" provenance line above in
+/// sync with the checkout you regenerated from.
 ///
 /// The catalog is client knowledge, not authority: the server's manifest gates
 /// what actually syncs, and its push results remain the backstop when this

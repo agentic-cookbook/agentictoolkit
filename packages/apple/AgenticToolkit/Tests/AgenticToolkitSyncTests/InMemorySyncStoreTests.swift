@@ -211,4 +211,48 @@ final class InMemorySyncStoreTests: XCTestCase {
         let cursor = try await store.cursor()
         XCTAssertEqual(cursor?.rawValue, "c1")
     }
+
+    /// Fix A5, InMemory twin of GRDBSyncStore's `testApplyIsAtomicWithCursor`:
+    /// apply is all-or-nothing. A `[good, bad]` batch — first change valid,
+    /// second an unparseable syncVersion — must throw AND leave the mirror rows
+    /// and the cursor exactly as they were. Never a half-applied batch where the
+    /// good row committed or the cursor advanced before the bad change aborted.
+    func testApplyIsAtomicWithCursor() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "personal.notes", schemaVersion: 1)])
+        do {
+            try await store.apply([
+                SyncChange(resource: "personal.notes", id: "good", op: .upsert, syncVersion: "1", data: [:]),
+                SyncChange(
+                    resource: "personal.notes", id: "bad", op: .upsert, syncVersion: "not-a-number", data: [:])
+            ], advancingTo: SyncCursor(rawValue: "c1"))
+            XCTFail("expected invalidChange")
+        } catch SyncStoreFailure.invalidChange {
+            // expected
+        }
+        let rowCount = try await store.rowCount(resource: "personal.notes")
+        XCTAssertEqual(rowCount, 0) // the good row was NOT committed
+        XCTAssertNil(await store.row(resource: "personal.notes", id: "good"))
+        let cursor = try await store.cursor()
+        XCTAssertNil(cursor) // cursor NOT advanced
+    }
+
+    /// Fix E3/F5, InMemory twin: purging a resource that was never registered is
+    /// a silent no-op — it must not throw, and it must leave every registered
+    /// resource (rows, registration, cursor) completely untouched.
+    func testPurgeResourcesOnUnregisteredResourceIsSilentNoOp() async throws {
+        let store = InMemorySyncStore()
+        try await store.prepare(resources: [SyncResource(resource: "a.x", schemaVersion: 1)])
+        try await store.apply(
+            [SyncChange(resource: "a.x", id: "1", op: .upsert, syncVersion: "1", data: [:])],
+            advancingTo: SyncCursor(rawValue: "c1")
+        )
+        try await store.purgeResources(["never.prepared"]) // must not throw
+        let aCount = try await store.rowCount(resource: "a.x")
+        XCTAssertEqual(aCount, 1) // untouched
+        let regs = try await store.registrations()
+        XCTAssertEqual(regs, ["a.x": 1]) // untouched
+        let cursor = try await store.cursor()
+        XCTAssertEqual(cursor?.rawValue, "c1") // untouched
+    }
 }

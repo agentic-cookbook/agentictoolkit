@@ -10,9 +10,6 @@ public struct SyncEngineConfiguration: Sendable {
     /// (the pre-enrollment behavior). When set, the effective set is
     /// manifest ∩ hostResources and changes outside it are skipped.
     public var hostResources: [SyncResource]?
-    /// Stage-time refusal set (route-mode resources); forwarded by hosts to
-    /// their store init as well. Kept here so hosts have one config surface.
-    public var pullOnlyResources: Set<String>
 
     public init(
         deviceId: String,
@@ -20,8 +17,7 @@ public struct SyncEngineConfiguration: Sendable {
         pushBatchSize: Int = 100,
         baseBackoff: TimeInterval = 2,
         maxBackoff: TimeInterval = 3600,
-        hostResources: [SyncResource]? = nil,
-        pullOnlyResources: Set<String> = []
+        hostResources: [SyncResource]? = nil
     ) {
         self.deviceId = deviceId
         self.pullLimit = pullLimit
@@ -29,7 +25,6 @@ public struct SyncEngineConfiguration: Sendable {
         self.baseBackoff = baseBackoff
         self.maxBackoff = maxBackoff
         self.hostResources = hostResources
-        self.pullOnlyResources = pullOnlyResources
     }
 }
 
@@ -189,11 +184,28 @@ public actor SyncEngine {
         var hasMore = true
         var consecutiveNoProgress = 0
         var reconcileResyncs = 0
+        // Fix H5+H1: read the registrations once at cycle start into a local
+        // snapshot and keep it current as reconcile purges (removes keys) and
+        // prepare registers (sets versions). Reconcile still runs per page, but
+        // it — and the prepare gate below — read this snapshot instead of
+        // hitting the store on every page.
+        var registered = try await store.registrations()
+        // Fix H4: latch the last-emitted unregistered-manifest set for this
+        // cycle so a multi-page pull over the same curated hostResources subset
+        // emits `.unregisteredManifestResources` once, not once per page. nil =
+        // nothing emitted yet this cycle.
+        var lastUnregisteredEmitted: [String]?
         while hasMore {
             let cursor = try await store.cursor()
             let response = try await transport.pull(cursor: cursor, limit: config.pullLimit)
             let effective = effectiveResources(from: response.manifest)
-            if try await reconcile(effective: effective, manifest: response.manifest, cursor: cursor) {
+            if try await reconcile(
+                effective: effective,
+                manifest: response.manifest,
+                cursor: cursor,
+                registered: &registered,
+                lastUnregisteredEmitted: &lastUnregisteredEmitted
+            ) {
                 // Mirror was reset (appearance/schema bump on a non-fresh
                 // cursor): restart the pull from a nil cursor.
                 reconcileResyncs += 1
@@ -204,7 +216,13 @@ public actor SyncEngine {
                 consecutiveNoProgress = 0
                 continue
             }
-            try await store.prepare(resources: effective)
+            // Fix H5+H1: prepare (a store write) only when the snapshot doesn't
+            // already cover `effective` at equal versions — skip it on the
+            // steady-state page where nothing enrolled, disenrolled, or bumped.
+            if !Self.snapshotCovers(registered, effective) {
+                try await store.prepare(resources: effective)
+                for descriptor in effective { registered[descriptor.resource] = descriptor.schemaVersion }
+            }
             let applicable: [SyncChange]
             if config.hostResources != nil {
                 let names = Set(effective.map(\.resource))
@@ -243,47 +261,95 @@ public actor SyncEngine {
         return manifest.filter { wanted.contains($0.resource) }
     }
 
+    /// The registration diff for one page, split out as a pure function so it
+    /// can be unit-tested directly (fix I6). Given the current registration
+    /// snapshot and the page's effective manifest, classify every resource as:
+    ///   - `disabled`: registered but no longer in the effective set — purge +
+    ///     quarantine its unpushed edits.
+    ///   - `bumped`: registered at a *different* schema_version than the
+    ///     manifest now reports — purge + resync. A version CHANGE in either
+    ///     direction counts (fix A2): a downgrade is as much a schema mismatch
+    ///     as an upgrade, and mirror rows written under the old version can't be
+    ///     trusted against the new one, so a rise OR a fall must purge + resync,
+    ///     not just a rise.
+    ///   - `appeared`: newly in the effective set (no prior registration) —
+    ///     resync on a non-fresh cursor.
+    /// Side-effect orchestration (purge/reset/emit) stays in `reconcile`.
+    static func reconcilePlan(
+        registered: [String: Int],
+        effective: [SyncResource]
+    ) -> (disabled: [String], bumped: [String], appeared: [String]) {
+        let effectiveNames = Set(effective.map(\.resource))
+        let disabled = registered.keys.filter { !effectiveNames.contains($0) }.sorted()
+        let bumped = effective
+            .filter { resource in registered[resource.resource].map { $0 != resource.schemaVersion } ?? false }
+            .map(\.resource).sorted()
+        let appeared = effective.map(\.resource)
+            .filter { registered[$0] == nil }.sorted()
+            // G2 (fix): provably dead today — `appeared` (registered[$0] == nil)
+            // and `bumped` (registered[$0] != nil) are computed against the same
+            // `registered` snapshot, so they are disjoint and this filter removes
+            // nothing. Kept deliberately: it becomes load-bearing the moment
+            // `appeared` is ever recomputed against a post-purge registrations
+            // read — a bumped resource whose purge removed its registration would
+            // resurface as "appeared" and be double-counted. Cheap insurance
+            // against that future refactor; do not delete.
+            .filter { !bumped.contains($0) }
+        return (disabled: disabled, bumped: bumped, appeared: appeared)
+    }
+
+    /// True when `registered` already covers every resource in `effective` at
+    /// the exact same schema_version — the steady-state page where nothing
+    /// enrolled, disenrolled, or bumped, so `store.prepare` would be a no-op
+    /// write and is skipped (fix H5+H1).
+    private static func snapshotCovers(_ registered: [String: Int], _ effective: [SyncResource]) -> Bool {
+        effective.allSatisfy { registered[$0.resource] == $0.schemaVersion }
+    }
+
     /// Enrollment transitions (recipe: offline-sync-client). Diffs the
-    /// effective manifest against the store's registrations BEFORE prepare.
-    /// Returns true when the mirror was reset and the pull must restart.
+    /// effective manifest against the `registered` snapshot BEFORE prepare, and
+    /// keeps that snapshot current as it purges (so the caller's per-cycle
+    /// snapshot never needs a fresh `registrations()` read). Returns true when
+    /// the mirror was reset and the pull must restart.
     private func reconcile(
         effective: [SyncResource],
         manifest: [SyncResource],
-        cursor: SyncCursor?
+        cursor: SyncCursor?,
+        registered: inout [String: Int],
+        lastUnregisteredEmitted: inout [String]?
     ) async throws -> Bool {
-        let registered = try await store.registrations()
         let effectiveNames = Set(effective.map(\.resource))
 
         if config.hostResources != nil {
             let unregistered = manifest.map(\.resource)
                 .filter { !effectiveNames.contains($0) }.sorted()
-            if !unregistered.isEmpty {
+            // Fix H4: emit at most once per distinct set per cycle — only when
+            // non-empty AND it differs from the last set emitted this cycle, so
+            // a multi-page pull over an unchanged subset yields one event.
+            if !unregistered.isEmpty, unregistered != lastUnregisteredEmitted {
                 eventContinuation.yield(.unregisteredManifestResources(unregistered))
+                lastUnregisteredEmitted = unregistered
             }
         }
 
-        let disabled = registered.keys.filter { !effectiveNames.contains($0) }.sorted()
-        if !disabled.isEmpty {
-            try await store.purgeResources(disabled)
-            eventContinuation.yield(.resourcesDisabled(disabled))
+        let plan = Self.reconcilePlan(registered: registered, effective: effective)
+
+        if !plan.disabled.isEmpty {
+            try await store.purgeResources(plan.disabled)
+            for name in plan.disabled { registered[name] = nil }
+            eventContinuation.yield(.resourcesDisabled(plan.disabled))
         }
 
-        let bumped = effective
-            .filter { resource in registered[resource.resource].map { $0 < resource.schemaVersion } ?? false }
-            .map(\.resource).sorted()
-        if !bumped.isEmpty {
-            try await store.purgeResources(bumped)
-            eventContinuation.yield(.resourcesSchemaBumped(bumped))
+        if !plan.bumped.isEmpty {
+            try await store.purgeResources(plan.bumped)
+            for name in plan.bumped { registered[name] = nil }
+            eventContinuation.yield(.resourcesSchemaBumped(plan.bumped))
         }
-
-        let appeared = effective.map(\.resource)
-            .filter { registered[$0] == nil }.sorted()
-            .filter { !bumped.contains($0) }
 
         // Fresh cursor: the initial pull covers everything — no gap, no resync.
-        guard cursor != nil, !(appeared.isEmpty && bumped.isEmpty) else { return false }
+        guard cursor != nil, !(plan.appeared.isEmpty && plan.bumped.isEmpty) else { return false }
         try await store.resetForResync()
-        if !appeared.isEmpty { eventContinuation.yield(.resourcesEnabled(appeared)) }
+        if !plan.appeared.isEmpty { eventContinuation.yield(.resourcesEnabled(plan.appeared)) }
         eventContinuation.yield(.resyncPerformed)
         return true
     }
@@ -331,17 +397,24 @@ public actor SyncEngine {
                         continue
                     }
                     guard let version = Self.adoptedVersion(from: current) else {
-                        // p2g: a non-finite/out-of-Int64-range sync_version
-                        // can't be converted safely — String(Int(number))
-                        // would trap. Skip adopting; the op still resolves
-                        // via `complete` below (the server remains
-                        // authoritative even though we can't mirror its row).
-                        conflicts += 1
-                        eventContinuation.yield(.failed(
-                            "conflict adoption skipped for \(matchingOp.resource)/\(matchingOp.rowId): " +
-                            "unrepresentable sync_version"
-                        ))
-                        resultsForStore.append(result)
+                        // A3 (fix): the conflict's current.sync_version can't
+                        // become a numeric version — either a non-numeric string
+                        // (which the old `adoptedVersion` passed through verbatim,
+                        // so `store.apply` threw before `complete()` ran and the
+                        // op re-pushed every cycle forever) or a
+                        // non-finite/out-of-Int64-range number. Either way the
+                        // server row is unadoptable, so route the op to the
+                        // terminal quarantine outcome — the same path as an
+                        // explicit `.rejected` — rather than re-attempting it. A
+                        // quarantined op is never retried under its original opId;
+                        // a fixed retry must re-`stage` for a fresh one. This
+                        // unifies what used to be two behaviors (non-numeric
+                        // string wedged; unrepresentable number "resolved as
+                        // conflict") into one: unadoptable ⇒ quarantine.
+                        rejected += 1
+                        resultsForStore.append(
+                            SyncPushResult(opId: result.opId, status: .rejected, reason: result.reason)
+                        )
                         continue
                     }
                     conflicts += 1
@@ -370,11 +443,15 @@ public actor SyncEngine {
             }
             try await store.complete(resultsForStore)
             eventContinuation.yield(.pushed(applied: applied, conflicts: conflicts, rejected: rejected))
-            if response.results.isEmpty { return } // defensive: avoid spinning
-            // Spin guard: if none of the ops we just attempted were resolved
-            // (e.g. a misbehaving server returns results whose opIds match
-            // nothing in the outbox), `complete` no-ops and the same batch
-            // would be re-fetched forever. Surface it as a failure instead.
+            // Spin guard (fix S2): if none of the ops we just attempted were
+            // resolved, `complete` no-ops and the same batch would be re-fetched
+            // forever. This covers a misbehaving server that returns results whose
+            // opIds match nothing in the outbox AND one that answers a non-empty
+            // pushed batch with an empty `results` array — the latter used to be
+            // short-circuited by an `if response.results.isEmpty { return }` here,
+            // which reported `.idle` and silently stopped draining instead of
+            // backing off. Both are "no progress"; surface them as a failure so
+            // the normal backoff + retry path handles them.
             let stillPending = try await store.pendingOps(limit: config.pushBatchSize)
             let remainingOpIds = Set(stillPending.map(\.opId))
             if attemptedOpIds.isSubset(of: remainingOpIds) {
@@ -384,15 +461,28 @@ public actor SyncEngine {
     }
 
     /// Checked conversion of a conflict's `current["sync_version"]` to the
-    /// string form `SyncChange.syncVersion` expects. Returns nil (skip
-    /// adopting, per p2g) rather than trapping for a non-finite or
-    /// out-of-Int64-range double — `Int(exactly:)` is the safe, native
-    /// checked-conversion API for exactly this case.
+    /// string form `SyncChange.syncVersion` expects (`/^\d+$/`). Returns nil —
+    /// routing the op to quarantine (fix A3) — for any value that can't yield a
+    /// numeric version, so a malformed `current` is never handed to
+    /// `store.apply` (which would throw and wedge the push loop):
+    ///   - a non-finite or out-of-Int64-range `.number` (`Int(exactly:)` fails);
+    ///   - a `.string` that isn't a base-10 integer (the old code returned such
+    ///     a string verbatim, which then wedged `apply`);
+    ///   - any other JSON type (`.bool`/`.array`/`.object`).
+    /// A missing `sync_version` key still means "version 0" — an absent version
+    /// is the well-defined pre-first-write state, not a malformed one.
     private static func adoptedVersion(from current: [String: JSONValue]) -> String? {
         guard let value = current["sync_version"] else { return "0" }
-        guard case .number(let number) = value else { return value.stringValue ?? "0" }
-        guard let intValue = Int(exactly: number) else { return nil }
-        return String(intValue)
+        switch value {
+        case .number(let number):
+            guard let intValue = Int(exactly: number) else { return nil }
+            return String(intValue)
+        case .string(let string):
+            guard Int(string) != nil else { return nil }
+            return string
+        default:
+            return nil
+        }
     }
 
     /// A resync clears the mirror and cursor but preserves the outbox
