@@ -74,7 +74,7 @@ const col = (i: number): HTMLElement => {
   if (!(el instanceof HTMLElement)) throw new Error(`no column ${i}`)
   return el
 }
-/** The rendered box width of a column — `40px` while it peeks, the full rail once revealed. */
+/** The rendered box width of a column — `32px` while it peeks, the full rail once revealed. */
 const boxWidth = (i: number) => col(i).style.width
 const boxLeft = (i: number) => col(i).style.left
 
@@ -100,9 +100,9 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    // Auto-hide (the default) covers both parents: each is a 40px peek.
-    expect(boxWidth(0)).toBe('40px')
-    expect(boxWidth(1)).toBe('40px')
+    // Auto-hide (the default) covers both parents: each is a 32px peek.
+    expect(boxWidth(0)).toBe('32px')
+    expect(boxWidth(1)).toBe('32px')
 
     enter(col(0))
 
@@ -159,7 +159,7 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
 
     // It closes on the pointer leaving the branch, and only then.
     leave(col(1), screen.getByText('detail'))
-    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
   })
 
   it('survives the REMOUNT a selection causes — the pointer never left, so the branch stays open', () => {
@@ -187,7 +187,7 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
 
     // And it still closes on the one thing that should close it: the pointer leaving.
     leave(col(1), screen.getByText('detail'))
-    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
   })
 
   it('closes a branch left open by a departed surface as soon as the pointer shows up elsewhere', () => {
@@ -211,7 +211,7 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
 
     // The pointer turns up outside the stack entirely: proof it is not in the branch.
     fireEvent.pointerOver(document.body, { relatedTarget: null })
-    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
   })
 
   it('collapses back to the previous state when the pointer leaves the whole branch', () => {
@@ -225,9 +225,9 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
 
     // Out of the branch entirely (into the detail pane, which is not a column).
     leave(col(1), screen.getByText('detail'))
-    expect(boxWidth(0)).toBe('40px')
-    expect(boxWidth(1)).toBe('40px')
-    expect(boxLeft(1)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
+    expect(boxWidth(1)).toBe('32px')
+    expect(boxLeft(1)).toBe('32px')
   })
 
   it('keeps the selection connectors above the revealed branch', () => {
@@ -258,7 +258,7 @@ describe('HierarchicalTopicDetail — whole-branch hover reveal', () => {
     // only the click-rooted group ever has a peek left standing behind it). Click a row in the
     // MIDDLE covered list: the branch opens at it, list 0 stays a peek behind it.
     fireEvent.click(railRow(/Temporal/))
-    expect(boxWidth(0)).toBe('40px') // a click must never spring the user's collapsed parents open
+    expect(boxWidth(0)).toBe('32px') // a click must never spring the user's collapsed parents open
 
     // Leading edge: the peek's own border is clipped away with its rail, so this shadow is the only
     // boundary between the opened list and the icon strip behind it (it used to be dropped on reveal,
@@ -321,9 +321,9 @@ describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choo
         <p>detail</p>
       </HierarchicalTopicDetail>,
     )
-    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
     expect(boxWidth(1)).toBe('240px')
-    expect(boxLeft(1)).toBe('40px')
+    expect(boxLeft(1)).toBe('32px')
   })
 
   it('a click that pushes a new choosing list roots the reveal: the new list floats over the detail until the pointer leaves', () => {
@@ -368,8 +368,8 @@ describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choo
 
     // The pointer leaving the branch is what settles the stack into its covered layout.
     leave(col(0), screen.getByText('detail'))
-    expect(boxWidth(0)).toBe('40px')
-    expect(boxLeft(1)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
+    expect(boxLeft(1)).toBe('32px')
   })
 
   it('a click that completes the path roots nothing — a stack at rest casts no floating card', () => {
@@ -404,7 +404,7 @@ describe('HierarchicalTopicDetail — auto-hide and the click that pushes a choo
     }
     render(<Stack />)
     fireEvent.click(railRow(/Core Platform/))
-    expect(boxWidth(0)).toBe('40px')
+    expect(boxWidth(0)).toBe('32px')
     expect(boxWidth(1)).toBe('240px')
     // The resting layered-stack shadow (its parent peeks under it) — but no floating trailing
     // edge over the detail, and no z-lift: the reveal machinery left the resting stack alone.

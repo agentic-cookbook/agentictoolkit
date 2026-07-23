@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  Component,
+  createRef,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -11,10 +13,12 @@ import {
   type Dispatch,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type ReactNode,
   type RefObject,
   type SetStateAction,
 } from "react"
+import { createPortal } from "react-dom"
 
 import {
   ChevronLeft,
@@ -27,6 +31,8 @@ import {
 } from "lucide-react"
 
 import { cn } from "../lib/utils"
+import { getSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
+import { hlog } from "./htdv-log"
 import { Button } from "../components/button"
 import {
   Dialog,
@@ -241,6 +247,168 @@ type SurfaceState = {
   autoSelected: Record<string, string>
 }
 
+/** How long one detail crossfades into the next. Brief on purpose — it reads as a swap, not a scene
+ *  change; matches HMDV's detail fade. Stretched by the dev slow-animations switch. */
+const DETAIL_CROSSFADE_MS = 220
+
+/** Token changes inside this window don't fade: they are the settle cascade of one gesture (levels
+ *  registering on mount, a default selection applying), not the user swapping details. */
+const DETAIL_CROSSFADE_DEBOUNCE_MS = 300
+
+/** How long an unmount-time snapshot stays adoptable by the next mount. A selection that remounts
+ *  the subtree (a route param nav) swaps within a frame or two; anything older is a real departure
+ *  and must not ghost back in. */
+const DETAIL_CROSSFADE_STASH_MS = 1000
+
+/** What the crossfade remembers per SURFACE, deliberately OUTSIDE React (like `surfaceStates`
+ *  below, and for the same reason: selecting inside the stack is a route change that can REMOUNT
+ *  the whole subtree). `token`/`tokenAt` = the selection the detail last painted and when — so a
+ *  remount can tell "became a different detail" from "same detail, fresh mount", and a genuine
+ *  first paint (no entry) shows instantly with no unasked-for intro. `clone`/`cloneAt` = the
+ *  outgoing pane's DOM snapshot taken on the way out of an unmounting instance, so the swap can
+ *  still crossfade across the remount. */
+const detailSwapMemory = new Map<
+  string,
+  { token: string; tokenAt: number; clone: HTMLElement | null; cloneAt: number }
+>()
+
+/**
+ * THE DETAIL SWAP (Mike): when a selection replaces what the detail pane shows, the two contents
+ * CROSSFADE briefly — the outgoing pane dissolves over the incoming one — instead of a hard cut.
+ * When nothing was showing yet (the surface's first paint), the content simply appears: no fade,
+ * no intro. The pane's GEOMETRY never animates on selection either way (see
+ * `useInPlaceOnStructureChange`); this component is only about the content inside it.
+ *
+ * The outgoing half is a `cloneNode` DOM snapshot, inert and hidden from AT, removed the moment
+ * the fade ends. Its twin (HMDV's `DetailContent`) deliberately fades only the incoming half,
+ * because a clone copies markup, not pixels — a canvas or an editor viewport clones empty. That
+ * limitation is real and accepted here: for the panes this stack swaps (forms, lists, cards) the
+ * clone IS the picture, and the block's owner asked for the dissolve.
+ *
+ * A class component because the outgoing DOM only exists BEFORE React commits the new content, and
+ * `getSnapshotBeforeUpdate` is the one hook that runs there. The unmount path (`snapshot` in
+ * `componentWillUnmount`, adopted by the next instance's `componentDidMount` via the module memory
+ * above) covers the selections that remount the subtree instead of updating it.
+ */
+class DetailCrossfade extends Component<{
+  /** The surface's stable identity (the stack's root level id) — the memory key. */
+  memoryKey: string
+  /** What the detail is showing: the per-level selection signature. A change = a swap. */
+  token: string
+  children: ReactNode
+}> {
+  private contentRef = createRef<HTMLDivElement>()
+  private overlayRef = createRef<HTMLDivElement>()
+  private anims: Animation[] = []
+
+  /** A static, inert copy of the pane as it looks RIGHT NOW — null when nothing is showing. */
+  private snapshotContent(): HTMLElement | null {
+    const el = this.contentRef.current
+    if (!el || el.offsetWidth === 0 || el.offsetHeight === 0 || el.childElementCount === 0) return null
+    return el.cloneNode(true) as HTMLElement
+  }
+
+  private crossfade(outgoing: HTMLElement): void {
+    const content = this.contentRef.current
+    const overlay = this.overlayRef.current
+    // No WAAPI (jsdom under test, or a browser too old): land instantly. The fade is decoration —
+    // never make the swap depend on being able to animate it.
+    if (!content || !overlay || typeof content.animate !== "function") return
+    // A fast second swap: drop the in-flight pair (cancelled animations never fire "finish", so
+    // the old cleanup can't wipe the overlay we are about to fill).
+    this.anims.forEach((a) => a.cancel())
+    overlay.replaceChildren(outgoing)
+    const ms = DETAIL_CROSSFADE_MS * (getSlowAnimations() ? SLOW_ANIM_FACTOR : 1)
+    const opts: KeyframeAnimationOptions = { duration: ms, easing: "ease-in-out" }
+    const fadeOut = overlay.animate([{ opacity: 1 }, { opacity: 0 }], opts)
+    const fadeIn = content.animate([{ opacity: 0 }, { opacity: 1 }], opts)
+    this.anims = [fadeOut, fadeIn]
+    fadeOut.addEventListener("finish", () => {
+      if (this.anims[0] !== fadeOut) return // a newer fade owns the overlay now
+      overlay.replaceChildren()
+      this.anims = []
+    })
+  }
+
+  override componentDidMount(): void {
+    const { memoryKey, token } = this.props
+    const mem = detailSwapMemory.get(memoryKey)
+    const now = Date.now()
+    detailSwapMemory.set(memoryKey, {
+      token,
+      tokenAt: mem?.token === token ? mem.tokenAt : now,
+      clone: null,
+      cloneAt: 0,
+    })
+    if (!mem || mem.token === token) return // first paint, or a remount of the same detail
+    // The remount half of a swap: fade from the stashed outgoing pane — but only when the swap was
+    // quick enough to read as one gesture, and the outgoing detail had actually settled on screen.
+    if (
+      mem.clone &&
+      now - mem.cloneAt < DETAIL_CROSSFADE_STASH_MS &&
+      now - mem.tokenAt > DETAIL_CROSSFADE_DEBOUNCE_MS
+    )
+      this.crossfade(mem.clone)
+  }
+
+  override getSnapshotBeforeUpdate(prevProps: this["props"]): HTMLElement | null {
+    // The one moment the OUTGOING pane's DOM still exists: after the new render, before React
+    // commits its mutations. (A layout effect is already too late — the old pixels are gone.)
+    if (prevProps.memoryKey !== this.props.memoryKey || prevProps.token === this.props.token)
+      return null
+    return this.snapshotContent()
+  }
+
+  override componentDidUpdate(
+    prevProps: this["props"],
+    _prevState: never,
+    snapshot: HTMLElement | null,
+  ): void {
+    const { memoryKey, token } = this.props
+    if (prevProps.memoryKey === memoryKey && prevProps.token === token) return
+    const mem = detailSwapMemory.get(memoryKey)
+    const now = Date.now()
+    const settled = !mem || now - mem.tokenAt > DETAIL_CROSSFADE_DEBOUNCE_MS
+    detailSwapMemory.set(memoryKey, { token, tokenAt: now, clone: null, cloneAt: 0 })
+    // No snapshot = nothing was showing (or a surface change, which is a fresh start): just show
+    // the new content. `settled` keeps the mount-time registration cascade from fading.
+    if (snapshot && settled && prevProps.memoryKey === memoryKey) this.crossfade(snapshot)
+  }
+
+  override componentWillUnmount(): void {
+    this.anims.forEach((a) => a.cancel())
+    this.anims = []
+    // The DOM is still attached here — stash the pane for the remount half of a swap. The stash
+    // self-expires (see `componentDidMount`); a departure that never remounts just leaves a small
+    // stale clone that the next visit's mount overwrites.
+    const mem = detailSwapMemory.get(this.props.memoryKey)
+    detailSwapMemory.set(this.props.memoryKey, {
+      token: this.props.token,
+      tokenAt: mem?.token === this.props.token ? mem.tokenAt : Date.now(),
+      clone: this.snapshotContent(),
+      cloneAt: Date.now(),
+    })
+  }
+
+  override render(): ReactElement {
+    return (
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={this.contentRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {this.props.children}
+        </div>
+        {/* The outgoing snapshot's home, above the content. A static clone: no listeners, no React,
+            out of the AT tree and the pointer's way; empty except while a fade runs. */}
+        <div
+          ref={this.overlayRef}
+          aria-hidden
+          inert
+          className="pointer-events-none absolute inset-0 flex flex-col overflow-hidden"
+        />
+      </div>
+    )
+  }
+}
+
 /**
  * That state per SURFACE, keyed by the stack's root level id — deliberately OUTSIDE React.
  *
@@ -265,7 +433,7 @@ export function HierarchicalTopicDetail({
   toolbar,
   help,
   showBreadcrumb = true,
-  minDetailWidth = "28rem",
+  minDetailWidth = MIN_DETAIL_DEFAULT,
   detailTitle,
   exitGuard = null,
   manualCollapse = true,
@@ -289,8 +457,11 @@ export function HierarchicalTopicDetail({
   /** Show the breadcrumb trail (default true). Pass false when an enclosing chrome
    *  renders the breadcrumb instead (the rails then carry no top bar of their own). */
   showBreadcrumb?: boolean
-  /** Minimum width of the leaf detail pane (CSS length). Below it the package drills
-   *  down (slides parent topic lists off-screen) so the detail keeps this width. Default `28rem`. */
+  /** Minimum width of the leaf detail pane (CSS length). The floor of the whole shrink sequence:
+   *  the lists collapse, then the detail shrinks TO this, then the lists slide off-screen — and
+   *  only when the detail can't hold this width even alone does the stack go NARROW (where the
+   *  detail is simply the device's width, which is also why phones need no value here). Default
+   *  {@link MIN_DETAIL_DEFAULT}: deliberately small for a desktop but clearly wider than a phone. */
   minDetailWidth?: string
   /** A title shown in the detail (leaf) pane's top strip, aligned with the rail
    *  headers — names what the pane is showing (covered style). */
@@ -319,9 +490,10 @@ export function HierarchicalTopicDetail({
    *  floating over the detail, and the stack settles when the pointer leaves. */
   autoHideTopics?: boolean
   /** WIDE (lists beside the detail, `disclosureStyle` above) vs NARROW (one full-width pane at a
-   *  time, pushed/popped like an iOS `UINavigationController`). Default `"auto"`: narrow when only a
-   *  detail can fit — the container is narrower than one topic list plus `minDetailWidth` — or the
-   *  browser is a phone. `"wide"` / `"narrow"` force one (for a showcase or a test). */
+   *  time, pushed/popped like an iOS `UINavigationController`). Default `"auto"`: narrow once the
+   *  wide layout's whole shrink sequence is exhausted — every list collapsed, the detail at
+   *  `minDetailWidth`, every collapsible list slid off-screen — or when the browser is a phone (a
+   *  phone therefore starts and stays narrow). `"wide"` / `"narrow"` force one (a showcase, a test). */
   layoutMode?: "auto" | "wide" | "narrow"
   /** Innermost detail content for the current selection (lands in the rightmost
    *  detail pane). */
@@ -427,14 +599,17 @@ export function HierarchicalTopicDetail({
   // (must-apply-disclosure-toggles-immediately).
   const toggleAutoHide = useCallback(
     () =>
-      patchSurface((p) => ({
-        ...p,
-        autoHide: !p.autoHide,
-        pins: {},
-        hoverId: null,
-        hoverAll: false,
-      })),
-    [patchSurface],
+      patchSurface((p) => {
+        hlog(surfaceKey || "htdv", "toggle-autohide", { to: !p.autoHide })
+        return {
+          ...p,
+          autoHide: !p.autoHide,
+          pins: {},
+          hoverId: null,
+          hoverAll: false,
+        }
+      }),
+    [patchSurface, surfaceKey],
   )
   const setPins: Dispatch<SetStateAction<Record<string, boolean>>> = useCallback(
     (update) =>
@@ -500,13 +675,62 @@ export function HierarchicalTopicDetail({
   const rowRef = useRef<HTMLDivElement>(null)
   const containerW = useContainerWidth(rowRef)
   const phone = usePhoneUserAgent()
-  // NARROW = "only a details view fits": the container can't hold ONE full topic list beside a
-  // minimum-width detail. A phone is always narrow regardless of the box it is given. Until the first
-  // measurement lands (containerW === 0) we assume wide — the layout effect corrects it pre-paint.
+  // NARROW = the wide layout has nothing left to trade: the shrink sequence (collapse the lists,
+  // shrink the detail to its minimum, slide the collapsed lists off-screen one at a time — see the
+  // stacks below) has hidden every list it may hide and the container STILL can't fit what remains.
+  // With every level selected that remainder is the detail at its minimum beside the LAST list's
+  // strip — below that the last strip goes too, and the stack becomes a navigation controller. With
+  // an unselected frontier the remainder is the frontier list itself: it is never hidden, and its
+  // landing placeholder claims no detail minimum. A phone is always narrow regardless of the box it
+  // is given. Until the first measurement lands (containerW === 0) we assume wide — the layout
+  // effect corrects it pre-paint.
+  //
+  // This floor is deliberately BELOW the old `minDetail + FULL_RAIL` one, which flipped the stack
+  // to narrow while the wide layout still had collapsed lists to hide progressively — so every list
+  // vanished at once as the window shrank, and the one-strip-at-a-time drill-down never ran (Mike).
+  const stripPx = disclosureStyle === "minimized" ? COLLAPSED_RAIL : COVERED_PEEK
+  const wideFloor = firstUnselected === -1 ? minDetailPx(minDetailWidth) + stripPx : FULL_RAIL
   const narrow =
     layoutMode === "narrow" ||
-    (layoutMode === "auto" &&
-      (phone || (containerW > 0 && containerW < minDetailPx(minDetailWidth) + FULL_RAIL)))
+    (layoutMode === "auto" && (phone || (containerW > 0 && containerW < wideFloor)))
+
+  // ONE DETAIL HOST that survives every stack flip. The three stacks are different component
+  // types, and React reconciles by tree position — rendering the detail as a stack's child would
+  // REMOUNT it on every wide↔narrow or covered↔minimized flip, resetting whatever state lives in
+  // `children` (a data browser's schema/table choice, a half-typed form) and unregistering any
+  // levels those children publish. That loss is what the flip must never cause: with a
+  // selection-dependent `wideFloor` it even bounced the mode straight back to wide (the lost
+  // selection lowered the floor the narrow decision was made on). So the detail renders through a
+  // PORTAL into this frame-owned, layout-neutral (`display: contents`) element, and the layout
+  // effect below re-slots that element into whichever stack is active: the flip MOVES the
+  // detail's DOM, React state intact. On the server there is no document and the portal renders
+  // nothing — every consumer's detail is client-populated, and portals are skipped during
+  // hydration, so the empty server slot matches.
+  const [detailHost] = useState(() => {
+    if (typeof document === "undefined") return null
+    const el = document.createElement("div")
+    el.className = "contents"
+    return el
+  })
+  const [detailSlotEl, setDetailSlotEl] = useState<HTMLDivElement | null>(null)
+  useLayoutEffect(() => {
+    if (detailHost && detailSlotEl) detailSlotEl.appendChild(detailHost)
+  }, [detailHost, detailSlotEl])
+
+  // LAYOUT LOG — the mode decision, on change only, with the width it was made at (htdv-log.ts).
+  const modeSig = `${narrow}|${wideFloor}|${phone}|${layoutMode}`
+  const loggedModeSig = useRef<string | null>(null)
+  useEffect(() => {
+    if (loggedModeSig.current === modeSig) return
+    loggedModeSig.current = modeSig
+    hlog(surfaceKey || "htdv", "mode", {
+      mode: narrow ? "narrow" : "wide",
+      w: containerW,
+      floor: wideFloor,
+      phone,
+      layout: layoutMode,
+    })
+  })
 
   // THE AUTOMATIC FRONTIER DETAIL: while the frontier list has no selection, the detail pane is
   // owned by the package — by default an almost-empty centered nudge to select something
@@ -553,7 +777,10 @@ export function HierarchicalTopicDetail({
   // levels, looping the stack between the two states (a mount/fetch storm, found live). Inline
   // display (not the `hidden` attribute) so the flex utility class can't override it.
   const detail = (
-    <>
+    // The swap wrapper: a selection replacing the pane's content crossfades briefly; a first paint
+    // just shows. Keyed on the SELECTION signature — the one thing that changes what this pane is
+    // showing from the stack's point of view.
+    <DetailCrossfade memoryKey={surfaceKey} token={levels.map((l) => l.selectedId ?? "·").join("|")}>
       {overview}
       <div
         style={overview ? { display: "none" } : undefined}
@@ -561,7 +788,7 @@ export function HierarchicalTopicDetail({
       >
         {children}
       </div>
-    </>
+    </DetailCrossfade>
   )
 
   // The layouts share the same selection / breadcrumb / exit-guard semantics above and differ ONLY in
@@ -585,6 +812,7 @@ export function HierarchicalTopicDetail({
     narrowTop: surface.narrowTop,
     setNarrowTop,
     containerW,
+    detailSlot: setDetailSlotEl,
   }
 
   return (
@@ -603,16 +831,16 @@ export function HierarchicalTopicDetail({
           width signal — the mode decision above and the covered stack's fit math below. */}
       <div ref={rowRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
         {narrow ? (
-          <NarrowStack {...stackProps} levels={levels}>
-            {detail}
-          </NarrowStack>
+          <NarrowStack {...stackProps} levels={levels} />
         ) : disclosureStyle === "minimized" ? (
-          <MinimizedStack {...stackProps} levels={levels} manualCollapse={manualCollapse}>
-            {detail}
-          </MinimizedStack>
+          <MinimizedStack {...stackProps} levels={levels} manualCollapse={manualCollapse} />
         ) : (
-          <CoveredStack {...stackProps}>{detail}</CoveredStack>
+          <CoveredStack {...stackProps} />
         )}
+        {/* The detail content, mounted ONCE regardless of which stack is active (see detailHost
+            above). The portal contributes no node here — the content lives in the host element,
+            which the placement effect keeps inside the active stack's detail slot. */}
+        {detailHost ? createPortal(detail, detailHost) : null}
       </div>
 
       {/* Unsaved-work guard: a 3-action Save / Discard / Cancel modal. Save → persist then act;
@@ -647,7 +875,13 @@ export function HierarchicalTopicDetail({
 // Covered (stacked) style: how much of a covered list still peeks out on the left under its child —
 // a PARTIAL cover, so the stack reads as physically layered cards (not a full cover / off-screen).
 // FULL_RAIL / COLLAPSED_RAIL are imported from topic-detail (the one authoritative home).
-const COVERED_PEEK = 40
+//
+// 32, not the 40 this shipped with: the peek must show each row's ICON and nothing after it. A row
+// is [10px padding][16px icon][gap][label…], so a 40px window reached ~6px INTO the label and every
+// covered list showed a column of sliced first letters at its right edge (Mike). At 32 the covering
+// list sits those few points further left and the slice is covered; the icon (ending at ~26px)
+// keeps a little air after it.
+const COVERED_PEEK = 32
 
 // The z-floor of a hover-revealed branch: its members lift to REVEAL_Z + i so the whole cascade
 // floats over the detail. The connector overlay rides just above the highest member (see below), so
@@ -659,17 +893,24 @@ const REVEAL_Z = 50
 const SHADOW_RIGHT = "8px 0 24px -6px var(--color-shadow)"
 const SHADOW_LEFT = "-10px 0 22px -8px var(--color-shadow)"
 
+/** The default `minDetailWidth` — the floor the auto-collapse / auto-hide sequence drives toward
+ *  on a DESKTOP. 36rem (576px): fairly small for a desktop pane, but clearly wider than a phone
+ *  (~390-430px) — a desktop detail squeezed to phone width reads as broken, not compact. Phones
+ *  never consult it: a phone is always NARROW, where the detail is the device's full width. */
+const MIN_DETAIL_DEFAULT = "36rem"
+const MIN_DETAIL_DEFAULT_PX = 36 * 16
+
 /** Parse `minDetailWidth` (a CSS length) to px for the fit math. Handles the units that make sense
  *  for a fixed minimum — `rem`/`em` (×16, the app's root size) and `px`. Viewport/percent units
- *  (`vw`/`%`/`vh`/`ch`) can't be resolved to a fixed px here, so they fall back to a sane default
+ *  (`vw`/`%`/`vh`/`ch`) can't be resolved to a fixed px here, so they fall back to the default
  *  rather than being silently mis-read as raw px. */
 function minDetailPx(minDetailWidth: string): number {
   const s = minDetailWidth.trim()
   const n = parseFloat(s)
-  if (Number.isNaN(n)) return 28 * 16 // unparseable → the 28rem default
+  if (Number.isNaN(n)) return MIN_DETAIL_DEFAULT_PX // unparseable → the default
   if (s.endsWith("rem") || s.endsWith("em")) return n * 16
   if (s.endsWith("px") || /^\d*\.?\d+$/.test(s)) return n // explicit px or a bare number
-  return 28 * 16 // a relative/viewport unit we can't resolve to fixed px → the 28rem default
+  return MIN_DETAIL_DEFAULT_PX // a relative/viewport unit we can't resolve to fixed px → the default
 }
 
 /** The measured width of `ref`'s element, tracked by a ResizeObserver. `useLayoutEffect` (not
@@ -752,7 +993,10 @@ interface StackProps {
   setNarrowTop: (i: number) => void
   /** The row's measured width (the frame's single ResizeObserver); 0 until the first measurement. */
   containerW: number
-  children: ReactNode
+  /** Ref callback for the stack's detail slot: the innermost detail wrapper each stack renders
+   *  EMPTY. The frame moves its one persistent detail host (a `display: contents` portal target)
+   *  into whichever slot is mounted, so the detail's React subtree survives stack flips. */
+  detailSlot: (el: HTMLDivElement | null) => void
 }
 
 /** The root list's header control: flips {@link StackProps.autoHide}. Unlike the `«`/`»` cover
@@ -784,26 +1028,46 @@ function AutoHideToggle({ autoHide, onToggle }: { autoHide: boolean; onToggle: (
   )
 }
 
+/** How long transitions stay OFF after a structural change (see below). Longer than any settle
+ *  cascade (level registrations, measured rail widths landing over a few commits), and by the time
+ *  it expires the geometry is at rest, so re-enabling transitions cannot animate anything. */
+const IN_PLACE_SETTLE_MS = 350
+
 /**
- * True for the ONE render that follows a STRUCTURAL change — a level appearing/disappearing or any
- * level's selection changing. Both stacks use it to drop their `left`/`width`/`grid` transitions for
- * that commit, so choosing a topic lands the new geometry IN PLACE (instantly) instead of sliding the
- * detail pane in from the left edge as the lists re-cover behind it. Width-driven changes (a window
- * resize, a cover toggle, the hover reveal) still animate: they don't touch this signature.
+ * True from a STRUCTURAL change — a level appearing/disappearing or any level's selection changing —
+ * until {@link IN_PLACE_SETTLE_MS} after the LAST such change. Both stacks use it to drop their
+ * `left`/`width`/`grid` transitions across that window, so choosing a topic lands the new geometry
+ * IN PLACE (instantly) instead of sliding the detail pane in from the left edge as the lists
+ * re-cover behind it. Width-driven changes (a window resize, a cover toggle, the hover reveal)
+ * still animate: they don't touch this signature.
  *
- * The bump re-renders with the transitions back on, but the geometry it re-renders with is the SAME
- * one the browser already painted — a transition can only animate a CHANGE, so nothing moves.
+ * A TIME window, not the one changed render this used to be. The single-render version bumped in a
+ * layout effect, which flushes BEFORE the browser paints — so the transition classes were back on
+ * the elements by first paint, and the browser animated the new geometry against the previously
+ * painted frame anyway: precisely the slide-in this hook exists to prevent (Mike, live on the hub).
+ * The window also covers the trailing commits a selection causes (levels registering, measured
+ * widths landing), which share the painted-frame problem without touching the signature themselves.
  */
 function useInPlaceOnStructureChange(signature: string): boolean {
   const prev = useRef(signature)
+  const holdUntil = useRef(0)
   const [, bump] = useState(0)
-  const changed = prev.current !== signature
-  useLayoutEffect(() => {
-    if (prev.current === signature) return
+  // Render-time detection, deliberately: the commit that APPLIES the new geometry must go to the
+  // browser without the transition classes — an effect is already too late (see above). The ref
+  // writes are idempotent, so a re-render or StrictMode double-render is harmless.
+  if (prev.current !== signature) {
     prev.current = signature
-    bump((n) => n + 1)
-  }, [signature])
-  return changed
+    holdUntil.current = Date.now() + IN_PLACE_SETTLE_MS
+  }
+  const inPlace = Date.now() < holdUntil.current
+  // Re-render once the hold expires, so the transition classes return for the NEXT width-driven
+  // change. The geometry is settled by then, so nothing moves on the re-render itself.
+  useEffect(() => {
+    if (!inPlace) return
+    const t = setTimeout(() => bump((n) => n + 1), holdUntil.current - Date.now() + 30)
+    return () => clearTimeout(t)
+  }, [inPlace, signature])
+  return inPlace
 }
 
 /** The signature {@link useInPlaceOnStructureChange} watches: the level count + every selection. */
@@ -962,7 +1226,7 @@ function MinimizedStack({
   setPins,
   levels,
   manualCollapse,
-  children,
+  detailSlot,
 }: Omit<StackProps, "containerW"> & { levels: TopicLevel[]; manualCollapse: boolean }) {
   // `pins` (from the frame) is this stack's manual collapse-to-icon-strip intent, and auto-hide is
   // its default for every non-leaf list — the same two intent layers the covered stack uses, drawn
@@ -1055,6 +1319,11 @@ function MinimizedStack({
   const setCollapse = (i: number, e: ReactMouseEvent) => {
     const level = rendered[i]!
     const target = !isCollapsed(level, i)
+    hlog(rendered[0]?.id ?? "htdv", "collapse-toggle", {
+      list: level.id,
+      to: target ? "collapsed" : "open",
+      all: e.metaKey || e.ctrlKey,
+    })
     if (e.metaKey || e.ctrlKey) {
       setOverride(Object.fromEntries(rendered.map((l) => [l.id, target])))
       return
@@ -1096,6 +1365,23 @@ function MinimizedStack({
   // manually collapsed, else its width), then the detail column. Held in a CSS var so changes
   // animate via the single grid transition (reduce-motion honoured by the global accessibility CSS).
   const cols = [...rendered.map((l, i) => `${visibleWidth(l, i)}px`), "minmax(0,1fr)"].join(" ")
+
+  // LAYOUT LOG — the fit pass's discrete outcome (icon strips + off-screen count), on change only
+  // (htdv-log.ts).
+  const fitSig = `${rendered.map((l, i) => (isCollapsed(l, i) ? "c" : "o")).join("")}|${hidden}`
+  const loggedFitSig = useRef<string | null>(null)
+  useEffect(() => {
+    if (loggedFitSig.current === fitSig) return
+    loggedFitSig.current = fitSig
+    hlog(rendered[0]?.id ?? "htdv", "fit", {
+      style: "minimized",
+      w: containerRef.current?.clientWidth ?? 0,
+      minPx,
+      lists: rendered.length,
+      collapsed: rendered.filter((l, i) => isCollapsed(l, i)).map((l) => l.id),
+      hidden,
+    })
+  })
 
   // Choosing a topic must land the detail IN PLACE, never slide it in as the columns re-flow behind
   // it; only width-driven changes (resize, a manual toggle) animate the grid.
@@ -1208,13 +1494,13 @@ function MinimizedStack({
         )}
         {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
             the viewport, so on a phone (where every list has drilled off) the form reflows to the
-            full width instead of forcing a horizontal scroll. */}
+            full width instead of forcing a horizontal scroll. Rendered EMPTY — the frame slots its
+            persistent detail host in here (see StackProps.detailSlot). */}
         <div
+          ref={detailSlot}
           className="flex min-h-0 w-full flex-1 flex-col"
           style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
-        >
-          {children}
-        </div>
+        />
       </section>
     </div>
   )
@@ -1243,7 +1529,7 @@ function CoveredStack({
   hoverAll,
   setHoverId,
   containerW,
-  children,
+  detailSlot,
 }: StackProps) {
   const minPx = minDetailPx(minDetailWidth)
   // Per-level rail width: a DRAGGED width (the trailing-border handle) wins, else the level's own
@@ -1413,6 +1699,27 @@ function CoveredStack({
   const detailLeft = Math.max(restingDetailLeft, revealRight)
   const detailWidth = containerW > 0 ? Math.max(0, containerW - detailLeft) : 0
 
+  // LAYOUT LOG — the fit pass's discrete outcome (who is covered, how many slid off), on change
+  // only, with the width and detail geometry it resolved at (htdv-log.ts).
+  const fitSig = `${rendered.map((_l, i) => (isCovered(i) ? "c" : "o")).join("")}|${hidden}|${offshift}`
+  const loggedFitSig = useRef<string | null>(null)
+  useEffect(() => {
+    if (containerW <= 0 || loggedFitSig.current === fitSig) return
+    loggedFitSig.current = fitSig
+    hlog(rendered[0]?.id ?? "htdv", "fit", {
+      style: "covered",
+      w: containerW,
+      minPx,
+      lists: rendered.length,
+      covered: rendered.filter((_l, i) => isCovered(i)).map((l) => l.id),
+      pressure,
+      hidden,
+      offshift,
+      detailLeft: restingDetailLeft,
+      detailW: containerW - restingDetailLeft,
+    })
+  })
+
   // Closing the group is a property of the GROUP, not of one list: moving the pointer from the
   // hovered list into one of its revealed children must NOT collapse it. So a leave only closes when
   // the pointer landed outside every member — `relatedTarget` (the element being entered) is not in a
@@ -1458,6 +1765,11 @@ function CoveredStack({
   // so "open all" only discloses the lists that actually fit.
   const setCover = (parentIndex: number, e: ReactMouseEvent) => {
     const target = !isCovered(parentIndex) // the state the clicked button moves that list TO
+    hlog(rendered[0]?.id ?? "htdv", "cover-toggle", {
+      list: rendered[parentIndex]!.id,
+      to: target ? "covered" : "open",
+      all: e.metaKey || e.ctrlKey,
+    })
     // The toggle must SHOW its work on the click: while a reveal is open the group renders at
     // full width regardless of pins, so a pin flip alone changes nothing until the pointer
     // happens to leave — the click reads as dead and its effect "turns up later". Dropping the
@@ -1714,13 +2026,14 @@ function CoveredStack({
             </div>
           ))}
         {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
-            the viewport, so on a phone the form reflows to the full width instead of scrolling. */}
+            the viewport, so on a phone the form reflows to the full width instead of scrolling.
+            Rendered EMPTY — the frame slots its persistent detail host in here (see
+            StackProps.detailSlot). */}
         <div
+          ref={detailSlot}
           className="flex min-h-0 w-full flex-1 flex-col"
           style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
-        >
-          {children}
-        </div>
+        />
       </section>
     </div>
   )
@@ -1729,7 +2042,8 @@ function CoveredStack({
 /**
  * The NARROW layout — the stack as an iOS `UINavigationController`.
  *
- * When only a detail can fit (a phone, or a window narrowed past one list + `minDetailWidth`), the
+ * When the wide layout is exhausted (a phone, or a window narrowed past the last collapsed strip
+ * beside a `minDetailWidth` detail — see the frame's `wideFloor`), the
  * side-by-side model has nothing left to trade: peeks, cover toggles and the hover reveal are all
  * pointer affordances on room that no longer exists. So the view stops being a row of columns and
  * becomes a NAVIGATION STACK — exactly one FULL-WIDTH pane at a time:
@@ -1757,7 +2071,7 @@ function NarrowStack({
   attemptExit,
   narrowTop,
   setNarrowTop,
-  children,
+  detailSlot,
 }: StackProps & { levels: TopicLevel[] }) {
   // The top of the navigation stack: the detail (index `levels.length`) once every level is selected,
   // else the frontier list — the one with nothing chosen in it yet.
@@ -1780,6 +2094,19 @@ function NarrowStack({
     const id = requestAnimationFrame(() => setAnim(top))
     return () => cancelAnimationFrame(id)
   }, [anim, top, setNarrowTop])
+
+  // LAYOUT LOG — every push/pop of the navigation stack (htdv-log.ts).
+  const loggedTop = useRef<number | null>(null)
+  useEffect(() => {
+    if (loggedTop.current === top) return
+    const from = loggedTop.current
+    loggedTop.current = top
+    hlog(levels[0]?.id ?? "htdv", "narrow-nav", {
+      top,
+      from: from ?? "first-paint",
+      pane: top === levels.length ? "detail" : (levels[top]?.id ?? top),
+    })
+  })
 
   // Back pops one pane: clear the deepest SELECTED level (exit-guarded, like every other clear).
   const onBack = () => attemptExit(() => levels[deepestSelected]?.onClear())
@@ -1879,7 +2206,9 @@ function NarrowStack({
             )}
           </div>
         )}
-        <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
+        {/* Rendered EMPTY — the frame slots its persistent detail host in here (see
+            StackProps.detailSlot), which is how the deep detail SURVIVES the flip into narrow. */}
+        <div ref={detailSlot} className="flex min-h-0 w-full flex-1 flex-col" />
       </section>
     </div>
   )

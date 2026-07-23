@@ -28,6 +28,9 @@ export {
 // Dev-only debug switches (mouse-detection frames, 10x-slow animations). They live here because
 // this package owns the behaviour; a consuming app's Debug panel flips them, and the app applies
 // `slowAnimationVars` to <html> once (see its AppShell) so portaled dialogs/menus scale too.
+// The HTDV layout log: host-flipped tracing of the wide/narrow decision and the stacks' fit passes
+// (the adh shell turns it on everywhere except production). See htdv-log.ts.
+export { setHtdvLayoutLog, getHtdvLayoutLog } from "./htdv-log"
 export {
   useShowDebugFrames,
   setShowDebugFrames,

@@ -3,15 +3,15 @@ id: 0bba1f5b-bc8d-4f76-b1c9-329b627f7ee8
 title: Hierarchical Topic / Detail View
 domain: agenticdeveloperhub://recipes/hierarchical-topic-detail
 type: recipe
-version: 1.16.0
+version: 1.17.0
 status: draft
 language: en
 created: '2026-06-30'
-modified: 2026-07-20
+modified: 2026-07-23
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: Deep-linkable stack of collapsible/coverable topic lists under one breadcrumb — covered parents peek and reveal the whole branch (that list AND its children) on hover, a header "+" create affordance, dash/connector selection markers, min-width detail, and a narrow (iOS navigation-controller) mode when only a detail fits.
+summary: Deep-linkable stack of collapsible/coverable topic lists under one breadcrumb — covered parents peek (icons only) and reveal the whole branch on hover, a header "+" create affordance, dash/connector selection markers, a min-width detail whose content crossfades on selection, progressive collapse→shrink→off-screen shrinking, and a narrow (iOS navigation-controller) mode once the wide layout is exhausted.
 platforms:
 - typescript
 - web
@@ -107,6 +107,11 @@ interface TopicLevel {
   items: TopicDetailItem[]
   selectedId: string | null
   defaultSelectedId?: string       // OPT-IN landing selection: chosen when this list APPEARS empty
+  leadsTo?: "list" | "detail"      // what a row here discloses (the cascade's declared leafness)
+  overview?: boolean | "cards"     // no-selection detail: default = the select nudge; "cards" = the
+                                   // card-grid landing (opt-in); false = the host's own landing
+  itemNoun?: string                // singular noun for one row — the nudge says "Select a <noun> …"
+  overviewHelp?: ReactNode         // the nudge's bespoke body: WHAT a row is and WHY to pick one
   onSelect: (id: string) => void   // select THIS level (clears descendants). Pure nav: push(`…/<id>`)
   onClear: () => void              // clear THIS level + everything below. Pure nav: push(parentUrl)
   emptyLabel?: string
@@ -200,37 +205,72 @@ collapse the whole ancestry, or to open all of it (subject to the fit rules).
 
 ### Auto-collapse — how the stack yields room (the authoritative rules)
 
-The **detail pane is the priority**: it is never sacrificed to keep a topic list on screen. As the
-container narrows, the lists yield in a strict order, and the detail keeps its `minDetailWidth`
-until it is the SOLE view — at which point it is exactly the container's width.
+**The priority is to show the details view as large as possible while also showing
+location/context** (the topic lists and the breadcrumb). As the container narrows, the lists yield
+in a strict order — collapse the lists, then shrink the detail, then move the lists off-screen —
+and only when the wide layout has nothing left to give does the stack become NARROW.
 
 **Shrinking:**
 
-1. The detail holds its width. Every list is measured at its full width, the detail at its minimum.
-2. **Phase 1 — hide.** While the lists + the detail's minimum don't fit, hide the **leftmost** still-
-   disclosed list (general → specific), one at a time, until they fit or every list is hidden. A
-   hidden list is a 40px peek (`covered`) / an icon strip (`minimized`) — it still occupies that width.
-3. **Phase 2 — off-screen.** Only once every list is already hidden and the peeks + the detail's
-   minimum STILL don't fit: slide the **leftmost** list off the left edge and shift the whole stack
-   left by **exactly that list's width**, hiding it. Repeat list by list until the detail fits, or
-   only the frontier remains. The shift is **quantised to whole lists** — a continuous shift would
-   park a list half off the edge, which reads as a clipped rail rather than a drilled-down one.
-4. The **frontier** (a list with nothing selected yet) is never hidden or slid off for the detail's
-   minimum: its "detail" is only a landing placeholder, which enforces NO minimum, so the list you are
-   choosing from always keeps its place.
+1. **Collapse, bottom (furthest-left) list first.** As the window shrinks, auto-collapse the topic
+   lists, starting with the leftmost / most-general one: whenever the detail would otherwise dip
+   below `minDetailWidth`, the leftmost still-open list collapses — to its 32px peek (`covered`) /
+   its icon strip (`minimized`) — handing the freed width back to the detail. Between collapses
+   the detail absorbs the shrink down to its minimum, so it is always as large as the current mix
+   of open lists allows.
+2. **Then the detail's width.** Once every topic list is collapsed, the detail alone absorbs
+   further shrinking — from wherever the last collapse left it, down to `minDetailWidth`.
+3. **Then off-screen, one at a time.** When the detail is at its minimum width and all the topic
+   lists are collapsed, move the topic lists off the screen's left edge one at a time (leftmost
+   first) until they are all hidden — each step shifts the stack by exactly that list's strip
+   width, **quantised to whole lists** (a continuous shift would park a list half off the edge,
+   which reads as a clipped rail rather than a drilled-down one). This phase is **progressive**:
+   one list per strip-width of shrink, never all at once.
+4. **Then narrow mode.** When they are all hidden, the HTDV is in **narrow mode** — it now
+   operates like a `UINavigationController` in UIKit for iOS: one full-width pane at a time (see
+   the narrow section below). The handoff is exact — the wide layout is abandoned only once it has
+   nothing left to trade (**must-exhaust-wide-before-narrow**), never earlier.
+5. The **frontier** (a list with nothing selected yet) is never collapsed for width or slid off:
+   its "detail" is only a landing placeholder, which enforces NO minimum, so the list you are
+   choosing from always keeps its place. For an unselected frontier the wide layout ends only when
+   the container can no longer hold that list itself.
 
-**Growing** is the same rules run again from scratch on the wider container, so it reverses exactly:
-off-screen lists slide back on (specific → general), then hidden lists disclose — but **a list only
-re-discloses when `autoHideTopics` is off** (and was not pinned shut), because auto-hide is an intent
-layer above the fit rules, not a consequence of narrowness.
+**Growing** is the same rules run again from scratch on the wider container, so on a larger device
+it reverses exactly: leaving narrow mode, the topic lists disclose in the reverse order —
+off-screen lists slide back on (specific → general), the detail grows back off its minimum, then
+collapsed lists re-open — but **a list only re-opens when `autoHideTopics` is off** (and was not
+pinned shut), because auto-hide is an intent layer above the fit rules, not a consequence of
+narrowness.
 
-### Selection lands in place — no slide-in
+**On a narrow device (a phone), the HTDV starts and remains in narrow mode** — the detail is the
+device's full width there, which is why `minDetailWidth` is a DESKTOP floor: fairly small, but
+clearly wider than a phone (default `36rem` / 576px; a desktop detail squeezed to phone width
+reads as broken, not compact).
+
+Every decision above is **traced** on non-production builds: the layout log (`htdv-log.ts`,
+flipped on by the host everywhere except production) prints the wide↔narrow mode decision, each
+fit pass's collapse / off-screen outcome with the width it resolved at, every disclosure toggle,
+and every narrow push/pop; `__htdvLogDump()` in the console returns the buffered trace.
+
+### Selection lands in place — no slide-in, content crossfades
 
 Choosing a topic changes the stack's STRUCTURE (a level appears, or the detail flips from a
 minimum-less landing to real content that claims `minDetailWidth`, re-hiding the lists behind it).
 That re-layout MUST be applied **instantly, in place** — the detail must never animate in from the
-left edge as the lists close behind it. Only **width-driven** changes animate: a window resize, a
-`«`/`»` cover toggle, the hover reveal, a drag.
+left edge, nor grow, as the lists close behind it. Only **width-driven** changes animate: a window
+resize, a `«`/`»` cover toggle, the hover reveal, a drag.
+
+The suppression is a settle **window**, not one render: a selection's trailing commits (levels
+registering, measured widths landing) repaint geometry a frame or two later, and re-enabling the
+transitions before the browser has painted the new layout animates it anyway — the exact slide-in
+this rule forbids. Transitions stay off until shortly after the LAST structural change.
+
+The pane's **content**, by contrast, swaps with a **brief crossfade**: when a selection replaces
+what the detail is showing, the outgoing pane dissolves into the incoming one (~220ms); when
+nothing was showing yet (the surface's first paint), the content simply appears — no fade, no
+unasked-for intro. The outgoing half is an inert DOM snapshot, so the dissolve works whether the
+selection updates the tree in place or remounts it (a route param nav). Geometry never
+participates: the pane does not move or grow while its content fades.
 
 ### Disclosure styles — minimized vs covered
 
@@ -241,8 +281,9 @@ The frame supports two `disclosureStyle`s for how parent lists yield room to the
   above). Parents disappear entirely as you drill in.
 - **`covered`** (the **default**): the lists are absolute-positioned and **overlap** like a stack of
   cards — each child list partially **covers** its parent, and the covered parent keeps a fixed
-  **40 px peek** (a left-aligned icon strip) at its left edge, so the whole ancestry stays glanceable
-  while the child + detail take the room. A list is covered automatically when there isn't room to show
+  **32 px peek** (a left-aligned icon strip — wide enough for each row's icon and nothing after it,
+  so the covering list sits far enough left that no sliced label letters show) at its left edge, so
+  the whole ancestry stays glanceable while the child + detail take the room. A list is covered automatically when there isn't room to show
   it in full, and the user can **manually** cover/uncover a list with its `«`/`»` toggle (user intent
   persists across resizes; the auto layer never uncovers a list the user covered). The **frontier** list
   (the one being chosen from, with no selection yet) is never covered. When even the peeks + the child +
@@ -290,16 +331,23 @@ The frame has two **layout modes**, chosen automatically (`layoutMode="auto"`):
 
 - **wide** — everything above: the lists sit beside the detail, cover/peek/reveal as room runs out, and
   drill off-screen at the end. This is the layout the whole recipe describes.
-- **narrow** — **only a detail fits**: the container can't hold one topic list beside a `minDetailWidth`
-  detail. The side-by-side model has nothing left to trade — peeks, cover toggles and the hover reveal
-  are all pointer affordances spending room that no longer exists (and on a phone there is no pointer at
-  all). So the view stops being a row of columns and becomes a **navigation stack**, exactly Apple's
-  `UINavigationController`: **one FULL-WIDTH pane at a time**.
+- **narrow** — **the wide layout is exhausted**: the shrink sequence above has collapsed every list,
+  taken the detail to `minDetailWidth`, and slid every collapsible list off-screen — and the container
+  STILL can't fit what remains. The side-by-side model has nothing left to trade — peeks, cover toggles
+  and the hover reveal are all pointer affordances spending room that no longer exists (and on a phone
+  there is no pointer at all). So the view stops being a row of columns and becomes a **navigation
+  stack**, exactly Apple's `UINavigationController`: **one FULL-WIDTH pane at a time**.
 
-Narrow mode is entered when the container is narrower than one topic list plus the detail's minimum, OR
-when the browser is a **phone** (an iOS / Android phone user agent) at any width. Tablets and desktops
-are decided by width alone — a narrow *window* on a big screen behaves exactly like a phone, and a wide
-one doesn't. `layoutMode="wide" | "narrow"` forces one (a showcase, a test).
+Narrow mode is entered when the last off-screen step has nothing left to hide: with every level
+selected, when the container is narrower than the detail's minimum plus ONE collapsed strip (below
+that the last strip goes too); with an unselected frontier, when the container can no longer hold the
+frontier list itself (it is never hidden, and its landing claims no detail minimum). It is ALSO
+entered — at any width — when the browser is a **phone** (an iOS / Android phone user agent), which is
+why a phone starts and remains in narrow mode. Tablets and desktops are decided by width alone — a
+narrow *window* on a big screen behaves exactly like a phone, and a wide one doesn't.
+`layoutMode="wide" | "narrow"` forces one (a showcase, a test). Deliberately NOT the old rule (one
+full topic list + the detail minimum): that flipped the stack to narrow while the wide layout still
+had collapsed strips to hide progressively, so every list vanished at once as the window shrank.
 
 In narrow mode:
 
@@ -320,6 +368,11 @@ In narrow mode:
   system's connectors need a parent list on screen to connect FROM, and in narrow mode there is never one.
 - The breadcrumb still spans the top — it is the one thing that shows the whole trail when only one pane
   is visible.
+- **The flip carries the detail with it, state intact.** The detail's subtree is never remounted by a
+  mode (or disclosure-style) change: the frame keeps it mounted once, in a portal host it re-slots into
+  whichever stack is active. This is what makes the flip safe on a merged stack, where the deeper levels
+  are published from inside the detail — a remount would clear the very selections whose depth put the
+  view in narrow mode (see must-keep-selection-across-modes).
 
 ### Create is a modal — the stack's create metaphor
 
@@ -363,49 +416,50 @@ Connectors join **selected rows only** — the chain ends at the deepest selecte
 open with **nothing selected** (the frontier being chosen from) gets **no line into it**: a line that
 ends at the list's edge lands beside whatever row happens to sit at the parent's height and reads as a
 phantom selection (v1.13.0 — a stub into the unselected frontier was tried and rejected). The
-unselected frontier's own landing is the topic overview below, not a connector.
+unselected frontier's own landing is the select nudge below, not a connector.
 
 Standalone `TopicDetail` (the single two-pane primitive, used by [[focused-topic-detail]] and the showcase)
 keeps the classic **`selectionStyle="bar"`** gold left-border — the dash/connector markers are a property of
 the hierarchical stack, not the primitive.
 
-### Topic overview — the automatic no-selection landing (every HTDV)
+### The select nudge — the automatic no-selection landing (every HTDV)
 
-Whenever the **frontier** list (the deepest rendered one) has **no selection**, the detail pane shows
-the standard **topic overview** — a responsive grid with **one card per row of that list**: the row's
-icon + label, and its `description` when the item carries one. Clicking a card **selects that row in
-the list** — it is the same `onSelect`, so URL, breadcrumb and connectors follow exactly as if the row
-had been clicked. The overview is titled by the **parent's selected row** (the entity whose topics
-these are), else the level's own title.
+Whenever the **frontier** list (the deepest rendered one) has **no selection**, the detail pane is
+owned by the package: it stays **almost empty**, showing one quiet, centered **select nudge**
+(`TopicSelectHint`, v1.17.0 — replacing the automatic card grid, which is now the per-level
+`"cards"` opt-in below). The nudge is a single centered card — an icon chip, a headline, and an
+optional blurb — built on the `Card` primitive, and it is **THE** "pick something" placeholder for
+the whole platform: every pane that waits on a choice (the stack's unselected frontier,
+master/detail leaves with no open row, explorer landings) renders this one component, never a bare
+`<p>` or the dashed `EmptyState` (which stays the home for genuinely empty / loading / error
+panes).
 
-This is a property of the FRAME, not of any host: **every** hierarchical view gets it automatically —
-the workspaces list at bare `/home`, the workspace features at `/<slug>/home`, a product's topics, a
-group's members, an editor's sections — with **no host wiring**. It exists ONLY in the no-selection
-state: the moment the frontier gains a selection, the host's real detail (`children`) shows. Cards
-never appear beside or instead of a selected topic's view.
+The headline is as **specific as the level allows**: `Select a workspace …`
+(`TopicLevel.itemNoun`), else `Select an item from Workspaces …` (the level's `title`), else the
+fully generic line. `TopicLevel.overviewHelp` is the level's bespoke body — WHAT one of these rows
+is and WHY to choose one — rendered under the headline; with an **empty** list the blurb shows
+alone (there is nothing to select yet, and the rail already shows `emptyLabel`).
 
-Each card **fits its contents**: the title lays out `flex items-start` with a break-anywhere label span,
-so a long label with no spaces to wrap on (a full reverse-domain identifier) wraps cleanly across lines
-INSIDE the card — the icon pinned to its first line — instead of overflowing or clipping at the card's edge.
+This is a property of the FRAME, not of any host: **every** hierarchical view gets it automatically
+— with **no host wiring**. It exists ONLY in the no-selection state: the moment the frontier gains
+a selection, the host's real detail (`children`) shows.
 
-Three seams:
+Three seams on `TopicLevel`:
 
-- `TopicDetailItem.description` — the card copy. Hosts should source it from the same store as the
-  help popovers (the hub reads `help.en.json`), so card text and help never drift. Items without one
-  render icon + label only.
-- `TopicLevel.overviewHelp` — swap the whole card grid for a single **centered help blurb** (exported
-  `TopicOverviewHelp`) at this level's unselected frontier. It is for a list of **one KIND of thing** (a
-  Sites list, a Groups list) where a grid of 100+ near-identical cards is noise: instead, one readable,
-  customizable blurb (the host's — a string or richer nodes) explains what the items are and why you'd
-  pick one. The component owns only the centered framing (`max-w-prose`, `text-center`, `<strong>`
-  emphasis); the content is the host's, and it too should read from the help store. `overviewHelp` wins
-  over the card grid at this level, and is ignored when `overview: false`.
-- `TopicLevel.overview: false` — the opt-out, for a level whose unselected state has a REAL landing of
-  its own (ResourceExplorer's searchable entity landing with New). Everything else takes the default.
+- `overview: "cards"` — the **opt-in** card grid (`TopicOverview`): one card per row (icon + label
+  + `description`; clicking selects), for a level whose card grid IS its landing page (the help
+  site's topic browser). While the list has rows, cards win over the blurb. Each card **fits its
+  contents**: a long unbreakable label (a full reverse-domain identifier) wraps across lines inside
+  the card, the icon pinned to its first line.
+- `itemNoun` / `overviewHelp` — the nudge's specificity: the singular noun for one row, and the
+  bespoke what-and-why blurb (a string or richer nodes; hosts should source it from the same store
+  as the help popovers so copy and help never drift).
+- `overview: false` — the opt-out, for a level whose unselected state has a REAL landing of its
+  own (ResourceExplorer's searchable entity landing with New). Everything else takes the default.
 
 Implementation constraint that is easy to break: the host's `children` MUST stay **mounted (hidden)**
-under the overview. In the merged one-rail stack the deeper levels are PUBLISHED by components living
-in `children` (`StackLevels`); unmounting them unregisters the very frontier level the overview is for,
+under the nudge. In the merged one-rail stack the deeper levels are PUBLISHED by components living
+in `children` (`StackLevels`); unmounting them unregisters the very frontier level the nudge is for,
 and the stack oscillates between the two states (React's max-update-depth crash).
 
 ## Ingredients
@@ -490,7 +544,9 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 - **must-not-redisclose-user-collapsed**: Automatic disclosure MUST NOT re-disclose a list that the user explicitly undisclosed (user intent wins over the layout heuristic).
 - **must-keep-detail-at-minimum-while-lists-yield**: Shrinking MUST take the room from the LISTS, never from the detail: the detail MUST hold `minDetailWidth` through both phases, and MUST only be narrower than it once every list is off-screen and it is the sole view — where it MUST be exactly the container's width.
 - **must-shift-off-screen-by-whole-lists**: In phase 2 the off-screen shift MUST be quantised to WHOLE lists — shift the stack left by exactly the leftmost visible list's width, hiding that list, and repeat. A partial shift (parking a list half off the left edge) is a defect.
-- **must-reverse-on-grow**: Widening MUST re-run the same rules on the wider container, so off-screen lists slide back on (specific → general) and hidden lists re-disclose — but a list MUST re-disclose ONLY when `autoHideTopics` is off and the user has not pinned it shut.
+- **must-hide-off-screen-progressively** (v1.17.0): Phase 2 MUST play out ONE list per strip-width of shrink — each further strip-width of narrowing hides exactly the next leftmost strip — and the wide→narrow mode switch MUST NOT preempt it (see **must-exhaust-wide-before-narrow**). All the collapsed lists disappearing at once as the window shrinks is a defect (the shipped behavior this rule replaces: the old narrow threshold, one full list + the detail minimum, was ABOVE the width where phase 2 begins, so the mode flip swallowed the whole progression).
+- **must-reverse-on-grow**: Widening MUST re-run the same rules on the wider container, so on a larger device leaving narrow mode discloses the lists in reverse order — off-screen lists slide back on (specific → general) and hidden lists re-disclose — but a list MUST re-disclose ONLY when `autoHideTopics` is off and the user has not pinned it shut.
+- **must-log-layout-decisions-outside-production** (v1.17.0): The layout engine MUST trace its decisions to the console — the wide↔narrow mode decision (with the width and floor it was made at), each fit pass's collapse / off-screen outcome, every disclosure toggle, and every narrow push/pop — on EVERY environment except production, where it MUST be off. The switch is host-flipped (`setHtdvLayoutLog`), sitting behind the host's build-inlined environment allowlist so a production bundle ships it dead-code-eliminated; the lines are also kept in a bounded buffer (`__htdvLogDump()`).
 
 ### Auto-hide — lead with the leaf
 
@@ -505,18 +561,19 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 - **must-keep-view-state-across-a-selection**: Selecting a row is a route change, and a route change REMOUNTS the page subtree — so anything the stack keeps in per-instance state is destroyed by the user's own click. Every piece of VIEW state MUST therefore outlive the mount, held per SURFACE (keyed by the root list) rather than per component: the **auto-hide** toggle, the per-list **pins**, the open **hover branch**, and the record of which levels' **defaults have already been applied**. The bugs this rule exists to forbid all look different and are one bug: lists the user opened snapping shut with the toggle flipped back on under them; a revealed branch collapsing the instant a row inside it is picked, with the pointer still in it and no event left that could reopen it; and a `defaultSelectedId` re-selecting the row the user just cleared, making it impossible to deselect. A reload MAY reset this state — a fresh load is a deliberate fresh start.
 - **must-portal-modals-out-of-the-stack**: A modal opened from inside the stack (a level's `+` create dialog, a confirmation) MUST be portalled to the document body. Rendering it in place leaves it a DESCENDANT of the pane that opened it, so it inherits that pane's fate — and narrow mode marks every pane that is not on top `inert` + `aria-hidden`, which makes the dialog unusable: the form silently swallows every keystroke and Save never enables. `position: fixed` is not enough; only a different parent is.
 
-### Motion — structure lands in place, width animates
+### Motion — structure lands in place, width animates, content crossfades
 
-- **must-land-structure-changes-in-place**: A STRUCTURAL change — a level appearing/disappearing, or any level's selection changing — MUST apply its new layout instantly, in place. The detail pane MUST NOT animate in from the left edge as the lists re-hide behind it, and no list may animate out.
+- **must-land-structure-changes-in-place**: A STRUCTURAL change — a level appearing/disappearing, or any level's selection changing — MUST apply its new layout instantly, in place. The detail pane MUST NOT animate in from the left edge, nor grow, as the lists re-hide behind it, and no list may animate out. The suppression MUST cover the selection's TRAILING commits too (v1.17.0): levels registering and measured widths landing repaint geometry a frame or two after the selection, and restoring the transition properties before the browser has painted the new layout animates it anyway — so the transitions stay off for a settle window after the LAST structural change, not just the render it happened on.
+- **must-crossfade-detail-swaps** (v1.17.0): When a selection REPLACES what the detail pane is showing, the outgoing content MUST dissolve into the incoming content with a brief crossfade (~220ms, both halves, ease-in-out; stretched by the dev slow-animations switch). When nothing was showing yet — the surface's first paint — the content MUST simply appear: no fade, no unasked-for intro. The dissolve MUST survive the remount a route-param selection causes (the outgoing half is an inert DOM snapshot taken before the swap), MUST NOT move or resize the pane (geometry answers to must-land-structure-changes-in-place), and MUST NOT fire for the mount-time settle cascade (levels registering is not the user swapping details).
 - **must-animate-width-changes**: Width-driven changes — a window resize, a `«`/`»` cover toggle, the hover reveal, a drag — MUST keep animating (subject to **must-respect-reduced-motion**).
 
 ### Covered disclosure — peek, reveal, titles, selection markers
 
 - **must-default-to-covered**: The hierarchical frame MUST default to the `covered` disclosure style; `minimized` is opt-in via `disclosureStyle="minimized"`.
-- **must-peek-covered-parent**: In the `covered` style, a covered parent list MUST stay partially visible as a fixed ~40 px icon-strip peek at its left edge (a stacked-card overlap), not disappear entirely; child lists overlap their parents with increasing z-index and the detail is topmost.
+- **must-peek-covered-parent**: In the `covered` style, a covered parent list MUST stay partially visible as a fixed 32 px icon-strip peek at its left edge (a stacked-card overlap), not disappear entirely; child lists overlap their parents with increasing z-index and the detail is topmost. The peek MUST show each row's icon and NOTHING after it (v1.17.0 — it was 40px, which reached ~6px into every label and left a column of sliced first letters at the peek's right edge; the covering list now sits those few points further left, covering them).
 - **must-cover-automatically**: A list MUST be covered automatically when there is not room to show it in full alongside the child lists and the detail at its minimum; the **frontier** choosing list (nothing selected yet) MUST NOT be covered, and MUST NOT be slid off-screen by the detail's minimum-width shift — an unselected frontier's detail is a landing placeholder that enforces NO minimum, so the choosing list always keeps its place.
 - **must-allow-manual-cover**: The user MUST be able to manually cover/uncover a list via its `«`/`»` toggle; a manually-covered list MUST stay covered across resizes (user intent wins), and the auto layer MUST NOT uncover a list the user covered.
-- **must-reveal-all-covered-lists-on-hover** (v1.13.0; supersedes must-reveal-covered-branch-on-hover): The pointer ENTERING a covered (peeking) list MUST reveal EVERY on-screen list — the hovered list's parents AND children alike — as real rails at full width, with uncovered `[icon] [name]` rows AND their titled headers (title, cover `«`/`»`, New `+`), chained side by side from the left edge as a lifted card (drop-shadows off both outer edges); the DETAIL is pushed right, never covered (must-push-detail-aside-on-reveal). Revealing less is a defect: the branch-only reveal left the hovered list's own parents covered, so walking the stack leftwards was a list-by-list re-rooting exercise. Off-screen (drilled-down) lists stay out — Back is their affordance. The reveal MUST be ANIMATED: the branch wipes open from the 40px peek to full width (and back), subject to **must-respect-reduced-motion**. There MUST be no per-row or per-header popover copy. The reveal is POINTER-driven only: it MUST NOT be triggered by focus, because a covered row keeps focus after a click and a focus reveal would leave the branch open — jamming the auto-cover as the window shrinks. (Covered rows stay keyboard-operable via their `aria-label`.)
+- **must-reveal-all-covered-lists-on-hover** (v1.13.0; supersedes must-reveal-covered-branch-on-hover): The pointer ENTERING a covered (peeking) list MUST reveal EVERY on-screen list — the hovered list's parents AND children alike — as real rails at full width, with uncovered `[icon] [name]` rows AND their titled headers (title, cover `«`/`»`, New `+`), chained side by side from the left edge as a lifted card (drop-shadows off both outer edges); the DETAIL is pushed right, never covered (must-push-detail-aside-on-reveal). Revealing less is a defect: the branch-only reveal left the hovered list's own parents covered, so walking the stack leftwards was a list-by-list re-rooting exercise. Off-screen (drilled-down) lists stay out — Back is their affordance. The reveal MUST be ANIMATED: the branch wipes open from the 32px peek to full width (and back), subject to **must-respect-reduced-motion**. There MUST be no per-row or per-header popover copy. The reveal is POINTER-driven only: it MUST NOT be triggered by focus, because a covered row keeps focus after a click and a focus reveal would leave the branch open — jamming the auto-cover as the window shrinks. (Covered rows stay keyboard-operable via their `aria-label`.)
 - **must-open-branch-in-place**: The branch MUST open IN PLACE — starting at the left edge the hovered list already occupies, laying its members out end to end. The covered peeks and lists underneath keep their geometry; closing the branch animates everything straight back to the layout it came from (the state it was in before the hover).
 - **must-push-detail-aside-on-reveal** (v1.13.1): The reveal MUST NOT cover the detail. While a reveal is open the detail's left edge MUST track the group's right edge — the detail slides RIGHT (animated, subject to must-respect-reduced-motion) so its content stays visible beside the open lists, clipping at the container's right edge when a deep stack leaves it no room, and slides back when the reveal closes. Only the detail yields; the peeks behind the group are still overlapped (that is what the card shadows mark).
 - **must-keep-branch-open-while-inside-it**: The revealed branch MUST stay open while the pointer is inside ANY of its members — moving from the hovered list into one of its revealed children MUST NOT collapse it. It MUST close (animate back to the previous state) only once the pointer has left every member of the branch. Entering a DIFFERENT covered list MUST re-root the branch at that list.
@@ -529,29 +586,31 @@ and the stack oscillates between the two states (React's max-update-depth crash)
 - **must-pure-select-from-reveal**: Clicking a row in a revealed list MUST be a PURE select of that item — it changes the selection only (it MUST NOT unselect, and MUST do nothing if the row is already selected), removing the deeper lists and showing the chosen item's detail.
 - **may-title-each-list**: A level MAY carry a `title`; when present it MUST render left-aligned (aligned with the row text) with a divider beneath it, the disclosure toggle in a fixed leading control slot.
 - **must-mark-selection-without-bar**: In the stack (`selectionStyle="marker"`) the selected row MUST NOT use the topic-detail gold left-bar; the root's selected row MUST show a leading gold dash, and each child's selected row MUST be joined to its selected parent row by a gold elbow connector.
-- **must-connect-selected-rows-only** (v1.13.0): A connector MUST join a selected parent row to a selected CHILD ROW — nothing else. A list that is open with nothing selected MUST get NO line into it (no stub to the list's edge: it lands beside an arbitrary row and reads as a phantom selection). The chain ends at the deepest selected row; the unselected frontier's landing is the topic overview, not a connector.
+- **must-connect-selected-rows-only** (v1.13.0): A connector MUST join a selected parent row to a selected CHILD ROW — nothing else. A list that is open with nothing selected MUST get NO line into it (no stub to the list's edge: it lands beside an arbitrary row and reads as a phantom selection). The chain ends at the deepest selected row; the unselected frontier's landing is the select nudge, not a connector.
 - **must-keep-connectors-attached-when-covered**: The selection connectors MUST stay attached to the correct rows when lists are covered/peeking and across the cover/uncover slide (measured from the DOM, re-tracked through the transition).
 - **must-keep-bar-for-standalone**: The standalone `TopicDetail` primitive MUST keep `selectionStyle="bar"` (the gold left-border); the dash/connector markers are a property of the hierarchical stack only.
 
 ### Topic overview — the automatic no-selection landing
 
-- **must-show-topic-overview-at-unselected-frontier** (v1.13.0): Whenever the frontier list has NO selection, the detail pane MUST show the standard topic overview: a responsive card grid with ONE card per row of that list — the row's icon + label + its `description` when present — titled by the parent's selected row (else the level's title). Clicking a card MUST fire the level's own `onSelect` for that row (URL, breadcrumb, connectors follow as for a row click). This is a FRAME behavior: every hierarchical view gets it automatically, with no host wiring — including a leading (e.g. workspaces) level when IT is the unselected frontier.
-- **must-hide-overview-once-selected** (v1.13.0): The overview exists ONLY in the no-selection state. The moment the frontier gains a selection the host's real detail (`children`) MUST show — cards MUST never render beside or instead of a selected topic's view.
+- **must-show-select-nudge-at-unselected-frontier** (v1.17.0; supersedes must-show-topic-overview-at-unselected-frontier): Whenever the frontier list has NO selection, the detail pane MUST stay almost empty, showing the centered select nudge — `TopicSelectHint`: one card (icon chip + headline + optional blurb) built on the `Card` primitive. The headline MUST be as specific as the level allows: `Select a <itemNoun> …`, else `Select an item from <title> …`, else the generic line; `TopicLevel.overviewHelp` renders as the bespoke what-and-why body under it, and with an EMPTY list the blurb MUST show alone (nothing is selectable yet; the rail already shows `emptyLabel`). This is a FRAME behavior: every hierarchical view gets it automatically, with no host wiring — including a leading (e.g. workspaces) level when IT is the unselected frontier.
+- **must-share-one-select-placeholder** (v1.17.0): `TopicSelectHint` is THE "pick something" placeholder platform-wide — every pane that waits on a choice (master/detail leaves with no open row, record-settings panes, explorer landings, feature panes) MUST render it, never a bare paragraph or the dashed `EmptyState`; the dashed `EmptyState` remains the home for genuinely empty / loading / error panes, and a ternary that conflates "loading" with "select something" MUST be split.
+- **may-opt-in-overview-cards** (v1.17.0; the automatic grid of v1.13.0 is now this opt-in): A level whose card grid IS its landing page (the help site's topic browser) MAY set `TopicLevel.overview: "cards"` to show the classic topic overview instead of the nudge — a responsive card grid with ONE card per row (icon + label + `description`; clicking fires the level's own `onSelect`), titled by the parent's selected row (else the level's title). While the list has rows, the cards win over `overviewHelp`.
+- **must-hide-overview-once-selected** (v1.13.0): The nudge/overview exists ONLY in the no-selection state. The moment the frontier gains a selection the host's real detail (`children`) MUST show — neither nudge nor cards may render beside or instead of a selected topic's view.
 - **may-opt-out-overview** (v1.13.0): A level whose unselected state has a REAL landing of its own (ResourceExplorer's searchable entity landing with New) MAY opt out via `TopicLevel.overview: false`; the host's `children` then render as before.
 - **may-describe-topics** (v1.13.0): A `TopicDetailItem` MAY carry a `description` (one or two sentences) feeding its overview card; hosts SHOULD source it from the same store as the help popovers so card copy and help never drift. Items without one render icon + label only.
 - **must-fit-overview-cards** (v1.14.0): An overview card MUST fit its contents — a long label with no break opportunities (a full reverse-domain identifier) MUST wrap across lines inside the card, the icon pinned to the first line, and MUST NOT overflow or clip at the card's edge.
-- **may-render-overview-help** (v1.14.0): A level MAY set `TopicLevel.overviewHelp` (a string or nodes) to replace the card grid at ITS unselected frontier with a single centered help blurb (`TopicOverviewHelp`) — for a list of one KIND of thing, where a grid of near-identical cards is noise and the landing should instead explain what the items are and how to choose one. It MUST win over the card grid at that level and MUST be ignored when `overview` is `false`.
-- **must-keep-children-mounted-under-overview** (v1.13.0): While the overview shows, the host's `children` MUST stay MOUNTED (hidden) beneath it. In the merged one-rail stack the deeper levels are PUBLISHED by components living in `children` (StackLevels); unmounting them unregisters the very frontier level the overview is for, and the stack oscillates between the two states (React max-update-depth).
+- **may-render-overview-help** (v1.17.0 shape; the standalone `TopicOverviewHelp` of v1.14.0 is FOLDED INTO `TopicSelectHint`): A level MAY set `TopicLevel.overviewHelp` (a string or nodes) as the nudge's bespoke body — what one of these rows is and why to pick one. It MUST render under the nudge's headline, MUST show alone when the list is empty, MUST be ignored when `overview` is `false`, and MUST yield to the `"cards"` grid while that opt-in level has rows.
+- **must-keep-children-mounted-under-overview** (v1.13.0): While the nudge or overview shows, the host's `children` MUST stay MOUNTED (hidden) beneath it. In the merged one-rail stack the deeper levels are PUBLISHED by components living in `children` (StackLevels); unmounting them unregisters the very frontier level the overview is for, and the stack oscillates between the two states (React max-update-depth).
 
 ### Narrow mode — the stack as a navigation controller
 
-- **must-switch-to-narrow-when-only-a-detail-fits**: The frame MUST switch to the NARROW layout when only a details view can fit — the container is narrower than one topic list plus `minDetailWidth` — or when the browser is a phone (an iOS / Android phone user agent) at ANY width. Tablets and desktops are decided by width alone, so a narrow WINDOW behaves exactly like a phone and a wide one does not. The mode MUST be resolved before paint (no flash of the wide layout), and `layoutMode="wide" | "narrow"` MUST force one.
+- **must-exhaust-wide-before-narrow** (v1.17.0; supersedes must-switch-to-narrow-when-only-a-detail-fits): The frame MUST switch to the NARROW layout only once the wide layout's whole shrink sequence is exhausted — every list collapsed, the detail at `minDetailWidth`, every collapsible list slid off-screen. Concretely: with every level selected, narrow begins when the container is narrower than `minDetailWidth` plus ONE collapsed strip (32px covered peek / the minimized icon strip); with an unselected frontier, when the container can no longer hold the frontier list itself (it is never hidden, and its landing claims no detail minimum). The frame MUST ALSO be narrow — at any width — when the browser is a phone (an iOS / Android phone user agent), so a phone starts and remains in narrow mode. Tablets and desktops are decided by width alone, so a narrow WINDOW behaves exactly like a phone and a wide one does not. The mode MUST be resolved before paint (no flash of the wide layout), and `layoutMode="wide" | "narrow"` MUST force one. The superseded rule (one full topic list + the detail minimum) sat ABOVE the width where off-screen hiding begins, so the mode flip hid every list at once and the progressive drill-down never ran.
 - **must-show-one-full-width-pane**: In narrow mode each topic list and the detail MUST be a FULL-WIDTH pane, and exactly ONE of them is visible: the frontier list while it is still being chosen from, the detail once every level is selected. A landing placeholder MUST NOT be shown in place of the list being chosen from. Peeks, cover toggles, the auto-hide toggle, the hover reveal and drag-resize MUST NOT be rendered — they spend room that does not exist.
 - **must-push-and-pop-like-a-navigation-controller**: Selecting MUST PUSH the next pane in from the right edge (animated, subject to **must-respect-reduced-motion**); the pane behind it MUST parallax and be `inert` + `aria-hidden`, so only the visible pane is reachable by pointer, keyboard or AT. A pane that is being pushed MUST animate in rather than appear in place.
 - **must-fill-the-pane**: A narrow pane IS the screen, so it MUST paint the whole of it: the list inside it MUST FILL the pane rather than size to its rows. A content-height rail leaves everything under the last row transparent — the parallaxed pane behind it shows through, and the page behind that — which reads as a half-drawn screen. (The wide stack's lists are stretched grid cells and correctly size to their column; this is the flex pane's own responsibility.) A full-width pane also MUST NOT draw the rail's trailing border: it separates nothing at the edge of the screen.
 - **must-slide-panes-ease-in-out**: EVERY pane — the topic lists AND the detail — MUST travel on one transition: a horizontal slide, **ease-in-out**, so the push and the pop each accelerate out of rest and settle back into it rather than snapping to a stop. Both directions animate: disclosing (push, in from the right) and undisclosing (pop, back out to the right). The animation MUST survive the REMOUNT the selection causes — the slide's origin is the pane the stack was last painted at, held per surface (**must-keep-view-state-across-a-selection**), because a pane that mounts already at its final transform has nothing to animate FROM and the push silently degrades to a jump. Under **must-respect-reduced-motion** the transition is dropped entirely: the panes cut to their new places, identical layout, no travel.
 - **must-offer-back-in-narrow**: Every narrow pane except the root MUST carry a top-left **Back** that POPS one pane — clearing exactly the deepest SELECTED level via the same `onClear` the breadcrumb and the wide Back use, so **must-guard-unsaved-on-exit** applies identically. Repeated Back MUST walk up to the root, and a popped pane MUST animate OUT to the right rather than vanish.
-- **must-keep-selection-across-modes**: Switching between wide and narrow (a resize) MUST preserve the selection exactly — the mode is a rendering of the same stack, never a navigation.
+- **must-keep-selection-across-modes** (hardened v1.17.0): Switching between wide and narrow (a resize) MUST preserve the selection exactly — the mode is a rendering of the same stack, never a navigation. That includes the DETAIL SUBTREE's own state: the flip MUST NOT remount `children`. In a merged stack the deeper levels are PUBLISHED by components living in `children`, so a remount silently clears the very selections this rule protects (and worse: with the selection-dependent narrow floor of must-exhaust-wide-before-narrow, the cleared selections lowered the floor the narrow decision was made on, bouncing the frame straight back to wide — the user shrank into narrow mode and landed in a wide layout with their place wiped). Concretely: the frame owns ONE persistent detail host (a `display: contents` portal target) and re-slots it into whichever stack is active, so a flip MOVES the detail's DOM with its React state intact. The same holds for a `disclosureStyle` change (covered ↔ minimized) — any change of stack, not just the mode.
 - **must-mark-narrow-selection-with-bar**: In narrow mode a list's selected row MUST use the primitive's gold `selectionStyle="bar"`: the dash/connector markers need a parent list on screen to connect FROM, and narrow mode never has one.
 - **must-show-row-disclosure-chevron**: In narrow mode every selectable row MUST carry a trailing chevron (›) marking that picking it pushes another pane in — a full-width pane has no peeking sibling column left to hint at that, so the row itself must say so. A `disabled` row MUST NOT show it (it has nowhere to go). The chevron is narrow-only: the wide/covered stack MUST NOT render it — the selection connector line already shows what a choice leads to there.
 
@@ -648,7 +707,7 @@ arguments — the measuring stays in the component, the deciding is tested.
   last final choice's content, or the landing/overview the gesture began over — never the newly
   selected topic's overview, a landing placeholder, or a blank. The next thing the detail shows on
   the walk's completion is the final choice's detail: ONE swap, old content → new content. For the
-  cascade this overrides must-show-topic-overview-at-unselected-frontier while the user is choosing
+  cascade this overrides must-show-select-nudge-at-unselected-frontier while the user is choosing
   (a deep link that lands on an unselected frontier still shows the overview — there is no held
   detail and no pointer) and the "showing the chosen item's detail" clause of
   must-pure-select-from-reveal for intermediate selects. The hold is a DISPLAY hold, not a deferred
@@ -760,7 +819,7 @@ arguments — the measuring stays in the component, the deciding is tested.
   uniform titled header (no reserved leading slot); the first topic sits directly under the header.
 - **Rails**: `bg-apt-nav`, fixed width ≈ widest topic + padding, right divider, a titled **header** with
   a disclosure/cover `«`/`»` control (left) + a left-aligned `title` + a right-justified New **`+`**
-  (`onNew`) and a divider beneath. Undisclosed/covered = a `~2.25rem` / 40px icon strip; in the stack
+  (`onNew`) and a divider beneath. Undisclosed/covered = an icon strip (32px covered peek / 48px `minimized` strip); in the stack
   selection is the **marker** (root dash + parent→child connectors), not a per-rail bar. Hovering a
   covered rail reveals the whole BRANCH — that rail AND its children, full rows + headers, chained side
   by side above the detail. In **narrow** mode a rail is instead the full-width pane (bar selection, a
@@ -837,11 +896,11 @@ arguments — the measuring stays in the component, the deciding is tested.
 | T37 | must-land-structure-changes-in-place | select a topic where the detail's left edge moves | the detail is at its final `left`/`width` on the FIRST frame after the click (no 300ms slide) |
 | T38 | must-animate-width-changes | click a `«`/`»` where the detail's left edge moves | the detail's `left` is still mid-flight one frame later (it eases) |
 | T39 | must-reverse-on-grow | with auto-hide OFF, narrow until lists hide/drill off, then widen back | the lists slide back on (specific → general) and re-disclose; with auto-hide ON they slide back on but stay hidden |
-| T40 | must-switch-to-narrow-when-only-a-detail-fits, must-keep-selection-across-modes | with a leaf selected, narrow the window past (one list + `minDetailWidth`) | the frame switches to the navigation stack — the detail is the sole full-width pane — with the SAME selection; widening restores the covered columns unchanged |
+| T40 | must-exhaust-wide-before-narrow, must-keep-selection-across-modes | with a leaf selected, narrow the window past (`minDetailWidth` + one collapsed strip) | the frame switches to the navigation stack — the detail is the sole full-width pane — with the SAME selection; widening restores the covered columns unchanged |
 | T41 | must-show-one-full-width-pane | narrow, workspace selected, feature not | the FEATURES list (the frontier) is the whole view at full width — not a landing pane telling you to pick one; the workspaces pane is `inert` + `aria-hidden` behind it, and no peek / cover toggle / auto-hide toggle is rendered |
 | T42 | must-push-and-pop-like-a-navigation-controller | narrow, select a topic | the detail pane animates IN from the right edge (it is still mid-flight one frame after the click, not already in place) and the list behind it parallaxes |
 | T43 | must-offer-back-in-narrow, must-guard-unsaved-on-exit | narrow, detail open, press Back | the deepest selected level is cleared, the detail animates OUT to the right and the list you chose from is the visible pane; a dirty leaf raises Save / Discard / Cancel first. The ROOT pane has no Back |
-| T44 | must-switch-to-narrow-when-only-a-detail-fits | load on an iPhone/Android phone UA at a viewport wide enough for the wide layout | the narrow layout is used anyway (a phone has no pointer for peeks / reveal / drag) |
+| T44 | must-exhaust-wide-before-narrow | load on an iPhone/Android phone UA at a viewport wide enough for the wide layout | the narrow layout is used anyway (a phone has no pointer for peeks / reveal / drag), and it stays narrow at every width |
 | T45 | must-keep-view-state-across-a-selection | turn auto-hide OFF, then pick another row in the root list (a route change, so the subtree remounts) | the lists stay disclosed and the toggle stays off — the user's click does not silently reset the view they just arranged |
 | T46 | must-keep-view-state-across-a-selection, must-close-branch-only-on-pointer-exit | hover a covered list to open its branch, then click a row inside it | the branch is still open after the remount (the pointer never left it), and closes only when the pointer leaves |
 | T47 | must-keep-view-state-across-a-selection, may-default-select-a-level | on a level with a `defaultSelectedId`, clear the auto-selected row (Back, or re-click) | it STAYS cleared — the default does not re-fire on the remount the clear caused |
@@ -853,13 +912,18 @@ arguments — the measuring stays in the component, the deciding is tested.
 | T53 | must-show-row-disclosure-chevron | narrow, a pane with an enabled row and a `disabled` row | the enabled row carries a trailing chevron, the disabled one does not; the same rows in the WIDE covered stack carry no chevron at all |
 | T54 | must-apply-disclosure-toggles-immediately | hover a covered peek so the reveal opens, then (without moving the pointer out) click a header's `«`/`»`, and separately the root header's auto-hide toggle | the reveal DROPS on the click and the stack settles to the new pin / mode state immediately — the layout visibly changes on the click itself, not later when the pointer happens to leave |
 | T55 | must-fit-overview-cards | a frontier list whose rows carry long unbreakable labels (full reverse-domain ids), narrow the pane | each label wraps across lines inside its card (icon on the first line); no card overflows or clips its content at the edge |
-| T56 | may-render-overview-help | a level with `overviewHelp` set, at its unselected frontier | the detail shows ONE centered help blurb (not the card grid); with `overview: false` the blurb is suppressed and the host's `children` show |
+| T56 | may-render-overview-help, must-show-select-nudge-at-unselected-frontier | a level with `itemNoun` + `overviewHelp` set, at its unselected frontier | the detail shows ONE centered card: `Select a <noun>` headline with the blurb under it; with an EMPTY list the blurb shows alone; with `overview: false` the nudge is suppressed and the host's `children` show; with `overview: "cards"` and rows the card grid shows instead |
 | T57 | must-hold-the-detail-until-the-final-choice | cascade: a final choice's detail is showing; click a topic (top menu or submenu) that discloses another topic list | the submenu opens and the detail pane is UNCHANGED — still the previous detail, not the new topic's overview or a landing |
 | T58 | must-hold-the-detail-until-the-final-choice | continue from T57: click a row that leads to no further topic list (the final choice) | the detail changes ONCE, straight to the final choice's detail — no intermediate overview/landing/blank ever showed during the walk |
 | T59 | must-auto-collapse-menus-on-final-choice | cascade, auto-collapse ON: make a final choice and leave the pointer where it clicked | the open menus collapse inward (animated) on the click itself — before the pointer leaves the menu region — and the final choice's detail shows |
 | T60 | must-auto-collapse-menus-on-final-choice | cascade, auto-collapse OFF: make a final choice with submenus open | only the detail swaps; every open menu stays exactly as arranged (no select collapses anything) |
 | T61 | must-not-move-the-menus-on-an-intermediate-select | cascade, auto-collapse ON: click a row in a disclosed list whose select discloses a submenu (the frontier advances) | the clicked list does not move or re-cover — the submenu appears beside it at the disclosed advance; every list already on screen stays exactly where it was, with no pointer movement required to hold it |
 | T62 | must-release-the-hold-when-the-gesture-ends | cascade: a detail is showing; re-click the selected root row (a clear), or the frontier menu's ✕, or a breadcrumb | the hold releases WITH the clear — the pane shows the real frontier state (overview / landing) as the navigation lands, on this surface and every one navigated to next; no stale pane follows the walk |
+| T63 | must-hide-off-screen-progressively, must-exhaust-wide-before-narrow | every list collapsed, leaf selected, detail at `minDetailWidth`; shrink the window one strip-width at a time | exactly ONE more list slides off the left edge per step (never several at once); only after the LAST strip goes does the frame switch to the navigation stack |
+| T64 | must-crossfade-detail-swaps | a detail is showing; select a different row (same level or deeper) | the outgoing pane dissolves into the incoming one over ~220ms — both halves fade, the pane itself does not move or resize — including when the selection is a route change that remounts the subtree |
+| T65 | must-crossfade-detail-swaps | a surface's very first paint (nothing was showing), and separately a mount-time settle (levels registering) | the content simply appears — no fade-in, no intro — in both cases |
+| T66 | must-log-layout-decisions-outside-production | on a non-production build, resize across a collapse, an off-screen step and the narrow flip | one `[htdv#…]` console line per decision (mode with width+floor, fit outcome, toggle, narrow push/pop); `__htdvLogDump()` returns the trace; a production build logs nothing |
+| T67 | must-keep-selection-across-modes | a MERGED stack whose deepest levels are published from `children` (feature-internal state, not the URL), all levels selected; shrink past the narrow floor, then widen back | the frame goes narrow with the detail as the top pane and STAYS narrow (no bounce back to wide); widening restores the wide layout with every selection — including the children-published ones — exactly as it was |
 
 ## Edge Cases
 
@@ -911,18 +975,24 @@ arguments — the measuring stays in the component, the deciding is tested.
 - **Auto-hide + the fit rules (2026-07-11).** The frame OWNS the disclosure intent — `autoHide`
   (seeded from `autoHideTopics`, default true) and `pins: Record<levelId, boolean>` — and passes both
   to whichever stack renders, so the two layouts share one contract and differ only in how a hidden
-  list is DRAWN (a 40px peek vs an icon strip). `toggleAutoHide` flips the flag and clears `pins`
+  list is DRAWN (a 32px peek vs an icon strip). `toggleAutoHide` flips the flag and clears `pins`
   (a clean reset). Each stack resolves `pinnedOrAutoHidden(i) = pins[id] ?? (autoHide && i < last)`,
   then adds width pressure on top — pressure only ever ADDS a hide, so a pin shut is never disclosed.
   The `«`/`»` handlers read `e.metaKey || e.ctrlKey` to write EVERY level's pin instead of one.
   Phase 2 is quantised: `while (hidden < coverable && widthFrom(hidden) > containerW) { offshift +=
   widthOf(hidden); hidden++ }`, so the stack shifts by whole lists and a hidden column is `inert` +
   `aria-hidden` + `pointer-events-none` (mounted, so it slides back in on grow).
-  `useInPlaceOnStructureChange(structureSignature(rendered))` returns true for the ONE render after a
-  level count / selection change and drops the `transition-[left,width]` classes for that commit, so
-  choosing a topic lands the detail in place; the bump re-render restores the transitions against
-  already-painted geometry, so nothing moves. Width-driven changes never touch that signature and keep
-  animating.
+  `useInPlaceOnStructureChange(structureSignature(rendered))` returns true from a level-count /
+  selection change until ~350ms after the LAST one and drops the `transition-[left,width]` classes
+  across that window, so choosing a topic lands the detail in place — including the selection's
+  trailing commits (levels registering, measured widths landing), which repaint geometry after the
+  change itself. (The one-render version restored the transitions in a layout effect, which flushes
+  BEFORE paint, so the browser animated the new geometry against the previous painted frame anyway.)
+  Width-driven changes never touch that signature and keep animating. The detail's CONTENT swap is
+  `DetailCrossfade`: a `getSnapshotBeforeUpdate` clone of the outgoing pane faded out over the
+  incoming content (WAAPI, ~220ms), with per-surface module memory (`detailSwapMemory`) so the swap
+  crossfades across the remount a route-param selection causes and a surface's first paint shows
+  instantly.
 - **React / Web (TypeScript).** Enclosing frame:
   `websites/shared/ui/src/blocks/hierarchical-topic-detail.tsx`
   (`HierarchicalTopicDetail`, props `levels: TopicLevel[]`, `disclosureStyle?: "covered" |
@@ -930,8 +1000,10 @@ arguments — the measuring stays in the component, the deciding is tested.
   "wide" | "narrow"` (default `auto`), `showBreadcrumb`,
   `rootLabel`, `trailingCrumbs`, `help`,
   `minDetailWidth`, `exitGuard: PaneExitGuard`, `manualCollapse`, `children`). It dispatches to a
-  `NarrowStack` (full-width panes, `translateX` push/pop) when only a detail fits, else a
-  `CoveredStack` (absolute, overlapping, `COVERED_PEEK` = 40px) or a `MinimizedStack` (grid columns);
+  `NarrowStack` (full-width panes, `translateX` push/pop) once the wide layout is exhausted (the
+  `wideFloor`: `minDetailWidth` + one strip with every level selected, else the frontier's full
+  rail; or a phone UA), else a
+  `CoveredStack` (absolute, overlapping, `COVERED_PEEK` = 32px) or a `MinimizedStack` (grid columns);
   in the wide styles it renders each level's `TopicRail` **and** the detail
   `<section key="__detail__">` as **flat sibling grid columns** (one
   `grid-template-columns` CSS var) — so the leaf has a stable slot (no remount) and ONE
@@ -941,8 +1013,8 @@ arguments — the measuring stays in the component, the deciding is tested.
   standalone `TopicDetail`'s custom leading row — e.g. FocusedTopicDetail's PopupMenu — rendered only
   when supplied; optional `backSlot` for the drill-down Back; per-rail drag handle with
   snap-to-collapse/full; animated via `md:transition-[grid-template-columns]`).
-  **Covered style:** a covered list's wrapper is `overflow-hidden` clipped to a 40px peek (its rows are
-  always FULL, so only the leading icon shows). Hovering it opens the whole BRANCH — that list and every
+  **Covered style:** a covered list's wrapper is `overflow-hidden` clipped to a 32px peek (its rows are
+  always FULL, so only the leading icon shows — nothing of the label). Hovering it opens the whole BRANCH — that list and every
   list below it — via an animated width **wipe** + a `left` chain (`CoveredStack`'s `hoverId` names the
   branch's root; members take `railWidth` and chain from the hovered list's own left edge), lifted above
   the detail with a drop-shadow off the branch's trailing edge; the z-lift **lingers** (`zLiftId` trails
@@ -1019,7 +1091,7 @@ arguments — the measuring stays in the component, the deciding is tested.
 - **Help is data, not markup.** A single keyed `site-config` store keeps help text out of
   components and consistent across the platform (dry).
 - **Covered, not just minimized.** The default `covered` style overlaps the lists like a stack of cards
-  so the whole ancestry stays glanceable (a 40px peek) while the child + detail take the room — versus
+  so the whole ancestry stays glanceable (a 32px peek) while the child + detail take the room — versus
   `minimized`, which slides parents fully off-screen. Both share the one fit controller; covered is the
   better default on wide screens, and the same off-screen drill-down is the phone layout
   (principle-of-least-astonishment).
@@ -1057,13 +1129,14 @@ arguments — the measuring stays in the component, the deciding is tested.
 | Live demo exists in ui-showcase (`hierarchical-topic-detail`) | passed | demo-exists |
 | One merged stack via context; off-screen drill-down + Back; unsaved guard | passed | implementation |
 | Dismantled master/details (one stack, no sublists); package-owned selection | passed | implementation |
-| Covered disclosure: 40px peek + whole-BRANCH hover reveal + header `+` create + per-list titles + dash/connector markers | passed | implementation |
+| Covered disclosure: 32px peek + whole-BRANCH hover reveal + header `+` create + per-list titles + dash/connector markers | passed | implementation |
 | Narrow mode: full-width panes, push/pop + Back, auto-switched by width or phone UA | passed | implementation |
 
 ## Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.17.0 | 2026-07-23 | Mike Fullerton | **The select nudge replaces the automatic card grid; the HTDV's shrink sequence made real (progressive off-screen + a later narrow flip); icon-only peeks; a bigger default detail minimum; in-place landing hardened; a detail crossfade; a layout log.** (0) **must-show-select-nudge-at-unselected-frontier** + **must-share-one-select-placeholder** + **may-opt-in-overview-cards** (supersede must-show-topic-overview-at-unselected-frontier): the unselected frontier's detail is now an almost-empty pane with one centered `TopicSelectHint` card (icon chip + a headline as specific as the level allows via new `TopicLevel.itemNoun`, + the level's bespoke `overviewHelp` blurb — `TopicOverviewHelp` folded in); the card grid became the per-level `overview: "cards"` opt-in (the help site keeps it); `TopicSelectHint` is THE platform-wide "pick something" placeholder (master/detail leaves, record-settings panes, explorer landings, feature panes), with the dashed `EmptyState` reserved for genuinely empty/loading/error panes. (1) **must-exhaust-wide-before-narrow** (supersedes must-switch-to-narrow-when-only-a-detail-fits) + **must-hide-off-screen-progressively**: the wide→narrow flip now happens only once every list is collapsed, the detail is at `minDetailWidth`, and every collapsible strip has slid off-screen one at a time — the old threshold (one full list + the minimum) sat above where phase 2 begins, so every list vanished at once and the progressive drill-down never ran (the reported bug). The authoritative auto-collapse section is rewritten as the priority order: detail as large as possible while showing context → collapse leftmost-first → shrink the detail to its minimum → off-screen one strip at a time → narrow (a UINavigationController); growing reverses it; a phone starts and remains narrow. (2) `COVERED_PEEK` 40→32px (**must-peek-covered-parent**): the peek shows each row's icon and nothing after it — 40px reached ~6px into every label, leaving sliced first letters at each peek's edge. (3) `minDetailWidth` default 28rem→**36rem** (576px): a desktop floor that is fairly small but clearly wider than a phone; phones never consult it (narrow = device width). The hub's WorkspaceShell drops its bespoke 34rem and rides the default. (4) **must-land-structure-changes-in-place** hardened: the transition suppression is a ~350ms settle WINDOW after the last structural change, not one render — the one-render bump restored the transition classes in a layout effect (pre-paint), so the browser animated the new geometry against the previous painted frame anyway, and the selection's trailing commits (level registrations, measured widths) leaked the same way. (5) **must-crossfade-detail-swaps**: a selection replacing the detail's content dissolves old→new over ~220ms (`DetailCrossfade`: a getSnapshotBeforeUpdate DOM clone faded out over the incoming pane, with per-surface module memory so the dissolve survives the route-remount and a first paint shows instantly, no intro). (6) **must-log-layout-decisions-outside-production**: the layout log (`htdv-log.ts`, `setHtdvLayoutLog`, `__htdvLogDump()`) traces mode decisions, fit outcomes, disclosure toggles and narrow push/pops on every environment except production (host-flipped behind the adh shell's build-inlined allowlist). (7) **must-keep-selection-across-modes** hardened: a stack flip (wide↔narrow, covered↔minimized) used to REMOUNT `children` — the stacks are different component types, and React reconciles by position — which cleared any children-published levels; with the new selection-dependent floor from (1) that even bounced the frame straight back to wide, place wiped (found verifying (1) live). The detail now renders through a portal into one frame-owned `display: contents` host that is re-slotted into the active stack, so a flip moves DOM, never React state. Vectors T40/T44 updated; new T63–T67. |
 | 1.16.0 | 2026-07-20 | Mike Fullerton | **The cascade's interaction layer REBUILT on a stored state machine, declared leafness, and query-based containment** (the architecture review's proposal, replacing the 1.15.x freeze mechanisms wholesale). (1) `CascadeMode` — settled vs engaged — is STORED per surface: engaging captures the resting geometry as a frozen `EngagedBase` (lefts, covered flags, off-screen count, the ground), a rail click can only engage/ratchet (never settle, never touch the base), and the only settles are pointer-exit, an explicit toggle, and the final choice. Deletes the ground latch (`mayMoveGround`), the covering freeze (`heldCover`), the frozen-frontier ratchet (`ratchetFrozenFrontier`/`coverFrontierWhileChoosing`), and the reveal-event reducer — must-hold-the-ground-under-the-pointer and must-not-move-the-menus-on-an-intermediate-select are now facts about data, not emergent properties of six cooperating interceptors. (2) Leafness is DECLARED (`TopicDetailItem.leadsTo`/`TopicLevel.leadsTo`, default `"detail"` fail-safe): the final choice is known at click time (`planRailHold`/`planLeafSettle`), deleting the retrospective two-render confirmation (`planChoiceSettle`/`heldSig`/`heldMoved`/`heldSettleArmed`). New rule `must-release-the-hold-when-the-gesture-ends` (T62): clears/✕/breadcrumbs release the hold IMMEDIATELY and pointer-exit releases it too — fixing the live regression where an unselect never released the hold (armed on clears, releasable only by a complete path) and the stale pane haunted every surface. (3) Containment is an IDEMPOTENT QUERY against settled MODEL rects (assigned lefts/tops + untransformed layout sizes), never an animating box's client rect — closing the whole stream-inference defect class (the remount null-region window AND the mid-animation shrunk-rect window that kept releasing holds under a real mouse while passing under synthetic input). The covered peeks now route through the same entry gate as the trigger lane (`pointerenter` is no longer used — Chrome fires it when layout moves under a stationary pointer, so 1.15.2's covered-column enter was itself a re-open hole). Hub: workspace/feature levels declare leafness; switching workspace lands on the new workspace's `/home` (never carries the active feature — nothing auto-selects without a declared default). |
 | 1.15.2 | 2026-07-20 | Mike Fullerton | **The pointer authority acts only on EVIDENCE, and entering a covered peek is how a settled cascade re-opens.** Two fixes to the closers contract ("the menus close only on the pointer leaving the blue region, an explicit `«/»`, and the final choice"). (1) Evidence clause on must-collapse-from-one-pointer-authority (`pointerInMenusAfterMove`): the remount a select causes has a window where no menu is measurable (detached old container, unpainted new one) and a real mouse always moves in it — a null region keeps the LAST answer instead of writing "outside", which had been releasing the ground/covering/reveal holds on exactly the click they exist to survive (reproducible with a real pointer, invisible to synthetic clicks). (2) The re-open clause of must-auto-collapse-menus-on-final-choice is now implementable as stated: with the disclose trigger entry-gated, a COVERED column carries its own pointer-ENTER that opens its branch reveal — entering a peek discloses it, so a covered root's rows are reachable again (re-click-to-unselect had gone dead: the rows sat under the child overdrawing them with nothing left to disclose the branch). |
 | 1.15.1 | 2026-07-20 | Mike Fullerton | **An intermediate select must not move the menus — the clicked list's stay-open is now STRUCTURAL, not reveal-dependent.** New rule `must-not-move-the-menus-on-an-intermediate-select` (vector T61), fixing the recurring "first menu auto-collapses on click" regression: a select advances the frontier, auto-hide covering computed against the new frontier covered the clicked list out from under the pointer, and only the pointer-reveal (must-root-reveal-on-covering-select) — racing the remount the select causes — held it open. The covering now computes against a FROZEN frontier in the surface's remount-surviving memory (`heldCover.frontier`): a rail click ratchets it to the clicked list's index (`ratchetFrozenFrontier`), a clear/✕ retreat is followed (`coverFrontierWhileChoosing`), and it advances only on the standing settles — pointer exit, or the final choice writing it forward so must-auto-collapse-menus-on-final-choice still lands on the click. A rail click is also recorded as pointer-in-the-menus evidence, so every pointer-keyed hold survives the remount with no pointermove ever observed. |
