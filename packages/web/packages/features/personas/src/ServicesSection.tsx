@@ -65,6 +65,14 @@ function fmtNum(n: number | undefined): string {
   return String(n);
 }
 
+/** A template's list/card label, suffixed with its non-chat modalities (e.g.
+ *  `Fal (image)`, `ElevenLabs (audio)`). Chat — the default when `modalities` is
+ *  null/omitted — carries no suffix, so plain LLM providers read unchanged. */
+function templateLabel(t: Template): string {
+  const media = (t.modalities ?? []).filter((m) => m !== "chat");
+  return media.length > 0 ? `${t.name} (${media.join("/")})` : t.name;
+}
+
 // ─── ServicesTable ────────────────────────────────────────────────────────────
 
 function StatusBadge({ connectStatus }: { connectStatus: string }) {
@@ -473,6 +481,13 @@ function NewServiceForm({
     });
   }
 
+  // Split the catalog: `connectable` templates have a first-party API and go in the
+  // picker (their label suffixed with any non-chat modalities); `informational` ones
+  // (availableVia set) have no API of their own, so they can't be connected — they
+  // render as read-only cards below that point at their gateway templates instead.
+  const connectable = templates.filter((t) => !t.availableVia);
+  const informational = templates.filter((t) => t.availableVia);
+
   return (
     <div className="flex flex-col gap-4">
       {templates.length > 0 && (
@@ -486,13 +501,43 @@ function NewServiceForm({
               }}
             >
               <option value="">Custom (no template)</option>
-              {templates.map((t) => (
+              {connectable.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  {templateLabel(t)}
                 </option>
               ))}
             </Select>
           </Field>
+          {informational.length > 0 && (
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="font-mono text-[0.65rem] uppercase tracking-wider text-apt-text-muted">
+                No first-party API
+              </div>
+              {informational.map((t) => (
+                <div key={t.id} className="rounded-lg border border-apt-border p-3 text-sm">
+                  <div className="font-medium text-apt-text">{templateLabel(t)}</div>
+                  <p className="mt-1 text-apt-text-muted">{t.availableVia?.note}</p>
+                  {(t.availableVia?.templates ?? []).length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {t.availableVia?.templates.map((name) => {
+                        const target = templates.find((x) => x.name === name);
+                        return target ? (
+                          <Button
+                            key={name}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => applyTemplate(target.id)}
+                          >
+                            Use {name}
+                          </Button>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </FieldGroup>
       )}
       <ServiceFields draft={draft} onChange={onChange} autoFocusName />

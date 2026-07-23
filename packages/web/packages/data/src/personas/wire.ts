@@ -225,6 +225,23 @@ export interface ConnectionSpec {
   extraHeaders?: Record<string, string>;
 }
 
+/** Sync-fed model row on a provider template (mirrors ProviderTemplateModel). */
+export interface TemplateModelRow {
+  id: string;
+  name: string;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  source: "curated" | "synced";
+  lastSyncedAt: string | null;
+  createdAt: string;
+}
+
+/** Set ⇒ informational template: no first-party API; connect via the named templates. */
+export interface TemplateAvailableVia {
+  note: string;
+  templates: string[];
+}
+
 /** Backend row for `GET /persona/service-templates` (a plain catalog table). */
 export interface ServiceTemplateRow {
   id: string;
@@ -234,6 +251,16 @@ export interface ServiceTemplateRow {
   documentationUrl: string | null;
   statusUrl: string | null;
   connectionSpec: ConnectionSpec | null;
+  /** Set ⇒ informational template: no first-party API of its own, so `connect` must
+   *  be hidden — a would-be user reaches this provider through the named gateway
+   *  templates instead. Null/omitted ⇒ a normal, directly-connectable template.
+   *  (Older backends omit the field entirely.) */
+  availableVia?: TemplateAvailableVia | null;
+  /** The provider's supported modalities (e.g. `["chat"]`, `["image"]`,
+   *  `["audio"]`). Null/omitted ⇒ chat. Older backends omit it.
+   *  (`syncKeys` is deliberately NOT mirrored — it is operator plumbing that never
+   *  reaches clients.) */
+  modalities?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
