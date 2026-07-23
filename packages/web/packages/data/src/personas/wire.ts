@@ -242,7 +242,12 @@ export interface TemplateAvailableVia {
   templates: string[];
 }
 
-/** Backend row for `GET /persona/service-templates` (a plain catalog table). */
+/** Backend DTO for `GET /persona/provider-templates` (one `items[]` entry) — the GLOBAL
+ *  provider-catalog row from `persona.service_templates`, as the hand-written route serves
+ *  it: `connectionSpec.extraHeaders` REDACTED, operator-only `syncKeys` stripped, and the
+ *  template's synced models nested. This route is the SOLE read surface for the table; the
+ *  raw generic-CRUD `/persona/service-templates` endpoint was removed because it served the
+ *  rows with `extraHeaders` unredacted. */
 export interface ServiceTemplateRow {
   id: string;
   providerKind: string;
@@ -257,14 +262,11 @@ export interface ServiceTemplateRow {
    *  (Older backends omit the field entirely.) */
   availableVia?: TemplateAvailableVia | null;
   /** The provider's supported modalities (e.g. `["chat"]`, `["image"]`,
-   *  `["audio"]`). Null/omitted ⇒ chat. Older backends omit it.
-   *  (`syncKeys` is intentionally not surfaced on this type. The hand-written
-   *  `/persona/provider-templates` payload strips it entirely; this authenticated
-   *  generic-CRUD row (`/persona/service-templates`) *does* carry it on the wire,
-   *  but clients have no use for the operator mapping — non-secret models.dev
-   *  provider ids / OpenRouter prefixes / arena vendor strings — so we omit it
-   *  from the type rather than model a field nothing reads.) */
+   *  `["audio"]`). Null/omitted ⇒ chat. Older backends omit it. (`syncKeys` is never
+   *  surfaced — the provider-templates payload strips it entirely.) */
   modalities?: string[] | null;
+  /** The template's catalog models, name-ordered (curated + synced). */
+  models: TemplateModelRow[];
   createdAt: string;
   updatedAt: string;
 }

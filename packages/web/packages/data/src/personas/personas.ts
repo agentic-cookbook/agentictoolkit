@@ -1,11 +1,11 @@
 // Persona/services/me API client — the hand-written /auth/me, /auth/slug-available,
-// and /public/* profile routes, plus generic CRUD over `persona.service_templates`,
-// `persona.services`, and `persona.personas`.
+// /public/* profile, and /persona/provider-templates routes, plus generic CRUD over
+// `persona.services` and `persona.personas`.
 //
 // Routes: /api/auth/me (get/patch), /api/auth/slug-available/{slug},
 //         /api/public/users/{slug}, /api/public/personas/{slug},
 //         /api/public/users/{ownerSlug}/personas/{personaSlug},
-//         /api/persona/service-templates,
+//         /api/persona/provider-templates,
 //         /api/persona/services (list/create), /api/persona/services/{id}
 //         (patch/delete/connect/models/models/refresh),
 //         /api/persona/personas (list/create), /api/persona/personas/{id}
@@ -74,9 +74,14 @@ export const api = {
     ),
   // Sign-out is the shared AuthProvider's `logout()` (revoke + clear the local
   // Bearer tokens), not an api.ts call — see src/App.tsx.
-  // Service templates are a plain catalog table served by generic CRUD at
-  // /persona/service-templates (list returns the rows directly).
-  templates: () => authedJson<Template[]>("/api/persona/service-templates"),
+  // Provider templates are the GLOBAL provider catalog, served by the hand-written
+  // /persona/provider-templates route: paginated ({ items, total, page, pageSize }), with
+  // connectionSpec.extraHeaders REDACTED and operator-only `syncKeys` stripped. Fetch one
+  // max-size page (MAX_PAGE_SIZE is 100; the catalog is well under that) and return the items.
+  templates: () =>
+    authedJson<{ items: Template[] }>(
+      "/api/persona/provider-templates?pageSize=100",
+    ).then((r) => r.items),
   services: {
     list: () => authedJson<UserService[]>("/api/persona/services"),
     create: (body: CreateServiceBody) =>
