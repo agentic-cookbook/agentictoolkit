@@ -2,6 +2,7 @@
 
 import { useMemo, type ComponentType, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { FolderTree, Table2 } from 'lucide-react'
 import {
   HierarchicalDetailView,
   type PaneExitGuard,
@@ -132,12 +133,14 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
       ? tablesInSchema.find((t) => t.table === rawTable) ?? null
       : null
 
+  // Row icons name what a row IS (a schema = a folder of tables; a table): without them every
+  // row falls back to the rail's placeholder circle, which reads as "unfinished".
   const schemaItems = useMemo<TopicDetailItem[]>(
-    () => schemas.map((s) => ({ id: s, label: s })),
+    () => schemas.map((s) => ({ id: s, label: s, icon: <FolderTree /> })),
     [schemas],
   )
   const tableItems = useMemo<TopicDetailItem[]>(
-    () => tablesInSchema.map((t) => ({ id: t.table, label: t.table })),
+    () => tablesInSchema.map((t) => ({ id: t.table, label: t.table, icon: <Table2 /> })),
     [tablesInSchema],
   )
   const tableSelectedId = tableSelected?.table ?? null

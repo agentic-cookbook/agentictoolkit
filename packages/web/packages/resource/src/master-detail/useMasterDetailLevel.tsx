@@ -30,6 +30,7 @@ export function useMasterDetailLevel<TItem, TInput>({
   getLabel,
   getSublabel,
   itemIcon,
+  getItemIcon,
   newLabel,
   leaf,
   emptyLabel,
@@ -48,6 +49,9 @@ export function useMasterDetailLevel<TItem, TInput>({
   getSublabel?: (item: TItem) => string | undefined;
   /** Leading icon for each row (fills the collapsed icon strip). */
   itemIcon?: ReactNode;
+  /** PER-ROW icon, when one uniform `itemIcon` can't say what a row is (e.g. an application's
+   *  kind, an integration's service type). Wins over `itemIcon` when both are given. */
+  getItemIcon?: (item: TItem) => ReactNode;
   /** "New …" affordance label. */
   newLabel: string;
   /** The deep-link leaf (URL selection); its `onSelect(null)` clears the level. */
@@ -68,7 +72,7 @@ export function useMasterDetailLevel<TItem, TInput>({
     id: getId(it),
     label: getLabel(it),
     sublabel: getSublabel?.(it),
-    icon: itemIcon,
+    icon: getItemIcon ? getItemIcon(it) : itemIcon,
   }));
 
   const newButtonLabel = newLabel.replace(/…+$/, "").trim();

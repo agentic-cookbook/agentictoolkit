@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FileText, Globe } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
@@ -324,6 +325,9 @@ export function ResearchPane({
   const items: TopicDetailItem[] = rows.map((d) => ({
     id: d.id,
     label: d.title || "Untitled",
+    // The icon carries the row's one discrete state: published (visible to the world) vs a
+    // private draft document. Matches the "Published" sublabel tag.
+    icon: d.visibility === "public" ? <Globe /> : <FileText />,
     sublabel:
       [d.category, d.visibility === "public" ? "Published" : null].filter(Boolean).join(" · ") ||
       (d.tags.length > 0 ? d.tags.join(", ") : undefined),
