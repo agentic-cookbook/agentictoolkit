@@ -1,0 +1,15 @@
+{
+  // Typechecks the test files that tsconfig.json excludes, so `pnpm lint`
+  // catches type errors in *.test.ts(x) too. Includes the workspace vitest
+  // setup file (three levels up) because it imports
+  // `@testing-library/jest-dom/vitest`, whose matcher augmentation the
+  // component tests rely on (toHaveAttribute / toHaveClass / toHaveStyle).
+  // rootDir widens to packages/web so that out-of-tree setup file is
+  // contained (an explicit rootDir under ./src would trip TS6059 on it).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../../.."
+  },
+  "include": ["src", "../../../vitest.setup.ts"],
+  "exclude": []
+}

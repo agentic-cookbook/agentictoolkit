@@ -63,6 +63,9 @@ export const PLACEHOLDERS = [
   "bitbag sighs. type something.",
   "bitbag awaits your inevitable disappointment.",
 ] as const;
+// Shown in the input while it's still disabled (before he greets you), in place
+// of the rotating PLACEHOLDERS above.
+export const DISABLED_PLACEHOLDER = "bitbag uninterested...";
 
 // Replies carry no "// " prefix — that's a per-theme flourish (green-matrix
 // adds it via CSS; old-school-terminal omits it). Keep the content prefix-free.

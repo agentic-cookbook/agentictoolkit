@@ -29,7 +29,7 @@
     "build:css": "mkdir -p dist/css && cp src/styles/*.css dist/css/",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run"
   },
   "peerDependencies": {

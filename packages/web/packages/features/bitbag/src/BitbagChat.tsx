@@ -19,6 +19,7 @@ import type { BitbagExpression } from './avatar'
 import {
   CONNECTED,
   CONNECTING,
+  DISABLED_PLACEHOLDER,
   GREETING,
   IDLE_WORDS,
   NEGOTIATION,
@@ -144,7 +145,7 @@ export function BitbagChat({
       <ThemeStyle theme={theme} scope={`.${THEME_SCOPE}`} />
       <InlineChatView
         session={session}
-        placeholder={inputDisabled ? 'bitbag uninterested...' : placeholder}
+        placeholder={inputDisabled ? DISABLED_PLACEHOLDER : placeholder}
         thinkingLabels={THINKING_WORDS}
         thinkingFrames={THINKING_GLYPH}
         thinkingDoneGlyph={THINKING_GLYPH_DONE}
