@@ -11,6 +11,7 @@ import {
   usePersonaMood,
   useRotatingPhrase,
   useTransientEcho,
+  type ChatBackend,
   type GazeVector,
 } from '@agenticdevelopertoolkit/chat'
 import { ThemeStyle, type ThemeKey } from '@agenticdevelopertoolkit/themes'
@@ -50,6 +51,12 @@ const THEME_SCOPE = 'pc-theme-scope'
 export interface BitbagChatProps {
   /** The toolkit theme that skins the chat. */
   theme: ThemeKey
+  /**
+   * The chat backend driving the conversation. Defaults to bitbag's built-in
+   * scripted mock (`BitbagBackend`), so consumers that omit it are unchanged;
+   * pass a real `ChatBackend` to talk to a live service.
+   */
+  backend?: ChatBackend
   /** Reports a deliberate expression hint up to the driver; null hands control back to his reflexes. */
   onExpressionHint?: (hint: BitbagExpression | null) => void
   /** Reports where bitbag should look; null hands his gaze back to his reflexes. */
@@ -64,13 +71,16 @@ export interface BitbagChatProps {
 
 export function BitbagChat({
   theme,
+  backend: backendProp,
   onExpressionHint,
   onGazeHint,
   utterance,
   onMute,
   anchorRef,
 }: BitbagChatProps) {
-  const backend = useMemo(() => new BitbagBackend(), [])
+  // Default to the built-in scripted mock so existing consumers are byte-for-byte
+  // behavior-identical; a supplied backend takes over verbatim.
+  const backend = useMemo(() => backendProp ?? new BitbagBackend(), [backendProp])
   const wrapperRef = useRef<HTMLDivElement>(null)
   // No welcome message — the connect ritual types it in instead.
   const session = useChatSession({ backend, persona: PERSONA })

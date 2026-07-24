@@ -6,7 +6,7 @@ import {
   ViewportShell,
   ViewportSpacer,
 } from '@agenticdevelopertoolkit/viewport'
-import type { GazeVector } from '@agenticdevelopertoolkit/chat'
+import type { ChatBackend, GazeVector } from '@agenticdevelopertoolkit/chat'
 import type { ThemeKey } from '@agenticdevelopertoolkit/themes'
 import { BitbagChat } from './BitbagChat'
 import { Bitbag, type BitbagExpression } from './avatar'
@@ -15,6 +15,11 @@ import { DEFAULT_THEME } from './voice'
 export interface BitbagStageProps {
   /** The toolkit theme that skins his chat. Defaults to the adh house style. */
   theme?: ThemeKey
+  /**
+   * The chat backend driving his conversation. Defaults to bitbag's built-in
+   * scripted mock; pass a real `ChatBackend` to wire him to a live service.
+   */
+  backend?: ChatBackend
   /** Pixel width of bitbag himself. Default 160. */
   size?: number
   /** Forces an expression, outranking the chat's hints. For debug menus. */
@@ -33,6 +38,7 @@ export interface BitbagStageProps {
  */
 export function BitbagStage({
   theme = DEFAULT_THEME,
+  backend,
   size = 160,
   expressionOverride = null,
   logo,
@@ -73,6 +79,7 @@ export function BitbagStage({
         <ViewportComposer className="pb-6">
           <BitbagChat
             theme={theme}
+            backend={backend}
             onExpressionHint={onHint}
             onGazeHint={onGaze}
             utterance={utterance}
