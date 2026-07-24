@@ -1,5 +1,6 @@
 // src/__tests__/backend.test.ts
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ChatResponse } from '@agentic-developer-toolkit/chat'
 import { BitbagBackend } from '../backend'
 import { FALLBACKS, INTRO } from '../voice'
 
@@ -179,7 +180,7 @@ describe('BitbagBackend', () => {
     await b.sendMessage('x', []) // drains INTRO[0]
     await b.sendMessage('x', []) // drains INTRO[1]
 
-    const drawn: string[] = []
+    const drawn: ChatResponse[] = []
     for (let i = 0; i < FALLBACKS.length; i++) {
       // Doesn't match any SEEDED pattern, so every draw falls through to the bag.
       drawn.push(await b.sendMessage('zzzqqqxyz', []))
