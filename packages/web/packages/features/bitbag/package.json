@@ -18,7 +18,10 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
-    "./css/bitbag-chat.css": "./dist/css/bitbag-chat.css"
+    "./css/bitbag-chat.css": {
+      "development": "./src/styles/bitbag-chat.css",
+      "default": "./dist/css/bitbag-chat.css"
+    }
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",

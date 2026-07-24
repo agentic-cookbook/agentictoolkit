@@ -114,7 +114,7 @@ export function BitbagChat({
   const { echo, idleIndex } = useTransientEcho(utterance)
   const idleWord = useRotatingPhrase(IDLE_WORDS, idleIndex)
 
-  const mood = usePersonaMood<BitbagExpression>({
+  const { mood, beat } = usePersonaMood<BitbagExpression>({
     responding,
     composing: userTyping,
     flightMoods: FLIGHT_MOODS,
@@ -133,8 +133,8 @@ export function BitbagChat({
     return () => clearTimeout(id)
   }, [connected])
   useEffect(() => {
-    onMute?.(responding || mood === ANSWER_BEAT.mood || inputDisabled || quietStart)
-  }, [responding, mood, inputDisabled, quietStart, onMute])
+    onMute?.(responding || beat || inputDisabled || quietStart)
+  }, [responding, beat, inputDisabled, quietStart, onMute])
 
   useCaretGaze(wrapperRef, anchorRef, (g) => onGazeHint?.(g))
   const caretBox = useBlockCursor(wrapperRef, theme === TERMINAL_THEME, sentCount)
