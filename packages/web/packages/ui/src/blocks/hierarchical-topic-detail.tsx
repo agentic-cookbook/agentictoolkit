@@ -1216,12 +1216,11 @@ function MinimizedStack({
   const pinned = (level: TopicLevel) => override[level.id] ?? false
   // A list shows as its icon strip when intent says so OR the window auto-undisclosed it (`auto`).
   // Off-screen drilling (`hidden`) is separate and applied last.
-  const isCollapsed = (level: TopicLevel, i: number) =>
-    pinned(level) || auto.has(level.id)
+  const isCollapsed = (level: TopicLevel) => pinned(level) || auto.has(level.id)
   // The visible width a list occupies in the fit math: 0 if slid off-screen, its icon strip if
   // collapsed, else its full/dragged width.
   const visibleWidth = (level: TopicLevel, i: number) =>
-    i < hidden ? 0 : isCollapsed(level, i) ? COLLAPSED_RAIL : naturalWidth(level)
+    i < hidden ? 0 : isCollapsed(level) ? COLLAPSED_RAIL : naturalWidth(level)
 
   // Recompute the window auto-disclosure for the current container width — the spec's TWO-PHASE
   // response, planned from scratch each time (so growing the window re-discloses then re-shows, in
@@ -1276,7 +1275,7 @@ function MinimizedStack({
   // fit rules still run on top, so an "expand all" only discloses the lists that actually fit.
   const setCollapse = (i: number, e: ReactMouseEvent) => {
     const level = rendered[i]!
-    const target = !isCollapsed(level, i)
+    const target = !isCollapsed(level)
     hlog(rendered[0]?.id ?? "htdv", "collapse-toggle", {
       list: level.id,
       to: target ? "collapsed" : "open",
@@ -1326,7 +1325,7 @@ function MinimizedStack({
 
   // LAYOUT LOG — the fit pass's discrete outcome (icon strips + off-screen count), on change only
   // (htdv-log.ts).
-  const fitSig = `${rendered.map((l, i) => (isCollapsed(l, i) ? "c" : "o")).join("")}|${hidden}`
+  const fitSig = `${rendered.map((l) => (isCollapsed(l) ? "c" : "o")).join("")}|${hidden}`
   const loggedFitSig = useRef<string | null>(null)
   useEffect(() => {
     if (loggedFitSig.current === fitSig) return
@@ -1336,7 +1335,7 @@ function MinimizedStack({
       w: containerRef.current?.clientWidth ?? 0,
       minPx,
       lists: rendered.length,
-      collapsed: rendered.filter((l, i) => isCollapsed(l, i)).map((l) => l.id),
+      collapsed: rendered.filter((l) => isCollapsed(l)).map((l) => l.id),
       hidden,
     })
   })
@@ -1410,7 +1409,7 @@ function MinimizedStack({
               titleActions={level.titleActions}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
-              collapsed={isCollapsed(level, i)}
+              collapsed={isCollapsed(level)}
               onToggle={manualCollapse ? (e) => setCollapse(i, e) : () => {}}
               onResize={(w) => onResizeLevel(level, w)}
               onResizeStart={() => setDragging(true)}
@@ -1635,7 +1634,7 @@ function CoveredStack({
     }
   }
   // A member's geometry: revealed → full rail width, chained from the hovered list; else the covered
-  // layout above (a 40px peek, or its full width when disclosed).
+  // layout above (a COVERED_PEEK-wide (32px) peek, or its full width when disclosed).
   const leftOf = (i: number) => (inGroup(i) ? revealLeft[i]! : left[i]!) - offshift
   const boxWidth = (i: number) => (inGroup(i) ? railWidth(rendered[i]!) : widthOf(i))
 
@@ -1707,7 +1706,10 @@ function CoveredStack({
     }
     document.addEventListener("pointerover", onPointerOver)
     return () => document.removeEventListener("pointerover", onPointerOver)
-  })
+    // Only re-subscribe when the hovered root appears/clears (the guard above turns on `null`);
+    // `columnIndexOf` is a stateless DOM reader and `setHoverId` is stable, so neither needs to be
+    // a dependency — leaving them out keeps this from re-binding the document listener every render.
+  }, [hoverId])
 
   // The `«`/`»` toggle sets a list's pin to the state it is moving TO. Holding the platform's
   // multi-select modifier (⌘ on macOS, Ctrl elsewhere) applies that same state to EVERY list at once
@@ -1806,7 +1808,7 @@ function CoveredStack({
         // THIS child so the overlap reads as physical. Index 0 has no parent.
         const parentCovered = i > 0 && isCovered(i - 1)
         // A covered list is rendered at its FULL width but its wrapper is clipped (`overflow-hidden`)
-        // to a COVERED_PEEK-wide box, so only the leading icon of each row shows — the 40px peek.
+        // to a COVERED_PEEK-wide box, so only the leading icon of each row shows — the 32px peek.
         // Revealing WIPES the box open to the full rail width (the `width` transition); the inner rail
         // keeps a fixed railWidth so its rows never reflow as the box widens.
         const revealed = inGroup(i) && !offscreen

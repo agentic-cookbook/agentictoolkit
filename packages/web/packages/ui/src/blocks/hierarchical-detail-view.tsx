@@ -44,9 +44,13 @@ export function useHierarchicalMenuDetailView(): boolean {
   return useContext(MenuDetailViewContext)
 }
 
-/** HMDV takes exactly HTDV's props plus one more `disclosureStyle` member, so the wider of the two
- *  IS the switch's surface and nothing here restates them — the props stay documented once, on the
- *  components, and cannot drift out of step with a third copy. */
+/** HMDV's props are a SUPERSET of HTDV's — HTDV's set plus the cascade-only members HMDV adds
+ *  (`disclosureStyle: "cascading"` and `autoHideTopics`) — so the wider of the two IS the switch's
+ *  surface and nothing here restates them: the props stay documented once, on the components, and
+ *  cannot drift out of step with a third copy. The two cascade-only props are meaningful only under
+ *  HMDV; the HTDV branch below reconciles `disclosureStyle` and drops `autoHideTopics` (HTDV has no
+ *  auto-hide mode), so a consumer passing one gets HMDV's behaviour when the cascade view is on and
+ *  no effect under the classic view. */
 export type HierarchicalDetailViewProps = ComponentProps<typeof HierarchicalMenuDetail>
 
 /**
@@ -64,6 +68,8 @@ export function HierarchicalDetailView(props: HierarchicalDetailViewProps) {
   // asks for it has to mean SOMETHING under the classic view. `covered` is that something: the
   // cascade already borrows covered's rules for its covering, pins and hover reveal, so it is the
   // same stack minus the vertical step — and it degrades rather than throwing a bad prop at HTDV.
+  // `autoHideTopics` (HMDV's other cascade-only prop) rides along in `...rest`; HTDV has no auto-hide
+  // mode and simply ignores it — an unknown prop, not an error.
   return (
     <HierarchicalTopicDetail
       {...rest}

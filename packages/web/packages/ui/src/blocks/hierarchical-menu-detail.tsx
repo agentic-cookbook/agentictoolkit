@@ -642,13 +642,21 @@ export function HierarchicalMenuDetail({
   const rowRef = useRef<HTMLDivElement>(null)
   const containerW = useContainerWidth(rowRef)
   const phone = usePhoneUserAgent()
-  // NARROW = "only a details view fits": the container can't hold ONE full topic list beside a
-  // minimum-width detail. A phone is always narrow regardless of the box it is given. Until the first
-  // measurement lands (containerW === 0) we assume wide — the layout effect corrects it pre-paint.
+  // NARROW = the wide layout has nothing left to trade: every list is down to its strip and the
+  // detail is at its minimum, and the container STILL can't fit them side by side. Below that the
+  // stack becomes a one-pane-at-a-time navigation controller. A phone is always narrow regardless of
+  // the box it is given. Until the first measurement lands (containerW === 0) we assume wide — the
+  // layout effect corrects it pre-paint.
+  //
+  // The floor adds the STRIP width (an icon rail when minimized, a COVERED_PEEK otherwise — the
+  // cascade borrows covered's peeking), matching HTDV. Flipping at `minDetail + FULL_RAIL` instead
+  // would turn the stack narrow while the wide layout still had lists to cover progressively, so
+  // every list vanished at once as the window shrank (see hierarchical-topic-detail.tsx's floor).
+  const stripPx = disclosureStyle === "minimized" ? COLLAPSED_RAIL : COVERED_PEEK
   const narrow =
     layoutMode === "narrow" ||
     (layoutMode === "auto" &&
-      (phone || (containerW > 0 && containerW < minDetailPx(minDetailWidth) + FULL_RAIL)))
+      (phone || (containerW > 0 && containerW < minDetailPx(minDetailWidth) + stripPx)))
 
   // THE AUTOMATIC FRONTIER DETAIL: while the frontier list has no selection, the detail pane is
   // owned by the package — by default an almost-empty centered nudge to select something
