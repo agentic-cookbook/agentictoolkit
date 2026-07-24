@@ -453,6 +453,54 @@ importers:
         specifier: ^4.1.4
         version: 4.1.6(@types/node@24.13.2)(jsdom@29.1.1)(vite@6.4.2(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0))
 
+  packages/features/bitbag:
+    devDependencies:
+      '@agentic-developer-toolkit/avatar':
+        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/avatar
+        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/avatar
+      '@agentic-developer-toolkit/chat':
+        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/chat
+        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/chat
+      '@agentic-developer-toolkit/themes':
+        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes
+        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes
+      '@testing-library/jest-dom':
+        specifier: ^6.9.1
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/react':
+        specifier: 19.2.16
+        version: 19.2.16
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.16)
+      esbuild-plugin-preserve-directives:
+        specifier: ^0.0.11
+        version: 0.0.11(esbuild@0.27.7)
+      gsap:
+        specifier: ^3.13.0
+        version: 3.15.0
+      jsdom:
+        specifier: ^29.0.2
+        version: 29.1.1
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.6(@types/node@24.13.2)(jsdom@29.1.1)(vite@6.4.2(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0))
+
   packages/features/chat:
     dependencies:
       react:
@@ -3607,6 +3655,9 @@ packages:
   gray-matter@4.0.3:
     resolution: {integrity: sha512-5v6yZd4JK3eMI3FqqCouswVqwugaA9r4dNZB1wwcmrD02QkV5H0y7XBQW8QwQqEaZY1pM9aqORSORhJRdNK44Q==}
     engines: {node: '>=6.0'}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   harper.js@2.4.0:
     resolution: {integrity: sha512-tFSoBJ9MfVoIVYBCrUXS0ovJr6uZ9l4HjGmpaEcsm7Ea/OnBf+LPSwgcVJUfHQVktMmuWyYXoV2ejUU1HnXkug==}
@@ -6781,6 +6832,8 @@ snapshots:
       kind-of: 6.0.3
       section-matter: 1.0.0
       strip-bom-string: 1.0.0
+
+  gsap@3.15.0: {}
 
   harper.js@2.4.0:
     dependencies:
