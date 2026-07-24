@@ -1,2 +1,10 @@
 // src/index.ts
-export {}
+export { BitbagStage } from './BitbagStage'
+export type { BitbagStageProps } from './BitbagStage'
+export { BitbagChat } from './BitbagChat'
+export type { BitbagChatProps } from './BitbagChat'
+export { Bitbag, EXPRESSIONS } from './avatar'
+export type { BitbagExpression } from './avatar'
+export { BitbagBackend } from './backend'
+export type { BitbagBackendOptions } from './backend'
+export { DEFAULT_THEME, TERMINAL_THEME } from './voice'

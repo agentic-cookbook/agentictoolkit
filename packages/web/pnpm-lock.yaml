@@ -464,6 +464,9 @@ importers:
       '@agentic-developer-toolkit/themes':
         specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes
         version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes
+      '@agentic-developer-toolkit/viewport':
+        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/viewport
+        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/viewport
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1

@@ -33,6 +33,7 @@
     "@agentic-developer-toolkit/avatar": "*",
     "@agentic-developer-toolkit/chat": "*",
     "@agentic-developer-toolkit/themes": "*",
+    "@agentic-developer-toolkit/viewport": "*",
     "gsap": "^3.13.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -41,6 +42,7 @@
     "@agentic-developer-toolkit/avatar": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/avatar",
     "@agentic-developer-toolkit/chat": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/chat",
     "@agentic-developer-toolkit/themes": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes",
+    "@agentic-developer-toolkit/viewport": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/viewport",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",
