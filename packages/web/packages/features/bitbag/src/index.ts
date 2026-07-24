@@ -1,6 +1,8 @@
 // src/index.ts
 export { BitbagStage } from './BitbagStage'
 export type { BitbagStageProps } from './BitbagStage'
+export { BitbagMini } from './BitbagMini'
+export type { BitbagMiniProps } from './BitbagMini'
 export { BitbagChat } from './BitbagChat'
 export type { BitbagChatProps } from './BitbagChat'
 export { Bitbag, EXPRESSIONS } from './avatar'
