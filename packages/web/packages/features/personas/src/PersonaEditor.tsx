@@ -9,6 +9,7 @@ import {
   FolderKanban,
   IdCard,
   KeyRound,
+  MessageSquare,
   ShieldCheck,
   SlidersHorizontal,
   Target,
@@ -34,9 +35,12 @@ import { AbilitiesPanel } from "./AbilitiesPanel";
 import { PermissionsPanel } from "./PermissionsPanel";
 import { InterestsEditor } from "./InterestsEditor";
 import { KnowledgeFacet } from "./InterestDocumentsPane";
+import { DemoFacet } from "./DemoFacet";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import {
   api,
+  personaBlank,
+  personaToBody,
   toPersonaDraft,
   type Persona,
   type PersonaBody,
@@ -155,21 +159,7 @@ function PersonaMemoryPane({
   );
 }
 
-const BLANK: PersonaDraft = {
-  id: "__draft__",
-  slug: "",
-  name: "",
-  description: null,
-  modelPrompt: "",
-  voice: null,
-  character: null,
-  examples: null,
-  avatarAttachmentId: null,
-  serviceId: null,
-  serviceName: null,
-  model: null,
-  visibility: "private",
-};
+const BLANK = personaBlank();
 
 const VISIBILITIES: { id: PersonaVisibility; label: string }[] = [
   { id: "public", label: "Public — listed on the registry" },
@@ -178,21 +168,7 @@ const VISIBILITIES: { id: PersonaVisibility; label: string }[] = [
 ];
 
 /** Build the wire body from a draft (drop display-only joins; coerce blanks to undefined). */
-function toBody(d: PersonaDraft): PersonaBody {
-  return {
-    slug: d.slug.trim(),
-    name: d.name.trim(),
-    description: d.description?.trim() || undefined,
-    modelPrompt: d.modelPrompt,
-    voice: d.voice?.trim() || undefined,
-    character: d.character?.trim() || undefined,
-    examples: d.examples?.trim() || undefined,
-    avatarAttachmentId: d.avatarAttachmentId,
-    serviceId: d.serviceId,
-    model: d.model,
-    visibility: d.visibility,
-  };
-}
+const toBody = personaToBody;
 
 /**
  * The persona editor — a topic/detail (one stack level) whose leaf carries a Save/Cancel bar over
@@ -570,6 +546,16 @@ export function PersonaEditor({
               : "Save this persona first to manage who can access it."}
           </SaveFirstNotice>
         ),
+    },
+    {
+      id: "demo",
+      label: "Demo Chat",
+      icon: <MessageSquare size={16} aria-hidden />,
+      description:
+        "A scripted conversation anyone can hold with this persona — no LLM service required.",
+      render: () => (
+        <DemoFacet value={draft.cannedChat} onChange={(v) => set("cannedChat", v)} />
+      ),
     },
     {
       id: "llm",
