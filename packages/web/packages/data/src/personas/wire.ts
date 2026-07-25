@@ -292,6 +292,19 @@ export interface ServiceRow {
   modelsFetchedAt?: string | null;
 }
 
+/** Mirrors backend/src/adh/src/llm/canned/config.ts — the toolkit deliberately does not
+ *  import backend or generated types, so this is a hand-kept, field-for-field copy. */
+export interface CannedPacing {
+  thinkMinMs: number; thinkJitterMs: number; tokenMinMs: number; tokenJitterMs: number;
+  reveal: "word" | "char";
+}
+export interface CannedSeeded { match: string[]; reply: string }
+export interface CannedScript {
+  intro: string[]; seeded: CannedSeeded[]; fallbacks: string[];
+  onExhausted: "reshuffle" | "hold-last";
+}
+export interface CannedChatConfig { enabled: boolean; pacing: CannedPacing; script: CannedScript }
+
 /** Backend row for `GET /persona/personas` (and a single persona). */
 export interface PersonaRow {
   id: string;
@@ -317,6 +330,7 @@ export interface PersonaRow {
    *  corpus buckets live. NOT the same ecosystem as `ownedEcosystemId` — the Knowledge/Memory
    *  panes scope to that one, the interest-documents pane scopes to this one. */
   corpusEcosystemId?: string | null;
+  cannedChat?: CannedChatConfig | null;
 }
 
 /** Backend row for `GET /public/personas/{slug}` and `GET
@@ -336,6 +350,7 @@ export interface PublicPersonaRow {
   visibility: "public" | "unlisted";
   createdAt: string;
   owner: PublicOwnerRow | null;
+  demoEnabled: boolean;
 }
 
 /** A persona's declared special interest (`persona.special_interests`). Three levels, narrowing:

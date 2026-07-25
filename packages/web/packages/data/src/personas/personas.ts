@@ -22,6 +22,7 @@ import type {
   PersonaRow,
   PublicPersonaRow,
   ConnectionSpec,
+  CannedChatConfig,
 } from "./wire";
 
 // The backend returns the /me payload UNWRAPPED (no `{ data }` envelope): GET and
@@ -218,6 +219,14 @@ export type {
   ConnectionSpecUrlVar,
   ConnectionSpecHeaderVar,
 } from "./wire";
+// Re-exported so the editor's demo facet can type its draft state without reaching
+// into ./wire directly.
+export type {
+  CannedChatConfig,
+  CannedPacing,
+  CannedScript,
+  CannedSeeded,
+} from "./wire";
 export type CreateServiceBody = {
   templateId?: string;
   name: string;
@@ -259,6 +268,8 @@ export type PersonaDraft = {
   serviceName?: string | null;
   model: string | null;
   visibility: PersonaVisibility;
+  /** Demo-mode script. Owner-only — absent from every public payload. */
+  cannedChat: CannedChatConfig | null;
 };
 // Map a loaded persona (response) into an editable draft, narrowing the spec's
 // loose `visibility: string` back to the UI union.
@@ -279,6 +290,7 @@ export function toPersonaDraft(p: Persona): PersonaDraft {
     serviceName: p.serviceName ?? null,
     model: p.model,
     visibility,
+    cannedChat: p.cannedChat ?? null,
   };
 }
 export type PublicPersona = PublicPersonaRow;
@@ -294,4 +306,5 @@ export type PersonaBody = {
   serviceId?: string | null;
   model?: string | null;
   visibility?: PersonaVisibility;
+  cannedChat?: CannedChatConfig | null;
 };
