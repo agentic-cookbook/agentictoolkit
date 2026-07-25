@@ -9,8 +9,10 @@ import {
   type TopicDetailItem,
   type TopicLevel,
 } from '@agentic-toolkit/ui/blocks'
+import { useAuth, isAdmin } from '@agentic-toolkit/auth'
 import { CRUD_TABLES } from './generated/table-metadata'
 import { CrudDataView } from './CrudDataView'
+import { readableTables } from './exposure'
 import { useExitGuardChannel } from './useExitGuardChannel'
 import type { CrudTableMeta } from './types'
 
@@ -107,9 +109,25 @@ export type CrudDataBrowserProps = CrudDataBrowserCommon &
 export function CrudDataBrowser(props: CrudDataBrowserProps) {
   const { tables, shell, selection, basePath, activeSchema, activeTable } = props
   const router = useRouter()
-  const allTables = useMemo(() => tables ?? Object.values(CRUD_TABLES), [tables])
+  // Admin-tier tables are hidden from a non-admin viewer: the backend refuses them outright, so
+  // listing them offers a row whose only outcome is a 403. Catalog-tier tables stay listed —
+  // they ARE readable — and CrudDataView renders them read-only. Presentation only; the server
+  // gate is the boundary either way (see exposure.ts).
+  //
+  // `user` is null while auth resolves, so a table starts hidden and appears once an admin is
+  // known. That direction is deliberate: a rail row that appears is far less alarming than one
+  // that vanishes, and a non-admin is never briefly shown something they cannot open.
+  const { user } = useAuth()
+  const viewerIsAdmin = isAdmin(user)
+  const allTables = useMemo(
+    () => readableTables(tables ?? Object.values(CRUD_TABLES), viewerIsAdmin),
+    [tables, viewerIsAdmin],
+  )
 
-  // level 0 = distinct schemas (sorted); level 1 = the open schema's tables (sorted).
+  // level 0 = distinct schemas (sorted); level 1 = the open schema's tables (sorted). Schemas
+  // are derived from the FILTERED tables, so a schema whose every table is admin-only (or an
+  // explicit `tables` prop narrowed to none) drops out of the rail entirely rather than opening
+  // onto an empty table list.
   const schemas = useMemo(
     () => [...new Set(allTables.map((t) => t.schema))].sort((a, b) => a.localeCompare(b)),
     [allTables],

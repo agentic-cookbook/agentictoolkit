@@ -12,6 +12,7 @@ const meta: CrudTableMeta = {
   basePath: '/demo/widgets',
   itemPath: '/demo/widgets/{id}',
   pkParams: ['id'],
+  exposure: 'owner',
   columns: [
     { name: 'id', type: 'string', required: false, nullable: false, serverManaged: true },
     { name: 'createdAt', type: 'string', required: false, nullable: false, serverManaged: true },
@@ -36,6 +37,7 @@ const rdidMeta: CrudTableMeta = {
   basePath: '/persona/personas',
   itemPath: '/persona/personas/{id}',
   pkParams: ['id'],
+  exposure: 'owner',
   columns: [
     { name: 'id', type: 'string', required: true, nullable: false, serverManaged: false, createOnly: true },
     { name: 'name', type: 'string', required: true, nullable: false, serverManaged: false },

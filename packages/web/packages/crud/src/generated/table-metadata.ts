@@ -10,6 +10,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/access/team-permissions",
     "itemPath": "/access/team-permissions/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -26,6 +27,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/billing/subscription-tiers",
     "itemPath": "/billing/subscription-tiers/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "key", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 64},
@@ -44,6 +46,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/billing/subscriptions",
     "itemPath": "/billing/subscriptions/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "userId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -65,6 +68,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/billing/tier-entitlements",
     "itemPath": "/billing/tier-entitlements/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "tierId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -80,6 +84,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/bucket/bucket-types",
     "itemPath": "/bucket/bucket-types/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": false, "createOnly": true},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false},
@@ -104,6 +109,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/bucket/buckets",
     "itemPath": "/bucket/buckets/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": false, "createOnly": true},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false},
@@ -127,6 +133,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/addresses",
     "itemPath": "/content/addresses/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -155,6 +162,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/categories",
     "itemPath": "/content/categories/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -180,6 +188,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/category-items",
     "itemPath": "/content/category-items/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -203,6 +212,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/contacts",
     "itemPath": "/content/contacts/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -230,6 +240,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/counters",
     "itemPath": "/content/counters/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -251,6 +262,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/dates",
     "itemPath": "/content/dates/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -277,6 +289,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/events",
     "itemPath": "/content/events/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -298,6 +311,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/feedback",
     "itemPath": "/content/feedback/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -327,6 +341,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/key-value-pairs",
     "itemPath": "/content/key-value-pairs/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -348,6 +363,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/keyword-items",
     "itemPath": "/content/keyword-items/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -371,6 +387,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/keywords",
     "itemPath": "/content/keywords/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -393,6 +410,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/list-items",
     "itemPath": "/content/list-items/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -415,6 +433,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/lists",
     "itemPath": "/content/lists/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -436,6 +455,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/locations",
     "itemPath": "/content/locations/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -463,6 +483,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/poll-options",
     "itemPath": "/content/poll-options/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -485,6 +506,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/polls",
     "itemPath": "/content/polls/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -509,6 +531,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/queue-items",
     "itemPath": "/content/queue-items/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -534,6 +557,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/queues",
     "itemPath": "/content/queues/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -554,6 +578,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/relationships",
     "itemPath": "/content/relationships/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -579,6 +604,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/social-links",
     "itemPath": "/content/social-links/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -604,6 +630,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/tags",
     "itemPath": "/content/tags/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -630,6 +657,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/content/urls",
     "itemPath": "/content/urls/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -662,6 +690,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/customer/customers",
     "itemPath": "/customer/customers/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -690,6 +719,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/document/blocks",
     "itemPath": "/document/blocks/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "documentId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -716,6 +746,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/document/documents",
     "itemPath": "/document/documents/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -740,6 +771,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/document/marks",
     "itemPath": "/document/marks/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "blockId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -765,6 +797,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/document/operations",
     "itemPath": "/document/operations/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "documentId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -792,6 +825,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/document/versions",
     "itemPath": "/document/versions/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "documentId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -817,6 +851,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/ecosystem/applications",
     "itemPath": "/ecosystem/applications/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": false, "createOnly": true},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false},
@@ -839,6 +874,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/ecosystem/ecosystem-regions",
     "itemPath": "/ecosystem/ecosystem-regions/{id}",
     "pkParams": ["id"],
+    "exposure": "admin",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 64},
       {"name": "displayName", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 128},
@@ -855,6 +891,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/ecosystem/ecosystems",
     "itemPath": "/ecosystem/ecosystems/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": false, "createOnly": true},
       {"name": "ownerId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -879,6 +916,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-bookmarks",
     "itemPath": "/integration/integration-bookmarks/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -912,6 +950,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-calendar-events",
     "itemPath": "/integration/integration-calendar-events/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "title", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 500},
@@ -951,6 +990,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-financial-transactions",
     "itemPath": "/integration/integration-financial-transactions/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -986,6 +1026,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-items",
     "itemPath": "/integration/integration-items/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1022,6 +1063,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-media-items",
     "itemPath": "/integration/integration-media-items/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1055,6 +1097,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-pages",
     "itemPath": "/integration/integration-pages/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1085,6 +1128,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/integration/integration-social-notifications",
     "itemPath": "/integration/integration-social-notifications/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1116,6 +1160,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/monitoring/endpoints",
     "itemPath": "/monitoring/endpoints/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "siteId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1141,6 +1186,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/monitoring/health-checks",
     "itemPath": "/monitoring/health-checks/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "endpointId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1161,6 +1207,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/monitoring/site-groups",
     "itemPath": "/monitoring/site-groups/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "userId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1182,6 +1229,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/monitoring/sites",
     "itemPath": "/monitoring/sites/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "siteGroupId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1203,6 +1251,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona-memory/blocks",
     "itemPath": "/persona-memory/blocks/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1225,6 +1274,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona-memory/facts",
     "itemPath": "/persona-memory/facts/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1259,6 +1309,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona-memory/links",
     "itemPath": "/persona-memory/links/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1281,6 +1332,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona-memory/memories",
     "itemPath": "/persona-memory/memories/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1319,6 +1371,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona/models",
     "itemPath": "/persona/models/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "templateId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 36},
@@ -1337,6 +1390,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona/personas",
     "itemPath": "/persona/personas/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": false, "createOnly": true},
       {"name": "userId", "type": "string", "required": false, "nullable": true, "serverManaged": true, "maxLength": 36},
@@ -1366,6 +1420,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/persona/tool-templates",
     "itemPath": "/persona/tool-templates/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "toolKey", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 255},
@@ -1384,6 +1439,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/personal/education",
     "itemPath": "/personal/education/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1410,6 +1466,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/personal/jobs",
     "itemPath": "/personal/jobs/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1436,6 +1493,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/project/tasks",
     "itemPath": "/project/tasks/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1469,6 +1527,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/settings/notifications",
     "itemPath": "/settings/notifications/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "customerId", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
@@ -1492,6 +1551,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/system/audit-events",
     "itemPath": "/system/audit-events/{id}",
     "pkParams": ["id"],
+    "exposure": "admin",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": true, "serverManaged": false, "maxLength": 36},
@@ -1511,6 +1571,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/team/teams",
     "itemPath": "/team/teams/{id}",
     "pkParams": ["id"],
+    "exposure": "owner",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ownerKind", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 16},
@@ -1531,6 +1592,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/usage/principal-tiers",
     "itemPath": "/usage/principal-tiers/{scope}/{principalId}",
     "pkParams": ["scope", "principalId"],
+    "exposure": "admin",
     "columns": [
       {"name": "scope", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 16},
       {"name": "principalId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 64},
@@ -1544,6 +1606,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/usage/rate-limit-tiers",
     "itemPath": "/usage/rate-limit-tiers/{id}",
     "pkParams": ["id"],
+    "exposure": "catalog",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "slug", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 50},
@@ -1568,6 +1631,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/usage/usage-counters",
     "itemPath": "/usage/usage-counters/{scope}/{principalId}/{periodStart}",
     "pkParams": ["scope", "principalId", "periodStart"],
+    "exposure": "admin",
     "columns": [
       {"name": "scope", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 16},
       {"name": "principalId", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 64},
@@ -1584,6 +1648,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/usage/usage-events",
     "itemPath": "/usage/usage-events/{id}",
     "pkParams": ["id"],
+    "exposure": "admin",
     "columns": [
       {"name": "id", "type": "integer", "required": false, "nullable": false, "serverManaged": true},
       {"name": "scope", "type": "string", "required": true, "nullable": false, "serverManaged": false, "maxLength": 16},

@@ -19,6 +19,7 @@ const tiers: CrudTableMeta = {
   basePath: '/billing/subscription-tiers',
   itemPath: '/billing/subscription-tiers/{id}',
   pkParams: ['id'],
+  exposure: 'owner',
   columns: [],
 }
 
@@ -29,6 +30,7 @@ const links: CrudTableMeta = {
   basePath: '/persona-memory/links',
   itemPath: '/persona-memory/links/{srcId}/{dstId}/{relation}',
   pkParams: ['srcId', 'dstId', 'relation'],
+  exposure: 'owner',
   columns: [],
 }
 

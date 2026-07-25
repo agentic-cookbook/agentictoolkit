@@ -28,6 +28,22 @@ export interface CrudColumn {
   maxLength?: number
 }
 
+/**
+ * A table's authorization tier, as the backend documents it (`x-exposure` on the collection
+ * path) from the same map its runtime gate enforces:
+ *
+ *   - `owner`   — any authenticated principal; rows are isolated to the caller's tenant
+ *                 server-side, so the whole table is readable and writable here.
+ *   - `catalog` — a global catalog or a server-written ledger: readable by anyone
+ *                 authenticated, writable only by an admin.
+ *   - `admin`   — readable AND writable only by an admin.
+ *
+ * The UI consumes this to present the surface the viewer may actually use (hide admin-only
+ * tables, render catalog tables read-only) instead of letting them discover it as a 403.
+ * It is NOT a security boundary — the server-side check is, and it runs regardless.
+ */
+export type CrudExposure = 'owner' | 'catalog' | 'admin'
+
 export interface CrudTableMeta {
   /** '<schema>/<table>' in URL (kebab) form, e.g. 'billing/subscription-tiers'. */
   key: string
@@ -41,6 +57,9 @@ export interface CrudTableMeta {
   itemPath: string
   /** itemPath's params in order — also the row fields holding the primary key. */
   pkParams: string[]
+  /** Who may reach this table, per the backend — see {@link CrudExposure}. Required, with no
+   *  default: guessing would either hide a usable table or offer an unusable one. */
+  exposure: CrudExposure
   columns: CrudColumn[]
 }
 

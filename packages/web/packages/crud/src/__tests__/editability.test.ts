@@ -18,6 +18,7 @@ const meta: CrudTableMeta = {
   basePath: '/demo/widgets',
   itemPath: '/demo/widgets/{id}',
   pkParams: ['id'],
+  exposure: 'owner',
   columns: [],
 }
 

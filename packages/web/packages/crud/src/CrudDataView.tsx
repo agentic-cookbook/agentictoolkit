@@ -24,6 +24,7 @@ import { CrudFieldInput } from './CrudFieldInput'
 import { buildPayload, toDraft, type CrudDraft } from './CrudRecordForm'
 import { isColumnEditable, isColumnHidden, type EditableMode } from './editability'
 import { isRowDirty, mergeDraft } from './edits'
+import { canWriteTable } from './exposure'
 import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
 import { rowKey, useCrudResource } from './useCrudResource'
@@ -112,16 +113,24 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
   // single "active for details" row.
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // Who the viewer is — the input to both write-side gates below.
+  const { user } = useAuth()
+  const viewerIsAdmin = isAdmin(user)
+  // Whether this viewer may write this table at all, per the backend's documented exposure tier:
+  // `catalog` and `admin` tables reserve writes to admins, so for everyone else the whole editing
+  // surface goes away — no Create, no Delete, no selection checkboxes, every field locked. That
+  // leaves nothing to make the pane dirty, so Cancel/Save stay disabled without a special case.
+  // Presentation only: the backend refuses the write regardless (see exposure.ts).
+  const canWrite = canWriteTable(meta, viewerIsAdmin)
   // Cross-ecosystem move (admin): available on any ecosystem-scoped table (one carrying an
   // `ecosystem_id` column), acting on the checked rows — so the SAME generic action reaches every
   // scoped table (personas included), not a per-feature bolt-on.
-  const { user } = useAuth()
   // Column names are the camelCase JSON field names (CrudColumn.name), so the tenant column is
   // `ecosystemId`, not `ecosystem_id`. Single-pk only — the move endpoint takes one id, and the
   // backend refuses composite keys, so a composite-pk table (e.g. persona_memory.links) must not
   // offer the action.
   const canMove =
-    isAdmin(user) &&
+    viewerIsAdmin &&
     meta.pkParams.length === 1 &&
     meta.columns.some((column) => column.name === 'ecosystemId')
   const [movingOpen, setMovingOpen] = useState(false)
@@ -335,8 +344,20 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
     <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-dirty={dirty || undefined}>
       <ButtonBar
         actions={actions}
+        showCreate={canWrite}
+        showDelete={canWrite}
         leading={
-          canMove ? (
+          !canWrite ? (
+            // Say WHY the actions are missing. A bar that silently loses its buttons reads as
+            // broken; naming the state (and the reason, on hover) is the honest version.
+            // `canMove` implies admin, so it can never be the alternative here.
+            <span
+              className="font-mono text-[0.7rem] uppercase tracking-wider text-apt-text-dim"
+              title="Shared platform data: everyone can read this table, only an administrator can change it."
+            >
+              Read-only
+            </span>
+          ) : canMove ? (
             <Button
               variant="secondary"
               disabled={selected.size === 0}
@@ -389,6 +410,7 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
             error={error}
             activeKey={activeKey}
             onSelect={setActiveKey}
+            selectable={canWrite}
             selected={selected}
             allSelected={allSelected}
             onToggleSelect={toggleSelect}
@@ -399,6 +421,7 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
           <RowDetails
             meta={meta}
             baseline={baseline}
+            readOnly={!canWrite}
             mode={isDraftActive ? 'create' : 'edit'}
             edits={activeKey != null ? edits[activeKey] : undefined}
             onEdit={(name, value) => {
@@ -452,6 +475,10 @@ interface RowListProps {
   error: string | null
   activeKey: string | null
   onSelect: (key: string) => void
+  /** Whether rows can be checked at all. False on a table this viewer may only read: the
+   *  checkbox exists to feed Delete / Move, both of which are gone, so the whole leading
+   *  column drops rather than offering a control with nothing to act on. */
+  selectable: boolean
   /** Server rowKeys checked for deletion. */
   selected: Set<string>
   allSelected: boolean
@@ -459,9 +486,9 @@ interface RowListProps {
   onToggleSelectAll: (checked: boolean) => void
 }
 
-/** The top pane: a leading select-for-delete checkbox column, then every column
- *  on a single full-width line (resizable headers), long cells truncated with the
- *  full value on hover. Server rows first, then create drafts (marked "new").
+/** The top pane: a leading select-for-delete checkbox column (writable tables only), then
+ *  every column on a single full-width line (resizable headers), long cells truncated with
+ *  the full value on hover. Server rows first, then create drafts (marked "new").
  *  Clicking or pressing Enter/Space on a row makes it the active row the detail
  *  pane edits (keyless rows are non-interactive — they can't be addressed). */
 function RowList({
@@ -473,6 +500,7 @@ function RowList({
   error,
   activeKey,
   onSelect,
+  selectable,
   selected,
   allSelected,
   onToggleSelect,
@@ -517,14 +545,16 @@ function RowList({
         <table className="w-full table-fixed text-left text-sm">
           <thead>
             <tr className="border-b border-apt-border">
-              <th style={{ width: 36 }} className="px-2 py-2 align-middle">
-                <Checkbox
-                  checked={allSelected}
-                  disabled={rows.length === 0}
-                  aria-label="Select all rows"
-                  onCheckedChange={(checked) => onToggleSelectAll(checked === true)}
-                />
-              </th>
+              {selectable && (
+                <th style={{ width: 36 }} className="px-2 py-2 align-middle">
+                  <Checkbox
+                    checked={allSelected}
+                    disabled={rows.length === 0}
+                    aria-label="Select all rows"
+                    onCheckedChange={(checked) => onToggleSelectAll(checked === true)}
+                  />
+                </th>
+              )}
               {columns.map((column) => (
                 <ColumnHeader
                   key={column.name}
@@ -550,6 +580,7 @@ function RowList({
                   cellKey={key}
                   interactive={interactive}
                   active={interactive && key === activeKey}
+                  selectable={selectable}
                   selected={selected.has(key)}
                   onSelect={onSelect}
                   onToggleSelect={onToggleSelect}
@@ -571,11 +602,16 @@ function RowList({
                     (isActive ? 'bg-apt-surface-2' : 'hover:bg-apt-surface')
                   }
                 >
-                  <td className="px-2 py-1.5 align-middle">
-                    <span className="font-mono text-[0.6rem] uppercase tracking-wider text-apt-gold">
-                      new
-                    </span>
-                  </td>
+                  {/* The drafts' counterpart to the checkbox column — dropped with it so the
+                      table stays rectangular. (A read-only table has no drafts to begin with,
+                      since Create is gone.) */}
+                  {selectable && (
+                    <td className="px-2 py-1.5 align-middle">
+                      <span className="font-mono text-[0.6rem] uppercase tracking-wider text-apt-gold">
+                        new
+                      </span>
+                    </td>
+                  )}
                   {columns.map((column) => {
                     const text = formatCellDisplay(buffer?.[column.name])
                     return (
@@ -616,6 +652,7 @@ const ServerRow = memo(function ServerRow({
   cellKey,
   interactive,
   active,
+  selectable,
   selected,
   onSelect,
   onToggleSelect,
@@ -626,6 +663,7 @@ const ServerRow = memo(function ServerRow({
   cellKey: string
   interactive: boolean
   active: boolean
+  selectable: boolean
   selected: boolean
   onSelect: (key: string) => void
   onToggleSelect: (key: string, checked: boolean) => void
@@ -644,14 +682,16 @@ const ServerRow = memo(function ServerRow({
     >
       {/* The checkbox is its own click target — selecting a row for deletion must
           not also make it the active detail row. */}
-      <td className="px-2 py-1.5 align-middle" onClick={(event) => event.stopPropagation()}>
-        <Checkbox
-          checked={selected}
-          disabled={!interactive}
-          aria-label={`Select row ${rowId}`}
-          onCheckedChange={(checked) => onToggleSelect(cellKey, checked === true)}
-        />
-      </td>
+      {selectable && (
+        <td className="px-2 py-1.5 align-middle" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            checked={selected}
+            disabled={!interactive}
+            aria-label={`Select row ${rowId}`}
+            onCheckedChange={(checked) => onToggleSelect(cellKey, checked === true)}
+          />
+        </td>
+      )}
       {columns.map((column) => {
         const text = formatCellDisplay(row[column.name])
         return (
@@ -756,6 +796,9 @@ interface RowDetailsProps {
   baseline: CrudDraft | null
   /** 'create' for an unsaved draft (createOnly columns editable), else 'edit'. */
   mode: EditableMode
+  /** Lock EVERY column, whatever its own editability — the viewer may read this table but not
+   *  write it. Nothing can then go dirty, so Save/Cancel stay disabled on their own. */
+  readOnly: boolean
   /** Dirty edits for the active row (col → value), or undefined when clean. */
   edits: CrudDraft | undefined
   onEdit: (name: string, value: string | boolean) => void
@@ -770,7 +813,7 @@ interface RowDetailsProps {
  * in the top row list). The row identity + the collapse disclosure live on the
  * split's header bar (CrudDataView passes them), not here.
  */
-function RowDetails({ meta, baseline, mode, edits, onEdit }: RowDetailsProps) {
+function RowDetails({ meta, baseline, mode, readOnly, edits, onEdit }: RowDetailsProps) {
   const bodyId = useId()
 
   if (!baseline) {
@@ -786,7 +829,7 @@ function RowDetails({ meta, baseline, mode, edits, onEdit }: RowDetailsProps) {
     <div className="flex min-w-0 flex-col">
       <dl className="flex flex-col gap-2.5 px-4 py-4">
         {columns.map((column) => {
-          const editable = isColumnEditable(meta, column, mode)
+          const editable = !readOnly && isColumnEditable(meta, column, mode)
           const value = edits?.[column.name] ?? baseline[column.name]
           const fieldId = `${bodyId}-${column.name}`
           return (

@@ -35,6 +35,7 @@ const TABLES: CrudTableMeta[] = [
     basePath: "/persona-memory/blocks",
     itemPath: "/persona-memory/blocks/{id}",
     pkParams: ["id"],
+    exposure: "owner",
     columns: [],
   },
 ];
