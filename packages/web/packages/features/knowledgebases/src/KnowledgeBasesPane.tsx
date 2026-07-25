@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
-import { CrudDataView, useExitGuardChannel, type CrudTableMeta } from "@agentic-toolkit/crud";
+import {
+  CrudDataView,
+  readableTables,
+  useExitGuardChannel,
+  useViewer,
+  type CrudTableMeta,
+} from "@agentic-toolkit/crud";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { useStackLevel, useRailExitGuard } from "@agentic-toolkit/resource";
 
@@ -30,13 +36,29 @@ export function KnowledgeBasesPane({
   scopeEcosystemId?: string;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const active = selected ? tables.find((t) => t.table === selected) ?? null : null;
   const { exitGuard, registerGuard } = useExitGuardChannel();
+
+  // The same exposure gate the /all-data browser applies (CrudDataBrowser), for the same reason:
+  // a table the viewer may not READ is a rail row whose only outcome is a 403. Today's
+  // persona-memory tables are all `owner`, so this is the identity — it is here so a host that
+  // later maps a catalog/admin table into this feature can't hand out a row that just fails.
+  // Empty until auth settles rather than "filtered for a non-admin", so an admin never watches a
+  // table vanish and pop back. WRITE access is CrudDataView's own call (it renders read-only).
+  const { isAdmin: viewerIsAdmin, ready: viewerReady } = useViewer();
+  const visible = useMemo(
+    () => (viewerReady ? readableTables(tables, viewerIsAdmin) : []),
+    [tables, viewerIsAdmin, viewerReady],
+  );
+  const active = selected ? visible.find((t) => t.table === selected) ?? null : null;
 
   const items = useMemo<TopicDetailItem[]>(
     () =>
-      tables.map((t) => ({ id: t.table, label: t.table, icon: <BookOpen size={16} aria-hidden /> })),
-    [tables],
+      visible.map((t) => ({
+        id: t.table,
+        label: t.table,
+        icon: <BookOpen size={16} aria-hidden />,
+      })),
+    [visible],
   );
   const level: TopicLevel = {
     id: "knowledgebases-tables",
@@ -45,7 +67,9 @@ export function KnowledgeBasesPane({
     selectedId: active?.table ?? null,
     onSelect: setSelected,
     onClear: () => setSelected(null),
-    emptyLabel: "No tables.",
+    // "No tables." would be a lie for the paint before auth settles, when the list is empty
+    // because the answer isn't in yet.
+    emptyLabel: viewerReady ? "No tables." : "Loading…",
   };
   useStackLevel(level);
   // Guard is live only while a table editor is open.

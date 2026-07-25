@@ -17,12 +17,20 @@ import {
 import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 import type { CrudTableMeta } from "@agentic-toolkit/crud";
 
+// The viewer behind the exposure gate. Hoisted so each test can set who is looking without
+// standing up an AuthProvider; `readableTables` itself stays the REAL implementation, so these
+// tests pin the pane's use of the gate, not a restatement of it.
+const { viewerRef } = vi.hoisted(() => ({
+  viewerRef: { current: { isAdmin: false, ready: true } },
+}));
+
 vi.mock("@agentic-toolkit/crud", async () => {
   const actual = await vi.importActual<typeof import("@agentic-toolkit/crud")>(
     "@agentic-toolkit/crud",
   );
   return {
     ...actual,
+    useViewer: () => viewerRef.current,
     CrudDataView: ({
       meta,
       scopeEcosystemId,
@@ -40,7 +48,10 @@ vi.mock("@agentic-toolkit/crud", async () => {
 
 import { KnowledgeBasesPane } from "./KnowledgeBasesPane";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  viewerRef.current = { isAdmin: false, ready: true };
+});
 
 const TABLES: CrudTableMeta[] = [
   {
@@ -66,12 +77,14 @@ const TABLES: CrudTableMeta[] = [
 ];
 
 /** Renders the published level's rows as clickable buttons — enough to drive table selection the
- *  way the hub's workspace shell (or a standalone feature site's own rail) would. */
+ *  way the hub's workspace shell (or a standalone feature site's own rail) would. An empty level
+ *  shows its `emptyLabel`, the way a real rail does. */
 function Rail({ levels }: { levels: TopicLevel[] }) {
   const level = levels[0];
   if (!level) return null;
   return (
     <div>
+      {level.items.length === 0 && <p>{level.emptyLabel}</p>}
       {level.items.map((it) => (
         <button key={it.id} type="button" onClick={() => level.onSelect(it.id)}>
           {it.label}
@@ -144,6 +157,54 @@ describe("KnowledgeBasesPane", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "facts" }));
     expect(screen.getByText(/^Editing facts/)).not.toBeNull();
+  });
+
+  // The exposure gate, which this pane applies because it publishes its own table list (the
+  // /all-data browser filters the same way). Persona-memory is all `owner` today, so these use a
+  // host that maps in a stricter table — exactly the case the gate exists for.
+  describe("exposure", () => {
+    const ADMIN_TABLE: CrudTableMeta = {
+      key: "system/audit_events",
+      schema: "system",
+      table: "audit-events",
+      basePath: "/system/audit-events",
+      itemPath: "/system/audit-events/{id}",
+      pkParams: ["id"],
+      exposure: "admin",
+      columns: [],
+    };
+
+    it("withholds a table the viewer may not read", () => {
+      render(
+        <Harness>
+          <KnowledgeBasesPane tables={[...TABLES, ADMIN_TABLE]} />
+        </Harness>,
+      );
+      expect(screen.queryByRole("button", { name: "audit-events" })).toBeNull();
+      expect(screen.getByRole("button", { name: "blocks" })).not.toBeNull();
+    });
+
+    it("lists it for an admin", () => {
+      viewerRef.current = { isAdmin: true, ready: true };
+      render(
+        <Harness>
+          <KnowledgeBasesPane tables={[...TABLES, ADMIN_TABLE]} />
+        </Harness>,
+      );
+      expect(screen.getByRole("button", { name: "audit-events" })).not.toBeNull();
+    });
+
+    it("publishes nothing until the viewer answer settles — 'Loading…', not 'No tables.'", () => {
+      // Filtering on a not-yet-known admin bit would make an admin's table vanish and pop back.
+      viewerRef.current = { isAdmin: false, ready: false };
+      render(
+        <Harness>
+          <KnowledgeBasesPane tables={TABLES} />
+        </Harness>,
+      );
+      expect(screen.queryByRole("button", { name: "blocks" })).toBeNull();
+      expect(screen.getByText("Loading…")).not.toBeNull();
+    });
   });
 
   it("threads scopeEcosystemId through to CrudDataView (the persona editor's Knowledge facet)", () => {

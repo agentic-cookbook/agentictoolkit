@@ -24,6 +24,10 @@ export {
 } from './editability'
 export type { EditableMode, EditableOverrides } from './editability'
 export { canReadTable, canWriteTable, readableTables } from './exposure'
+// For feature packages that publish their OWN table list (e.g. @agentic-toolkit/knowledgebases):
+// they need the same viewer this package's browsers gate on, or they list what the server refuses.
+export { useViewer } from './viewer'
+export type { CrudViewer } from './viewer'
 export { CRUD_TABLES } from './generated/table-metadata'
 export { CRUD_SCHEMAS } from './schemas'
 export { ErrorText } from '@agentic-toolkit/ui/components/error-text'
