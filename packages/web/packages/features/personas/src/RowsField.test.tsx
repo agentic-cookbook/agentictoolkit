@@ -6,10 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { RowsField } from "./RowsField";
 
-// REQUIRED: this package's vitest config has no global afterEach, so RTL's auto-cleanup never
-// runs. Without this, every `harness()` render stacks up in the same document and the singular
-// queries below ("Add" button, /none yet/) throw "found multiple elements" from test 2 onward —
-// failing against a perfectly correct component. All four sibling tests carry this same line.
+// Explicit, though redundant: `featureVitest()` sets `globals: true`, so RTL's own auto-cleanup
+// (dist/index.js:23 — `if (typeof afterEach === 'function')`) already fires between tests. All
+// four sibling suites state it anyway; follow the convention rather than leaving the next reader
+// to re-derive that the singular queries below ("Add" button, /none yet/) are safe.
 afterEach(cleanup);
 
 function harness(value: string[], onChange = vi.fn()) {
