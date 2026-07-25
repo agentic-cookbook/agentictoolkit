@@ -2,6 +2,10 @@
 "use client";
 
 import type { CannedChatConfig } from "@agentic-toolkit/data/personas";
+import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
+import { Input } from "@agentic-toolkit/ui/components/input";
+import { Select } from "@agentic-toolkit/ui/components/select";
+import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { RowsField } from "./RowsField";
 
 /** Mirrors the backend's CANNED_DEFAULT_PACING. */
@@ -11,18 +15,22 @@ export const DEMO_DEFAULT_CONFIG: CannedChatConfig = {
   script: { intro: [], seeded: [], fallbacks: [], onExhausted: "reshuffle" },
 };
 
+/** A pacing number. Empty or non-numeric input clamps to 0 rather than writing NaN into
+ *  the config — `Number("")` is 0 but `Number("1e")` is NaN, and a NaN here survives all
+ *  the way to the server's pacing math. */
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span>{label}</span>
-      <input
+    <Field label={label} className="min-w-[9rem] flex-1">
+      <Input
         type="number"
         min={0}
-        className="rounded border px-2 py-1"
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onChange(Number.isFinite(n) && n >= 0 ? n : 0);
+        }}
       />
-    </label>
+    </Field>
   );
 }
 
@@ -44,23 +52,28 @@ export function DemoFacet({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-4">
-      <label className="flex items-center gap-2 text-sm font-medium">
-        <input type="checkbox" checked={cfg.enabled} onChange={(e) => patch({ enabled: e.target.checked })} />
+      {/* Checkbox carries its own accessible name via aria-label and the visible copy is a
+          demoted sibling OUTSIDE it — the same shape AbilitiesPanel's grant rows use. */}
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Checkbox
+          checked={cfg.enabled}
+          onCheckedChange={(checked) => patch({ enabled: checked === true })}
+          aria-label="Enable demo chat"
+        />
         <span>Enable demo chat</span>
-      </label>
-      <p className="text-xs opacity-70">
+      </div>
+      <p className="text-xs text-apt-text-muted">
         A scripted conversation anyone can hold with this persona — including signed-out visitors,
         and even with no LLM service configured. Demo conversations never count toward this
         persona&apos;s stats, XP, or badges.
       </p>
 
-      <fieldset className="flex flex-wrap gap-3">
-        <legend className="text-sm font-medium">Pacing</legend>
+      <FieldGroup title="Pacing" className="flex-row flex-wrap gap-3">
         <NumberField label="Think delay (ms)" value={cfg.pacing.thinkMinMs} onChange={(n) => patchPacing({ thinkMinMs: n })} />
         <NumberField label="Think jitter (ms)" value={cfg.pacing.thinkJitterMs} onChange={(n) => patchPacing({ thinkJitterMs: n })} />
         <NumberField label="Token delay (ms)" value={cfg.pacing.tokenMinMs} onChange={(n) => patchPacing({ tokenMinMs: n })} />
         <NumberField label="Token jitter (ms)" value={cfg.pacing.tokenJitterMs} onChange={(n) => patchPacing({ tokenJitterMs: n })} />
-      </fieldset>
+      </FieldGroup>
 
       <RowsField
         label="Opening lines"
@@ -70,7 +83,7 @@ export function DemoFacet({
         blankRow={() => ""}
         addLabel="Add opening line"
         renderRow={(row, set) => (
-          <input aria-label="Opening line" className="w-full rounded border px-2 py-1" value={row} onChange={(e) => set(e.target.value)} />
+          <Input aria-label="Opening line" value={row} onChange={(e) => set(e.target.value)} />
         )}
       />
 
@@ -83,16 +96,14 @@ export function DemoFacet({
         addLabel="Add keyword reply"
         renderRow={(row, set) => (
           <div className="flex min-w-0 flex-col gap-1">
-            <input
+            <Input
               aria-label="Keywords"
-              className="w-full rounded border px-2 py-1"
               placeholder="matrix, rain"
               value={row.match.join(", ")}
               onChange={(e) => set({ ...row, match: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
             />
-            <input
+            <Input
               aria-label="Reply"
-              className="w-full rounded border px-2 py-1"
               value={row.reply}
               onChange={(e) => set({ ...row, reply: e.target.value })}
             />
@@ -108,21 +119,19 @@ export function DemoFacet({
         blankRow={() => ""}
         addLabel="Add fallback"
         renderRow={(row, set) => (
-          <input aria-label="Fallback" className="w-full rounded border px-2 py-1" value={row} onChange={(e) => set(e.target.value)} />
+          <Input aria-label="Fallback" value={row} onChange={(e) => set(e.target.value)} />
         )}
       />
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span>When every fallback has been used</span>
-        <select
-          className="rounded border px-2 py-1"
+      <Field label="When every fallback has been used">
+        <Select
           value={cfg.script.onExhausted}
           onChange={(e) => patchScript({ onExhausted: e.target.value as "reshuffle" | "hold-last" })}
         >
           <option value="reshuffle">Start over</option>
           <option value="hold-last">Repeat the last reply</option>
-        </select>
-      </label>
+        </Select>
+      </Field>
     </div>
   );
 }
