@@ -13,9 +13,9 @@ import {
 } from 'react'
 import { ButtonBar, type ButtonBarActions, type PaneExitGuard } from '@agentic-toolkit/ui/blocks'
 import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
+import { Badge } from '@agentic-toolkit/ui/components/badge'
 import { Button } from '@agentic-toolkit/ui/components/button'
 import { Checkbox } from '@agentic-toolkit/ui/components/checkbox'
-import { useAuth, isAdmin } from '@agentic-toolkit/auth'
 import { ApiButton } from '@agentic-toolkit/api-explorer'
 import { MoveToEcosystemDialog } from './MoveToEcosystemDialog'
 import { ResizableSplit } from '@agentic-toolkit/ui/components/resizable-split'
@@ -25,6 +25,7 @@ import { buildPayload, toDraft, type CrudDraft } from './CrudRecordForm'
 import { isColumnEditable, isColumnHidden, type EditableMode } from './editability'
 import { isRowDirty, mergeDraft } from './edits'
 import { canWriteTable } from './exposure'
+import { useViewer } from './viewer'
 import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
 import { rowKey, useCrudResource } from './useCrudResource'
@@ -113,13 +114,13 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
   // single "active for details" row.
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  // Who the viewer is — the input to both write-side gates below.
-  const { user } = useAuth()
-  const viewerIsAdmin = isAdmin(user)
+  // Who the viewer is — the input to both write-side gates below. `ready` is false while auth
+  // bootstraps; the whole pane waits on it rather than rendering a read-only surface it would
+  // then have to re-flow (see the early return before the JSX).
+  const { isAdmin: viewerIsAdmin, ready: viewerReady } = useViewer()
   // Whether this viewer may write this table at all, per the backend's documented exposure tier:
   // `catalog` and `admin` tables reserve writes to admins, so for everyone else the whole editing
-  // surface goes away — no Create, no Delete, no selection checkboxes, every field locked. That
-  // leaves nothing to make the pane dirty, so Cancel/Save stay disabled without a special case.
+  // surface goes away — no Create, no Delete, no selection checkboxes, every field locked.
   // Presentation only: the backend refuses the write regardless (see exposure.ts).
   const canWrite = canWriteTable(meta, viewerIsAdmin)
   // Cross-ecosystem move (admin): available on any ecosystem-scoped table (one carrying an
@@ -189,7 +190,11 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
   }, [edits, rowByKey, meta, draftKeys])
 
   const hasDrafts = draftKeys.length > 0
-  const dirty = isDirty || hasDrafts
+  // Unsaved work — but only work this viewer could actually persist. `canWrite` is derived from
+  // LIVE auth, so it can flip mid-edit (the session expires, a logout fires in another tab)
+  // while `edits`/`draftKeys` survive; without this the pane would sit there with "Read-only"
+  // beside an enabled Save, and the exit guard would prompt to save writes that all 403.
+  const dirty = (isDirty || hasDrafts) && canWrite
 
   // The server rows that can be checked for deletion (keyless rows are excluded from
   // rowByKey, so its keys ARE exactly the selectable ones).
@@ -340,6 +345,17 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
   const apiQuery: Record<string, string> = { ...(filter ?? {}) }
   if (scopeEcosystemId) apiQuery.ecosystemId = scopeEcosystemId
 
+  // Hold the whole pane until we know who is looking. Rendering first would mean guessing
+  // "non-admin", i.e. showing an admin the read-only surface — no checkbox column, no Create,
+  // fields as plain text — and then re-flowing the entire table around them a paint later.
+  if (!viewerReady) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+        <Spinner />
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-dirty={dirty || undefined}>
       <ButtonBar
@@ -349,13 +365,15 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
         leading={
           !canWrite ? (
             // Say WHY the actions are missing. A bar that silently loses its buttons reads as
-            // broken; naming the state (and the reason, on hover) is the honest version.
-            // `canMove` implies admin, so it can never be the alternative here.
-            <span
-              className="font-mono text-[0.7rem] uppercase tracking-wider text-apt-text-dim"
-              title="Shared platform data: everyone can read this table, only an administrator can change it."
-            >
-              Read-only
+            // broken. The reason is VISIBLE text, not a `title`: a tooltip on a non-interactive
+            // element reaches neither a screen reader nor a touch device, which is most of the
+            // audience that needs telling. `canMove` implies admin, so it can never be the
+            // alternative here.
+            <span className="flex items-center gap-2">
+              <Badge variant="neutral">Read-only</Badge>
+              <span className="text-xs text-apt-text-dim">
+                Shared platform data — only an administrator can change it.
+              </span>
             </span>
           ) : canMove ? (
             <Button
@@ -410,7 +428,7 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
             error={error}
             activeKey={activeKey}
             onSelect={setActiveKey}
-            selectable={canWrite}
+            canWrite={canWrite}
             selected={selected}
             allSelected={allSelected}
             onToggleSelect={toggleSelect}
@@ -421,7 +439,7 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
           <RowDetails
             meta={meta}
             baseline={baseline}
-            readOnly={!canWrite}
+            canWrite={canWrite}
             mode={isDraftActive ? 'create' : 'edit'}
             edits={activeKey != null ? edits[activeKey] : undefined}
             onEdit={(name, value) => {
@@ -475,10 +493,11 @@ interface RowListProps {
   error: string | null
   activeKey: string | null
   onSelect: (key: string) => void
-  /** Whether rows can be checked at all. False on a table this viewer may only read: the
-   *  checkbox exists to feed Delete / Move, both of which are gone, so the whole leading
-   *  column drops rather than offering a control with nothing to act on. */
-  selectable: boolean
+  /** Whether the viewer may write this table. False drops the whole leading checkbox column:
+   *  the checkbox exists to feed Delete / Move, both of which are gone, so it would be a
+   *  control with nothing to act on. Same flag, same spelling, as RowDetails' — inverting it
+   *  per child is how the two drift. */
+  canWrite: boolean
   /** Server rowKeys checked for deletion. */
   selected: Set<string>
   allSelected: boolean
@@ -500,7 +519,7 @@ function RowList({
   error,
   activeKey,
   onSelect,
-  selectable,
+  canWrite,
   selected,
   allSelected,
   onToggleSelect,
@@ -545,7 +564,7 @@ function RowList({
         <table className="w-full table-fixed text-left text-sm">
           <thead>
             <tr className="border-b border-apt-border">
-              {selectable && (
+              {canWrite && (
                 <th style={{ width: 36 }} className="px-2 py-2 align-middle">
                   <Checkbox
                     checked={allSelected}
@@ -580,7 +599,7 @@ function RowList({
                   cellKey={key}
                   interactive={interactive}
                   active={interactive && key === activeKey}
-                  selectable={selectable}
+                  canWrite={canWrite}
                   selected={selected.has(key)}
                   onSelect={onSelect}
                   onToggleSelect={onToggleSelect}
@@ -605,7 +624,7 @@ function RowList({
                   {/* The drafts' counterpart to the checkbox column — dropped with it so the
                       table stays rectangular. (A read-only table has no drafts to begin with,
                       since Create is gone.) */}
-                  {selectable && (
+                  {canWrite && (
                     <td className="px-2 py-1.5 align-middle">
                       <span className="font-mono text-[0.6rem] uppercase tracking-wider text-apt-gold">
                         new
@@ -652,7 +671,7 @@ const ServerRow = memo(function ServerRow({
   cellKey,
   interactive,
   active,
-  selectable,
+  canWrite,
   selected,
   onSelect,
   onToggleSelect,
@@ -663,7 +682,7 @@ const ServerRow = memo(function ServerRow({
   cellKey: string
   interactive: boolean
   active: boolean
-  selectable: boolean
+  canWrite: boolean
   selected: boolean
   onSelect: (key: string) => void
   onToggleSelect: (key: string, checked: boolean) => void
@@ -682,7 +701,7 @@ const ServerRow = memo(function ServerRow({
     >
       {/* The checkbox is its own click target — selecting a row for deletion must
           not also make it the active detail row. */}
-      {selectable && (
+      {canWrite && (
         <td className="px-2 py-1.5 align-middle" onClick={(event) => event.stopPropagation()}>
           <Checkbox
             checked={selected}
@@ -796,9 +815,10 @@ interface RowDetailsProps {
   baseline: CrudDraft | null
   /** 'create' for an unsaved draft (createOnly columns editable), else 'edit'. */
   mode: EditableMode
-  /** Lock EVERY column, whatever its own editability — the viewer may read this table but not
-   *  write it. Nothing can then go dirty, so Save/Cancel stay disabled on their own. */
-  readOnly: boolean
+  /** Whether the viewer may write this table. False locks EVERY column, whatever its own
+   *  editability says — a viewer-level veto over the schema-level rule, kept as a separate
+   *  gate because the two answer different questions (who is asking vs. what the column is). */
+  canWrite: boolean
   /** Dirty edits for the active row (col → value), or undefined when clean. */
   edits: CrudDraft | undefined
   onEdit: (name: string, value: string | boolean) => void
@@ -813,7 +833,7 @@ interface RowDetailsProps {
  * in the top row list). The row identity + the collapse disclosure live on the
  * split's header bar (CrudDataView passes them), not here.
  */
-function RowDetails({ meta, baseline, mode, readOnly, edits, onEdit }: RowDetailsProps) {
+function RowDetails({ meta, baseline, mode, canWrite, edits, onEdit }: RowDetailsProps) {
   const bodyId = useId()
 
   if (!baseline) {
@@ -829,7 +849,7 @@ function RowDetails({ meta, baseline, mode, readOnly, edits, onEdit }: RowDetail
     <div className="flex min-w-0 flex-col">
       <dl className="flex flex-col gap-2.5 px-4 py-4">
         {columns.map((column) => {
-          const editable = !readOnly && isColumnEditable(meta, column, mode)
+          const editable = canWrite && isColumnEditable(meta, column, mode)
           const value = edits?.[column.name] ?? baseline[column.name]
           const fieldId = `${bodyId}-${column.name}`
           return (

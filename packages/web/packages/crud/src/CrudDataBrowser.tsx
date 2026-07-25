@@ -9,10 +9,10 @@ import {
   type TopicDetailItem,
   type TopicLevel,
 } from '@agentic-toolkit/ui/blocks'
-import { useAuth, isAdmin } from '@agentic-toolkit/auth'
 import { CRUD_TABLES } from './generated/table-metadata'
 import { CrudDataView } from './CrudDataView'
 import { readableTables } from './exposure'
+import { useViewer } from './viewer'
 import { useExitGuardChannel } from './useExitGuardChannel'
 import type { CrudTableMeta } from './types'
 
@@ -114,14 +114,15 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
   // they ARE readable — and CrudDataView renders them read-only. Presentation only; the server
   // gate is the boundary either way (see exposure.ts).
   //
-  // `user` is null while auth resolves, so a table starts hidden and appears once an admin is
-  // known. That direction is deliberate: a rail row that appears is far less alarming than one
-  // that vanishes, and a non-admin is never briefly shown something they cannot open.
-  const { user } = useAuth()
-  const viewerIsAdmin = isAdmin(user)
+  // Until auth settles the rail is EMPTY (loading), not "filtered for a non-admin": guessing
+  // would either flash admin tables at someone who can't open them, or make an admin's
+  // deep-linked schema vanish and pop back a paint later. Empty-then-populated is the one
+  // sequence that never shows a wrong answer.
+  const { isAdmin: viewerIsAdmin, ready: viewerReady } = useViewer()
   const allTables = useMemo(
-    () => readableTables(tables ?? Object.values(CRUD_TABLES), viewerIsAdmin),
-    [tables, viewerIsAdmin],
+    () =>
+      viewerReady ? readableTables(tables ?? Object.values(CRUD_TABLES), viewerIsAdmin) : [],
+    [tables, viewerIsAdmin, viewerReady],
   )
 
   // level 0 = distinct schemas (sorted); level 1 = the open schema's tables (sorted). Schemas
@@ -189,7 +190,8 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
           if (selection) selection.onSelectSchema(null)
           else if (basePath) router.push(basePath, { scroll: false })
         },
-        emptyLabel: 'No schemas.',
+        // "None" and "not known yet" are different answers; say which one this is.
+        emptyLabel: viewerReady ? 'No schemas.' : 'Loading…',
       },
       {
         id: 'table',
@@ -211,7 +213,16 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
         emptyLabel: 'No tables.',
       },
     ],
-    [schemaItems, tableItems, schemaSelected, tableSelectedId, router, basePath, selection],
+    [
+      schemaItems,
+      tableItems,
+      schemaSelected,
+      tableSelectedId,
+      router,
+      basePath,
+      selection,
+      viewerReady,
+    ],
   )
 
   // The open table's editor registers its unsaved-work guard here; the topic-detail block consults
@@ -223,7 +234,13 @@ export function CrudDataBrowser(props: CrudDataBrowserProps) {
 
   // `children` land in the frontier pane: the table view once a table is open,
   // else a hint to drill in. Keyed per table so a switch is a fresh mount.
-  const content = tableSelected ? (
+  // Before auth settles, a deep link has no answer yet — say "loading", not "pick a schema"
+  // (which would read as the deep link having failed).
+  const content = !viewerReady ? (
+    <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">
+      Loading…
+    </p>
+  ) : tableSelected ? (
     <CrudDataView key={tableSelected.key} meta={tableSelected} onGuardChange={registerGuard} />
   ) : (
     <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">

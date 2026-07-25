@@ -18,6 +18,11 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
+    "./exposure": {
+      "types": "./dist/exposure.d.ts",
+      "development": "./src/exposure.ts",
+      "import": "./dist/exposure.js"
+    },
     "./sources.css": "./sources.css",
     "./generated/table-metadata": {
       "types": "./dist/generated/table-metadata.d.ts",

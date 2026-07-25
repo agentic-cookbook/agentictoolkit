@@ -97,14 +97,26 @@ export interface CrudRecordFormProps {
   meta: CrudTableMeta
   /** Editing this row; absent = creating. */
   initial?: CrudRow
+  /** Whether the viewer may write this table (see `canWriteTable`). False locks every field
+   *  and drops Save, leaving a row VIEWER — the backend refuses the write, so a submit button
+   *  here only leads to a 403. Required, not defaulted: a caller that hasn't decided must not
+   *  silently get the permissive answer. */
+  canWrite: boolean
   onSubmit: (values: CrudRow) => Promise<void>
   onCancel: () => void
 }
 
 /** Create/edit form generated from the table metadata: enum → select,
  *  boolean → checkbox, number → numeric input, object/array/unknown → JSON
- *  textarea, everything else → text input. */
-export function CrudRecordForm({ meta, initial, onSubmit, onCancel }: CrudRecordFormProps) {
+ *  textarea, everything else → text input. Read-only (`canWrite` false) renders
+ *  the same fields locked, with Close in place of Cancel/Save. */
+export function CrudRecordForm({
+  meta,
+  initial,
+  canWrite,
+  onSubmit,
+  onCancel,
+}: CrudRecordFormProps) {
   const mode: CrudFormMode = initial ? 'edit' : 'create'
   const [draft, setDraft] = useState<CrudDraft>(() => toDraft(meta, initial))
   const { busy: saving, error, run } = useAction()
@@ -124,8 +136,9 @@ export function CrudRecordForm({ meta, initial, onSubmit, onCancel }: CrudRecord
       {writableColumns(meta).map((column) => {
         const label = column.required ? `${column.name} *` : column.name
         // createOnly columns can't change on edit (the backend strips them
-        // from PUT) — show the seeded value, disabled, not a doomed edit.
-        const disabled = mode === 'edit' && column.createOnly === true
+        // from PUT) — show the seeded value, disabled, not a doomed edit. A viewer
+        // without write access gets the same treatment for every column.
+        const disabled = !canWrite || (mode === 'edit' && column.createOnly === true)
         const control = (
           <CrudFieldInput
             column={column}
@@ -154,12 +167,16 @@ export function CrudRecordForm({ meta, initial, onSubmit, onCancel }: CrudRecord
       })}
       <ErrorText error={error} />
       <div className="flex justify-end gap-2">
+        {/* Read-only: one way out, named for what it does. A disabled Save would still
+            advertise an action the backend would refuse. */}
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
-          Cancel
+          {canWrite ? 'Cancel' : 'Close'}
         </Button>
-        <Button type="submit" size="sm" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
+        {canWrite && (
+          <Button type="submit" size="sm" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        )}
       </div>
     </form>
   )

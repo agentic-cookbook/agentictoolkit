@@ -34,7 +34,7 @@ const meta: CrudTableMeta = {
   ],
 }
 
-const noHandlers = { onNew: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn() }
+const noHandlers = { canWrite: true, onNew: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn() }
 
 describe('displayColumns', () => {
   it('puts the primary key first, skips object columns, caps the count', () => {
@@ -83,6 +83,7 @@ describe('CrudTable', () => {
         rows={rows}
         loading={false}
         error={null}
+        canWrite
         onNew={onNew}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -96,5 +97,31 @@ describe('CrudTable', () => {
     expect(onEdit).toHaveBeenCalledWith(rows[0])
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     expect(onDelete).toHaveBeenCalledWith(rows[0])
+  })
+
+  // The write-side gate the feature pages rely on: `billing` is catalog end to end, so a
+  // non-admin gets this branch on every one of its tables.
+  it('drops New and Delete and turns Edit into View when the viewer may not write', async () => {
+    const user = userEvent.setup()
+    const onEdit = vi.fn()
+    const rows = [{ id: 'w1', name: 'Widget one' }]
+    render(
+      <CrudTable
+        meta={meta}
+        rows={rows}
+        loading={false}
+        error={null}
+        canWrite={false}
+        onNew={vi.fn()}
+        onEdit={onEdit}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'New' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    // The row is still reachable — read access is what the catalog tier grants.
+    expect(screen.getByText('Read-only')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'View' }))
+    expect(onEdit).toHaveBeenCalledWith(rows[0])
   })
 })

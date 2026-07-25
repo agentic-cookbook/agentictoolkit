@@ -32,6 +32,21 @@ describe('canReadTable', () => {
     expect(canReadTable(admin, false)).toBe(false)
     expect(canReadTable(admin, true)).toBe(true)
   })
+
+  // The server's hasPermission returns false for a table it cannot classify. So must this: a
+  // meta whose tier is missing (a hand-built literal from JS, a stale prebuilt catalog) or a
+  // stricter tier added later must NOT list to everyone by default.
+  it('fails closed on a missing or unrecognised tier', () => {
+    const untiered = { ...owner, exposure: undefined as unknown as CrudExposure }
+    const future = { ...owner, exposure: 'sealed' as unknown as CrudExposure }
+    for (const meta of [untiered, future]) {
+      expect(canReadTable(meta, false)).toBe(false)
+      expect(canWriteTable(meta, false)).toBe(false)
+    }
+    expect(readableTables([owner, untiered, future], false).map((t) => t.exposure)).toEqual([
+      'owner',
+    ])
+  })
 })
 
 describe('canWriteTable', () => {

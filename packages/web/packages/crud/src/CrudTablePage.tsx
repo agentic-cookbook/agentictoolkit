@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@agentic-toolkit/ui/components/button'
 import {
@@ -13,10 +13,13 @@ import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
 import { SectionHeader } from '@agentic-toolkit/ui/blocks/section-header'
 import { railLinkVariants } from '@agentic-toolkit/ui/lib/nav-rail'
 import { cn } from '@agentic-toolkit/ui/lib/utils'
+import { Spinner } from '@agentic-toolkit/ui/components/spinner'
 import { CrudRecordForm } from './CrudRecordForm'
 import { CrudTable } from './CrudTable'
 import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
+import { canWriteTable, readableTables } from './exposure'
+import { useViewer } from './viewer'
 import { rowKey, useCrudResource } from './useCrudResource'
 import type { CrudRow, CrudTableMeta } from './types'
 
@@ -38,19 +41,35 @@ export interface CrudTablePageProps {
 /** A feature's placeholder workspace: a rail of the tables it edits and a
  *  metadata-driven CRUD surface for the active one. */
 export function CrudTablePage({ title, tables, activeTable, baseHref }: CrudTablePageProps) {
-  const requested = activeTable === undefined ? undefined : tables.find((t) => t.table === activeTable)
-  // A bare route falls back to the first table; an EXPLICIT unknown segment
-  // must not (silently editing a different table than the URL names) — it
-  // renders a notice instead, and nothing data-bearing mounts (no authed
-  // fetch for a table the user didn't ask for).
-  const unknownTable = activeTable !== undefined && requested === undefined
-  const meta = unknownTable ? undefined : (requested ?? tables[0]!)
+  // The same exposure gate the /all-data browser applies, for the same reason: an admin-tier
+  // table listed to a non-admin is a rail row (and a LIST request) whose only outcome is a 403.
+  // Feature tables are usually all `owner`, so this is usually the identity — but `billing` is
+  // catalog end to end, and `usage` is mixed.
+  const { isAdmin: viewerIsAdmin, ready: viewerReady } = useViewer()
+  const visible = useMemo(() => readableTables(tables, viewerIsAdmin), [tables, viewerIsAdmin])
+  const requested =
+    activeTable === undefined ? undefined : visible.find((t) => t.table === activeTable)
+  // A bare route falls back to the first table; an EXPLICIT segment naming a table that isn't
+  // there — unknown, or admin-only for this viewer — must not (silently editing a different
+  // table than the URL names). It renders a notice instead, and nothing data-bearing mounts
+  // (no authed fetch for a table the user didn't ask for, or may not read).
+  const unavailableTable = activeTable !== undefined && requested === undefined
+  const meta = unavailableTable ? undefined : requested ?? visible[0]
+
+  // Hold until auth settles rather than render the rail as a non-admin and re-flow it.
+  if (!viewerReady) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-12">
+        <Spinner />
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6 md:flex-row md:gap-6">
       <nav aria-label={`${title} tables`} className="shrink-0 md:w-56">
         <ul className="flex flex-row flex-wrap gap-1 md:flex-col">
-          {tables.map((table) => (
+          {visible.map((table) => (
             <li key={table.key}>
               <Link
                 href={`${baseHref}/${table.table}`}
@@ -70,10 +89,21 @@ export function CrudTablePage({ title, tables, activeTable, baseHref }: CrudTabl
         {meta ? (
           // Keyed per table so a rail switch is a fresh mount (first-load
           // spinner, dialog/edit state reset) instead of a stale carry-over.
-          <CrudTableSurface key={meta.key} meta={meta} />
-        ) : (
+          <CrudTableSurface
+            key={meta.key}
+            meta={meta}
+            canWrite={canWriteTable(meta, viewerIsAdmin)}
+          />
+        ) : visible.length === 0 ? (
           <p className="py-8 text-center font-mono text-sm text-apt-text-dim" role="status">
-            Unknown table “{activeTable}” — pick one from the list.
+            No tables here are available to you.
+          </p>
+        ) : (
+          // Deliberately one message for "no such table" and "not yours to open": the table
+          // names are public in the API spec, so distinguishing them would buy nothing, and a
+          // bare "unknown table" would be a lie in the second case.
+          <p className="py-8 text-center font-mono text-sm text-apt-text-dim" role="status">
+            No table “{activeTable}” here — pick one from the list.
           </p>
         )}
       </div>
@@ -82,9 +112,9 @@ export function CrudTablePage({ title, tables, activeTable, baseHref }: CrudTabl
 }
 
 /** The data-bearing half: owns the resource hook and the dialog state, so the
- *  unknown-table notice never mounts it (rules of hooks keep it a separate
+ *  unavailable-table notice never mounts it (rules of hooks keep it a separate
  *  component, not a branch). */
-function CrudTableSurface({ meta }: { meta: CrudTableMeta }) {
+function CrudTableSurface({ meta, canWrite }: { meta: CrudTableMeta; canWrite: boolean }) {
   const resource = useCrudResource(meta)
   const [editing, setEditing] = useState<Editing>(null)
   const [deleting, setDeleting] = useState<CrudRow | null>(null)
@@ -102,6 +132,7 @@ function CrudTableSurface({ meta }: { meta: CrudTableMeta }) {
         rows={resource.rows}
         loading={resource.loading}
         error={resource.error}
+        canWrite={canWrite}
         onNew={() => setEditing({ mode: 'create' })}
         onEdit={(row) => setEditing({ mode: 'edit', row })}
         onDelete={(row) => setDeleting(row)}
@@ -111,7 +142,9 @@ function CrudTableSurface({ meta }: { meta: CrudTableMeta }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editing?.mode === 'edit' ? `Edit ${meta.table} row` : `New ${meta.table} row`}
+              {editing?.mode === 'edit'
+                ? `${canWrite ? 'Edit' : 'View'} ${meta.table} row`
+                : `New ${meta.table} row`}
             </DialogTitle>
           </DialogHeader>
           {editing && (
@@ -121,6 +154,7 @@ function CrudTableSurface({ meta }: { meta: CrudTableMeta }) {
               key={editing.mode === 'edit' ? rowKey(meta, editing.row) : 'create'}
               meta={meta}
               initial={editing.mode === 'edit' ? editing.row : undefined}
+              canWrite={canWrite}
               onSubmit={submit}
               onCancel={() => setEditing(null)}
             />

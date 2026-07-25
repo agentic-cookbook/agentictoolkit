@@ -16,12 +16,19 @@ import type { CrudTableMeta } from './types'
  * Whether the viewer may READ this table at all — i.e. whether it should appear in the
  * browser's schema ▸ table rails.
  *
- * Only the `admin` tier is viewer-restricted: `catalog` tables are readable by anyone
- * authenticated (they are global catalogs and server-written ledgers), and `owner` tables are
- * readable by anyone, with the rows themselves isolated to the caller's tenant server-side.
+ * `catalog` tables are readable by anyone authenticated (they are global catalogs and
+ * server-written ledgers), and `owner` tables are readable by anyone, with the rows themselves
+ * isolated to the caller's tenant server-side.
+ *
+ * An ALLOWLIST, deliberately — everything else, `admin` included, needs the capability. A
+ * denylist (`=== 'admin' ? … : true`) would list every table to everyone the moment a meta
+ * arrived without a tier (a hand-built literal from JS, a stale prebuilt `dist/`) or the backend
+ * introduced a stricter fourth tier. The server's `hasPermission` fails closed on a table it
+ * cannot classify; so does this.
  */
 export function canReadTable(meta: CrudTableMeta, isAdminViewer: boolean): boolean {
-  return meta.exposure === 'admin' ? isAdminViewer : true
+  if (meta.exposure === 'owner' || meta.exposure === 'catalog') return true
+  return isAdminViewer
 }
 
 /**
@@ -31,6 +38,8 @@ export function canReadTable(meta: CrudTableMeta, isAdminViewer: boolean): boole
  *
  * A false here means the editor renders read-only: no Create, no Delete, and every field
  * locked, so nothing can go dirty and Save stays disabled.
+ *
+ * Already an allowlist: an unrecognised (or absent) tier lands on the admin-only side.
  */
 export function canWriteTable(meta: CrudTableMeta, isAdminViewer: boolean): boolean {
   return meta.exposure === 'owner' ? true : isAdminViewer

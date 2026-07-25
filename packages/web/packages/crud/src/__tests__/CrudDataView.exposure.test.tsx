@@ -2,23 +2,32 @@ import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { AuthUser } from '@agentic-toolkit/auth'
 import type { CrudColumn, CrudExposure, CrudTableMeta } from '../types'
 
 /** RowDetails' empty state — the signal that no row is open yet. */
 const NO_ROW_OPEN = 'Select a row to see its details.'
 
-// The view reaches the network through these two only, and asks `useAuth` who the viewer is —
-// the same seam useCrudResource's own test mocks.
+/** The auth context as the view sees it. Only these two fields are read. */
+let auth: { user: AuthUser | null; isLoading: boolean } = { user: null, isLoading: false }
+
+/** A viewer of the given rank, in the REAL AuthUser shape — `isAdmin` reads `capabilities`,
+ *  so a fake `{ admin: true }` here would pass while the production check returned false. */
+const viewerUser = (admin: boolean): AuthUser =>
+  ({ id: 'u1', email: 'u@example.com', capabilities: admin ? ['admin'] : [] }) as AuthUser
+
+// The view reaches the network through these two only.
 vi.mock('@agentic-toolkit/auth/client', () => ({
   authedJson: vi.fn(),
   authedRequest: vi.fn(),
 }))
-vi.mock('@agentic-toolkit/auth', () => ({
-  useAuth: () => ({ user: viewer }),
-  isAdmin: () => viewer?.admin === true,
+// Who the viewer is comes from the auth context; only THAT is faked. `isAdmin` and everything
+// else stays real, so a call that passed the wrong thing (or no argument) fails here.
+vi.mock('@agentic-toolkit/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@agentic-toolkit/auth')>()),
+  useOptionalAuth: () => auth,
+  useAuth: () => auth,
 }))
-
-let viewer: { admin: boolean } | null = null
 
 const { authedJson } = vi.mocked(await import('@agentic-toolkit/auth/client'))
 const { CrudDataView } = await import('../CrudDataView')
@@ -45,7 +54,7 @@ const metaFor = (exposure: CrudExposure): CrudTableMeta => ({
 
 /** Render the view for one tier/viewer combination, with one row listed. */
 async function renderView(exposure: CrudExposure, admin: boolean) {
-  viewer = { admin }
+  auth = { user: viewerUser(admin), isLoading: false }
   authedJson.mockResolvedValue([{ id: 'w1', name: 'Widget' }] as never)
   render(<CrudDataView meta={metaFor(exposure)} />)
   await waitFor(() => expect(screen.getByText('Widget')).toBeInTheDocument())
@@ -53,10 +62,25 @@ async function renderView(exposure: CrudExposure, admin: boolean) {
 
 beforeEach(() => {
   authedJson.mockReset()
-  viewer = null
+  auth = { user: null, isLoading: false }
 })
 
 describe('CrudDataView write gating by exposure tier', () => {
+  // Auth resolves asynchronously, and "not an admin yet" is not "not an admin": rendering on
+  // the guess would show an admin the read-only surface and then re-flow the whole table.
+  it('waits for auth rather than rendering the pane as a non-admin', async () => {
+    auth = { user: null, isLoading: true }
+    authedJson.mockResolvedValue([{ id: 'w1', name: 'Widget' }] as never)
+    const { rerender } = render(<CrudDataView meta={metaFor('catalog')} />)
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument()
+
+    auth = { user: viewerUser(true), isLoading: false }
+    rerender(<CrudDataView meta={metaFor('catalog')} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument())
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument()
+  })
+
   it('offers the full editing surface on an owner table to a non-admin', async () => {
     await renderView('owner', false)
     expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument()

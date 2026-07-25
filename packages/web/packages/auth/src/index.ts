@@ -1,7 +1,7 @@
 'use client'
 
 export { isLocalHostname } from './hostname'
-export { AuthProvider, useAuth } from './context'
+export { AuthProvider, useAuth, useOptionalAuth } from './context'
 export type { AuthContextValue, AuthProviderProps } from './context'
 export type { MfaChallenge, MfaMethod, MfaCodeMethod } from './mfa'
 export { RequireAuth } from './RequireAuth'

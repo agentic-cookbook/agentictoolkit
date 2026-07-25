@@ -495,3 +495,18 @@ export function useAuth<U extends AuthUser = AuthUser>(): AuthContextValue<U> {
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider')
   return ctx as unknown as AuthContextValue<U>
 }
+
+/**
+ * The auth context when a provider is present, else null — for shared components that merely
+ * ADJUST to who is signed in (hiding an admin-only affordance, say) and must still render in a
+ * shell that has no AuthProvider: a docs page, a public site's frame, a test harness.
+ *
+ * Prefer {@link useAuth} everywhere a provider is guaranteed and the component genuinely needs
+ * one: a missing provider is a wiring bug worth failing fast on. Reach for this only where "no
+ * provider" has an honest answer — and make that answer the CLOSED one (treat the viewer as
+ * anonymous), never an assumption of privilege.
+ */
+export function useOptionalAuth<U extends AuthUser = AuthUser>(): AuthContextValue<U> | null {
+  const ctx = useContext(AuthContext)
+  return (ctx as unknown as AuthContextValue<U> | undefined) ?? null
+}

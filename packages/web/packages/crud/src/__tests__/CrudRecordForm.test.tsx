@@ -170,7 +170,7 @@ describe('buildPayload', () => {
 
 describe('CrudRecordForm', () => {
   it('renders the right control per column type, marking required', () => {
-    render(<CrudRecordForm meta={meta} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    render(<CrudRecordForm meta={meta} canWrite onSubmit={vi.fn()} onCancel={vi.fn()} />)
     expect(screen.getByLabelText('name *')).toBeInTheDocument()
     expect(screen.getByLabelText('count')).toHaveAttribute('type', 'number')
     expect(screen.getByText('active')).toBeInTheDocument() // checkbox label
@@ -185,7 +185,7 @@ describe('CrudRecordForm', () => {
   it('submits the coerced payload', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
-    render(<CrudRecordForm meta={meta} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    render(<CrudRecordForm meta={meta} canWrite onSubmit={onSubmit} onCancel={vi.fn()} />)
     await user.type(screen.getByLabelText('name *'), 'Widget')
     await user.type(screen.getByLabelText('count'), '5')
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -201,6 +201,7 @@ describe('CrudRecordForm', () => {
     render(
       <CrudRecordForm
         meta={meta}
+        canWrite
         initial={{ name: 'Widget', active: true }}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
@@ -213,7 +214,7 @@ describe('CrudRecordForm', () => {
   it('shows a validation error without calling onSubmit', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
-    render(<CrudRecordForm meta={meta} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    render(<CrudRecordForm meta={meta} canWrite onSubmit={onSubmit} onCancel={vi.fn()} />)
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('name is required')
     expect(onSubmit).not.toHaveBeenCalled()
@@ -225,6 +226,7 @@ describe('CrudRecordForm', () => {
     render(
       <CrudRecordForm
         meta={meta}
+        canWrite
         initial={{ name: 'Widget', active: true, payload: { mode: 'fast' } }}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
@@ -241,7 +243,7 @@ describe('CrudRecordForm', () => {
   it('parses JSON typed into an unknown column on create', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
-    render(<CrudRecordForm meta={meta} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    render(<CrudRecordForm meta={meta} canWrite onSubmit={onSubmit} onCancel={vi.fn()} />)
     await user.type(screen.getByLabelText('name *'), 'Widget')
     await user.click(screen.getByLabelText(/^payload/))
     await user.paste('{"mode": "fast"}')
@@ -254,7 +256,7 @@ describe('CrudRecordForm', () => {
   it('shows the field-named error for invalid JSON in an unknown column', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
-    render(<CrudRecordForm meta={meta} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    render(<CrudRecordForm meta={meta} canWrite onSubmit={onSubmit} onCancel={vi.fn()} />)
     await user.type(screen.getByLabelText('name *'), 'Widget')
     await user.click(screen.getByLabelText(/^payload/))
     await user.paste('{nope')
@@ -269,6 +271,7 @@ describe('CrudRecordForm', () => {
     render(
       <CrudRecordForm
         meta={rdidMeta}
+        canWrite
         initial={{ id: 'com.x.thing', name: 'Thing' }}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
@@ -281,10 +284,30 @@ describe('CrudRecordForm', () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ name: 'Thing' }))
   })
 
+  // The read-only twin of this form: the row is still inspectable, but nothing about it
+  // suggests an edit the backend would refuse.
+  it('locks every field and drops Save when the viewer may not write', () => {
+    render(
+      <CrudRecordForm
+        meta={meta}
+        canWrite={false}
+        initial={{ name: 'Widget', count: 5 }}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('name *')).toBeDisabled()
+    expect(screen.getByLabelText('count')).toBeDisabled()
+    expect(screen.getByLabelText(/^config/)).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    // One way out, named for what it does.
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument()
+  })
+
   it('keeps createOnly columns editable and included on create', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
-    render(<CrudRecordForm meta={rdidMeta} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    render(<CrudRecordForm meta={rdidMeta} canWrite onSubmit={onSubmit} onCancel={vi.fn()} />)
     const idInput = screen.getByLabelText('id *')
     expect(idInput).toBeEnabled()
     await user.type(idInput, 'com.x.thing')

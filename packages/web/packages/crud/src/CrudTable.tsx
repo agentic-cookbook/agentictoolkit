@@ -1,5 +1,6 @@
 'use client'
 
+import { Badge } from '@agentic-toolkit/ui/components/badge'
 import { Button } from '@agentic-toolkit/ui/components/button'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
 import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
@@ -33,14 +34,29 @@ export interface CrudTableProps {
   rows: CrudRow[]
   loading: boolean
   error: string | null
+  /** Whether the viewer may write this table (see `canWriteTable`). False drops New and Delete
+   *  and turns Edit into View — the backend refuses those writes, so offering them is offering
+   *  a 403. Required, not defaulted: a caller that hasn't decided must not silently get the
+   *  permissive answer. */
+  canWrite: boolean
   onNew: () => void
+  /** Opens the row — for editing when `canWrite`, else read-only. */
   onEdit: (row: CrudRow) => void
   onDelete: (row: CrudRow) => void
 }
 
 /** Placeholder-grade row list for one table: no sorting/search/pagination (the
  *  backend caps lists at 500); per-row Edit/Delete and a New action. */
-export function CrudTable({ meta, rows, loading, error, onNew, onEdit, onDelete }: CrudTableProps) {
+export function CrudTable({
+  meta,
+  rows,
+  loading,
+  error,
+  canWrite,
+  onNew,
+  onEdit,
+  onDelete,
+}: CrudTableProps) {
   const columns = displayColumns(meta)
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -48,9 +64,20 @@ export function CrudTable({ meta, rows, loading, error, onNew, onEdit, onDelete 
         <span className="font-mono text-[0.7rem] text-apt-text-dim">
           {loading ? 'Loading…' : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
         </span>
-        <Button size="sm" onClick={onNew}>
-          New
-        </Button>
+        {canWrite ? (
+          <Button size="sm" onClick={onNew}>
+            New
+          </Button>
+        ) : (
+          // Name the state rather than just losing the button — and say why, in visible text
+          // (a `title` tooltip reaches neither a screen reader nor a touch device).
+          <span className="flex items-center gap-2">
+            <Badge variant="neutral">Read-only</Badge>
+            <span className="text-xs text-apt-text-dim">
+              Shared platform data — only an administrator can change it.
+            </span>
+          </span>
+        )}
       </div>
       <ErrorText error={error} />
       {loading ? (
@@ -88,11 +115,13 @@ export function CrudTable({ meta, rows, loading, error, onNew, onEdit, onDelete 
                   ))}
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     <Button variant="ghost" size="sm" onClick={() => onEdit(row)}>
-                      Edit
+                      {canWrite ? 'Edit' : 'View'}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => onDelete(row)}>
-                      Delete
-                    </Button>
+                    {canWrite && (
+                      <Button variant="ghost" size="sm" onClick={() => onDelete(row)}>
+                        Delete
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
