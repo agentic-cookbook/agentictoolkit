@@ -10,7 +10,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
     "basePath": "/access/team-permissions",
     "itemPath": "/access/team-permissions/{id}",
     "pkParams": ["id"],
-    "exposure": "catalog",
+    "exposure": "admin",
     "columns": [
       {"name": "id", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 36},
       {"name": "ecosystemId", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 36},
