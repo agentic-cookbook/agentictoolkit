@@ -20,16 +20,16 @@ export default defineConfig({
   outExtension: () => ({ js: '.js' }),
   // bitbag opts OUT of the shared `featureTsup` preset (../tsup.preset.ts): its
   // external list only covers react, @agentic-toolkit/*, next/*, and lucide-react,
-  // but bitbag also needs gsap and @agentic-developer-toolkit/* kept external.
+  // but bitbag also needs gsap and @agenticdevelopertoolkit/* kept external.
   external: [
     'react',
     'react-dom',
     'react/jsx-runtime',
     'gsap',
-    '@agentic-developer-toolkit/chat',
-    '@agentic-developer-toolkit/avatar',
-    '@agentic-developer-toolkit/themes',
-    '@agentic-developer-toolkit/viewport',
+    '@agenticdevelopertoolkit/chat',
+    '@agenticdevelopertoolkit/avatar',
+    '@agenticdevelopertoolkit/themes',
+    '@agenticdevelopertoolkit/viewport',
   ],
   esbuildPlugins: [
     preserveDirectivesPlugin({

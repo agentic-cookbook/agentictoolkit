@@ -455,18 +455,18 @@ importers:
 
   packages/features/bitbag:
     devDependencies:
-      '@agentic-developer-toolkit/avatar':
-        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/avatar
-        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/avatar
-      '@agentic-developer-toolkit/chat':
-        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/chat
-        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/chat
-      '@agentic-developer-toolkit/themes':
-        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes
-        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes
-      '@agentic-developer-toolkit/viewport':
-        specifier: link:../../../../../../agentic-developer-toolkit/packages/web/packages/viewport
-        version: link:../../../../../../agentic-developer-toolkit/packages/web/packages/viewport
+      '@agenticdevelopertoolkit/avatar':
+        specifier: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/avatar
+        version: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/avatar
+      '@agenticdevelopertoolkit/chat':
+        specifier: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/chat
+        version: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/chat
+      '@agenticdevelopertoolkit/themes':
+        specifier: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/themes
+        version: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/themes
+      '@agenticdevelopertoolkit/viewport':
+        specifier: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/viewport
+        version: link:../../../../../../agenticdevelopertoolkit/packages/web/packages/viewport
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1

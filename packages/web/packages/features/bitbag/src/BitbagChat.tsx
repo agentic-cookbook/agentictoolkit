@@ -12,8 +12,8 @@ import {
   useRotatingPhrase,
   useTransientEcho,
   type GazeVector,
-} from '@agentic-developer-toolkit/chat'
-import { ThemeStyle, type ThemeKey } from '@agentic-developer-toolkit/themes'
+} from '@agenticdevelopertoolkit/chat'
+import { ThemeStyle, type ThemeKey } from '@agenticdevelopertoolkit/themes'
 import { BitbagBackend } from './backend'
 import type { BitbagExpression } from './avatar'
 import {

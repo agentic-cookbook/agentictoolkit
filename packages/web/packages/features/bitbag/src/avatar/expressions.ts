@@ -1,4 +1,4 @@
-import type { Pose } from "@agentic-developer-toolkit/avatar";
+import type { Pose } from "@agenticdevelopertoolkit/avatar";
 
 // bitbag's pose data conforms to the engine's generic Pose; re-export it so
 // callers can `import { Pose } from "./expressions"` if they ever need it.

@@ -8,7 +8,7 @@ import {
   type ExpressionEffect,
   type MoodMap,
   type Tuning,
-} from "@agentic-developer-toolkit/avatar";
+} from "@agenticdevelopertoolkit/avatar";
 import { POSES, type BitbagExpression } from "./expressions";
 
 const GOLD = "#d9bb74"; // bb's lit resting color (the adh accent-bright)

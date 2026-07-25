@@ -5,7 +5,7 @@ import {
   type ChatMessage,
   type ChatResponse,
   type ChatStreamEvent,
-} from '@agentic-developer-toolkit/chat'
+} from '@agenticdevelopertoolkit/chat'
 import { FALLBACKS, INTRO, SEEDED } from './voice'
 
 const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))

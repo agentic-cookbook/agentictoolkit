@@ -5,9 +5,9 @@ import {
   ViewportComposer,
   ViewportShell,
   ViewportSpacer,
-} from '@agentic-developer-toolkit/viewport'
-import type { GazeVector } from '@agentic-developer-toolkit/chat'
-import type { ThemeKey } from '@agentic-developer-toolkit/themes'
+} from '@agenticdevelopertoolkit/viewport'
+import type { GazeVector } from '@agenticdevelopertoolkit/chat'
+import type { ThemeKey } from '@agenticdevelopertoolkit/themes'
 import { BitbagChat } from './BitbagChat'
 import { Bitbag, type BitbagExpression } from './avatar'
 import { DEFAULT_THEME } from './voice'

@@ -1,4 +1,4 @@
-import type { ThemeKey } from '@agentic-developer-toolkit/themes'
+import type { ThemeKey } from '@agenticdevelopertoolkit/themes'
 
 // Silly "thinking" words for the in-flight indicator (bitbag's own dialect).
 // Must end in "ing" — the spinner auto-derives the grey done form by swapping

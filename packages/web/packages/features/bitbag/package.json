@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/bitbag",
   "version": "0.1.0",
-  "description": "bitbag — his persona, voice, avatar rig, and chat surface. Mounts on any site that links @agentic-developer-toolkit.",
+  "description": "bitbag — his persona, voice, avatar rig, and chat surface. Mounts on any site that links @agenticdevelopertoolkit.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,19 +33,19 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@agentic-developer-toolkit/avatar": "*",
-    "@agentic-developer-toolkit/chat": "*",
-    "@agentic-developer-toolkit/themes": "*",
-    "@agentic-developer-toolkit/viewport": "*",
+    "@agenticdevelopertoolkit/avatar": "*",
+    "@agenticdevelopertoolkit/chat": "*",
+    "@agenticdevelopertoolkit/themes": "*",
+    "@agenticdevelopertoolkit/viewport": "*",
     "gsap": "^3.13.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@agentic-developer-toolkit/avatar": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/avatar",
-    "@agentic-developer-toolkit/chat": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/chat",
-    "@agentic-developer-toolkit/themes": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/themes",
-    "@agentic-developer-toolkit/viewport": "link:../../../../../../agentic-developer-toolkit/packages/web/packages/viewport",
+    "@agenticdevelopertoolkit/avatar": "link:../../../../../../agenticdevelopertoolkit/packages/web/packages/avatar",
+    "@agenticdevelopertoolkit/chat": "link:../../../../../../agenticdevelopertoolkit/packages/web/packages/chat",
+    "@agenticdevelopertoolkit/themes": "link:../../../../../../agenticdevelopertoolkit/packages/web/packages/themes",
+    "@agenticdevelopertoolkit/viewport": "link:../../../../../../agenticdevelopertoolkit/packages/web/packages/viewport",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",

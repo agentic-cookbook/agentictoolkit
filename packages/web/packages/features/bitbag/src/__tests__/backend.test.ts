@@ -1,6 +1,6 @@
 // src/__tests__/backend.test.ts
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ChatResponse } from '@agentic-developer-toolkit/chat'
+import type { ChatResponse } from '@agenticdevelopertoolkit/chat'
 import { BitbagBackend } from '../backend'
 import { FALLBACKS, INTRO } from '../voice'
 

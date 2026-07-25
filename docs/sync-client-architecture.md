@@ -129,8 +129,8 @@ public enum SyncTransportError: Error, Sendable, Equatable {
 ```
 
 **Who implements it:** the concrete wire client is **`ADHSyncAPI`** in the
-sibling `agentic-developer-toolkit` repo
-(`AgenticDeveloperHubClient/Sources/Sync/ADHSyncAPI.swift`). It deliberately
+sibling `agenticdevelopertoolkit` repo
+(`packages/apple/AgenticDeveloperHubClient/Sources/Sync/ADHSyncAPI.swift`). It deliberately
 decodes nothing — it owns only URLs, bearer auth, and HTTP status → `Failure`
 mapping (`unauthorized` for 401, `resyncRequired` for 410, `http(code)`
 otherwise), so that package needs no toolkit dependency and moves raw `Data`.
