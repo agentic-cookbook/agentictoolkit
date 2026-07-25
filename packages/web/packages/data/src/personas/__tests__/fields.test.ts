@@ -39,6 +39,26 @@ describe("persona field descriptors", () => {
     expect(personaToBody({ ...personaBlank(), cannedChat: cfg }).cannedChat).toEqual(cfg);
   });
 
+  it("passes raw fields through untouched, nulls included", () => {
+    // `raw` fields never trim/drop — a typo'd "omit" would silently vanish from the body,
+    // and `toBeNull()` alone wouldn't catch it (undefined isn't null but isn't caught either
+    // way); assert key presence explicitly via toHaveProperty.
+    const draft = {
+      ...personaBlank(),
+      modelPrompt: "  leading and trailing  ", // raw: NOT trimmed, unlike slug/name
+      avatarAttachmentId: null,
+      serviceId: "svc_1",
+      model: null,
+      visibility: "unlisted" as const,
+    };
+    const body = personaToBody(draft);
+    expect(body.modelPrompt).toBe("  leading and trailing  ");
+    expect(body).toHaveProperty("avatarAttachmentId", null);
+    expect(body.serviceId).toBe("svc_1");
+    expect(body).toHaveProperty("model", null);
+    expect(body.visibility).toBe("unlisted");
+  });
+
   it("describes every field exactly once", () => {
     const keys = PERSONA_FIELDS.map((f) => f.key);
     expect(new Set(keys).size).toBe(keys.length);
