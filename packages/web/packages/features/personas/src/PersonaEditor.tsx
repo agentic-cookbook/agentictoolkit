@@ -175,14 +175,17 @@ const toBody = personaToBody;
  * the active section's fields, for both create (`persona === null`) and edit. The caller owns the
  * list; this pane owns the draft, validation, and save, then signals back.
  *
- * Three facets cross a package boundary the editor itself can't reach, so the HOST injects them:
+ * Several surfaces cross a package boundary the editor itself can't reach, so the HOST injects them:
  *  - `renderChatPane` — the live try-it chat (needs the host's own chat wiring);
+ *  - `renderModelDetails` — the rich model browser beside the Model select (per-model metadata and
+ *    a provider re-fetch, which read/write the host's service rows);
  *  - `profileUrlFor` — the persona's public profile URL (needs the host's site-URL config);
  *  - `renderKnowledgeBases` — the Knowledge Bases browser (a separate feature package this one
  *    doesn't depend on).
- * Each is optional: when a host omits one, the affordance is either hidden (profile URL) or shown
- * with a distinct "not available in this view" notice (chat / knowledge bases) rather than the
- * misleading "save first" copy — the persona IS already saved, the view just doesn't wire it.
+ * Each is optional, and omitting one degrades rather than breaks: the affordance is hidden (profile
+ * URL, model details — the plain Select still picks a model) or replaced by a distinct "not
+ * available in this view" notice (chat / knowledge bases) rather than the misleading "save first"
+ * copy — the persona IS already saved, the view just doesn't wire it.
  */
 export function PersonaEditor({
   persona,
@@ -193,6 +196,7 @@ export function PersonaEditor({
   activeSubtab,
   onSubtabChange,
   renderChatPane,
+  renderModelDetails,
   profileUrlFor,
   renderKnowledgeBases,
   renderProject,
@@ -217,6 +221,19 @@ export function PersonaEditor({
   /** Renders the live try-it chat for a SAVED persona (the LLM Settings facet). Omit to show a
    *  "not available in this view" notice instead. */
   renderChatPane?: (persona: Persona) => ReactNode;
+  /** Renders a richer model browser beside the Model select (the LLM Settings facet) — the one
+   *  the plain `<Select>` of model names can't be: per-model context window, max output tokens,
+   *  pricing, modalities and capability flags, plus a live re-fetch of the provider's model list.
+   *  That view reads a service's provider metadata and writes back a refreshed service row, which
+   *  is host-app territory, so it's injected the same way `renderChatPane` is. Called only when a
+   *  service is selected; omit it and the facet is the bare Select. */
+  renderModelDetails?: (args: {
+    /** The currently selected service — the models being browsed belong to it. */
+    service: UserService;
+    selectedModelId: string | null;
+    /** Writes the chosen model into the draft (null clears it). Does NOT save. */
+    onSelect: (modelId: string | null) => void;
+  }) => ReactNode;
   /** The persona's public profile URL for a given slug. Omit to hide the Public URL affordance
    *  entirely (it stays gated on `visibility === "public"` and a non-empty slug either way). */
   profileUrlFor?: (slug: string) => string;
@@ -588,20 +605,34 @@ export function PersonaEditor({
               </Select>
             </Field>
             <Field label="Model">
-              <Select
-                value={draft.model ?? ""}
-                onChange={(e) => set("model", e.target.value || null)}
-                disabled={!activeService || activeService.models.length === 0}
-              >
-                <option value="">
-                  {activeService ? "No model selected" : "Pick a service first"}
-                </option>
-                {activeService?.models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.displayName ?? m.id}
-                  </option>
-                ))}
-              </Select>
+              {/* Select grows, the injected details affordance keeps its natural width. The
+                  sizing lives on this wrapper, not on Select's `className` — that lands on the
+                  inner <select>, while the flex CHILD here is Select's own `relative` chevron
+                  wrapper, which would stay content-sized. */}
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Select
+                    value={draft.model ?? ""}
+                    onChange={(e) => set("model", e.target.value || null)}
+                    disabled={!activeService || activeService.models.length === 0}
+                  >
+                    <option value="">
+                      {activeService ? "No model selected" : "Pick a service first"}
+                    </option>
+                    {activeService?.models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.displayName ?? m.id}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {activeService &&
+                  renderModelDetails?.({
+                    service: activeService,
+                    selectedModelId: draft.model ?? null,
+                    onSelect: (modelId) => set("model", modelId),
+                  })}
+              </div>
             </Field>
           </FieldGroup>
           {persona ? (

@@ -14,7 +14,8 @@
 // KnowledgeBasesPane/PersonaChatPane itself — the render helpers below pass prop-echoing stubs for
 // both instead of module-mocking them.
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import type { ComponentProps } from "react";
 
 // Prop-echoing stubs for the leaf panels: each renders a testid + the scoping prop it was handed,
 // so the editor's "renders panel X with persona.id / ecosystem" wiring is directly assertable.
@@ -58,7 +59,7 @@ vi.mock("@agentic-toolkit/crud", () => ({
 
 import { PersonaEditor } from "./PersonaEditor";
 import { RailHostBoundary } from "@agentic-toolkit/resource";
-import type { Persona } from "@agentic-toolkit/data/personas";
+import type { Persona, UserService } from "@agentic-toolkit/data/personas";
 
 const PERSONA = {
   id: "persona-1",
@@ -265,6 +266,91 @@ describe("PersonaEditor facet gating when ownedEcosystemId is null (#5 null-guar
     renderUnprovisioned("memory");
     expect(screen.queryByTestId("memory-crud")).toBeNull();
     expect(screen.getByText(/memory isn't available yet/i)).not.toBeNull();
+  });
+});
+
+// The LLM facet's Model row is a plain <Select> of model names. A host that can show more — each
+// model's context window, pricing, modalities, plus a live re-fetch from the provider — injects it
+// through `renderModelDetails`, the same cross-boundary seam `renderChatPane` uses. The registry
+// wires its ServiceDetailsDialog there; the hub wires nothing, so the omitted case is a real
+// shipping configuration and not just a control.
+describe("PersonaEditor model details seam", () => {
+  const SERVICE = {
+    id: "svc-1",
+    name: "Anthropic",
+    models: [
+      { id: "claude-opus-5", displayName: "Claude Opus 5" },
+      { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5" },
+    ],
+  } as unknown as UserService;
+  const CONFIGURED = {
+    ...PERSONA,
+    serviceId: "svc-1",
+    model: "claude-haiku-4-5",
+  } as unknown as Persona;
+
+  type RenderModelDetails = ComponentProps<typeof PersonaEditor>["renderModelDetails"];
+
+  function renderLlm(persona: Persona, renderModelDetails?: RenderModelDetails) {
+    return render(
+      <PersonaEditor
+        persona={persona}
+        services={[SERVICE]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        activeSubtab="llm"
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+        renderModelDetails={renderModelDetails}
+      />,
+    );
+  }
+
+  /** Echoes what the editor handed the host, and picks the OTHER model when clicked. */
+  const detailsStub: RenderModelDetails = ({ service, selectedModelId, onSelect }) => (
+    <button
+      type="button"
+      data-testid="model-details"
+      data-service={service.id}
+      data-selected={selectedModelId ?? ""}
+      onClick={() => onSelect("claude-opus-5")}
+    >
+      Details
+    </button>
+  );
+
+  it("hands the host the active service and the draft's model, and takes back the host's pick", () => {
+    renderLlm(CONFIGURED, detailsStub);
+    const button = screen.getByTestId("model-details");
+    expect(button.getAttribute("data-service")).toBe("svc-1");
+    expect(button.getAttribute("data-selected")).toBe("claude-haiku-4-5");
+    // Same draft field as the Select beside it, so the Select re-renders on the host's pick —
+    // this is what proves the seam WRITES rather than just reporting.
+    expect((screen.getByDisplayValue("Claude Haiku 4.5") as HTMLSelectElement).value).toBe(
+      "claude-haiku-4-5",
+    );
+    fireEvent.click(button);
+    expect((screen.getByDisplayValue("Claude Opus 5") as HTMLSelectElement).value).toBe(
+      "claude-opus-5",
+    );
+  });
+
+  it("leaves the plain Select working when the host wires nothing — the hub's mount", () => {
+    renderLlm(CONFIGURED, undefined);
+    expect(screen.queryByTestId("model-details")).toBeNull();
+    const select = screen.getByDisplayValue("Claude Haiku 4.5") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "claude-opus-5" } });
+    expect((screen.getByDisplayValue("Claude Opus 5") as HTMLSelectElement).value).toBe(
+      "claude-opus-5",
+    );
+  });
+
+  it("isn't rendered at all until a service is chosen — there are no models to browse yet", () => {
+    // PERSONA has serviceId: null, so the Model select reads "Pick a service first".
+    renderLlm(PERSONA, detailsStub);
+    expect(screen.queryByTestId("model-details")).toBeNull();
+    expect(screen.getByDisplayValue("Pick a service first")).not.toBeNull();
   });
 });
 
