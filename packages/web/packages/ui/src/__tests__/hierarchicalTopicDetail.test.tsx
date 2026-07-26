@@ -17,7 +17,11 @@
 import { useState } from 'react'
 import { act, render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { HierarchicalTopicDetail, type TopicLevel } from '../blocks/hierarchical-topic-detail'
+import {
+  HierarchicalTopicDetail,
+  type TopicLevel,
+  type TopicSelectOptions,
+} from '../blocks/hierarchical-topic-detail'
 
 const REGIONS = [
   { id: 'us', label: 'us-west-1' },
@@ -503,12 +507,23 @@ describe('HierarchicalTopicDetail — a level’s default selection', () => {
   /** A live 2-level stack (Regions → Topics) whose Topics level names a default. Selection is real
    *  state here, not a spy, because the whole behaviour is about what happens across re-renders as
    *  the user drills in, clears, and comes back. */
-  function Stack({ onSelectTopic }: { onSelectTopic: (id: string | null) => void }) {
-    const [region, setRegion] = useState<string | null>(null)
-    const [topic, setTopic] = useState<string | null>(null)
-    const set = (t: string | null) => {
+  function Stack({
+    onSelectTopic,
+    region: region0 = null,
+    topic: topic0 = null,
+  }: {
+    onSelectTopic: (id: string | null, opts?: TopicSelectOptions) => void
+    /** Seed the stack mid-drill, i.e. the state a DEEP LINK hands it on first render. */
+    region?: string | null
+    topic?: string | null
+  }) {
+    const [region, setRegion] = useState<string | null>(region0)
+    const [topic, setTopic] = useState<string | null>(topic0)
+    // `opts` is recorded alongside the id: for a level that ROUTES, whether the stack asked to
+    // replace or to push is part of the call, so the tests below pin it rather than dropping it.
+    const set = (t: string | null, opts?: TopicSelectOptions) => {
       setTopic(t)
-      onSelectTopic(t)
+      onSelectTopic(t, opts)
     }
     const levels: TopicLevel[] = [
       {
@@ -531,7 +546,7 @@ describe('HierarchicalTopicDetail — a level’s default selection', () => {
         items: TOPICS,
         selectedId: topic,
         defaultSelectedId: 'users',
-        onSelect: (id) => set(id),
+        onSelect: (id, opts) => set(id, opts),
         onClear: () => set(null),
       },
     ]
@@ -550,8 +565,23 @@ describe('HierarchicalTopicDetail — a level’s default selection', () => {
     expect(onSelectTopic).not.toHaveBeenCalled()
 
     fireEvent.click(row(/us-west-1/))
-    expect(onSelectTopic).toHaveBeenLastCalledWith('users')
+    expect(onSelectTopic).toHaveBeenLastCalledWith('users', { replace: true })
     expect(row(/Users/)).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('asks to REPLACE when it chose, and not when the user did', () => {
+    // The whole difference between the two, and the reason `opts` exists: the state a default
+    // supersedes is one the user never asked for and never sees, so it must not become a Back
+    // stop — landing on it would re-apply the default and bounce them straight forward again.
+    // A clicked row is the opposite: the user asked for it, so it earns its own history entry.
+    const onSelectTopic = vi.fn()
+    render(<Stack onSelectTopic={onSelectTopic} />)
+
+    fireEvent.click(row(/us-west-1/)) // the list appears → the default fires for the user
+    expect(onSelectTopic).toHaveBeenLastCalledWith('users', { replace: true })
+
+    fireEvent.click(row(/Applications/)) // the user picks a different topic
+    expect(onSelectTopic).toHaveBeenLastCalledWith('apps', undefined)
   })
 
   it('does not fight a manual deselect — the default arms once per visit', () => {
@@ -562,7 +592,22 @@ describe('HierarchicalTopicDetail — a level’s default selection', () => {
     // Re-click the auto-selected row to clear it. A default that re-fires here makes the row
     // impossible to deselect — the default may choose FOR the user, never argue WITH them.
     fireEvent.click(row(/Users/))
-    expect(onSelectTopic).toHaveBeenLastCalledWith(null)
+    expect(onSelectTopic).toHaveBeenLastCalledWith(null, undefined)
+    expect(row(/Users/)).not.toHaveAttribute('aria-current', 'true')
+  })
+
+  it('does not fight a clear on a list that arrived ALREADY selected (a deep link)', () => {
+    // The same rule as above, reached the other way: the list appears with the selection already
+    // made (someone opened `…/topics/users` directly), so the default never fires and — before
+    // this was fixed — never recorded that its visit was spent. Clearing the row then looked
+    // like a fresh appearance with nothing chosen, so the default re-applied and the row could
+    // not be deselected at all: a click that visibly did nothing.
+    const onSelectTopic = vi.fn()
+    render(<Stack onSelectTopic={onSelectTopic} region="us" topic="users" />)
+    expect(onSelectTopic).not.toHaveBeenCalled() // nothing to choose — it is already chosen
+
+    fireEvent.click(row(/Users/)) // re-click the selected row to clear it
+    expect(onSelectTopic).toHaveBeenLastCalledWith(null, undefined)
     expect(row(/Users/)).not.toHaveAttribute('aria-current', 'true')
   })
 
@@ -572,10 +617,10 @@ describe('HierarchicalTopicDetail — a level’s default selection', () => {
     fireEvent.click(row(/us-west-1/))
     fireEvent.click(row(/Users/)) // clear it
     fireEvent.click(row(/us-west-1/)) // leave the region (re-click deselects) — the list goes away
-    expect(onSelectTopic).toHaveBeenLastCalledWith(null)
+    expect(onSelectTopic).toHaveBeenLastCalledWith(null, undefined)
 
     fireEvent.click(row(/eu-central-1/)) // come back in: the list re-appears, so the default re-arms
-    expect(onSelectTopic).toHaveBeenLastCalledWith('users')
+    expect(onSelectTopic).toHaveBeenLastCalledWith('users', { replace: true })
     expect(row(/Users/)).toHaveAttribute('aria-current', 'true')
   })
 })

@@ -52,6 +52,15 @@ export interface PaneExitGuard {
   save(): Promise<boolean>
 }
 
+/** How a select should enter history, for the levels whose `onSelect` NAVIGATES (a router push).
+ *  Passed only when the BLOCK chose rather than the user — today that is a level's
+ *  `defaultSelectedId` — so an auto-applied default lands where a click would have, without
+ *  leaving a Back stop on the state it immediately redirected away from. Ignored by levels that
+ *  select in memory; a click never carries it, so a chosen row is always its own history entry. */
+export interface TopicSelectOptions {
+  replace?: boolean
+}
+
 // The enclosing frame for a hierarchy of topic/detail rails — the generalisation
 // of the adh.com/home nesting (`[workspaces] | [features] | [content]`). Instead
 // of hand-nesting TopicDetail inside TopicDetail, a consumer passes a flat
@@ -107,8 +116,10 @@ export interface TopicLevel {
   overviewHelp?: ReactNode
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
-   *  row, or this level's `defaultSelectedId` when the list appears). */
-  onSelect: (id: string) => void
+   *  row, or this level's `defaultSelectedId` when the list appears). `opts` says HOW: the
+   *  default-select path passes `{ replace: true }` (see {@link TopicSelectOptions}), a click
+   *  passes nothing. A routing implementation should honour it; an in-memory one may ignore it. */
+  onSelect: (id: string, opts?: TopicSelectOptions) => void
   /** Clear THIS level and everything below it, keeping ancestors. Pure navigation. The
    *  package calls it for re-click-deselect, breadcrumb up-navigation, and Back. */
   onClear: () => void
@@ -593,7 +604,10 @@ export function HierarchicalTopicDetail({
   )
 
   // A level's OPT-IN `defaultSelectedId`: select it for the user the moment the list appears with
-  // nothing chosen. Fired as the level's own `onSelect`, so it is indistinguishable from a click.
+  // nothing chosen. Fired as the level's own `onSelect`, so it is indistinguishable from a click —
+  // except in HISTORY: it goes out with `{ replace: true }`, because the state it replaces is one
+  // the user never asked for and never sees. Push it and every visit costs TWO Back presses, the
+  // first landing on the bare parent that instantly re-applies the default and bounces forward.
   //
   // Armed per APPEARANCE, which is the whole subtlety. The arming key is the ancestor selections that
   // produced this list, remembered per level (in the surface store, because applying or clearing the
@@ -601,7 +615,9 @@ export function HierarchicalTopicDetail({
   // forget it had fired and re-select the row the user just cleared, making the row undeselectable):
   //   - the list is not rendered at all (its parent is unselected) → DISARM, so the next visit fires;
   //   - already fired for this key and the user has since cleared the row → stay disarmed. The
-  //     default may choose FOR the user, never argue WITH them.
+  //     default may choose FOR the user, never argue WITH them;
+  //   - the list appeared ALREADY selected (a deep link into a view) → spend the visit without
+  //     firing, so that same clear-stands rule covers the deep-linked entry too.
   // A default naming an item the list doesn't have (yet) is simply not applied — an async list arms
   // when its rows land, and a stale default never selects a phantom row.
   useEffect(() => {
@@ -619,15 +635,24 @@ export function HierarchicalTopicDetail({
         }
         return
       }
-      if (level.selectedId != null) return
-      if (!level.items.some((it) => it.id === wanted)) return
       const key = `${levels
         .slice(0, i)
         .map((l) => l.selectedId ?? "")
         .join("|")}::${wanted}`
+      if (level.selectedId != null) {
+        // The list appeared with a selection ALREADY in place — a deep link straight to a view,
+        // or the default's own select landing. Nothing to apply, but the visit must still count as
+        // spent: leave it unrecorded and a later manual clear looks exactly like "the list just
+        // appeared with nothing chosen", so the default re-fires and the row cannot be deselected.
+        if (surface.autoSelected[level.id] !== key) {
+          patchSurface((p) => ({ ...p, autoSelected: { ...p.autoSelected, [level.id]: key } }))
+        }
+        return
+      }
+      if (!level.items.some((it) => it.id === wanted)) return
       if (surface.autoSelected[level.id] === key) return // fired for this visit; a manual clear stands
       patchSurface((p) => ({ ...p, autoSelected: { ...p.autoSelected, [level.id]: key } }))
-      level.onSelect(wanted)
+      level.onSelect(wanted, { replace: true })
     })
   })
 

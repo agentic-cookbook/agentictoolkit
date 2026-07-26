@@ -149,14 +149,16 @@ function Harness({
   onSelectSpy,
   view = "list",
 }: {
-  onSelectSpy?: (leafId: string | null) => void;
+  onSelectSpy?: (leafId: string | null, opts?: { replace?: boolean }) => void;
   view?: string | null;
 }) {
   const [leafId, setLeafId] = useState<string | null>(view);
   const leaf: TopicLeaf = {
     leafId,
-    onSelect: (id) => {
-      onSelectSpy?.(id);
+    // The spy records the OPTIONS too: a real leaf routes, so whether the stack asked to replace
+    // or to push is part of what this surface must forward, not an implementation detail.
+    onSelect: (id, opts) => {
+      onSelectSpy?.(id, opts);
       setLeafId(id);
     },
   };
@@ -180,8 +182,10 @@ describe("WorkItemsSurface", () => {
 
     // The level names List as its `defaultSelectedId`, so opening Work Items lands there instead of
     // on a pane asking which view you want. It arrives as a NORMAL selection — the leaf is routed
-    // through `leaf.onSelect`, exactly as if the row had been clicked.
-    expect(onSelectSpy).toHaveBeenCalledWith("list");
+    // through `leaf.onSelect`, exactly as if the row had been clicked — except that it asks to
+    // REPLACE: the bare topic it supersedes was never a state the user chose or saw, so leaving a
+    // Back stop on it would make one click cost two Back presses.
+    expect(onSelectSpy).toHaveBeenCalledWith("list", { replace: true });
     expect(await screen.findByRole("grid", { name: "Work items" })).not.toBeNull();
     expect(screen.queryByText(/select a view/i)).toBeNull();
     expect(within(rail).getByRole("button", { name: "List" })).toHaveAttribute(
@@ -197,7 +201,9 @@ describe("WorkItemsSurface", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Board" }));
 
-    expect(onSelectSpy).toHaveBeenCalledWith("board");
+    // A CLICK carries no options — it is a state the user asked for, so it earns its own history
+    // entry. Only the stack's own auto-applied default asks to replace.
+    expect(onSelectSpy).toHaveBeenCalledWith("board", undefined);
 
     // The Board columns are now rendered (in position order), the List grid gone. Scoped to the
     // board: the rail's own rows are <li>s too, so an unscoped listitem query would sweep them in.

@@ -14,6 +14,7 @@ import {
   TopicSelectHint,
   type TopicDetailItem,
   type TopicLevel,
+  type TopicSelectOptions,
 } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ResourceLanding } from "./resource-landing";
@@ -26,7 +27,9 @@ import { RailHostBoundary } from "./standalone-rail-host";
  *  single-record topics ignore it. */
 export interface TopicLeaf {
   leafId: string | null;
-  onSelect: (leafId: string | null) => void;
+  /** `opts` mirrors a level's own `onSelect` (see `TopicSelectOptions`): the stack passes
+   *  `{ replace: true }` when IT applied a default rather than the user picking the leaf. */
+  onSelect: (leafId: string | null, opts?: TopicSelectOptions) => void;
 }
 
 export interface ResourceTopic {
@@ -153,6 +156,17 @@ export function ResourceExplorer<T>({
   reload?: () => Promise<void>;
 }): ReactElement {
   const router = useRouter();
+  // Every SELECT in this explorer routes through here, so `{ replace: true }` — which the stack
+  // hands to a level's auto-applied `defaultSelectedId` — is honoured on all of them, not just the
+  // one level that declares a default today. A pushed auto-default costs the user a Back press on
+  // a URL they never chose and never saw.
+  const select = useCallback(
+    (href: string, opts?: TopicSelectOptions) => {
+      if (opts?.replace) router.replace(href, { scroll: false });
+      else router.push(href, { scroll: false });
+    },
+    [router],
+  );
   const [newOpen, setNewOpen] = useState(false);
 
   const validTopics = new Set(topics.map((t) => t.id));
@@ -222,7 +236,7 @@ export function ResourceExplorer<T>({
     overview: false,
     selectedId: isAll ? null : (scopedId ?? null),
     // No default topic appended — selecting an entity shows its topics list with nothing focused.
-    onSelect: (id) => router.push(`${basePath}/${id}`, { scroll: false }),
+    onSelect: (id, opts) => select(`${basePath}/${id}`, opts),
     onClear: () => router.push(basePath, { scroll: false }),
     emptyLabel: landing?.emptyLabel ?? "",
     // "New …" is a right-justified `+` in the resource list header — absent entirely
@@ -240,8 +254,8 @@ export function ResourceExplorer<T>({
     overviewHelp: `Each topic is one working area of this ${nameSuffix.toLowerCase()} — its apps, users, settings, and so on. Picking one opens that area's list or pane here.`,
     items: topicItems,
     selectedId: topic,
-    onSelect: (id) => {
-      if (scopedId) router.push(`${basePath}/${scopedId}/${id}`, { scroll: false });
+    onSelect: (id, opts) => {
+      if (scopedId) select(`${basePath}/${scopedId}/${id}`, opts);
     },
     onClear: () => {
       if (scopedId) router.push(`${basePath}/${scopedId}`, { scroll: false });
@@ -269,13 +283,13 @@ export function ResourceExplorer<T>({
   // threads this through `useMasterDetailForm({ urlSelection })`; others ignore it.
   const leaf: TopicLeaf = {
     leafId: activeLeafId ?? null,
-    onSelect: (leafId) => {
+    onSelect: (leafId, opts) => {
       if (!scopedId || !topic) return;
-      router.push(
+      select(
         leafId
           ? `${basePath}/${scopedId}/${topic}/${leafId}`
           : `${basePath}/${scopedId}/${topic}`,
-        { scroll: false },
+        opts,
       );
     },
   };
@@ -285,13 +299,13 @@ export function ResourceExplorer<T>({
   // a given member, so a grouped persona / bucket / user deep-links exactly like its standalone route.
   const subLeafFor = (memberId: string): TopicLeaf => ({
     leafId: activeMemberEntityId ?? null,
-    onSelect: (entityId) => {
+    onSelect: (entityId, opts) => {
       if (!scopedId || !topic) return;
-      router.push(
+      select(
         entityId
           ? `${basePath}/${scopedId}/${topic}/${memberId}/${entityId}`
           : `${basePath}/${scopedId}/${topic}/${memberId}`,
-        { scroll: false },
+        opts,
       );
     },
   });

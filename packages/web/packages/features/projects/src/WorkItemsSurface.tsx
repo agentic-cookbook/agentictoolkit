@@ -237,9 +237,11 @@ export function WorkItemsSurface({
     selectedId: view,
     // Choosing Work Items lands on the List view rather than an empty pane asking which view you
     // want — the answer is nearly always List, and it stays a normal selection (URL, breadcrumb,
-    // re-click-to-clear all behave as if the row had been clicked).
+    // re-click-to-clear all behave as if the row had been clicked). `opts` is forwarded so the
+    // stack can REPLACE the bare-topic URL when it applies that default: the user asked for Work
+    // Items, so Work Items is what Back should leave, not a stop on a pane they never saw.
     defaultSelectedId: "list",
-    onSelect: (id) => leaf.onSelect(id),
+    onSelect: (id, opts) => leaf.onSelect(id, opts),
     onClear: () => leaf.onSelect(null),
     onNew: () => setNewOpen(true),
     newLabel: "New work item",
