@@ -54,6 +54,39 @@ describe("specialInterestsApi", () => {
     expect(body).not.toHaveProperty("bucketId");
     expect(body.stances).toBe("Revised.");
   });
+
+  it("preserves null topical and specific on general-only interests", async () => {
+    const fetchMockForResponse = vi.fn();
+    fetchMockForResponse.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: "i2",
+        personaId: "persona.acme.bitbag",
+        slug: "philosophy",
+        general: "Philosophy",
+        topical: null,
+        specific: null,
+        stances: null,
+      }),
+      text: async () => "{}",
+    });
+    vi.stubGlobal("fetch", fetchMockForResponse);
+
+    const result = await specialInterestsApi.create({
+      personaId: "persona.acme.bitbag",
+      slug: "philosophy",
+      general: "Philosophy",
+      topical: null,
+      specific: null,
+    });
+
+    const body = JSON.parse(String(fetchMockForResponse.mock.calls[0][1].body));
+    expect(body.topical).toBe(null);
+    expect(body.specific).toBe(null);
+    expect(result.topical).toBe(null);
+    expect(result.specific).toBe(null);
+  });
 });
 
 describe("interestDocumentsApi", () => {
