@@ -144,7 +144,7 @@ export function DemoFacet({
 
       <RowsField
         label="Fallback replies"
-        hint="Used when nothing else matches. Each is used once before any repeats."
+        hint="Used when nothing else matches. Each is used once before any repeats. With none, your opening and triggered lines carry the whole conversation."
         value={cfg.script.fallbacks}
         onChange={(fallbacks) => patchScript({ fallbacks })}
         blankRow={() => ""}
@@ -154,7 +154,10 @@ export function DemoFacet({
         )}
       />
 
-      <Field label="When every fallback has been used">
+      {/* Governs whichever pool runs the conversation: the fallbacks when there are any,
+          otherwise the opening and triggered lines themselves. Naming only the fallbacks
+          left authors with no fallbacks unable to tell that their opening lines replay. */}
+      <Field label="When every reply has been used">
         <Select
           value={cfg.script.onExhausted}
           onChange={(e) => patchScript({ onExhausted: e.target.value as "reshuffle" | "hold-last" })}
