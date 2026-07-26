@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { InterestsEditor } from "./InterestsEditor";
+import { InterestsEditor, slugify } from "./InterestsEditor";
 
 const list = vi.fn();
 const create = vi.fn();
@@ -38,6 +38,17 @@ beforeEach(() => {
   create.mockReset().mockResolvedValue(row);
   update.mockReset().mockResolvedValue(row);
   del.mockReset().mockResolvedValue(undefined);
+});
+
+describe("slugify", () => {
+  it("never leaves a trailing dash after truncating to the 64-char rdid segment limit", () => {
+    // 63 letters + " b": non-alnum run becomes a single "-" at index 63, so a naive
+    // slice(0, 64) AFTER stripping edge dashes keeps that dash and drops the "b" —
+    // producing a slug that ends in "-", which the server 400s on as unusable.
+    const slug = slugify("a".repeat(63) + " b");
+    expect(slug).toBe("a".repeat(63));
+    expect(slug.endsWith("-")).toBe(false);
+  });
 });
 
 describe("InterestsEditor", () => {
@@ -115,11 +126,97 @@ describe("InterestsEditor", () => {
     expect(await screen.findByText(/don't have permission/i)).toBeInTheDocument();
   });
 
+  it("tells the two 400s apart: the cap has its own message, everything else names the length limit", async () => {
+    const attempt = async () => {
+      await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+      await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+      await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
+    };
+
+    // The backend's exact pre-create-hook message (crud/pre-create-hooks.ts, specialInterestCreate).
+    create.mockRejectedValue(
+      Object.assign(new Error("a persona may have at most 2 special interests"), { status: 400 }),
+    );
+    const { unmount } = render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await attempt();
+    expect(await screen.findByText(/at most 2 interests/i)).toBeInTheDocument();
+    unmount();
+
+    // Every OTHER 400 — a level over its 120-char limit, an unusable slug — comes back from
+    // generic CRUD's Zod catch as this flat, field-blind string (crud/factory.ts). It must not be
+    // narrated as the cap.
+    create.mockRejectedValue(Object.assign(new Error("invalid request body"), { status: 400 }));
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await attempt();
+    expect(await screen.findByText(/120 characters/i)).toBeInTheDocument();
+    expect(screen.queryByText(/at most 2 interests/i)).not.toBeInTheDocument();
+  });
+
   it("deletes an interest", async () => {
     list.mockResolvedValue([row]);
     render(<InterestsEditor personaId="persona.acme.bitbag" />);
     await screen.findByDisplayValue("Battlestar Galactica");
     await userEvent.click(screen.getByRole("button", { name: /remove/i }));
     await waitFor(() => expect(del).toHaveBeenCalledWith("i1"));
+  });
+
+  it("routes an existing row's save to update, never create", async () => {
+    list.mockResolvedValue([row]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Battlestar Galactica");
+    await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(
+        "i1",
+        expect.objectContaining({ general: "Science Fiction" }),
+      ),
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("sends topical and specific as null, not empty strings, for a general-only interest", async () => {
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+    await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+    await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({
+      general: "Film",
+      topical: null,
+      specific: null,
+      stances: null,
+    });
+  });
+
+  it("keeps a loaded Specific value editable even though its Topical level is null", async () => {
+    // No CHECK constraint ties the levels together (migrations/0155_persona_special_interests.sql)
+    // — `topical: null, specific: 'X'` is a legal row the API will happily return.
+    list.mockResolvedValue([{ ...row, topical: null, specific: "Alien" }]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    const specific = await screen.findByLabelText(/^specific$/i);
+    expect(specific).toHaveValue("Alien");
+    expect(specific).toBeEnabled();
+  });
+
+  it("does not clobber an unsaved sibling card when saving another", async () => {
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    const addButton = await screen.findByRole("button", { name: /add an interest/i });
+    await userEvent.click(addButton);
+    await userEvent.click(addButton);
+
+    const generals = screen.getAllByLabelText(/^general$/i);
+    await userEvent.type(generals[0]!, "Science Fiction");
+    await userEvent.type(generals[1]!, "Film");
+    const opinions = screen.getAllByLabelText(/^opinions$/i);
+    await userEvent.type(opinions[1]!, "Ridley Scott's best work.");
+
+    await userEvent.click(screen.getAllByRole("button", { name: /^save interest$/i })[0]!);
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+
+    // The second card was never saved — saving the first must not wipe it out from under the
+    // author. A wholesale `reload()` after save would replace both cards with the server's rows
+    // (here: just the one row `create` resolved to), losing the second card entirely.
+    expect(screen.getByDisplayValue("Film")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Ridley Scott's best work.")).toBeInTheDocument();
   });
 });

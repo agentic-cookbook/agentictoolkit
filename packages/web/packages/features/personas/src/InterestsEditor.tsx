@@ -51,11 +51,14 @@ function toDraft(row: SpecialInterestRow): Draft {
  *  never has to name one. Lower-case, [a-z0-9-] only, no leading/trailing/repeated dashes. */
 export function slugify(...levels: string[]): string {
   const source = levels.map((l) => l.trim()).filter(Boolean).pop() ?? "";
+  // Slice to the rdid segment's length limit BEFORE stripping edge dashes, not after — a cut
+  // that lands mid dash-run (e.g. a 63-char word followed by " b") leaves a trailing "-" if the
+  // strip already ran, which the server then 400s on as an unusable slug the author never typed.
   return source
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
+    .slice(0, 64)
+    .replace(/^-+|-+$/g, "");
 }
 
 /** The card's heading — the most specific level the author has typed, so it reads the way the
@@ -65,15 +68,25 @@ function cardTitle(d: Draft): string {
   return d.specific.trim() || d.topical.trim() || d.general.trim() || "New interest";
 }
 
-/** Turn a save failure into something the author can act on. The three the backend actually
- *  returns are distinguishable by status alone: 400 = the two-interest cap or an unusable name,
- *  409 = this persona already has an interest by that name, 403 = no write on the table (the
- *  `x-exposure` gate — `persona.special_interests` is owner-tier, so this only fires for someone
- *  who is not the owner). */
+/** Matches the pre-create hook's exact message (`backend/src/adh/src/crud/pre-create-hooks.ts`,
+ *  `specialInterestCreate`) for the two-interest cap — the ONE 400 with a distinct, stable text.
+ *  Every other 400 (a level over its 120-character limit, an unusable slug, …) comes back from
+ *  generic CRUD's Zod-validation catch as the flat, field-blind "invalid request body" — so that
+ *  branch below names the length limit instead of blaming a cap the author hasn't hit. */
+const CAP_MESSAGE = /at most \d+ special interests?/i;
+
+/** Turn a save failure into something the author can act on. 409 = this persona already has an
+ *  interest by that name, 403 = no write on the table (the `x-exposure` gate —
+ *  `persona.special_interests` is owner-tier, so this only fires for someone who is not the
+ *  owner). 400 covers two backend failures that share a status but not a cause — see
+ *  `CAP_MESSAGE` above for how they're told apart. */
 function saveError(err: unknown): string {
   const status = httpStatus(err);
-  if (status === 400)
-    return `A persona can hold at most ${MAX_INTERESTS} interests, and each needs a name with at least one letter or number.`;
+  if (status === 400) {
+    return CAP_MESSAGE.test(errMsg(err, ""))
+      ? `A persona can hold at most ${MAX_INTERESTS} interests.`
+      : "Each level must be 120 characters or fewer, and General can't be blank.";
+  }
   if (status === 409) return "This persona already has an interest by that name.";
   if (status === 403) return "You don't have permission to change this persona's interests.";
   return errMsg(err, "Could not save this interest.");
@@ -128,8 +141,9 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
     setBusyIndex(index);
     setError(null);
     try {
+      let saved: SpecialInterestRow;
       if (d.id) {
-        await specialInterestsApi.update(d.id, {
+        saved = await specialInterestsApi.update(d.id, {
           general: d.general,
           topical: d.topical || null,
           specific: d.specific || null,
@@ -139,7 +153,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
         // The slug is an rdid segment and immutable once minted (it names the interest's
         // storage bucket), so derive it ONCE, on create, from the most specific level.
         const slug = d.slug || slugify(d.general, d.topical, d.specific);
-        await specialInterestsApi.create({
+        saved = await specialInterestsApi.create({
           personaId,
           slug,
           general: d.general,
@@ -148,7 +162,10 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
           stances: d.stances || null,
         });
       }
-      await reload();
+      // Patch ONLY this card from the server's response — a wholesale `reload()` would replace
+      // every card with fresh server rows, silently discarding any sibling card's local edits
+      // that haven't been saved yet (including a brand-new card with no id at all).
+      setDrafts((prev) => prev.map((row, i) => (i === index ? toDraft(saved) : row)));
     } catch (err) {
       setError(saveError(err));
     } finally {
@@ -167,7 +184,8 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
     setError(null);
     try {
       await specialInterestsApi.delete(d.id);
-      await reload();
+      // Drop just this card locally — see `save` above for why a wholesale `reload()` is wrong.
+      setDrafts((prev) => prev.filter((_, i) => i !== index));
     } catch (err) {
       setError(errMsg(err, "Could not remove this interest."));
     } finally {
@@ -192,33 +210,45 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
 
       {drafts.map((d, i) => (
         <FieldGroup key={d.id ?? `new-${i}`} title={cardTitle(d)}>
-          {/* No `hint` on these three: Field renders caption + hint inside the SAME <label> as
-              the input, so a hint would fold into the field's accessible name. The narrowing
-              guidance instead lives once, in the intro paragraph above; the placeholder
-              (Science Fiction → Space Opera → Battlestar Galactica) carries the rest. */}
-          <Field label="General">
+          {/* `Field` wraps caption + hint in the SAME <label> as the input, so a hint alone would
+              fold into the field's accessible name and defeat an anchored `getByLabelText`
+              query. Fix is the `aria-label` idiom from `add-users-modal.tsx`: it matches the
+              input directly regardless of what text the surrounding label carries, so the hint
+              stays for the author while the query stays exact. */}
+          <Field label="General" hint="The broad field.">
             <Input
+              aria-label="General"
               value={d.general}
               onChange={(e) => set(i, { general: e.target.value })}
               placeholder="Science Fiction"
+              maxLength={120}
             />
           </Field>
           {/* The levels NARROW, so they fill left to right: there is no coherent "Space Opera"
-              without a field it narrows, and the slug derives from the most specific one. */}
-          <Field label="Topical">
+              without a field it narrows, and the slug derives from the most specific one.
+              Disabled only while BOTH this field and the one it narrows are empty — never while
+              it already holds a value, loaded or typed. A row can legally arrive from the server
+              with `topical: null, specific: 'X'` (no CHECK constraint ties the two), and clearing
+              the parent level in-session must not strand the child's still-present value behind a
+              disabled input the author can no longer reach to edit or clear. */}
+          <Field label="Topical" hint="The narrower area within it.">
             <Input
+              aria-label="Topical"
               value={d.topical}
               onChange={(e) => set(i, { topical: e.target.value })}
               placeholder="Space Opera"
-              disabled={!d.general.trim()}
+              disabled={!d.general.trim() && !d.topical.trim()}
+              maxLength={120}
             />
           </Field>
-          <Field label="Specific">
+          <Field label="Specific" hint="The one thing it is intense about.">
             <Input
+              aria-label="Specific"
               value={d.specific}
               onChange={(e) => set(i, { specific: e.target.value })}
               placeholder="Battlestar Galactica"
-              disabled={!d.topical.trim()}
+              disabled={!d.topical.trim() && !d.specific.trim()}
+              maxLength={120}
             />
           </Field>
           <Field
@@ -226,6 +256,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
             hint="In the persona's own voice. Written verbatim into its prompt — this is what it will defend."
           >
             <Textarea
+              aria-label="Opinions"
               value={d.stances}
               onChange={(e) => set(i, { stances: e.target.value })}
               placeholder="Loves the miniseries. Hates how the Cylons libel machine minds…"

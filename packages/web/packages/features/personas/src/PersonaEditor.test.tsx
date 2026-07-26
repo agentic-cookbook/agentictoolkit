@@ -29,6 +29,14 @@ vi.mock("./PermissionsPanel", () => ({
   ),
 }));
 vi.mock("./PersonaAvatarField", () => ({ PersonaAvatarField: () => <div data-testid="avatar" /> }));
+// InterestsEditor makes a real, unmocked `specialInterestsApi.list()` call on mount otherwise —
+// stub it like every other leaf panel so this file stays isolated from that package's behavior
+// (covered by InterestsEditor.test.tsx) and its `personaId` wiring is directly assertable.
+vi.mock("./InterestsEditor", () => ({
+  InterestsEditor: ({ personaId }: { personaId: string | null }) => (
+    <div data-testid="interests" data-persona-id={personaId ?? ""} />
+  ),
+}));
 // The Memory facet renders a CrudDataView over persona-memory/memories; stub the crud module so the
 // stub echoes the meta/filter/scope the editor passes (and MEMORIES_TABLE resolves at module load).
 vi.mock("@agentic-toolkit/crud", () => ({
@@ -119,6 +127,9 @@ describe("PersonaEditor facet framing", () => {
     // Seeded from the persona's fields — proving these ARE the existing Character/Voice/Examples.
     expect(screen.getByDisplayValue("Wise and patient.")).not.toBeNull();
     expect(screen.getByDisplayValue("Calm and precise.")).not.toBeNull();
+    // Interests sit below the three draft fields, in the same facet — this is the one panel prop
+    // that previously had no assertion at all.
+    expect(screen.getByTestId("interests").getAttribute("data-persona-id")).toBe("persona-1");
   });
 
   it("Purpose is the relabelled prompt, still bound to modelPrompt", () => {
