@@ -26,6 +26,10 @@ export interface GroupTopicItem {
    *  deep-linkable inner entity (the segment AFTER this member) for members that URL-drive their
    *  own selection — a persona list, a master/detail config pane; members without one ignore it. */
   render: (subLeaf: TopicLeaf) => ReactNode;
+  /** Marks this member's rail row `data-blocked="true"` — forwarded to {@link TopicDetailItem}'s
+   *  own `blocked` field. For a caller whose leaf blocks some action (e.g. Save) on a field that
+   *  lives in a DIFFERENT member's pane, so the user can find which topic to open. */
+  blocked?: boolean;
 }
 
 /**
@@ -83,6 +87,7 @@ export function StackGroupDetail({
     icon: i.icon,
     description: i.description,
     leadsTo: i.leadsTo,
+    blocked: i.blocked,
   }));
   const level: TopicLevel = {
     id: levelId,

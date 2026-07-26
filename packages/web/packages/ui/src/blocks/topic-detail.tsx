@@ -68,6 +68,11 @@ export interface TopicDetailItem {
   deleteLabel?: string
   /** Confirmation body copy. Defaults to a generic "can't be undone" warning. */
   deleteConfirm?: ReactNode
+  /** Marks this row as holding a field that is blocking some other action elsewhere in the view
+   *  (e.g. a disabled Save whose blocking field lives on this topic's pane) — rendered as
+   *  `data-blocked="true"` so a caller can point the user at the right topic without adding a
+   *  visible badge here. Purely a DOM marker; renders no visual change of its own. */
+  blocked?: boolean
 }
 
 /** A leading rail row rendered ABOVE the topics (e.g. a custom list header, or a PopupMenu control in
@@ -178,6 +183,7 @@ function TopicList({
       <button
         type="button"
         data-htd-row
+        data-blocked={item.blocked ? "true" : undefined}
         disabled={item.disabled}
         onClick={() => {
           // Covered lists pure-SELECT: a click only CHANGES the selection — it never toggles/unselects,

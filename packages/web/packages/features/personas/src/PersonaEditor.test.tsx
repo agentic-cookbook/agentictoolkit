@@ -475,3 +475,44 @@ describe("PersonaEditor Save gate", () => {
     expect(save).toBeDisabled();
   });
 });
+
+// The located reason (SaveBlock) is useless if the UI never shows it — these prove the message
+// actually reaches the screen (via ButtonBar's `leading` slot) and the offending topic gets marked,
+// so a user editing Identity isn't left staring at a silently grey Save button (the reported bug).
+// Rendered with activeSubtab="identity" so the Name field (and the Identity topic row) are on
+// screen — a bare renderEditor() selects no topic at all (see the facet-framing describe above).
+// Topics are plain <button data-htd-row> rows (topic-detail.tsx's itemButton), NOT role="tab" — so
+// these assert against the real button + its accessible name (the visible label text) instead.
+describe("PersonaEditor surfaces why Save is disabled", () => {
+  it("says why Save is disabled once the user has edited", async () => {
+    renderEditor("identity");
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    expect(screen.getByText(/Enter a name in Identity/)).toBeInTheDocument();
+  });
+
+  // `renderEditor` alone renders ONLY the editor's own leaf content: without an ancestor rail
+  // HOST, StackGroupDetail's StackLevels publisher no-ops (see resource/src/rail-host.tsx) and the
+  // real topic rail (where `data-blocked` actually lands) never mounts at all. RailHostBoundary is
+  // the same host-or-standalone boundary PersonasFeature wraps the editor in for real — here (no
+  // ancestor host) it self-hosts via StandaloneRailHost, so the rail renders through the REAL
+  // HierarchicalTopicDetail/topic-detail.tsx pipeline rather than a hand-rolled test stand-in.
+  it("marks the topic holding the blocking field", async () => {
+    render(
+      <RailHostBoundary>
+        <PersonaEditor
+          persona={PERSONA}
+          services={[]}
+          onSaved={vi.fn()}
+          onCancel={vi.fn()}
+          activeSubtab="identity"
+          onSubtabChange={vi.fn()}
+          renderKnowledgeBases={renderKnowledgeBases}
+          renderChatPane={renderChatPane}
+        />
+      </RailHostBoundary>,
+    );
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    const identityTopic = screen.getByRole("button", { name: /identity/i });
+    expect(identityTopic).toHaveAttribute("data-blocked", "true");
+  });
+});

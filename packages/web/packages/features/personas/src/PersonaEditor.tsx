@@ -333,6 +333,7 @@ export function PersonaEditor({
       id: "identity",
       label: "Identity",
       icon: <IdCard size={16} aria-hidden />,
+      blocked: block?.topicId === "identity",
       render: () => (
         <TopicPane>
           <FieldGroup title="Identity">
@@ -692,6 +693,13 @@ export function PersonaEditor({
         }}
         showCreate={false}
         showDelete={false}
+        leading={
+          block && (dirty || isNew) ? (
+            <span className="text-xs text-apt-text-muted" role="status">
+              {block.message}
+            </span>
+          ) : undefined
+        }
       />
       <ErrorText error={error} className="px-6 pt-2" />
       {/* The persona's API, on every facet: the item read once saved, the create POST while new. */}
