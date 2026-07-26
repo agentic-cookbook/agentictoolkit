@@ -49,6 +49,13 @@ describe("RowsField", () => {
     expect(onChange).toHaveBeenCalledWith(["z", "b"]);
   });
 
+  it("names each remove button by its list, not by row number alone", () => {
+    // The demo facet stacks three of these on one pane. "Remove row 1" named three different
+    // buttons there — ambiguous to a screen reader and unqueryable by name in a test.
+    harness(["a", "b"]);
+    expect(screen.getByRole("button", { name: "Remove row 2 of Intro" })).toBeTruthy();
+  });
+
   it("shows an empty state when there are no rows", () => {
     harness([]);
     expect(screen.getByText(/none yet/i)).toBeTruthy();

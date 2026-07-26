@@ -61,7 +61,10 @@ export function RowsField<T>({
                 type="button"
                 variant="destructive-ghost"
                 size="sm"
-                aria-label={`Remove row ${i + 1}`}
+                // Scoped by `label` because three RowsFields share one pane: "Remove row 1" alone
+                // named three different buttons, so neither a screen-reader user nor a by-name
+                // query could tell which list it belonged to.
+                aria-label={`Remove row ${i + 1} of ${label}`}
                 onClick={() => removeAt(i)}
               >
                 Remove

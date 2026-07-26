@@ -11,6 +11,7 @@ import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
+import { useState } from "react";
 import { RowsField } from "./RowsField";
 
 /** Mirrors the backend's CANNED_DEFAULT_PACING. */
@@ -20,12 +21,21 @@ export const DEMO_DEFAULT_CONFIG: CannedChatConfig = {
   script: { intro: [], seeded: [], fallbacks: [], onExhausted: "reshuffle" },
 };
 
-/** A pacing number. Empty or non-numeric input clamps to 0 rather than writing NaN into
- *  the config — `Number("")` is 0 but `Number("1e")` is NaN, and a NaN here survives all
- *  the way to the server's pacing math. Over-`max` input clamps down to the ceiling, which
- *  is what the server would do to it anyway (see DEMO_MAX_* — the pacing bounds exist because
- *  the turn's DB transaction stays open for the whole stream); clamping here means the author
- *  sees the value that will actually be used instead of one silently overridden on save. */
+/** A pacing number, edited through a local draft string so that the states you pass THROUGH
+ *  while typing survive the keystroke that produced them.
+ *
+ *  A directly-controlled `value={number}` cannot: `Number("")` is 0, so clearing the box to
+ *  retype it wrote 0 into the config and re-rendered "0" under the caret, and clamping on every
+ *  keystroke meant typing "5000" toward "50000" snapped back to the ceiling mid-word. Both make
+ *  the field feel like it is fighting the author.
+ *
+ *  So: the draft is what the author sees while the box is focused, and it propagates upward only
+ *  when it parses — empty or half-typed input ("1e" is NaN) leaves the last good value in place
+ *  rather than writing NaN or 0 into the server's pacing math. Clamping to `max` waits for blur,
+ *  which is what the server would do to it anyway (see DEMO_MAX_* — the pacing bounds exist
+ *  because the turn's DB transaction stays open for the whole stream); doing it here too means
+ *  the author sees the value that will actually be used instead of one silently overridden on
+ *  save. Blur precedes the click that saves, so the clamp always runs first. */
 function NumberField({
   label,
   value,
@@ -37,19 +47,60 @@ function NumberField({
   max: number;
   onChange: (n: number) => void;
 }) {
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <Field label={label} className="min-w-[9rem] flex-1">
       <Input
         type="number"
         min={0}
         max={max}
-        value={value}
+        value={draft ?? String(value)}
         onChange={(e) => {
-          const n = Number(e.target.value);
-          onChange(Number.isFinite(n) && n >= 0 ? Math.min(n, max) : 0);
+          const raw = e.target.value;
+          setDraft(raw);
+          const n = Number(raw);
+          if (raw.trim() !== "" && Number.isFinite(n) && n >= 0) onChange(n);
+        }}
+        onBlur={() => {
+          // Clamps what was TYPED, not the incoming `value`: this component is controlled, so
+          // reading the prop here would clamp only after the parent had already accepted the
+          // over-max number, and never at all if it hadn't.
+          const n = Number(draft);
+          setDraft(null);
+          if (draft !== null && draft.trim() !== "" && Number.isFinite(n) && n > max) onChange(max);
         }}
       />
     </Field>
+  );
+}
+
+/** The keywords for one seeded row, edited as a raw comma-separated string.
+ *
+ *  Splitting on every keystroke and re-joining for display is a round trip that erases its own
+ *  separator: typing "matrix," splits to ["matrix", ""], the blank is dropped, and the join
+ *  hands back "matrix" — the comma disappears from under the caret, and so does the space after
+ *  it. The array is the stored form, not the edited one, so the raw text is what lives in state
+ *  while the box is focused; the parse still runs on every keystroke so the row is saveable
+ *  without blurring first. */
+function KeywordsInput({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <Input
+      aria-label="Keywords"
+      placeholder="matrix, rain"
+      value={draft ?? value.join(", ")}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean));
+      }}
+      onBlur={() => setDraft(null)}
+    />
   );
 }
 
@@ -127,12 +178,7 @@ export function DemoFacet({
         addLabel="Add keyword reply"
         renderRow={(row, set) => (
           <div className="flex min-w-0 flex-col gap-1">
-            <Input
-              aria-label="Keywords"
-              placeholder="matrix, rain"
-              value={row.match.join(", ")}
-              onChange={(e) => set({ ...row, match: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
-            />
+            <KeywordsInput value={row.match} onChange={(match) => set({ ...row, match })} />
             <Input
               aria-label="Reply"
               value={row.reply}
@@ -144,7 +190,7 @@ export function DemoFacet({
 
       <RowsField
         label="Fallback replies"
-        hint="Used when nothing else matches. Each is used once before any repeats. With none, your opening and triggered lines carry the whole conversation."
+        hint="Used when nothing else matches. Each is used once before any repeats. With none, the persona replays your opening and keyword lines instead — so a keyword reply can be given to a message that matches none of its keywords."
         value={cfg.script.fallbacks}
         onChange={(fallbacks) => patchScript({ fallbacks })}
         blankRow={() => ""}
