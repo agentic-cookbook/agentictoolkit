@@ -1,7 +1,12 @@
 // .../features/personas/src/DemoFacet.tsx
 "use client";
 
-import type { CannedChatConfig } from "@agentic-toolkit/data/personas";
+import {
+  canDemoChat,
+  DEMO_MAX_THINK_MS,
+  DEMO_MAX_TOKEN_MS,
+  type CannedChatConfig,
+} from "@agentic-toolkit/data/personas";
 import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -17,17 +22,31 @@ export const DEMO_DEFAULT_CONFIG: CannedChatConfig = {
 
 /** A pacing number. Empty or non-numeric input clamps to 0 rather than writing NaN into
  *  the config — `Number("")` is 0 but `Number("1e")` is NaN, and a NaN here survives all
- *  the way to the server's pacing math. */
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+ *  the way to the server's pacing math. Over-`max` input clamps down to the ceiling, which
+ *  is what the server would do to it anyway (see DEMO_MAX_* — the pacing bounds exist because
+ *  the turn's DB transaction stays open for the whole stream); clamping here means the author
+ *  sees the value that will actually be used instead of one silently overridden on save. */
+function NumberField({
+  label,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
   return (
     <Field label={label} className="min-w-[9rem] flex-1">
       <Input
         type="number"
         min={0}
+        max={max}
         value={value}
         onChange={(e) => {
           const n = Number(e.target.value);
-          onChange(Number.isFinite(n) && n >= 0 ? n : 0);
+          onChange(Number.isFinite(n) && n >= 0 ? Math.min(n, max) : 0);
         }}
       />
     </Field>
@@ -68,11 +87,23 @@ export function DemoFacet({
         persona&apos;s stats, XP, or badges.
       </p>
 
+      {/* Enabled but unanswerable: the server asks the SAME question (canDemoChat) before it
+          claims a turn, so this script demos nothing — the persona falls through to its LLM
+          service, or tells the visitor it has none. Said here, where it can be fixed, rather
+          than left for the author to discover from the visitor's side. */}
+      {cfg.enabled && !canDemoChat(cfg) ? (
+        <p role="status" className="text-xs text-apt-gold">
+          Demo chat is on, but this script has no line the persona can say — add an opening line,
+          a keyword reply, or a fallback. Until then visitors get the persona&apos;s normal
+          replies, not the demo.
+        </p>
+      ) : null}
+
       <FieldGroup title="Pacing" className="flex-row flex-wrap gap-3">
-        <NumberField label="Think delay (ms)" value={cfg.pacing.thinkMinMs} onChange={(n) => patchPacing({ thinkMinMs: n })} />
-        <NumberField label="Think jitter (ms)" value={cfg.pacing.thinkJitterMs} onChange={(n) => patchPacing({ thinkJitterMs: n })} />
-        <NumberField label="Token delay (ms)" value={cfg.pacing.tokenMinMs} onChange={(n) => patchPacing({ tokenMinMs: n })} />
-        <NumberField label="Token jitter (ms)" value={cfg.pacing.tokenJitterMs} onChange={(n) => patchPacing({ tokenJitterMs: n })} />
+        <NumberField label="Think delay (ms)" value={cfg.pacing.thinkMinMs} max={DEMO_MAX_THINK_MS} onChange={(n) => patchPacing({ thinkMinMs: n })} />
+        <NumberField label="Think jitter (ms)" value={cfg.pacing.thinkJitterMs} max={DEMO_MAX_THINK_MS} onChange={(n) => patchPacing({ thinkJitterMs: n })} />
+        <NumberField label="Token delay (ms)" value={cfg.pacing.tokenMinMs} max={DEMO_MAX_TOKEN_MS} onChange={(n) => patchPacing({ tokenMinMs: n })} />
+        <NumberField label="Token jitter (ms)" value={cfg.pacing.tokenJitterMs} max={DEMO_MAX_TOKEN_MS} onChange={(n) => patchPacing({ tokenJitterMs: n })} />
       </FieldGroup>
 
       <RowsField

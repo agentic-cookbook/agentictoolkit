@@ -520,33 +520,38 @@ export function PersonaEditor({
           <SaveFirstNotice>Save this persona first to configure its permissions.</SaveFirstNotice>
         ),
     },
-    {
-      id: "access",
-      label: "Access",
-      icon: <KeyRound size={16} aria-hidden />,
-      // WHO may reach this persona — the per-item share panel (restriction mode +
-      // item-scoped role assignments + the effective-permission explainer;
-      // docs/workspace-roles-permissions.md). Distinct from Permissions above, which is
-      // what the persona itself may DO. Needs a saved persona + a workspace context.
-      render: () =>
-        persona && workspaceSlug ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <ItemAccessPanel
-              workspaceSlug={workspaceSlug}
-              feature="personas"
-              itemId={persona.id}
-              itemLabel={persona.name || persona.slug}
-              subjectsDirectory={workspaceSubjectsDirectory}
-            />
-          </div>
-        ) : (
-          <SaveFirstNotice>
-            {persona
-              ? "Open this persona from a workspace to manage who can access it."
-              : "Save this persona first to manage who can access it."}
-          </SaveFirstNotice>
-        ),
-    },
+    // WHO may reach this persona — the per-item share panel (restriction mode + item-scoped
+    // role assignments + the effective-permission explainer; docs/workspace-roles-permissions.md).
+    // Distinct from Permissions above, which is what the persona itself may DO.
+    //
+    // Item access is a WORKSPACE concept, so the topic is absent entirely outside one (the
+    // registry mounts this editor with no workspaceSlug) rather than listed and then explaining
+    // it can't work here: a topic that never has anything to show is noise, not degradation.
+    // Inside a workspace it stays listed and gated behind the first save like its neighbours,
+    // because there the answer really is "not yet".
+    ...(workspaceSlug
+      ? [
+          {
+            id: "access",
+            label: "Access",
+            icon: <KeyRound size={16} aria-hidden />,
+            render: () =>
+              persona ? (
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+                  <ItemAccessPanel
+                    workspaceSlug={workspaceSlug}
+                    feature="personas"
+                    itemId={persona.id}
+                    itemLabel={persona.name || persona.slug}
+                    subjectsDirectory={workspaceSubjectsDirectory}
+                  />
+                </div>
+              ) : (
+                <SaveFirstNotice>Save this persona first to manage who can access it.</SaveFirstNotice>
+              ),
+          },
+        ]
+      : []),
     {
       id: "demo",
       label: "Demo Chat",

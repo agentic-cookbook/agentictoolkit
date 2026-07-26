@@ -5,16 +5,33 @@ export type PersonaFieldKind = "text" | "longText" | "select" | "canned";
 /** How a field is serialized onto the wire body. */
 export type PersonaFieldWire = "trimRequired" | "trimOptional" | "raw" | "omit";
 
-export interface PersonaFieldDescriptor {
-  key: keyof PersonaDraft;
-  label: string;
-  hint?: string;
-  kind: PersonaFieldKind;
-  /** Which editor facet renders it. */
-  facet: string;
-  blank: PersonaDraft[keyof PersonaDraft];
-  wire: PersonaFieldWire;
-}
+/**
+ * The editor topics a scalar field can be rendered under — the `id`s of PersonaEditor's
+ * `topics[]`. The bespoke panes (project, knowledge, memory, abilities, permissions, access)
+ * are NOT fields and are deliberately absent: putting a field under one means adding its id
+ * here too. A literal union rather than `string` so a typo'd facet fails the build instead of
+ * silently rendering the field nowhere.
+ */
+export type PersonaFacetId = "identity" | "description" | "personality" | "purpose" | "demo" | "llm";
+
+/**
+ * One editable field. Distributed over `keyof PersonaDraft` so `blank` is typed against the
+ * key it sits next to — as a single interface, `blank` was the whole union of draft value
+ * types, which let `{ key: "name", blank: null }` through and made `personaBlank()` produce a
+ * draft that violated its own type.
+ */
+export type PersonaFieldDescriptor = {
+  [K in keyof PersonaDraft]-?: {
+    key: K;
+    label: string;
+    hint?: string;
+    kind: PersonaFieldKind;
+    /** Which editor facet renders it. */
+    facet: PersonaFacetId;
+    blank: PersonaDraft[K];
+    wire: PersonaFieldWire;
+  };
+}[keyof PersonaDraft];
 
 /**
  * The single description of the persona's editable surface. `personaBlank` and

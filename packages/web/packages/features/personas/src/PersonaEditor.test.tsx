@@ -267,3 +267,41 @@ describe("PersonaEditor facet gating when ownedEcosystemId is null (#5 null-guar
     expect(screen.getByText(/memory isn't available yet/i)).not.toBeNull();
   });
 });
+
+// Item access is a WORKSPACE concept: the panel needs a workspace to resolve roles and subjects
+// against. The persona registry mounts this editor with no workspace at all, where the topic used
+// to be listed and then say "Open this persona from a workspace…" — a tab that can never do
+// anything in that host. Absent beats present-and-inert; inside a workspace it is listed as
+// before (gated behind the first save like its neighbours).
+describe("PersonaEditor Access topic is workspace-only", () => {
+  function renderIn(workspaceSlug?: string) {
+    return render(
+      <PersonaEditor
+        persona={PERSONA}
+        services={[]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        workspaceSlug={workspaceSlug}
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+      />,
+      // A rail host, so the topics are actually published as clickable tabs (see the
+      // rail-host contract above) — otherwise neither case would show any topic.
+      { wrapper: RailHostBoundary },
+    );
+  }
+
+  it("lists Access when the editor is mounted inside a workspace", () => {
+    renderIn("acme");
+    expect(screen.getByRole("button", { name: "Access" })).not.toBeNull();
+  });
+
+  it("omits Access entirely with no workspace — the registry mount", () => {
+    renderIn(undefined);
+    expect(screen.queryByRole("button", { name: "Access" })).toBeNull();
+    // The neighbouring topics are unaffected — this hides ONE topic, not the rail.
+    expect(screen.getByRole("button", { name: "Permissions" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Demo Chat" })).not.toBeNull();
+  });
+});
