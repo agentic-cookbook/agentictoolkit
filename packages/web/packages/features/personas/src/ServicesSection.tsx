@@ -264,6 +264,19 @@ const CLEAR_TEMPLATE: Partial<ServiceDraft> = {
   authHint: undefined,
 };
 
+/**
+ * `ServiceDraft.urlVarValues`/`headerVarValues` are `Record<string,string>` — object-valued
+ * fields `useDirtyDraft`'s `sameValue` compares by `Object.is`, same hazard as `WorkItemEditor`'s
+ * assignee field. It's silently safe here ONLY because edit mode never re-enables url-var/header
+ * prompting: this function always seeds `urlVars`/`headerVars` as `undefined`, so the branches in
+ * `ServiceFields` that render those fields (and would call `onChange` with a FRESH
+ * `{...draft.urlVarValues, [name]: value}` object every keystroke — never `===` the baseline's)
+ * never render in edit mode. If someone re-enables url-var/header prompting on edit (recovering
+ * `urlVars`/`headerVars`/`templateSpec` from the service's stored template), Save will read as
+ * permanently dirty the instant the first such field renders and is touched — encode those two
+ * Records as primitives (e.g. a sorted `k=v&k=v` string) the same way `WorkItemEditor` encodes its
+ * object-valued assignee field, rather than storing the Record itself in the draft.
+ */
 function fromService(s: UserService): ServiceDraft {
   return {
     templateId: s.templateId ?? undefined,
@@ -602,6 +615,7 @@ function ServiceEditor({
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "services", step: "save" });
       setFormError(err instanceof Error ? err.message : "Failed to save service.");
+    } finally {
       setSaving(false);
     }
   }
