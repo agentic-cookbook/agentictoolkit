@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, type SubmitEvent } from 'react'
+import { type SubmitEvent } from 'react'
 import { Button } from '@agentic-toolkit/ui/components/button'
 import { Field } from '@agentic-toolkit/ui/blocks/field'
 import { CrudFieldInput, isJsonColumn } from './CrudFieldInput'
 import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
+import { useDirtyDraft } from '@agentic-toolkit/ui/hooks/useDirtyDraft'
 import type { CrudColumn, CrudRow, CrudTableMeta } from './types'
 import { fieldCaptionClass } from '@agentic-toolkit/ui/lib/typography'
 
@@ -118,8 +119,13 @@ export function CrudRecordForm({
   onCancel,
 }: CrudRecordFormProps) {
   const mode: CrudFormMode = initial ? 'edit' : 'create'
-  const [draft, setDraft] = useState<CrudDraft>(() => toDraft(meta, initial))
+  const { draft, patch, dirty } = useDirtyDraft<CrudDraft>(() => toDraft(meta, initial))
   const { busy: saving, error, run } = useAction()
+  // On EDIT, an untouched row has nothing to save — gate on dirty so re-submitting the
+  // loaded values (a silent no-op PUT) isn't offered. CREATE has no loaded baseline to
+  // diff against — an all-defaults row is a legitimate save, so it stays exempt (same
+  // "genuinely create-only" carve-out the rest of the dirty-gating work uses).
+  const canSave = mode === 'create' || dirty
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault()
@@ -128,8 +134,7 @@ export function CrudRecordForm({
     })
   }
 
-  const setField = (name: string, value: string | boolean) =>
-    setDraft((prev) => ({ ...prev, [name]: value }))
+  const setField = (name: string, value: string | boolean) => patch({ [name]: value })
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -173,7 +178,7 @@ export function CrudRecordForm({
           {canWrite ? 'Cancel' : 'Close'}
         </Button>
         {canWrite && (
-          <Button type="submit" size="sm" disabled={saving}>
+          <Button type="submit" size="sm" disabled={saving || !canSave}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
         )}

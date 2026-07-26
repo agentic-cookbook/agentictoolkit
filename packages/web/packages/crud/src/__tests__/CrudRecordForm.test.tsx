@@ -207,6 +207,9 @@ describe('CrudRecordForm', () => {
         onCancel={vi.fn()}
       />,
     )
+    // An edit mode Save is dirty-gated (see the describe block below) — touch a field
+    // first so the click actually reaches onSubmit.
+    await user.type(screen.getByLabelText('name *'), '!')
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('409: duplicate')
   })
@@ -234,6 +237,8 @@ describe('CrudRecordForm', () => {
     )
     // textarea (not a plain input) showing pretty JSON, not "[object Object]"
     expect(screen.getByLabelText(/^payload/)).toHaveValue('{\n  "mode": "fast"\n}')
+    // Edit mode Save is dirty-gated — touch an unrelated field so the click submits.
+    await user.type(screen.getByLabelText('name *'), '!')
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ payload: { mode: 'fast' } })),
@@ -280,8 +285,10 @@ describe('CrudRecordForm', () => {
     const idInput = screen.getByLabelText('id *')
     expect(idInput).toBeDisabled()
     expect(idInput).toHaveValue('com.x.thing')
+    // id is locked (createOnly on edit) — name is the only field left to dirty the form.
+    await user.type(screen.getByLabelText('name *'), '!')
     await user.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ name: 'Thing' }))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ name: 'Thing!' }))
   })
 
   // The read-only twin of this form: the row is still inspectable, but nothing about it
@@ -316,5 +323,48 @@ describe('CrudRecordForm', () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({ id: 'com.x.thing', name: 'Thing' }),
     )
+  })
+})
+
+describe('CrudRecordForm: edit-mode Save is dirty-gated, create-mode is exempt', () => {
+  it('edit mode: Save starts disabled on an untouched row, and enables once a field changes', async () => {
+    const user = userEvent.setup()
+    render(
+      <CrudRecordForm
+        meta={meta}
+        canWrite
+        initial={{ name: 'Widget', count: 5, active: true }}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    const save = screen.getByRole('button', { name: 'Save' })
+    expect(save).toBeDisabled()
+    await user.type(screen.getByLabelText('name *'), '!')
+    expect(save).toBeEnabled()
+  })
+
+  it('edit mode: Save disables again once an edit is reverted back to the loaded value', async () => {
+    const user = userEvent.setup()
+    render(
+      <CrudRecordForm
+        meta={meta}
+        canWrite
+        initial={{ name: 'Widget', count: 5, active: true }}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    const save = screen.getByRole('button', { name: 'Save' })
+    const name = screen.getByLabelText('name *')
+    await user.type(name, '!')
+    expect(save).toBeEnabled()
+    await user.type(name, '{Backspace}')
+    expect(save).toBeDisabled()
+  })
+
+  it('create mode: Save starts enabled — there is no loaded baseline to diff against', () => {
+    render(<CrudRecordForm meta={meta} canWrite onSubmit={vi.fn()} onCancel={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
   })
 })
