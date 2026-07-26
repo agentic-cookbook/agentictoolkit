@@ -12,6 +12,10 @@ export { ServicesSection } from "./ServicesSection";
 // personas an owner has let act on the caller's behalf; a host mounts it standalone.
 export { AssistantsPanel } from "./AssistantsPanel";
 
+// The special-interests editor lives inside the Personality facet (PersonaEditor mounts it
+// directly), but it's also exported standalone since it only needs a personaId.
+export { InterestsEditor } from "./InterestsEditor";
+
 // The site entry: a thin, host-agnostic wrapper that drives PersonasSection's urlSelection from an
 // explicit basePath — a feature site mounts this directly, no host-side glue needed.
 export { PersonasFeature } from "./PersonasFeature";

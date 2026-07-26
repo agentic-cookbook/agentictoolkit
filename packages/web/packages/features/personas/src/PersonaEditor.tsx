@@ -32,6 +32,7 @@ import { rdidPrefix, validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { PersonaAvatarField } from "./PersonaAvatarField";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { PermissionsPanel } from "./PermissionsPanel";
+import { InterestsEditor } from "./InterestsEditor";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import {
   api,
@@ -427,6 +428,10 @@ export function PersonaEditor({
             onChange={(v) => set("examples", v || null)}
             placeholder="Example exchanges."
           />
+          {/* Interests are a CHILD table with their own save, so they sit below the three draft
+              fields rather than joining them — same facet (this is where an author writes the
+              persona's personality), different lifecycle. `persona` is null for an unsaved draft. */}
+          <InterestsEditor personaId={persona?.id ?? null} />
         </div>
       ),
     },
