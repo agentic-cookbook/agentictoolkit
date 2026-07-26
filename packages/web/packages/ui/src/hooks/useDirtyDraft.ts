@@ -12,6 +12,15 @@ export interface DirtyDraft<T extends object> {
   commit: (next?: T) => void
   /** Throw the edits away and return to the baseline. */
   reset: () => void
+  /**
+   * The "what was loaded" snapshot `dirty` compares `draft` against — read-only, moved only by
+   * `commit`. A consumer that must diff `draft` against the ORIGINAL loaded values itself (e.g. to
+   * build a minimal PATCH body) reads this instead of keeping its own parallel copy of the prop it
+   * was seeded from: after `commit(saved)` this is the server's row while a caller's own copy of the
+   * original prop would still be the stale pre-save one, and the two would disagree exactly when it
+   * matters.
+   */
+  baseline: T
 }
 
 /**
@@ -74,5 +83,5 @@ export function useDirtyDraft<T extends object>(initial: T | (() => T)): DirtyDr
     return (Object.keys(draft) as (keyof T)[]).some((k) => !sameValue(draft[k], baseline[k]))
   }, [state])
 
-  return { draft: state.draft, set, patch, dirty, commit, reset }
+  return { draft: state.draft, set, patch, dirty, commit, reset, baseline: state.baseline }
 }

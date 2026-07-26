@@ -61,4 +61,19 @@ describe("useDirtyDraft", () => {
     expect(result.current.draft).toEqual({ name: "a" })
     expect(result.current.dirty).toBe(false)
   })
+
+  it("exposes baseline: starts at the initial value, unmoved by set/patch, and moves on commit", () => {
+    const { result } = renderHook(() => useDirtyDraft({ name: "a", tags: ["x"] }))
+    expect(result.current.baseline).toEqual({ name: "a", tags: ["x"] })
+
+    act(() => result.current.set("name", "b"))
+    act(() => result.current.patch({ tags: ["y"] }))
+    // draft moved, baseline didn't — a consumer diffing against `baseline` must see the ORIGINAL
+    // loaded values while edits are in flight.
+    expect(result.current.draft).toEqual({ name: "b", tags: ["y"] })
+    expect(result.current.baseline).toEqual({ name: "a", tags: ["x"] })
+
+    act(() => result.current.commit())
+    expect(result.current.baseline).toEqual({ name: "b", tags: ["y"] })
+  })
 })
