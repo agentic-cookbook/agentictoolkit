@@ -313,6 +313,10 @@ export interface PersonaRow {
   createdAt: string;
   updatedAt: string;
   ownedEcosystemId?: string | null;
+  /** DERIVED (crud/read-decorators.ts): the OWNER's realm, where this persona's special-interest
+   *  corpus buckets live. NOT the same ecosystem as `ownedEcosystemId` — the Knowledge/Memory
+   *  panes scope to that one, the interest-documents pane scopes to this one. */
+  corpusEcosystemId?: string | null;
 }
 
 /** Backend row for `GET /public/personas/{slug}` and `GET
@@ -332,4 +336,25 @@ export interface PublicPersonaRow {
   visibility: "public" | "unlisted";
   createdAt: string;
   owner: PublicOwnerRow | null;
+}
+
+/** A persona's declared special interest (`persona.special_interests`). Three levels, narrowing:
+ *  general → topical → specific (Science Fiction → Space Opera → Battlestar Galactica). `stances`
+ *  is the AUTHOR's opinions, rendered verbatim into the persona's system prompt. */
+export interface SpecialInterestRow {
+  id: string;
+  personaId: string;
+  slug: string;
+  general: string;
+  topical: string | null;
+  specific: string | null;
+  stances: string | null;
+  position: number;
+  /** Server-assigned on create; the bucket that holds this interest's research corpus. */
+  bucketId: string | null;
+  /** DERIVED: the row-mode `content.markdown` bucket-type inside `bucketId`. */
+  bucketTypeId?: string | null;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
