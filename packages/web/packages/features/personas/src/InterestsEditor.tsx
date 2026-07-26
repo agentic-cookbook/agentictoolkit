@@ -26,8 +26,11 @@ import {
 /** The cap the backend enforces (400 past it). Mirrored here to disable the add button. */
 const MAX_INTERESTS = 2;
 
-/** A card's editable state. `id` is null until the first successful save. */
+/** A card's editable state. `id` is null until the first successful save. `key` is a client-only
+ *  identity, stable for the card's whole lifetime, that `save`/`remove` address instead of the
+ *  card's position in `drafts` — see `newKey` below for why. */
 interface Draft {
+  key: string;
   id: string | null;
   slug: string;
   general: string;
@@ -36,8 +39,24 @@ interface Draft {
   stances: string;
 }
 
-function toDraft(row: SpecialInterestRow): Draft {
+/** A stable client-side identity for a draft card. Deliberately NOT derived from `id`: a brand-new
+ *  card has no id at all, and that is exactly the card that must stay addressable across its first
+ *  save. Deliberately NOT the array index either — `save`/`remove` are async and capture their
+ *  target before an await, and a sibling's completion in between (a faster delete, a synchronous
+ *  remove of an earlier card) can shift every later card's index out from under them, landing the
+ *  eventual `map`/`filter` on the wrong row. `crypto.randomUUID` needs a secure context, so this
+ *  falls back to a counter — uniqueness only has to hold for one component instance's lifetime. */
+let keySeq = 0;
+function newKey(): string {
+  const c = (globalThis as { crypto?: Crypto }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  keySeq += 1;
+  return `draft-${Date.now()}-${keySeq}`;
+}
+
+function toDraft(row: SpecialInterestRow, key: string): Draft {
   return {
+    key,
     id: row.id,
     slug: row.slug,
     general: row.general,
@@ -96,14 +115,25 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [busyIndex, setBusyIndex] = useState<number | null>(null);
+  // A SET, not a single value: concurrent operations on DIFFERENT cards (delete B, then delete A
+  // while B is still in flight) are a legitimate flow, not a same-card double-click, and each
+  // card's own busy state must track only its own request regardless of what else is in flight.
+  const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set());
+
+  const setBusy = (key: string, busy: boolean) =>
+    setBusyKeys((prev) => {
+      const next = new Set(prev);
+      if (busy) next.add(key);
+      else next.delete(key);
+      return next;
+    });
 
   const reload = useCallback(async () => {
     if (!personaId) return;
     setLoading(true);
     try {
       const rows = await specialInterestsApi.list(personaId);
-      setDrafts(rows.map(toDraft));
+      setDrafts(rows.map((row) => toDraft(row, newKey())));
       setError(null);
     } catch (err) {
       setError(errMsg(err, "Could not load this persona's interests."));
@@ -130,15 +160,18 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
   const add = () =>
     setDrafts((prev) => [
       ...prev,
-      { id: null, slug: "", general: "", topical: "", specific: "", stances: "" },
+      { key: newKey(), id: null, slug: "", general: "", topical: "", specific: "", stances: "" },
     ]);
 
-  const save = async (index: number) => {
-    // `index` always comes from mapping `drafts` itself (see the render below), so this is
-    // never actually undefined — the guard is here only to satisfy noUncheckedIndexedAccess.
-    const d = drafts[index];
+  // `save`/`remove` take the card's KEY, never its array index or position at call time. Both are
+  // async: the array can reorder while one is in flight (a sibling's delete resolving first, a
+  // synchronous remove of an earlier card), and an index captured at dispatch would then apply the
+  // eventual `map`/`filter` to whatever card has slid into that slot — not the card the author
+  // actually clicked. Keying by `key` makes the write land on the right row regardless of order.
+  const save = async (key: string) => {
+    const d = drafts.find((row) => row.key === key);
     if (!d) return;
-    setBusyIndex(index);
+    setBusy(key, true);
     setError(null);
     try {
       let saved: SpecialInterestRow;
@@ -162,34 +195,37 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
           stances: d.stances || null,
         });
       }
-      // Patch ONLY this card from the server's response — a wholesale `reload()` would replace
-      // every card with fresh server rows, silently discarding any sibling card's local edits
-      // that haven't been saved yet (including a brand-new card with no id at all).
-      setDrafts((prev) => prev.map((row, i) => (i === index ? toDraft(saved) : row)));
+      // Patch ONLY this card from the server's response, addressed by its stable key — a
+      // wholesale `reload()` would replace every card with fresh server rows, silently
+      // discarding any sibling card's local edits that haven't been saved yet (including a
+      // brand-new card with no id at all); an index-addressed patch would land on whichever
+      // card now sits at that position if the array reordered while this save was in flight.
+      setDrafts((prev) => prev.map((row) => (row.key === key ? toDraft(saved, key) : row)));
     } catch (err) {
       setError(saveError(err));
     } finally {
-      setBusyIndex(null);
+      setBusy(key, false);
     }
   };
 
-  const remove = async (index: number) => {
-    const d = drafts[index];
+  const remove = async (key: string) => {
+    const d = drafts.find((row) => row.key === key);
     if (!d) return;
     if (!d.id) {
-      setDrafts((prev) => prev.filter((_, i) => i !== index));
+      setDrafts((prev) => prev.filter((row) => row.key !== key));
       return;
     }
-    setBusyIndex(index);
+    setBusy(key, true);
     setError(null);
     try {
       await specialInterestsApi.delete(d.id);
-      // Drop just this card locally — see `save` above for why a wholesale `reload()` is wrong.
-      setDrafts((prev) => prev.filter((_, i) => i !== index));
+      // Drop just this card locally, addressed by key — see `save` above for why an
+      // index-addressed filter is wrong once a concurrent operation can reorder the array.
+      setDrafts((prev) => prev.filter((row) => row.key !== key));
     } catch (err) {
       setError(errMsg(err, "Could not remove this interest."));
     } finally {
-      setBusyIndex(null);
+      setBusy(key, false);
     }
   };
 
@@ -209,7 +245,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       <ErrorText error={error} />
 
       {drafts.map((d, i) => (
-        <FieldGroup key={d.id ?? `new-${i}`} title={cardTitle(d)}>
+        <FieldGroup key={d.key} title={cardTitle(d)}>
           {/* `Field` wraps caption + hint in the SAME <label> as the input, so a hint alone would
               fold into the field's accessible name and defeat an anchored `getByLabelText`
               query. Fix is the `aria-label` idiom from `add-users-modal.tsx`: it matches the
@@ -267,15 +303,15 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => void remove(i)}
-              disabled={busyIndex === i}
+              onClick={() => void remove(d.key)}
+              disabled={busyKeys.has(d.key)}
             >
               <Trash2 size={14} aria-hidden /> Remove
             </Button>
             <Button
               type="button"
-              onClick={() => void save(i)}
-              disabled={busyIndex === i || !d.general.trim()}
+              onClick={() => void save(d.key)}
+              disabled={busyKeys.has(d.key) || !d.general.trim()}
             >
               Save interest
             </Button>

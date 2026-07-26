@@ -8,6 +8,17 @@ const create = vi.fn();
 const update = vi.fn();
 const del = vi.fn();
 
+/** A promise this test controls the settling of, so two mocked requests dispatched in one order
+ *  can be made to SETTLE in the other — the only way to exercise the "array reordered while an
+ *  earlier request was still in flight" race the key-based addressing fix exists for. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 vi.mock("@agentic-toolkit/data/personas", () => ({
   specialInterestsApi: {
     list: (...a: unknown[]) => list(...a),
@@ -218,5 +229,84 @@ describe("InterestsEditor", () => {
     // (here: just the one row `create` resolved to), losing the second card entirely.
     expect(screen.getByDisplayValue("Film")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Ridley Scott's best work.")).toBeInTheDocument();
+  });
+
+  it("does not leave a ghost row when two deletes settle out of dispatch order", async () => {
+    // Cards A (id "a") and B (id "b"). Remove B is clicked FIRST, Remove A SECOND — but A's
+    // DELETE settles first, out of dispatch order. Addressed by array position, that reorders
+    // the array (A's own completion drops index 0) before B's completion runs, so B's own
+    // `filter(i !== 1)` becomes a no-op on the now-length-1 array: B is gone server-side but a
+    // ghost of it stays rendered. Addressed by key, both removals land on the card actually
+    // clicked regardless of settle order, so no ghost survives either way.
+    const delA = deferred<void>();
+    const delB = deferred<void>();
+    del.mockImplementation((id: string) => (id === "a" ? delA.promise : delB.promise));
+    list.mockResolvedValue([
+      { ...row, id: "a", general: "CardA" },
+      { ...row, id: "b", general: "CardB" },
+    ]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("CardA");
+
+    const [removeA, removeB] = screen.getAllByRole("button", { name: /remove/i });
+    await userEvent.click(removeB!); // dispatched first
+    await userEvent.click(removeA!); // dispatched second — not blocked, it's a different card
+    expect(del).toHaveBeenCalledWith("b");
+    expect(del).toHaveBeenCalledWith("a");
+
+    // A's delete (dispatched SECOND) settles FIRST.
+    delA.resolve();
+    await waitFor(() => expect(screen.queryByDisplayValue("CardA")).not.toBeInTheDocument());
+
+    // B's delete (dispatched FIRST) settles LAST, once the array has already reshuffled.
+    delB.resolve();
+    await waitFor(() => expect(screen.queryByDisplayValue("CardB")).not.toBeInTheDocument());
+
+    expect(screen.queryAllByRole("button", { name: /remove/i })).toHaveLength(0);
+  });
+
+  it("does not let a reordering remove clobber a concurrent save's target card", async () => {
+    // Three loaded drafts — reachable even though the Add button caps at two, because `list()`
+    // itself is never capped (legacy rows, or a TOCTOU race in the pre-create count check).
+    // Save the middle card (B) and, before it resolves, remove the first (A). A's delete
+    // settles first, sliding C into B's old array slot. If `save`'s completion patched by array
+    // position it would land on C — the exact shape of the original data-loss bug, just
+    // conditional on timing instead of guaranteed on every save.
+    const delA = deferred<void>();
+    const updateB = deferred<typeof row>();
+    del.mockImplementation((id: string) =>
+      id === "a" ? delA.promise : Promise.resolve(undefined),
+    );
+    update.mockImplementation((id: string) => (id === "b" ? updateB.promise : Promise.resolve(row)));
+    list.mockResolvedValue([
+      { ...row, id: "a", general: "Alpha" },
+      { ...row, id: "b", general: "Beta" },
+      { ...row, id: "c", general: "Gamma" },
+    ]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Alpha");
+
+    // An unsaved edit on C that must survive untouched by anything that happens to A or B.
+    const opinions = screen.getAllByLabelText(/^opinions$/i);
+    await userEvent.type(opinions[2]!, " Ridley's footnote.");
+
+    const saveButtons = screen.getAllByRole("button", { name: /^save interest$/i });
+    await userEvent.click(saveButtons[1]!); // Save B
+
+    const removeButtons = screen.getAllByRole("button", { name: /remove/i });
+    await userEvent.click(removeButtons[0]!); // Remove A, while B's save is still in flight
+
+    // A's delete settles first, reordering the array before B's save completes.
+    delA.resolve();
+    await waitFor(() => expect(screen.queryByDisplayValue("Alpha")).not.toBeInTheDocument());
+
+    updateB.resolve({ ...row, id: "b", slug: "beta-saved", general: "Beta Saved" });
+    await waitFor(() => expect(screen.getByDisplayValue("Beta Saved")).toBeInTheDocument());
+
+    // C was never touched by either operation: its own field is unchanged and its unsaved edit
+    // is still there — not overwritten by B's saved row.
+    expect(screen.getByDisplayValue("Gamma")).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/Ridley's footnote/)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /remove/i })).toHaveLength(2);
   });
 });
