@@ -217,8 +217,14 @@ export function WorkItemEditor({
         Object.keys(patch).length === 0
           ? item
           : await projectWorkItemsApi.update(item.id, patch);
-      // Adopt the saved row as the new baseline so Save re-disables until the next edit —
-      // this instance stays mounted across a save (keyed by item id, which doesn't change).
+      // Adopt the saved row as the new baseline so Save re-disables until the next edit. This is
+      // DEFENSIVE, not load-bearing for the current consumer: WorkItemsSurface's onSaved clears
+      // selectedId, which unmounts this editor on every successful save (a fresh instance mounts
+      // if the same item is reselected), so nothing here observes the moved baseline today. Keep
+      // it anyway — single-source-of-truth is still right, and it's what makes this editor correct
+      // for any FUTURE consumer that keeps it mounted across a save (e.g. an inline/non-modal
+      // surface), the same way `baseline` itself is a general-purpose hook extension rather than
+      // something built to this one consumer's current unmount behavior.
       commit(draftFromItem(saved, statuses));
       onSaved(saved);
     } catch (e) {

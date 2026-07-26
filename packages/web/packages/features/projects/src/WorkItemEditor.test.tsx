@@ -156,4 +156,34 @@ describe("WorkItemEditor save (edit mode)", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(ITEM));
     expect(update).not.toHaveBeenCalled();
   });
+
+  it("diffs the second save against the saved row (baseline), not the stale item prop", async () => {
+    update.mockResolvedValueOnce({ ...ITEM, title: "New Title" });
+    renderEditor();
+
+    const save = screen.getByRole("button", { name: "Save changes" });
+
+    // First save: edit the title only.
+    fireEvent.change(screen.getByPlaceholderText("Design the landing page"), {
+      target: { value: "New Title" },
+    });
+    fireEvent.click(save);
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenNthCalledWith(1, "w1", { title: "New Title" });
+
+    // Second save: edit ONLY the description — the draft's title still reads "New Title", the
+    // exact value just saved. If buildPatch() diffed against the stale `item` PROP (title:
+    // "Design the landing page", since props never change mid-test) instead of the hook's
+    // committed BASELINE (title: "New Title" after the first save's commit()), it would wrongly
+    // resend `title: "New Title"` a second time — a phantom re-send of a field the user didn't
+    // touch this round. This is the whole justification for the `baseline` hook extension; without
+    // it (or without the commit() call that advances it), this assertion fails.
+    update.mockResolvedValueOnce({ ...ITEM, title: "New Title", description: "New description" });
+    fireEvent.change(screen.getByLabelText(/description/i), {
+      target: { value: "New description" },
+    });
+    fireEvent.click(save);
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    expect(update).toHaveBeenNthCalledWith(2, "w1", { description: "New description" });
+  });
 });
