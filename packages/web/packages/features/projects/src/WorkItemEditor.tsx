@@ -7,11 +7,12 @@ import { Select } from "@agentic-toolkit/ui/components/select";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { Button } from "@agentic-toolkit/ui/components/button";
+import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import { projectActivityApi } from "@agentic-toolkit/data/projects";
 import type { ProjectStatus, ProjectParticipant } from "@agentic-toolkit/data/projects";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
-import { AssigneePicker, type AssigneeValue } from "./AssigneePicker";
+import { AssigneePicker, toOptionValue, fromOptionValue, type AssigneeValue } from "./AssigneePicker";
 import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
 import { type BadgeVariant } from "./helpers";
 
@@ -50,6 +51,44 @@ export function priorityMeta(n: number): { label: string; variant: BadgeVariant 
 function assigneeOf(item: WorkItem | null): AssigneeValue | null {
   if (!item || !item.assigneeKind || !item.assigneeId) return null;
   return { assigneeKind: item.assigneeKind, assigneeId: item.assigneeId };
+}
+
+/**
+ * The editor's draft shape — one object so `useDirtyDraft` can tell whether ANY field differs
+ * from what was loaded. `assignee` is carried as its encoded option string (`toOptionValue`'s
+ * `"kind:id"` | `""`), not the `{assigneeKind,assigneeId}` object `AssigneePicker` works with:
+ * `useDirtyDraft`'s dirty-check compares non-array fields by `Object.is`, so an object-valued field
+ * would read as dirty forever the first time it's set (a fresh object each keystroke/selection,
+ * never `===` the baseline's). Reusing the picker's own string codec sidesteps that instead of
+ * papering over it — the same discipline `sameValue` already applies to arrays, applied here via
+ * the field's representation rather than a hook change.
+ */
+type WorkItemDraft = {
+  title: string;
+  description: string;
+  statusId: string;
+  assigneeOption: string;
+  priority: number;
+  startDate: string;
+  dueDate: string;
+  parentId: string;
+};
+
+/** Load a work item into the editor's draft shape — the ONE place "what a work item's editable
+ *  fields look like as a draft" is defined, used both to seed the draft and (after a save) to
+ *  rebuild the baseline from the server's row. `statuses` supplies the same first-status fallback
+ *  the Status field itself falls back to when the item has none. */
+function draftFromItem(item: WorkItem, statuses: ProjectStatus[]): WorkItemDraft {
+  return {
+    title: item.title,
+    description: item.description ?? "",
+    statusId: item.statusId ?? statuses[0]?.id ?? "",
+    assigneeOption: toOptionValue(assigneeOf(item)),
+    priority: item.priority,
+    startDate: item.startDate ?? "",
+    dueDate: item.dueDate ?? "",
+    parentId: item.parentId ?? "",
+  };
 }
 
 /* ── Per-item activity + comment composer (edit mode only) ──────────────────
@@ -149,19 +188,14 @@ export function WorkItemEditor({
   const renderRecordAffordance = useRecordAffordance();
   // Seeded once from `item`; the pane keys this editor by item id (or "new") so a
   // switch remounts it with fresh state — no derive-from-props effect needed.
-  const [title, setTitle] = useState(item.title);
-  const [description, setDescription] = useState(item.description ?? "");
-  const [statusId, setStatusId] = useState(item.statusId ?? statuses[0]?.id ?? "");
-  const [assignee, setAssignee] = useState<AssigneeValue | null>(assigneeOf(item));
-  const [priority, setPriority] = useState(item.priority);
-  const [startDate, setStartDate] = useState(item.startDate ?? "");
-  const [dueDate, setDueDate] = useState(item.dueDate ?? "");
-  const [parentId, setParentId] = useState(item.parentId ?? "");
+  const { draft, set, dirty, commit, baseline } = useDirtyDraft<WorkItemDraft>(() =>
+    draftFromItem(item, statuses),
+  );
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = title.trim().length > 0 && !saving;
+  const canSave = dirty && draft.title.trim().length > 0;
   // Parent options: every other work item in the project (an item can't parent itself).
   const parentOptions = useMemo(
     () => workItems.filter((w) => w.id !== item.id),
@@ -169,7 +203,7 @@ export function WorkItemEditor({
   );
 
   async function save() {
-    if (!title.trim()) {
+    if (!draft.title.trim()) {
       setError("Title is required.");
       return;
     }
@@ -183,6 +217,9 @@ export function WorkItemEditor({
         Object.keys(patch).length === 0
           ? item
           : await projectWorkItemsApi.update(item.id, patch);
+      // Adopt the saved row as the new baseline so Save re-disables until the next edit —
+      // this instance stays mounted across a save (keyed by item id, which doesn't change).
+      commit(draftFromItem(saved, statuses));
       onSaved(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save work item.");
@@ -191,31 +228,33 @@ export function WorkItemEditor({
     }
   }
 
-  // Edit mode: PATCH only the changed fields. Clearing the assignee / a date /
-  // the parent sends an explicit null (the T1 client keeps it), which is the
-  // backend's clear semantics.
+  // Edit mode: PATCH only the changed fields, diffed against the hook's committed BASELINE (what
+  // was actually loaded/last saved) rather than the `item` prop — after `commit()` above the
+  // baseline is the server's row while `item` is still the stale pre-save prop, so the two would
+  // disagree exactly when it matters. Clearing the assignee / a date / the parent sends an
+  // explicit null (the T1 client keeps it), which is the backend's clear semantics.
   function buildPatch(): Parameters<typeof projectWorkItemsApi.update>[1] {
-    if (!item) return {};
     const patch: Parameters<typeof projectWorkItemsApi.update>[1] = {};
-    if (title.trim() !== item.title) patch.title = title.trim();
-    if (description.trim() !== item.description) patch.description = description.trim();
-    if (statusId !== item.statusId) patch.statusId = statusId;
+    if (draft.title.trim() !== baseline.title) patch.title = draft.title.trim();
+    if (draft.description.trim() !== baseline.description) {
+      patch.description = draft.description.trim();
+    }
+    if (draft.statusId !== baseline.statusId) patch.statusId = draft.statusId;
 
-    const newKind = assignee?.assigneeKind ?? null;
-    const newId = assignee?.assigneeId ?? null;
-    if (newKind !== item.assigneeKind || newId !== item.assigneeId) {
-      patch.assigneeKind = newKind as WorkItem["assigneeKind"];
-      patch.assigneeId = newId;
+    if (draft.assigneeOption !== baseline.assigneeOption) {
+      const decoded = fromOptionValue(draft.assigneeOption);
+      patch.assigneeKind = (decoded?.assigneeKind ?? null) as WorkItem["assigneeKind"];
+      patch.assigneeId = decoded?.assigneeId ?? null;
     }
 
-    if (priority !== item.priority) patch.priority = priority;
+    if (draft.priority !== baseline.priority) patch.priority = draft.priority;
 
-    const newStart = startDate || null;
-    if (newStart !== item.startDate) patch.startDate = newStart;
-    const newDue = dueDate || null;
-    if (newDue !== item.dueDate) patch.dueDate = newDue;
-    const newParent = parentId || null;
-    if (newParent !== item.parentId) patch.parentId = newParent;
+    const newStart = draft.startDate || null;
+    if (newStart !== (baseline.startDate || null)) patch.startDate = newStart;
+    const newDue = draft.dueDate || null;
+    if (newDue !== (baseline.dueDate || null)) patch.dueDate = newDue;
+    const newParent = draft.parentId || null;
+    if (newParent !== (baseline.parentId || null)) patch.parentId = newParent;
 
     return patch;
   }
@@ -235,10 +274,10 @@ export function WorkItemEditor({
         <Input
           /* eslint-disable-next-line jsx-a11y/no-autofocus -- intentional focus-on-open for the editor's first field */
           autoFocus
-          value={title}
+          value={draft.title}
           onChange={(e) => {
             setError(null);
-            setTitle(e.target.value);
+            set("title", e.target.value);
           }}
           placeholder="Design the landing page"
         />
@@ -246,15 +285,15 @@ export function WorkItemEditor({
 
       <Field label="Description">
         <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={draft.description}
+          onChange={(e) => set("description", e.target.value)}
           placeholder="What needs to happen? (optional)"
           rows={3}
         />
       </Field>
 
       <Field label="Status">
-        <Select value={statusId} onChange={(e) => setStatusId(e.target.value)}>
+        <Select value={draft.statusId} onChange={(e) => set("statusId", e.target.value)}>
           {statuses.length === 0 && <option value="">Default</option>}
           {statuses.map((s) => (
             <option key={s.id} value={s.id}>
@@ -264,12 +303,16 @@ export function WorkItemEditor({
         </Select>
       </Field>
 
-      <AssigneePicker participants={participants} value={assignee} onChange={setAssignee} />
+      <AssigneePicker
+        participants={participants}
+        value={fromOptionValue(draft.assigneeOption)}
+        onChange={(v) => set("assigneeOption", toOptionValue(v))}
+      />
 
       <Field label="Priority">
         <Select
-          value={String(priority)}
-          onChange={(e) => setPriority(Number(e.target.value))}
+          value={String(draft.priority)}
+          onChange={(e) => set("priority", Number(e.target.value))}
         >
           {PRIORITIES.map((p) => (
             <option key={p.value} value={p.value}>
@@ -283,17 +326,21 @@ export function WorkItemEditor({
         <Field label="Start date" className="min-w-40 flex-1">
           <Input
             type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            value={draft.startDate}
+            onChange={(e) => set("startDate", e.target.value)}
           />
         </Field>
         <Field label="Due date" className="min-w-40 flex-1">
-          <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Input
+            type="date"
+            value={draft.dueDate}
+            onChange={(e) => set("dueDate", e.target.value)}
+          />
         </Field>
       </div>
 
       <Field label="Parent" hint="An optional parent work item in this project.">
-        <Select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+        <Select value={draft.parentId} onChange={(e) => set("parentId", e.target.value)}>
           <option value="">None</option>
           {parentOptions.map((w) => (
             <option key={w.id} value={w.id}>
@@ -309,7 +356,7 @@ export function WorkItemEditor({
         <Button variant="ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={() => void save()} disabled={!canSave}>
+        <Button onClick={() => void save()} disabled={!canSave || saving}>
           {saving ? "Saving…" : "Save changes"}
         </Button>
       </div>

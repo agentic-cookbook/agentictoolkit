@@ -114,6 +114,20 @@ describe("WorkItemEditor activity + comment composer (edit mode)", () => {
   });
 });
 
+describe("WorkItemEditor save gate", () => {
+  it("starts disabled for an unmodified item and enables after an edit", () => {
+    renderEditor();
+
+    const save = screen.getByRole("button", { name: "Save changes" });
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("Design the landing page"), {
+      target: { value: "Design the new landing page" },
+    });
+    expect(save).toBeEnabled();
+  });
+});
+
 describe("WorkItemEditor save (edit mode)", () => {
   it("skips the no-op PATCH when nothing changed, saving the unchanged item", async () => {
     const onSaved = vi.fn();
@@ -129,8 +143,14 @@ describe("WorkItemEditor save (edit mode)", () => {
       />,
     );
 
-    // Save with nothing edited → buildPatch is empty → update is NOT called; the
-    // success path fires straight away with the unchanged item.
+    // Save is dirty-gated, so an untouched form can't click Save at all — edit the title
+    // with only trailing whitespace. That's a real (if trivial) edit as far as the raw
+    // dirty check is concerned (Object.is sees a different string), but buildPatch()'s
+    // .trim() normalization still produces an EMPTY patch against the baseline, so update
+    // is still skipped — the no-op-PATCH behavior this test exists to cover is unchanged.
+    fireEvent.change(screen.getByPlaceholderText("Design the landing page"), {
+      target: { value: `${ITEM.title} ` },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(ITEM));
