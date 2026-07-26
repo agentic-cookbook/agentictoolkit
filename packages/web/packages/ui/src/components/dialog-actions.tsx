@@ -25,6 +25,13 @@ export interface DialogActionsProps {
   confirmVariant?: React.ComponentProps<typeof Button>["variant"]
   destructive?: boolean
   busy?: boolean
+  /**
+   * Disables the confirm button while NOT busy (e.g. the form is unedited or invalid).
+   * `busy` already hides both buttons behind a spinner, so this has no effect then.
+   * Defaults to `false` (backward-compatible — every existing caller keeps confirm
+   * always-enabled-when-idle).
+   */
+  confirmDisabled?: boolean
   /** Which button gets initial focus when the dialog opens. Defaults to "confirm"; set to "cancel" for destructive. */
   initialFocus?: "confirm" | "cancel"
   /**
@@ -57,6 +64,7 @@ export function DialogActions({
   confirmVariant,
   destructive = false,
   busy = false,
+  confirmDisabled = false,
   initialFocus = destructive ? "cancel" : "confirm",
   focusOnMount = true,
   layout = "auto",
@@ -158,6 +166,7 @@ export function DialogActions({
         size="sm"
         variant={destructive ? "destructive" : (confirmVariant ?? "default")}
         onClick={onConfirm}
+        disabled={confirmDisabled}
         className={!isNatural && cancelLabel != null ? "flex-1" : undefined}
       >
         {confirmLabel}

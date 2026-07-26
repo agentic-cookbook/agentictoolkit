@@ -104,6 +104,13 @@ export function AdminNotesModal({
     onSave(working.map((n) => ({ id: n.id, content: n.content })))
   }
 
+  // The outer Save button used to enable on ANY selection/mount regardless of whether
+  // the working copy actually diverges from the loaded `notes` — clicking it with zero
+  // edits staged would still fire `onSave([...])`. Compare structurally (order-sensitive,
+  // matching how add/edit/delete mutate `working` in place) against the SAME `notes`
+  // reference `close()` already treats as the reset baseline.
+  const dirty = JSON.stringify(working) !== JSON.stringify(notes)
+
   // Cancel/close discards the staged working copy back to the loaded `notes` and
   // clears any in-progress note editor, so reopening (without a remount) starts
   // clean. Save does NOT call this — the caller closes on mutation success.
@@ -150,7 +157,7 @@ export function AdminNotesModal({
           </div>
           <DialogFooter>
             <Button size="sm" variant="ghost" onClick={close}>Cancel</Button>
-            <Button size="sm" onClick={handleSave} disabled={busy}>Save</Button>
+            <Button size="sm" onClick={handleSave} disabled={busy || !dirty}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
