@@ -24,17 +24,12 @@ export interface InterestDocumentBody {
   content: string;
 }
 
-/** `?asType=persona&asId=<persona uuid>` — the act-as principal every call on this plane needs.
- *
- *  `personaId` MUST be the persona's raw uuid, never its rdid, even though the persona-CRUD
- *  routes accept either. Backend bug (do not "fix" this by switching to an rdid): `loadTarget`
- *  (routes/bucketsData.ts:256-294) resolves an rdid to its uuid only inside a LOCAL variable
- *  in `assertActAsOwned` (routes/bucketsData.ts:203-234, see `id` at :213-214) and returns the
- *  caller-supplied `actAs` unmutated. Every `canBucketAccess` call site (routes/bucketsData.ts:362,
- *  428, 512, 564) then passes that raw, unresolved value through to `bucketAccessBits`
- *  (lib/bucket-permissions.ts:104-105), which compares it by exact STRING EQUALITY against the
- *  persona uuid `ensurePersonaReader` stamped into the access group. An rdid never equals that
- *  uuid, so it 403s. */
+/** `?asType=persona&asId=<persona rdid or uuid>` — the act-as principal every call on this plane
+ *  needs. Either form works: `loadTarget` (routes/bucketsData.ts) resolves an rdid through
+ *  `assertActAsOwned` and returns the act-as principal carrying the RESOLVED uuid, which is what
+ *  the grant check then matches against `access.group_members.member_id` — the persona uuid
+ *  `ensurePersonaReader` stamped into the access group. Pass the rdid: it is what
+ *  `GET /persona/personas` returns, and no API surface exposes the uuid at all. */
 function actingAs(personaId: string): string {
   return `?asType=persona&asId=${enc(personaId)}`;
 }

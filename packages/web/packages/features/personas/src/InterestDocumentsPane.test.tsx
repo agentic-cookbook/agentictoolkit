@@ -87,22 +87,16 @@ describe("InterestDocumentsPane", () => {
     expect(listDocs).not.toHaveBeenCalled();
   });
 
-  // RULING 1 regression pin — the brief's four tests above all pass with `personaId` set to
-  // EITHER the persona's rdid or its uuid, because their fixture happens to set both to the same
-  // string. That's exactly what makes the underlying bug invisible: `access.group_members.member_id`
-  // holds the persona's raw UUID (provisioning stamps it there — provision-interest-bucket.ts:252-253),
-  // and bucketsData.ts's grant check (`assertActAsOwned` / `canBucketAccess`, routes/bucketsData.ts:
-  // 203-234, 362, 428, 512, 564) passes the caller-supplied `asId` straight through UNRESOLVED. An
-  // rdid never string-equals the stored uuid, so it 403s silently. This test pins that the pane's
-  // OWN `personaId` prop reaches the client call verbatim, whatever shape it is handed.
-  it("acts as the persona's uuid, not its rdid — the ACL matches member_id", async () => {
-    // Regression pin: access.group_members.member_id holds the persona UUID (provisioning
-    // inserts the resolved uuid), and bucketsData.ts passes the RAW asId straight to the grant
-    // check without resolving an rdid. Sending `persona.id` (an rdid) is a silent 403.
-    const uuidInterest = { ...interest, personaId: "3f1b0c2e-0000-4000-8000-000000000001" };
-    render(<InterestDocumentsPane {...props} personaId={uuidInterest.personaId} interest={uuidInterest} />);
-    await waitFor(() => expect(listDocs).toHaveBeenCalled());
-    expect(listDocs).toHaveBeenCalledWith("b1", "t1", "3f1b0c2e-0000-4000-8000-000000000001");
+  it("will not save a document with no content", async () => {
+    // `content` IS the document — an empty one is a row the persona can never usefully search, and
+    // sending it only surfaces whatever the rows plane says about a blank column as a raw error
+    // string. Guard it the same way `title` is guarded, in the UI.
+    render(<InterestDocumentsPane {...props} />);
+    await userEvent.click(await screen.findByRole("button", { name: /add a document/i }));
+    await userEvent.type(screen.getByLabelText(/title/i), "Cylon portrayal");
+    expect(screen.getByRole("button", { name: /^save document$/i })).toBeDisabled();
+    await userEvent.type(screen.getByLabelText(/content/i), "The reimagined series…");
+    expect(screen.getByRole("button", { name: /^save document$/i })).toBeEnabled();
   });
 });
 
@@ -113,28 +107,52 @@ describe("KnowledgeFacet", () => {
   const LABEL_B = "Science Fiction › Space Opera › Firefly";
 
   const persona = {
-    // Deliberately an RDID, exactly what GET /persona/personas returns — must NOT reach the pane
-    // as the act-as principal. See RULING 1 above.
+    // An RDID, exactly what GET /persona/personas returns — the only form of a persona id any
+    // client ever holds. `SpecialInterestRow.personaId` is the SAME string: the CRUD read path
+    // swaps the stored uuid back to the rdid on the way out (crud/factory.ts's `refEntries`), so
+    // there is no uuid anywhere on the wire to choose between.
     id: "persona.acme.bitbag",
     corpusEcosystemId: "eco-1",
     ownedEcosystemId: "owned-eco-1",
   } as unknown as Persona;
 
-  // RULING 1 regression pin, at the FACET layer this time — this is where the actual defect lived
-  // (the pane just forwards whatever `personaId` it's handed). Mocks specialInterestsApi.list to
-  // return one interest whose personaId is a UUID distinct from the parent persona's rdid `id`,
-  // selects that interest's tab, and asserts the UUID — not the rdid — reaches interestDocumentsApi.list.
-  it("passes the persona's uuid (interest.personaId), never the persona's rdid, as the act-as principal", async () => {
-    const uuidPersonaId = "3f1b0c2e-0000-4000-8000-000000000001";
-    const rowInterest = { ...interest, personaId: uuidPersonaId };
-    listInterests.mockResolvedValue([rowInterest]);
+  // The facet's wiring guarantee: the act-as principal is the PERSONA being edited, and the
+  // bucket/type addressed are the SELECTED interest's — three ids that are easy to cross while
+  // every one of them is a plausible-looking string.
+  it("acts as the persona under edit, against the selected interest's bucket", async () => {
+    listInterests.mockResolvedValue([interest]);
 
     render(<KnowledgeFacet persona={persona} />);
 
     await userEvent.click(await screen.findByRole("button", { name: LABEL_A }));
 
     await waitFor(() => expect(listDocs).toHaveBeenCalled());
-    expect(listDocs).toHaveBeenCalledWith("b1", "t1", uuidPersonaId);
+    expect(listInterests).toHaveBeenCalledWith(persona.id);
+    expect(listDocs).toHaveBeenCalledWith("b1", "t1", persona.id);
+  });
+
+  // I3 — the facet is NOT remounted when the rail switches persona: `group-topic-detail.tsx` keys
+  // the rendered topic by TOPIC id (`<Fragment key={active.id}>`), which does not change, so only
+  // the `persona` prop does. Refetching alone leaves the previous persona's interests on screen
+  // until the new list settles — and clicking one opens persona A's corpus under persona B's
+  // editor. The effect has to clear first, not just refetch.
+  it("drops the previous persona's interest tabs the moment the persona changes", async () => {
+    const personaA = persona;
+    const personaB = { ...persona, id: "persona.acme.other" } as unknown as Persona;
+
+    listInterests.mockImplementation((id: string) =>
+      // B's list never settles — the window this test is about.
+      id === personaA.id ? Promise.resolve([interest]) : new Promise(() => {}),
+    );
+
+    const { rerender } = render(<KnowledgeFacet persona={personaA} />);
+    await userEvent.click(await screen.findByRole("button", { name: LABEL_A }));
+    expect(await screen.findByText(/nothing here yet/i)).toBeInTheDocument();
+
+    rerender(<KnowledgeFacet persona={personaB} />);
+
+    expect(screen.queryByRole("button", { name: LABEL_A })).not.toBeInTheDocument();
+    expect(screen.queryByText(/nothing here yet/i)).not.toBeInTheDocument();
   });
 
   // RULING 2 regression pin — KnowledgeFacet renders InterestDocumentsPane with no key, so

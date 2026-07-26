@@ -45,12 +45,10 @@ export function InterestDocumentsPane({
   corpusEcosystemId,
   interest,
 }: {
-  /** MUST be the persona's raw uuid (`SpecialInterestRow.personaId`), never its rdid — sent as the
-   *  act-as principal. The rows plane's grant check (routes/bucketsData.ts's `canBucketAccess`
-   *  call sites) matches this value, UNRESOLVED, against `access.group_members.member_id`, which
-   *  provisioning stamped with the persona's uuid (`provision-interest-bucket.ts`). The persona's
-   *  own `id` from `GET /persona/personas` is an rdid and would silently 403 every call below —
-   *  see `interest-documents.ts`'s `actingAs()` doc for the full trace. */
+  /** The persona, as the act-as principal — its rdid (`Persona.id`, which is also what
+   *  `SpecialInterestRow.personaId` carries: the CRUD read path swaps stored uuids back to rdids).
+   *  The rows plane resolves it to the uuid `access.group_members.member_id` holds before the
+   *  grant check, so either form is accepted; the rdid is the only one a client actually has. */
   personaId: string;
   /** Where this persona's corpus buckets live (Persona.corpusEcosystemId). */
   corpusEcosystemId: string | null;
@@ -173,7 +171,14 @@ export function InterestDocumentsPane({
             <Button type="button" variant="ghost" onClick={() => setAdding(false)} disabled={busy}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => void save()} disabled={busy || !title.trim()}>
+            {/* `content` IS the document — the text the persona searches. An empty one is a row it
+                can never usefully match, so gate on it exactly as on the title rather than letting
+                the rows plane refuse a blank column as a raw error string. */}
+            <Button
+              type="button"
+              onClick={() => void save()}
+              disabled={busy || !title.trim() || !content.trim()}
+            >
               Save document
             </Button>
           </ButtonBar>
@@ -207,6 +212,12 @@ export function KnowledgeFacet({
 
   useEffect(() => {
     let live = true;
+    // Clear BEFORE the fetch, not just after it lands. The rail switches persona without
+    // remounting this facet — the stack keys the rendered pane by TOPIC id, which doesn't change —
+    // so a refetch alone leaves the previous persona's tabs on screen for the whole round trip,
+    // and clicking one opens that persona's corpus under this one's editor.
+    setInterests([]);
+    setSelected(null);
     specialInterestsApi
       .list(persona.id)
       .then((rows) => {
@@ -255,12 +266,10 @@ export function KnowledgeFacet({
           // screen under the new heading until the new fetch lands (or forever, if it fails). A key
           // forces React to unmount/remount on switch, so state resets immediately.
           key={current.id}
-          // The act-as principal is the persona's raw UUID (`current.personaId`), NOT `persona.id`
-          // — see InterestDocumentsPane's `personaId` doc comment for why an rdid here is a silent
-          // 403. `RDID_REFS` (crud/policy.ts) only rewrites values on the WRITE path, so this list
-          // response's `personaId` is the raw uuid stored on the row — exactly what
-          // `access.group_members.member_id` holds.
-          personaId={current.personaId}
+          // The act-as principal is the persona being edited. `current.personaId` is the identical
+          // string (`RDID_REFS` swaps that FK back to an rdid on the way out — crud/factory.ts),
+          // so this names the subject directly rather than round-tripping it through the interest.
+          personaId={persona.id}
           corpusEcosystemId={persona.corpusEcosystemId ?? null}
           interest={current}
         />
