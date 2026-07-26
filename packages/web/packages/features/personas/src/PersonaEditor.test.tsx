@@ -15,6 +15,7 @@
 // both instead of module-mocking them.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 
 // Prop-echoing stubs for the leaf panels: each renders a testid + the scoping prop it was handed,
@@ -57,9 +58,9 @@ vi.mock("@agentic-toolkit/crud", () => ({
   useExitGuardChannel: () => ({ exitGuard: null, registerGuard: vi.fn() }),
 }));
 
-import { PersonaEditor } from "./PersonaEditor";
+import { PersonaEditor, saveBlockedReason } from "./PersonaEditor";
 import { RailHostBoundary } from "@agentic-toolkit/resource";
-import type { Persona, UserService } from "@agentic-toolkit/data/personas";
+import type { Persona, PersonaDraft, UserService } from "@agentic-toolkit/data/personas";
 
 const PERSONA = {
   id: "persona-1",
@@ -87,13 +88,18 @@ const renderChatPane = () => <div data-testid="chat" />;
 
 /** Render the editor with a saved persona, selecting `subtab` through the URL-selection seam
  *  (passing onSubtabChange makes the sub-tab URL-driven, so `activeSubtab` picks the facet).
- *  `options` forwards testing-library's render options — the rail-host contract tests below use
- *  its `wrapper` to mount the editor under a rail host (default: no host, as the facet tests
- *  above assume). */
-function renderEditor(subtab?: string, options?: Parameters<typeof render>[1]) {
+ *  `persona` defaults to the shared fixture but can be overridden (e.g. a blank-prompt variant
+ *  for the Save-gate tests below). `options` forwards testing-library's render options — the
+ *  rail-host contract tests below use its `wrapper` to mount the editor under a rail host
+ *  (default: no host, as the facet tests above assume). */
+function renderEditor(
+  subtab?: string,
+  persona: Persona = PERSONA,
+  options?: Parameters<typeof render>[1],
+) {
   return render(
     <PersonaEditor
-      persona={PERSONA}
+      persona={persona}
       services={[]}
       onSaved={vi.fn()}
       onCancel={vi.fn()}
@@ -186,7 +192,7 @@ describe("PersonaEditor facet framing", () => {
 // it inside the hub frame). What the wrapper decides is whether the facets are REACHABLE at all.
 describe("PersonaEditor rail-host contract", () => {
   it("shows its facet topics when a host supplies a rail", () => {
-    renderEditor(undefined, { wrapper: RailHostBoundary });
+    renderEditor(undefined, PERSONA, { wrapper: RailHostBoundary });
     // Every facet becomes a clickable rail topic — Demo Chat (this branch's facet) among them.
     expect(screen.getByRole("button", { name: "Demo Chat" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Identity" })).not.toBeNull();
@@ -389,5 +395,83 @@ describe("PersonaEditor Access topic is workspace-only", () => {
     // The neighbouring topics are unaffected — this hides ONE topic, not the rail.
     expect(screen.getByRole("button", { name: "Permissions" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Demo Chat" })).not.toBeNull();
+  });
+});
+
+// The Save gate: `saveBlockedReason` is the located REASON Save is disabled (a bug report the old
+// boolean `valid` couldn't give — see PersonaEditor.tsx's doc comment on the function). These unit
+// tests prove the helper directly; the render tests below prove it (plus `dirty`) actually drives
+// the button.
+describe("saveBlockedReason", () => {
+  // Every field a real PersonaDraft has — `examples` is `string | null`, NOT an array.
+  const base: PersonaDraft = {
+    id: "persona.mike.scout",
+    slug: "scout",
+    name: "Scout",
+    description: "",
+    modelPrompt: "",
+    voice: "",
+    character: "",
+    examples: null,
+    avatarAttachmentId: null,
+    serviceId: null,
+    serviceName: null,
+    model: null,
+    visibility: "private",
+  };
+
+  it("does not block a blank prompt — quick-create allows one", () => {
+    expect(saveBlockedReason(base)).toBeNull();
+    expect(saveBlockedReason({ ...base, modelPrompt: "" })).toBeNull();
+  });
+
+  it("blocks a blank name and points at the topic holding it", () => {
+    const block = saveBlockedReason({ ...base, name: "  " });
+    expect(block?.message).toMatch(/name/i);
+    expect(block?.topicId).toBe("identity");
+  });
+
+  it("blocks a blank slug", () => {
+    expect(saveBlockedReason({ ...base, slug: "" })?.message).toMatch(/slug/i);
+  });
+
+  it("blocks an invalid slug and says why", () => {
+    const block = saveBlockedReason({ ...base, slug: "Not Valid" });
+    expect(block?.message).toMatch(/slug/i);
+    expect(block?.topicId).toBe("identity");
+  });
+});
+
+// The spec's behavioural acceptance criteria: `saveBlockedReason` alone doesn't prove the button
+// reacts correctly — these prove Save is gated on `dirty && valid` together, rendered through the
+// real StackGroupDetail/ButtonBar wiring (activeSubtab="identity" so the Identity pane — Name +
+// Visibility — is actually on screen; a bare renderEditor() selects no topic at all).
+describe("PersonaEditor Save gate", () => {
+  it("a blank prompt does not stop an Identity edit from saving", async () => {
+    // The reported bug: modelPrompt lives in Purpose, not Identity, so a blank prompt must never
+    // hold Identity edits hostage.
+    renderEditor("identity", { ...PERSONA, modelPrompt: "" } as unknown as Persona);
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).toBeDisabled();
+    await userEvent.type(screen.getByLabelText(/name/i), "!");
+    expect(save).toBeEnabled();
+  });
+
+  it("changing visibility alone enables Save", async () => {
+    renderEditor("identity");
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText(/visibility/i), "public");
+    expect(save).toBeEnabled();
+  });
+
+  it("reverting an edit disables Save again", async () => {
+    renderEditor("identity");
+    const save = screen.getByRole("button", { name: /save/i });
+    const name = screen.getByLabelText(/name/i);
+    await userEvent.type(name, "!");
+    expect(save).toBeEnabled();
+    await userEvent.type(name, "{backspace}");
+    expect(save).toBeDisabled();
   });
 });

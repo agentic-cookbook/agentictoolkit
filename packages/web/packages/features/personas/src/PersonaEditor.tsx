@@ -19,6 +19,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { CRUD_TABLES, CrudDataView, useExitGuardChannel } from "@agentic-toolkit/crud";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
+import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
 import {
   StackGroupDetail,
   useRailExitGuard,
@@ -170,6 +171,31 @@ const VISIBILITIES: { id: PersonaVisibility; label: string }[] = [
 /** Build the wire body from a draft (drop display-only joins; coerce blanks to undefined). */
 const toBody = personaToBody;
 
+export interface SaveBlock {
+  message: string;
+  topicId: string;
+}
+
+/**
+ * Why Save is blocked, or null when it is not. A located REASON rather than a boolean, because a
+ * silently disabled Save is the actual bug: the old gate also required `modelPrompt`, which lives
+ * in the Purpose topic, so a user editing Identity had no way to discover what was holding the
+ * button down. Returning the topic id lets the caller point at the offending pane.
+ *
+ * `modelPrompt` is deliberately NOT required. Quick-create already produces personas with a blank
+ * prompt, so refusing to save one here contradicted how the row came into existence.
+ *
+ * `visibility` needs no clause: it is a closed enum that always holds a value. What makes the
+ * visibility popup move the button is the `dirty` term in the gate, not validation.
+ */
+export function saveBlockedReason(draft: PersonaDraft): SaveBlock | null {
+  if (draft.name.trim() === "") return { message: "Enter a name in Identity.", topicId: "identity" };
+  if (draft.slug.trim() === "") return { message: "Enter a slug in Identity.", topicId: "identity" };
+  const slugError = validateLeaf(draft.slug);
+  if (slugError) return { message: `Slug: ${slugError}`, topicId: "identity" };
+  return null;
+}
+
 /**
  * The persona editor — a topic/detail (one stack level) whose leaf carries a Save/Cancel bar over
  * the active section's fields, for both create (`persona === null`) and edit. The caller owns the
@@ -248,22 +274,16 @@ export function PersonaEditor({
 }) {
   // Derive the initial draft from the persona prop; keyed remount (per id) in the
   // parent gives each persona a fresh editor, so seeding state here is safe.
-  const [draft, setDraft] = useState<PersonaDraft>(() =>
+  const { draft, set, dirty, commit } = useDirtyDraft<PersonaDraft>(() =>
     persona ? toPersonaDraft(persona) : BLANK,
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const renderRecordAffordance = useRecordAffordance();
 
-  const set = <K extends keyof PersonaDraft>(key: K, value: PersonaDraft[K]) =>
-    setDraft((d) => ({ ...d, [key]: value }));
-
   const isNew = persona === null;
-  const valid =
-    draft.name.trim() !== "" &&
-    draft.slug.trim() !== "" &&
-    validateLeaf(draft.slug) === null &&
-    draft.modelPrompt.trim() !== "";
+  const block = saveBlockedReason(draft);
+  const valid = block === null;
   const idPrefix = rdidPrefix(persona?.id);
 
   const activeService = useMemo(
@@ -290,6 +310,10 @@ export function PersonaEditor({
       const saved = isNew
         ? await api.personas.create(body, { workspace: workspaceSlug })
         : await api.personas.update(persona.id, body, { workspace: workspaceSlug });
+      // The server normalises (slug casing, trimming) and — after the rdid cascade — may return a
+      // different id than we sent. Adopt what it actually stored, so `dirty` measures the draft
+      // against the saved truth rather than against what we optimistically hoped.
+      commit(toPersonaDraft(saved));
       onSaved(saved);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "personas", step: "save" });
@@ -663,7 +687,7 @@ export function PersonaEditor({
           onCancel,
           canCancel: true,
           onSave: () => void save(),
-          canSave: valid,
+          canSave: dirty && valid,
           saving,
         }}
         showCreate={false}
