@@ -5,9 +5,14 @@
 // (for a host that just wants a mounted feature), and the URL grammar both share.
 export { PersonasSection } from "./PersonasSection";
 export { ServicesSection } from "./ServicesSection";
-// PersonaEditor stays internal: every host reaches it through PersonasSection /
-// PersonasFeature, and an exported 20-prop editor would freeze its internals as
-// public API for consumers that don't exist.
+// PersonaEditor is exported for hosts that own their own persona LIST but want the
+// real editor — the persona registry mounts it beside its own flat table. It was
+// held back while "consumers that don't exist" was true; it no longer is. A host
+// mounting it directly MUST wrap it in `RailHostBoundary` (@agentic-toolkit/resource):
+// the editor publishes its facet topics to a rail host and renders only the leaf, so
+// without one the facet tabs never appear. PersonasSection/PersonasFeature remain the
+// route for a host that wants list + editor together.
+export { PersonaEditor } from "./PersonaEditor";
 // User Settings "Assistants" panel — per-user consent (Layer-2 may_act 'user') for the
 // personas an owner has let act on the caller's behalf; a host mounts it standalone.
 export { AssistantsPanel } from "./AssistantsPanel";

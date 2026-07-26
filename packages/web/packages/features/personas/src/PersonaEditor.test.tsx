@@ -57,6 +57,7 @@ vi.mock("@agentic-toolkit/crud", () => ({
 }));
 
 import { PersonaEditor } from "./PersonaEditor";
+import { RailHostBoundary } from "@agentic-toolkit/resource";
 import type { Persona } from "@agentic-toolkit/data/personas";
 
 const PERSONA = {
@@ -84,8 +85,11 @@ const renderKnowledgeBases = (scopeEcosystemId: string) => (
 const renderChatPane = () => <div data-testid="chat" />;
 
 /** Render the editor with a saved persona, selecting `subtab` through the URL-selection seam
- *  (passing onSubtabChange makes the sub-tab URL-driven, so `activeSubtab` picks the facet). */
-function renderEditor(subtab?: string) {
+ *  (passing onSubtabChange makes the sub-tab URL-driven, so `activeSubtab` picks the facet).
+ *  `options` forwards testing-library's render options — the rail-host contract tests below use
+ *  its `wrapper` to mount the editor under a rail host (default: no host, as the facet tests
+ *  above assume). */
+function renderEditor(subtab?: string, options?: Parameters<typeof render>[1]) {
   return render(
     <PersonaEditor
       persona={PERSONA}
@@ -97,6 +101,7 @@ function renderEditor(subtab?: string) {
       renderKnowledgeBases={renderKnowledgeBases}
       renderChatPane={renderChatPane}
     />,
+    options,
   );
 }
 
@@ -165,6 +170,34 @@ describe("PersonaEditor facet framing", () => {
     renderEditor("llm");
     expect(screen.getByText("Service")).not.toBeNull();
     expect(screen.getByTestId("chat")).not.toBeNull();
+  });
+});
+
+// The rail-host contract. PersonaEditor publishes its facet topics through StackGroupDetail and
+// renders only the LEAF, so a host that mounts the editor DIRECTLY (rather than through
+// PersonasSection/PersonasFeature, which self-host) MUST wrap it in RailHostBoundary — the persona
+// registry does exactly that. Lose the wrapper and the failure is silent: the editor still renders,
+// saves and typechecks, but no facet tab (Identity … Demo Chat) is reachable. The second test is
+// the CONTROL — without it the first would still pass if RailHostBoundary were a no-op.
+//
+// The discriminator is the RAIL, not the hint: "Select a topic." is the leaf placeholder shown
+// until a facet is chosen, so it is present in BOTH cases (a host's frontier nudge only replaces
+// it inside the hub frame). What the wrapper decides is whether the facets are REACHABLE at all.
+describe("PersonaEditor rail-host contract", () => {
+  it("shows its facet topics when a host supplies a rail", () => {
+    renderEditor(undefined, { wrapper: RailHostBoundary });
+    // Every facet becomes a clickable rail topic — Demo Chat (this branch's facet) among them.
+    expect(screen.getByRole("button", { name: "Demo Chat" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Identity" })).not.toBeNull();
+  });
+
+  it("falls back to the topic hint with no rail host", () => {
+    renderEditor();
+    // Published to nobody: not one facet is rendered, so no tab can be clicked…
+    expect(screen.queryByText("Demo Chat")).toBeNull();
+    expect(screen.queryByText("Identity")).toBeNull();
+    // …and the editor sits on the leaf placeholder forever.
+    expect(screen.getByText("Select a topic.")).not.toBeNull();
   });
 });
 
