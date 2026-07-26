@@ -73,6 +73,15 @@ function toDraft(row: SpecialInterestRow, key: string): Draft {
   };
 }
 
+/** The subset of `Draft` that can actually go stale relative to the server — everything except
+ *  the client-only `key` and the immutable `id`/`slug`. Compared field-by-field (not
+ *  `JSON.stringify`) against `baselines[d.key]` to decide whether a loaded card is dirty. */
+type DraftFields = Pick<Draft, "general" | "topical" | "specific" | "stances">;
+
+function fieldsOf(d: Draft): DraftFields {
+  return { general: d.general, topical: d.topical, specific: d.specific, stances: d.stances };
+}
+
 /** A short, stable, `[0-9a-z]` digest of a string — FNV-1a 32-bit rendered base-36. Deliberately
  *  not a cryptographic hash and not `crypto.randomUUID`: the ONLY properties needed are that the
  *  same text always digests to the same value (so a failed save retried is the same interest, not
@@ -175,6 +184,12 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
   // while B is still in flight) are a legitimate flow, not a same-card double-click, and each
   // card's own busy state must track only its own request regardless of what else is in flight.
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set());
+  // The stored baseline each loaded card was prefilled from, keyed by the card's stable `key` —
+  // re-set to the just-saved fields on a successful save, so that card's Save goes disabled again
+  // until the next edit rather than staying clickable for a no-op re-save of what's already
+  // persisted. A brand-new card (`id === null`) never gets an entry here; `canSaveCard` below
+  // exempts it from the dirty check entirely since it has no persisted state to diff against.
+  const [baselines, setBaselines] = useState<Record<string, DraftFields>>({});
 
   const setBusy = (key: string, busy: boolean) =>
     setBusyKeys((prev) => {
@@ -189,7 +204,9 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
     setLoading(true);
     try {
       const rows = await specialInterestsApi.list(personaId);
-      setDrafts(rows.map((row) => toDraft(row, newKey())));
+      const newDrafts = rows.map((row) => toDraft(row, newKey()));
+      setDrafts(newDrafts);
+      setBaselines(Object.fromEntries(newDrafts.map((d) => [d.key, fieldsOf(d)])));
       setError(null);
     } catch (err) {
       setError(errMsg(err, "Could not load this persona's interests."));
@@ -212,6 +229,23 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
 
   const set = (index: number, patch: Partial<Draft>) =>
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+
+  // A brand-new card (`id === null`) has no persisted baseline to diff against — a filled-in
+  // required field IS the change, same carve-out `CrudRecordForm`'s `canSave` and `TopicForm`'s
+  // `canSubmit` use for create mode. A loaded card is gated on dirty too, so re-submitting the
+  // unchanged interest (a silent no-op PUT) isn't offered.
+  const canSaveCard = (d: Draft): boolean => {
+    if (!d.general.trim()) return false;
+    if (d.id === null) return true;
+    const baseline = baselines[d.key];
+    if (!baseline) return true;
+    return (
+      d.general !== baseline.general ||
+      d.topical !== baseline.topical ||
+      d.specific !== baseline.specific ||
+      d.stances !== baseline.stances
+    );
+  };
 
   const add = () =>
     setDrafts((prev) => [
@@ -257,6 +291,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       // brand-new card with no id at all); an index-addressed patch would land on whichever
       // card now sits at that position if the array reordered while this save was in flight.
       setDrafts((prev) => prev.map((row) => (row.key === key ? toDraft(saved, key) : row)));
+      setBaselines((prev) => ({ ...prev, [key]: fieldsOf(toDraft(saved, key)) }));
     } catch (err) {
       setError(saveError(err));
     } finally {
@@ -264,11 +299,19 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
     }
   };
 
+  const dropBaseline = (key: string) =>
+    setBaselines((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
   const remove = async (key: string) => {
     const d = drafts.find((row) => row.key === key);
     if (!d) return;
     if (!d.id) {
       setDrafts((prev) => prev.filter((row) => row.key !== key));
+      dropBaseline(key);
       return;
     }
     setBusy(key, true);
@@ -278,6 +321,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       // Drop just this card locally, addressed by key — see `save` above for why an
       // index-addressed filter is wrong once a concurrent operation can reorder the array.
       setDrafts((prev) => prev.filter((row) => row.key !== key));
+      dropBaseline(key);
     } catch (err) {
       setError(errMsg(err, "Could not remove this interest."));
     } finally {
@@ -379,7 +423,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
             <Button
               type="button"
               onClick={() => void save(d.key)}
-              disabled={busyKeys.has(d.key) || !d.general.trim()}
+              disabled={busyKeys.has(d.key) || !canSaveCard(d)}
             >
               Save interest
             </Button>

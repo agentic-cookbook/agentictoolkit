@@ -284,14 +284,59 @@ describe("InterestsEditor", () => {
     list.mockResolvedValue([row]);
     render(<InterestsEditor personaId="persona.acme.bitbag" />);
     await screen.findByDisplayValue("Battlestar Galactica");
+    // A loaded card's Save is dirty-gated — it must actually change before Save is clickable
+    // (see "starts disabled for an unmodified interest" below), so edit General first.
+    await userEvent.type(screen.getByLabelText(/^general$/i), "!");
     await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
     await waitFor(() =>
       expect(update).toHaveBeenCalledWith(
         "i1",
-        expect.objectContaining({ general: "Science Fiction" }),
+        expect.objectContaining({ general: "Science Fiction!" }),
       ),
     );
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("starts disabled for an unmodified interest and enables after one field edit", async () => {
+    list.mockResolvedValue([row]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Battlestar Galactica");
+
+    const save = screen.getByRole("button", { name: /^save interest$/i });
+    expect(save).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText(/^general$/i), "!");
+    expect(save).toBeEnabled();
+  });
+
+  it("re-disables Save after a successful save (baseline moves)", async () => {
+    list.mockResolvedValue([row]);
+    update.mockResolvedValue({ ...row, general: "Science Fiction!" });
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Battlestar Galactica");
+
+    const save = screen.getByRole("button", { name: /^save interest$/i });
+    await userEvent.type(screen.getByLabelText(/^general$/i), "!");
+    expect(save).toBeEnabled();
+
+    await userEvent.click(save);
+    await waitFor(() => expect(update).toHaveBeenCalled());
+
+    // Re-submitting the just-saved value (a silent no-op PUT) must not stay offered — the
+    // baseline has to adopt the saved row, not just clear a `saving` flag.
+    await waitFor(() => expect(screen.getByRole("button", { name: /^save interest$/i })).toBeDisabled());
+  });
+
+  it("does not gate a brand-new card's Save on dirty — only on a filled General", async () => {
+    // A brand-new card has no persisted baseline to diff against — a filled-in required field
+    // IS the change (same carve-out CrudRecordForm's create mode uses).
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+    const save = screen.getByRole("button", { name: /^save interest$/i });
+    expect(save).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+    expect(save).toBeEnabled();
   });
 
   it("sends topical and specific as null, not empty strings, for a general-only interest", async () => {
@@ -398,6 +443,10 @@ describe("InterestsEditor", () => {
     // An unsaved edit on C that must survive untouched by anything that happens to A or B.
     const opinions = screen.getAllByLabelText(/^opinions$/i);
     await userEvent.type(opinions[2]!, " Ridley's footnote.");
+
+    // B's Save is dirty-gated — edit it so Save is actually clickable.
+    const generals = screen.getAllByLabelText(/^general$/i);
+    await userEvent.type(generals[1]!, "!");
 
     const saveButtons = screen.getAllByRole("button", { name: /^save interest$/i });
     await userEvent.click(saveButtons[1]!); // Save B
