@@ -16,6 +16,11 @@ export { AssistantsPanel } from "./AssistantsPanel";
 // directly), but it's also exported standalone since it only needs a personaId.
 export { InterestsEditor } from "./InterestsEditor";
 
+// The interest research-corpus pane and the Knowledge facet it's mounted inside of.
+// KnowledgeFacet lives inside the Knowledge facet (PersonaEditor mounts it directly), but both
+// are exported standalone for the same reason as InterestsEditor above.
+export { InterestDocumentsPane, KnowledgeFacet } from "./InterestDocumentsPane";
+
 // The site entry: a thin, host-agnostic wrapper that drives PersonasSection's urlSelection from an
 // explicit basePath — a feature site mounts this directly, no host-side glue needed.
 export { PersonasFeature } from "./PersonasFeature";

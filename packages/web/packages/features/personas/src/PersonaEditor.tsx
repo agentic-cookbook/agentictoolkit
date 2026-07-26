@@ -33,6 +33,7 @@ import { PersonaAvatarField } from "./PersonaAvatarField";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { PermissionsPanel } from "./PermissionsPanel";
 import { InterestsEditor } from "./InterestsEditor";
+import { KnowledgeFacet } from "./InterestDocumentsPane";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import {
   api,
@@ -483,23 +484,17 @@ export function PersonaEditor({
       id: "knowledge",
       label: "Knowledge",
       icon: <BookOpen size={16} aria-hidden />,
-      // Facet 3 — the Knowledge Bases surface (the persona-memory schema browser), scoped to the
-      // ecosystem this persona OWNS (not its scoping/home `ecosystemId` — a persona acting as `self`
-      // reads/writes knowledge under its own owned ecosystem). A draft has no id, so gate it behind
-      // the first save; a saved persona whose owned ecosystem isn't provisioned yet (`null`) gets a
-      // distinct notice rather than silently falling back to the scoping ecosystem. The knowledgebases
-      // feature package is a sibling this package doesn't depend on, so its pane is host-injected.
+      // Facet 3 — the persona's knowledge: the Knowledge Bases surface (host-injected, scoped to
+      // the ecosystem this persona OWNS) plus one tab per special interest, whose research corpus
+      // lives in the OWNER's realm (`corpusEcosystemId`) instead. Two different ecosystems, which
+      // is why they are sibling tabs rather than one merged pane. A draft has no id, so gate the
+      // whole facet behind the first save; the per-pane "not provisioned yet" cases are handled
+      // inside KnowledgeFacet.
       render: () => {
         if (!persona) {
           return <SaveFirstNotice>Save this persona first to manage its knowledge bases.</SaveFirstNotice>;
         }
-        if (!persona.ownedEcosystemId) {
-          return <SaveFirstNotice>This persona's knowledge bases aren't available yet.</SaveFirstNotice>;
-        }
-        if (!renderKnowledgeBases) {
-          return <SaveFirstNotice>Knowledge bases aren't available in this view.</SaveFirstNotice>;
-        }
-        return renderKnowledgeBases(persona.ownedEcosystemId);
+        return <KnowledgeFacet persona={persona} renderKnowledgeBases={renderKnowledgeBases} />;
       },
     },
     {
