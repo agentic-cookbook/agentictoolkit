@@ -26,6 +26,13 @@ import {
 /** The cap the backend enforces (400 past it). Mirrored here to disable the add button. */
 const MAX_INTERESTS = 2;
 
+/** The `stances` length the backend enforces (`MAX_STANCES_CHARS` in
+ *  `backend/src/adh/src/crud/pre-create-hooks.ts`, 400 past it). Mirrored here as the textarea's
+ *  `maxLength` so the author is stopped while typing rather than by a save that fails after the
+ *  fact — the backend's message for it is generic, and this is the one field with no visible
+ *  length cue. The bound exists because stances are pasted into the system prompt on every turn. */
+const MAX_STANCES_CHARS = 4000;
+
 /** A card's editable state. `id` is null until the first successful save. `key` is a client-only
  *  identity, stable for the card's whole lifetime, that `save`/`remove` address instead of the
  *  card's position in `drafts` — see `newKey` below for why. */
@@ -346,8 +353,20 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
               onChange={(e) => set(i, { stances: e.target.value })}
               placeholder="Loves the miniseries. Hates how the Cylons libel machine minds…"
               className="min-h-32 resize-y"
+              maxLength={MAX_STANCES_CHARS}
             />
           </Field>
+          {/* Removing an interest is NOT destructive to the research, and the author has no way to
+              tell that from a trash icon. The backend deliberately keeps the bucket and every
+              document in it (`revokeInterestBucketAccess`) — a delete is often a rename-by-recreate
+              and re-gathering a corpus is expensive — and withdraws only this persona's access.
+              Saying so here is what makes that design legible instead of a silent surprise in
+              either direction: nobody loses work they thought was gone, and nobody assumes a
+              removal wiped material they wanted wiped. */}
+          <p className="text-xs text-apt-text-muted">
+            Removing an interest keeps its research documents — they stay in storage and only this
+            persona&apos;s access to them is withdrawn.
+          </p>
           <ButtonBar>
             <Button
               type="button"

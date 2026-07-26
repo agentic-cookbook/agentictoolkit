@@ -260,6 +260,26 @@ describe("InterestsEditor", () => {
     await waitFor(() => expect(del).toHaveBeenCalledWith("i1"));
   });
 
+  it("says removal keeps the research, because the backend deliberately does", async () => {
+    // `revokeInterestBucketAccess` keeps the bucket and every document in it and withdraws only
+    // the persona's access — a delete is often a rename-by-recreate. A trash icon communicates
+    // the opposite, so the card has to say it.
+    list.mockResolvedValue([row]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Battlestar Galactica");
+    expect(screen.getByText(/keeps its research documents/i)).toBeInTheDocument();
+  });
+
+  it("stops over-long opinions at the field, not at the failed save", async () => {
+    // `stances` is `text()` in the DB, so nothing in the derived request schema bounds it — the
+    // backend enforces MAX_STANCES_CHARS in its hooks because the value is pasted into the system
+    // prompt on every turn. Mirrored here so the author is stopped while typing.
+    list.mockResolvedValue([row]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Battlestar Galactica");
+    expect(screen.getByLabelText(/^opinions$/i)).toHaveAttribute("maxlength", "4000");
+  });
+
   it("routes an existing row's save to update, never create", async () => {
     list.mockResolvedValue([row]);
     render(<InterestsEditor personaId="persona.acme.bitbag" />);
