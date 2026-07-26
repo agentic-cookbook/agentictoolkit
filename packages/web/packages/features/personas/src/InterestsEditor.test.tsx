@@ -52,6 +52,10 @@ beforeEach(() => {
 });
 
 describe("slugify", () => {
+  /** The backend's own leaf rule (`SEGMENT_RE`, backend/src/adh/src/lib/rdid.ts): lowercase
+   *  alphanumerics with INTERIOR hyphens only. `validateLeaf` 400s on anything else, "" included. */
+  const LEAF = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+
   it("never leaves a trailing dash after truncating to the 64-char rdid segment limit", () => {
     // 63 letters + " b": non-alnum run becomes a single "-" at index 63, so a naive
     // slice(0, 64) AFTER stripping edge dashes keeps that dash and drops the "b" —
@@ -59,6 +63,34 @@ describe("slugify", () => {
     const slug = slugify("a".repeat(63) + " b");
     expect(slug).toBe("a".repeat(63));
     expect(slug.endsWith("-")).toBe(false);
+  });
+
+  // A level with no [a-z0-9] at all collapses to a dash run and then to "". The backend answers
+  // `slug: Required.` with a 400, and there is NO slug field in this editor — so an author writing
+  // in Cyrillic, CJK or emoji could never save an interest and could never see why.
+  it.each([
+    ["Cyrillic", "Звёздный крейсер «Галактика»"],
+    ["CJK", "宇宙戦艦ヤマト"],
+    ["emoji", "🚀🛸"],
+  ])("derives a legal rdid segment from a %s-only level", (_name, level) => {
+    const slug = slugify("Science Fiction", "Space Opera", level);
+    expect(slug).not.toBe("");
+    expect(slug).toMatch(LEAF);
+  });
+
+  it("gives two different non-latin levels two different slugs", () => {
+    // A shared constant fallback would make the persona's SECOND such interest a duplicate-slug
+    // 409 — swapping one dead end for another.
+    expect(slugify("宇宙戦艦ヤマト")).not.toBe(slugify("機動戦士ガンダム"));
+  });
+
+  it("derives the same slug twice for the same level, so a retry is not a new name", () => {
+    // Asserts the leaf shape too, deliberately: "" === "" would make a bare stability check pass
+    // against the very bug this file is pinning. A random or clock-seeded fallback fails the
+    // second assertion — the author's failed save would come back under a different name.
+    const first = slugify("Звёздный крейсер");
+    expect(first).toMatch(LEAF);
+    expect(slugify("Звёздный крейсер")).toBe(first);
   });
 });
 
@@ -116,24 +148,16 @@ describe("InterestsEditor", () => {
     expect(screen.getByLabelText(/^specific$/i)).toBeDisabled();
   });
 
-  it("names the real problem for each failure the backend returns", async () => {
-    const attempt = async () => {
-      await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
-      await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
-      await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
-    };
-
-    create.mockRejectedValue(Object.assign(new Error("409 Conflict"), { status: 409 }));
-    const { unmount } = render(<InterestsEditor personaId="persona.acme.bitbag" />);
-    await attempt();
-    expect(await screen.findByText(/already has an interest by that name/i)).toBeInTheDocument();
-    unmount();
-
+  // 409 has its own test below ("tells the 409s apart") — it is no longer a single-cause status,
+  // so a one-line mapping assertion here would only re-encode the premise that broke.
+  it("names the write gate rather than looking broken on a 403", async () => {
     // 403 is the x-exposure write gate: `persona.special_interests` is owner-tier, so generic
     // CRUD refuses a non-owner server-side and the editor says so instead of looking broken.
-    create.mockRejectedValue(Object.assign(new Error("403 Forbidden"), { status: 403 }));
+    create.mockRejectedValue(Object.assign(new Error("forbidden"), { status: 403 }));
     render(<InterestsEditor personaId="persona.acme.bitbag" />);
-    await attempt();
+    await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+    await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+    await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
     expect(await screen.findByText(/don't have permission/i)).toBeInTheDocument();
   });
 
@@ -161,6 +185,71 @@ describe("InterestsEditor", () => {
     await attempt();
     expect(await screen.findByText(/120 characters/i)).toBeInTheDocument();
     expect(screen.queryByText(/at most 2 interests/i)).not.toBeInTheDocument();
+  });
+
+  it("blames the interest's name, not its length, when the backend rejects the derived slug", async () => {
+    // `specialInterestCreate` (crud/pre-create-hooks.ts) validates the slug FIRST and answers
+    // `slug: <validateLeaf message>` verbatim. Folding that into the generic 400 branch tells the
+    // author their levels are too long or blank — false on both counts, and unactionable, since
+    // the slug is derived and has no field in this UI.
+    create.mockRejectedValue(
+      Object.assign(new Error("slug: Required."), { status: 400 }),
+    );
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+    await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+    await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
+
+    expect(await screen.findByText(/letter or digit/i)).toBeInTheDocument();
+    expect(screen.queryByText(/120 characters/i)).not.toBeInTheDocument();
+  });
+
+  it("tells the 409s apart: only the duplicate is a name clash", async () => {
+    const attempt = async () => {
+      await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+      await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+      await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
+    };
+
+    // Generic CRUD's unique-violation 409 — the duplicate slug (crud/factory.ts).
+    create.mockRejectedValue(
+      Object.assign(new Error("resource already exists"), { status: 409 }),
+    );
+    const { unmount } = render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await attempt();
+    expect(await screen.findByText(/already has an interest by that name/i)).toBeInTheDocument();
+    unmount();
+
+    // The provisioning 409s the Task 6 C1 fix added to the SAME hook: an owner whose realm has no
+    // default bucket, saving their FIRST interest under a unique name, was told they already had
+    // one by that name. Fall through to the backend's own text instead of a confident falsehood.
+    create.mockRejectedValue(
+      Object.assign(
+        new Error("ecosystem eco-1 has no default bucket — cannot provision an interest corpus"),
+        { status: 409 },
+      ),
+    );
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await attempt();
+    expect(await screen.findByText(/no default bucket/i)).toBeInTheDocument();
+    expect(screen.queryByText(/already has an interest by that name/i)).not.toBeInTheDocument();
+  });
+
+  it("does not call the other provisioning 409 a duplicate either", async () => {
+    // `personaCorpusEcosystemId` (src/lib/persona-corpus-ecosystem.ts) — an owner with no
+    // resolvable home realm. Same status, same hook, entirely different cause.
+    create.mockRejectedValue(
+      Object.assign(new Error("cannot resolve a corpus ecosystem for customer cust-1"), {
+        status: 409,
+      }),
+    );
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+    await userEvent.type(screen.getByLabelText(/^general$/i), "Film");
+    await userEvent.click(screen.getByRole("button", { name: /^save interest$/i }));
+
+    expect(await screen.findByText(/cannot resolve a corpus ecosystem/i)).toBeInTheDocument();
+    expect(screen.queryByText(/already has an interest by that name/i)).not.toBeInTheDocument();
   });
 
   it("deletes an interest", async () => {

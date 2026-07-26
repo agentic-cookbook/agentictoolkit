@@ -66,18 +66,41 @@ function toDraft(row: SpecialInterestRow, key: string): Draft {
   };
 }
 
+/** A short, stable, `[0-9a-z]` digest of a string — FNV-1a 32-bit rendered base-36. Deliberately
+ *  not a cryptographic hash and not `crypto.randomUUID`: the ONLY properties needed are that the
+ *  same text always digests to the same value (so a failed save retried is the same interest, not
+ *  a second one) and that different texts almost never collide (so a persona's two interests can't
+ *  land on one slug). `Math.imul` keeps the multiply in 32-bit; `>>> 0` keeps it unsigned. */
+function digest36(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
 /** The rdid segment for a new interest, derived from its most specific level so the author
- *  never has to name one. Lower-case, [a-z0-9-] only, no leading/trailing/repeated dashes. */
+ *  never has to name one. Lower-case, [a-z0-9-] only, no leading/trailing/repeated dashes.
+ *  Never returns "" — see the fallback below. */
 export function slugify(...levels: string[]): string {
   const source = levels.map((l) => l.trim()).filter(Boolean).pop() ?? "";
   // Slice to the rdid segment's length limit BEFORE stripping edge dashes, not after — a cut
   // that lands mid dash-run (e.g. a 63-char word followed by " b") leaves a trailing "-" if the
   // strip already ran, which the server then 400s on as an unusable slug the author never typed.
-  return source
+  const derived = source
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .slice(0, 64)
     .replace(/^-+|-+$/g, "");
+  // A level written entirely outside [a-z0-9] — Cyrillic, CJK, emoji, «guillemets» — has nothing
+  // to keep: the replace collapses it to one dash run and the strip empties it. The backend's
+  // `validateLeaf` answers "" with `slug: Required.` (400), and this editor has NO slug field, so
+  // the author would be permanently stuck: no way to satisfy it, and (before the `slug:` branch in
+  // `saveError`) no way to even learn what was wrong. Fall back to a digest of the level so the
+  // interest is nameable at all — opaque, but the slug is an internal storage segment the author
+  // never sees, while the levels they DID type are what the UI and the prompt render.
+  return derived || `interest-${digest36(source)}`;
 }
 
 /** The card's heading — the most specific level the author has typed, so it reads the way the
@@ -88,25 +111,51 @@ function cardTitle(d: Draft): string {
 }
 
 /** Matches the pre-create hook's exact message (`backend/src/adh/src/crud/pre-create-hooks.ts`,
- *  `specialInterestCreate`) for the two-interest cap — the ONE 400 with a distinct, stable text.
- *  Every other 400 (a level over its 120-character limit, an unusable slug, …) comes back from
- *  generic CRUD's Zod-validation catch as the flat, field-blind "invalid request body" — so that
- *  branch below names the length limit instead of blaming a cap the author hasn't hit. */
+ *  `specialInterestCreate`) for the two-interest cap. The slug rejection from that same hook has
+ *  its own text and its own branch (`SLUG_MESSAGE` below); everything else — a level over its
+ *  120-character limit, a blank General — comes back from generic CRUD's Zod-validation catch as
+ *  the flat, field-blind "invalid request body", so the last branch names the length limit
+ *  instead of blaming a cap the author hasn't hit. */
 const CAP_MESSAGE = /at most \d+ special interests?/i;
 
-/** Turn a save failure into something the author can act on. 409 = this persona already has an
- *  interest by that name, 403 = no write on the table (the `x-exposure` gate —
- *  `persona.special_interests` is owner-tier, so this only fires for someone who is not the
- *  owner). 400 covers two backend failures that share a status but not a cause — see
- *  `CAP_MESSAGE` above for how they're told apart. */
+/** The pre-create hook's slug rejection, emitted verbatim as `slug: <validateLeaf message>`
+ *  (`backend/src/adh/src/crud/pre-create-hooks.ts` → `lib/rdid.ts`). A THIRD 400 sharing the
+ *  status with the cap and with generic CRUD's "invalid request body", and the only one whose
+ *  cause is a field the author cannot see: the slug is derived, not typed. `slugify` above should
+ *  now make this unreachable — this branch is what tells us if that ever stops being true, rather
+ *  than blaming the author's level lengths for it. */
+const SLUG_MESSAGE = /^slug:/i;
+
+/** The unique-violation 409 — generic CRUD answers a duplicate row with "resource already exists"
+ *  and a duplicate rdid with "id already exists" (`crud/factory.ts`), the same "already exists"
+ *  text `rethrowConflict` keys on elsewhere in this codebase. Matched POSITIVELY, so the two
+ *  PROVISIONING 409s the pre-create hook also throws ("… has no default bucket …",
+ *  "cannot resolve a corpus ecosystem …") fall through to their own text instead of being
+ *  narrated as a name clash — an owner with an un-provisioned storage tree saving their FIRST
+ *  interest was previously told they already had one by that name. Positive rather than negative
+ *  matching on purpose: a fourth 409 added later falls through to the backend's words, which is
+ *  merely unpolished, instead of inheriting a confident falsehood. */
+const DUPLICATE_MESSAGE = /already exists/i;
+
+/** Turn a save failure into something the author can act on. 403 = no write on the table (the
+ *  `x-exposure` gate — `persona.special_interests` is owner-tier, so this only fires for someone
+ *  who is not the owner). 400 and 409 each cover several backend failures that share a status but
+ *  not a cause — see `CAP_MESSAGE`, `SLUG_MESSAGE` and `DUPLICATE_MESSAGE` above for how they are
+ *  told apart, and note that every discriminator matches the SPECIFIC case and falls through, so
+ *  an unrecognized message is never mislabelled as a recognized one. */
 function saveError(err: unknown): string {
   const status = httpStatus(err);
+  const message = errMsg(err, "");
   if (status === 400) {
-    return CAP_MESSAGE.test(errMsg(err, ""))
-      ? `A persona can hold at most ${MAX_INTERESTS} interests.`
-      : "Each level must be 120 characters or fewer, and General can't be blank.";
+    if (CAP_MESSAGE.test(message)) return `A persona can hold at most ${MAX_INTERESTS} interests.`;
+    if (SLUG_MESSAGE.test(message)) {
+      return "This interest's name can't be turned into an id — give its most specific level at least one letter or digit.";
+    }
+    return "Each level must be 120 characters or fewer, and General can't be blank.";
   }
-  if (status === 409) return "This persona already has an interest by that name.";
+  if (status === 409 && DUPLICATE_MESSAGE.test(message)) {
+    return "This persona already has an interest by that name.";
+  }
   if (status === 403) return "You don't have permission to change this persona's interests.";
   return errMsg(err, "Could not save this interest.");
 }

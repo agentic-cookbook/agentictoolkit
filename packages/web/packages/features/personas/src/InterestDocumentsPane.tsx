@@ -212,10 +212,18 @@ export function KnowledgeFacet({
 
   useEffect(() => {
     let live = true;
-    // Clear BEFORE the fetch, not just after it lands. The rail switches persona without
-    // remounting this facet — the stack keys the rendered pane by TOPIC id, which doesn't change —
-    // so a refetch alone leaves the previous persona's tabs on screen for the whole round trip,
-    // and clicking one opens that persona's corpus under this one's editor.
+    // Clear BEFORE the fetch, not just after it lands — DEFENSIVE, and unobservable in this app
+    // as it stands. The rail does remount this facet: `PersonasSection.tsx` is the only in-repo
+    // site that renders `PersonaEditor`, and it renders `<PersonaEditor key={openPersona.id}>`, so
+    // switching persona changes the key and React rebuilds the whole editor subtree with
+    // `interests: []` already. (The HTD stack keying the topic by TOPIC id — `group-topic-detail`'s
+    // `<Fragment key={active.id}>` — is true but not what decides it.)
+    //
+    // Worth keeping anyway: `PersonaEditor` AND `KnowledgeFacet` are both exported from this
+    // package's index, so an external host can render either one unkeyed, changing only the
+    // `persona` prop. In that host a refetch alone would leave the previous persona's tabs on
+    // screen for the whole round trip, and clicking one would open that persona's corpus under
+    // this one's editor. Clearing first costs one render and removes the hazard for every host.
     setInterests([]);
     setSelected(null);
     specialInterestsApi

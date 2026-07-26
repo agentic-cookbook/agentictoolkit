@@ -131,11 +131,13 @@ describe("KnowledgeFacet", () => {
     expect(listDocs).toHaveBeenCalledWith("b1", "t1", persona.id);
   });
 
-  // I3 — the facet is NOT remounted when the rail switches persona: `group-topic-detail.tsx` keys
-  // the rendered topic by TOPIC id (`<Fragment key={active.id}>`), which does not change, so only
-  // the `persona` prop does. Refetching alone leaves the previous persona's interests on screen
-  // until the new list settles — and clicking one opens persona A's corpus under persona B's
-  // editor. The effect has to clear first, not just refetch.
+  // This `rerender` swaps the `persona` prop WITHOUT a remount — the unkeyed-host case, which is
+  // deliberately not what the app does: `PersonasSection.tsx` renders `<PersonaEditor
+  // key={openPersona.id}>`, so a rail switch remounts the facet and clears it for free. Both
+  // `PersonaEditor` and `KnowledgeFacet` are exported from this package though, so an external
+  // host can render either unkeyed — and there, refetching alone would leave the previous
+  // persona's interests on screen until the new list settles, with a click opening persona A's
+  // corpus under persona B's editor. This pins the clear-before-fetch that makes that safe.
   it("drops the previous persona's interest tabs the moment the persona changes", async () => {
     const personaA = persona;
     const personaB = { ...persona, id: "persona.acme.other" } as unknown as Persona;
