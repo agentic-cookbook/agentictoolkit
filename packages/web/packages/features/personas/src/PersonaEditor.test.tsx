@@ -14,7 +14,7 @@
 // KnowledgeBasesPane/PersonaChatPane itself — the render helpers below pass prop-echoing stubs for
 // both instead of module-mocking them.
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 
@@ -57,10 +57,33 @@ vi.mock("@agentic-toolkit/crud", () => ({
   ),
   useExitGuardChannel: () => ({ exitGuard: null, registerGuard: vi.fn() }),
 }));
+// Only api.personas.{update,create} need to be test doubles (the save-round-trip tests below drive
+// them); everything else — including the real toPersonaDraft, which PersonaEditor calls to seed its
+// draft on every render — passes through via importActual so the rest of this file's tests (which
+// never touch the network) are unaffected.
+vi.mock("@agentic-toolkit/data/personas", async () => {
+  const actual = await vi.importActual<typeof import("@agentic-toolkit/data/personas")>(
+    "@agentic-toolkit/data/personas",
+  );
+  return {
+    ...actual,
+    api: {
+      ...actual.api,
+      personas: { ...actual.api.personas, update: vi.fn(), create: vi.fn() },
+    },
+  };
+});
 
 import { PersonaEditor, saveBlockedReason } from "./PersonaEditor";
 import { RailHostBoundary } from "@agentic-toolkit/resource";
-import type { Persona, PersonaDraft, UserService } from "@agentic-toolkit/data/personas";
+import {
+  api,
+  type Persona,
+  type PersonaDraft,
+  type UserService,
+} from "@agentic-toolkit/data/personas";
+
+const updatePersona = vi.mocked(api.personas.update);
 
 const PERSONA = {
   id: "persona-1",
@@ -514,5 +537,45 @@ describe("PersonaEditor surfaces why Save is disabled", () => {
     await userEvent.clear(screen.getByLabelText(/name/i));
     const identityTopic = screen.getByRole("button", { name: /identity/i });
     expect(identityTopic).toHaveAttribute("data-blocked", "true");
+  });
+});
+
+// Cross-task fix-round-1 finding: save()'s success path (unlike ServicesSection's handleSave,
+// which had the identical bug) previously never reset `saving`, and — unlike WorkItemEditor, whose
+// real consumer unmounts it on save — PersonaEditor's real consumer (PersonasSection) does NOT
+// clear the selected persona id on `onSaved`, so this editor instance stays mounted across a save.
+// That makes the bug reachable in production: after any successful save the Save/Cancel bar would
+// read "Saving…" and stay disabled forever, until the user navigated away and back. None of the
+// "PersonaEditor Save gate" tests above click Save or await a real save round-trip — they only
+// assert the DIRTY gate via typed edits — so this is the only test in the file that would catch a
+// regression of the missing `finally { setSaving(false) }` fix.
+describe("PersonaEditor save (edit mode)", () => {
+  it("re-enables Save after a successful save (baseline moves AND saving clears)", async () => {
+    const saved: Persona = { ...PERSONA, name: "Bobby" };
+    updatePersona.mockResolvedValue(saved);
+
+    renderEditor("identity");
+
+    const save = screen.getByRole("button", { name: /save/i });
+    await userEvent.clear(screen.getByLabelText(/name/i));
+    await userEvent.type(screen.getByLabelText(/name/i), "Bobby");
+    expect(save).toBeEnabled();
+
+    await userEvent.click(save);
+    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1));
+    expect(updatePersona).toHaveBeenCalledWith(
+      PERSONA.id,
+      expect.objectContaining({ name: "Bobby" }),
+      { workspace: undefined },
+    );
+
+    // Assert BOTH halves of post-save recovery, not just one: the button's accessible name is back
+    // to "Save" (a stuck `saving` flag — no `finally { setSaving(false) }` on the success path —
+    // would leave it reading "Saving…" forever, so this `findByRole` would time out) AND that
+    // "Save" button is disabled (a skipped `commit()` — baseline never adopts the saved row — would
+    // leave `dirty` true forever, so the button would be enabled instead). Either bug alone fails
+    // this pair, mirroring the equivalent ServicesSection test.
+    const saveAfter = await screen.findByRole("button", { name: "Save" });
+    expect(saveAfter).toBeDisabled();
   });
 });

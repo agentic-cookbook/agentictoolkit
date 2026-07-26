@@ -318,6 +318,7 @@ export function PersonaEditor({
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "personas", step: "save" });
       setError(err instanceof Error ? err.message : "Failed to save persona.");
+    } finally {
       setSaving(false);
     }
   }
