@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Boxes } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import {
   HierarchicalDetailView,
@@ -572,7 +573,7 @@ function ServiceEditor({
 
   // Derive the initial draft from the service prop; keyed remount per id in the
   // parent gives each service a fresh editor, so seeding state here is safe.
-  const [draft, setDraft] = useState<ServiceDraft>(() => fromService(service));
+  const { draft, patch, dirty, commit } = useDirtyDraft<ServiceDraft>(() => fromService(service));
   // Live service state: updated after connect/refresh without a full remount.
   const [liveService, setLiveService] = useState<UserService>(service);
   const [saving, setSaving] = useState(false);
@@ -594,6 +595,9 @@ function ServiceEditor({
         ...(draft.apiKeyInput ? { apiKey: draft.apiKeyInput } : {}),
       };
       const saved = await api.services.patch(service.id, body);
+      // Adopt the saved row as the new baseline so Save re-disables until the next edit —
+      // this instance stays mounted (onSaved re-selects the SAME id, no remount).
+      commit(fromService(saved));
       onSaved(saved);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "services", step: "save" });
@@ -659,7 +663,7 @@ function ServiceEditor({
             onCancel,
             canCancel: true,
             onSave: () => void handleSave(),
-            canSave: valid,
+            canSave: dirty && valid,
             saving,
             onDelete: () => void handleDelete(),
             canDelete: true,
@@ -672,7 +676,7 @@ function ServiceEditor({
 
         <ServiceFields
           draft={draft}
-          onChange={setDraft}
+          onChange={(next) => patch(next)}
           providerDisabled
           apiKeyHint={liveService.hasApiKey ? "Leave blank to keep the existing key." : undefined}
           apiKeyPlaceholder={liveService.hasApiKey ? "•••• set" : "sk-…"}
