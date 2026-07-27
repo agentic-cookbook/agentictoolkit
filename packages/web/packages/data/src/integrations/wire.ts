@@ -230,7 +230,7 @@ export interface LinkTokenBodyType {
   serviceType?: string;
 }
 
-/** Per-connection sync settings the worker reads (gmail/reddit today). */
+/** Per-connection sync settings the worker reads (gmail/reddit/mailchimp today). */
 export interface SyncSettingsBodyType {
   /** Gmail label ids to sync (default INBOX). */
   gmailLabelIds?: string[];
@@ -240,6 +240,9 @@ export interface SyncSettingsBodyType {
   redditSubreddits?: string[];
   /** Keywords to match within watched subreddits (max 50). */
   redditKeywords?: string[];
+  /** Mailchimp/Klaviyo audience (list) ids to also sync CONTACTS for. Absent/empty = the
+   *  audience roster only. */
+  audienceIds?: string[];
 }
 
 /** `{ ok, syncSettings }` returned by the settings PATCH. */
