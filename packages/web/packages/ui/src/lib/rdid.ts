@@ -3,6 +3,11 @@
 // `<type>.<scope>.<name>`; <type>+<scope> are fixed/inherited, only the leaf <name> is editable.
 
 export const RDID_TYPE_TO_ENTITY_TYPE = {
+  // Principals. `org.<slug>` and `user.<ecosystem path>.<slug>` are the addresses of the
+  // organization / customer rows themselves. Mirrors the backend map — kept first, in the
+  // same order the backend declares them.
+  org: 'organization',
+  user: 'customer',
   ecosystem: 'ecosystem',
   storage: 'bucket',
   app: 'application',
