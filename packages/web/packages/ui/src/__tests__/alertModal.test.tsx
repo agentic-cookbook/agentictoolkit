@@ -7,7 +7,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { AlertModal } from '../components/alert-modal'
-import { decideActionLayout } from '../components/dialog-actions'
+import { DialogActions } from '../components/dialog-actions'
 
 // ---------------------------------------------------------------------------
 // jsdom stubs for floating-ui / base-ui popup positioning
@@ -398,20 +398,72 @@ describe('AlertModal — Escape key contract', () => {
 })
 
 // ---------------------------------------------------------------------------
-// decideActionLayout — pure threshold
+// DialogActions — the equal-vs-natural rule lives in CSS, not in a measurement
 // ---------------------------------------------------------------------------
-describe('decideActionLayout — pure threshold', () => {
-  it('returns "equal" when container ≤ 2× maxButtonWidth', () => {
-    expect(decideActionLayout(200, 100)).toBe("equal")  // exactly equal
-    expect(decideActionLayout(199, 100)).toBe("equal")  // below
-    expect(decideActionLayout(100, 50)).toBe("equal")   // exactly 2×
+describe('DialogActions — layout', () => {
+  function renderActions(layout?: 'auto' | 'equal' | 'natural', cancelLabel: string | undefined = 'Cancel') {
+    render(
+      <DialogActions
+        confirmLabel="OK"
+        onConfirm={vi.fn()}
+        cancelLabel={cancelLabel}
+        onCancel={vi.fn()}
+        {...(layout ? { layout } : {})}
+      />,
+    )
+    return {
+      row: document.querySelector('[data-slot="dialog-actions"]') as HTMLElement,
+      confirm: screen.getByRole('button', { name: 'OK' }),
+      cancel: cancelLabel != null ? screen.getByRole('button', { name: cancelLabel }) : null,
+    }
+  }
+
+  // `flex-1 max-w-max` in a `justify-end` row IS the rule: grow into your share of
+  // the row, stop at your natural width, and let the leftover collect on the left.
+  // Wide row → natural widths, right-justified. Narrow row → an even split.
+  it('defaults to "auto": each button grows but is capped at its natural width', () => {
+    const { row, cancel, confirm } = renderActions()
+    expect(row.className).toContain('justify-end')
+    for (const btn of [cancel!, confirm]) {
+      expect(btn.className).toContain('flex-1')
+      expect(btn.className).toContain('max-w-max')
+    }
   })
-  it('returns "natural" when container > 2× maxButtonWidth', () => {
-    expect(decideActionLayout(201, 100)).toBe("natural")  // just above
-    expect(decideActionLayout(500, 100)).toBe("natural")  // well above
+
+  it('"equal" splits the row evenly — growth is uncapped', () => {
+    const { row, cancel, confirm } = renderActions('equal')
+    expect(row.className).not.toContain('justify-end')
+    for (const btn of [cancel!, confirm]) {
+      expect(btn.className).toContain('flex-1')
+      expect(btn.className).not.toContain('max-w-max')
+    }
   })
-  it('returns "equal" when maxButtonWidth is 0 (unmeasured)', () => {
-    expect(decideActionLayout(500, 0)).toBe("equal")
+
+  it('"natural" right-justifies and grows neither button', () => {
+    const { row, cancel, confirm } = renderActions('natural')
+    expect(row.className).toContain('justify-end')
+    for (const btn of [cancel!, confirm]) expect(btn.className).not.toContain('flex-1')
+  })
+
+  // The regression this replaced: the row used to render "equal", measure the
+  // buttons in a layout effect, then flip. The flip landed after the dialog was
+  // already visible and clickable, and `Button`'s `transition-all` stretched it into
+  // a ~150ms slide — so a click aimed at where Cancel had settled missed it. Nothing
+  // may reposition the row after the first render.
+  it('settles on the first render — mounting effects move nothing', () => {
+    const { row, cancel } = renderActions()
+    const rowClass = row.className
+    const cancelClass = cancel!.className
+    // A resize is the other path that used to re-measure; it must be inert now.
+    window.dispatchEvent(new Event('resize'))
+    expect(row.className).toBe(rowClass)
+    expect(cancel!.className).toBe(cancelClass)
+  })
+
+  it('a lone confirm button is right-justified at its natural width', () => {
+    const { row, confirm } = renderActions(undefined, undefined)
+    expect(row.className).toContain('justify-end')
+    expect(confirm.className).toContain('max-w-max')
   })
 })
 

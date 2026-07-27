@@ -3,15 +3,15 @@ id: f679a77e-04f7-4e43-b898-6d78a637a760
 title: DialogActions
 domain: agenticdeveloperhub://recipes/dialog-actions
 type: ingredient
-version: 1.0.0
+version: 1.1.0
 status: draft
 language: en
 created: '2026-07-03'
-modified: '2026-07-03'
+modified: '2026-07-27'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "Two-button dialog footer with measured layout — equal-width when narrow, natural-width right-justified when wide — plus initial focus and resize re-measure."
+summary: "Two-button dialog footer whose layout is resolved by CSS — equal-width when narrow, natural-width right-justified when wide — settled on the first painted frame, plus initial focus and a busy state."
 platforms:
 - typescript
 - web
@@ -34,36 +34,36 @@ references: []
 ## Overview
 
 `DialogActions` (`@adh-shared/ui`) is the standard footer for a dialog or alert:
-a cancel button (optional) and a confirm button, laid out per the measured rule
-in **alert-and-dialog §4**. It measures the natural (content-driven) width of
-each button and the container's own width, then chooses one of two layouts:
+a cancel button (optional) and a confirm button, laid out per the rule in
+**alert-and-dialog §Layout**, which resolves to one of two shapes according to how
+much room the container gives them:
 
-- **equal-width** — each button gets `flex-1` and the row fills the container
-  (`[ Cancel ][ Confirm ]`), used when the container is narrow.
+- **equal-width** — each button takes half the row and the row fills the container
+  (`[ Cancel ][ Confirm ]`), when the container is narrow.
 - **natural-width, right-justified** — the buttons keep their content width and
-  hug the right edge (`justify-end`), used when the container is wide enough that
-  equal-width buttons would look stretched.
+  hug the right edge, when the container has room for both.
 
-The threshold is `containerWidth > 2 × maxButtonWidth → natural`, otherwise
-`equal`, exposed as the pure, unit-testable helper `decideActionLayout`. The
-component re-measures via a `ResizeObserver`, sets initial focus on mount
-(defaulting to the safe button), and renders a spinner while `busy`.
+The rule is expressed in CSS rather than measured in JavaScript: each button is
+`flex-1 max-w-max` inside a `justify-end` row, so it grows into its share of the
+row but never past its natural width, and any leftover space collects on the left.
+The layout engine therefore resolves equal-vs-natural during first layout, and the
+first painted frame is the final one. The component also sets initial focus on
+mount (defaulting to the safe button) and renders a spinner while `busy`.
 
-Two symbols ship from `@adh-shared/ui/components/dialog-actions`:
-
-- `DialogActions` — the component.
-- `decideActionLayout(containerWidth, maxButtonWidth)` — the pure layout decision,
-  exported so the equal-vs-natural rule can be unit-tested without a real layout.
+One symbol ships from `@adh-shared/ui/components/dialog-actions`: the
+`DialogActions` component. There is no exported layout helper — see *Design
+Decisions*.
 
 ## Behavioral Requirements
 
 - **must-render-confirm**: The component MUST always render a confirm button labeled with `confirmLabel` that invokes `onConfirm` when activated.
 - **must-render-cancel-when-labeled**: The component MUST render a cancel button that invokes `onCancel` when `cancelLabel` is provided, and MUST omit the cancel button entirely when `cancelLabel` is absent.
-- **must-equal-width-when-narrow**: In `auto` layout with two buttons, when the container width is at most twice the larger natural button width, the component MUST lay the buttons out equal-width (each `flex-1`) filling the container.
-- **must-natural-width-when-wide**: In `auto` layout with two buttons, when the container width exceeds twice the larger natural button width, the component MUST keep both buttons at their natural width and right-justify the row.
-- **must-measure-natural-width**: The component MUST derive each button's natural width from its intrinsic content size, unaffected by the `flex-1` stretch applied in equal-width mode.
-- **must-remeasure-on-resize**: The component MUST re-measure and re-decide the layout when its container is resized.
-- **must-honor-forced-layout**: When `layout` is `equal` or `natural`, the component MUST use that layout without measuring, and MUST NOT re-measure on resize.
+- **must-equal-width-when-narrow**: In `auto` layout with two buttons, when the container is too narrow for both at their natural width, the component MUST split the row evenly between them.
+- **must-natural-width-when-wide**: In `auto` layout with two buttons, when the container has room for both at their natural width, the component MUST hold each at that width and right-justify the row.
+- **must-cap-growth-at-natural-width**: In `auto` layout, no button may be stretched past its own natural width; the space a button declines MUST fall to the other button if it needs it, and otherwise to the left of the row.
+- **must-settle-before-interactive**: The component MUST present its final button geometry on the first frame it paints. It MUST NOT move or resize a button after mount as a result of deciding its own layout — a button that shifts while the dialog is already clickable can swallow the click that was aimed at it.
+- **must-follow-the-container**: The layout MUST be derived from the container's own width, not the viewport's, and MUST re-resolve when the container's width changes.
+- **must-honor-forced-layout**: When `layout` is `equal` or `natural`, the component MUST use that layout regardless of the container's width.
 - **must-focus-initial-on-mount**: When `focusOnMount` is true, the component MUST move focus on mount to the button named by `initialFocus`.
 - **must-default-focus-to-safe-button**: When `initialFocus` is unset, the component MUST default initial focus to the confirm button normally and to the cancel button when `destructive` is true.
 - **must-not-focus-when-suppressed**: When `focusOnMount` is false, the component MUST NOT move focus on mount, leaving the host to place focus.
@@ -72,15 +72,15 @@ Two symbols ship from `@adh-shared/ui/components/dialog-actions`:
 
 ## Appearance
 
-Narrow container (`container ≤ 2 × Wmax`) → equal-width, filling the row:
+Narrow container (no room for both at natural width) → an even split of the row:
 
 ```
 ┌───────────────────────────────┐
-│ [   Cancel   ][   Confirm   ]  │   each flex-1
+│ [   Cancel   ][   Confirm   ]  │   each capped share
 └───────────────────────────────┘
 ```
 
-Wide container (`container > 2 × Wmax`) → natural width, right-justified:
+Wide container (room for both) → natural width, right-justified:
 
 ```
 ┌───────────────────────────────────────────┐
@@ -96,8 +96,10 @@ Busy:
 └───────────────────────────────┘
 ```
 
-- Row: `flex items-center gap-3`; `w-full` in equal mode, `justify-end` in natural
-  and busy modes.
+- Row: `flex items-center gap-3`; `w-full justify-end` in `auto`, `w-full` in
+  forced-equal, `justify-end` in forced-natural and busy modes.
+- Buttons in `auto` carry `flex-1 max-w-max`; forced-equal carries `flex-1`
+  (uncapped); forced-natural carries neither.
 - Buttons are the shared `Button` at `size="sm"`. Cancel is `variant="outline"`;
   confirm is `destructive` when `destructive`, else `confirmVariant` (default
   `"default"`, the gold primary).
@@ -109,11 +111,11 @@ Busy:
 
 | State | Appearance change |
 |---|---|
-| Idle, narrow container | equal-width `[ Cancel ][ Confirm ]`, both `flex-1` |
+| Idle, narrow container | even split, `[ Cancel ][ Confirm ]` filling the row |
 | Idle, wide container | natural-width, right-justified (`justify-end`) |
-| Forced `equal` | always equal-width regardless of container width; no resize measuring |
-| Forced `natural` | always natural-width right-justified; no resize measuring |
-| Confirm-only (no `cancelLabel`) | single confirm button; equal mode does not stretch it |
+| Forced `equal` | always equal-width regardless of container width |
+| Forced `natural` | always natural-width right-justified |
+| Confirm-only (no `cancelLabel`) | single confirm button, right-justified at its natural width; forced-equal does not stretch it |
 | Destructive | confirm renders destructive variant; default initial focus is Cancel |
 | Busy | buttons replaced by a `role="status"` spinner; no clicks fire |
 
@@ -137,35 +139,38 @@ Busy:
 | T1 | must-render-confirm | `confirmLabel="Save"`, click confirm | `onConfirm` called once |
 | T2 | must-render-cancel-when-labeled | `cancelLabel="Cancel"`, click cancel | cancel button present; `onCancel` called once |
 | T3 | must-render-cancel-when-labeled | no `cancelLabel` | no cancel button in the DOM |
-| T4 | must-equal-width-when-narrow / decideActionLayout | `decideActionLayout(200, 120)` (200 ≤ 240) | `"equal"` |
-| T5 | must-natural-width-when-wide / decideActionLayout | `decideActionLayout(300, 120)` (300 > 240) | `"natural"` |
-| T6 | must-measure-natural-width (Playwright) | render narrow, then confirm both buttons carry `flex-1` | equal-width layout, container filled |
-| T7 | must-remeasure-on-resize (Playwright) | render narrow (equal), widen container past `2 × Wmax` | layout flips to natural, right-justified |
-| T8 | must-honor-forced-layout | `layout="equal"` in a wide container | equal-width; no natural flip on resize |
+| T4 | must-equal-width-when-narrow (Playwright) | `auto` in a container narrower than `2 × Wmax` | both buttons at half the row, container filled |
+| T5 | must-natural-width-when-wide (Playwright) | `auto` in a container wider than `2 × Wmax` | both at natural width; row right-justified |
+| T6 | must-cap-growth-at-natural-width | `auto` | both buttons carry `flex-1 max-w-max`; the row carries `justify-end` |
+| T7 | must-settle-before-interactive (Playwright) | sample the cancel button's bounding box every frame from before the dialog opens | exactly one distinct box — the final one — for the dialog's whole life |
+| T8 | must-follow-the-container (Playwright) | render narrow (even split), widen the container past `2 × Wmax` | layout becomes natural, right-justified |
+| T8b | must-honor-forced-layout | `layout="equal"` in a wide container | equal-width, uncapped; no natural flip when resized |
 | T9 | must-focus-initial-on-mount + must-default-focus-to-safe-button | mount non-destructive | confirm button is `document.activeElement` |
 | T10 | must-default-focus-to-safe-button | mount with `destructive` | cancel button is `document.activeElement` |
 | T11 | must-not-focus-when-suppressed | mount with `focusOnMount={false}` | neither button receives focus |
 | T12 | must-show-busy-indicator | `busy`, attempt to click | `role="status"` spinner present; no buttons; `onConfirm`/`onCancel` not called |
 | T13 | must-style-confirm-destructive | `destructive` | confirm button uses destructive variant |
-| T14 | decideActionLayout guard | `decideActionLayout(500, 0)` | `"equal"` (non-positive max width) |
+| T14 | must-settle-before-interactive | mount, then fire a window resize | the row's and buttons' class lists are byte-identical before and after |
 
 ## Edge Cases
 
-- **Zero/unmeasured button width**: `decideActionLayout` returns `"equal"` when
-  `maxButtonWidth <= 0`, so before measurement (or with empty labels) the row
-  defaults to the safe equal-width layout rather than collapsing.
-- **Confirm-only**: with no `cancelLabel`, the lone confirm button is not given
-  `flex-1` in equal mode, so it does not stretch to fill the row.
-- **Boundary width**: at exactly `container == 2 × Wmax` the decision is `"equal"`
-  (strict `>` for natural), avoiding a flicker at the threshold.
-- **Busy toggled mid-measure**: measurement is skipped while `busy` (and while
-  `layout` is forced), so the spinner path never reads button geometry.
-- **Label change**: the layout effect re-runs when `cancelLabel`/`confirmLabel`
-  change, re-measuring because the natural widths may have changed.
-- **Natural-width measurement**: to read a button's content width while it is under
-  a `flex-1` stretch, the component momentarily takes it out of flex flow
-  (`position:fixed; width:auto; left:-9999px`) to read its intrinsic width, then
-  restores the inline styles — a visual no-op.
+- **Empty or zero-width labels**: a button with no content collapses to its padding,
+  which is its natural width; the cap is simply small and the other button takes the
+  slack. There is no "unmeasured" state to guard against, because nothing is measured.
+- **Confirm-only**: with no `cancelLabel`, the lone confirm button sits at its natural
+  width on the right. Forced-equal still does not stretch it.
+- **One button outgrows its half, the other does not**: the small one settles at its
+  natural width and the large one takes the remainder, instead of both snapping to an
+  even split and truncating the large one. This is the one behavioural difference from
+  the previous `2 × Wmax` threshold, and it is strictly the better answer.
+- **Boundary width**: there is no threshold to sit exactly on. The row passes
+  continuously between the two shapes as the container narrows, so no flicker band
+  exists.
+- **Busy**: the spinner path renders no buttons at all, so the layout question does
+  not arise.
+- **Label change**: a longer label changes the button's natural width, and the layout
+  engine re-resolves during the same layout pass that reflows the text — there is no
+  second pass to observe.
 
 ## Configuration
 
@@ -177,14 +182,10 @@ Busy:
 | `onCancel` | `() => void` | — | Cancel handler. |
 | `confirmVariant` | `Button["variant"]` | `"default"` | Confirm variant when not destructive. |
 | `destructive` | `boolean` | `false` | Confirm uses the destructive variant; default focus moves to Cancel. |
-| `busy` | `boolean` | `false` | Replace buttons with a status spinner; suppress measuring and clicks. |
+| `busy` | `boolean` | `false` | Replace buttons with a status spinner; suppress clicks. |
 | `initialFocus` | `"confirm" \| "cancel"` | `destructive ? "cancel" : "confirm"` | Which button gets focus on mount. |
 | `focusOnMount` | `boolean` | `true` | When false, do not auto-focus (host focuses its own field). |
-| `layout` | `"auto" \| "equal" \| "natural"` | `"auto"` | `auto` measures per §4; `equal`/`natural` force it and skip measuring. |
-
-`decideActionLayout(containerWidth, maxButtonWidth): "equal" | "natural"` is the
-exported pure decision: `"equal"` when `maxButtonWidth <= 0` or
-`containerWidth <= 2 × maxButtonWidth`, else `"natural"`.
+| `layout` | `"auto" \| "equal" \| "natural"` | `"auto"` | `auto` lets CSS resolve the rule per alert-and-dialog §Layout; `equal`/`natural` force one shape. |
 
 ## Logging
 
@@ -194,32 +195,50 @@ belongs to the host's `onConfirm`/`onCancel` handlers, not to the component.
 ## Platform Notes
 
 - File: `websites/shared/ui/src/components/dialog-actions.tsx`.
-- `"use client"` — it uses `useLayoutEffect`, `useEffect`, `useState`, refs, and a
-  `ResizeObserver`.
+- `"use client"` — it uses `useEffect` and refs for the initial-focus placement.
+  It holds no layout state and starts no observers.
 - Depends on the shared `Button` (`./button`) and `Loader2` from `lucide-react`.
 - Demo: `ui-showcase` Topic `dialog-actions` (regenerate `sources.generated.ts`
   via `gen-sources.py` after source changes).
-- The measured-layout rule is the shared implementation of **alert-and-dialog §4**;
+- The layout rule is the shared implementation of **alert-and-dialog §Layout**;
   hosts (e.g. the invitation modal) may force `layout="equal"` per their own spec.
 
 ## Design Decisions
 
-- **Measured equal-vs-natural, not a media query.** The layout depends on the
-  container's own width and the buttons' content, which a viewport media query
-  cannot know. Measuring the container plus intrinsic button widths, then applying
-  the `2 × Wmax` threshold, produces the right layout in any dialog size and
-  re-derives it via `ResizeObserver` when the container changes.
-- **Pure `decideActionLayout` helper.** Extracting the threshold as a pure function
-  makes the core rule unit-testable without a DOM/layout and keeps the effect thin.
-- **Intrinsic width via temporary un-flexing.** `flex-1` masks a button's content
-  width, so measurement momentarily removes each button from flex flow
-  (`position:fixed; width:auto`) to read its natural width and restores styles —
-  a reversible, invisible read.
+- **Container-driven, not a media query.** The layout depends on the container's own
+  width and the buttons' content, which a viewport media query cannot know.
+- **Resolved in CSS, not measured in JavaScript.** `flex-1 max-w-max` in a
+  `justify-end` row states the rule directly — grow into your share, stop at your
+  natural width, let the slack collect on the left — and the layout engine answers it
+  during first layout, for free, at every container width.
+
+  This replaced a measured implementation, and the reason is worth keeping. That
+  version rendered the row equal-width, then read each button's natural width in a
+  layout effect by moving it to `position: fixed; left: -9999px`, and flipped the row
+  via `setState`. It was documented here as "a reversible, invisible read." It was
+  neither. The `getBoundingClientRect()` call forced a reflow, which gave each button
+  a resolved *previous* width and so armed `Button`'s `transition-all`; the flip
+  became a ~150ms animation that started only once the dialog was on screen and
+  clickable. Instrumented in Chromium, Cancel travelled 268px to the right while
+  shrinking from 198px to 64px — and it held the wrong position for four frames
+  (55ms → 122ms) before the slide began, long enough to look settled. A click aimed
+  there lands on bare dialog surface after the button has left, and the dialog just
+  sits there, apparently ignoring you. It surfaced as a rare e2e flake; it was a real
+  defect for anyone quick with a mouse.
+
+  The general lesson: **deciding your own layout after you are already interactive is
+  a race with your user.** Prefer a declarative rule the engine resolves before the
+  first paint over a measure-then-correct effect.
+- **No exported layout helper.** The old `decideActionLayout(containerWidth,
+  maxButtonWidth)` existed so the threshold could be unit-tested without a real
+  layout. With the rule in CSS there is no threshold to test in isolation — the
+  contract is now the class list (asserted in unit tests) plus the settled geometry
+  (asserted in the browser).
 - **Safe default focus.** Non-destructive confirms focus the confirm button;
   destructive actions focus Cancel so an accidental Enter can't trigger a
   dangerous confirm. `focusOnMount={false}` yields focus to form dialogs.
-- **Busy short-circuit.** Rendering the spinner instead of the buttons (and
-  skipping measurement) keeps the in-flight state simple and prevents double-submit.
+- **Busy short-circuit.** Rendering the spinner instead of the buttons keeps the
+  in-flight state simple and prevents double-submit.
 
 ## Compliance
 
@@ -234,3 +253,4 @@ belongs to the host's `onConfirm`/`onCancel` handlers, not to the component.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0.0 | 2026-07-03 | Mike Fullerton | Initial recipe; documents the measured equal-vs-natural layout, initial focus, resize re-measure, and busy state. |
+| 1.1.0 | 2026-07-27 | Mike Fullerton | Layout moved from a measure-then-flip layout effect to a pure CSS rule (`flex-1 max-w-max` in a `justify-end` row). Removes the post-paint 268px slide that could swallow a click aimed at Cancel. Drops the exported `decideActionLayout` helper and the `ResizeObserver`. |

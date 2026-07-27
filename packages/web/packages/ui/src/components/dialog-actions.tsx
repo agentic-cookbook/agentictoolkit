@@ -5,18 +5,6 @@ import { Loader2 } from "lucide-react"
 import { Button } from "./button"
 import { cn } from "../lib/utils"
 
-/**
- * Pure helper — determines whether two-button layout is equal-width or natural.
- * Exported for unit testing without needing layout.
- */
-export function decideActionLayout(
-  containerWidth: number,
-  maxButtonWidth: number,
-): "equal" | "natural" {
-  if (maxButtonWidth <= 0) return "equal"
-  return containerWidth > 2 * maxButtonWidth ? "natural" : "equal"
-}
-
 export interface DialogActionsProps {
   cancelLabel?: string
   onCancel?: () => void
@@ -43,20 +31,39 @@ export interface DialogActionsProps {
    */
   focusOnMount?: boolean
   /**
-   * Button-row layout. "auto" (default) measures equal-width vs natural-right-
-   * justify per alert-and-dialog §4; "equal" / "natural" force it. The invitation
-   * modal forces "equal" per its design spec.
+   * Button-row layout. "auto" (default) resolves equal-width vs natural-right-
+   * justify per alert-and-dialog §Layout; "equal" / "natural" force it. The
+   * invitation modal forces "equal" per its design spec.
    */
   layout?: "auto" | "equal" | "natural"
 }
 
 /**
- * Two-button action footer with measured layout.
+ * Two-button action footer.
  *
- * - Measures natural button widths and container width after render.
- * - If containerWidth > 2 × maxButtonWidth → natural width + right-justify.
- * - Otherwise → equal-width (flex-1 each).
- * - Handles initial focus and ResizeObserver re-measurement.
+ * - "auto" hands the equal-vs-natural rule to the layout engine: each button is
+ *   `flex-1 max-w-max`, so it grows into its share of the row but never past its
+ *   natural width, in a `justify-end` row. A row with space for both buttons
+ *   therefore settles at natural widths, right-justified; a row without it splits
+ *   the width evenly. That is alert-and-dialog §Layout, minus the truncation the
+ *   old rule caused in between — when only ONE button outgrows its half, only that
+ *   button takes the extra space instead of both snapping to equal.
+ * - "equal" / "natural" force one branch.
+ * - Handles initial focus.
+ *
+ * The rule is deliberately NOT measured in JS. It used to be: the row rendered
+ * "equal", then a layout effect displaced each button to `position: fixed;
+ * left: -9999px` to read its natural width and flipped the row via `setMeasured`.
+ * Two defects fell out of that. Reading `getBoundingClientRect()` mid-effect forced
+ * a reflow, which gave each button a resolved "before" width and so armed
+ * `Button`'s `transition-all` — turning the flip into a ~150ms slide that starts
+ * AFTER the dialog is visible and clickable (measured in Chromium: Cancel
+ * travelling 268px right while shrinking 198px → 64px). And the row sat at that
+ * wrong first position for several frames before the slide began — long enough to
+ * read as settled, so a click aimed there, by a person or by a test's actionability
+ * check, lands on empty dialog surface and the dialog simply does not respond.
+ * Resolving the rule in CSS makes the first painted frame the final one, leaving no
+ * window to click into.
  */
 export function DialogActions({
   cancelLabel,
@@ -71,50 +78,8 @@ export function DialogActions({
   focusOnMount = true,
   layout = "auto",
 }: DialogActionsProps): React.ReactElement {
-  const containerRef = React.useRef<HTMLDivElement>(null)
   const cancelRef = React.useRef<HTMLButtonElement>(null)
   const confirmRef = React.useRef<HTMLButtonElement>(null)
-  const [measured, setMeasured] = React.useState<"equal" | "natural">("equal")
-  const effectiveLayout = layout === "auto" ? measured : layout
-
-  // Measure and set layout after render, and on resize — only in "auto" mode.
-  React.useLayoutEffect(() => {
-    if (busy || layout !== "auto") return
-    function measure() {
-      const container = containerRef.current
-      const cancelBtn = cancelRef.current
-      const confirmBtn = confirmRef.current
-      if (!container) return
-      // Read intrinsic (natural) button width without flex constraints.
-      // flex-1 expands buttons beyond their content size; we need the
-      // content-driven min-width. Setting position:fixed + width:auto removes
-      // the element from flex flow so the browser reports its natural size.
-      function intrinsicWidth(el: HTMLButtonElement | null): number {
-        if (!el) return 0
-        const s = el.style
-        const prevPos = s.position
-        const prevWidth = s.width
-        const prevLeft = s.left
-        s.position = "fixed"
-        s.width = "auto"
-        s.left = "-9999px"
-        // Force a style recalculation so getBoundingClientRect sees the new styles.
-        const w = el.getBoundingClientRect().width
-        s.position = prevPos
-        s.width = prevWidth
-        s.left = prevLeft
-        return w
-      }
-      const cancelW = intrinsicWidth(cancelBtn)
-      const confirmW = intrinsicWidth(confirmBtn)
-      const maxBtnW = Math.max(cancelW, confirmW)
-      setMeasured(decideActionLayout(container.offsetWidth, maxBtnW))
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    if (containerRef.current) observer.observe(containerRef.current)
-    return () => observer.disconnect()
-  }, [busy, cancelLabel, confirmLabel, layout])
 
   // Initial focus on mount — skipped when focusOnMount={false} (form dialogs that
   // focus their first input instead).
@@ -140,11 +105,7 @@ export function DialogActions({
 
   if (busy) {
     return (
-      <div
-        ref={containerRef}
-        data-slot="dialog-actions"
-        className="flex items-center justify-end gap-3"
-      >
+      <div data-slot="dialog-actions" className="flex items-center justify-end gap-3">
         <Loader2
           className="size-4 animate-spin text-apt-text-muted"
           role="status"
@@ -154,15 +115,22 @@ export function DialogActions({
     )
   }
 
-  const isNatural = effectiveLayout === "natural"
+  // `max-w-max` is the whole "auto" rule: it caps a flex-1 button at its natural
+  // width, so the row right-justifies itself once there is room for both. Forced
+  // "equal" grows uncapped; forced "natural" does not grow at all; and a lone
+  // confirm is never stretched to fill the row.
+  const grow =
+    layout === "auto" ? "flex-1 max-w-max"
+    : layout === "equal" && cancelLabel != null ? "flex-1"
+    : undefined
 
   return (
     <div
-      ref={containerRef}
       data-slot="dialog-actions"
       className={cn(
         "flex items-center gap-3",
-        isNatural ? "justify-end" : "w-full",
+        layout !== "natural" && "w-full",
+        layout !== "equal" && "justify-end",
       )}
     >
       {cancelLabel != null && (
@@ -171,7 +139,7 @@ export function DialogActions({
           variant="outline"
           size="sm"
           onClick={onCancel}
-          className={!isNatural ? "flex-1" : undefined}
+          className={grow}
         >
           {cancelLabel}
         </Button>
@@ -182,7 +150,7 @@ export function DialogActions({
         variant={destructive ? "destructive" : (confirmVariant ?? "default")}
         onClick={onConfirm}
         disabled={confirmDisabled}
-        className={!isNatural && cancelLabel != null ? "flex-1" : undefined}
+        className={grow}
       >
         {confirmLabel}
       </Button>
