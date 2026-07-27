@@ -22,6 +22,14 @@ export function SaveCancelButtons({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  // ONE inert-ness term, keyed by every affordance that expresses it. A control that is
+  // `disabled` must not also look enabled: `canSave` alone is a statement about the DRAFT
+  // (dirty && valid), and it stays TRUE while a save is in flight — the busy term is applied
+  // here, at the button. Keying the gold `className` off `canSave` while keying `disabled`
+  // off `canSave || saving` therefore painted a gold, enabled-looking button that reads
+  // "Saving…" and ignores clicks. Derive once; the styling follows the disabled state by
+  // construction rather than restating half of it.
+  const saveDisabled = !canSave || saving;
   return (
     <>
       <Button variant="ghost" size="sm" onClick={onCancel} disabled={!canCancel || saving}>
@@ -32,9 +40,9 @@ export function SaveCancelButtons({
         variant="ghost"
         size="sm"
         onClick={onSave}
-        disabled={!canSave || saving}
+        disabled={saveDisabled}
         className={
-          canSave ? "bg-apt-gold text-apt-bg hover:bg-apt-gold-bright" : "text-apt-text-muted"
+          saveDisabled ? "text-apt-text-muted" : "bg-apt-gold text-apt-bg hover:bg-apt-gold-bright"
         }
       >
         <Check data-icon="inline-start" />

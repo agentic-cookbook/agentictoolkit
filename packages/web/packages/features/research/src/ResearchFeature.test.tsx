@@ -228,4 +228,37 @@ describe("ResearchFeature", () => {
 
     expect(update).toHaveBeenCalledTimes(1);
   });
+
+  // The counterpart to the guard above: that ref is released in `finally`, so it also releases
+  // when the PUT throws. Nothing pinned that — move the reset onto the success path and one 500
+  // leaves `savingRef.current === true` for the rest of the session, with Save silently dead and
+  // nothing on screen saying why.
+  it("releases the in-flight latch when the save THROWS, so a retry still fires", async () => {
+    update
+      .mockRejectedValueOnce(new Error("Backend exploded."))
+      .mockResolvedValueOnce(structuredClone({ ...DOCUMENT, title: "Federated learning notes v2" }));
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+
+    const title = (await screen.findByDisplayValue("Federated learning notes")) as HTMLInputElement;
+    fireEvent.change(title, { target: { value: "Federated learning notes v2" } });
+
+    const save = screen.getByRole("button", { name: "Save" });
+    await act(async () => {
+      save.click();
+    });
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Backend exploded.")).not.toBeNull();
+
+    // The draft is untouched by the failure, so Save is live again — and it must actually fire.
+    const retry = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+    expect(retry.disabled).toBe(false);
+    await act(async () => {
+      retry.click();
+    });
+    expect(update).toHaveBeenCalledTimes(2);
+  });
 });

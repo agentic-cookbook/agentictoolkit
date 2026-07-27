@@ -98,6 +98,13 @@ function Harness({ config }: { config: MasterDetailFormConfig<Row, Draft> }) {
       <button type="button" onClick={() => form.select("r1")}>
         pick row
       </button>
+      <label>
+        name
+        <input
+          value={form.draft?.name ?? ""}
+          onChange={(e) => form.onChange({ name: e.target.value })}
+        />
+      </label>
       <ButtonBar actions={form.actions} />
     </>
   );
@@ -116,6 +123,37 @@ describe("ButtonBar — a grey Save says why", () => {
     fireEvent.click(screen.getByRole("button", { name: "pick row" }));
     expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
     expect(screen.queryByText(NAME_REQUIRED)).toBeNull();
+  });
+
+  // `canSave` deliberately stays TRUE while the request is out (the busy term belongs at the
+  // button), so styling keyed off `canSave` alone painted the button gold and enabled-looking
+  // while it was disabled and reading "Saving…". One term now drives disabled AND the styling.
+  it("MUTES the Save button while a save is in flight, not just disables it", async () => {
+    let settle!: (row: Row) => void;
+    const update = vi.fn(
+      () =>
+        new Promise<Row>((res) => {
+          settle = res;
+        }),
+    );
+    render(<Harness config={makeConfig({ update })} />);
+    fireEvent.click(screen.getByRole("button", { name: "pick row" }));
+    fireEvent.change(screen.getByLabelText("name"), { target: { value: "Edited" } });
+
+    const enabled = screen.getByRole("button", { name: /Save/ }) as HTMLButtonElement;
+    expect(enabled).not.toBeDisabled();
+    expect(enabled.className).toContain("bg-apt-gold");
+
+    fireEvent.click(enabled);
+    const busy = screen.getByRole("button", { name: /Sav/ }) as HTMLButtonElement;
+    expect(busy.textContent).toContain("Saving…");
+    expect(busy).toBeDisabled();
+    expect(busy.className).toContain("text-apt-text-muted");
+    expect(busy.className).not.toContain("bg-apt-gold");
+
+    await act(async () => {
+      settle({ id: "r1", name: "Edited" });
+    });
   });
 });
 
@@ -179,5 +217,32 @@ describe("useMasterDetailForm — save() latches its own re-entrancy", () => {
       await result.current.actions.onSave();
     });
     expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  // The release lives in `finally`, so it also runs when the request THROWS. Nothing pinned that:
+  // moving the reset onto the success path leaves `savingRef.current === true` forever after one
+  // 500, and Save is dead for the rest of the session — silently, with no visible cause — across
+  // every pane built on this hook. Same fact `useThemeEditor`'s suite already pins.
+  it("releases the latch when the request THROWS, so a retry still fires", async () => {
+    const create = vi
+      .fn<(input: Draft) => Promise<Row>>()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({ id: "r2", name: "Row Two" });
+    const { result } = renderHook(() => useMasterDetailForm(makeConfig({ create })));
+    act(() => result.current.actions.onCreate());
+    act(() => result.current.onChange({ name: "Row Two" }));
+
+    await act(async () => {
+      expect(await result.current.actions.onSave()).toBe(false);
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBe("boom");
+
+    // The retry is the whole point: the draft is unchanged and still savable.
+    expect(result.current.actions.canSave).toBe(true);
+    await act(async () => {
+      expect(await result.current.actions.onSave()).toBe(true);
+    });
+    expect(create).toHaveBeenCalledTimes(2);
   });
 });
