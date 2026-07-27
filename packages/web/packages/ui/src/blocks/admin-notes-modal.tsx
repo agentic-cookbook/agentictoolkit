@@ -20,10 +20,12 @@ const COLS: DataTableColumn<AdminNote>[] = [
  *
  * The caller passes the already-loaded `notes` (react-query lives in the app,
  * never here) plus an `onSave` callback. The component seeds a private working
- * copy from `notes` and never re-syncs while OPEN — the staged model — but
- * re-seeds from the prop whenever it is closed, so every open starts from what is
- * actually loaded. To reset mid-open when the target subject changes, the caller
- * passes a changing `key` (e.g. `subjectTable:subjectId`) so React remounts it.
+ * copy from `notes` — the staged model — and re-seeds from the prop whenever it
+ * is closed, so every open starts from what is actually loaded. While OPEN it
+ * adopts a fresh `notes` only when the user has staged nothing; staged edits are
+ * never clobbered (see the effect for that boundary). To reset mid-open when the
+ * target subject changes, the caller passes a changing `key`
+ * (e.g. `subjectTable:subjectId`) so React remounts it.
  *
  * Save → `onSave(working)`; the caller performs the mutation and closes (flips
  * `open`) on success. Cancel (or dialog-dismiss) → discard the staged working
@@ -46,8 +48,13 @@ export function AdminNotesModal({
   onSave: (notes: { id?: string; content: string }[]) => void
   busy?: boolean
 }): React.ReactElement {
-  // Seeded from the loaded notes and re-seeded whenever the dialog is closed (staged model).
+  // Seeded from the loaded notes and re-seeded whenever the dialog is closed (staged model)
+  // or a refetch lands on an unstaged open dialog (see the effect below).
   const [working, setWorking] = React.useState<AdminNote[]>(notes)
+  // The `notes` value most recently SEEDED into `working`. It is the only honest baseline for
+  // "has the user staged anything?": the incoming `notes` differs from `working` by definition
+  // the moment a refetch lands, so comparing against that would read every refetch as a user edit.
+  const seededNotes = React.useRef<AdminNote[]>(notes)
   // null = editor closed; a note-id string = editing that note; "" = new note.
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [draft, setDraft] = React.useState("")
@@ -115,6 +122,7 @@ export function AdminNotesModal({
 
   // Drop the staged working copy back to the loaded `notes` and close any in-progress note editor.
   function resetWorking(): void {
+    seededNotes.current = notes
     setWorking(notes)
     setEditingId(null)
     setDraft("")
@@ -126,9 +134,30 @@ export function AdminNotesModal({
   // the pre-save working copy: its client-side note ids and dates can no longer match the refetched
   // `notes`, so `dirty` is stuck true, Save is permanently lit, and one click re-sends that stale
   // set — silently REVERTING whatever the refresh brought in.
+  //
+  // …and re-seed on the SAME grounds when a refetch lands while the dialog is OPEN and the user
+  // has staged nothing. That is reachable on defaults (react-query's 30s staleTime +
+  // refetchOnWindowFocus), and without it an untouched open dialog goes `dirty` with zero user
+  // edits, lighting Save so one click PUTs the pre-refetch set over the newer one — the same
+  // silent revert through a different door.
+  //
+  // SCOPE BOUNDARY — deliberate, do not "finish" this into a merge. When the user HAS staged
+  // edits we keep them: clobbering typed work would be strictly worse. That leaves a genuine
+  // concurrent-edit conflict — a note another admin added while this user was editing is dropped
+  // by the save. That is PRE-EXISTING behaviour of this component and explicitly OUT OF SCOPE for
+  // the save-gate work: it is a data-MERGE problem, not a save-gate problem, and a 3-way merge
+  // here would be a large, unreviewed behaviour change. Fix it deliberately, on its own, or not
+  // at all.
   React.useEffect(() => {
-    if (!open) resetWorking()
+    if (!open) {
+      resetWorking()
+      return
+    }
+    // Structural, order-sensitive, and against the LAST SEEDED value — matching `dirty` below.
+    if (JSON.stringify(working) === JSON.stringify(seededNotes.current)) resetWorking()
     // `resetWorking` is re-created every render, so depending on it would re-seed in a loop.
+    // `working` is read but deliberately NOT a dep: this reacts to `notes` arriving, not to the
+    // user's own staging (which must not re-trigger the adopt check).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, notes])
 

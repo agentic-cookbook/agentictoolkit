@@ -80,6 +80,27 @@ function SaveHarness(): React.ReactElement {
   )
 }
 
+/** A note that arrives from a REFETCH while the dialog is open — react-query's 30s staleTime +
+ *  refetchOnWindowFocus make that reachable on the admin app's defaults, and both wrappers pass
+ *  `notes={notesQ.data}` straight through. Its author is distinct so the grid (Author / Added /
+ *  Modified — the content lives in the detail pane) tells it apart from the seeded/staged rows. */
+const CONCURRENT_NOTE: AdminNote = {
+  id: 'n2',
+  content: 'Added by another admin',
+  author: 'someone-else',
+  addedDate: '2026-03-03',
+  modifiedDate: '2026-03-03',
+  subjectTable: 'invitation_requests',
+  subjectId: 'r1',
+}
+
+/** The dialog held OPEN with a given `notes` prop. Swapping that prop via `rerender` is a refetch
+ *  landing mid-session — no close/reopen, no remount. (A trigger button rendered alongside would
+ *  be unreachable: the open modal marks everything outside it inert.) */
+function openWith(notes: AdminNote[]): React.ReactElement {
+  return <AdminNotesModal open onClose={() => {}} author="tester" notes={notes} onSave={() => {}} />
+}
+
 function dataRowCount(): number {
   const grid = screen.getByRole('grid', { name: /admin notes/i })
   return within(grid)
@@ -205,5 +226,61 @@ describe('AdminNotesModal — outer Save button is dirty-gated', () => {
     // The refetched set — the two saved notes AND the concurrent one — not the stale working copy.
     expect(dataRowCount()).toBe(3)
     expect(outerSaveButton()).toBeDisabled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The close-path re-seed above covers only a CLOSED dialog. A refetch landing
+// while the dialog is OPEN reached the same silent revert through a different
+// door: `working` stayed on the pre-refetch set, `dirty` flipped true with zero
+// user edits, and one click PUT the stale set back over the newer one. The rule
+// is asymmetric on purpose, so both halves are pinned here:
+//   • nothing staged  → adopt the incoming notes (Save goes quiet, the new note shows)
+//   • edits staged    → keep the user's work (never clobber typed input)
+// ---------------------------------------------------------------------------
+describe('AdminNotesModal — a refetch landing while the dialog is OPEN', () => {
+  function outerSaveButton(): HTMLElement {
+    const grid = screen.getByRole('grid', { name: /admin notes/i })
+    const outerDialog = grid.closest('[role="dialog"]') as HTMLElement
+    return within(outerDialog).getByRole('button', { name: /^save$/i })
+  }
+
+  it('is ADOPTED when the user has staged nothing — Save stays disabled and the new note shows', async () => {
+    const { rerender } = render(openWith(NOTES))
+    await waitFor(() => expect(screen.getByRole('grid', { name: /admin notes/i })).toBeInTheDocument())
+    expect(dataRowCount()).toBe(1)
+    expect(outerSaveButton()).toBeDisabled()
+
+    rerender(openWith([...NOTES, CONCURRENT_NOTE]))
+    await waitFor(() => expect(dataRowCount()).toBe(2))
+
+    // The note another admin added is visible…
+    expect(screen.getByText('someone-else')).toBeInTheDocument()
+    // …and Save is still grey: adopting a refetch is not a user edit.
+    expect(outerSaveButton()).toBeDisabled()
+  })
+
+  it('does NOT clobber staged edits — the user’s work survives the refetch', async () => {
+    const { rerender } = render(openWith(NOTES))
+    await waitFor(() => expect(screen.getByRole('grid', { name: /admin notes/i })).toBeInTheDocument())
+
+    // Stage a new note (author "tester", so the grid can tell it from the seeded row).
+    fireEvent.click(screen.getByRole('button', { name: /new note/i }))
+    const textarea = await screen.findByRole('textbox', { name: /note content/i })
+    fireEvent.change(textarea, { target: { value: 'Staged addition' } })
+    const editorDialog = textarea.closest('[role="dialog"]') as HTMLElement
+    fireEvent.click(within(editorDialog).getByRole('button', { name: /^save$/i }))
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: /note content/i })).toBeNull())
+    expect(dataRowCount()).toBe(2)
+
+    rerender(openWith([...NOTES, CONCURRENT_NOTE]))
+
+    // Still the staged set: the adopt path must not fire once anything is staged.
+    await waitFor(() => expect(screen.getByText('tester')).toBeInTheDocument())
+    expect(dataRowCount()).toBe(2)
+    expect(screen.queryByText('someone-else')).toBeNull()
+    // Genuinely unsaved work, so Save is lit — and the concurrent note it would drop is the
+    // documented, out-of-scope merge conflict, not a save-gate defect.
+    expect(outerSaveButton()).not.toBeDisabled()
   })
 })

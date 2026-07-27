@@ -12,7 +12,7 @@
 // Rail) renders the published level's "New document" affordance AND its items, standing in for
 // the hub's workspace shell.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   RailHostContext,
@@ -39,6 +39,7 @@ vi.mock("@agentic-toolkit/data/markdown", () => ({
     list: vi.fn(),
     get: vi.fn(),
     create: vi.fn(),
+    update: vi.fn(),
     categories: vi.fn(),
     tags: vi.fn(),
   },
@@ -50,6 +51,7 @@ import { markdownApi, type ResearchDocument, type ResearchSummary } from "@agent
 const list = vi.mocked(markdownApi.list);
 const get = vi.mocked(markdownApi.get);
 const create = vi.mocked(markdownApi.create);
+const update = vi.mocked(markdownApi.update);
 const categories = vi.mocked(markdownApi.categories);
 const tags = vi.mocked(markdownApi.tags);
 
@@ -200,5 +202,30 @@ describe("ResearchFeature", () => {
     const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
     expect(body.value).toBe("# Federated learning\n\nSome notes.");
     await waitFor(() => expect(get).toHaveBeenCalledWith("doc-1", { workspace: undefined }));
+  });
+
+  // `canSave` is dirty && valid — the busy term is applied at the button (SaveCancelButtons
+  // renders `disabled={!canSave || saving}`), never folded into the predicate. `saving` is a
+  // RENDER value, so it cannot also serve as the in-flight guard: two activations inside a
+  // single commit (a double-click before React paints the disabled button) both read the
+  // pre-save `false` and both PUT. Only the handler's own ref stops the second.
+  it("ignores a second Save that lands before the disabled state can render", async () => {
+    update.mockReturnValue(new Promise(() => {})); // never settles — the save stays in flight
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+
+    const title = (await screen.findByDisplayValue("Federated learning notes")) as HTMLInputElement;
+    fireEvent.change(title, { target: { value: "Federated learning notes v2" } });
+
+    const save = screen.getByRole("button", { name: "Save" });
+    await act(async () => {
+      save.click();
+      save.click();
+    });
+
+    expect(update).toHaveBeenCalledTimes(1);
   });
 });

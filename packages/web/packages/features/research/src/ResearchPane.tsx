@@ -179,11 +179,21 @@ export function ResearchPane({
   // when it already matches — e.g. right after create seeds the returned doc — so a
   // just-opened doc doesn't flash to "Loading…" + issue a redundant GET.
   const loadedIdRef = useRef<string | null>(null);
+  // Re-entrancy latch for `onSave`. The `saving` STATE can't do this job: it is a render value,
+  // so two activations inside a single commit (a double-click on Save before React paints the
+  // disabled button) both read the pre-save `false` and both PUT. A ref flips synchronously on
+  // the way in and clears in `finally`.
+  const savingRef = useRef(false);
 
   const baseline: ResearchInput | null = selectedDoc ? researchToInput(selectedDoc) : null;
   const dirty = Boolean(draft && baseline && researchDiffers(draft, baseline));
   const validationError = draft ? researchValidate(draft) : null;
-  const canSave = Boolean(draft && baseline) && dirty && validationError === null && !saving && !loadingDoc;
+  // Dirty AND valid — `!loadingDoc` stays because it is a DATA-AVAILABILITY term (there is no
+  // baseline to diverge from until the body has landed), not a busy term. The busy/saving term is
+  // applied at the button: `SaveCancelButtons` already renders `disabled={!canSave || saving}`, so
+  // folding `!saving` in here would express the same rule twice — and that duplicate is what
+  // previously stood in for the missing re-entrancy latch in `onSave`.
+  const canSave = Boolean(draft && baseline) && dirty && validationError === null && !loadingDoc;
   const canDelete = selectedId !== null && !saving && !deleting;
 
   // Load a document's body into the form (or clear it when id is null). Token-guarded so an
@@ -258,12 +268,18 @@ export function ResearchPane({
   // stack's exit guard knows whether a gated navigation may proceed.
   async function onSave(): Promise<boolean> {
     if (!draft) return false;
+    // Already in flight — swallow the duplicate. Reporting `false` is right for the exit guard
+    // too: nothing has been persisted YET, so leaving now would still lose the edit.
+    // Already in flight — swallow the duplicate. Reporting `false` is right for the exit guard
+    // too: nothing has been persisted YET, so leaving now would still lose the edit.
+    if (savingRef.current) return false;
     const problem = researchValidate(draft);
     if (problem) {
       setFormError(problem);
       return false;
     }
     const input = researchNormalize(draft);
+    savingRef.current = true;
     setSaving(true);
     setFormError(null);
     try {
@@ -283,6 +299,7 @@ export function ResearchPane({
       setFormError(errorText(err, "Failed to save."));
       return false;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
