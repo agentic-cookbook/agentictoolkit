@@ -43,7 +43,15 @@ function sameValue(a: unknown, b: unknown): boolean {
  * Editors previously kept a bare `useState` draft and gated Save on validity alone, which made
  * the button say the wrong thing in both directions: lit before the user touched anything, and —
  * when a required field on some other tab happened to be blank — permanently grey no matter what
- * they edited. Dirty is the missing half of `canSave = dirty && valid && !saving`.
+ * they edited. Dirty is the missing half of `canSave = dirty && valid`.
+ *
+ * The in-flight/`saving` term is deliberately NOT part of that: `canSave` is a statement about the
+ * DRAFT alone ("is there something worth saving, and is it savable?"), so it stays meaningful to
+ * anything that reads it — a blocked-reason message, an exit guard, a test. Whether a save is
+ * already running is a property of the request, not the draft, and belongs at the button
+ * (`disabled={!canSave || saving}`). Two consumers apply it for you and must not be doubled up on:
+ * `SaveCancelButtons` (`ui/src/blocks/button-bar.tsx`) and `DialogActions`, which hides its whole
+ * action row while `busy`.
  *
  * Draft and baseline live in ONE state object rather than draft-in-state plus baseline-in-a-ref:
  * `commit()` must produce a genuinely new state value or React bails out of the update (same

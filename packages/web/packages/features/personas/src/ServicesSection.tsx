@@ -434,11 +434,22 @@ function connectionSpecForCreate(d: ServiceDraft): ConnectionSpec | undefined {
   return { ...(d.templateSpec ?? { specVersion: 1 }), specVersion: 1, extraHeaders };
 }
 
-/** Returns an error message, or null when the create draft is valid. */
-function validateServiceDraft(d: ServiceDraft): string | null {
+/** The three required-field rules shared by the create modal and the edit pane, as a REASON rather
+ *  than a boolean: the edit pane's Save is disabled while any of them fails, so without a message
+ *  the user gets a grey button and no way to learn which field is holding it down. The create
+ *  modal's own validator below starts from the same three so the two can never disagree about
+ *  what "required" means or how it is worded. */
+function requiredFieldsBlock(d: ServiceDraft): string | null {
   if (d.name.trim() === "") return "A name is required.";
   if (d.providerKind === "") return "Select a provider.";
   if (d.baseUrl.trim() === "") return "A base URL is required.";
+  return null;
+}
+
+/** Returns an error message, or null when the create draft is valid. */
+function validateServiceDraft(d: ServiceDraft): string | null {
+  const required = requiredFieldsBlock(d);
+  if (required) return required;
   if (/\{\w+\}/.test(d.baseUrl)) return "Fill in all the URL fields.";
   if (d.headerVars?.some((v) => (d.headerVarValues[v.header] ?? "").trim() === ""))
     return "Fill in all the header fields.";
@@ -594,8 +605,12 @@ function ServiceEditor({
   const [refreshing, setRefreshing] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const valid =
-    draft.name.trim() !== "" && draft.providerKind !== "" && draft.baseUrl.trim() !== "";
+  // Exactly the rules the old boolean encoded, as the reason they failed — the edit pane never
+  // renders the url-var/header fields `validateServiceDraft` additionally checks (see
+  // `fromService`), so reusing the shared required-field block keeps the gate byte-identical in
+  // behaviour while giving the bar something to say.
+  const block = requiredFieldsBlock(draft);
+  const valid = block === null;
 
   async function handleSave() {
     if (!valid) return;
@@ -683,6 +698,15 @@ function ServiceEditor({
             canDelete: true,
           }}
           showCreate={false}
+          leading={
+            // Say WHY Save is grey when a required field is the blocker; silent when the only
+            // reason is "nothing changed yet", which the grey button already communicates.
+            block && dirty ? (
+              <span className="text-xs text-apt-text-muted" role="status">
+                {block}
+              </span>
+            ) : undefined
+          }
         />
       </ToolbarPortal>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">

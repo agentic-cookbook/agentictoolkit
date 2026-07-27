@@ -116,4 +116,29 @@ describe("ServicesSection save gate (service editor)", () => {
     const saveAfter = await screen.findByRole("button", { name: "Save" });
     expect(saveAfter).toBeDisabled();
   });
+
+  // `handleSave` opens with `if (!valid) return` — the gate disables Save before that can run, so
+  // clearing a required field otherwise yields a grey button and zero explanation.
+  it("says WHY Save is blocked when a required field is cleared", async () => {
+    render(<ServicesSection urlSelection={{ serviceId: SERVICE.id, onSelectService: vi.fn() }} />);
+
+    await screen.findByRole("button", { name: "Save" });
+    expect(screen.queryByText("A name is required.")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: "  " } });
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByText("A name is required.")).toBeInTheDocument();
+  });
+
+  // The other half: a service that arrives already invalid must not open with a complaint about a
+  // row the user hasn't touched.
+  it("stays silent about an already-blank name the user hasn't touched", async () => {
+    list.mockResolvedValue([{ ...SERVICE, name: "" }]);
+    render(<ServicesSection urlSelection={{ serviceId: SERVICE.id, onSelectService: vi.fn() }} />);
+
+    const save = await screen.findByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+    expect(screen.queryByText("A name is required.")).toBeNull();
+  });
 });

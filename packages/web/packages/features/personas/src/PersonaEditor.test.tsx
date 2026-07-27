@@ -84,6 +84,7 @@ import {
 } from "@agentic-toolkit/data/personas";
 
 const updatePersona = vi.mocked(api.personas.update);
+const createPersona = vi.mocked(api.personas.create);
 
 const PERSONA = {
   id: "persona-1",
@@ -513,6 +514,35 @@ describe("PersonaEditor surfaces why Save is disabled", () => {
     expect(screen.getByText(/Enter a name in Identity/)).toBeInTheDocument();
   });
 
+  // The `(dirty || isNew)` half of the gate, asserted from BOTH sides — without these two the
+  // condition could collapse to a bare `block` (nagging at a row the user never touched) or to
+  // `block && dirty` (a brand-new draft silently grey) and the suite would stay green.
+  it("stays SILENT about an already-invalid saved persona the user hasn't touched", () => {
+    // A stored persona whose name is blank/whitespace — `saveBlockedReason` fires, but the user has
+    // edited nothing, so the editor must not open with a complaint about a row it just loaded.
+    renderEditor("identity", { ...PERSONA, name: "  " } as unknown as Persona);
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+    expect(screen.queryByText(/Enter a name in Identity/)).toBeNull();
+  });
+
+  it("says why Save is disabled on an UNTOUCHED new draft (isNew, not yet dirty)", () => {
+    render(
+      <PersonaEditor
+        persona={null}
+        services={[]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        activeSubtab="identity"
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+      />,
+    );
+    // A blank draft is invalid from the first frame; "nothing to save yet" is NOT the reason Save
+    // is grey here, so the create flow has to name the missing field before the user guesses.
+    expect(screen.getByText(/Enter a name in Identity/)).toBeInTheDocument();
+  });
+
   // `renderEditor` alone renders ONLY the editor's own leaf content: without an ancestor rail
   // HOST, StackGroupDetail's StackLevels publisher no-ops (see resource/src/rail-host.tsx) and the
   // real topic rail (where `data-blocked` actually lands) never mounts at all. RailHostBoundary is
@@ -575,6 +605,41 @@ describe("PersonaEditor save (edit mode)", () => {
     // "Save" button is disabled (a skipped `commit()` — baseline never adopts the saved row — would
     // leave `dirty` true forever, so the button would be enabled instead). Either bug alone fails
     // this pair, mirroring the equivalent ServicesSection test.
+    const saveAfter = await screen.findByRole("button", { name: "Save" });
+    expect(saveAfter).toBeDisabled();
+  });
+});
+
+// The CREATE path's own baseline adoption. The edit-mode test above cannot catch a `commit()` that
+// only runs for an existing persona (`if (!isNew) commit(...)`): PersonasSection keeps this editor
+// mounted after `onSaved` in BOTH modes, so a create that skips `commit` leaves the just-saved draft
+// permanently dirty — Save stays lit and a second click re-POSTs, creating a duplicate persona.
+describe("PersonaEditor save (create mode)", () => {
+  it("re-disables Save after a successful CREATE (baseline adopts the created row)", async () => {
+    const created: Persona = { ...PERSONA, id: "persona-2", slug: "scout", name: "Scout" };
+    createPersona.mockResolvedValue(created);
+
+    render(
+      <PersonaEditor
+        persona={null}
+        services={[]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        activeSubtab="identity"
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+      />,
+    );
+
+    await userEvent.type(screen.getByPlaceholderText("Bob"), "Scout");
+    await userEvent.type(screen.getByPlaceholderText("bob"), "scout");
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).toBeEnabled();
+
+    await userEvent.click(save);
+    await waitFor(() => expect(createPersona).toHaveBeenCalledTimes(1));
+
     const saveAfter = await screen.findByRole("button", { name: "Save" });
     expect(saveAfter).toBeDisabled();
   });

@@ -66,11 +66,11 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderEditor() {
+function renderEditor(item: WorkItem = ITEM) {
   return render(
     <WorkItemEditor
       projectId="p1"
-      item={ITEM}
+      item={item}
       statuses={[]}
       participants={[]}
       workItems={[ITEM]}
@@ -125,6 +125,29 @@ describe("WorkItemEditor save gate", () => {
       target: { value: "Design the new landing page" },
     });
     expect(save).toBeEnabled();
+  });
+
+  // The gate disables Save before `save()`'s own `setError("Title is required.")` can ever run, so
+  // without a rendered reason a cleared title produces a grey button and no explanation at all.
+  it("says WHY Save is blocked when the title is cleared", () => {
+    renderEditor();
+
+    expect(screen.queryByText("Title is required.")).toBeNull();
+
+    fireEvent.change(screen.getByPlaceholderText("Design the landing page"), {
+      target: { value: "  " },
+    });
+
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.getByText("Title is required.")).toBeInTheDocument();
+  });
+
+  // The other half: an item that arrives ALREADY invalid must not open with a complaint about a row
+  // the user hasn't touched. Nothing-to-save is what the grey button already says.
+  it("stays silent about an already-blank title the user hasn't touched", () => {
+    renderEditor({ ...ITEM, title: "" });
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.queryByText("Title is required.")).toBeNull();
   });
 });
 

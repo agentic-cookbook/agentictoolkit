@@ -339,6 +339,30 @@ describe("InterestsEditor", () => {
     expect(save).toBeEnabled();
   });
 
+  // The gate disables Save, so the backend 400 that used to explain a blank General can no longer
+  // be provoked from the UI at all — the card has to say it up front.
+  it("says WHY a card's Save is blocked once the author has typed something", async () => {
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));
+
+    // An empty, untouched card stays quiet — grey there already means "nothing to save".
+    expect(screen.queryByText("General can't be blank.")).toBeNull();
+
+    await userEvent.type(screen.getByLabelText(/^opinions$/i), "Cylons are people too.");
+
+    expect(screen.getByRole("button", { name: /^save interest$/i })).toBeDisabled();
+    expect(screen.getByText("General can't be blank.")).toBeInTheDocument();
+  });
+
+  it("stays silent about a loaded interest whose General is blank until it is touched", async () => {
+    list.mockResolvedValue([{ ...row, general: "" }]);
+    render(<InterestsEditor personaId="persona.acme.bitbag" />);
+    await screen.findByDisplayValue("Battlestar Galactica");
+
+    expect(screen.getByRole("button", { name: /^save interest$/i })).toBeDisabled();
+    expect(screen.queryByText("General can't be blank.")).toBeNull();
+  });
+
   it("sends topical and specific as null, not empty strings, for a general-only interest", async () => {
     render(<InterestsEditor personaId="persona.acme.bitbag" />);
     await userEvent.click(await screen.findByRole("button", { name: /add an interest/i }));

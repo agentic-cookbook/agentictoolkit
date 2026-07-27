@@ -153,6 +153,13 @@ const SLUG_MESSAGE = /^slug:/i;
  *  merely unpolished, instead of inheriting a confident falsehood. */
 const DUPLICATE_MESSAGE = /already exists/i;
 
+/** The one save-blocking rule this editor can check BEFORE the request, in one place: it is both
+ *  the reason shown beside a card's greyed-out Save and the tail of the 400's narration below, so
+ *  the pre-click explanation and the post-failure one can never say different things. It has to be
+ *  said up front at all because `canSaveCard` disables the button, which makes the 400 that used
+ *  to explain it unreachable. */
+const BLANK_GENERAL_MESSAGE = "General can't be blank.";
+
 /** Turn a save failure into something the author can act on. 403 = no write on the table (the
  *  `x-exposure` gate — `persona.special_interests` is owner-tier, so this only fires for someone
  *  who is not the owner). 400 and 409 each cover several backend failures that share a status but
@@ -167,7 +174,7 @@ function saveError(err: unknown): string {
     if (SLUG_MESSAGE.test(message)) {
       return "This interest's name can't be turned into an id — give its most specific level at least one letter or digit.";
     }
-    return "Each level must be 120 characters or fewer, and General can't be blank.";
+    return `Each level must be 120 characters or fewer, and ${BLANK_GENERAL_MESSAGE}`;
   }
   if (status === 409 && DUPLICATE_MESSAGE.test(message)) {
     return "This persona already has an interest by that name.";
@@ -234,17 +241,34 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
   // required field IS the change, same carve-out `CrudRecordForm`'s `canSave` and `TopicForm`'s
   // `canSubmit` use for create mode. A loaded card is gated on dirty too, so re-submitting the
   // unchanged interest (a silent no-op PUT) isn't offered.
-  const canSaveCard = (d: Draft): boolean => {
-    if (!d.general.trim()) return false;
-    if (d.id === null) return true;
+  // The one validity rule a card's Save can check before the request, as a REASON rather than a
+  // boolean: a card whose Opinions are typed but whose General is blank is dirty AND invalid, so
+  // the button greys out and the only explanation — the backend's field-blind 400, narrated by
+  // `saveError` — can no longer be reached, because the click can't happen.
+  const cardBlockedReason = (d: Draft): string | null =>
+    d.general.trim() ? null : BLANK_GENERAL_MESSAGE;
+
+  /** Has this card diverged from what was persisted? A brand-new card is dirty the moment it holds
+   *  anything at all. */
+  const cardDirty = (d: Draft): boolean => {
     const baseline = baselines[d.key];
-    if (!baseline) return true;
+    if (d.id === null || !baseline) {
+      return Boolean(d.general || d.topical || d.specific || d.stances);
+    }
     return (
       d.general !== baseline.general ||
       d.topical !== baseline.topical ||
       d.specific !== baseline.specific ||
       d.stances !== baseline.stances
     );
+  };
+
+  const canSaveCard = (d: Draft): boolean => {
+    if (cardBlockedReason(d) !== null) return false;
+    // A brand-new card (`id === null`) has no persisted baseline to diff against — a filled-in
+    // required field IS the change, so `cardBlockedReason` passing is enough.
+    if (d.id === null || !baselines[d.key]) return true;
+    return cardDirty(d);
   };
 
   const add = () =>
@@ -411,7 +435,17 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
             Removing an interest keeps its research documents — they stay in storage and only this
             persona&apos;s access to them is withdrawn.
           </p>
-          <ButtonBar>
+          <ButtonBar
+            leading={
+              // Say WHY this card's Save is grey when General is the blocker. Silent on a card the
+              // author hasn't touched — grey there just means "nothing to save".
+              cardBlockedReason(d) && cardDirty(d) ? (
+                <span className="text-xs text-apt-text-muted" role="status">
+                  {cardBlockedReason(d)}
+                </span>
+              ) : undefined
+            }
+          >
             <Button
               type="button"
               variant="ghost"

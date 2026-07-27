@@ -53,6 +53,11 @@ function assigneeOf(item: WorkItem | null): AssigneeValue | null {
   return { assigneeKind: item.assigneeKind, assigneeId: item.assigneeId };
 }
 
+/** The editor's one validity rule, in one place — both the pre-click reason shown beside Save and
+ *  the error `save()` sets on the (now unreachable-by-click) guard path read this, so the button's
+ *  explanation and the form's error can't drift apart. */
+const TITLE_REQUIRED = "Title is required.";
+
 /**
  * The editor's draft shape — one object so `useDirtyDraft` can tell whether ANY field differs
  * from what was loaded. `assignee` is carried as its encoded option string (`toOptionValue`'s
@@ -195,7 +200,12 @@ export function WorkItemEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = dirty && draft.title.trim().length > 0;
+  // Why Save is blocked, or null — a located REASON rather than a bare boolean. `save()` still
+  // sets the same message, but the gate below disables the button before that path can run, so a
+  // user with a blank title would otherwise get a grey button and no explanation. One string,
+  // reached two ways.
+  const blockedReason = draft.title.trim().length === 0 ? TITLE_REQUIRED : null;
+  const canSave = dirty && blockedReason === null;
   // Parent options: every other work item in the project (an item can't parent itself).
   const parentOptions = useMemo(
     () => workItems.filter((w) => w.id !== item.id),
@@ -204,7 +214,7 @@ export function WorkItemEditor({
 
   async function save() {
     if (!draft.title.trim()) {
-      setError("Title is required.");
+      setError(TITLE_REQUIRED);
       return;
     }
     setSaving(true);
@@ -365,6 +375,14 @@ export function WorkItemEditor({
         <Button onClick={() => void save()} disabled={!canSave || saving}>
           {saving ? "Saving…" : "Save changes"}
         </Button>
+        {/* Say WHY Save is grey when a validity rule is holding it down. Gated on `dirty` because
+            "nothing to save yet" needs no caption — grey already means that — while an edited but
+            unsavable draft does. */}
+        {blockedReason && dirty && (
+          <span className="text-xs text-apt-text-muted" role="status">
+            {blockedReason}
+          </span>
+        )}
       </div>
 
       {/* Activity + comments live only on a saved item (needs a real id). */}
