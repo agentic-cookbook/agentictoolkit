@@ -39,8 +39,16 @@ export interface MaskedProviderConfigRow {
   providerId: string;
   /** Human-facing name for this config. */
   name: string;
-  /** Resource id addressing this config (an `integration.*` rdid). */
-  rdid: string;
+  /**
+   * Resource id addressing this config (an `integration.*` rdid), or null when the row has no
+   * canonical mapping — a row that predates the mint, or one whose mapping an operator freed.
+   *
+   * NULL RATHER THAN `""`, and the difference is not cosmetic: the empty string is a valid
+   * rdid-shaped value that callers treat as one, so keying rows on it collapses every unmapped
+   * config into a single identity. Callers that need a stable per-row key or a URL segment fall
+   * back to `id` — every by-id integrations route accepts the uuid OR the rdid.
+   */
+  rdid: string | null;
   /** Non-secret config: clientId, scopes, URLs, endpoints, credentialStyle */
   config: Record<string, unknown>;
   /** Whether a client secret is stored (the value is never returned) */
