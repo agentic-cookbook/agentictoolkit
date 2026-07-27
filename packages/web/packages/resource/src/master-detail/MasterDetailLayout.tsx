@@ -30,6 +30,10 @@ export interface MasterDetailActions {
   canCancel: boolean;
   onSave: () => void;
   canSave: boolean;
+  /** Why Save is disabled, or null when nothing is blocking it — rendered beside the button so a
+   *  grey Save always says why. Supplied by useMasterDetailForm from the same `validate` that
+   *  computes `canSave`; optional so hand-built bars that have no reason to give can omit it. */
+  blockedReason?: string | null;
   saving?: boolean;
   onDelete: () => void;
   canDelete: boolean;
@@ -147,6 +151,7 @@ export function ButtonBar({
     canCancel,
     onSave,
     canSave,
+    blockedReason = null,
     saving = false,
     onDelete,
     canDelete,
@@ -193,6 +198,21 @@ export function ButtonBar({
         </h2>
       )}
       <div className="flex-1" />
+      {/* Why Save is grey, from the FIRST frame — not gated on `dirty`. The detail below shows
+          only `form.error`, which `save()` alone sets and `canSave` keeps unreachable by click,
+          so without this every master/detail create opens on a dead Save with no explanation
+          anywhere on screen. An EDIT opens on a loaded, valid row where `blockedReason` is null,
+          so it stays quiet on its own. Sits left of Cancel/Save; truncates rather than pushing
+          the buttons off the bar. */}
+      {blockedReason && (
+        <span
+          role="status"
+          className="mr-2 max-w-[40%] truncate text-xs text-apt-text-muted"
+          title={blockedReason}
+        >
+          {blockedReason}
+        </span>
+      )}
       <SaveCancelButtons
         canCancel={canCancel}
         canSave={canSave}

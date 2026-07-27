@@ -108,8 +108,20 @@ export function useMasterDetailForm<TItem, TInput>(
   const others = rows.filter((r) => config.getId(r) !== selectedId);
 
   const dirty = Boolean(draft) && Boolean(base) && config.differs(draft!, base!);
-  const valid = Boolean(draft) && config.validate(draft!, others) === null;
-  const canSave = dirty && valid && !saving;
+  // Why Save can't fire, as the REASON string `config.validate` already returns rather than the
+  // boolean it used to be collapsed into. Every pane built on this hook renders its Save through
+  // the shared ButtonBar and shows nothing but `form.error` — which `save()` alone sets, and
+  // `canSave` keeps `save()` from being reachable by click — so discarding the message here left
+  // eleven panes greying Save out with no explanation anywhere. Now it rides in `actions` next to
+  // `canSave` and ButtonBar renders it beside the button. Not gated on `dirty`: a create opens on
+  // a blank draft that is already blocked, and that is exactly when the reason is instruction.
+  const blockedReason = draft ? config.validate(draft, others) : null;
+  const valid = Boolean(draft) && blockedReason === null;
+  // dirty && valid ONLY. The in-flight term is NOT folded in here: `canSave` is a statement about
+  // the DRAFT, and every consumer hands it to ButtonBar → SaveCancelButtons, which already renders
+  // `disabled={!canSave || saving}`. Re-entrancy is latched in `save()` itself (see savingRef),
+  // because `saving` is a render value and cannot stop a second activation inside one commit.
+  const canSave = dirty && valid;
   const canCancel = editing && !saving;
   const canDelete =
     Boolean(selected) && !creating && !saving && !deleting && Boolean(config.remove);
@@ -119,6 +131,13 @@ export function useMasterDetailForm<TItem, TInput>(
   // effect below re-hydrates only on an EXTERNAL selection change (deep-link / browser
   // back), never re-clobbering a draft that `select`/`save` already loaded for that id.
   const loadedIdRef = useRef<string | null | undefined>(undefined);
+
+  // Re-entrancy latch for `save`. The `saving` STATE can't do this job: it is a render value, so
+  // two activations inside a single commit (a double-click on Save before React paints the
+  // disabled button, or the exit-guard's Save landing on top of one) both read the pre-save
+  // `false` and both POST/PUT — a create fires twice and the second one 409s. A ref flips
+  // synchronously on the way in and clears in `finally`.
+  const savingRef = useRef(false);
 
   function onChange(next: TInput) {
     setDraft(next);
@@ -176,6 +195,9 @@ export function useMasterDetailForm<TItem, TInput>(
   // failed or the request threw (the editor stays open with its error shown).
   async function save(): Promise<boolean> {
     if (!draft) return true;
+    // Already in flight — swallow the duplicate. Reporting `false` is right for the exit guard
+    // too: nothing has been persisted YET, so leaving now would still lose the edit.
+    if (savingRef.current) return false;
     const problem = config.validate(draft, others);
     if (problem) {
       setError(problem);
@@ -183,6 +205,7 @@ export function useMasterDetailForm<TItem, TInput>(
     }
     const input = config.normalize ? config.normalize(draft) : draft;
     setError(null);
+    savingRef.current = true;
     setSaving(true);
     try {
       if (creating) {
@@ -209,6 +232,7 @@ export function useMasterDetailForm<TItem, TInput>(
       setError(err instanceof Error ? err.message : "Failed to save.");
       return false;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -270,6 +294,7 @@ export function useMasterDetailForm<TItem, TInput>(
       canCancel,
       onSave: save,
       canSave,
+      blockedReason,
       saving,
       onDelete: requestDelete,
       canDelete,

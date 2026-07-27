@@ -270,8 +270,6 @@ export function ResearchPane({
     if (!draft) return false;
     // Already in flight — swallow the duplicate. Reporting `false` is right for the exit guard
     // too: nothing has been persisted YET, so leaving now would still lose the edit.
-    // Already in flight — swallow the duplicate. Reporting `false` is right for the exit guard
-    // too: nothing has been persisted YET, so leaving now would still lose the edit.
     if (savingRef.current) return false;
     const problem = researchValidate(draft);
     if (problem) {
