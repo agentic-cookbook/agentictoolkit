@@ -38,6 +38,48 @@ function Harness({ notes }: { notes: AdminNote[] }): React.ReactElement {
   )
 }
 
+/** The full consumer round-trip: Save hands the staged notes to a stand-in "server" that assigns
+ *  its own ids/dates (and reveals a note another admin added meanwhile), then closes the dialog on
+ *  success — exactly what AdminNotesModal's wrappers do with `onSuccess: onClose`. */
+function SaveHarness(): React.ReactElement {
+  const [open, setOpen] = React.useState(true)
+  const [notes, setNotes] = React.useState<AdminNote[]>(NOTES)
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>reopen</button>
+      <AdminNotesModal
+        open={open}
+        onClose={() => setOpen(false)}
+        author="tester"
+        notes={notes}
+        onSave={(staged) => {
+          setNotes([
+            ...staged.map((n, i) => ({
+              id: `server-${i + 1}`,
+              content: n.content,
+              author: 'admin',
+              addedDate: '2026-02-02',
+              modifiedDate: '2026-02-02',
+              subjectTable: 'invitation_requests',
+              subjectId: 'r1',
+            })),
+            {
+              id: 'server-concurrent',
+              content: 'Added by another admin',
+              author: 'someone-else',
+              addedDate: '2026-02-02',
+              modifiedDate: '2026-02-02',
+              subjectTable: 'invitation_requests',
+              subjectId: 'r1',
+            },
+          ])
+          setOpen(false)
+        }}
+      />
+    </>
+  )
+}
+
 function dataRowCount(): number {
   const grid = screen.getByRole('grid', { name: /admin notes/i })
   return within(grid)
@@ -135,6 +177,33 @@ describe('AdminNotesModal — outer Save button is dirty-gated', () => {
     fireEvent.click(screen.getByRole('button', { name: /reopen/i }))
     await waitFor(() => expect(screen.getByRole('grid', { name: /admin notes/i })).toBeInTheDocument())
 
+    expect(outerSaveButton()).toBeDisabled()
+  })
+
+  // The other way out of the dialog. SAVE closes through the CALLER (mutation onSuccess → onClose),
+  // so it never runs the component's own `close()`. Without a re-seed on close, the working copy
+  // that was just persisted outlives the refetch it caused: its client-side ids/dates can never
+  // match the server-shaped rows again, so Save stays lit and one click re-sends the pre-refresh
+  // set — wiping the note another admin added in between.
+  it('adopts the refetched notes after a SAVE closes the still-mounted modal', async () => {
+    render(<SaveHarness />)
+    await waitFor(() => expect(screen.getByRole('grid', { name: /admin notes/i })).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /new note/i }))
+    const textarea = await screen.findByRole('textbox', { name: /note content/i })
+    fireEvent.change(textarea, { target: { value: 'Staged addition' } })
+    const editorDialog = textarea.closest('[role="dialog"]') as HTMLElement
+    fireEvent.click(within(editorDialog).getByRole('button', { name: /^save$/i }))
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: /note content/i })).toBeNull())
+
+    fireEvent.click(outerSaveButton())
+    await waitFor(() => expect(screen.queryByRole('grid', { name: /admin notes/i })).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: /reopen/i }))
+    await waitFor(() => expect(screen.getByRole('grid', { name: /admin notes/i })).toBeInTheDocument())
+
+    // The refetched set — the two saved notes AND the concurrent one — not the stale working copy.
+    expect(dataRowCount()).toBe(3)
     expect(outerSaveButton()).toBeDisabled()
   })
 })

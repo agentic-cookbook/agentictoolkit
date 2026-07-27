@@ -20,14 +20,16 @@ const COLS: DataTableColumn<AdminNote>[] = [
  *
  * The caller passes the already-loaded `notes` (react-query lives in the app,
  * never here) plus an `onSave` callback. The component seeds a private working
- * copy from `notes` AT MOUNT and never re-syncs while open — the staged model. To
- * reset the working copy when the target subject changes, the caller passes a
- * changing `key` (e.g. `subjectTable:subjectId`) so React remounts this component.
+ * copy from `notes` and never re-syncs while OPEN — the staged model — but
+ * re-seeds from the prop whenever it is closed, so every open starts from what is
+ * actually loaded. To reset mid-open when the target subject changes, the caller
+ * passes a changing `key` (e.g. `subjectTable:subjectId`) so React remounts it.
  *
  * Save → `onSave(working)`; the caller performs the mutation and closes (flips
  * `open`) on success. Cancel (or dialog-dismiss) → discard the staged working
- * copy back to the `notes` prop and `onClose`, so a consumer that keeps this
- * modal mounted (stable `key`) can't resurrect a cancelled edit on the next open.
+ * copy back to the `notes` prop and `onClose`. Either way a consumer that keeps
+ * this modal mounted (stable `key`) can't resurrect a stale working copy on the
+ * next open — neither a cancelled edit nor a just-saved, now-superseded one.
  */
 export function AdminNotesModal({
   open,
@@ -44,7 +46,7 @@ export function AdminNotesModal({
   onSave: (notes: { id?: string; content: string }[]) => void
   busy?: boolean
 }): React.ReactElement {
-  // Seeded at mount from the loaded notes; Cancel/close resets back to it (staged model).
+  // Seeded from the loaded notes and re-seeded whenever the dialog is closed (staged model).
   const [working, setWorking] = React.useState<AdminNote[]>(notes)
   // null = editor closed; a note-id string = editing that note; "" = new note.
   const [editingId, setEditingId] = React.useState<string | null>(null)
@@ -111,13 +113,30 @@ export function AdminNotesModal({
   // reference `close()` already treats as the reset baseline.
   const dirty = JSON.stringify(working) !== JSON.stringify(notes)
 
-  // Cancel/close discards the staged working copy back to the loaded `notes` and
-  // clears any in-progress note editor, so reopening (without a remount) starts
-  // clean. Save does NOT call this — the caller closes on mutation success.
-  function close(): void {
+  // Drop the staged working copy back to the loaded `notes` and close any in-progress note editor.
+  function resetWorking(): void {
     setWorking(notes)
     setEditingId(null)
     setDraft("")
+  }
+
+  // Re-seed whenever the dialog ends up CLOSED, whoever closed it — including the SAVE path, which
+  // closes through the caller (its mutation's onSuccess flips `open`) and so never runs `close()`.
+  // Without this, a saved-then-reopened modal that was never remounted (stable `key`) still holds
+  // the pre-save working copy: its client-side note ids and dates can no longer match the refetched
+  // `notes`, so `dirty` is stuck true, Save is permanently lit, and one click re-sends that stale
+  // set — silently REVERTING whatever the refresh brought in.
+  React.useEffect(() => {
+    if (!open) resetWorking()
+    // `resetWorking` is re-created every render, so depending on it would re-seed in a loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, notes])
+
+  // Cancel/close discards the staged working copy back to the loaded `notes` and
+  // clears any in-progress note editor, so reopening (without a remount) starts
+  // clean even before the effect above sees `open` flip.
+  function close(): void {
+    resetWorking()
     onClose()
   }
 

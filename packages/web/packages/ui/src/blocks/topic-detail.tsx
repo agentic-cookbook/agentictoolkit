@@ -69,9 +69,11 @@ export interface TopicDetailItem {
   /** Confirmation body copy. Defaults to a generic "can't be undone" warning. */
   deleteConfirm?: ReactNode
   /** Marks this row as holding a field that is blocking some other action elsewhere in the view
-   *  (e.g. a disabled Save whose blocking field lives on this topic's pane) — rendered as
-   *  `data-blocked="true"` so a caller can point the user at the right topic without adding a
-   *  visible badge here. Purely a DOM marker; renders no visual change of its own. */
+   *  (e.g. a disabled Save whose blocking field lives on this topic's pane). The row gets an amber
+   *  dot on its icon — visible in the expanded list AND the collapsed / covered icon strips, which
+   *  is where a user hunting for a greyed-out Save most needs it — plus a screen-reader-only
+   *  "needs attention" so the marker is not colour-only. It also carries `data-blocked="true"`
+   *  for callers and tests that need to find the row programmatically. */
   blocked?: boolean
 }
 
@@ -194,8 +196,12 @@ function TopicList({
           onSelect(item.id)
         }}
         aria-current={active ? "true" : undefined}
-        // Icon-only rows have no visible text → carry the label as the accessible name.
-        aria-label={hideLabel ? item.label : undefined}
+        // Icon-only rows have no visible text → carry the label as the accessible name, plus the
+        // blocked state the amber dot conveys visually (the sr-only span below can't do it here —
+        // aria-label replaces the element's content for AT).
+        aria-label={
+          hideLabel ? (item.blocked ? `${item.label}, needs attention` : item.label) : undefined
+        }
         className={cn(
           // .settings-nav-item: mono, 0.8rem, tracking 0.02em.
           "relative flex w-full items-center border-l-2 border-transparent bg-transparent transition-colors",
@@ -234,8 +240,18 @@ function TopicList({
           <span aria-hidden className="absolute inset-y-0 -left-0.5 w-0.5 bg-apt-gold" />
         )}
         {/* Decorative: the label (text or aria-label) is the name, so the icon is hidden from AT. */}
-        <span aria-hidden data-htd-icon className="flex shrink-0">
+        <span aria-hidden data-htd-icon className="relative flex shrink-0">
           {icon}
+          {/* The blocked marker rides the ICON rather than the trailing accessory slot, because
+              the accessory is dropped in the collapsed / covered icon strips — exactly the modes
+              where the user can't read the label and most needs to see WHICH topic is holding
+              Save down. The ring punches it out of whatever the row sits on. */}
+          {item.blocked && (
+            <span
+              data-htd-blocked
+              className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-full bg-apt-orange ring-2 ring-apt-nav"
+            />
+          )}
         </span>
         {!hideLabel &&
           (item.inlineSublabel && item.sublabel ? (
@@ -258,6 +274,11 @@ function TopicList({
               )}
             </span>
           ))}
+        {/* Colour alone is not a signal. The dot lives inside the aria-hidden icon, so the row's
+            accessible name carries the state instead — appended AFTER the label here (an
+            accessible name is content order), and folded into `aria-label` when the label is
+            hidden, since aria-label REPLACES the content and would silence this span. */}
+        {item.blocked && !hideLabel && <span className="sr-only">, needs attention</span>}
         {!hideLabel && (item.trailing || rowDisclosure) && (
           <span className="ml-auto flex shrink-0 items-center gap-1 pl-1.5">
             {item.trailing}

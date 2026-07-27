@@ -280,11 +280,18 @@ export function PersonaEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const renderRecordAffordance = useRecordAffordance();
+  // What a create returned, remembered locally. `commit()` deliberately leaves this editor MOUNTED
+  // and re-armed after a successful save, but `persona` is a prop the parent need not refresh (it
+  // may keep passing null) — so newness cannot be read from the prop alone or the second Save would
+  // POST a DUPLICATE persona. Everything below asks `persisted`, never `persona`, which also lets
+  // the id-gated facets (avatar, knowledge, memory, abilities…) come alive the moment it exists.
+  const [created, setCreated] = useState<Persona | null>(null);
+  const persisted = persona ?? created;
 
-  const isNew = persona === null;
+  const isNew = persisted === null;
   const block = saveBlockedReason(draft);
   const valid = block === null;
-  const idPrefix = rdidPrefix(persona?.id);
+  const idPrefix = rdidPrefix(persisted?.id);
 
   const activeService = useMemo(
     () => services.find((s) => s.id === draft.serviceId) ?? null,
@@ -307,13 +314,16 @@ export function PersonaEditor({
       // The workspace scope rides every write (workspaceQuery no-ops when absent):
       // update under an org workspace needs it so a member can save personas OTHER
       // members created for the org (the item ownership scope replaces the creator pin).
-      const saved = isNew
-        ? await api.personas.create(body, { workspace: workspaceSlug })
-        : await api.personas.update(persona.id, body, { workspace: workspaceSlug });
+      // Update targets the DRAFT's id, not the prop's: `commit()` re-baselines it from the server's
+      // response, so it tracks an id the rdid cascade rewrote where a captured prop would not.
+      const saved = persisted
+        ? await api.personas.update(draft.id, body, { workspace: workspaceSlug })
+        : await api.personas.create(body, { workspace: workspaceSlug });
       // The server normalises (slug casing, trimming) and — after the rdid cascade — may return a
       // different id than we sent. Adopt what it actually stored, so `dirty` measures the draft
       // against the saved truth rather than against what we optimistically hoped.
       commit(toPersonaDraft(saved));
+      if (!persisted) setCreated(saved);
       onSaved(saved);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "personas", step: "save" });
@@ -365,7 +375,7 @@ export function PersonaEditor({
                 </p>
               ) : (
                 <PersonaAvatarField
-                  personaId={persona.id}
+                  personaId={persisted.id}
                   value={draft.avatarAttachmentId}
                   onChange={(id) => set("avatarAttachmentId", id)}
                 />
@@ -450,8 +460,8 @@ export function PersonaEditor({
           />
           {/* Interests are a CHILD table with their own save, so they sit below the three draft
               fields rather than joining them — same facet (this is where an author writes the
-              persona's personality), different lifecycle. `persona` is null for an unsaved draft. */}
-          <InterestsEditor personaId={persona?.id ?? null} />
+              persona's personality), different lifecycle. `persisted` is null for an unsaved draft. */}
+          <InterestsEditor personaId={persisted?.id ?? null} />
         </div>
       ),
     },
@@ -464,7 +474,7 @@ export function PersonaEditor({
       // GET /persona/personas/{id} (id prefilled), only once the persona exists.
       render: () => (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {persona && (
+          {persisted && (
             <div className="px-6 pt-4">
               <span className="text-xs text-apt-text-muted">
                 Stored as the <code className="font-mono">modelPrompt</code> field on this persona.
@@ -490,13 +500,13 @@ export function PersonaEditor({
       // backfill). The projects feature package is a sibling this package doesn't depend
       // on, so its pane is host-injected (renderProject) — same seam as Knowledge above.
       render: () => {
-        if (!persona) {
+        if (!persisted) {
           return <SaveFirstNotice>Save this persona first to open its project.</SaveFirstNotice>;
         }
         if (!renderProject) {
           return <SaveFirstNotice>The project isn't available in this view.</SaveFirstNotice>;
         }
-        return renderProject(persona.id);
+        return renderProject(persisted.id);
       },
     },
     {
@@ -510,10 +520,10 @@ export function PersonaEditor({
       // whole facet behind the first save; the per-pane "not provisioned yet" cases are handled
       // inside KnowledgeFacet.
       render: () => {
-        if (!persona) {
+        if (!persisted) {
           return <SaveFirstNotice>Save this persona first to manage its knowledge bases.</SaveFirstNotice>;
         }
-        return <KnowledgeFacet persona={persona} renderKnowledgeBases={renderKnowledgeBases} />;
+        return <KnowledgeFacet persona={persisted} renderKnowledgeBases={renderKnowledgeBases} />;
       },
     },
     {
@@ -524,13 +534,15 @@ export function PersonaEditor({
       // to the ecosystem it OWNS (see PersonaMemoryPane's doc comment). Gated behind the first save
       // (a draft has no id), and again behind the owned ecosystem existing (see Knowledge above).
       render: () => {
-        if (!persona) {
+        if (!persisted) {
           return <SaveFirstNotice>Save this persona first to view its memory.</SaveFirstNotice>;
         }
-        if (!persona.ownedEcosystemId) {
+        if (!persisted.ownedEcosystemId) {
           return <SaveFirstNotice>This persona's memory isn't available yet.</SaveFirstNotice>;
         }
-        return <PersonaMemoryPane personaId={persona.id} ownedEcosystemId={persona.ownedEcosystemId} />;
+        return (
+          <PersonaMemoryPane personaId={persisted.id} ownedEcosystemId={persisted.ownedEcosystemId} />
+        );
       },
     },
     {
@@ -540,9 +552,9 @@ export function PersonaEditor({
       // Facet 5 — what tools this persona HAS: grant/revoke + per-tool autonomy, against its real id.
       // Gated behind the first save.
       render: () =>
-        persona ? (
+        persisted ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
-            <AbilitiesPanel personaId={persona.id} />
+            <AbilitiesPanel personaId={persisted.id} />
           </div>
         ) : (
           <SaveFirstNotice>Save this persona first to grant it tools.</SaveFirstNotice>
@@ -555,9 +567,9 @@ export function PersonaEditor({
       // Context-scoped Permissions — WHERE / AS-WHAT this persona may act (its may_act grants) plus
       // its pending human-decision queue. Gated behind the first save.
       render: () =>
-        persona ? (
+        persisted ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
-            <PermissionsPanel personaId={persona.id} />
+            <PermissionsPanel personaId={persisted.id} />
           </div>
         ) : (
           <SaveFirstNotice>Save this persona first to configure its permissions.</SaveFirstNotice>
@@ -579,13 +591,13 @@ export function PersonaEditor({
             label: "Access",
             icon: <KeyRound size={16} aria-hidden />,
             render: () =>
-              persona ? (
+              persisted ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
                   <ItemAccessPanel
                     workspaceSlug={workspaceSlug}
                     feature="personas"
-                    itemId={persona.id}
-                    itemLabel={persona.name || persona.slug}
+                    itemId={persisted.id}
+                    itemLabel={persisted.name || persisted.slug}
                     subjectsDirectory={workspaceSubjectsDirectory}
                   />
                 </div>
@@ -661,9 +673,9 @@ export function PersonaEditor({
               </div>
             </Field>
           </FieldGroup>
-          {persona ? (
+          {persisted ? (
             renderChatPane ? (
-              renderChatPane(persona)
+              renderChatPane(persisted)
             ) : (
               <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center p-6 text-center">
                 <p className="text-sm text-apt-text-muted">Chat isn't available in this view.</p>
@@ -705,11 +717,11 @@ export function PersonaEditor({
       <ErrorText error={error} className="px-6 pt-2" />
       {/* The persona's API, on every facet: the item read once saved, the create POST while new. */}
       <div className="flex justify-end px-6 pt-2">
-        {persona
+        {persisted
           ? renderRecordAffordance?.({
               method: "GET",
               path: "/persona/personas/{id}",
-              pathValues: { id: persona.id },
+              pathValues: { id: persisted.id },
               title: "Persona API",
             })
           : renderRecordAffordance?.({

@@ -643,4 +643,49 @@ describe("PersonaEditor save (create mode)", () => {
     const saveAfter = await screen.findByRole("button", { name: "Save" });
     expect(saveAfter).toBeDisabled();
   });
+
+  // …and the save AFTER that create must be an UPDATE. The test above stops at "Save re-disables",
+  // which a `create`-forever editor also passes: `commit()` re-arms this instance in place and
+  // PersonasSection keeps it mounted with the SAME `persona={null}` prop, so newness read from the
+  // prop stays true and the next click POSTs a DUPLICATE persona rather than PUTting the first one.
+  it("UPDATES the created row on the next save, rather than creating a second persona", async () => {
+    const created: Persona = { ...PERSONA, id: "persona-2", slug: "scout", name: "Scout" };
+    // This file has no mock-clearing afterEach, and the call COUNTS are the whole point here.
+    createPersona.mockClear();
+    updatePersona.mockClear();
+    createPersona.mockResolvedValue(created);
+    updatePersona.mockResolvedValue({ ...created, name: "Scouty" });
+
+    render(
+      <PersonaEditor
+        persona={null}
+        services={[]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        activeSubtab="identity"
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+      />,
+    );
+
+    await userEvent.type(screen.getByPlaceholderText("Bob"), "Scout");
+    await userEvent.type(screen.getByPlaceholderText("bob"), "scout");
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => expect(createPersona).toHaveBeenCalledTimes(1));
+
+    await userEvent.type(await screen.findByLabelText(/name/i), "y");
+    const save = await screen.findByRole("button", { name: "Save" });
+    await waitFor(() => expect(save).toBeEnabled());
+    await userEvent.click(save);
+
+    // The id the server assigned — not a second POST, and not the "__draft__" placeholder.
+    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1));
+    expect(updatePersona).toHaveBeenCalledWith(
+      "persona-2",
+      expect.objectContaining({ name: "Scouty" }),
+      { workspace: undefined },
+    );
+    expect(createPersona).toHaveBeenCalledTimes(1);
+  });
 });

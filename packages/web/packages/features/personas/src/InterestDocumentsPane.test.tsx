@@ -98,6 +98,39 @@ describe("InterestDocumentsPane", () => {
     await userEvent.type(screen.getByLabelText(/content/i), "The reimagined series…");
     expect(screen.getByRole("button", { name: /^save document$/i })).toBeEnabled();
   });
+
+  // Both terms holding Save down are VALIDITY rules, so a grey button here is not self-explanatory
+  // the way "nothing to save yet" is — it has to name the field it is waiting for. The gate makes
+  // `save()`'s own guard unreachable by click, so the caption is the only place the user can read
+  // it.
+  it("says WHY Save is grey, naming the field it is waiting for", async () => {
+    render(<InterestDocumentsPane {...props} />);
+    await userEvent.click(await screen.findByRole("button", { name: /add a document/i }));
+
+    // A create form has no unchanged baseline to be quiet about, so it speaks on arrival.
+    expect(screen.getByText("A title is required.")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/title/i), "Cylon portrayal");
+    expect(screen.queryByText("A title is required.")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Content is required — it's what the persona searches."),
+    ).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/content/i), "The reimagined series…");
+    expect(
+      screen.queryByText("Content is required — it's what the persona searches."),
+    ).not.toBeInTheDocument();
+  });
+
+  // Whitespace is not content: the gate trims, so a form filled with spaces must stay blocked and
+  // keep saying why rather than posting a document the persona can never match.
+  it("treats a whitespace-only title or body as still missing", async () => {
+    render(<InterestDocumentsPane {...props} />);
+    await userEvent.click(await screen.findByRole("button", { name: /add a document/i }));
+    await userEvent.type(screen.getByLabelText(/title/i), "   ");
+    expect(screen.getByText("A title is required.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^save document$/i })).toBeDisabled();
+  });
 });
 
 describe("KnowledgeFacet", () => {

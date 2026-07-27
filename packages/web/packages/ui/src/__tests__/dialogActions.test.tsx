@@ -59,3 +59,54 @@ describe('DialogActions — confirmDisabled', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 })
+
+/**
+ * `confirmDisabled` × `focusOnMount` used to be a focus hole: `focus()` on a disabled button is a
+ * silent no-op with no fallback, so the dialog opened with focus still on `<body>` — no focus trap,
+ * Tab walking the page behind the dialog, Escape possibly never reaching the handler. With
+ * `focusOnMount` defaulting to true, `initialFocus` defaulting to "confirm", and dirty-gating
+ * meaning Save now STARTS disabled, that is the ordinary combination rather than an exotic one.
+ */
+describe('DialogActions — initial focus with a disabled preferred target', () => {
+  it('focuses confirm on mount when it is enabled', () => {
+    render(
+      <DialogActions cancelLabel="Cancel" onCancel={vi.fn()} confirmLabel="Save" onConfirm={vi.fn()} />,
+    )
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Save' }))
+  })
+
+  it('falls back to Cancel when the preferred confirm is disabled', () => {
+    render(
+      <DialogActions
+        cancelLabel="Cancel"
+        onCancel={vi.fn()}
+        confirmLabel="Save"
+        onConfirm={vi.fn()}
+        confirmDisabled
+      />,
+    )
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+  })
+
+  it('falls back to confirm when the preferred cancel is missing (destructive default)', () => {
+    // `destructive` flips the default initialFocus to "cancel"; with no cancel button rendered
+    // there is nothing to prefer, so the confirm has to take it.
+    render(<DialogActions confirmLabel="Delete" onConfirm={vi.fn()} destructive />)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' }))
+  })
+
+  it('leaves focus alone when no button can take it', () => {
+    render(<DialogActions confirmLabel="Save" onConfirm={vi.fn()} confirmDisabled />)
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('does not steal focus later when the gate flips open', () => {
+    const { rerender } = render(
+      <DialogActions confirmLabel="Save" onConfirm={vi.fn()} confirmDisabled />,
+    )
+    rerender(<DialogActions confirmLabel="Save" onConfirm={vi.fn()} confirmDisabled={false} />)
+    // The focus effect is mount-only on purpose — re-running it would yank focus out of whatever
+    // field the user was typing in at the moment their edit made the form savable.
+    expect(document.activeElement).toBe(document.body)
+  })
+})

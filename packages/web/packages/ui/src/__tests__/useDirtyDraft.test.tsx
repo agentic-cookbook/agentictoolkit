@@ -38,6 +38,38 @@ describe("useDirtyDraft", () => {
     expect(result.current.dirty).toBe(true)
   })
 
+  // `patch` is the mutator child components call with a whole fresh object per change
+  // (ServicesSection), so an unconditional setState re-renders the editor on every keystroke that
+  // changed nothing. It has to short-circuit exactly like `set` — sibling mutators disagreeing on
+  // identical input is a caller trap.
+  it("patch returns the SAME state object when every value is unchanged", () => {
+    const { result } = renderHook(() => useDirtyDraft({ a: 1, tags: ["x"] }))
+    const before = result.current.draft
+    // Fresh object, fresh array — identity differs, content doesn't.
+    act(() => result.current.patch({ a: 1, tags: ["x"] }))
+    expect(result.current.draft).toBe(before)
+    expect(result.current.dirty).toBe(false)
+  })
+
+  it("patch still applies when only SOME of the values are unchanged", () => {
+    const { result } = renderHook(() => useDirtyDraft({ a: 1, b: 2 }))
+    act(() => result.current.patch({ a: 1, b: 3 }))
+    expect(result.current.draft).toEqual({ a: 1, b: 3 })
+    expect(result.current.dirty).toBe(true)
+  })
+
+  // `commit(next)` can narrow the key set; a following `patch` widens the DRAFT past the baseline.
+  // (The mirror image — a baseline key the draft has lost — is what `dirty`'s union iteration
+  // guards, and is deliberately not asserted here: no sequence of set/patch/commit/reset can
+  // produce it, so a test for it could not fail. See the comment on `dirty`.)
+  it("sees a key the draft has gained since the baseline was committed", () => {
+    const { result } = renderHook(() => useDirtyDraft<{ a: number; b?: number }>({ a: 1, b: 2 }))
+    act(() => result.current.commit({ a: 1 }))
+    expect(result.current.dirty).toBe(false)
+    act(() => result.current.patch({ b: 5 }))
+    expect(result.current.dirty).toBe(true)
+  })
+
   it("commit adopts the saved row as the new baseline", () => {
     const { result } = renderHook(() => useDirtyDraft({ name: "a" }))
     act(() => result.current.set("name", "b"))

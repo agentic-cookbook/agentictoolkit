@@ -22,7 +22,11 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
 
 import { WorkItemEditor } from "./WorkItemEditor";
 import { projectActivityApi, type ProjectActivity } from "@agentic-toolkit/data/projects";
-import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
+import {
+  projectWorkItemsApi,
+  type ProjectStatus,
+  type WorkItem,
+} from "@agentic-toolkit/data/projects";
 
 const workItemActivity = vi.mocked(projectActivityApi.workItemActivity);
 const addComment = vi.mocked(projectActivityApi.addComment);
@@ -152,7 +156,10 @@ describe("WorkItemEditor save gate", () => {
 });
 
 describe("WorkItemEditor save (edit mode)", () => {
-  it("skips the no-op PATCH when nothing changed, saving the unchanged item", async () => {
+  // The raw dirty check saw a different string and lit Save up; the PATCH it would have sent was
+  // empty, because every field goes out trimmed. Save is gated on that PATCH now, so the no-op
+  // write can't even be requested — which is stronger than skipping it after the click.
+  it("a trailing space in the title is not a change — Save stays disabled and nothing is written", () => {
     const onSaved = vi.fn();
     render(
       <WorkItemEditor
@@ -166,18 +173,22 @@ describe("WorkItemEditor save (edit mode)", () => {
       />,
     );
 
-    // Save is dirty-gated, so an untouched form can't click Save at all — edit the title
-    // with only trailing whitespace. That's a real (if trivial) edit as far as the raw
-    // dirty check is concerned (Object.is sees a different string), but buildPatch()'s
-    // .trim() normalization still produces an EMPTY patch against the baseline, so update
-    // is still skipped — the no-op-PATCH behavior this test exists to cover is unchanged.
     fireEvent.change(screen.getByPlaceholderText("Design the landing page"), {
       target: { value: `${ITEM.title} ` },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(ITEM));
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(update).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  // The other side of the same comparison: a row STORED with stray whitespace used to be diffed
+  // trimmed-draft-against-raw-baseline, so it read as changed the instant it loaded — Save was live
+  // on a form nobody had touched, offering a write that only re-normalises what is already there.
+  it("an item stored with untrimmed text loads with Save disabled", () => {
+    renderEditor({ ...ITEM, title: "  Design the landing page  ", description: " notes " });
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
   });
 
   it("diffs the second save against the saved row (baseline), not the stale item prop", async () => {
@@ -208,5 +219,57 @@ describe("WorkItemEditor save (edit mode)", () => {
     fireEvent.click(save);
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
     expect(update).toHaveBeenNthCalledWith(2, "w1", { description: "New description" });
+  });
+});
+
+// Every other test in this file renders with `statuses={[]}`, so the status field's real
+// (populated) path was never exercised. An item with NO status used to load as `statuses[0].id`
+// — the SAME invented value on both the draft and the baseline — so the field displayed a status
+// the row didn't have, dirty stayed false, re-picking that status hit `set`'s sameValue
+// short-circuit, and the item could never be given a status at all.
+describe("WorkItemEditor status field with a statusless item", () => {
+  const STATUSES: ProjectStatus[] = [
+    { id: "s1", projectId: "p1", key: "todo", label: "To do", category: "todo", position: 0, createdAt: "2026-07-03T00:00:00Z" },
+    { id: "s2", projectId: "p1", key: "doing", label: "Doing", category: "in_progress", position: 1, createdAt: "2026-07-03T00:00:00Z" },
+  ];
+  const NO_STATUS: WorkItem = { ...ITEM, statusId: null };
+
+  function renderWithStatuses() {
+    return render(
+      <WorkItemEditor
+        projectId="p1"
+        item={NO_STATUS}
+        statuses={STATUSES}
+        participants={[]}
+        workItems={[NO_STATUS]}
+        onSaved={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+  }
+
+  it("shows it has no status rather than the first one", () => {
+    renderWithStatuses();
+    const select = screen.getByLabelText("Status") as HTMLSelectElement;
+    expect(select.value).toBe("");
+    expect(screen.getByRole("option", { name: "— No status" })).toBeDefined();
+  });
+
+  // Deliberately picks the FIRST status — the very value the old fallback pre-filled the draft
+  // AND the baseline with. That is the case the bug swallowed whole: the field already read
+  // "To do", so choosing "To do" was a no-op the dirty check never saw and Save stayed dead.
+  it("lets the first status be picked and PATCHes it", async () => {
+    update.mockResolvedValueOnce({ ...NO_STATUS, statusId: "s1" });
+    renderWithStatuses();
+
+    const save = screen.getByRole("button", { name: "Save changes" });
+    expect(save).toHaveProperty("disabled", true);
+
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "s1" } });
+    expect(save).toHaveProperty("disabled", false);
+
+    fireEvent.click(save);
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenNthCalledWith(1, "w1", { statusId: "s1" });
   });
 });

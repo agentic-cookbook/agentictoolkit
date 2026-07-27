@@ -32,6 +32,22 @@ function interestLabel(i: SpecialInterestRow): string {
   return [i.general, i.topical, i.specific].map((l) => l?.trim()).filter(Boolean).join(" › ");
 }
 
+/* ── Why "Save document" is grey ───────────────────────────────────────────
+ * Both terms holding that button down are VALIDITY rules, not dirtiness, and a validity rule that
+ * greys Save has to say so: "nothing to save yet" explains itself, "this can never be saved as it
+ * stands" does not. One function, two readers — the button's `disabled` and the caption beside it —
+ * so the two can't drift. `content` is gated as hard as `title` because `content` IS the document:
+ * an empty one is a row the persona can never usefully match, and letting it through only trades
+ * this caption for the rows plane's raw blank-column error. */
+const DOCUMENT_TITLE_REQUIRED = "A title is required.";
+const DOCUMENT_CONTENT_REQUIRED = "Content is required — it's what the persona searches.";
+
+function documentBlockedReason(title: string, content: string): string | null {
+  if (!title.trim()) return DOCUMENT_TITLE_REQUIRED;
+  if (!content.trim()) return DOCUMENT_CONTENT_REQUIRED;
+  return null;
+}
+
 function Notice({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-6 text-center">
@@ -101,7 +117,15 @@ export function InterestDocumentsPane({
     );
   }
 
+  const blockedReason = documentBlockedReason(title, content);
+
   const save = async () => {
+    // The button is gated on exactly this, so a click can't reach here blocked — but `save()` has
+    // to be right on its own, and the message it would show is the same one, from one place.
+    if (blockedReason !== null) {
+      setError(blockedReason);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -167,18 +191,22 @@ export function InterestDocumentsPane({
               className="min-h-40 resize-y"
             />
           </Field>
-          <ButtonBar>
+          <ButtonBar
+            leading={
+              // A CREATE form speaks on arrival — there is no loaded value to have not-changed yet,
+              // so the only thing grey can mean here is "a field is still missing", and the user
+              // opened this form on purpose. (Edit surfaces gate the same caption on `dirty`.)
+              blockedReason ? (
+                <span className="text-xs text-apt-text-muted" role="status">
+                  {blockedReason}
+                </span>
+              ) : undefined
+            }
+          >
             <Button type="button" variant="ghost" onClick={() => setAdding(false)} disabled={busy}>
               Cancel
             </Button>
-            {/* `content` IS the document — the text the persona searches. An empty one is a row it
-                can never usefully match, so gate on it exactly as on the title rather than letting
-                the rows plane refuse a blank column as a raw error string. */}
-            <Button
-              type="button"
-              onClick={() => void save()}
-              disabled={busy || !title.trim() || !content.trim()}
-            >
+            <Button type="button" onClick={() => void save()} disabled={busy || blockedReason !== null}>
               Save document
             </Button>
           </ButtonBar>

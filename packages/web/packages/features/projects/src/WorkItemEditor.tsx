@@ -81,13 +81,18 @@ type WorkItemDraft = {
 
 /** Load a work item into the editor's draft shape — the ONE place "what a work item's editable
  *  fields look like as a draft" is defined, used both to seed the draft and (after a save) to
- *  rebuild the baseline from the server's row. `statuses` supplies the same first-status fallback
- *  the Status field itself falls back to when the item has none. */
-function draftFromItem(item: WorkItem, statuses: ProjectStatus[]): WorkItemDraft {
+ *  rebuild the baseline from the server's row.
+ *
+ *  An item with NO status loads as `""`, not as the first status: the draft and the baseline are
+ *  both built from this, so writing a fallback here would put the SAME invented value on both sides
+ *  of the dirty check — the field would show a status the row does not have, `dirty` would stay
+ *  false, re-picking it would hit `set`'s `sameValue` short-circuit, and the status could never be
+ *  persisted at all. The Status field renders the empty case explicitly instead (see below). */
+function draftFromItem(item: WorkItem): WorkItemDraft {
   return {
     title: item.title,
     description: item.description ?? "",
-    statusId: item.statusId ?? statuses[0]?.id ?? "",
+    statusId: item.statusId ?? "",
     assigneeOption: toOptionValue(assigneeOf(item)),
     priority: item.priority,
     startDate: item.startDate ?? "",
@@ -194,7 +199,7 @@ export function WorkItemEditor({
   // Seeded once from `item`; the pane keys this editor by item id (or "new") so a
   // switch remounts it with fresh state — no derive-from-props effect needed.
   const { draft, set, dirty, commit, baseline } = useDirtyDraft<WorkItemDraft>(() =>
-    draftFromItem(item, statuses),
+    draftFromItem(item),
   );
 
   const [saving, setSaving] = useState(false);
@@ -205,7 +210,14 @@ export function WorkItemEditor({
   // user with a blank title would otherwise get a grey button and no explanation. One string,
   // reached two ways.
   const blockedReason = draft.title.trim().length === 0 ? TITLE_REQUIRED : null;
-  const canSave = dirty && blockedReason === null;
+  // What a save would actually PATCH — and THIS, not `dirty`, is what gates Save. `dirty` compares
+  // the RAW draft, while every field goes out normalised (titles and descriptions trimmed, empty
+  // dates/parent as null), so a trailing space in the title flipped `dirty` true and lit Save up
+  // for a write carrying nothing. An empty patch means there is nothing to save, whatever the
+  // keystrokes say. `dirty` still gates the caption below, which is about the FORM having been
+  // touched rather than about the write.
+  const patch = buildPatch();
+  const canSave = Object.keys(patch).length > 0 && blockedReason === null;
   // Parent options: every other work item in the project (an item can't parent itself).
   const parentOptions = useMemo(
     () => workItems.filter((w) => w.id !== item.id),
@@ -220,9 +232,11 @@ export function WorkItemEditor({
     setSaving(true);
     setError(null);
     try {
-      const patch = buildPatch();
-      // Nothing changed → skip the no-op PATCH (empty body) and adopt the
-      // unchanged item, avoiding a pointless network round-trip.
+      // Nothing changed → skip the no-op PATCH (empty body) and adopt the unchanged item, avoiding
+      // a pointless network round-trip. The gate above now disables Save on exactly this condition,
+      // so a click can't reach it; it stays because `save()` has to be correct on its own for any
+      // other caller (a keyboard shortcut, a future inline surface), the same way the title guard
+      // above does.
       const saved =
         Object.keys(patch).length === 0
           ? item
@@ -235,7 +249,7 @@ export function WorkItemEditor({
       // for any FUTURE consumer that keeps it mounted across a save (e.g. an inline/non-modal
       // surface), the same way `baseline` itself is a general-purpose hook extension rather than
       // something built to this one consumer's current unmount behavior.
-      commit(draftFromItem(saved, statuses));
+      commit(draftFromItem(saved));
       onSaved(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save work item.");
@@ -251,8 +265,12 @@ export function WorkItemEditor({
   // explicit null (the T1 client keeps it), which is the backend's clear semantics.
   function buildPatch(): Parameters<typeof projectWorkItemsApi.update>[1] {
     const patch: Parameters<typeof projectWorkItemsApi.update>[1] = {};
-    if (draft.title.trim() !== baseline.title) patch.title = draft.title.trim();
-    if (draft.description.trim() !== baseline.description) {
+    // Both sides trimmed, deliberately: comparing a trimmed draft against a RAW baseline is
+    // asymmetric, so a row stored with stray whitespace read as changed the instant it loaded —
+    // Save was live on an untouched form, for a write that only re-normalises what is already
+    // there. The server keeps whatever it was given; that is not this editor's to silently fix.
+    if (draft.title.trim() !== baseline.title.trim()) patch.title = draft.title.trim();
+    if (draft.description.trim() !== baseline.description.trim()) {
       patch.description = draft.description.trim();
     }
     if (draft.statusId !== baseline.statusId) patch.statusId = draft.statusId;
@@ -311,6 +329,15 @@ export function WorkItemEditor({
       <Field label="Status">
         <Select value={draft.statusId} onChange={(e) => set("statusId", e.target.value)}>
           {statuses.length === 0 && <option value="">Default</option>}
+          {/* An item can genuinely have NO status (the board renders it as "—"). Keep an explicit
+              empty option for as long as the loaded row has none, so the field states that instead
+              of silently displaying the first status — which a `value` no option matches would do,
+              turning "unset" into a status the user never picked and cannot save. Picking a real
+              one is then a REAL change, and it stays revertible until the next save moves the
+              baseline. */}
+          {statuses.length > 0 && baseline.statusId === "" && (
+            <option value="">— No status</option>
+          )}
           {statuses.map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}

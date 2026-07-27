@@ -32,7 +32,9 @@ export interface DialogActionsProps {
    * always-enabled-when-idle).
    */
   confirmDisabled?: boolean
-  /** Which button gets initial focus when the dialog opens. Defaults to "confirm"; set to "cancel" for destructive. */
+  /** Which button gets initial focus when the dialog opens. Defaults to "confirm"; set to "cancel"
+   *  for destructive. A PREFERENCE, not a guarantee: if that button is disabled or absent, focus
+   *  goes to the other one rather than nowhere (see the focus effect). */
   initialFocus?: "confirm" | "cancel"
   /**
    * When false, DialogActions does NOT auto-focus any button on mount — the host
@@ -116,11 +118,24 @@ export function DialogActions({
 
   // Initial focus on mount — skipped when focusOnMount={false} (form dialogs that
   // focus their first input instead).
+  //
+  // Falls back to the OTHER button when the preferred one is disabled. `focus()` on a disabled
+  // button is a silent no-op, which used to leave focus on `<body>`: no focus trap, Tab walking
+  // the page behind the dialog, Escape possibly never reaching the handler. That combination is
+  // now the NORMAL one — `initialFocus` defaults to "confirm" and dirty-gating means Save starts
+  // disabled — so the dialog must always land focus somewhere inside itself.
+  //
+  // `disabled` is read off the DOM rather than from the `confirmDisabled` prop so the effect keeps
+  // its mount-only deps: re-running it when the gate later flips would yank focus out from under
+  // whatever the user is typing in.
   React.useEffect(() => {
     if (!focusOnMount) return
-    const btn =
-      initialFocus === "cancel" ? cancelRef.current : confirmRef.current
-    btn?.focus()
+    const preferred = initialFocus === "cancel" ? cancelRef.current : confirmRef.current
+    const other = initialFocus === "cancel" ? confirmRef.current : cancelRef.current
+    const target = preferred && !preferred.disabled ? preferred : other
+    // Both gone or both disabled: leave focus alone rather than pretending. The host dialog's own
+    // focus management (base-ui's Popup) is the remaining line of defence.
+    if (target && !target.disabled) target.focus()
   }, [focusOnMount, initialFocus])
 
   if (busy) {
