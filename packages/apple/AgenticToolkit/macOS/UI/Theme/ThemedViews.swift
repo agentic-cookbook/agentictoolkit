@@ -117,6 +117,45 @@ public final class ThemedButton: NSButton, Themeable {
     }
 }
 
+@MainActor
+public extension NSButton {
+
+    /// Paint a stock push button as the *secondary* action of a themed dialog
+    /// (Cancel/Close, sitting beside a blue default button).
+    ///
+    /// A non-default push button draws *nothing* in these themed windows — no
+    /// bezel and no title, though it is enabled, sized, and hit-testable (its
+    /// sibling default button, the one with a Return key equivalent, draws
+    /// fine). `bezelColor` doesn't rescue it either. So the button leaves the
+    /// stock bezel behind and paints itself: an elevated surface one clear step
+    /// above the window backdrop, outlined, with primary-emphasis text — the
+    /// things that say "enabled".
+    ///
+    /// Borderless buttons have no bezel padding, so callers give the button its
+    /// size (matching the default button beside it) rather than leaning on an
+    /// intrinsic size that is now just the title.
+    func applySecondaryActionTheme(_ palette: SemanticPalette) {
+        isBordered = false
+        bezelStyle = .regularSquare
+        focusRingType = .none
+        wantsLayer = true
+        layer?.cornerRadius = 6
+        layer?.borderWidth = 1
+        layer?.backgroundColor = palette.nsColor(.elevatedSurface).cgColor
+        layer?.borderColor = palette.nsColor(.outline).cgColor
+        contentTintColor = palette.primaryTextColor
+        attributedTitle = NSAttributedString(string: title, attributes: [
+            .foregroundColor: palette.primaryTextColor,
+            .font: font ?? palette.font(.button),
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.alignment = .center
+                return style
+            }()
+        ])
+    }
+}
+
 /// A panel: a layer-backed surface fill with an optional outline stroke and
 /// rounded corners. Replaces raw `NSBox`/`.controlBackgroundColor` boxes so the
 /// theme drives panel background **and** border/outline color.

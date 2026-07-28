@@ -77,6 +77,29 @@ struct DescriptorCatalogTests {
         }
     }
 
+    @Test("The shared catalog describes the models the shipped descriptors offer")
+    func shippedModelsResolveAgainstTheSharedCatalog() throws {
+        // The point of the shared table: a model listed by any provider gets a
+        // description without that provider's descriptor carrying one. A few
+        // vendors adh has no blurbs for at all keep this short of 100%, so the
+        // guard is against a REGRESSION (a broken alias/canonicalization rule
+        // would drop it to near zero), not a demand for perfection.
+        var listed = 0
+        var described = 0
+        for bundleDir in ["OpenAI", "Google", "ClaudeAPI", "OpenAICompatible"] {
+            let descriptor = try shipped(bundleDir)
+            for template in descriptor.resolvedTemplates {
+                for model in template.models {
+                    listed += 1
+                    let info = AIModelCatalog.shared.resolve(model: model, template: template)
+                    if info.description?.isEmpty == false { described += 1 }
+                }
+            }
+        }
+        #expect(listed > 500)
+        #expect(described * 10 > listed * 9, "\(described)/\(listed) shipped models described")
+    }
+
     @Test("OpenAI-compatible Ollama template is keyless and ships no fabricated models")
     func openAICompatibleOllamaTemplate() throws {
         let descriptor = try shipped("OpenAICompatible")

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import AIPluginKit
 @testable import AgenticToolkitMacOS
 
 @Suite("ModelPickerItem")
@@ -47,5 +48,21 @@ struct ModelPickerItemTests {
         // "Tools:" is rendered, not part of the searchable fields.
         let item = ModelPickerItem(id: "m", tools: true)
         #expect(item.matches("tools") == false)
+    }
+
+    @Test("a row carries the resolved catalog facts whole")
+    func carriesResolvedFacts() {
+        // The row stores what the catalog resolved rather than copying fields out,
+        // so the numbers the detail pane shows can't drift from the table.
+        let info = AIModelCatalog.ResolvedModel(
+            id: "m", description: "Shared blurb.", capabilities: ["tools"],
+            goodFor: "Long context", tools: true, contextWindow: 131_072,
+            inputCostPerM: 0.15)
+        let item = ModelPickerItem(id: "m", info: info)
+        #expect(item.description == "Shared blurb.")
+        #expect(item.tools == true)
+        #expect(item.goodFor == "Long context")
+        #expect(item.info.contextWindow == 131_072)
+        #expect(item.matches("shared"))
     }
 }

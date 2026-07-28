@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import AIPluginKit
 import AgenticToolkitCore
 @testable import AgenticToolkitMacOS
 
@@ -21,7 +22,7 @@ struct ModelChooserContentTests {
         #expect(ModelChooserContent.offeredModels(listed: ["a"], current: "") == ["a"])
     }
 
-    @Test("capabilityBadges prefer live capabilities, fall back to curated tools")
+    @Test("capabilityBadges prefer live capabilities, then the shared catalog, then curated tools")
     func badges() {
         let live = OllamaModelMetadata(
             capabilities: ["tools", "vision"], parameterSize: nil, quantization: nil, contextLength: nil
@@ -30,9 +31,45 @@ struct ModelChooserContentTests {
             item: ModelPickerItem(id: "m"), metadata: live
         )
         #expect(badges == ["Tools", "Vision"])
+        // A live server outranks the catalog: it is the machine actually serving it.
+        let catalogued = ModelPickerItem(id: "m", info: AIModelCatalog.ResolvedModel(
+            id: "m", capabilities: ["reasoning", "tools"]))
+        #expect(ModelChooserContent.capabilityBadges(item: catalogued, metadata: live)
+            == ["Tools", "Vision"])
+        #expect(ModelChooserContent.capabilityBadges(item: catalogued, metadata: nil)
+            == ["Reasoning", "Tools"])
         let curated = ModelPickerItem(id: "m", tools: true)
         #expect(ModelChooserContent.capabilityBadges(item: curated, metadata: nil) == ["Tools"])
         #expect(ModelChooserContent.capabilityBadges(item: ModelPickerItem(id: "m"), metadata: nil) == [])
+    }
+
+    @Test("factsLine reports the gateway's limits and prices, not the model's capabilities")
+    func factsLine() {
+        let full = AIModelCatalog.ResolvedModel(
+            id: "m", capabilities: ["tools"], contextWindow: 131_072, maxOutput: 65_536,
+            inputCostPerM: 0.15, outputCostPerM: 0.6)
+        // Binary limits read the way the vendor quotes them: 131072 is "128K".
+        #expect(ModelChooserContent.factsLine(full)
+            == "128K context · 64K max output · $0.15/$0.6 per M tokens")
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", contextWindow: 1_000_000)) == "1M context")
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", contextWindow: 1_048_576)) == "1M context")
+        // A decimal limit stays decimal — 200000 is "200K", never "195K".
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", contextWindow: 200_000)) == "200K context")
+        // A published half-price says which half it is.
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", inputCostPerM: 1.75))
+            == "$1.75 per M input tokens")
+        // Free models and sub-cent prices both have to survive the formatting.
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", inputCostPerM: 0, outputCostPerM: 0.435))
+            == "$0/$0.435 per M tokens")
+        // Capabilities alone are not facts about the gateway.
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", capabilities: ["tools"])) == nil)
+        #expect(ModelChooserContent.factsLine(AIModelCatalog.ResolvedModel(id: "m")) == nil)
     }
 
     @Test("specLine formats size, quant, and context")

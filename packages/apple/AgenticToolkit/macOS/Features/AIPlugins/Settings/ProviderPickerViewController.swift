@@ -182,7 +182,12 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             chooseButton.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
             chooseButton.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
             cancelButton.trailingAnchor.constraint(equalTo: chooseButton.leadingAnchor, constant: -10),
-            cancelButton.centerYAnchor.constraint(equalTo: chooseButton.centerYAnchor)
+            cancelButton.centerYAnchor.constraint(equalTo: chooseButton.centerYAnchor),
+            // Cancel is drawn by the theme rather than by a stock bezel (see
+            // `applySecondaryActionTheme`), so its size is stated here — matching
+            // the default button beside it — instead of coming from the bezel.
+            cancelButton.heightAnchor.constraint(equalTo: chooseButton.heightAnchor),
+            cancelButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 72)
         ])
 
         self.view = root
@@ -413,6 +418,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         return style
     }()
 
+    /// Wrapping, hung off the model name it belongs to, so a long catalog blurb
+    /// stays visibly attached to its model instead of running back to the margin.
+    private static let modelDetailStyle: NSParagraphStyle = {
+        let style = NSMutableParagraphStyle()
+        style.firstLineHeadIndent = 24
+        style.headIndent = 24
+        style.paragraphSpacing = 2
+        return style
+    }()
+
     /// Builds the structured details pane for a provider: header, provider/LLM
     /// blurbs, an aligned label/value block (with a clickable base URL), and one
     /// line per model with its description / tool support / strengths when known.
@@ -470,14 +485,21 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             add("\nModels\n", NSFont.boldSystemFont(ofSize: 12), primary)
             for model in models {
                 add("  \(model)\n", NSFont.systemFont(ofSize: 12, weight: .semibold), primary)
-                guard let detail = template.modelDetail(for: model) else { continue }
-                if let text = detail.description, !text.isEmpty {
-                    add("      \(text)\n", caption, secondary)
+                // Curated `modelDetails` where the descriptor has them, else the
+                // shared catalog — so every model gets a blurb, not just the
+                // handful anyone hand-wrote.
+                let info = AIModelCatalog.shared.resolve(model: model, template: template)
+                if let text = info.description, !text.isEmpty {
+                    add(text + "\n", caption, secondary, modelDetailStyle)
                 }
-                var caps: [String] = []
-                if let tools = detail.tools { caps.append("Tools: \(tools ? "Yes" : "No")") }
-                if let goodFor = detail.goodFor, !goodFor.isEmpty { caps.append("Good for: \(goodFor)") }
-                if !caps.isEmpty { add("      \(caps.joined(separator: " · "))\n", caption, tertiary) }
+                let badges = ModelChooserContent.capabilityBadges(info).map { "\($0) ✓" }
+                let facts = badges + [ModelChooserContent.factsLine(info)].compactMap { $0 }
+                if !facts.isEmpty {
+                    add(facts.joined(separator: " · ") + "\n", caption, tertiary, modelDetailStyle)
+                }
+                if let goodFor = info.goodFor, !goodFor.isEmpty {
+                    add("Good for: \(goodFor)\n", caption, tertiary, modelDetailStyle)
+                }
             }
         }
 
@@ -512,11 +534,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         infoTextView.backgroundColor = palette.surfaceColor
         infoScroll.backgroundColor = palette.surfaceColor
 
-        // The default (Choose) button shows via its opaque accent fill, but a normal
-        // button's bezel is semi-transparent and vanishes against the themed dark
-        // background — give Cancel an opaque, theme-derived bezel so it stays visible.
-        cancelButton.bezelColor = palette.nsColor(.elevatedSurface)
-        cancelButton.contentTintColor = palette.primaryTextColor
+        // The same explicit Cancel styling the chooser uses, so the two dialogs
+        // agree — AppKit's stock bezel does not (see `applySecondaryActionTheme`).
+        cancelButton.applySecondaryActionTheme(palette)
 
         updateInfo(for: currentRow())
         tableView.reloadData()

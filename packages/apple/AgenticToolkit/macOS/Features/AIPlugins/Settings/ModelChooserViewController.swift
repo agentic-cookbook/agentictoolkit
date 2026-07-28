@@ -86,10 +86,11 @@ public final class ModelChooserViewController: NSViewController {
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError() }
 
+    /// Everything known about `model` at this provider: the shared catalog's
+    /// description/capabilities, this template's context window and prices, and
+    /// any curated `modelDetails` copy (which wins).
     private static func item(for model: String, template: AIPluginDescriptor.ProviderTemplate) -> ModelPickerItem {
-        let detail = template.modelDetail(for: model)
-        return ModelPickerItem(
-            id: model, description: detail?.description, tools: detail?.tools, goodFor: detail?.goodFor)
+        ModelPickerItem(id: model, info: AIModelCatalog.shared.resolve(model: model, template: template))
     }
 
     // MARK: - View tree
@@ -141,7 +142,12 @@ public final class ModelChooserViewController: NSViewController {
             okButton.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
             okButton.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
             cancelButton.trailingAnchor.constraint(equalTo: okButton.leadingAnchor, constant: -10),
-            cancelButton.centerYAnchor.constraint(equalTo: okButton.centerYAnchor)
+            cancelButton.centerYAnchor.constraint(equalTo: okButton.centerYAnchor),
+            // Cancel is drawn by the theme rather than by a stock bezel (see
+            // `applySecondaryActionTheme`), so its size is stated here — matching
+            // the default button beside it — instead of coming from the bezel.
+            cancelButton.heightAnchor.constraint(equalTo: okButton.heightAnchor),
+            cancelButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 72)
         ])
 
         self.view = root
@@ -192,7 +198,8 @@ public final class ModelChooserViewController: NSViewController {
         cancelButton.title = "Cancel"
         cancelButton.bezelStyle = .rounded
         cancelButton.setButtonType(.momentaryPushIn)
-        cancelButton.keyEquivalent = "\u{1b}"          // Escape
+        // Escape is handled once, via PickerKeyboardController's window monitor
+        // (see `viewDidAppear`) — mirroring ProviderPicker, so no key equivalent here.
         cancelButton.target = self
         cancelButton.action = #selector(cancelTapped)
 
@@ -326,6 +333,11 @@ public final class ModelChooserViewController: NSViewController {
             group.addSettingSubview(Self.wrappingLabel(
                 parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
         }
+        // Context window / output limit / token prices — this provider's terms, not
+        // the model's own, so they sit apart from the capability badges above.
+        if let facts = ModelChooserContent.factsLine(item.info) {
+            group.addSettingSubview(Self.wrappingLabel(facts, role: .tertiaryText, textRole: .caption))
+        }
         let size = LocalModelServer.size(of: item.id, in: sizesByModel)
         if let fit = ModelChooserContent.fitLine(
             sizeBytes: size, physicalRAM: physicalRAM,
@@ -373,8 +385,9 @@ public final class ModelChooserViewController: NSViewController {
         view.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
         tableView.backgroundColor = palette.surfaceColor
         tableScroll.backgroundColor = palette.surfaceColor
-        cancelButton.bezelColor = palette.nsColor(.elevatedSurface)
-        cancelButton.contentTintColor = palette.primaryTextColor
+        // Cancel is painted explicitly: AppKit's stock bezel composites away to
+        // nothing in this window (see `applySecondaryActionTheme`).
+        cancelButton.applySecondaryActionTheme(palette)
         renderDetail()   // ThemedLabels/PanelView re-theme themselves; rebuild to be safe
         tableView.reloadData()
     }

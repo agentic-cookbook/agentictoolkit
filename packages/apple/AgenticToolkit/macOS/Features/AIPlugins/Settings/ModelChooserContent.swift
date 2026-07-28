@@ -20,15 +20,79 @@ public enum ModelChooserContent {
         return listed + [current]
     }
 
-    /// Capability badges — prefer the live server list (title-cased), else derive
-    /// `["Tools"]` from a curated `tools == true`.
+    /// Capability badges — prefer the live server list (title-cased), else what the
+    /// shared catalog reports, else `["Tools"]` from a curated `tools == true`.
     public static func capabilityBadges(item: ModelPickerItem, metadata: OllamaModelMetadata?) -> [String] {
         if let metadata, !metadata.capabilities.isEmpty {
             return metadata.capabilities
                 .filter { $0 != "completion" }
-                .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+                .map(titleCased)
         }
-        return item.tools == true ? ["Tools"] : []
+        return capabilityBadges(item.info)
+    }
+
+    /// Capability badges for a resolved model, with no live server to ask —
+    /// the provider picker's per-model lines and the chooser's fallback.
+    public static func capabilityBadges(_ info: AIModelCatalog.ResolvedModel) -> [String] {
+        if !info.capabilities.isEmpty { return info.capabilities.map(titleCased) }
+        return info.tools == true ? ["Tools"] : []
+    }
+
+    /// "131K context · 65K max output · $0.15/$0.60 per M tokens" — the numbers
+    /// this provider serves the model under. `nil` when none are known.
+    ///
+    /// Deliberately excludes capabilities: those are the model's own and render as
+    /// badges, while these differ per gateway (the same model is 262K tokens at one
+    /// and 1M at another), which is why the catalog keys them by template.
+    public static func factsLine(_ info: AIModelCatalog.ResolvedModel) -> String? {
+        var parts: [String] = []
+        if let context = info.contextWindow { parts.append("\(compact(context)) context") }
+        if let output = info.maxOutput { parts.append("\(compact(output)) max output") }
+        if let price = priceText(input: info.inputCostPerM, output: info.outputCostPerM) {
+            parts.append(price)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private static func titleCased(_ word: some StringProtocol) -> String {
+        word.prefix(1).uppercased() + word.dropFirst()
+    }
+
+    /// Token counts as everyone quotes them: 131072 -> "128K", 200000 -> "200K",
+    /// 1048576 and 1000000 -> "1M".
+    ///
+    /// Which unit to divide by is the whole trick — a binary limit divided by 1000
+    /// reads as the wrong number ("131K context" for what the vendor calls 128K),
+    /// and a decimal limit divided by 1024 reads as "195K" for 200000. A limit that
+    /// is an exact multiple of 1024 was set in binary; anything else was set in
+    /// decimal.
+    private static func compact(_ value: Int) -> String {
+        let unit = value % 1024 == 0 ? 1024.0 : 1000.0
+        if Double(value) >= unit * unit { return "\(Int((Double(value) / (unit * unit)).rounded()))M" }
+        if Double(value) >= unit { return "\(Int((Double(value) / unit).rounded()))K" }
+        return "\(value)"
+    }
+
+    /// Prices are per million tokens, input first. A provider that publishes only
+    /// one of the two says which one it is rather than implying both.
+    private static func priceText(input: Double?, output: Double?) -> String? {
+        switch (input, output) {
+        case let (input?, output?): return "$\(money(input))/$\(money(output)) per M tokens"
+        case let (input?, nil): return "$\(money(input)) per M input tokens"
+        case let (nil, output?): return "$\(money(output)) per M output tokens"
+        default: return nil
+        }
+    }
+
+    /// Three decimals, trailing zeros trimmed — $0.435 keeps its precision and
+    /// $1.00 reads as "$1".
+    private static func money(_ value: Double) -> String {
+        var text = String(format: "%.3f", value)
+        if text.contains(".") {
+            while text.hasSuffix("0") { text.removeLast() }
+            if text.hasSuffix(".") { text.removeLast() }
+        }
+        return text
     }
 
     /// "32.8B · Q4_K_M · 32K context" from live specs; nil when none are known.
