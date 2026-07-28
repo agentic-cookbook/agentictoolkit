@@ -1,0 +1,52 @@
+/*
+ * bitbag's dock — his face riding above his chat, as a column.
+ *
+ * STRUCTURE ONLY, and deliberately unpositioned: where the dock parks is the
+ * host's call (fixed on a marketing page, absolute inside a footer bar), and a
+ * `position` baked in here would have to be fought off at every mount. The skin
+ * is the host's too — the chat is painted by whichever toolkit theme BitbagChat
+ * scopes to it. What lives here is only what is true of the dock everywhere:
+ * the column, the pointer contract, and how he dozes when the chat folds away.
+ */
+
+.bb-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* The column itself ignores the pointer so it never eats a scroll or tap meant
+   * for the page behind it; each child re-enables pointer events for itself. */
+  pointer-events: none;
+}
+
+/* His face, riding just above the chat. `overflow: visible` on his SVG lets his
+ * emotional scale/spin spill up past this box into the empty space above,
+ * uncropped. */
+.bb-dock__avatar {
+  pointer-events: auto;
+  margin-bottom: 0.2rem;
+  /* He grows out of his chat, so the scale is pinned to the edge he sits on:
+   * shrinking pulls him DOWN onto the composer rather than collapsing toward his
+   * own middle and leaving him hovering. Transform rather than width so the
+   * growth composites on the GPU and never reflows the bottom-anchored column —
+   * his layout box is unchanged, so the chat below him never moves. */
+  transform-origin: bottom center;
+  transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bb-dock__chat {
+  pointer-events: auto;
+  width: 100%;
+}
+
+/* Chat folded away → he dozes at half size, sitting on his own entry line.
+ *
+ * The chat package puts `.pc-collapsed` on `.persona-chat` whenever the composer
+ * is unfocused (its `minimal` inactive sizing), so `:has()` lets the dock react
+ * to its own descendant's state with no React plumbing at all — the chat already
+ * owns that truth, and nothing here can drift out of sync with it. The polarity
+ * is picked so a browser without `:has()` degrades to full size rather than to a
+ * permanently shrunken bitbag: full is the DEFAULT, and the collapsed rule is
+ * what shrinks him. */
+.bb-dock:has(.persona-chat.pc-collapsed) .bb-dock__avatar {
+  transform: scale(0.5);
+}

@@ -4,15 +4,16 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   InlineChatView,
   useBlockCursor,
-  useCaretGaze,
   useChatSession,
   useConnectRitual,
   useInputFocusReclaim,
+  usePersonaGaze,
   usePersonaMood,
   useRotatingPhrase,
   useTransientEcho,
   type ChatBackend,
   type GazeVector,
+  type InlineChatSizing,
 } from '@agenticdevelopertoolkit/chat'
 import { ThemeStyle, type ThemeKey } from '@agenticdevelopertoolkit/themes'
 import { BitbagBackend } from './backend'
@@ -43,14 +44,33 @@ const TYPING_MOODS: readonly BitbagExpression[] = ['inquisitive', 'excited']
 const ANSWER_BEAT = { mood: 'smug' as const, ms: 2200 }
 /** He holds his random utterances for this long after first connecting. */
 const QUIET_START_MS = 30000
+/** How far the dock's transcript may grow before it starts scrolling. */
+const DOCK_MAX_HEIGHT = '46vh'
 
 // The chat's visual skin comes entirely from the toolkit theme applied here,
 // scoped to this wrapper so switching it never touches the rest of the page.
 const THEME_SCOPE = 'pc-theme-scope'
 
+/**
+ * How bitbag occupies the page — the one axis the two mountings differ on, so
+ * they can't drift into two forks of him (which is what happened the last time
+ * a site wanted the dock).
+ *
+ * - `stage`: he IS the page (bitbag.ai). He is summoned — the composer stays
+ *   shut while a status line cycles "bitbag summoned, success unlikely..." and
+ *   he waits to be reached for. Making you wait for him is the joke.
+ * - `dock`: he is a fixture in the corner of a page about something else (the
+ *   shared footer). He arrives already connected and folds down to a single
+ *   entry line when idle. A fixture that won't answer until it has finished
+ *   performing is just broken, so the summoning theater is dropped here.
+ */
+export type BitbagVariant = 'stage' | 'dock'
+
 export interface BitbagChatProps {
   /** The toolkit theme that skins the chat. */
   theme: ThemeKey
+  /** How he occupies the page — see BitbagVariant. Defaults to `stage`. */
+  variant?: BitbagVariant
   /**
    * The chat backend driving the conversation. Defaults to bitbag's built-in
    * scripted mock (`BitbagBackend`), so consumers that omit it are unchanged;
@@ -65,19 +85,30 @@ export interface BitbagChatProps {
   utterance?: { text: string; id: number } | null
   /** Reports when bitbag should be muted, so the status holds the spinner, not his chatter. */
   onMute?: (mute: boolean) => void
-  /** Caps the chat's height at this element's bottom (plus a gap) so it never rises over him. */
+  /**
+   * The avatar element he is measured against: his eyes track the caret relative
+   * to this frame's horizontal centre, and on the `stage` it also caps the chat's
+   * height at the element's bottom so the transcript never rises over him. (In the
+   * `dock` he sits directly above his chat, so the cap comes from the viewport
+   * instead — an element-offset there would leave the transcript no room at all.)
+   */
   anchorRef?: RefObject<HTMLElement | null>
+  /** Extra classes on the theme-scope root — the host's positioning wrapper. */
+  className?: string
 }
 
 export function BitbagChat({
   theme,
+  variant = 'stage',
   backend: backendProp,
   onExpressionHint,
   onGazeHint,
   utterance,
   onMute,
   anchorRef,
+  className,
 }: BitbagChatProps) {
+  const isDock = variant === 'dock'
   // Default to the built-in scripted mock so existing consumers are byte-for-byte
   // behavior-identical; a supplied backend takes over verbatim.
   const backend = useMemo(() => backendProp ?? new BitbagBackend(), [backendProp])
@@ -85,15 +116,39 @@ export function BitbagChat({
   // No welcome message — the connect ritual types it in instead.
   const session = useChatSession({ backend, persona: PERSONA })
 
-  const { inputDisabled, connected, statusLine } = useConnectRitual({
+  // One ritual, two arrivals. On the stage he is summoned: the wait lines cycle
+  // until the reader reaches for him. In the dock he arrives already connected
+  // (`engageOn: 'mount'`), so it runs straight through — welcome, beat, greeting,
+  // composer open — and the summoning lines are never shown.
+  const { inputDisabled, connected, engaged, statusLine } = useConnectRitual({
     say: session.say,
     welcome: WELCOME,
     greeting: GREETING,
-    waitLines: SUMMON_SEQUENCE,
-    stallLines: NEGOTIATION,
+    waitLines: isDock ? undefined : SUMMON_SEQUENCE,
+    stallLines: isDock ? undefined : NEGOTIATION,
     connectingLine: CONNECTING,
     connectedLine: CONNECTED,
+    engageOn: isDock ? 'mount' : 'pointer',
   })
+
+  // "The reader has deliberately reached for him" — which on the stage the ritual
+  // already tracks (being reached for is what summons him), but in the dock is a
+  // DIFFERENT fact from arriving: he connects at mount there, and reusing the
+  // ritual's flag would have him engaged from the first frame and so never
+  // following a cursor at all. So the dock watches for the reach itself.
+  const [dockEngaged, setDockEngaged] = useState(false)
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!isDock || !el || dockEngaged) return
+    const onEngage = (): void => setDockEngaged(true)
+    el.addEventListener('pointerdown', onEngage)
+    el.addEventListener('focusin', onEngage)
+    return () => {
+      el.removeEventListener('pointerdown', onEngage)
+      el.removeEventListener('focusin', onEngage)
+    }
+  }, [isDock, dockEngaged])
+  const reached = isDock ? dockEngaged : engaged
 
   // He's "responding" both while awaiting the reply AND while it streams out.
   const streaming = session.messages.some((m) => m.isStreaming)
@@ -118,7 +173,14 @@ export function BitbagChat({
     if (session.isTyping) setUserTyping(false)
   }, [session.isTyping])
 
-  useInputFocusReclaim(wrapperRef, !inputDisabled)
+  // Gated on having been reached for, not merely on the composer being open. The
+  // reclaim's first act is to focus the input, and the input taking focus is what
+  // the sizing hook reads as engagement — so in the dock, enabling it the instant
+  // he finished greeting would have him seize the caret and hold himself open
+  // over the page. He greets from the corner and folds back down. (On the stage
+  // this is the same condition as before: being reached for is what starts the
+  // ritual, so the composer never opens before `reached`.)
+  useInputFocusReclaim(wrapperRef, reached && !inputDisabled)
 
   const sentCount = session.messages.reduce((n, m) => n + (m.isPersona ? 0 : 1), 0)
   const placeholder = useRotatingPhrase(PLACEHOLDERS, sentCount)
@@ -147,11 +209,42 @@ export function BitbagChat({
     onMute?.(responding || beat || inputDisabled || quietStart)
   }, [responding, beat, inputDisabled, quietStart, onMute])
 
-  useCaretGaze(wrapperRef, anchorRef, (g) => onGazeHint?.(g))
+  // His two gaze sources — cursor-follow before he's reached for, caret-follow
+  // once he has been — arbitrated by one toolkit hook, so both mountings share a
+  // single correct implementation of the switch. onGazeHint's own null, when the
+  // box empties, hands his gaze back to his idle reflexes.
+  usePersonaGaze(wrapperRef, anchorRef, reached, (g: GazeVector | null) => onGazeHint?.(g))
   const caretBox = useBlockCursor(wrapperRef, theme === TERMINAL_THEME, sentCount)
 
+  // On the stage the transcript grows up until it reaches bitbag's bottom edge,
+  // so it never rises over him, and it is always open. In the dock he rides
+  // directly above his chat — an element-offset there would leave the transcript
+  // no room — so it caps against the viewport instead, and folds away to just the
+  // composer bar when idle (`inactive: minimal`), which is also how he sits on
+  // load: collapsed, waiting to be reached for.
+  const sizing: InlineChatSizing = useMemo(
+    () =>
+      isDock
+        ? {
+            active: { mode: 'content-hugging', maxHeight: { kind: 'css', value: DOCK_MAX_HEIGHT } },
+            inactive: { mode: 'minimal' },
+            transition: 'animated',
+          }
+        : {
+            active: {
+              mode: 'content-hugging',
+              maxHeight: anchorRef
+                ? { kind: 'element-offset', ref: anchorRef, gapPx: 24 }
+                : { kind: 'viewport-offset', topOffsetPx: 80 },
+            },
+          },
+    [isDock, anchorRef],
+  )
+
+  const rootClass = [THEME_SCOPE, className].filter(Boolean).join(' ')
+
   return (
-    <div ref={wrapperRef} className={THEME_SCOPE}>
+    <div ref={wrapperRef} className={rootClass}>
       <ThemeStyle theme={theme} scope={`.${THEME_SCOPE}`} />
       <InlineChatView
         session={session}
@@ -165,14 +258,7 @@ export function BitbagChat({
         statusUtterance={inputDisabled ? statusLine : echo}
         inputDisabled={inputDisabled}
         fadeOlder
-        sizing={{
-          active: {
-            mode: 'content-hugging',
-            maxHeight: anchorRef
-              ? { kind: 'element-offset', ref: anchorRef, gapPx: 24 }
-              : { kind: 'viewport-offset', topOffsetPx: 80 },
-          },
-        }}
+        sizing={sizing}
       />
       {/* Block cursor. left/top/width/height are viewport coords from
           caretMetrics — position:fixed (set in the theme CSS) resolves them
