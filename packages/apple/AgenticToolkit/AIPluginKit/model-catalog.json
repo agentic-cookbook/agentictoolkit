@@ -6831,14 +6831,6 @@
         "maxOutput": 40960,
         "inputCostPerM": 0.29,
         "outputCostPerM": 0.59
-      },
-      "whisper-large-v3": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
-      "whisper-large-v3-turbo": {
-        "contextWindow": 0,
-        "maxOutput": 0
       }
     },
     "kimi": {
@@ -7323,7 +7315,6 @@
       },
       "Qwen/Qwen3-Embedding-8B": {
         "contextWindow": 32768,
-        "maxOutput": 0,
         "inputCostPerM": 0.01,
         "outputCostPerM": 0
       },
@@ -8113,7 +8104,6 @@
       },
       "black-forest-labs/flux.1-dev": {
         "contextWindow": 4096,
-        "maxOutput": 0,
         "inputCostPerM": 0,
         "outputCostPerM": 0
       },
@@ -8125,7 +8115,6 @@
       },
       "black-forest-labs/flux_1-schnell": {
         "contextWindow": 77,
-        "maxOutput": 0,
         "inputCostPerM": 0,
         "outputCostPerM": 0
       },
@@ -8358,7 +8347,6 @@
         "outputCostPerM": 0
       },
       "nvidia/active-speaker-detection": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8370,7 +8358,6 @@
         "outputCostPerM": 0
       },
       "nvidia/cosmos-predict1-5b": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8382,13 +8369,11 @@
         "outputCostPerM": 0
       },
       "nvidia/cosmos-transfer1-7b": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
       },
       "nvidia/cosmos-transfer2_5-2b": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8460,7 +8445,6 @@
         "outputCostPerM": 0
       },
       "nvidia/magpie-tts-zeroshot": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8568,7 +8552,6 @@
         "outputCostPerM": 0
       },
       "nvidia/synthetic-video-detector": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8580,7 +8563,6 @@
         "outputCostPerM": 0
       },
       "nvidia/usdvalidate": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8598,7 +8580,6 @@
         "outputCostPerM": 0
       },
       "openai/whisper-large-v3": {
-        "contextWindow": 0,
         "maxOutput": 4096,
         "inputCostPerM": 0,
         "outputCostPerM": 0
@@ -8610,14 +8591,10 @@
         "outputCostPerM": 0
       },
       "qwen/qwen-image": {
-        "contextWindow": 0,
-        "maxOutput": 0,
         "inputCostPerM": 0,
         "outputCostPerM": 0
       },
       "qwen/qwen-image-edit": {
-        "contextWindow": 0,
-        "maxOutput": 0,
         "inputCostPerM": 0,
         "outputCostPerM": 0
       },
@@ -8689,10 +8666,6 @@
       }
     },
     "openai": {
-      "chatgpt-image-latest": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
       "gpt-3.5-turbo": {
         "contextWindow": 16385,
         "maxOutput": 4096,
@@ -8995,21 +8968,7 @@
         "inputCostPerM": 5,
         "outputCostPerM": 30
       },
-      "gpt-image-1": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
-      "gpt-image-1-mini": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
-      "gpt-image-1.5": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
       "gpt-image-2": {
-        "contextWindow": 0,
-        "maxOutput": 0,
         "inputCostPerM": 5,
         "outputCostPerM": 30
       },
@@ -9909,18 +9868,6 @@
         "maxOutput": 256000,
         "inputCostPerM": 0.185,
         "outputCostPerM": 1.11
-      },
-      "step-tts-2": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
-      "stepaudio-2.5-asr": {
-        "contextWindow": 0,
-        "maxOutput": 0
-      },
-      "stepaudio-2.5-tts": {
-        "contextWindow": 0,
-        "maxOutput": 0
       }
     },
     "tencent-hunyuan": {
@@ -10194,20 +10141,16 @@
         "outputCostPerM": 2
       },
       "grok-imagine-image": {
-        "contextWindow": 8000,
-        "maxOutput": 0
+        "contextWindow": 8000
       },
       "grok-imagine-image-quality": {
-        "contextWindow": 8000,
-        "maxOutput": 0
+        "contextWindow": 8000
       },
       "grok-imagine-video": {
-        "contextWindow": 1024,
-        "maxOutput": 0
+        "contextWindow": 1024
       },
       "grok-imagine-video-1.5": {
-        "contextWindow": 1024,
-        "maxOutput": 0
+        "contextWindow": 1024
       }
     },
     "z-ai": {

@@ -35,15 +35,31 @@ struct ModelUseFacetTests {
         #expect(facets == [.agents, .vision, .problemSolving])
     }
 
-    @Test("facets(for:) reads id, description, goodFor and the extra text")
+    @Test("facets(for:) reads description, goodFor and the extra text — never the id")
     func fromResolvedModel() {
         let model = AIModelCatalog.ResolvedModel(
-            id: "qwen3-coder", description: "General purpose.", goodFor: "translation")
+            id: "mystery-7b", description: "Great at coding.", goodFor: "translation")
         #expect(ModelUseFacet.facets(for: model).isSuperset(of: [.coding, .translation]))
+        // A name is marketing, not description: "-fast" is a serving tier, not a
+        // budget model, and "-instruct"/"-chat" is a training recipe on most of the
+        // catalog. A model described only by its name earns no facets — and, having
+        // none, still passes every filter (see `unknownPasses`).
+        #expect(ModelUseFacet.facets(for: AIModelCatalog.ResolvedModel(id: "claude-opus-5-fast")).isEmpty)
+        #expect(ModelUseFacet.facets(for: AIModelCatalog.ResolvedModel(id: "qwen3-coder")).isEmpty)
         // A live blurb the catalog never had still earns facets.
         #expect(ModelUseFacet.facets(for: AIModelCatalog.ResolvedModel(id: "mystery"),
                                      extraText: "excels at math and logic puzzles")
             .contains(.problemSolving))
+    }
+
+    @Test("'large language model' is not evidence of translation")
+    func languageIsNotTranslation() {
+        // The boilerplate opener of half the catalog's blurbs — matching it made
+        // "Translation" list models that translate nothing.
+        #expect(ModelUseFacet.facets(text: "A large language model from Acme.")
+            .contains(.translation) == false)
+        #expect(ModelUseFacet.facets(text: "Translates between 30 languages").contains(.translation))
+        #expect(ModelUseFacet.facets(text: "Strong on rare language pairs").contains(.translation))
     }
 
     @Test("an empty selection filters nothing")

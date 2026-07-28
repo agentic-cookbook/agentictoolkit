@@ -60,12 +60,20 @@ public enum ModelChooserContent {
     /// `descriptions` carries the live blurbs fetched per model (ollama.com), which
     /// is where a local model's only prose comes from; without it every model on a
     /// local server would be facet-less.
+    ///
+    /// `keeping` is the currently chosen model, which survives every filter — same
+    /// rule as `offeredModels(listed:current:)`. Filtering it out would move the
+    /// selection to whatever landed at row 0, and the filters re-run on their own
+    /// when late sizes and blurbs arrive, so the choice could change with nobody
+    /// touching anything.
     public static func filter(_ items: [ModelPickerItem], query: String,
                               uses: Set<ModelUseFacet> = [],
                               descriptions: [String: String] = [:],
-                              fit: FitFilter? = nil) -> [ModelPickerItem] {
+                              fit: FitFilter? = nil,
+                              keeping: String = "") -> [ModelPickerItem] {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
         return items.filter { item in
+            if item.id == keeping, !keeping.isEmpty { return true }
             if !uses.isEmpty {
                 let facets = ModelUseFacet.facets(for: item.info, extraText: descriptions[item.id])
                 guard ModelUseFacet.matches(facets: facets, selected: uses) else { return false }
@@ -99,10 +107,14 @@ public enum ModelChooserContent {
     /// Deliberately excludes capabilities: those are the model's own and render as
     /// badges, while these differ per gateway (the same model is 262K tokens at one
     /// and 1M at another), which is why the catalog keys them by template.
+    ///
+    /// A non-positive limit is treated as unknown, not printed: gateways publish a
+    /// literal `0` for "we don't say", and "0 context · 0 max output" reads as a
+    /// model that can't be used at all.
     public static func factsLine(_ info: AIModelCatalog.ResolvedModel) -> String? {
         var parts: [String] = []
-        if let context = info.contextWindow { parts.append("\(compact(context)) context") }
-        if let output = info.maxOutput { parts.append("\(compact(output)) max output") }
+        if let context = info.contextWindow, context > 0 { parts.append("\(compact(context)) context") }
+        if let output = info.maxOutput, output > 0 { parts.append("\(compact(output)) max output") }
         if let price = priceText(input: info.inputCostPerM, output: info.outputCostPerM) {
             parts.append(price)
         }
@@ -114,15 +126,16 @@ public enum ModelChooserContent {
     }
 
     /// Token counts as everyone quotes them: 131072 -> "128K", 200000 -> "200K",
-    /// 1048576 and 1000000 -> "1M".
+    /// 128000 -> "128K", 1048576 and 1000000 -> "1M".
     ///
     /// Which unit to divide by is the whole trick — a binary limit divided by 1000
     /// reads as the wrong number ("131K context" for what the vendor calls 128K),
-    /// and a decimal limit divided by 1024 reads as "195K" for 200000. A limit that
-    /// is an exact multiple of 1024 was set in binary; anything else was set in
-    /// decimal.
+    /// and a decimal limit divided by 1024 reads as "195K" for 200000. Round decimal
+    /// numbers are asked FIRST, because a limit can be an exact multiple of both:
+    /// 128000 is 125 × 1024, and dividing it in binary prints "125K" for the window
+    /// every vendor quotes as 128K.
     private static func compact(_ value: Int) -> String {
-        let unit = value % 1024 == 0 ? 1024.0 : 1000.0
+        let unit = value % 1000 == 0 || value % 1024 != 0 ? 1000.0 : 1024.0
         if Double(value) >= unit * unit { return "\(Int((Double(value) / (unit * unit)).rounded()))M" }
         if Double(value) >= unit { return "\(Int((Double(value) / unit).rounded()))K" }
         return "\(value)"
@@ -141,8 +154,22 @@ public enum ModelChooserContent {
 
     /// Three decimals, trailing zeros trimmed — $0.435 keeps its precision and
     /// $1.00 reads as "$1".
+    ///
+    /// A price three decimals would misstate by more than half a percent gets as
+    /// many as it needs: the cheapest gateways charge $0.0002 per M tokens, which
+    /// three decimals print as "$0" — free, the one error a price line must not
+    /// make — and $0.0008, which they round up by a quarter.
     private static func money(_ value: Double) -> String {
-        var text = String(format: "%.3f", value)
+        for decimals in 3...8 {
+            let text = String(format: "%.\(decimals)f", value)
+            let shown = Double(text) ?? value
+            if abs(shown - value) <= abs(value) * 0.005 { return trimmingZeros(text) }
+        }
+        return trimmingZeros(String(format: "%.8f", value))
+    }
+
+    private static func trimmingZeros(_ string: String) -> String {
+        var text = string
         if text.contains(".") {
             while text.hasSuffix("0") { text.removeLast() }
             if text.hasSuffix(".") { text.removeLast() }
@@ -185,10 +212,18 @@ public enum ModelChooserContent {
         String(format: value == value.rounded() ? "%.0f" : "%.1f", value)
     }
 
-    /// The curated blurb, else the live-fetched description (`fetched`: the
-    /// ollama.com page blurb for local models, hosted-catalog text for remote
-    /// ones — see `LocalProviderModelStore.fetchModelInfo`), else the curated
-    /// good-for line, else a plain placeholder.
+    /// The model's own blurb — curated `modelDetails` copy where a descriptor has
+    /// it, else the shared catalog's description (both arrive already merged, in
+    /// `item.description`; see `AIModelCatalog.resolve`) — then the live-fetched
+    /// text, then the curated good-for line, then a plain placeholder.
+    ///
+    /// The shipped text is preferred over `fetched` deliberately: it is cleaned to
+    /// one line, identical at every gateway serving the model, and it paints on the
+    /// first frame instead of after a round trip. `fetched` (the ollama.com page
+    /// blurb for local models, hosted-catalog text for remote ones — see
+    /// `LocalProviderModelStore.fetchModelInfo`) then covers exactly what the
+    /// catalog can't: models it has never seen, which is every tag pulled onto a
+    /// local server.
     public static func descriptionText(item: ModelPickerItem, fetched: String? = nil) -> String {
         if let text = item.description, !text.isEmpty { return text }
         if let fetched, !fetched.isEmpty { return fetched }

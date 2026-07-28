@@ -55,6 +55,11 @@ def test_clean_collapses_markdown_into_one_line():
     assert text == "Fast model. See the docs."
 
 
+def test_clean_strips_hashtags_only_at_the_end():
+    """A `#` mid-sentence is part of the prose, not a tag to drop."""
+    assert g._clean("Ranked #1-overall for coding. #benchmarks") == "Ranked #1-overall for coding."
+
+
 def test_clean_trims_a_truncated_blurb_back_to_a_whole_sentence():
     """adh truncates long blurbs mid-sentence; the dangling clause reads as a bug."""
     assert g._clean("A reasoning model. It is optimized for...") == "A reasoning model."
@@ -148,6 +153,19 @@ def test_local_only_providers_get_no_offerings():
     assert next(m for m in catalog["models"] if m["id"] == "llama3.2")["description"] == "Small."
 
 
+def test_a_published_zero_limit_is_not_a_limit():
+    """Gateways publish `0` for "we don't say" — shipping it read out as
+    "0 context · 0 max output" in the picker. A zero PRICE is real, and stays."""
+    catalog = _catalog_of(
+        _vendor("Groq", [_model("m", contextWindow=0, maxOutput=0, inputCostPerM=0)]))
+    assert catalog["offerings"]["groq"]["m"] == {"inputCostPerM": 0}
+
+
+def test_a_model_whose_only_metadata_is_zero_limits_produces_no_offering():
+    catalog = _catalog_of(_vendor("Groq", [_model("m", contextWindow=0, maxOutput=0)]))
+    assert catalog["offerings"] == {}
+
+
 def test_a_single_vendor_plugin_feeds_every_template_it_declares():
     """ClaudeAPI ships two templates (API key and Max-token auth) for one vendor;
     both serve the same models, so both get the offerings."""
@@ -164,6 +182,13 @@ def test_catalog_carries_its_schema_version_and_provenance():
     assert catalog["schemaVersion"] == g.SCHEMA_VERSION
     assert catalog["generatedAt"].endswith("Z")
     assert catalog["source"].startswith("https://")
+
+
+def test_source_records_the_base_url_the_rows_came_from():
+    """A catalog built against a staging adh must not claim production as its source."""
+    catalog = g.build_catalog([_vendor("Groq", [_model("m", "A model.")])],
+                              base_url="https://staging.adh.test")
+    assert catalog["source"].startswith("https://staging.adh.test")
 
 
 def test_models_and_offerings_are_sorted_for_a_stable_diff():

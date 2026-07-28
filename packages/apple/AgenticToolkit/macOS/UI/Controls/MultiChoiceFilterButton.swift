@@ -115,6 +115,10 @@ public final class MultiChoiceFilterButton: NSPopUpButton {
         menu?.items.first?.title = "\(label): \(summary)"
         // A pull-down redraws its title from item 0 only when the menu is reset.
         synchronizeTitleAndSelectedItem()
+        // The title just changed length, and the button's intrinsic width is measured
+        // from it — without this, a longer summary lays out inside the old width and
+        // gets truncated ("Good for: Cod…").
+        invalidateIntrinsicContentSize()
     }
 
     private func applyTheme(_ palette: SemanticPalette) {

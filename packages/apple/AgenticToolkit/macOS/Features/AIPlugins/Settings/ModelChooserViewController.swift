@@ -439,7 +439,8 @@ public final class ModelChooserViewController: NSViewController {
             fit: fitCheckbox.state == .on
                 ? .init(sizes: sizesByModel, physicalRAM: physicalRAM,
                         warnPct: context.warnPct, blockPct: context.blockPct)
-                : nil)
+                : nil,
+            keeping: selectedModel)
         tableView.reloadData()
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
     }

@@ -58,6 +58,17 @@ struct ModelChooserContentTests {
         // A decimal limit stays decimal — 200000 is "200K", never "195K".
         #expect(ModelChooserContent.factsLine(
             AIModelCatalog.ResolvedModel(id: "m", contextWindow: 200_000)) == "200K context")
+        // 128000 is an exact multiple of BOTH units (125 × 1024): the round decimal
+        // reading wins, because 128K is what every vendor publishing it calls it.
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", contextWindow: 128_000)) == "128K context")
+        // A published 0 is "this gateway doesn't say", not a model that holds no
+        // tokens — it prints nothing rather than "0 context".
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", contextWindow: 0, maxOutput: 0)) == nil)
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", contextWindow: 0, maxOutput: 8_192))
+            == "8K max output")
         // A published half-price says which half it is.
         #expect(ModelChooserContent.factsLine(
             AIModelCatalog.ResolvedModel(id: "m", inputCostPerM: 1.75))
@@ -66,6 +77,11 @@ struct ModelChooserContentTests {
         #expect(ModelChooserContent.factsLine(
             AIModelCatalog.ResolvedModel(id: "m", inputCostPerM: 0, outputCostPerM: 0.435))
             == "$0/$0.435 per M tokens")
+        // A price below a tenth of a cent gets the digits it needs — the cheapest
+        // gateways really do charge $0.0002, and "$0" would say they charge nothing.
+        #expect(ModelChooserContent.factsLine(
+            AIModelCatalog.ResolvedModel(id: "m", inputCostPerM: 0.0002, outputCostPerM: 0.0008))
+            == "$0.0002/$0.0008 per M tokens")
         // Capabilities alone are not facts about the gateway.
         #expect(ModelChooserContent.factsLine(
             AIModelCatalog.ResolvedModel(id: "m", capabilities: ["tools"])) == nil)
@@ -81,11 +97,16 @@ struct ModelChooserContentTests {
         #expect(ModelChooserContent.specLine(nil) == nil)
     }
 
-    @Test("descriptionText uses curated text or a placeholder")
+    @Test("descriptionText prefers the shipped blurb, then the fetched one, then a placeholder")
     func description() {
         let item1 = ModelPickerItem(id: "m", description: "Balanced.")
         #expect(ModelChooserContent.descriptionText(item: item1) == "Balanced.")
+        // The shipped text is cleaned, gateway-independent and instant, so it wins.
+        #expect(ModelChooserContent.descriptionText(item: item1, fetched: "From the web") == "Balanced.")
         let item2 = ModelPickerItem(id: "m")
+        // …and the live fetch covers exactly what it can't: models nobody described,
+        // which on a local server is every tag the user pulled.
+        #expect(ModelChooserContent.descriptionText(item: item2, fetched: "From the web") == "From the web")
         #expect(ModelChooserContent.descriptionText(item: item2) == "No description yet.")
     }
 
@@ -177,6 +198,24 @@ struct ModelChooserContentTests {
         let warnFit = ModelChooserContent.FitFilter(
             sizes: ["coder-7b": 20_000_000_000], physicalRAM: ram)
         #expect(warnFit.keeps("coder-7b"))
+    }
+
+    @Test("the chosen model survives every filter")
+    func filterKeepsCurrentSelection() {
+        // Nothing may filter the current choice out of the list: the row that lands
+        // at 0 becomes the selection, and the filters re-run by themselves as sizes
+        // and blurbs arrive — so the chosen model could change with nobody touching
+        // anything.
+        #expect(ModelChooserContent.filter(filterItems, query: "coder", keeping: "scribe-7b").map(\.id)
+            == ["coder-7b", "scribe-7b"])
+        let fit = ModelChooserContent.FitFilter(
+            sizes: ["scribe-7b": 51_000_000_000], physicalRAM: 64_000_000_000)
+        #expect(ModelChooserContent.filter(
+            filterItems, query: "", uses: [.coding], fit: fit, keeping: "scribe-7b").map(\.id)
+            == ["coder-7b", "scribe-7b", "mystery-7b"])
+        // Nothing chosen yet: the filter behaves exactly as before.
+        #expect(ModelChooserContent.filter(filterItems, query: "coder", keeping: "").map(\.id)
+            == ["coder-7b"])
     }
 
     @Test("query, uses and fit are ANDed")

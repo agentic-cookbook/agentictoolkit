@@ -76,7 +76,7 @@ public enum ModelUseFacet: String, CaseIterable, Sendable, Codable {
         case .writing: return ["writ", "creative", "copywriting", "storytell", "draft", "editing", "prose"]
         case .vision: return ["vision", "visual", "multimodal", "ocr", "video", "chart", "screenshot", "image"]
         case .agents: return ["agent", "agentic", "tool", "orchestrat", "workflow", "autonom"]
-        case .translation: return ["translat", "multiling", "localization", "language"]
+        case .translation: return ["translat", "multiling", "localization"]
         case .speech: return ["audio", "speech", "transcri", "voice", "tts", "asr"]
         case .economy: return ["fast", "efficient", "lightweight", "cheap", "inexpensive"]
         }
@@ -93,7 +93,7 @@ public enum ModelUseFacet: String, CaseIterable, Sendable, Codable {
         case .writing: return ["text generation", "content creation"]
         case .vision: return ["vision-language", "document understanding"]
         case .agents: return ["function calling", "tool use", "long-horizon", "long horizon"]
-        case .translation: return []
+        case .translation: return ["language pairs", "cross-language"]
         case .speech: return ["text-to-speech", "speech-to-text"]
         case .economy: return ["low cost", "low-cost", "high volume", "high-volume", "cost-effective",
                                "cost effective", "high throughput", "high-throughput"]
@@ -116,10 +116,16 @@ public enum ModelUseFacet: String, CaseIterable, Sendable, Codable {
     /// `extraText` carries description text the catalog doesn't have — a local
     /// server's ollama.com blurb, say — so a live-fetched model the catalog has
     /// never seen still earns facets.
+    ///
+    /// The model's *id* is deliberately not evidence. Names are marketing, not
+    /// description: `-instruct` and `-chat` are a training-recipe suffix on most of
+    /// the catalog rather than a claim about conversation, and `claude-opus-5-fast`
+    /// would land the flagship model under "Economy". A model with no prose earns no
+    /// facets and stays visible anyway — see `matches`.
     public static func facets(
         for model: AIModelCatalog.ResolvedModel, extraText: String? = nil
     ) -> Set<ModelUseFacet> {
-        facets(text: [model.id, model.description, model.goodFor, extraText]
+        facets(text: [model.description, model.goodFor, extraText]
             .compactMap { $0 }.joined(separator: " "),
                capabilities: model.capabilities)
     }

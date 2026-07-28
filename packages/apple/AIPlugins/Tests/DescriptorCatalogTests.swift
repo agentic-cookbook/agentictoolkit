@@ -96,8 +96,12 @@ struct DescriptorCatalogTests {
                 }
             }
         }
-        #expect(listed > 500)
-        #expect(described * 10 > listed * 9, "\(described)/\(listed) shipped models described")
+        // Both bars sit far below today's figures (861 listed, 93% described) on
+        // purpose: they must fail for a BREAKAGE — an alias rule that stops
+        // resolving, a catalog resource that stops shipping — and not for a routine
+        // refresh that moves the numbers a few points, which is data news, not a bug.
+        #expect(listed > 100, "\(listed) models listed across the shipped descriptors")
+        #expect(described * 2 > listed, "\(described)/\(listed) shipped models described")
     }
 
     @Test("OpenAI-compatible Ollama template is keyless and ships no fabricated models")

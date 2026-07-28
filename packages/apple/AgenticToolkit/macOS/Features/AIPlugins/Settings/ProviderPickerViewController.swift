@@ -102,6 +102,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     private var themeObserver: ThemePaletteObserver?
     private var didSetInitialSplit = false
+    /// Is the field's text a mirrored selection (`moveSelection`) rather than a typed
+    /// query? A mirrored name must never be filtered ON: arrowing to "Anthropic" and
+    /// then picking a "Good for" facet would otherwise narrow the list to Anthropic,
+    /// as if the user had typed it.
+    private var queryIsMirroredSelection = false
     private let keyboard = PickerKeyboardController()
 
     /// Live model lists fetched for OpenAI-shaped (local/compatible) providers,
@@ -136,19 +141,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         self.tableWidth = tableW
 
         let infoWidth: CGFloat = 400
-        // Height for the table to show every row without scrolling.
-        let tableHeight = CGFloat(max(rows.count, 1)) * 24 + 28 /* header */ + 4
-        // Height for the tallest details pane (measured at infoWidth) without scrolling.
-        let palette = ThemePaletteObserver.currentPalette
-        let textWidth = infoWidth - 26 /* text-container insets + line padding */
-        let detailsHeight = rows.map { row in
-            // No live models are cached yet at init time — measure against the
-            // static snapshot, same as `resolvedModels(for:)`'s fallback.
-            Self.attributedInfo(for: row, models: row.available.template.models, palette: palette).boundingRect(
-                with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
-                options: [.usesLineFragmentOrigin, .usesFontLeading]).height
-        }.max() ?? 0
-        let paneHeight = max(tableHeight, ceil(detailsHeight) + 20 /* text insets */)
+        // Height for the table to show every row without scrolling — the pane the
+        // window is sized around.
+        //
+        // The details pane is deliberately NOT measured: a provider serving a hundred
+        // models renders thousands of points of text, so fitting the tallest one asks
+        // for a window taller than any display (the screen clamps it, and the measured
+        // number is thrown away). Laying out every provider's full pane through Core
+        // Text just to compute that discarded number cost the whole catalog — decode,
+        // resolve and typeset — before the picker could open. The pane scrolls.
+        let paneHeight = CGFloat(max(rows.count, 1)) * 24 + 28 /* header */ + 4
 
         let width = 16 + tableW + 8 /* divider gap */ + infoWidth + 16
         let height = 16 + 26 /* search */ + 8 + 26 /* filter bar */ + 8
@@ -393,12 +395,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         // field. A programmatic stringValue set does not fire controlTextDidChange,
         // so this never re-filters the list out from under the selection.
         searchField.stringValue = filteredRows[next].provider
+        queryIsMirroredSelection = true
     }
+
+    /// The text to filter on — nothing while the field is showing a mirrored selection.
+    private var effectiveQuery: String { queryIsMirroredSelection ? "" : searchField.stringValue }
 
     private func applyFilter() {
         filteredRows = ProviderPickerFilter.filter(
             allRows,
-            query: searchField.stringValue,
+            query: effectiveQuery,
             uses: Set(useFilter.selection.compactMap(ModelUseFacet.init(rawValue:))),
             types: Set(typeFilter.selection.compactMap(ProviderTypeFacet.init(rawValue:))))
         reloadTable()
@@ -662,6 +668,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
 extension ProviderPickerViewController: NSSearchFieldDelegate {
 
     public func controlTextDidChange(_ obj: Notification) {
+        queryIsMirroredSelection = false
         applyFilter()
     }
 

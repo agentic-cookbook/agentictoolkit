@@ -146,7 +146,10 @@ public extension NSButton {
         contentTintColor = palette.primaryTextColor
         attributedTitle = NSAttributedString(string: title, attributes: [
             .foregroundColor: palette.primaryTextColor,
-            .font: font ?? palette.font(.button),
+            // The theme's button font, like `ThemedButton` — not the control's own
+            // `font`, which is never nil on a stock NSButton and so would pin this
+            // to AppKit's system font forever.
+            .font: palette.font(.button),
             .paragraphStyle: {
                 let style = NSMutableParagraphStyle()
                 style.alignment = .center

@@ -105,7 +105,9 @@ def _clean(text: str | None) -> str | None:
         return None
     collapsed = " ".join(text.split())
     collapsed = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", collapsed)  # markdown links -> their text
-    collapsed = re.sub(r"\s*#[a-z0-9-]+\b", "", collapsed)  # trailing #hashtags
+    # Trailing #hashtags only — anchored at the end, or the same pattern eats a "#2"
+    # or a "#1-ranked" out of the middle of a sentence.
+    collapsed = re.sub(r"(?:\s*#[a-z0-9-]+)+(?=\s*(?:\.\.\.|…)?$)", "", collapsed)
     collapsed = collapsed.strip()
     if collapsed.endswith(("...", "…")):
         collapsed = collapsed.rstrip(".… ")
@@ -163,7 +165,7 @@ def vendor_template_ids(items: list[dict]) -> list[tuple[dict, list[str]]]:
     return pairs
 
 
-def build_catalog(items: list[dict]) -> dict:
+def build_catalog(items: list[dict], base_url: str = descriptors.DEFAULT_BASE_URL) -> dict:
     """Fold adh's per-vendor model rows into one shared table plus per-gateway offerings."""
     aliases: dict[str, set[str]] = {}
     described: dict[str, list[str]] = {}
@@ -184,11 +186,21 @@ def build_catalog(items: list[dict]) -> dict:
             # A local server's limits and prices are the user's machine's, not
             # adh's, so those templates get no offerings (same rule that keeps
             # their model lists empty in the descriptors).
+            #
+            # A limit of 0 means "this gateway doesn't publish one", not "this model
+            # holds no tokens", so it is dropped rather than shipped — the picker
+            # would otherwise read out "0 context · 0 max output". A *price* of 0 is
+            # kept: free is a real, useful price.
             offering = {
                 field: meta[field]
-                for field in ("contextWindow", "maxOutput", "inputCostPerM", "outputCostPerM")
-                if meta.get(field) is not None
+                for field in ("contextWindow", "maxOutput")
+                if (meta.get(field) or 0) > 0
             }
+            offering.update({
+                field: meta[field]
+                for field in ("inputCostPerM", "outputCostPerM")
+                if meta.get(field) is not None
+            })
             if not offering:
                 continue
             for tid in template_ids:
@@ -208,7 +220,9 @@ def build_catalog(items: list[dict]) -> dict:
     return {
         "schemaVersion": SCHEMA_VERSION,
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source": descriptors.DEFAULT_BASE_URL + descriptors.CATALOG_PATH,
+        # The URL the rows actually came from — a catalog generated against a staging
+        # adh must not claim production as its source.
+        "source": base_url + descriptors.CATALOG_PATH,
         "models": models,
         "offerings": {tid: dict(sorted(v.items())) for tid, v in sorted(offerings.items())},
     }
@@ -233,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        catalog = build_catalog(descriptors.fetch_catalog(args.base_url))
+        catalog = build_catalog(descriptors.fetch_catalog(args.base_url), base_url=args.base_url)
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
