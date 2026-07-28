@@ -37,28 +37,58 @@ export interface EnumeratedProject {
   framework: string | null;
 }
 
+/** An enumeration plus the PROVENANCE a caller needs to act on an ABSENCE. */
+export interface DeployEnumeration {
+  projects: EnumeratedProject[];
+  /** The canonical platforms this run listed LIVE and completely — i.e. the ones whose
+   *  absence from `projects` proves the project is gone. A provider that errored, timed
+   *  out, isn't authorized to enumerate (a project-scoped Railway token), or degraded to
+   *  its configured fallback list is deliberately ABSENT: its list is missing names that
+   *  still exist, and a caller that treated those as retired would re-point live monitors.
+   *
+   *  `vercel` is never here — its projects come from the `deploy_project_meta` mirror, not
+   *  from a call this function makes, so only the caller that refreshed that table knows
+   *  whether the read behind it was complete. It adds `vercel` itself when it was. */
+  verifiedPlatforms: string[];
+}
+
 /**
  * Enumerate every deploy project the monitor knows about: the persisted Vercel meta
  * (with custom domains) plus freshly-polled Railway projects and Cloudflare worker
  * scripts. Each provider fetch is time-boxed and falls back to the last-known config
  * snapshot, so a slow/absent provider degrades to its cached list rather than failing.
+ *
+ * The bare project list, for the callers that only render it. A caller that must reason
+ * about a project being MISSING needs {@link enumerateDeployProjectsVerified} instead —
+ * this shape cannot distinguish "gone" from "we couldn't look".
  */
 export async function enumerateDeployProjects(db: DeployDb): Promise<EnumeratedProject[]> {
+  return (await enumerateDeployProjectsVerified(db)).projects;
+}
+
+/** {@link enumerateDeployProjects}, plus which platforms the listing can speak for. */
+export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<DeployEnumeration> {
   const conn = await providerConnFromConfig(db);
   const railwayTimer = withTimeout(6_000);
   // One Railway project list, shared by the enumeration AND the per-project domain
   // resolution — so the latter can overlap the Cloudflare work instead of waiting for it.
   // The timer bounds ONLY this list call, so clear it the moment the list settles (not
   // after the whole Promise.all, which now also includes the slower domain resolution).
-  const railwayProjectsP: Promise<{ id: string; name: string }[]> = (
+  // `live` records whether that list came from the ACCOUNT or from the configured
+  // fallback — the difference between "these are all the projects there are" and "these
+  // are the ones somebody wrote down". Only the former licenses reading an absence.
+  const railwayListingP: Promise<{ projects: { id: string; name: string }[]; live: boolean }> = (
     conn.railway.token
-      ? listRailwayProjects(conn.railway.token, railwayTimer.signal).then((r) => r ?? conn.railway.projects ?? [])
-      : Promise.resolve<{ id: string; name: string }[]>([])
+      ? listRailwayProjects(conn.railway.token, railwayTimer.signal).then((r) =>
+          r ? { projects: r, live: true } : { projects: conn.railway.projects ?? [], live: false },
+        )
+      : Promise.resolve({ projects: [] as { id: string; name: string }[], live: false })
   ).finally(() => railwayTimer.done());
+  const railwayProjectsP = railwayListingP.then((l) => l.projects);
 
-  const [metas, railwayProjects, cf, railwayDomainByProject] = await Promise.all([
+  const [metas, railwayListing, cf, railwayDomainByProject] = await Promise.all([
     db.select().from(deployProjectMeta),
-    railwayProjectsP,
+    railwayListingP,
     // Resolve the CF account ONCE (a blank CLOUDFLARE_ACCOUNT_ID is discovered from the
     // token), then fan out to the worker list + the live custom-domain map under that
     // single account — so the two can't race a duplicate /accounts probe. Null (no token
@@ -75,6 +105,7 @@ export async function enumerateDeployProjects(db: DeployDb): Promise<EnumeratedP
     railwayProjectsP.then((projects) => resolveRailwayDomains(conn.railway.token, projects)),
   ]);
 
+  const railwayProjects = railwayListing.projects;
   const workerScripts = cf?.scripts ?? conn.cloudflare.workerScripts ?? [];
   // The live worker custom-domain map (the SAME source Cloudflare routes with),
   // inverted to worker→host. Vercel writes domains into deployProjectMeta, but CF/Railway
@@ -156,7 +187,12 @@ export async function enumerateDeployProjects(db: DeployDb): Promise<EnumeratedP
     }));
   });
 
-  return [...vercelCf, ...railway].sort(
+  // Same rule as Railway's: `cf.scripts` is null when the worker listing failed or the
+  // account couldn't be resolved, and `workerScripts` then falls back to the configured
+  // list — which cannot be read as the complete truth about what exists.
+  const verifiedPlatforms = [...(railwayListing.live ? ["railway"] : []), ...(cf?.scripts ? ["cloudflare"] : [])];
+
+  const projects = [...vercelCf, ...railway].sort(
     (a, b) =>
       a.platform.localeCompare(b.platform) ||
       a.projectName.localeCompare(b.projectName) ||
@@ -166,6 +202,8 @@ export async function enumerateDeployProjects(db: DeployDb): Promise<EnumeratedP
       railwayEnvRank(a.environment) - railwayEnvRank(b.environment) ||
       (a.environment ?? '').localeCompare(b.environment ?? ''),
   );
+
+  return { projects, verifiedPlatforms };
 }
 
 /**

@@ -65,27 +65,51 @@ export type AddPlan =
    *  re-pointed away from (a rename/delete on the platform). Present only on a repair;
    *  absent when the endpoint was simply unwired. Callers report it: silently rewriting
    *  wiring the operator can still see on the board would be an unexplained change. */
-  | { kind: "wire-endpoint"; endpointId: string; siteId: string; platform: string; deployProject: string; environment: string; replaces?: string }
+  | { kind: "wire-endpoint"; endpointId: string; siteId: string; platform: string; deployProject: string; environment: string; replaces?: string; replacesPlatform?: string }
   | { kind: "add-endpoint"; siteId: string; url: string; environment: string; platform: string; deployProject: string }
   | { kind: "new-site"; siteName: string; siteSlug: string; url: string; environment: string; platform: string; deployProject: string };
 
+/** This run's answer to "does this deploy project still exist?" — the enumerated names,
+ *  PLUS which platforms that enumeration is allowed to speak for. Both halves are required
+ *  because absence only means "deleted" on a platform we actually READ: a platform whose
+ *  listing failed, or that degraded to a configured fallback list, is missing names that
+ *  are perfectly alive, and treating those as retired would re-point live monitors. */
+export interface LiveProjectIndex {
+  /** Every enumerated project, keyed by {@link deployProjectKey}. */
+  keys: ReadonlySet<string>;
+  /** The CANONICAL platforms whose enumeration was a complete, authenticated, live read —
+   *  the only ones whose absence is evidence. Empty ⇒ nothing is ever judged retired. */
+  platforms: ReadonlySet<string>;
+}
+
 /** What the planner may consult BEYOND the endpoints — all optional, all narrowing. */
 export interface PlanOpts {
-  /** Every deploy project the platforms STILL have, keyed by {@link deployProjectKey}.
-   *  Supplying it lets the planner tell a real conflict (two LIVE projects claiming one
-   *  domain — genuinely ambiguous) from STALE WIRING (an endpoint naming a project the
-   *  platform no longer has, because it was renamed or deleted). Stale wiring is
-   *  REPAIRED by re-pointing the endpoint; without this set every existing wiring is
-   *  assumed live, which is the conservative reading and today's behavior. */
-  liveProjects?: ReadonlySet<string>;
+  /** This run's live-project index (see {@link LiveProjectIndex}). Supplying it lets the
+   *  planner tell a real conflict (two LIVE projects claiming one domain — genuinely
+   *  ambiguous) from STALE WIRING (an endpoint naming a project the platform no longer
+   *  has, because it was renamed or deleted). Stale wiring is REPAIRED by re-pointing the
+   *  endpoint; without it every existing wiring is assumed live, which is the conservative
+   *  reading and today's behavior. */
+  liveProjects?: LiveProjectIndex;
 }
 
 /** Build {@link PlanOpts.liveProjects} from this run's enumeration — the ONE place the
- *  set's key shape is produced, so a caller can't index it differently from the planner
- *  that reads it (an off-by-one-format set would silently declare every project retired,
- *  the most destructive possible failure of this feature). */
-export function indexLiveProjects(projects: readonly { platform: string; projectName: string }[]): Set<string> {
-  return new Set(projects.map((p) => deployProjectKey(p.platform, p.projectName)));
+ *  key shape is produced, so a caller can't index it differently from the planner that
+ *  reads it (an off-by-one-format set would silently declare every project retired, the
+ *  most destructive possible failure of this feature).
+ *
+ *  `verifiedPlatforms` is REQUIRED, and naming nothing is the safe answer: a caller that
+ *  can't say which listings were authoritative gets an index that repairs nothing, rather
+ *  than one that silently trusts a fallback list. Canonicalized here so the caller may
+ *  pass whatever spelling its provider layer uses (`cloudflare-pages` ≡ `cloudflare`). */
+export function indexLiveProjects(
+  projects: readonly { platform: string; projectName: string }[],
+  verifiedPlatforms: readonly string[],
+): LiveProjectIndex {
+  return {
+    keys: new Set(projects.map((p) => deployProjectKey(p.platform, p.projectName))),
+    platforms: new Set(verifiedPlatforms.map(platformCanon)),
+  };
 }
 
 /** Decide how to represent `project` in the config given the current endpoints. */
@@ -110,14 +134,24 @@ export function planAddProject(project: ProjectLite, endpoints: EndpointLite[], 
     return { e, host, apex: siteApex(host), wireable: endpointNeedsWiring(e.kind) };
   });
 
-  // Does the project an endpoint is wired to STILL EXIST on its platform? Only ever
-  // answered for the platform we're adding on: `liveProjects` is built from THIS run's
-  // enumeration, and a platform whose enumeration failed contributes no addable projects
-  // at all (the Vercel path fails closed) — so a name on ANOTHER platform is a set we may
-  // not hold, and "not in the set" would be an assumption, not a fact. Unknown ⇒ live,
-  // which keeps the conservative branch (leave it alone) in every case we can't prove.
-  const stillLive = (e: EndpointLite): boolean =>
-    !opts.liveProjects || platformCanon(e.platform) !== platform || opts.liveProjects.has(deployProjectKey(platform, e.deployProject!));
+  // Does the project an endpoint is wired to STILL EXIST on its platform? Answered
+  // against the ENDPOINT's own platform, not the one we're adding on — a monitor left
+  // behind by a platform MIGRATION (site moves Vercel → Railway; the old Vercel project
+  // is deleted, the new Railway one claims the same host) names a dead project just as
+  // surely as a rename does, and refusing to look across platforms would leave exactly
+  // that case unrepairable forever.
+  //
+  // What makes the cross-platform read safe is `platforms`: absence is evidence ONLY for
+  // a platform whose listing this run completed and authenticated. Unknown platform,
+  // unknown name, or no index at all ⇒ live, which keeps the conservative branch (leave
+  // it alone) in every case we cannot actually prove.
+  const stillLive = (e: EndpointLite): boolean => {
+    const live = opts.liveProjects;
+    if (!live || !e.deployProject) return true;
+    const p = platformCanon(e.platform);
+    if (!live.platforms.has(p)) return true;
+    return live.keys.has(deployProjectKey(p, e.deployProject));
+  };
 
   // 1) A DEPLOY-BACKED endpoint already monitors this exact host → wire it.
   //    A health/dns/custom probe on the same host is NOT a deploy target, so skip
@@ -142,6 +176,10 @@ export function planAddProject(project: ProjectLite, endpoints: EndpointLite[], 
         deployProject,
         environment: exact.environment || env,
         replaces: exact.deployProject,
+        // The platform the RETIRED name belonged to — not necessarily this project's. A
+        // migration re-points a vercel monitor onto a railway project, and a report that
+        // named the new platform would say railway no longer has a name railway never had.
+        replacesPlatform: platformCanon(exact.platform),
       };
     }
     // Preserve an operator-set environment; only fill it in when missing.

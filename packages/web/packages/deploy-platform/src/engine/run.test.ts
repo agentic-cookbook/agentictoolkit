@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { type EndpointLite, type ProjectLite } from "./plan.js";
+import { indexLiveProjects, type EndpointLite, type ProjectLite } from "./plan.js";
 import { runAutoConfigure, uniqueSiteIdentity, type SiteLite, type StatusAddApi } from "./run.js";
 
 const proj = (projectName: string, domain: string | null, platform = "vercel"): ProjectLite => ({ platform, projectName, domain });
@@ -272,7 +272,7 @@ describe("runAutoConfigure — a renamed deploy project", () => {
     // Without this the project is offered on every run and refused on every run — the
     // "N projects not monitored" banner becomes permanent, with no action that clears it.
     const a = api();
-    const live = new Set(["vercel|mikefullerton-production"]);
+    const live = indexLiveProjects([{ platform: "vercel", projectName: "mikefullerton-production" }], ["vercel"]);
 
     const res = await runAutoConfigure([proj("mikefullerton-production", "mikefullerton.com")], { api: a, liveProjects: live });
 
@@ -282,9 +282,33 @@ describe("runAutoConfigure — a renamed deploy project", () => {
     expect(res.notes[0]!.note).toContain("mikefullerton-com"); // the name it took over from
   });
 
+  it("names the platform the RETIRED project was on, not the one taking over", async () => {
+    // A migration re-points a VERCEL monitor onto a RAILWAY project. Reporting "which
+    // railway no longer has" would be a false statement about a name railway never had —
+    // and the note is the only place the operator learns their wiring was rewritten.
+    const a = makeApi({
+      listSites: vi.fn(async () => [{ id: "s1", slug: "lewis", groupId: "g1" }]),
+      listAllEndpoints: vi.fn(async () => [
+        { id: "e1", siteId: "s1", url: "https://lewis.example.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "adh-status-monitoring-site" },
+      ]),
+    });
+    const live = indexLiveProjects([{ platform: "railway", projectName: "adh-status" }], ["vercel", "railway"]);
+
+    const res = await runAutoConfigure([{ platform: "railway", projectName: "adh-status", domain: "lewis.example.com" }], { api: a, liveProjects: live });
+
+    expect(res.added).toHaveLength(1);
+    expect(res.notes[0]!.note).toBe("took over the monitor wired to adh-status-monitoring-site, which vercel no longer has");
+  });
+
   it("leaves it alone when the old name is still a live project", async () => {
     const a = api();
-    const live = new Set(["vercel|mikefullerton-production", "vercel|mikefullerton-com"]);
+    const live = indexLiveProjects(
+      [
+        { platform: "vercel", projectName: "mikefullerton-production" },
+        { platform: "vercel", projectName: "mikefullerton-com" },
+      ],
+      ["vercel"],
+    );
 
     const res = await runAutoConfigure([proj("mikefullerton-production", "mikefullerton.com")], { api: a, liveProjects: live });
 

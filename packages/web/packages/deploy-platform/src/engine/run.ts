@@ -15,7 +15,7 @@
 // builder runner so their sequencing/skip-collection semantics can't drift.
 // ---------------------------------------------------------------------------
 import { domainFamily, epHost, platformCanon, slugify } from "../canon/index.js";
-import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type PlanOpts, type ProjectLite } from "./plan.js";
+import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type LiveProjectIndex, type PlanOpts, type ProjectLite } from "./plan.js";
 import { endpointUnconfigured } from "./classify.js";
 
 /** Render an unknown thrown value as a display string (Error → message, else String). */
@@ -150,7 +150,7 @@ interface Working {
   /** The projects the platforms still have (see {@link PlanOpts.liveProjects}). Absent
    *  when the caller can't enumerate. Immutable for the run: it describes the PLATFORMS,
    *  and nothing we do to the monitoring config changes what exists on them. */
-  liveProjects?: ReadonlySet<string>;
+  liveProjects?: LiveProjectIndex;
 }
 
 /** Index `domain family → owning group` across the whole fleet in ONE pass. A family owned
@@ -233,7 +233,7 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
     );
     // Taking a monitor over from a retired project is a REWRITE of wiring the operator
     // can still see on the board — report it rather than let the row silently change name.
-    return { kind: "added", note: plan.replaces ? `took over the monitor wired to ${plan.replaces}, which ${plan.platform} no longer has` : undefined };
+    return { kind: "added", note: plan.replaces ? `took over the monitor wired to ${plan.replaces}, which ${plan.replacesPlatform ?? plan.platform} no longer has` : undefined };
   }
   // add-endpoint / new-site: no existing endpoint monitors this domain. Match-only
   // (no `create`) leaves it for the operator; with `create` we add the monitor.
