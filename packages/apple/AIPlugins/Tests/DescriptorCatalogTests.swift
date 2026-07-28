@@ -54,13 +54,27 @@ struct DescriptorCatalogTests {
         let descriptor = try shipped("OpenAICompatible")
         #expect(descriptor.schemaVersion == 3)
         let xai = try #require(descriptor.resolvedTemplates.first { $0.id == "xai" })
+        // The model list is regenerated from adh's catalog, so assert the curated
+        // parts — pinning the whole list would just churn on every refresh.
         #expect(xai.resolvedDefaultModel == "grok-4.5")
-        #expect(xai.models == [
-            "grok-4.5", "grok-4.3",
-            "grok-4.20-0309-reasoning", "grok-4.20-0309-non-reasoning", "grok-4.20-multi-agent-0309"
-        ])
+        #expect(xai.models.contains(xai.resolvedDefaultModel))
+        #expect(xai.models.contains("grok-4.3"))
         #expect(xai.defaultValues["baseURL"] == "https://api.x.ai/v1")
         #expect(xai.secretRequired == true)
+    }
+
+    @Test("Every OpenAI-compatible template is curated and preselects a model it offers")
+    func openAICompatibleTemplatesAreCurated() throws {
+        let descriptor = try shipped("OpenAICompatible")
+        for template in descriptor.resolvedTemplates {
+            // Generated entries arrive bare; an uncurated one shows a blank LLM column
+            // and an empty details pane in the picker.
+            #expect(template.provider?.isEmpty == false, "\(template.id) has no provider")
+            #expect(template.providerDescription?.isEmpty == false, "\(template.id) has no blurb")
+            if let selected = template.defaultModel {
+                #expect(template.models.contains(selected), "\(template.id) preselects a model it doesn't offer")
+            }
+        }
     }
 
     @Test("OpenAI-compatible Ollama template is keyless and ships no fabricated models")

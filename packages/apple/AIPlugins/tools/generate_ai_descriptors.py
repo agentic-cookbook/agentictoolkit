@@ -5,7 +5,9 @@ Fetches ``GET /persona/provider-templates`` from agenticdeveloperhub and merges
 ``{baseUrl, models}`` into the four toolkit ``.aiplugin`` descriptors. adh is the
 source of truth for which providers exist, their base URLs, and their model
 lists; template ids, curated copy, and the Ollama keyless/baseURL override are
-preserved. Local execution (the compiled executors) is unchanged.
+preserved. Vendors adh marks ``availableVia`` (no first-party API — the baseUrl
+is a docs page) are skipped. Local execution (the compiled executors) is
+unchanged.
 
 Run manually; review the ``git diff``; commit the descriptors to the toolkit.
 
@@ -36,17 +38,54 @@ MAX_PAGES = 100
 # user's configured provider. adh's "OpenAI" is deliberately absent — it routes
 # to the dedicated OpenAI plugin, not to an OpenAICompatible entry.
 NAME_TO_ID = {
+    "AWS Bedrock": "aws-bedrock",
+    "Azure OpenAI": "azure-openai",
+    "Baidu ERNIE": "baidu-ernie",
+    "Baseten": "baseten",
+    "ByteDance Volcengine Ark": "bytedance-volcengine-ark",
     "Cerebras": "cerebras",
+    "Cloudflare AI Gateway": "cloudflare-ai-gateway",
+    "Cloudflare Workers AI": "cloudflare-workers-ai",
+    "Cohere": "cohere",
+    "Deep Infra": "deep-infra",
     "DeepSeek": "deepseek",
+    "Diffbot": "diffbot",
     "Fireworks": "fireworks",
+    "GitHub Models": "github-models",
     "Groq": "groq",
+    "Helicone AI Gateway": "helicone-ai-gateway",
+    "Hyperbolic": "hyperbolic",
+    "LM Studio": "lm-studio",
+    "LiteLLM": "litellm",
+    "Martian": "martian",
+    "MiniMax": "minimax",
     "Mistral": "mistral",
     "Moonshot Kimi": "kimi",
+    "Nebius Token Factory": "nebius-token-factory",
+    "Novita AI": "novita-ai",
+    "Nvidia NIM": "nvidia-nim",
     "Ollama (local)": "ollama",
     "OpenRouter": "openrouter",
+    "Perplexity": "perplexity",
+    "Portkey": "portkey",
+    "Qwen": "qwen",
+    "Requesty": "requesty",
+    "SambaNova Cloud": "sambanova-cloud",
+    "SiliconFlow": "siliconflow",
+    "StepFun": "stepfun",
+    "Tencent Hunyuan": "tencent-hunyuan",
     "Together": "together",
+    "Vercel AI Gateway": "vercel-ai-gateway",
+    "Z.AI": "z-ai",
     "xAI": "xai",
 }
+
+# Templates whose models are whatever the user has installed or configured on
+# their own machine. adh can only describe a vendor's hosted catalog, so any list
+# it carries for these is fiction — shipping it just lets someone pick a model
+# they don't have and hit "model not found". The editor reads the real list live
+# from GET {baseURL}/models instead.
+LIVE_MODELS_ONLY_IDS = {"ollama", "lm-studio", "litellm"}
 
 # providerKind -> single-vendor descriptor dir (exactly one provider per file).
 SINGLE_VENDOR_KIND = {
@@ -159,7 +198,8 @@ def merge_openai_compatible(descriptor: dict, adh_openai: list[dict]) -> dict:
     Matched entries get ``baseURL`` + ``models`` refreshed and keep their curated
     copy (blurbs, columns, fields, secretRequired); unmatched ``NAME_TO_ID``
     vendors are inserted as minimal entries; local-only templates (e.g. the
-    ``custom`` catch-all) are left untouched.
+    ``custom`` catch-all) are left untouched. ``LIVE_MODELS_ONLY_IDS`` templates
+    keep an empty model list whatever adh claims.
     """
     templates = descriptor.setdefault("templates", [])
     by_id = {t["id"]: t for t in templates}
@@ -178,7 +218,7 @@ def merge_openai_compatible(descriptor: dict, adh_openai: list[dict]) -> dict:
                 f"using id {tid!r} with no curated copy — add a mapping + copy",
                 file=sys.stderr,
             )
-        models = model_names(item)
+        models = [] if tid in LIVE_MODELS_ONLY_IDS else model_names(item)
         base_url = item["baseUrl"]
         existing = by_id.get(tid)
         if existing is not None:
@@ -200,11 +240,30 @@ def merge_openai_compatible(descriptor: dict, adh_openai: list[dict]) -> dict:
     return descriptor
 
 
+def has_no_first_party_api(adh_template: dict) -> bool:
+    """True when adh says this vendor has no first-party API to point a client at.
+
+    adh sets ``availableVia`` (a note plus the templates that *do* serve the
+    models) on vendors it lists for completeness but that expose no endpoint of
+    their own — their ``baseUrl`` is a docs/marketing page, not an API base. A
+    descriptor entry for one could never connect, so they are skipped.
+    """
+    return bool(adh_template.get("availableVia"))
+
+
 def route(items: list[dict]) -> dict:
     """Group adh templates by their descriptor target."""
     result: dict = {"anthropic": None, "gemini": None, "openai": None, "openai_compatible": []}
     for t in items:
         kind, name = t.get("providerKind"), t.get("name")
+        if kind in ("anthropic", "gemini", "openai") and has_no_first_party_api(t):
+            via = (t.get("availableVia") or {}).get("templates") or []
+            print(
+                f"note: skipping {name!r} — adh reports no first-party API"
+                + (f"; served by {', '.join(via)}" if via else ""),
+                file=sys.stderr,
+            )
+            continue
         if kind == "anthropic":
             result["anthropic"] = t
         elif kind == "gemini":
