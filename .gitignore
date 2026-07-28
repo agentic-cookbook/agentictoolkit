@@ -38,6 +38,10 @@ Package.resolved
 DerivedData/
 Package.resolved
 
+# Python tooling bytecode
+__pycache__/
+*.pyc
+
 # graphify output (generated)
 graphify-out/
 
