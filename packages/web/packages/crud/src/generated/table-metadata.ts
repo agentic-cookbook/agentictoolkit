@@ -40,6 +40,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
       {"name": "publicKey", "type": "string", "required": false, "nullable": false, "serverManaged": true, "maxLength": 64},
       {"name": "status", "type": "string", "required": false, "nullable": false, "serverManaged": false, "maxLength": 20},
       {"name": "welcomeTemplateId", "type": "string", "required": false, "nullable": true, "serverManaged": false, "maxLength": 36},
+      {"name": "welcomeBackTemplateId", "type": "string", "required": false, "nullable": true, "serverManaged": false, "maxLength": 36},
       {"name": "fromName", "type": "string", "required": false, "nullable": true, "serverManaged": false, "maxLength": 255},
       {"name": "isDeleted", "type": "boolean", "required": false, "nullable": false, "serverManaged": true},
       {"name": "createdAt", "type": "string", "required": false, "nullable": false, "serverManaged": true},
