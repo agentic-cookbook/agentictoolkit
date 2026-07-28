@@ -78,18 +78,25 @@ const canonItem = (s: string): string => {
 };
 const canonSub = (s: string): string => formatVerbs(parseVerbs(s).crud, false);
 
-/** The editable draft: `slug` is meaningful only while creating; grants are always
- *  one canonical row per ACCESS_FEATURES (in that order) so index-aligned diffing works. */
+/** The editable draft: `slug` is meaningful only while creating; `grants` is always
+ *  one canonical row per ACCESS_FEATURES (in that order) so index-aligned diffing works, and
+ *  `carried` holds the grants this pane does NOT render (see {@link carriedGrantsFor}). The two
+ *  are kept in SEPARATE arrays precisely so that invariant survives: everything the matrix
+ *  renders, edits, and diffs is `grants`, and nothing else can ever land in it. */
 interface RoleInput {
   slug: string;
   name: string;
   description: string;
   defaultFor: "" | "customer" | "persona";
   grants: AccessGrantRow[];
+  carried: AccessGrantRow[];
 }
 
 const blankGrants = (): AccessGrantRow[] =>
   ACCESS_FEATURES.map((f) => ({ feature: f.key, itemVerbs: "", subitemVerbs: "" }));
+
+const isRenderedFeature = (feature: string): boolean =>
+  ACCESS_FEATURES.some((f) => f.key === feature);
 
 // Project a role's grants onto the fixed ACCESS_FEATURES rows (missing features ⇒ empty),
 // canonicalized — so every draft has the same shape regardless of what the server sent.
@@ -103,6 +110,34 @@ const grantsFor = (role: AccessRoleRow): AccessGrantRow[] =>
     };
   });
 
+/**
+ * The role's grants for feature areas this build does NOT render, copied VERBATIM so they can be
+ * resubmitted byte-for-byte on save.
+ *
+ * ACCESS_FEATURES is a fixed list shared by every product built on this toolkit, but the BACKEND's
+ * feature-area registry is per-deployment — a server can, and does, hold grants for areas this pane
+ * knows nothing about. Save is a FULL REPLACEMENT (the server deletes every grant row and
+ * re-inserts exactly what we send), and a feature missing from that payload is recorded as a
+ * DELIBERATE revocation, which the deploy-time role backfill then honors by refusing to restore it.
+ * So a grant dropped here is destroyed permanently and silently, by an admin who only wanted to
+ * tick a box on some unrelated row. Carrying the rows through means this pane can only ever change
+ * what it actually shows.
+ *
+ * Deliberately NOT canonicalized: we make no claim about verbs we don't understand, and round-trip
+ * fidelity is the whole point. The server canonicalizes on write anyway.
+ */
+const carriedGrantsFor = (role: AccessRoleRow): AccessGrantRow[] =>
+  role.grants.filter((g) => !isRenderedFeature(g.feature)).map((g) => ({ ...g }));
+
+/** What actually goes on the wire: the edited matrix plus the untouched carried rows. Every
+ *  submit path (create AND update) must use this — the payload is a full replacement, so a caller
+ *  that sends `draft.grants` alone silently revokes everything in `carried`. */
+const submitGrants = (d: RoleInput): AccessGrantRow[] => [...d.grants, ...d.carried];
+
+// Only the RENDERED rows participate: they are the sole thing the user can change, and both sides
+// of the comparison are built by grantsFor, so they are index-aligned by construction. `carried` is
+// never edited (nothing in the UI reaches it), so it is identical in draft and baseline — including
+// it could only ever report false, while giving up the length/index guarantee this relies on.
 const grantsDiffer = (a: AccessGrantRow[], b: AccessGrantRow[]): boolean =>
   a.length !== b.length ||
   a.some((g, i) => g.itemVerbs !== b[i]!.itemVerbs || g.subitemVerbs !== b[i]!.subitemVerbs);
@@ -174,6 +209,10 @@ export function TeamPermissionsPane({
     description: "",
     defaultFor: "",
     grants: blankGrants(),
+    // Nothing to carry: `blank()` is only ever the starting draft for a CREATE (the hook calls it
+    // from `create()`, and the create modal from its own `blank` prop) — it is never merged onto an
+    // existing row, so there are no server grants in play yet.
+    carried: [],
   });
   const roleValidate = (draft: RoleInput, others: AccessRoleRow[]): string | null => {
     // Slug is validated unconditionally (not just while creating): existing slugs already
@@ -193,6 +232,7 @@ export function TeamPermissionsPane({
     description: d.description.trim(),
     defaultFor: d.defaultFor,
     grants: d.grants,
+    carried: d.carried,
   });
   const createRole = async (input: RoleInput): Promise<AccessRoleRow> => {
     // Guarded for safety — the pane is unreachable for create without a workspace, but a
@@ -203,7 +243,7 @@ export function TeamPermissionsPane({
       name: input.name,
       description: input.description,
       defaultFor: input.defaultFor,
-      grants: input.grants,
+      grants: submitGrants(input),
     });
   };
 
@@ -218,6 +258,7 @@ export function TeamPermissionsPane({
       description: r.description,
       defaultFor: (r.defaultFor === "customer" || r.defaultFor === "persona" ? r.defaultFor : ""),
       grants: grantsFor(r),
+      carried: carriedGrantsFor(r),
     }),
     validate: roleValidate,
     differs: (a, b) =>
@@ -234,7 +275,7 @@ export function TeamPermissionsPane({
         name: input.name,
         description: input.description,
         defaultFor: input.defaultFor,
-        grants: input.grants,
+        grants: submitGrants(input),
       });
     },
     // Only custom roles are deletable; the affordance is hidden for system roles (below), and
@@ -447,6 +488,13 @@ function RoleDetail({
         <p className="text-xs text-apt-text-muted">The admin role is immutable.</p>
       )}
 
+      {/* `draft.grants` is exactly the ACCESS_FEATURES rows, in order, by construction — so this map
+          is complete and its index `i` is the same index the dirty check walks. `draft.carried`
+          (grants for feature areas this build has no label for) is deliberately NOT rendered: it
+          rides along untouched to the save payload. Showing a raw feature key with live toggles
+          would invite an admin to edit verbs the pane cannot even describe. The label fallback
+          below is therefore unreachable, and kept only so a broken invariant degrades to a visible
+          key rather than a blank row. */}
       <FieldGroup title="Permissions">
         {draft.grants.map((grant, i) => (
           <FeatureGrantRow

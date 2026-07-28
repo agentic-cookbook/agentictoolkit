@@ -85,6 +85,22 @@ const ADMIN = role({
     { feature: "personas", itemVerbs: "C,R,U,D,M", subitemVerbs: "C,R,U,D" },
   ],
 });
+// A role holding a grant for a feature area this build does NOT render. ACCESS_FEATURES is a fixed
+// list shared by every product on the toolkit, while the BACKEND's feature-area registry is
+// per-deployment — so a server can (and does) return grants for areas the pane knows nothing about.
+// Saving is a full replacement server-side, and an omitted feature is audited as a DELIBERATE
+// revocation that the deploy-time role backfill then refuses to restore, so a grant this pane drops
+// is destroyed permanently and silently. It must ride through untouched.
+const WITH_UNKNOWN = role({
+  id: "r4",
+  slug: "editor",
+  name: "Editor",
+  grants: [
+    { feature: "projects", itemVerbs: "R", subitemVerbs: "" },
+    { feature: "personas", itemVerbs: "R", subitemVerbs: "" },
+    { feature: "audiences", itemVerbs: "C,R,U,D", subitemVerbs: "C,R,U,D" },
+  ],
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -229,6 +245,64 @@ describe("TeamPermissionsPane", () => {
           expect.objectContaining({ feature: "personas", itemVerbs: "", subitemVerbs: "" }),
         ]),
       }),
+    );
+  });
+
+  it("carries a grant for a feature outside ACCESS_FEATURES through an unrelated save", async () => {
+    listRoles.mockResolvedValue([structuredClone(WITH_UNKNOWN)]);
+    updateRole.mockResolvedValue(structuredClone(WITH_UNKNOWN));
+    render(<TestHarness />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editor" }));
+    await screen.findByDisplayValue("Editor");
+
+    // The unknown area is NOT rendered — this pane edits exactly ACCESS_FEATURES, no more.
+    expect(screen.queryByText("audiences")).toBeNull();
+    expect(screen.queryByText("Audiences")).toBeNull();
+
+    // Edit an unrelated (rendered) feature, then save.
+    const projectsRow = screen.getByText("Projects").closest("div") as HTMLElement;
+    fireEvent.click(within(projectsRow).getByRole("button", { name: "M" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(updateRole).toHaveBeenCalledTimes(1));
+    const grants = updateRole.mock.calls[0]![2]!.grants!;
+    // The edit landed, AND the invisible grant went back out VERBATIM — the PATCH is a full
+    // replacement, so anything missing from this array is revoked.
+    expect(grants).toContainEqual({ feature: "projects", itemVerbs: "R,M", subitemVerbs: "" });
+    expect(grants).toContainEqual({
+      feature: "audiences",
+      itemVerbs: "C,R,U,D",
+      subitemVerbs: "C,R,U,D",
+    });
+    expect([...grants].map((g) => g.feature).sort()).toEqual([
+      "audiences",
+      "personas",
+      "projects",
+    ]);
+  });
+
+  it("stays pristine on a role with a carried grant (Save disabled, nothing submitted)", async () => {
+    // The dirty check walks the RENDERED rows index-aligned; carried rows must not tip a
+    // never-touched form into dirty (which would offer Save on a form the user never edited).
+    listRoles.mockResolvedValue([structuredClone(WITH_UNKNOWN)]);
+    render(<TestHarness />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editor" }));
+    await screen.findByDisplayValue("Editor");
+
+    const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    fireEvent.click(save);
+    await waitFor(() => expect(updateRole).not.toHaveBeenCalled());
+
+    // …and a real edit still registers (the carried row does not MASK a genuine change).
+    const projectsRow = screen.getByText("Projects").closest("div") as HTMLElement;
+    fireEvent.click(within(projectsRow).getByRole("button", { name: "M" }));
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
+        false,
+      ),
     );
   });
 
