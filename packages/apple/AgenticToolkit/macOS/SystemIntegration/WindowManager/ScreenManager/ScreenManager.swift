@@ -33,8 +33,15 @@ public final class ScreenManager {
     public private(set) var knownSetIDs: Set<String> = []
     /// Identity of the set of screens attached right now.
     public private(set) var currentSetID: String
-    /// Latest per-screen snapshots, kept to diff against on change events.
+    /// Latest per-screen snapshots. Refreshed both by change notifications and,
+    /// on demand, by `touchCurrentSet()`.
     private var currentSnapshots: [ScreenSnapshot]
+    /// The snapshots the last *delivered* classification was computed against.
+    /// Deliberately separate from `currentSnapshots`: `touchCurrentSet()` may
+    /// refresh the latter between notifications, and if that also moved the
+    /// diff baseline the change notification that follows would classify as
+    /// "nothing moved" and no window would be repositioned.
+    private var lastNotifiedSnapshots: [ScreenSnapshot]
 
     private var observers: [UUID: @MainActor (ScreenChange) -> Void] = [:]
     /// Injected clock so tests can control `savedAt`/aging.
@@ -57,6 +64,7 @@ public final class ScreenManager {
 
         let snapshots = screenProvider.screens.map(ScreenSnapshot.init)
         self.currentSnapshots = snapshots
+        self.lastNotifiedSnapshots = snapshots
         self.currentSetID = ScreenSet.identity(of: snapshots)
         self.knownSets = Self.pruned(storage.loadSets(), olderThan: maxSetAge, now: now())
         self.knownSetIDs = Set(knownSets.map(\.id))
@@ -114,9 +122,14 @@ public final class ScreenManager {
     /// (not private) so tests can drive it without posting notifications.
     func processScreenChange() {
         let snapshots = screenProvider.screens.map(ScreenSnapshot.init)
-        let change = Self.classifyChange(from: currentSnapshots, to: snapshots)
+        // Diff against the last snapshots we *notified* on, not the live ones:
+        // `touchCurrentSet()` may have already refreshed `currentSnapshots`
+        // ahead of this notification, and diffing against those would report
+        // "nothing changed" and skip repositioning.
+        let change = Self.classifyChange(from: lastNotifiedSnapshots, to: snapshots)
         currentSnapshots = snapshots
         currentSetID = ScreenSet.identity(of: snapshots)
+        lastNotifiedSnapshots = snapshots
         guard let change else { return }
         upsertCurrentSet(persist: true)
         let description = String(describing: change)
@@ -168,6 +181,7 @@ public final class ScreenManager {
     /// window save/restore paths so a set stays alive while it's in use.
     /// Persistence is throttled; the in-memory record updates every call.
     public func touchCurrentSet() {
+        reconcileWithLiveScreens()
         let timestamp = now()
         let shouldPersist: Bool
         if let last = lastPersistedTouch, timestamp.timeIntervalSince(last) < Self.touchPersistInterval {
@@ -177,6 +191,41 @@ public final class ScreenManager {
             lastPersistedTouch = timestamp
         }
         upsertCurrentSet(persist: shouldPersist)
+    }
+
+    /// Re-derives `currentSetID` (and `currentSnapshots`) from the live screen
+    /// list when the two have drifted apart.
+    ///
+    /// `currentSetID` is otherwise only refreshed when a screen-parameters
+    /// notification arrives, but `WindowFrameManager` reads the live screens
+    /// and the set id *together*: `saveFrame` fingerprints the screen the
+    /// window is actually on and files that placement under `currentSetID`.
+    /// During a display reconfiguration AppKit repositions windows itself —
+    /// firing `windowDidMove` → `saveFrame` — before, or between, those
+    /// notifications, so the two sources disagree. The placement then lands
+    /// under the *wrong* arrangement's key, fingerprinted for a display that
+    /// arrangement doesn't even contain, and overwrites the good placement for
+    /// that arrangement: the window comes back on the wrong screen.
+    ///
+    /// Deliberately does **not** classify or notify. Doing so here would
+    /// re-enter `saveFrame` (via the reposition handlers) in the middle of the
+    /// save that called us; `lastNotifiedSnapshots` keeps the following
+    /// notification able to classify off the pre-refresh baseline instead.
+    private func reconcileWithLiveScreens() {
+        let live = screenProvider.screens
+        // Cheap guard first — this runs on every drag tick, and building
+        // snapshots means a CoreGraphics UUID lookup plus an IODisplay name
+        // lookup per screen. Screen *membership* cannot change without the
+        // frame list changing too, so an identical frame list means an
+        // identical set. (`visibleFrame` is left out on purpose: the Dock
+        // hiding changes it without touching membership.)
+        if live.count == currentSnapshots.count,
+           zip(live, currentSnapshots).allSatisfy({ $0.frame == $1.frame }) {
+            return
+        }
+        let snapshots = live.map(ScreenSnapshot.init)
+        currentSnapshots = snapshots
+        currentSetID = ScreenSet.identity(of: snapshots)
     }
 
     /// Inserts or updates the current set in `knownSets` (bumping `lastSeen`

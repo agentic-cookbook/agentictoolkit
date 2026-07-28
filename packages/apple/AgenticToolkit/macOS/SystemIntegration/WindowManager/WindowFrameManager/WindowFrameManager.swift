@@ -101,15 +101,17 @@ public final class WindowFrameManager {
             return false
         }
 
+        // Restoring counts as "seeing" the current screen set — and settles the
+        // set id against the live screens before we look a placement up under
+        // it (same reason as `saveFrame`).
+        screenManager.touchCurrentSet()
+        let setID = screenManager.currentSetID
+
         let screens = screenProvider.screens
         guard !screens.isEmpty else {
             applyGeometricCenter(to: window)
             return false
         }
-
-        // Restoring counts as "seeing" the current screen set.
-        screenManager.touchCurrentSet()
-        let setID = screenManager.currentSetID
 
         // 1. Placement saved for this exact screen set. `resolvedFrame` picks
         //    the anchor by match quality: an exact screen match replays the
@@ -175,11 +177,16 @@ public final class WindowFrameManager {
     public func saveFrame(for window: NSWindow, id: String) {
         guard let spec = windowSpecs[id], spec.persistsFrame else { return }
 
-        let screens = screenProvider.screens
-        guard let screen = Self.bestScreen(for: window, among: screens) else { return }
-
+        // Settle the set id against the live screens *before* choosing the
+        // screen to fingerprint, so the placement and the key it's filed under
+        // come from one view of the world. AppKit repositions windows during a
+        // display reconfiguration, and the resulting `windowDidMove` can land
+        // here before the screen-change notification does.
         screenManager.touchCurrentSet()
         let setID = screenManager.currentSetID
+
+        let screens = screenProvider.screens
+        guard let screen = Self.bestScreen(for: window, among: screens) else { return }
         let visible = screen.visibleFrame
         let topLeft = FrameCalculator.topLeftOffset(
             windowFrame: window.frame, screenVisibleFrame: visible

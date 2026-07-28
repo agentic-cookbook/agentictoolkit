@@ -220,6 +220,62 @@ final class ScreenManagerTests: XCTestCase {
         XCTAssertFalse(notified)
     }
 
+    // MARK: - Reconciling with live screens between notifications
+
+    /// AppKit repositions windows during a display reconfiguration, so
+    /// `saveFrame` (→ `touchCurrentSet`) can run before the screen-parameters
+    /// notification is delivered. The set id must already reflect the live
+    /// screens by then, or the placement is filed under the previous
+    /// arrangement's key.
+    func testTouchCurrentSetPicksUpAnUndeliveredScreenChange() {
+        let (manager, storage, provider) = makeManager(screens: [Self.builtin])
+        let soloSetID = manager.currentSetID
+
+        // The external display arrives; no notification has been processed yet.
+        provider.screens = [Self.builtin, Self.external]
+        manager.touchCurrentSet()
+
+        let dockedSetID = ScreenSet.identity(of: [Self.builtin, Self.external].map { ScreenSnapshot($0) })
+        XCTAssertEqual(manager.currentSetID, dockedSetID,
+            "touchCurrentSet must settle the id against the live screens")
+        XCTAssertNotEqual(manager.currentSetID, soloSetID)
+        XCTAssertTrue(storage.sets.contains { $0.id == dockedSetID },
+            "the newly-live set is recorded, not just held in memory")
+    }
+
+    /// The reconcile above must not swallow the notification that follows it:
+    /// classification runs off the last snapshots we actually notified on, so
+    /// `WindowFrameManager` still gets its reposition event.
+    func testReconcileDoesNotSwallowTheFollowingChangeNotification() {
+        let (manager, _, provider) = makeManager(screens: [Self.builtin])
+        let soloSetID = manager.currentSetID
+
+        var received: [ScreenChange] = []
+        manager.addObserver { received.append($0) }
+
+        provider.screens = [Self.builtin, Self.external]
+        manager.touchCurrentSet()
+        XCTAssertTrue(received.isEmpty, "the reconcile itself must not notify — it can re-enter saveFrame")
+
+        // The real notification lands a moment later.
+        manager.processScreenChange()
+
+        XCTAssertEqual(received, [.screenSetChanged(
+            previousSetID: soloSetID, currentSetID: manager.currentSetID
+        )], "the change is still classified against the pre-reconcile baseline")
+    }
+
+    /// The hot path (`touchCurrentSet` on every drag tick) must not thrash when
+    /// nothing moved: an unchanged frame list short-circuits before snapshots
+    /// are rebuilt, and the id is unchanged either way.
+    func testTouchCurrentSetIsStableWhenScreensAreUnchanged() {
+        let (manager, _, _) = makeManager(screens: [Self.builtin, Self.external])
+        let setID = manager.currentSetID
+        for _ in 0..<5 { manager.touchCurrentSet() }
+        XCTAssertEqual(manager.currentSetID, setID)
+        XCTAssertEqual(manager.knownSets.filter { $0.id == setID }.count, 1)
+    }
+
     func testReturningToKnownSetKeepsFirstSeen() throws {
         var clock = Date(timeIntervalSince1970: 1_000_000)
         let (manager, _, provider) = makeManager(screens: [Self.builtin], now: { clock })

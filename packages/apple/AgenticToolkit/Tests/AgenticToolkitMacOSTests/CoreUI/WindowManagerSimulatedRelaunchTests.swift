@@ -298,6 +298,55 @@ final class WindowManagerSimulatedRelaunchTests: XCTestCase {
         XCTAssertNotEqual(window.frame.origin.x, staleAbsoluteX, accuracy: 1)
     }
 
+    /// A display change AppKit acts on *before* it notifies us must not file the
+    /// resulting move under the outgoing arrangement's key.
+    ///
+    /// When a display drops out, AppKit pulls the windows that were on it back
+    /// onto a surviving screen — and that `windowDidMove` reaches `saveFrame`
+    /// before `didChangeScreenParameters` reaches `ScreenManager`. If the set id
+    /// is still the old one at that moment, the docked arrangement's placement
+    /// is overwritten with a position on a screen that arrangement doesn't even
+    /// contain, and re-docking brings the window back on the wrong display.
+    func testMoveDuringUndeliveredScreenChangeDoesNotClobberTheDockedPlacement() throws {
+        let storage = MockStorage()
+        let setStorage = MockScreenSetStorage()
+        let dockedFrame = NSRect(x: 2200, y: 300, width: 600, height: 480)
+
+        // Docked: the window lives on the external display.
+        let (frames, provider, screenManager) = makeFrames(
+            screens: [Self.builtin(), Self.external()], storage: storage, setStorage: setStorage
+        )
+        let window = makeWindow(frame: dockedFrame)
+        window.identifier = NSUserInterfaceItemIdentifier("wm_test")
+        frames.windowLister = { [window] }
+        frames.saveFrame(for: window, id: "test")
+        let dockedSetID = screenManager.currentSetID
+
+        // The external display drops out. AppKit has already updated the screen
+        // list and yanked the window onto the built-in — but the notification
+        // hasn't been delivered, so `processScreenChange()` has NOT run yet.
+        provider.screens = [Self.builtin()]
+        provider.mainScreen = provider.screens[0]
+        window.setFrame(NSRect(x: 100, y: 300, width: 600, height: 480), display: false)
+        frames.saveFrame(for: window, id: "test")
+
+        let saved = try XCTUnwrap(storage.loadState(for: "test"))
+        let soloSetID = ScreenSet.identity(of: [ScreenSnapshot(Self.builtin())])
+        XCTAssertEqual(saved.placements[dockedSetID]?.screenFingerprint.displayUUID, "EXTERNAL",
+            "the docked arrangement must still remember the external display")
+        XCTAssertEqual(saved.placements[soloSetID]?.screenFingerprint.displayUUID, "BUILTIN",
+            "the undocked move belongs to the undocked arrangement")
+
+        // Re-dock and relaunch: the window comes back where the user left it.
+        let (frames2, _, _) = makeFrames(
+            screens: [Self.builtin(), Self.external()], storage: storage, setStorage: setStorage
+        )
+        let window2 = makeWindow()
+        XCTAssertTrue(frames2.restoreFrame(for: window2, id: "test"))
+        XCTAssertEqual(window2.frame, dockedFrame,
+            "re-docking must restore onto the external display, not the built-in")
+    }
+
     // MARK: - Oversize clamp
 
     /// A window saved LARGER than the screen it later restores onto must come
