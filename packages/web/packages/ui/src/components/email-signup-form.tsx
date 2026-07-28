@@ -86,13 +86,23 @@ export function EmailSignupForm({
 
   const base = apiBaseUrl.replace(/\/$/, "")
 
+  /**
+   * The list config GET, factored out of the mount effect because a FAILED submit has to run it
+   * again. The nonce it carries has a server-side lifetime (audience/nonce.ts MAX_AGE_MS, 30
+   * minutes); fetching it once at mount meant a tab left open past that window could never sign
+   * up again — every retry re-sent the same expired nonce, and the only cure was a page reload.
+   */
+  const fetchConfig = React.useCallback(async (): Promise<ListConfig> => {
+    const res = await fetch(`${base}/public/signup-lists/${encodeURIComponent(publicKey)}`)
+    if (!res.ok) throw new Error(String(res.status))
+    return (await res.json()) as ListConfig
+  }, [base, publicKey])
+
   React.useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
-        const res = await fetch(`${base}/public/signup-lists/${encodeURIComponent(publicKey)}`)
-        if (!res.ok) throw new Error(String(res.status))
-        const body = (await res.json()) as ListConfig
+        const body = await fetchConfig()
         if (cancelled) return
         setConfig(body)
         setPhase(body.status === "open" ? "ready" : "closed")
@@ -103,7 +113,7 @@ export function EmailSignupForm({
     return () => {
       cancelled = true
     }
-  }, [base, publicKey])
+  }, [fetchConfig])
 
   async function submit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -137,7 +147,32 @@ export function EmailSignupForm({
       // Deliberately generic. The server's reasons ('invalid submission') describe the
       // anti-abuse gate, and repeating them tells an attacker which defence tripped.
       setError({ kind: "server", message: "Something went wrong. Please try again." })
+      // Re-enabled FIRST, in the same commit as the error, so the retry affordance never waits
+      // on a second network round trip that may itself hang.
       setPhase("ready")
+      // ...and then the nonce is replaced, because an EXPIRED nonce is the one failure that
+      // retrying with the same payload can never recover from: the server rejects it, we land
+      // back here, and without this the next attempt carries the identical dead value forever.
+      await refreshConfig()
+    }
+  }
+
+  /**
+   * Swap in a fresh config (and therefore a fresh nonce) after a failed submit.
+   *
+   * Failure to refresh is deliberately silent and KEEPS the config we already have: the visitor
+   * has just been told something went wrong, and a stale nonce still leaves a form they can try
+   * again with, whereas surfacing a second error — or dropping to `unavailable` — would take a
+   * working form away over a transient blip. A list that has CLOSED while the tab sat open is
+   * different: that is a durable answer, and continuing to offer the form would be a lie.
+   */
+  async function refreshConfig(): Promise<void> {
+    try {
+      const body = await fetchConfig()
+      setConfig(body)
+      if (body.status !== "open") setPhase("closed")
+    } catch {
+      /* keep the config we have — see above */
     }
   }
 

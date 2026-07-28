@@ -191,10 +191,20 @@ describe('EmailSignupForm', () => {
     expect(screen.getByLabelText(/email/i)).toHaveAttribute('aria-invalid', 'false')
   })
 
-  it('re-enables the button after a server error so the visitor can retry', async () => {
+  // Re-enabling the button is only half of "the visitor can retry": the nonce the mount GET
+  // issued expires server-side (audience/nonce.ts MAX_AGE_MS, 30 minutes), so a form that kept
+  // its original config would re-send the identical dead value on every attempt and the tab
+  // could NEVER sign up again. This retries for real and pins WHICH nonce the second POST
+  // carried — asserting only that the button came back would stay green under that bug.
+  it('re-enables the button after a server error, and the retry carries a FRESH nonce', async () => {
     setup()
     await screen.findByText('Launch list')
     fetchMock.mockRejectedValueOnce(new Error('offline'))
+    // The refresh GET the failure must trigger, handing back a different nonce.
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ name: 'Launch list', description: 'Be first to know.', status: 'open', nonce: 'n2' }),
+    })
 
     typeEmail('ada@example.com')
     submitForm()
@@ -203,6 +213,61 @@ describe('EmailSignupForm', () => {
     const button = screen.getByRole('button', { name: /sign up/i })
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-busy', 'false')
+
+    // GET, failed POST, refresh GET — and the refresh must address the same public list.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(callAt(2)[0]).toBe('https://api.test/public/signup-lists/pk1')
+
+    fetchMock.mockResolvedValueOnce(okPost())
+    submitForm()
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
+    const retried = JSON.parse(callAt(3)[1].body)
+    expect(retried.nonce).toBe('n2')
+    expect(retried.email).toBe('ada@example.com')
+    // The retry SUCCEEDS: success copy present, and the first attempt's error gone with it.
+    expect(await screen.findByText(/thanks/i)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  // The refresh is a best-effort repair, not a new failure mode: if it cannot reach the server
+  // the visitor must still be looking at a usable form, not an error page or a dead button.
+  it('keeps the form usable when the post-failure config refresh ALSO fails', async () => {
+    setup()
+    await screen.findByText('Launch list')
+    fetchMock.mockRejectedValueOnce(new Error('offline'))
+    fetchMock.mockRejectedValueOnce(new Error('still offline'))
+
+    typeEmail('ada@example.com')
+    submitForm()
+
+    await screen.findByRole('alert')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(screen.getByRole('button', { name: /sign up/i })).toBeEnabled()
+    expect(screen.getByLabelText(/email/i)).toHaveValue('ada@example.com')
+    // Not the two dead ends — a transient blip must not claim the list is closed or gone.
+    expect(screen.queryByText(/unavailable/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/is closed to new signups/i)).not.toBeInTheDocument()
+  })
+
+  // ...but a list that CLOSED while the tab sat open is a durable answer, and the refresh is
+  // where the form finds out. Continuing to offer a form that can only be rejected is the lie
+  // this pins against.
+  it('stops offering the form when the refresh reports the list has since closed', async () => {
+    setup()
+    await screen.findByText('Launch list')
+    fetchMock.mockRejectedValueOnce(new Error('offline'))
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ name: 'Launch list', description: null, status: 'closed', nonce: 'n2' }),
+    })
+
+    typeEmail('ada@example.com')
+    submitForm()
+
+    expect(await screen.findByText(/is closed to new signups/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/thanks/i)).not.toBeInTheDocument()
   })
 
   it('rejects a malformed address itself instead of spending a signup on it', async () => {
@@ -301,7 +366,7 @@ describe('EmailSignupForm', () => {
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
   })
 
-  it('sends the name when one is collected, and omits it when left blank', async () => {
+  it('sends the name when one is collected', async () => {
     setup()
     await screen.findByText('Launch list')
     fetchMock.mockResolvedValueOnce(okPost())
@@ -312,6 +377,28 @@ describe('EmailSignupForm', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
     expect(JSON.parse(callAt(1)[1].body).name).toBe('Ada Lovelace')
+  })
+
+  // Split from the case above, which claimed both halves and only ever exercised the first.
+  // The KEY must be absent, not merely falsy: `name: name.trim()` (dropping the `|| undefined`)
+  // sends `""`, the server schema has no `.min(1)`, and the contact is stored with an empty
+  // name that overwrites whatever the address was previously known by.
+  it('omits the name key entirely when the field is left blank', async () => {
+    setup()
+    await screen.findByText('Launch list')
+    fetchMock.mockResolvedValueOnce(okPost())
+
+    // Typed and then cleared, so this pins "blank at submit time" rather than "never touched".
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: '  ' } })
+    typeEmail('ada@example.com')
+    submitForm()
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    const body = JSON.parse(callAt(1)[1].body)
+    expect('name' in body).toBe(false)
+    // Decorrelation: the assertion above would also pass on an empty body.
+    expect(body.email).toBe('ada@example.com')
+    expect(body.nonce).toBe('n1')
   })
 
   it('shows the caller success message rather than the default one', async () => {
