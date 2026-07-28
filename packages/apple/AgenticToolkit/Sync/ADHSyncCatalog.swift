@@ -84,7 +84,7 @@ public enum ADHSyncCatalog {
         SyncResource(resource: "settings.communication", schemaVersion: 1),
         SyncResource(resource: "settings.notifications", schemaVersion: 1),
         SyncResource(resource: "social.follows", schemaVersion: 1),
-        SyncResource(resource: "social.user_blocks", schemaVersion: 1),
+        SyncResource(resource: "social.user_blocks", schemaVersion: 1)
     ]
 
     /// Pull-only resources (29): backend pushMode 'route'.
@@ -117,6 +117,6 @@ public enum ADHSyncCatalog {
         "settings.appearance",
         "settings.communication",
         "social.follows",
-        "social.user_blocks",
+        "social.user_blocks"
     ]
 }
