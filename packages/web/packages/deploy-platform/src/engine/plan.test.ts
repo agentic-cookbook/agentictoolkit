@@ -54,6 +54,48 @@ describe("planAddProject — decision table", () => {
     });
   });
 
+  it("apex owner behind `www.` → add-endpoint onto that site, NOT a duplicate new site", () => {
+    // The production endpoint is `www.<apex>`; the staging project's host is `staging.<apex>`.
+    // Matching only on the env prefix leaves those two hosts unrelated, so this planned a
+    // NEW site named for the same project base the production project already used — a
+    // (group, slug) collision that skipped the project on every run, forever.
+    // Deliberately UNWIRED, so only the apex rule can match it — an operator-created site
+    // never carries a deployProject for the sibling rule to fall back on.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://www.agenticstenographer.app", environment: "production" })];
+    const plan = planAddProject(proj("agenticstenographer-staging", "staging.agenticstenographer.app"), eps);
+    expect(plan).toEqual({
+      kind: "add-endpoint",
+      siteId: "s1",
+      url: "https://staging.agenticstenographer.app",
+      environment: "staging",
+      platform: "vercel",
+      deployProject: "agenticstenographer-staging",
+    });
+  });
+
+  it("sibling project (same platform, same base name) on a host sharing no apex → add-endpoint there", () => {
+    // Vercel names each env a SEPARATE project, and a provider host carries no apex to
+    // match on — so only the shared project base (`hub`) can tie these together.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://hub-prod.vercel.app", platform: "vercel", deployProject: "hub-production" })];
+    const plan = planAddProject({ platform: "vercel", projectName: "hub-testing", domain: "hub-test.vercel.app", environment: "testing" }, eps);
+    expect(plan).toEqual({
+      kind: "add-endpoint",
+      siteId: "s1",
+      url: "https://hub-test.vercel.app",
+      environment: "testing",
+      platform: "vercel",
+      deployProject: "hub-testing",
+    });
+  });
+
+  it("same base name on a DIFFERENT platform is not a sibling → new-site", () => {
+    // `myagenticprojects` on Railway and Vercel are unrelated products that merely share a
+    // name; grouping them would graft one product's monitor onto the other's site.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://svc.up.railway.app", platform: "railway", deployProject: "myagenticprojects" })];
+    const plan = planAddProject(proj("myagenticprojects-production", "myagenticprojects.com"), eps);
+    expect(plan).toMatchObject({ kind: "new-site", siteSlug: "myagenticprojects" });
+  });
+
   it("two projects claiming one already-wired host → conflict (existing wiring named, not clobbered)", () => {
     const eps = [ep({ id: "e1", siteId: "s1", url: "https://agenticdeveloperhelp.com", platform: "vercel", deployProject: "other-project" })];
     const plan = planAddProject(proj("help-production", "agenticdeveloperhelp.com"), eps);

@@ -1,4 +1,4 @@
-import { platformCanon, envFromProject, hostEnv, stripEnvPrefix, projectBaseName, epHost, slugify } from "../canon/index.js";
+import { platformCanon, envFromProject, hostEnv, siteApex, projectBaseName, epHost, slugify } from "../canon/index.js";
 import { endpointNeedsWiring } from "./classify.js";
 
 // A project with no known domain (e.g. a Cloudflare Worker) still gets a site +
@@ -13,13 +13,19 @@ export const PLACEHOLDER_URL = "https://";
 //
 //   1. An endpoint already monitors that exact host  → just wire it (set
 //      platform + deployProject).
-//   2. A site already owns the apex (has an endpoint on the same host minus the
-//      env prefix)                                    → add a new endpoint there.
-//   3. Nothing owns it                                → create a new site, then
+//   2. A site already owns the apex (has an endpoint on the same host minus any
+//      `www.`/env prefix)                             → add a new endpoint there.
+//   3. A site already monitors a SIBLING of this project (same platform, same
+//      project base name)                             → add a new endpoint there.
+//   4. Nothing owns it                                → create a new site, then
 //      add the endpoint.
 //
+// Steps 2 and 3 both key off the same canonical form the NAME in step 4 is built
+// from — matching and naming must agree, or a project matches nothing and is then
+// named for a site that already exists (a slug collision that strands it forever).
+//
 // Pure: it returns a PLAN; the caller performs the API writes. Easy to unit-test.
-// The host/project canonicalization helpers (hostEnv/stripEnvPrefix/projectBaseName/
+// The host/project canonicalization helpers (hostEnv/siteApex/projectBaseName/
 // epHost) live in ../canon so every deploy surface shares one definition.
 // ---------------------------------------------------------------------------
 
@@ -66,12 +72,13 @@ export function planAddProject(project: ProjectLite, endpoints: EndpointLite[]):
   }
 
   const env = explicitEnv ?? hostEnv(domain);
-  const base = stripEnvPrefix(domain);
+  const base = siteApex(domain);
+  const projectBase = projectBaseName(deployProject);
   // Parse each endpoint's host + apex + deploy-backed-ness ONCE (else O(n) URL
   // re-parses per step, O(n·m) across an Add-all).
   const ix = endpoints.map((e) => {
     const host = epHost(e.url);
-    return { e, host, apex: stripEnvPrefix(host), wireable: endpointNeedsWiring(e.kind) };
+    return { e, host, apex: siteApex(host), wireable: endpointNeedsWiring(e.kind) };
   });
 
   // 1) A DEPLOY-BACKED endpoint already monitors this exact host → wire it.
@@ -96,18 +103,22 @@ export function planAddProject(project: ProjectLite, endpoints: EndpointLite[]):
     return { kind: "add-endpoint", siteId: owner.siteId, url: `https://${domain}`, environment: env, platform, deployProject };
   }
 
-  // 3) A site already has an endpoint wired to THIS SAME (platform, deployProject) → add
-  //    the new env's endpoint there. This groups a Railway project's per-environment
-  //    entries (production/staging/testing) onto ONE site even when their provider hosts
-  //    (`svc-production…` / `svc-staging…`) share no apex — the earlier env created the
-  //    site, this one attaches to it. Vercel/CF envs are DIFFERENT projects, so they never
-  //    false-group here (their deployProject names differ per env).
-  const sibling = ix.find((x) => x.wireable && x.e.deployProject === deployProject && platformCanon(x.e.platform) === platform)?.e;
+  // 3) A site already has an endpoint wired to a SIBLING of this project — same platform,
+  //    same project BASE name (`x-production` / `x-staging` / `x-testing` → `x`) → add the
+  //    new env's endpoint there. This groups a Railway project's per-environment entries
+  //    onto ONE site even when their provider hosts (`svc-production…` / `svc-staging…`)
+  //    share no apex, AND groups Vercel's per-env PROJECTS (`x-staging` is a different
+  //    project from `x-production`, not a different env of one) onto that same site.
+  //    Matching on the base is what makes step 4's base-derived NAME safe: without it a
+  //    sibling is named for a site that already exists and its slug 409s forever.
+  const sibling = ix.find(
+    (x) => x.wireable && !!x.e.deployProject && projectBaseName(x.e.deployProject) === projectBase && platformCanon(x.e.platform) === platform,
+  )?.e;
   if (sibling) {
     return { kind: "add-endpoint", siteId: sibling.siteId, url: `https://${domain}`, environment: env, platform, deployProject };
   }
 
-  // 4) Nobody owns it — a new site named for the project's base.
-  const name = projectBaseName(project.projectName);
-  return { kind: "new-site", siteName: name, siteSlug: slugify(name), url: `https://${domain}`, environment: env, platform, deployProject };
+  // 4) Nobody owns it — a new site named for the project's base (the same key step 3
+  //    matches on, so the next sibling lands HERE instead of re-deriving this name).
+  return { kind: "new-site", siteName: projectBase, siteSlug: slugify(projectBase), url: `https://${domain}`, environment: env, platform, deployProject };
 }

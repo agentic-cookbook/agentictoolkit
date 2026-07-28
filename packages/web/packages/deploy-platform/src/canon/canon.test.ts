@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hostEnv, projectBaseName, stripEnvPrefix } from "./index.js";
+import { domainFamily, hostEnv, projectBaseName, siteApex, stripEnvPrefix } from "./index.js";
 
 describe("canon helpers", () => {
   it("hostEnv classifies common prefixes", () => {
@@ -28,5 +28,31 @@ describe("canon helpers", () => {
     expect(projectBaseName("app-production")).toBe("app");
     // No recognized suffix → unchanged.
     expect(projectBaseName("mysite")).toBe("mysite");
+  });
+
+  it("siteApex collapses www AND env labels onto one apex", () => {
+    // The whole point: a product served at `www.x` in production and `staging.x` in
+    // staging must resolve to ONE site key. stripEnvPrefix alone leaves them different.
+    expect(siteApex("www.agenticstenographer.app")).toBe("agenticstenographer.app");
+    expect(siteApex("staging.agenticstenographer.app")).toBe("agenticstenographer.app");
+    expect(siteApex("agenticstenographer.app")).toBe("agenticstenographer.app");
+    // Either prefix may front the other.
+    expect(siteApex("www.staging.example.com")).toBe("example.com");
+    expect(siteApex("staging.www.example.com")).toBe("example.com");
+    // A non-env, non-www label is a DIFFERENT site and stays whole.
+    expect(siteApex("lewis.agenticdeveloperhub.com")).toBe("lewis.agenticdeveloperhub.com");
+  });
+
+  it("domainFamily is the registrable domain, and null where that would mean nothing", () => {
+    expect(domainFamily("lewis.agenticdeveloperhub.com")).toBe("agenticdeveloperhub.com");
+    expect(domainFamily("agenticdeveloperhub.com")).toBe("agenticdeveloperhub.com");
+    expect(domainFamily("a.b.c.example.co.uk")).toBe("example.co.uk");
+    // Provider-issued hosts share a suffix but NOT a product family — never group on them.
+    expect(domainFamily("svc-production-1234.up.railway.app")).toBeNull();
+    expect(domainFamily("my-app.vercel.app")).toBeNull();
+    expect(domainFamily("docs.pages.dev")).toBeNull();
+    // Nothing to derive.
+    expect(domainFamily("localhost")).toBeNull();
+    expect(domainFamily("")).toBeNull();
   });
 });

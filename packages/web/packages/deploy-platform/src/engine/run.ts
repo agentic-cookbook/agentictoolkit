@@ -14,8 +14,8 @@
 // apply-with-rollback loop (`applySequentially`) is shared by this runner AND the
 // builder runner so their sequencing/skip-collection semantics can't drift.
 // ---------------------------------------------------------------------------
-import { epHost, platformCanon } from "../canon/index.js";
-import { planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
+import { domainFamily, epHost, platformCanon, slugify } from "../canon/index.js";
+import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
 import { endpointUnconfigured } from "./classify.js";
 
 /** Render an unknown thrown value as a display string (Error → message, else String). */
@@ -34,6 +34,12 @@ function plural(n: number, singular: string, pluralForm = `${singular}s`): strin
  */
 export interface StatusAddApi {
   listAllEndpoints(): Promise<EndpointLite[]>;
+  // Every existing site (id + slug + group). Two things on the create path need it: a
+  // site slug is UNIQUE PER GROUP, so a derived slug that is already taken has to be
+  // disambiguated rather than 409 and strand the project on every future run; and a new
+  // site belongs with the group that already owns its domain family, not wherever the
+  // fallback points.
+  listSites(): Promise<SiteLite[]>;
   updateEndpoint(id: string, body: Record<string, unknown>): Promise<unknown>;
   createSite(body: { name: string; slug: string; groupId: string }): Promise<{ id: string }>;
   // Returns the CREATED endpoint as an `EndpointLite` — the adapter maps whatever the
@@ -46,7 +52,15 @@ export interface StatusAddApi {
   deleteSite(id: string): Promise<void>;
 }
 
-/** Opt-in creation: the target group new sites are filed under. Absent → match-only. */
+/** An existing site, as the create path needs to see it. */
+export interface SiteLite {
+  id: string;
+  slug: string;
+  groupId: string;
+}
+
+/** Opt-in creation: the FALLBACK group new sites are filed under — used when the new
+ *  site's domain family doesn't already belong to a group. Absent → match-only. */
 export interface CreateOpts {
   groupId: string;
 }
@@ -97,10 +111,56 @@ export async function applySequentially<T>(
   return { added, created, skipped };
 }
 
-// A mutable endpoint snapshot so a sequential run sees the wirings earlier matches
-// applied (e.g. a project's staging + prod variants resolving against the same site).
+// A mutable snapshot so a sequential run sees what earlier applies did (e.g. a project's
+// staging + prod variants resolving against the same site, or the slug the previous
+// project just claimed).
 interface Working {
   endpoints: EndpointLite[];
+  /** `${groupId}|${slug}` for every site that exists — INCLUDING ones created earlier in
+   *  this same run, so two projects in one batch can't derive the same slug and 409. */
+  takenSlugs: Set<string>;
+  /** siteId → groupId, the lookup behind the domain-family group choice. */
+  siteGroup: Map<string, string>;
+}
+
+/** The group a NEW site for `host` belongs in: the one that already owns other sites in
+ *  the same domain family (`lewis.agenticdeveloperhub.com` joins whatever group holds
+ *  `agenticdeveloperhub.com`), else the operator's fallback. Two groups owning the family
+ *  is ambiguous → fallback; we never guess which half of a split family is right. */
+export function groupForNewSite(host: string, working: Working, fallbackGroupId: string): string {
+  const family = domainFamily(host);
+  if (!family) return fallbackGroupId;
+  let found: string | null = null;
+  for (const e of working.endpoints) {
+    if (domainFamily(epHost(e.url)) !== family) continue;
+    const g = working.siteGroup.get(e.siteId);
+    if (!g) continue;
+    if (found === null) found = g;
+    else if (found !== g) return fallbackGroupId;
+  }
+  return found ?? fallbackGroupId;
+}
+
+/**
+ * A (name, slug) for a new site that no site in `groupId` already uses. Needed because the
+ * planned slug is a PROJECT BASE name — two unrelated products can share one (Railway's
+ * `myagenticprojects` and Vercel's `myagenticprojects-production`), and `(group, slug)` is
+ * UNIQUE, so the collision 409s and strands the project on every future run. Falls back to
+ * the host (self-describing, and the thing that actually differs), then to a counter.
+ */
+export function uniqueSiteIdentity(
+  base: { name: string; slug: string },
+  host: string,
+  groupId: string,
+  taken: Set<string>,
+): { name: string; slug: string } {
+  const free = (slug: string): boolean => slug.length > 0 && !taken.has(`${groupId}|${slug}`);
+  if (free(base.slug)) return base;
+  if (host && free(slugify(host))) return { name: host, slug: slugify(host) };
+  for (let n = 2; n < 100; n += 1) {
+    if (free(`${base.slug}-${n}`)) return { name: `${base.name} (${n})`, slug: `${base.slug}-${n}` };
+  }
+  return base; // 99 taken variants — let the server's constraint have the last word
 }
 
 /** Match one deploy project to the EXISTING site that monitors its domain and wire it
@@ -132,17 +192,34 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
     working.endpoints = [...working.endpoints, ep];
     return { kind: "created" };
   }
-  // new-site: nobody owns the apex → create the site, then its endpoint. If the
-  // endpoint create fails, roll the site back: a site with no endpoint isn't just
-  // useless, its (group, slug) would 409 every future Auto Configure run and strand
-  // the project permanently. Rolling back lets the next run re-create it cleanly.
-  const site = await api.createSite({ name: plan.siteName, slug: plan.siteSlug, groupId: create.groupId });
+  // new-site: nobody owns the apex → create the site, then its endpoint. The site is filed
+  // with its domain family's group when there is one (the fallback group is for genuinely
+  // new families), and its slug is disambiguated against the ones already taken in that
+  // group — an unavoidable 409 here doesn't just fail this run, it strands the project on
+  // every future one.
+  const host = plan.url === PLACEHOLDER_URL ? "" : epHost(plan.url);
+  const groupId = groupForNewSite(host, working, create.groupId);
+  const identity = uniqueSiteIdentity({ name: plan.siteName, slug: plan.siteSlug }, host, groupId, working.takenSlugs);
+  const site = await api.createSite({ name: identity.name, slug: identity.slug, groupId });
+  const slugKey = `${groupId}|${identity.slug}`;
+  working.takenSlugs.add(slugKey);
+  working.siteGroup.set(site.id, groupId);
   let ep: EndpointLite;
   try {
     ep = await api.createEndpoint(site.id, { url: plan.url, environment: plan.environment, platform: plan.platform, deployProject: plan.deployProject });
   } catch (e) {
-    await api.deleteSite(site.id).catch(() => {}); // best-effort rollback; report the original failure
-    throw e;
+    // Roll the site back: a site with no endpoint isn't just useless, its (group, slug)
+    // would 409 every future run. Release the slug ONLY if the delete actually landed —
+    // otherwise the row still holds it and a later project must route around it.
+    let rolledBack = true;
+    await api.deleteSite(site.id).catch(() => {
+      rolledBack = false;
+    });
+    if (rolledBack) {
+      working.takenSlugs.delete(slugKey);
+      working.siteGroup.delete(site.id);
+    }
+    throw e; // report the original failure, not the rollback's outcome
   }
   working.endpoints = [...working.endpoints, ep];
   return { kind: "created" };
@@ -167,7 +244,12 @@ export async function runAutoConfigure(
   opts: { api: StatusAddApi; create?: CreateOpts; onProgress?: (done: number, total: number) => void },
 ): Promise<AutoConfigureResult<ProjectLite>> {
   const { api, create, onProgress } = opts;
-  const working: Working = { endpoints: await api.listAllEndpoints() };
+  const [endpoints, sites] = await Promise.all([api.listAllEndpoints(), api.listSites()]);
+  const working: Working = {
+    endpoints,
+    takenSlugs: new Set(sites.map((s) => `${s.groupId}|${s.slug}`)),
+    siteGroup: new Map(sites.map((s) => [s.id, s.groupId])),
+  };
   return applySequentially(addable, (p) => executeAdd(p, working, api, create), onProgress);
 }
 

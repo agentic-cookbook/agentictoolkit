@@ -48,6 +48,7 @@ function hostOf(url: string): string {
 }
 
 const ENV_PREFIX = /^(staging|testing|preview|prod|production)\./;
+const WWW_PREFIX = /^www\./;
 
 /** Env implied by a host's leading label: `staging.x` → staging, plain apex → production. */
 export function hostEnv(host: string): string {
@@ -60,6 +61,48 @@ export function hostEnv(host: string): string {
 /** Drop a single leading env label so staging/testing/prod hosts collapse to one apex. */
 export function stripEnvPrefix(host: string): string {
   return host.replace(ENV_PREFIX, "");
+}
+
+/**
+ * The host a SITE is identified by: leading `www.` and/or env labels removed, so
+ * `www.x.com`, `x.com`, `staging.x.com` and `www.staging.x.com` all collapse to `x.com`.
+ *
+ * `www.` matters as much as the env labels do: a product whose production endpoint is
+ * `www.x.com` while its staging host is `staging.x.com` shares NO apex under
+ * `stripEnvPrefix` alone — so the staging project looks unowned, gets planned as a new
+ * site named after the same project base, and collides with the site production already
+ * created. Loops because either prefix can front the other.
+ */
+export function siteApex(host: string): string {
+  let h = host;
+  for (;;) {
+    const next = h.replace(WWW_PREFIX, "").replace(ENV_PREFIX, "");
+    if (next === h) return h;
+    h = next;
+  }
+}
+
+// Hosts a deploy PROVIDER hands out. Two sites under `*.up.railway.app` share only their
+// provider, not a product family — so these can never seed the family grouping below the
+// way two `*.example.com` hosts do.
+const PROVIDER_SUFFIXES = ["vercel.app", "railway.app", "pages.dev", "workers.dev", "netlify.app", "onrender.com", "fly.dev", "herokuapp.com", "github.io"];
+
+// Public suffixes that take THREE labels rather than two. Deliberately tiny — the fleet is
+// .com/.app/.ai/.dev; extend it when a real host needs it rather than vendoring a PSL.
+const TWO_PART_TLDS = ["co.uk", "org.uk", "ac.uk", "com.au", "co.nz", "co.jp", "com.br"];
+
+/**
+ * The registrable domain a host belongs to (`x.com` for `a.b.x.com`) — the COARSE "same
+ * product family" key, one level up from `siteApex`. `null` when the answer would be
+ * meaningless: a provider-issued host, or a host with no dot at all.
+ */
+export function domainFamily(host: string): string | null {
+  const h = host.toLowerCase().replace(/\.$/, "");
+  if (!h.includes(".")) return null;
+  if (PROVIDER_SUFFIXES.some((s) => h === s || h.endsWith(`.${s}`))) return null;
+  const labels = h.split(".");
+  const take = TWO_PART_TLDS.includes(labels.slice(-2).join(".")) ? 3 : 2;
+  return labels.length <= take ? h : labels.slice(-take).join(".");
 }
 
 /** Project name minus a trailing `-production`/`-staging`/`-testing` suffix → the base. */
