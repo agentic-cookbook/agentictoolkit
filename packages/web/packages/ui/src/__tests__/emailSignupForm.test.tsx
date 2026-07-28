@@ -421,4 +421,131 @@ describe('EmailSignupForm', () => {
 
     expect(callAt(0)[0]).toBe('https://api.test/public/signup-lists/pk1')
   })
+
+  /**
+   * The server refuses any nonce younger than its floor (audience/nonce.ts MIN_AGE_MS) — the
+   * "no human filled this form in that fast" check. Refreshing the config after a failed submit
+   * mints a FRESH nonce, which restarts that clock: a visitor who clicks again straight away is
+   * refused, mints another nonce, and loops forever, each attempt failing for the same reason.
+   *
+   * Every assertion below is about WHEN the POST leaves, so each one is written to be false if
+   * the wait is removed: the "held" checks run in the same synchronous tick as the submit (the
+   * unwaited code path calls `fetch` before yielding), and the elapsed checks are measured from
+   * the arrival of the nonce that attempt actually carries.
+   */
+  describe('the server-published timing floor', () => {
+    // Short enough to keep the suite quick, long enough that "waited" and "did not wait" cannot
+    // be confused for scheduling noise.
+    const FLOOR_MS = 200
+
+    /** Queue a config GET, stamping the instant its body reaches the form. */
+    const configGet = (nonce: string, sink: number[]) =>
+      fetchMock.mockImplementationOnce(async () => ({
+        ok: true,
+        json: async () => {
+          sink.push(Date.now())
+          return { name: 'Launch list', description: 'Be first to know.', status: 'open', nonce, minAgeMs: FLOOR_MS }
+        },
+      }))
+
+    /** Queue a POST, stamping the instant the request is actually issued. */
+    const postOnce = (sink: number[], result: () => unknown) =>
+      fetchMock.mockImplementationOnce(async () => {
+        sink.push(Date.now())
+        return result()
+      })
+
+    it('holds the POST until the nonce is old enough for the server to accept it', async () => {
+      fetchMock.mockReset()
+      const gets: number[] = []
+      const posts: number[] = []
+      configGet('n1', gets)
+      setup()
+      await screen.findByText('Launch list')
+
+      postOnce(posts, okPost)
+      typeEmail('ada@example.com')
+      submitForm()
+
+      // Held, not sent. Without the wait the request goes out in this very tick.
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      // ...and the visitor is told the form is working rather than looking at a dead click.
+      expect(screen.getByRole('button', { name: /signing up/i })).toHaveAttribute('aria-busy', 'true')
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 3000 })
+      expect(posts[0]! - gets[0]!).toBeGreaterThanOrEqual(FLOOR_MS)
+      expect(await screen.findByText(/thanks/i)).toBeInTheDocument()
+    })
+
+    // The loop itself. The retry must be measured against the SECOND nonce's arrival: a form
+    // that refreshed the config without re-stamping would see the mount's timestamp, conclude
+    // the floor had long passed, and fire immediately — which is the failure this pins.
+    it('waits again on a prompt retry, so the replacement nonce is not spent before it is valid', async () => {
+      fetchMock.mockReset()
+      const gets: number[] = []
+      const posts: number[] = []
+      configGet('n1', gets)
+      setup()
+      await screen.findByText('Launch list')
+
+      postOnce(posts, () => {
+        throw new Error('rejected')
+      })
+      configGet('n2', gets)
+      postOnce(posts, okPost)
+
+      typeEmail('ada@example.com')
+      submitForm()
+
+      await screen.findByRole('alert')
+      // Wait for the replacement config to be ADOPTED, not merely requested — retrying before
+      // then would re-send the dead nonce and prove nothing about the clock.
+      await waitFor(() => expect(gets).toHaveLength(2), { timeout: 3000 })
+
+      submitForm()
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4), { timeout: 3000 })
+      expect(posts[1]! - gets[1]!).toBeGreaterThanOrEqual(FLOOR_MS)
+      // The retry SUCCEEDS — the whole point. A form that merely waited and still failed would
+      // satisfy the timing assertion above on its own.
+      expect(JSON.parse(callAt(3)[1].body).nonce).toBe('n2')
+      expect(await screen.findByText(/thanks/i)).toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('does not delay a visitor whose nonce is already older than the floor', async () => {
+      fetchMock.mockReset()
+      const gets: number[] = []
+      const posts: number[] = []
+      configGet('n1', gets)
+      setup()
+      await screen.findByText('Launch list')
+
+      // Exactly what a real visitor does: spend longer than the floor filling the form in.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, FLOOR_MS + 25))
+      })
+
+      postOnce(posts, okPost)
+      typeEmail('ada@example.com')
+      submitForm()
+
+      // Same tick. The slack the form adds is slack on a wait it is already doing, never a
+      // toll charged to someone who has nothing left to wait for.
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('submits immediately against a backend that publishes no floor at all', async () => {
+      // The mount GET from `beforeEach` — no `minAgeMs`, as an older backend sends.
+      setup()
+      await screen.findByText('Launch list')
+      fetchMock.mockResolvedValueOnce(okPost())
+
+      typeEmail('ada@example.com')
+      submitForm()
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
 })

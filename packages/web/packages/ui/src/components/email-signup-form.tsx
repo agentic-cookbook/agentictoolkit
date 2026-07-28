@@ -35,7 +35,22 @@ interface ListConfig {
   description: string | null
   status: string
   nonce: string
+  /**
+   * How old the nonce must be before the server will accept a submission (audience/nonce.ts
+   * MIN_AGE_MS). Optional because a backend predating the field simply omits it — a form talking
+   * to one then behaves exactly as it did before, submitting immediately.
+   */
+  minAgeMs?: number
 }
+
+/**
+ * Slack added to the wait so a submission cannot land a millisecond under the floor. `setTimeout`
+ * is a lower bound, so this is not correcting for early firing — it covers the rounding between
+ * the two clocks and keeps the check off a knife edge. Small enough that nobody perceives it.
+ */
+const TIMING_FLOOR_BUFFER_MS = 250
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * The form's outcomes, kept mutually exclusive so the DOM can only ever be telling the visitor
@@ -87,6 +102,23 @@ export function EmailSignupForm({
   const base = apiBaseUrl.replace(/\/$/, "")
 
   /**
+   * When the CURRENT nonce arrived, by this browser's clock. A ref, not state: nothing renders
+   * from it, and it must be readable by a submit that is already in flight.
+   *
+   * The wait below is measured as a DURATION FROM THIS MOMENT, never as a comparison between a
+   * server timestamp and `Date.now()`. That is what makes it immune to clock skew: a visitor
+   * whose machine is an hour off still measures three real seconds, and the network latency in
+   * both directions only ever ADDS to the age the server computes.
+   */
+  const nonceReceivedAt = React.useRef(0)
+
+  /** Adopt a freshly fetched config and stamp when its nonce arrived. Always paired. */
+  const adoptConfig = React.useCallback((body: ListConfig) => {
+    nonceReceivedAt.current = Date.now()
+    setConfig(body)
+  }, [])
+
+  /**
    * The list config GET, factored out of the mount effect because a FAILED submit has to run it
    * again. The nonce it carries has a server-side lifetime (audience/nonce.ts MAX_AGE_MS, 30
    * minutes); fetching it once at mount meant a tab left open past that window could never sign
@@ -104,7 +136,7 @@ export function EmailSignupForm({
       try {
         const body = await fetchConfig()
         if (cancelled) return
-        setConfig(body)
+        adoptConfig(body)
         setPhase(body.status === "open" ? "ready" : "closed")
       } catch {
         if (!cancelled) setPhase("unavailable")
@@ -113,7 +145,7 @@ export function EmailSignupForm({
     return () => {
       cancelled = true
     }
-  }, [fetchConfig])
+  }, [fetchConfig, adoptConfig])
 
   async function submit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -130,6 +162,20 @@ export function EmailSignupForm({
     setPhase("submitting")
     setError(null)
     try {
+      // The server refuses a nonce younger than its floor (audience/nonce.ts MIN_AGE_MS) — the
+      // "no human filled this in that fast" check. A retry is exactly the case that trips it: the
+      // failed attempt minted a fresh nonce, so the clock restarted, and a visitor who clicks
+      // again straight away is rejected, mints ANOTHER nonce, and loops forever. Waiting the
+      // remainder out here converts that loop into a submission that simply lands a moment later.
+      //
+      // Measured as a duration since the nonce ARRIVED, never as `Date.now()` vs a server
+      // timestamp, so a skewed client clock cannot shorten it; latency only ever makes the age
+      // the server computes larger than what we waited.
+      const remaining = (config.minAgeMs ?? 0) - (Date.now() - nonceReceivedAt.current)
+      // The buffer rides on top of a wait we are ALREADY doing rather than being added
+      // unconditionally, so a visitor who spent longer than the floor filling the form — the
+      // common case by far — submits with no delay at all.
+      if (remaining > 0) await sleep(remaining + TIMING_FLOOR_BUFFER_MS)
       const res = await fetch(`${base}/public/signup-lists/${encodeURIComponent(publicKey)}/signups`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -169,7 +215,7 @@ export function EmailSignupForm({
   async function refreshConfig(): Promise<void> {
     try {
       const body = await fetchConfig()
-      setConfig(body)
+      adoptConfig(body)
       if (body.status !== "open") setPhase("closed")
     } catch {
       /* keep the config we have — see above */
