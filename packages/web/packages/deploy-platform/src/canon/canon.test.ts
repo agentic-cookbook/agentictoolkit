@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { domainFamily, hostEnv, projectBaseName, siteApex, stripEnvPrefix } from "./index.js";
+import { domainFamily, envFromProject, hostEnv, projectBaseName, siteApex } from "./index.js";
 
 describe("canon helpers", () => {
   it("hostEnv classifies common prefixes", () => {
-    // `staging.`/`testing.` leading labels map to that env; anything without a known
-    // env prefix (a plain apex, or `www.` which is NOT in the prefix set) is production.
+    // `staging.`/`testing.` leading labels map to that env; a plain apex is production.
     expect(hostEnv("staging.example.com")).toBe("staging");
     expect(hostEnv("testing.example.com")).toBe("testing");
     expect(hostEnv("www.example.com")).toBe("production");
@@ -12,27 +11,27 @@ describe("canon helpers", () => {
     // `prod`/`production` normalize to "production"; `preview` collapses to "staging".
     expect(hostEnv("prod.example.com")).toBe("production");
     expect(hostEnv("preview.example.com")).toBe("staging");
+    // A leading `www.` is skipped, not treated as "no env label" — siteApex folds it away,
+    // so reading the env past it is what keeps the two answers about one host consistent.
+    expect(hostEnv("www.staging.example.com")).toBe("staging");
   });
 
-  it("stripEnvPrefix removes a leading env marker", () => {
-    expect(stripEnvPrefix("staging.example.com")).toBe("example.com");
-    expect(stripEnvPrefix("testing.example.com")).toBe("example.com");
-    // Only a KNOWN env label is stripped — `www.` is left intact.
-    expect(stripEnvPrefix("www.example.com")).toBe("www.example.com");
-    expect(stripEnvPrefix("example.com")).toBe("example.com");
-  });
-
-  it("projectBaseName strips a trailing env suffix", () => {
+  it("projectBaseName strips the env marker in BOTH spellings envFromProject reads", () => {
     expect(projectBaseName("mysite-staging")).toBe("mysite");
     expect(projectBaseName("docs-testing")).toBe("docs");
     expect(projectBaseName("app-production")).toBe("app");
-    // No recognized suffix → unchanged.
+    // The legacy PREFIX form. Asymmetry here is the same defect as a missing suffix: the
+    // project matches no sibling, then gets NAMED for the base that sibling's site holds.
+    expect(projectBaseName("staging.adh")).toBe("adh");
+    expect(projectBaseName("testing.admin.adh")).toBe("admin.adh");
+    expect(envFromProject("staging.adh")).toBe("staging");
+    // No recognized marker → unchanged.
     expect(projectBaseName("mysite")).toBe("mysite");
   });
 
   it("siteApex collapses www AND env labels onto one apex", () => {
     // The whole point: a product served at `www.x` in production and `staging.x` in
-    // staging must resolve to ONE site key. stripEnvPrefix alone leaves them different.
+    // staging must resolve to ONE site key. Stripping env labels alone leaves them different.
     expect(siteApex("www.agenticstenographer.app")).toBe("agenticstenographer.app");
     expect(siteApex("staging.agenticstenographer.app")).toBe("agenticstenographer.app");
     expect(siteApex("agenticstenographer.app")).toBe("agenticstenographer.app");
@@ -41,6 +40,10 @@ describe("canon helpers", () => {
     expect(siteApex("staging.www.example.com")).toBe("example.com");
     // A non-env, non-www label is a DIFFERENT site and stays whole.
     expect(siteApex("lewis.agenticdeveloperhub.com")).toBe("lewis.agenticdeveloperhub.com");
+    // NEVER below two labels: `staging.io` reducing to `io` would make every host under
+    // that TLD share one "apex", and step 2 would graft new projects onto strangers' sites.
+    expect(siteApex("staging.io")).toBe("staging.io");
+    expect(siteApex("www.com")).toBe("www.com");
   });
 
   it("domainFamily is the registrable domain, and null where that would mean nothing", () => {
@@ -51,6 +54,12 @@ describe("canon helpers", () => {
     expect(domainFamily("svc-production-1234.up.railway.app")).toBeNull();
     expect(domainFamily("my-app.vercel.app")).toBeNull();
     expect(domainFamily("docs.pages.dev")).toBeNull();
+    // Same for the other common PaaS defaults — two products hosted by one of these share
+    // their HOST provider, and filing the second into the first's group is a wrong answer.
+    expect(domainFamily("myapp.web.app")).toBeNull();
+    expect(domainFamily("myapp.firebaseapp.com")).toBeNull();
+    expect(domainFamily("x.azurestaticapps.net")).toBeNull();
+    expect(domainFamily("x.ondigitalocean.app")).toBeNull();
     // Nothing to derive.
     expect(domainFamily("localhost")).toBeNull();
     expect(domainFamily("")).toBeNull();

@@ -157,10 +157,15 @@ export function uniqueSiteIdentity(
   const free = (slug: string): boolean => slug.length > 0 && !taken.has(`${groupId}|${slug}`);
   if (free(base.slug)) return base;
   if (host && free(slugify(host))) return { name: host, slug: slugify(host) };
-  for (let n = 2; n < 100; n += 1) {
-    if (free(`${base.slug}-${n}`)) return { name: `${base.name} (${n})`, slug: `${base.slug}-${n}` };
+  // Only NUMBER a real base: an empty one (a project named entirely in punctuation, with
+  // no host to fall back on) would otherwise yield the nonsense site ` (2)` / `-2`. Hand
+  // the empty slug back and let the server's validation reject it, with a reason.
+  if (base.slug.length > 0) {
+    for (let n = 2; n < 100; n += 1) {
+      if (free(`${base.slug}-${n}`)) return { name: `${base.name} (${n})`, slug: `${base.slug}-${n}` };
+    }
   }
-  return base; // 99 taken variants — let the server's constraint have the last word
+  return base; // every variant taken — let the server's constraint have the last word
 }
 
 /** Match one deploy project to the EXISTING site that monitors its domain and wire it

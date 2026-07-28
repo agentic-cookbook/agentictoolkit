@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { type EndpointLite, type ProjectLite } from "./plan.js";
-import { runAutoConfigure, type SiteLite, type StatusAddApi } from "./run.js";
+import { runAutoConfigure, uniqueSiteIdentity, type SiteLite, type StatusAddApi } from "./run.js";
 
 const proj = (projectName: string, domain: string | null, platform = "vercel"): ProjectLite => ({ platform, projectName, domain });
 
@@ -95,6 +95,13 @@ describe("runAutoConfigure — a derived slug can never strand a project", () =>
     expect(res.created).toHaveLength(2);
     const slugs = (api.createSite as unknown as { mock: { calls: [{ slug: string }][] } }).mock.calls.map((c) => c[0].slug);
     expect(new Set(slugs).size).toBe(2);
+  });
+
+  it("never numbers an EMPTY base slug into a nonsense identity", () => {
+    // A project named entirely in punctuation slugifies to "", and the placeholder-URL path
+    // passes no host — so there is nothing to disambiguate WITH. Numbering it anyway would
+    // create a site literally named " (2)" with slug "-2" and record that slug as taken.
+    expect(uniqueSiteIdentity({ name: "***", slug: "" }, "", "g1", new Set())).toEqual({ name: "***", slug: "" });
   });
 });
 

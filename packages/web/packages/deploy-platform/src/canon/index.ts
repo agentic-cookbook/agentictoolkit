@@ -50,17 +50,15 @@ function hostOf(url: string): string {
 const ENV_PREFIX = /^(staging|testing|preview|prod|production)\./;
 const WWW_PREFIX = /^www\./;
 
-/** Env implied by a host's leading label: `staging.x` → staging, plain apex → production. */
+/** Env implied by a host's leading label: `staging.x` → staging, plain apex → production.
+ *  A leading `www.` is skipped first, exactly as {@link siteApex} folds it away — otherwise
+ *  `www.staging.x.com` reads as production and its staging deployment is monitored, and
+ *  reported, as prod. */
 export function hostEnv(host: string): string {
-  const m = ENV_PREFIX.exec(host);
+  const m = ENV_PREFIX.exec(host.replace(WWW_PREFIX, ""));
   if (!m) return "production";
   const p = m[1]!;
   return p === "prod" || p === "production" ? "production" : p === "preview" ? "staging" : p;
-}
-
-/** Drop a single leading env label so staging/testing/prod hosts collapse to one apex. */
-export function stripEnvPrefix(host: string): string {
-  return host.replace(ENV_PREFIX, "");
 }
 
 /**
@@ -68,16 +66,17 @@ export function stripEnvPrefix(host: string): string {
  * `www.x.com`, `x.com`, `staging.x.com` and `www.staging.x.com` all collapse to `x.com`.
  *
  * `www.` matters as much as the env labels do: a product whose production endpoint is
- * `www.x.com` while its staging host is `staging.x.com` shares NO apex under
- * `stripEnvPrefix` alone — so the staging project looks unowned, gets planned as a new
- * site named after the same project base, and collides with the site production already
- * created. Loops because either prefix can front the other.
+ * `www.x.com` while its staging host is `staging.x.com` shares NO apex under env-label
+ * stripping alone — so the staging project looks unowned, gets planned as a new site named
+ * after the same project base, and collides with the site production already created.
+ * Loops because either prefix can front the other, but never strips below TWO labels:
+ * `staging.io` must not reduce to `io`, or every host under that TLD shares one "apex".
  */
 export function siteApex(host: string): string {
   let h = host;
   for (;;) {
     const next = h.replace(WWW_PREFIX, "").replace(ENV_PREFIX, "");
-    if (next === h) return h;
+    if (next === h || next.split(".").length < 2) return h;
     h = next;
   }
 }
@@ -85,7 +84,23 @@ export function siteApex(host: string): string {
 // Hosts a deploy PROVIDER hands out. Two sites under `*.up.railway.app` share only their
 // provider, not a product family — so these can never seed the family grouping below the
 // way two `*.example.com` hosts do.
-const PROVIDER_SUFFIXES = ["vercel.app", "railway.app", "pages.dev", "workers.dev", "netlify.app", "onrender.com", "fly.dev", "herokuapp.com", "github.io"];
+const PROVIDER_SUFFIXES = [
+  "vercel.app",
+  "railway.app",
+  "pages.dev",
+  "workers.dev",
+  "netlify.app",
+  "onrender.com",
+  "fly.dev",
+  "herokuapp.com",
+  "github.io",
+  "web.app",
+  "firebaseapp.com",
+  "azurestaticapps.net",
+  "ondigitalocean.app",
+  "deno.dev",
+  "surge.sh",
+];
 
 // Public suffixes that take THREE labels rather than two. Deliberately tiny — the fleet is
 // .com/.app/.ai/.dev; extend it when a real host needs it rather than vendoring a PSL.
@@ -105,9 +120,13 @@ export function domainFamily(host: string): string | null {
   return labels.length <= take ? h : labels.slice(-take).join(".");
 }
 
-/** Project name minus a trailing `-production`/`-staging`/`-testing` suffix → the base. */
+/** Project name minus its env marker → the base every environment of one product shares.
+ *  Both spellings {@link envFromProject} reads: the current `-staging`/`-testing`/
+ *  `-production` SUFFIX and the legacy `staging.`/`testing.` PREFIX (`staging.adh` → `adh`).
+ *  The two must stay symmetric — a name whose env this can't strip matches no sibling and
+ *  is then NAMED for the base its sibling's site already holds. */
 export function projectBaseName(projectName: string): string {
-  return projectName.replace(/-(production|staging|testing)$/, "");
+  return projectName.replace(/^(staging|testing)\./, "").replace(/-(production|staging|testing)$/, "");
 }
 
 /** Endpoint host, lowercased, with any `:port` stripped (project domains are bare). */

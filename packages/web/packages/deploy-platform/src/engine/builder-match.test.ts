@@ -51,6 +51,16 @@ describe("planBuilderSite", () => {
     expect(planBuilderSite(p, sites)).toEqual({ kind: "skip", reason: "already configured" });
   });
 
+  it("matches the site it created last run when the base isn't already slug-shaped", () => {
+    // Run 1 created this site with `slugify(base)` = "my-app". Matching on the RAW base
+    // ("My_App") misses it and plans another new-site asking for the slug that site already
+    // holds — the same "named by a key it never matched on" collision, one planner over.
+    // (prodUrl host ≠ the project's domain, so the domain rule can't be what matches here.)
+    const p = project({ projectName: "My_App", domain: "my-app.other.com", domains: ["my-app.other.com"] });
+    const sites = [site({ id: "s4", slug: "my-app", name: "My_App", prodUrl: "https://myapp.example.com" })];
+    expect(planBuilderSite(p, sites)).toEqual({ kind: "skip", reason: "already configured" });
+  });
+
   it("no rootDirectory, no domain, no gitRepo → skip (\"no identity\")", () => {
     const p = project({ projectName: "mystery" });
     expect(planBuilderSite(p, [])).toEqual({ kind: "skip", reason: "no identity" });

@@ -70,11 +70,13 @@ export function planBuilderSite(project: EnumeratedProjectLike, sites: BuilderSi
   const base = projectBaseName(project.projectName);
 
   // Match order: rootDirectory == repoDir, then canonical domain == prodUrl host,
-  // then projectBaseName == slug. First hit wins.
+  // then projectBaseName == slug. First hit wins. The slug comparison SLUGIFIES the base —
+  // the same transform the create below names with, so a base that isn't already slug-shaped
+  // (`staging.adh`) matches the site it created last run instead of asking for that slug again.
   const matched =
     (rootDir ? sites.find((s) => !!s.repoDir && s.repoDir === rootDir) : undefined) ??
     (canonHost ? sites.find((s) => !!s.prodUrl && epHost(s.prodUrl) === canonHost) : undefined) ??
-    sites.find((s) => s.slug === base);
+    sites.find((s) => s.slug === slugify(base));
 
   const prodDomain = prodDomainOf(project);
   const prodUrl = prodDomain ? `https://${prodDomain}` : null;

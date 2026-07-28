@@ -88,6 +88,23 @@ describe("planAddProject — decision table", () => {
     });
   });
 
+  it("groups the LEGACY prefix env spelling (`staging.adh`) onto its base project's site", () => {
+    // The other name shape in this fleet: env as a `staging.` PREFIX rather than a
+    // `-staging` suffix. `envFromProject` has always read both, so the base derivation must
+    // too — otherwise this project matches nothing and step 4 names it `staging.adh`,
+    // a SECOND site beside `adh`'s.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://adh-prod.vercel.app", platform: "vercel", deployProject: "adh" })];
+    const plan = planAddProject({ platform: "vercel", projectName: "staging.adh", domain: "adh-stg.vercel.app", environment: "staging" }, eps);
+    expect(plan).toEqual({
+      kind: "add-endpoint",
+      siteId: "s1",
+      url: "https://adh-stg.vercel.app",
+      environment: "staging",
+      platform: "vercel",
+      deployProject: "staging.adh",
+    });
+  });
+
   it("same base name on a DIFFERENT platform is not a sibling → new-site", () => {
     // `myagenticprojects` on Railway and Vercel are unrelated products that merely share a
     // name; grouping them would graft one product's monitor onto the other's site.
