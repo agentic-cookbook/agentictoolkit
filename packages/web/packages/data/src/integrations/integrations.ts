@@ -23,6 +23,7 @@ import type {
   AuthUrlResultRow,
   ConnectRequestBody,
   CreateProviderConfigBody,
+  DeliverabilityWebhookRow,
   LinkTokenBodyType,
   MaskedProviderConfigRow,
   ProviderCatalogEntryRow,
@@ -42,6 +43,9 @@ export type ProviderAuthMethod = ProviderCatalogEntry["authMethod"];
 
 /** A stored, secret-masked provider config for an ecosystem. */
 export type MaskedProviderConfig = MaskedProviderConfigRow;
+
+/** The registration details for a provider's deliverability webhook (postmark today). */
+export type DeliverabilityWebhook = DeliverabilityWebhookRow;
 
 /** The PUT (upsert) body for a provider config — a blank/absent
  *  `clientSecret` preserves the stored secret. */

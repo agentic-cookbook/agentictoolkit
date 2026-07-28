@@ -31,6 +31,20 @@ export interface ProviderCatalogEntryRow {
   }[];
 }
 
+/**
+ * The deliverability webhook an operator has to register with their email provider, DERIVED by
+ * the backend from the ecosystem + its webhook secret and returned alongside a config — never
+ * stored, so it cannot drift from the URL the webhook route actually accepts.
+ */
+export interface DeliverabilityWebhookRow {
+  /** The absolute URL, already carrying this ecosystem's signed token. */
+  url: string
+  /** The custom header name the provider must send the shared secret in. */
+  secretHeader: string
+  /** One line naming the provider's own setting, so a consumer needs no copy of its own. */
+  instruction: string
+}
+
 /** A stored, secret-masked provider config for an ecosystem. */
 export interface MaskedProviderConfigRow {
   id: string;
@@ -53,6 +67,14 @@ export interface MaskedProviderConfigRow {
   config: Record<string, unknown>;
   /** Whether a client secret is stored (the value is never returned) */
   hasSecret: boolean;
+  /**
+   * Present on providers whose deliverability events feed suppression (postmark today), absent
+   * on every other provider; `null` when the deployment has not configured a webhook secret and
+   * therefore cannot build a working URL. Optional-and-nullable is the shape the backend
+   * actually sends — the three cases are told apart, rather than collapsing "this provider has
+   * no webhook" into "this deployment has not set one up".
+   */
+  deliverabilityWebhook?: DeliverabilityWebhookRow | null;
   updatedBy?: string | null;
   createdAt?: string;
   updatedAt?: string;
