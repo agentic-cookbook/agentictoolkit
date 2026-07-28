@@ -20,6 +20,61 @@ public enum ModelChooserContent {
         return listed + [current]
     }
 
+    /// "Only models that fit this Mac" — the on-disk sizes and the machine's RAM a
+    /// fit verdict is computed from, using the same policy (and the same thresholds)
+    /// the daemon's guard enforces, so the list can never offer a model the guard
+    /// would then refuse.
+    public struct FitFilter: Sendable, Equatable {
+        public let sizes: [String: Int]
+        public let physicalRAM: UInt64
+        public let warnPct: Int
+        public let blockPct: Int
+
+        public init(sizes: [String: Int], physicalRAM: UInt64,
+                    warnPct: Int = ModelFitPolicy.defaultWarnPct,
+                    blockPct: Int = ModelFitPolicy.defaultBlockPct) {
+            self.sizes = sizes
+            self.physicalRAM = physicalRAM
+            self.warnPct = warnPct
+            self.blockPct = blockPct
+        }
+
+        /// Is `model` small enough to keep?
+        ///
+        /// Only the block tier is dropped — the tier at which the guard refuses to
+        /// run the model at all. Warn-tier models are heavy but do run, and the
+        /// details pane already labels them; and a model whose size is unknown (any
+        /// local server that isn't Ollama) is kept, matching how the guard itself
+        /// fails open on an unknown size.
+        public func keeps(_ model: String) -> Bool {
+            ModelFitPolicy.tier(diskBytes: LocalModelServer.size(of: model, in: sizes),
+                                physicalRAM: physicalRAM,
+                                warnPct: warnPct, blockPct: blockPct) != .block
+        }
+    }
+
+    /// The chooser's list filter: the search field's substring, the "good for"
+    /// facets, and the fits-this-Mac box. The three are independent — a model must
+    /// survive all of them.
+    ///
+    /// `descriptions` carries the live blurbs fetched per model (ollama.com), which
+    /// is where a local model's only prose comes from; without it every model on a
+    /// local server would be facet-less.
+    public static func filter(_ items: [ModelPickerItem], query: String,
+                              uses: Set<ModelUseFacet> = [],
+                              descriptions: [String: String] = [:],
+                              fit: FitFilter? = nil) -> [ModelPickerItem] {
+        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
+        return items.filter { item in
+            if !uses.isEmpty {
+                let facets = ModelUseFacet.facets(for: item.info, extraText: descriptions[item.id])
+                guard ModelUseFacet.matches(facets: facets, selected: uses) else { return false }
+            }
+            if let fit, !fit.keeps(item.id) { return false }
+            return needle.isEmpty || item.matches(needle)
+        }
+    }
+
     /// Capability badges — prefer the live server list (title-cased), else what the
     /// shared catalog reports, else `["Tools"]` from a curated `tools == true`.
     public static func capabilityBadges(item: ModelPickerItem, metadata: OllamaModelMetadata?) -> [String] {

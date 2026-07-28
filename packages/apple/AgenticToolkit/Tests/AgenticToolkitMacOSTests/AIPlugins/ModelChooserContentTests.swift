@@ -129,4 +129,61 @@ struct ModelChooserContentTests {
         #expect(ModelChooserContent.warnPrompt(
             model: "m", sizeBytes: 8_900_000_000, physicalRAM: ram, warnPct: 10, blockPct: 50) != nil)
     }
+
+    // MARK: - filter
+
+    private var filterItems: [ModelPickerItem] {
+        [ModelPickerItem(id: "coder-7b", description: "Great at coding and debugging"),
+         ModelPickerItem(id: "scribe-7b", description: "Creative writing and drafting"),
+         ModelPickerItem(id: "mystery-7b")]
+    }
+
+    @Test("filter's query keeps matching the id and the description")
+    func filterQuery() {
+        #expect(ModelChooserContent.filter(filterItems, query: "coder").map(\.id) == ["coder-7b"])
+        #expect(ModelChooserContent.filter(filterItems, query: "DRAFTING").map(\.id) == ["scribe-7b"])
+        #expect(ModelChooserContent.filter(filterItems, query: "  ").count == 3)
+    }
+
+    @Test("filter narrows by what a model is good for, keeping unknowns")
+    func filterUses() {
+        // mystery-7b has no prose at all, so no evidence either way — it stays.
+        #expect(ModelChooserContent.filter(filterItems, query: "", uses: [.coding]).map(\.id)
+            == ["coder-7b", "mystery-7b"])
+        #expect(ModelChooserContent.filter(filterItems, query: "", uses: [.coding, .writing]).count == 3)
+        #expect(ModelChooserContent.filter(filterItems, query: "", uses: []).count == 3)
+    }
+
+    @Test("a live blurb gives a catalog-less model its facets")
+    func filterUsesFromFetchedDescriptions() {
+        let filtered = ModelChooserContent.filter(
+            filterItems, query: "", uses: [.vision],
+            descriptions: ["mystery-7b": "reads charts and screenshots"])
+        #expect(filtered.map(\.id) == ["mystery-7b"])
+    }
+
+    @Test("the fit filter drops only block-tier models, keeping unknown sizes")
+    func filterFit() {
+        let ram: UInt64 = 64_000_000_000
+        let fit = ModelChooserContent.FitFilter(
+            sizes: ["coder-7b": 4_000_000_000,      // ok
+                    "scribe-7b": 51_000_000_000],   // block (>50% of RAM, est.)
+            physicalRAM: ram)
+        #expect(ModelChooserContent.filter(filterItems, query: "", fit: fit).map(\.id)
+            == ["coder-7b", "mystery-7b"])
+        // Unchecked: nothing is dropped.
+        #expect(ModelChooserContent.filter(filterItems, query: "", fit: nil).count == 3)
+        // Warn-tier survives — the guard runs those, it only refuses block-tier.
+        let warnFit = ModelChooserContent.FitFilter(
+            sizes: ["coder-7b": 20_000_000_000], physicalRAM: ram)
+        #expect(warnFit.keeps("coder-7b"))
+    }
+
+    @Test("query, uses and fit are ANDed")
+    func filterCombines() {
+        let fit = ModelChooserContent.FitFilter(
+            sizes: ["coder-7b": 51_000_000_000], physicalRAM: 64_000_000_000)
+        #expect(ModelChooserContent.filter(filterItems, query: "coder", uses: [.coding], fit: fit).isEmpty)
+        #expect(ModelChooserContent.filter(filterItems, query: "coder", uses: [.writing]).isEmpty)
+    }
 }

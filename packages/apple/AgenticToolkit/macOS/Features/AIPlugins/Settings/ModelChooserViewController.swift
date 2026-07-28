@@ -54,6 +54,13 @@ public final class ModelChooserViewController: NSViewController {
     private let physicalRAM = SystemMemoryMonitor.shared.physicalRAM
 
     private let searchField = NSSearchField()
+    private let useFilter = MultiChoiceFilterButton(
+        label: "Good for",
+        choices: ModelUseFacet.allCases.map { .init(id: $0.rawValue, title: $0.title, detail: $0.detail) })
+    /// "Fits this Mac". Only local servers report a model's size, so only there can
+    /// this box mean anything — elsewhere it isn't built (see `configureFilterBar`).
+    private static let fitFilterTitle = "Fits this Mac"
+    private let fitCheckbox = NSButton(checkboxWithTitle: fitFilterTitle, target: nil, action: nil)
     private let tableView = NSTableView()
     private let tableScroll = NSScrollView()
     /// Canonical composable-settings scroll host: top-anchored, width pinned to
@@ -70,7 +77,9 @@ public final class ModelChooserViewController: NSViewController {
     /// Fires once with the chosen model (OK) or nil (Cancel/close).
     var completion: ((String?) -> Void)?
 
-    var initialContentSize: NSSize { NSSize(width: 720, height: 460) }
+    /// Taller than the pre-filter-bar 460 by exactly the bar it gained, so the
+    /// detail pane opens at the height it always did.
+    var initialContentSize: NSSize { NSSize(width: 720, height: 494) }
 
     public init(context: ModelChooserContext) {
         self.context = context
@@ -100,6 +109,7 @@ public final class ModelChooserViewController: NSViewController {
         root.wantsLayer = true
 
         configureSearchField()
+        configureFilterBar()
         configureTable()
         configureSplit()
         configureButtons()
@@ -128,13 +138,32 @@ public final class ModelChooserViewController: NSViewController {
         splitView.setHoldingPriority(NSLayoutConstraint.Priority(261), forSubviewAt: 0)
         splitView.setHoldingPriority(NSLayoutConstraint.Priority(260), forSubviewAt: 1)
 
-        [splitView, cancelButton, okButton].forEach {
+        [useFilter, fitCheckbox, splitView, cancelButton, okButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             root.addSubview($0)
         }
 
         NSLayoutConstraint.activate([
-            splitView.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
+            // The filter row spans the whole window rather than sitting in the left
+            // pane with the search field: the pull-down's summary title is wider
+            // than the model table, and squeezing it would truncate the one part of
+            // the control that says what is filtered.
+            //
+            // Each control is constrained directly rather than arranged in an
+            // NSStackView. This window is opened from a SwiftUI button action
+            // (`LLMProvidersView.presentChooser`) and enters `runModal` from inside
+            // it; a control nested in a stack view here never gets its first
+            // display pass — it is in the accessibility tree, at the right frame,
+            // hit-testable, and blank until something else forces it to redraw,
+            // while its stack view's own layer paints fine. Direct subviews of the
+            // content view draw normally (as Cancel/OK next door always have).
+            useFilter.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
+            useFilter.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+            fitCheckbox.leadingAnchor.constraint(equalTo: useFilter.trailingAnchor, constant: 12),
+            fitCheckbox.centerYAnchor.constraint(equalTo: useFilter.centerYAnchor),
+            fitCheckbox.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -16),
+
+            splitView.topAnchor.constraint(equalTo: useFilter.bottomAnchor, constant: 8),
             splitView.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             splitView.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
             splitView.bottomAnchor.constraint(equalTo: cancelButton.topAnchor, constant: -10),
@@ -152,6 +181,27 @@ public final class ModelChooserViewController: NSViewController {
 
         self.view = root
     }
+
+    /// The filter row above the split: what the model is good for, and — for a local
+    /// server only — whether it fits in this machine's RAM.
+    ///
+    /// There is no *type* filter here, unlike the provider picker: a chooser is
+    /// opened on one already-chosen provider, so every model in it has that
+    /// provider's single type and the control could only ever show or empty the
+    /// whole list. The fit box takes that slot, and is the type question's local
+    /// half — "will this actually run here".
+    private func configureFilterBar() {
+        useFilter.onChange = { [weak self] _ in self?.applyFilter() }
+        fitCheckbox.target = self
+        fitCheckbox.action = #selector(fitFilterToggled)
+        fitCheckbox.toolTip = "Hide models too large for this Mac's "
+            + "\(ModelFitPolicy.gbString(Int(physicalRAM))) of memory"
+        // Only a local server reports a model's size, so only there can the box
+        // mean anything; elsewhere it is present but never shown.
+        fitCheckbox.isHidden = !LocalProviderModelStore.isLocal(baseURL: context.baseURL)
+    }
+
+    @objc private func fitFilterToggled() { applyFilter() }
 
     private func configureSearchField() {
         searchField.placeholderString = "Filter models"
@@ -264,6 +314,7 @@ public final class ModelChooserViewController: NSViewController {
             sizesByModel = await liveSizes
                 ?? LocalProviderModelStore.cachedSizes(baseURL: context.baseURL)
             renderDetail()
+            reapplyFilterIfDataDriven()
         }
         refreshAllModelInfo()
     }
@@ -293,7 +344,12 @@ public final class ModelChooserViewController: NSViewController {
                     model: model, viaOllamaPage: isLocal)
                 guard let self else { return }
                 var changed = false
-                if let text = info.description { descriptionsByModel[model] = text; changed = true }
+                if let text = info.description {
+                    descriptionsByModel[model] = text
+                    changed = true
+                    // A blurb is where a local model's facets come from.
+                    reapplyFilterIfDataDriven()
+                }
                 if let stats = info.stats { pageStatsByModel[model] = stats; changed = true }
                 if let rank = info.rank { ranksByModel[model] = rank; changed = true }
                 if changed, selectedModel == model { renderDetail() }
@@ -375,10 +431,27 @@ public final class ModelChooserViewController: NSViewController {
     }
 
     private func applyFilter() {
-        let needle = searchField.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
-        filtered = needle.isEmpty ? items : items.filter { $0.matches(needle) }
+        filtered = ModelChooserContent.filter(
+            items,
+            query: searchField.stringValue,
+            uses: Set(useFilter.selection.compactMap(ModelUseFacet.init(rawValue:))),
+            descriptions: descriptionsByModel,
+            fit: fitCheckbox.state == .on
+                ? .init(sizes: sizesByModel, physicalRAM: physicalRAM,
+                        warnPct: context.warnPct, blockPct: context.blockPct)
+                : nil)
         tableView.reloadData()
         selectRow(filtered.firstIndex { $0.id == selectedModel } ?? 0)
+    }
+
+    /// Re-run the filter when late-arriving data would change its answer — sizes
+    /// and blurbs land per model, seconds after the list does, and a filter set
+    /// before they arrived would otherwise keep judging models on nothing. Skipped
+    /// when neither filter is on, so the common case doesn't reload the table once
+    /// per fetch.
+    private func reapplyFilterIfDataDriven() {
+        guard !useFilter.selection.isEmpty || fitCheckbox.state == .on else { return }
+        applyFilter()
     }
 
     private func applyTheme(_ palette: SemanticPalette) {
@@ -388,6 +461,11 @@ public final class ModelChooserViewController: NSViewController {
         // Cancel is painted explicitly: AppKit's stock bezel composites away to
         // nothing in this window (see `applySecondaryActionTheme`).
         cancelButton.applySecondaryActionTheme(palette)
+        // A checkbox's title takes the system label color, not the theme's.
+        fitCheckbox.attributedTitle = NSAttributedString(string: Self.fitFilterTitle, attributes: [
+            .foregroundColor: palette.primaryTextColor,
+            .font: palette.font(.body)
+        ])
         renderDetail()   // ThemedLabels/PanelView re-theme themselves; rebuild to be safe
         tableView.reloadData()
     }

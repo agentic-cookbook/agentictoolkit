@@ -64,6 +64,57 @@ struct ProviderPickerTests {
         #expect(ProviderPickerFilter.filter(rows, query: "   ").count == 3)
     }
 
+    @Test("Filter narrows by provider type, independently of the query")
+    func filterByType() {
+        let rows = [
+            row(provider: "Anthropic", llm: "Claude", configType: "API Key"),
+            row(provider: "Anthropic", llm: "Claude", configType: "OAuth Account"),
+            row(provider: "Ollama", llm: "Local", configType: "Local")
+        ]
+        #expect(ProviderPickerFilter.filter(rows, query: "", types: [.local]).map(\.provider) == ["Ollama"])
+        #expect(ProviderPickerFilter.filter(rows, query: "", types: [.apiKey, .subscription]).count == 2)
+        #expect(ProviderPickerFilter.filter(rows, query: "", types: []).count == 3)
+        // Query and type are ANDed.
+        #expect(ProviderPickerFilter.filter(rows, query: "anthropic", types: [.local]).isEmpty)
+    }
+
+    @Test("Filter narrows by what the provider's models are good for")
+    func filterByUse() {
+        let coder = ProviderPickerRow(available: .init(
+            pluginIdentifier: "com.x",
+            template: .init(id: "t1", displayName: "Coder", models: ["m-code"], provider: "Coder",
+                            llm: "C", configType: "API Key",
+                            modelDetails: [.init(id: "m-code", description: "Great at coding")])))
+        let writer = ProviderPickerRow(available: .init(
+            pluginIdentifier: "com.x",
+            template: .init(id: "t2", displayName: "Writer", models: ["m-write"], provider: "Writer",
+                            llm: "W", configType: "API Key",
+                            modelDetails: [.init(id: "m-write", description: "Creative writing")])))
+        // No models listed at all — a local server whose list is only known at runtime.
+        let unknown = row(provider: "Ollama", llm: "Local", configType: "Local")
+
+        #expect(coder.uses.contains(.coding))
+        #expect(writer.uses.contains(.writing))
+        #expect(unknown.uses.isEmpty)
+
+        let rows = [coder, writer, unknown]
+        // A provider with no known models is never hidden by a use filter.
+        #expect(ProviderPickerFilter.filter(rows, query: "", uses: [.coding]).map(\.provider)
+            == ["Coder", "Ollama"])
+        #expect(ProviderPickerFilter.filter(rows, query: "", uses: [.coding, .writing]).count == 3)
+    }
+
+    @Test("A provider's uses are the union over all its models")
+    func usesUnionAcrossModels() {
+        let both = ProviderPickerRow(available: .init(
+            pluginIdentifier: "com.x",
+            template: .init(id: "t", displayName: "Both", models: ["a", "b"], provider: "Both",
+                            llm: "B", configType: "API Key",
+                            modelDetails: [.init(id: "a", description: "Great at coding"),
+                                           .init(id: "b", description: "Creative writing")])))
+        #expect(both.uses.isSuperset(of: [.coding, .writing]))
+    }
+
     @Test("pickerRows always sorts by provider, then llm, then config type")
     func pickerRowsSorted() {
         UserSettings.aiProviderConfigurations.value = []

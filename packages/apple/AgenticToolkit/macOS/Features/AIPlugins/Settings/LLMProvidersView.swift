@@ -124,7 +124,23 @@ struct LLMProviderEditorView: View {
             pluginIdentifier: configuration.pluginIdentifier, template: template,
             baseURL: values["baseURL"] ?? "", apiKey: values["apiKey"],
             currentModel: currentModel.isEmpty ? template.resolvedDefaultModel : currentModel)
-        ModelChooser.present(over: window, context: context) { selectModel($0, template: template) }
+        // Presented a run-loop turn later, not inline: `present` enters `runModal`,
+        // and spinning a nested modal loop from inside a SwiftUI button action —
+        // i.e. from inside SwiftUI's own update — leaves the chooser's AppKit
+        // controls unpainted (framed and hit-testable, but blank until something
+        // forces a redraw). Off the button's call stack, the window draws normally.
+        //
+        // Scheduled on the run loop rather than with `DispatchQueue.main.async`:
+        // the modal loop never returns from the block that starts it, and a main
+        // *queue* block that never returns stops the queue draining, which strands
+        // every `await` the chooser makes (live model list, sizes, blurbs) until
+        // the window closes. A run-loop block leaves the main queue free to drain.
+        CFRunLoopPerformBlock(CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue) {
+            MainActor.assumeIsolated {
+                ModelChooser.present(over: window, context: context) { selectModel($0, template: template) }
+            }
+        }
+        CFRunLoopWakeUp(CFRunLoopGetMain())
     }
 
     /// Commits a model choice: persist it, refresh the label, and — if a chat is

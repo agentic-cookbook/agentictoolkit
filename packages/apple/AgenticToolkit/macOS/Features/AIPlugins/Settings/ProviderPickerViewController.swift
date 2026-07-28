@@ -9,8 +9,23 @@ import AgenticToolkitCoreMacOS
 public struct ProviderPickerRow: Equatable, Sendable {
     public let available: AIPluginManager.AvailableProviderTemplate
 
+    /// What this provider's models are collectively good for — the union over every
+    /// model it lists, because the question a filter answers here is "could I do X
+    /// at this provider", not "is every model at it good at X".
+    ///
+    /// Resolved once, at init: it costs a catalog lookup per listed model, and the
+    /// filter re-runs on every keystroke. Providers whose models are only known at
+    /// runtime (local servers) contribute an empty set, which the filter reads as
+    /// "unknown" rather than "none" — see `ModelUseFacet.matches`.
+    public let uses: Set<ModelUseFacet>
+
     public init(available: AIPluginManager.AvailableProviderTemplate) {
         self.available = available
+        let template = available.template
+        self.uses = template.models.reduce(into: Set<ModelUseFacet>()) { found, model in
+            found.formUnion(
+                ModelUseFacet.facets(for: AIModelCatalog.shared.resolve(model: model, template: template)))
+        }
     }
 
     /// Vendor / service — the Provider column (e.g. "Anthropic", "Google").
@@ -19,17 +34,25 @@ public struct ProviderPickerRow: Equatable, Sendable {
     public var llm: String { available.template.resolvedLLM }
     /// Auth method — the Config Type column (e.g. "API Key", "OAuth Account").
     public var configType: String { available.template.resolvedConfigType }
+    /// What it takes to use this provider — the Config Type, bucketed for filtering.
+    public var type: ProviderTypeFacet { ProviderTypeFacet(configType: configType) }
 }
 
-/// Pure, testable substring filter over provider rows (provider + LLM + config type).
+/// Pure, testable filter over provider rows: a substring over the three columns,
+/// narrowed by what the provider's models are good for and by what it takes to set
+/// it up. The three are independent — a row must survive all of them.
 public enum ProviderPickerFilter {
-    public static func filter(_ rows: [ProviderPickerRow], query: String) -> [ProviderPickerRow] {
+    public static func filter(_ rows: [ProviderPickerRow], query: String,
+                              uses: Set<ModelUseFacet> = [],
+                              types: Set<ProviderTypeFacet> = []) -> [ProviderPickerRow] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !needle.isEmpty else { return rows }
-        return rows.filter {
-            $0.provider.lowercased().contains(needle)
-                || $0.llm.lowercased().contains(needle)
-                || $0.configType.lowercased().contains(needle)
+        return rows.filter { row in
+            guard ModelUseFacet.matches(facets: row.uses, selected: uses),
+                  ProviderTypeFacet.matches(type: row.type, selected: types) else { return false }
+            guard !needle.isEmpty else { return true }
+            return row.provider.lowercased().contains(needle)
+                || row.llm.lowercased().contains(needle)
+                || row.configType.lowercased().contains(needle)
         }
     }
 }
@@ -62,6 +85,13 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public let initialContentSize: NSSize
 
     private let searchField = NSSearchField()
+    private let useFilter = MultiChoiceFilterButton(
+        label: "Good for",
+        choices: ModelUseFacet.allCases.map { .init(id: $0.rawValue, title: $0.title, detail: $0.detail) })
+    private let typeFilter = MultiChoiceFilterButton(
+        label: "Type",
+        choices: ProviderTypeFacet.allCases.map { .init(id: $0.rawValue, title: $0.title, detail: $0.detail) })
+    private let filterBar = NSStackView()
     private let tableView = NSTableView()
     private let tableScroll = NSScrollView()
     private let infoTextView = NSTextView()
@@ -121,7 +151,8 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         let paneHeight = max(tableHeight, ceil(detailsHeight) + 20 /* text insets */)
 
         let width = 16 + tableW + 8 /* divider gap */ + infoWidth + 16
-        let height = 16 + 26 /* search */ + 8 + paneHeight + 10 + 32 /* buttons */ + 16
+        let height = 16 + 26 /* search */ + 8 + 26 /* filter bar */ + 8
+            + paneHeight + 10 + 32 /* buttons */ + 16
         self.initialContentSize = NSSize(width: width, height: height)
         super.init(nibName: nil, bundle: nil)
     }
@@ -159,12 +190,13 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         root.wantsLayer = true
 
         configureSearchField()
+        configureFilterBar()
         configureTable()
         configureInfo()
         configureSplit()
         configureButtons()
 
-        [searchField, splitView, cancelButton, chooseButton].forEach {
+        [searchField, filterBar, splitView, cancelButton, chooseButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             root.addSubview($0)
         }
@@ -174,7 +206,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             searchField.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             searchField.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
 
-            splitView.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: 8),
+            filterBar.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: 8),
+            filterBar.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+            filterBar.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -16),
+
+            splitView.topAnchor.constraint(equalTo: filterBar.bottomAnchor, constant: 8),
             splitView.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
             splitView.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
             splitView.bottomAnchor.constraint(equalTo: cancelButton.topAnchor, constant: -10),
@@ -231,6 +267,18 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         searchField.delegate = self
         searchField.sendsWholeSearchString = false
         searchField.sendsSearchStringImmediately = true
+    }
+
+    /// The two pull-down filters, on one row under the search field. They narrow
+    /// the same list the search field does — what the provider's models are good
+    /// for, and what it takes to set the provider up.
+    private func configureFilterBar() {
+        filterBar.orientation = .horizontal
+        filterBar.spacing = 8
+        filterBar.addArrangedSubview(useFilter)
+        filterBar.addArrangedSubview(typeFilter)
+        useFilter.onChange = { [weak self] _ in self?.applyFilter() }
+        typeFilter.onChange = { [weak self] _ in self?.applyFilter() }
     }
 
     private func configureTable() {
@@ -348,7 +396,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     }
 
     private func applyFilter() {
-        filteredRows = ProviderPickerFilter.filter(allRows, query: searchField.stringValue)
+        filteredRows = ProviderPickerFilter.filter(
+            allRows,
+            query: searchField.stringValue,
+            uses: Set(useFilter.selection.compactMap(ModelUseFacet.init(rawValue:))),
+            types: Set(typeFilter.selection.compactMap(ProviderTypeFacet.init(rawValue:))))
         reloadTable()
         selectRow(0)
     }
