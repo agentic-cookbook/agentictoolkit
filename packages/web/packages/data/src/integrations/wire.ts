@@ -32,15 +32,25 @@ export interface ProviderCatalogEntryRow {
 }
 
 /**
- * The deliverability webhook an operator has to register with their email provider, DERIVED by
- * the backend from the ecosystem + its webhook secret and returned alongside a config — never
- * stored, so it cannot drift from the URL the webhook route actually accepts.
+ * The deliverability webhook an operator has to register with their email provider. The URL is
+ * DERIVED by the backend from the ecosystem and returned alongside a config — never stored, so it
+ * cannot drift from the URL the webhook route actually accepts.
  */
 export interface DeliverabilityWebhookRow {
-  /** The absolute URL, already carrying this ecosystem's signed token. */
+  /** The absolute URL, addressing this ecosystem. */
   url: string
-  /** The custom header name the provider must send the shared secret in. */
+  /** The custom header name the provider must send `secret` in. */
   secretHeader: string
+  /**
+   * THIS ECOSYSTEM's own inbound webhook credential — not a deployment-wide value. It is what
+   * makes the webhook authenticate one tenant rather than "somebody who configured a webhook",
+   * so it is per-config, server-minted and rotatable.
+   *
+   * `null` means no secret is stored yet (a config created before the column existed): the URL
+   * is real but every call to it is refused until the operator rotates one in. Rendering the URL
+   * without noticing this hands over a registration that silently 401s forever.
+   */
+  secret: string | null
   /** One line naming the provider's own setting, so a consumer needs no copy of its own. */
   instruction: string
 }

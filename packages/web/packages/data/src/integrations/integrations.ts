@@ -197,6 +197,28 @@ export const integrationsApi = {
     await authedRequest(configByIdPath(ecosystemId, configId), { method: "DELETE" });
   },
 
+  /**
+   * Mint a NEW inbound webhook secret for this config and return the updated masked row (the
+   * value arrives on `deliverabilityWebhook.secret` — it is never echoed anywhere else).
+   *
+   * DESTRUCTIVE, in the same sense as rotating a list's embed key: the previous secret stops
+   * authenticating the moment this returns, so a provider still configured with it starts
+   * failing silently — Postmark logs a 401 its own side and nothing in the product notices.
+   * Callers must confirm before firing it.
+   *
+   * It is also the ONLY way a config created before per-config secrets existed gets one, so it
+   * doubles as "generate" for a webhook whose `secret` is null.
+   */
+  async rotateWebhookSecret(
+    ecosystemId: string,
+    configId: string,
+  ): Promise<MaskedProviderConfig> {
+    return authedJson<MaskedProviderConfig>(
+      `${configByIdPath(ecosystemId, configId)}/rotate-webhook-secret`,
+      { method: "POST" },
+    );
+  },
+
   // ── connections (linked accounts for the caller's active ecosystem) ──────────
 
   /** The connections OWNED by ecosystem `ecosystemId` (secrets redacted), across all
