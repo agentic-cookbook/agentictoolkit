@@ -138,6 +138,94 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
 
     expect(api.createSite).toHaveBeenCalledWith(expect.objectContaining({ groupId: "g-other" }));
   });
+
+  it("REPORTS the redirect — a site filed elsewhere than the chosen group comes back as a note", async () => {
+    // Overriding the operator's pick silently reads as "it went where you said". It didn't.
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const api = makeApi({
+      listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
+      listAllEndpoints: vi.fn(async () => [
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+      ]),
+      createEndpoint: vi.fn(async () => created),
+    });
+
+    const res = await runAutoConfigure([proj("adh-status", "lewis.agenticdeveloperhub.com", "railway")], { api, create: { groupId: "g-other" } });
+
+    expect(res.notes).toHaveLength(1);
+    expect(res.notes[0]!.note).toContain("agenticdeveloperhub.com");
+  });
+
+  it("says nothing when the site landed in the group the operator actually chose", async () => {
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://brandnew.example.org", kind: "http", environment: "production", platform: "vercel", deployProject: "brandnew" };
+    const api = makeApi({ createEndpoint: vi.fn(async () => created) });
+
+    const res = await runAutoConfigure([proj("brandnew", "brandnew.example.org")], { api, create: { groupId: "g-other" } });
+
+    expect(res.created).toHaveLength(1);
+    expect(res.notes).toHaveLength(0);
+  });
+
+  it("forceGroup makes the operator's pick AUTHORITATIVE — the domain-family rule is not consulted", async () => {
+    // A board grouped by ENVIRONMENT, not product: the family rule would file a production
+    // site under Testing because a testing endpoint happens to share its domain family.
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const api = makeApi({
+      listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
+      listAllEndpoints: vi.fn(async () => [
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+      ]),
+      createEndpoint: vi.fn(async () => created),
+    });
+
+    const res = await runAutoConfigure([proj("adh-status", "lewis.agenticdeveloperhub.com", "railway")], { api, create: { groupId: "g-other", forceGroup: true } });
+
+    expect(api.createSite).toHaveBeenCalledWith(expect.objectContaining({ groupId: "g-other" }));
+    expect(res.notes).toHaveLength(0); // nothing was overridden, so there is nothing to report
+  });
+
+  it("a family SPLIT across two groups is ambiguous → the chosen group wins", async () => {
+    // Two groups already hold sites in `agenticdeveloperhub.com`. Picking either half would
+    // be a guess; the operator's selection is the only non-guess available.
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const api = makeApi({
+      listSites: vi.fn(async () => [
+        { id: "s-hub", slug: "hub", groupId: "g-adh" },
+        { id: "s-two", slug: "two", groupId: "g-split" },
+      ]),
+      listAllEndpoints: vi.fn(async () => [
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+        { id: "e2", siteId: "s-two", url: "https://two.agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "two" },
+      ]),
+      createEndpoint: vi.fn(async () => created),
+    });
+
+    const res = await runAutoConfigure([proj("adh-status", "lewis.agenticdeveloperhub.com", "railway")], { api, create: { groupId: "g-other" } });
+
+    expect(api.createSite).toHaveBeenCalledWith(expect.objectContaining({ groupId: "g-other" }));
+    expect(res.notes).toHaveLength(0);
+  });
+
+  it("a rolled-back create leaves the family index intact for the next project", async () => {
+    // A failed create must not disturb the family's ownership — the next project in the
+    // batch still belongs with the group that already owns the family.
+    const api = makeApi({
+      listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
+      listAllEndpoints: vi.fn(async () => [
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+      ]),
+      createSite: vi.fn(async () => ({ id: "site-1" })),
+      createEndpoint: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValue({ id: "srv-2", siteId: "site-1", url: "https://two.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "vercel", deployProject: "two" }),
+    });
+
+    // First create fails and rolls back; the second must still see g-adh owning the family.
+    await runAutoConfigure([proj("one", "one.agenticdeveloperhub.com"), proj("two", "two.agenticdeveloperhub.com")], { api, create: { groupId: "g-other" } });
+
+    expect(api.createSite).toHaveBeenNthCalledWith(2, expect.objectContaining({ groupId: "g-adh" }));
+  });
 });
 
 describe("runAutoConfigure — real-id intra-run chaining", () => {

@@ -59,10 +59,17 @@ export interface SiteLite {
   groupId: string;
 }
 
-/** Opt-in creation: the FALLBACK group new sites are filed under — used when the new
- *  site's domain family doesn't already belong to a group. Absent → match-only. */
+/** Opt-in creation. Absent → match-only. */
 export interface CreateOpts {
+  /** The group new sites are filed under. By DEFAULT a FALLBACK: a new site whose domain
+   *  family a group already owns joins THAT group instead, so one product's sites stay
+   *  together. Whenever that redirection happens the run says so (see
+   *  {@link AutoConfigureResult.notes}) — it is never a silent substitution. */
   groupId: string;
+  /** true → `groupId` is AUTHORITATIVE; the domain-family rule is not consulted at all.
+   *  For a board whose groups aren't per-product (per-environment, say), where filing a
+   *  production site with its family would put it in the Testing group. */
+  forceGroup?: boolean;
 }
 
 /** The aggregated outcome of an auto-configure run, generalized over the project type so
@@ -73,17 +80,25 @@ export interface AutoConfigureResult<T = ProjectLite> {
   added: T[];
   created: T[];
   skipped: { project: T; reason: string }[];
+  /** Items that SUCCEEDED, but not the way the operator asked — a new site filed with its
+   *  domain family's group rather than the selected one. A choice we override is a choice
+   *  we have to report: silence here reads as "it went where you said". */
+  notes: { project: T; note: string }[];
 }
 
-/** The outcome of applying ONE plan step — the vocabulary `applySequentially` aggregates. */
-export type ApplyOutcome = { kind: "added" } | { kind: "created" } | { kind: "skipped"; reason: string };
+/** The outcome of applying ONE plan step — the vocabulary `applySequentially` aggregates.
+ *  A success may carry a `note`: it worked, with a caveat the operator needs told. */
+export type ApplyOutcome =
+  | { kind: "added"; note?: string }
+  | { kind: "created"; note?: string }
+  | { kind: "skipped"; reason: string };
 
 /**
  * Run `applyOne` over `items` STRICTLY IN SEQUENCE (never parallel), collecting each item
- * into added / created / skipped. Sequential because each apply may mutate shared working
- * state that later applies must see (a wiring, or a site, created earlier in the run).
- * Resilient: one item throwing is recorded in `skipped`, never fatal to the rest. This is
- * the single sequencing definition reused by BOTH `runAutoConfigure` and
+ * into added / created / skipped (+ any notes). Sequential because each apply may mutate
+ * shared working state that later applies must see (a wiring, or a site, created earlier in
+ * the run). Resilient: one item throwing is recorded in `skipped`, never fatal to the rest.
+ * This is the single sequencing definition reused by BOTH `runAutoConfigure` and
  * `runBuilderAutoConfigure` — neither duplicates the loop.
  */
 export async function applySequentially<T>(
@@ -94,6 +109,7 @@ export async function applySequentially<T>(
   const added: T[] = [];
   const created: T[] = [];
   const skipped: { project: T; reason: string }[] = [];
+  const notes: { project: T; note: string }[] = [];
   const total = items.length;
   let done = 0;
   for (const item of items) {
@@ -102,13 +118,14 @@ export async function applySequentially<T>(
       if (r.kind === "added") added.push(item);
       else if (r.kind === "created") created.push(item);
       else skipped.push({ project: item, reason: r.reason });
+      if (r.kind !== "skipped" && r.note) notes.push({ project: item, note: r.note });
     } catch (e) {
       skipped.push({ project: item, reason: msg(e) });
     }
     done += 1;
     onProgress?.(done, total);
   }
-  return { added, created, skipped };
+  return { added, created, skipped, notes };
 }
 
 // A mutable snapshot so a sequential run sees what earlier applies did (e.g. a project's
@@ -119,26 +136,43 @@ interface Working {
   /** `${groupId}|${slug}` for every site that exists — INCLUDING ones created earlier in
    *  this same run, so two projects in one batch can't derive the same slug and 409. */
   takenSlugs: Set<string>;
-  /** siteId → groupId, the lookup behind the domain-family group choice. */
-  siteGroup: Map<string, string>;
+  /** Registrable domain family → the ONE group that owns it, or null when two groups split
+   *  it (ambiguous — we never guess which half is right). Built ONCE from the fleet, so
+   *  filing a new site is a map lookup instead of a full endpoint re-scan (which is
+   *  O(endpoints × created) across a batch — exactly the re-parsing the planner precomputes
+   *  its way out of). Deliberately IMMUTABLE: a site created mid-run is filed either with
+   *  the family's existing owner or, for an unowned family, with the fallback — and the map
+   *  already answers both of those the same way, so maintaining it could not change an
+   *  answer. The next run rebuilds it from the fleet. */
+  familyGroup: ReadonlyMap<string, string | null>;
+}
+
+/** Index `domain family → owning group` across the whole fleet in ONE pass. A family owned
+ *  by two different groups maps to null: it's split, and we never guess which half a new
+ *  site belongs to. */
+export function indexFamilyGroups(endpoints: EndpointLite[], sites: SiteLite[]): Map<string, string | null> {
+  const siteGroup = new Map(sites.map((s) => [s.id, s.groupId]));
+  const idx = new Map<string, string | null>();
+  for (const e of endpoints) {
+    const family = domainFamily(epHost(e.url));
+    if (!family) continue;
+    const g = siteGroup.get(e.siteId);
+    if (!g) continue;
+    const cur = idx.get(family);
+    if (cur === undefined) idx.set(family, g);
+    else if (cur !== null && cur !== g) idx.set(family, null);
+  }
+  return idx;
 }
 
 /** The group a NEW site for `host` belongs in: the one that already owns other sites in
  *  the same domain family (`lewis.agenticdeveloperhub.com` joins whatever group holds
- *  `agenticdeveloperhub.com`), else the operator's fallback. Two groups owning the family
- *  is ambiguous → fallback; we never guess which half of a split family is right. */
+ *  `agenticdeveloperhub.com`), else the operator's fallback. An unknown or split family
+ *  falls back too. */
 export function groupForNewSite(host: string, working: Working, fallbackGroupId: string): string {
   const family = domainFamily(host);
   if (!family) return fallbackGroupId;
-  let found: string | null = null;
-  for (const e of working.endpoints) {
-    if (domainFamily(epHost(e.url)) !== family) continue;
-    const g = working.siteGroup.get(e.siteId);
-    if (!g) continue;
-    if (found === null) found = g;
-    else if (found !== g) return fallbackGroupId;
-  }
-  return found ?? fallbackGroupId;
+  return working.familyGroup.get(family) ?? fallbackGroupId;
 }
 
 /**
@@ -179,6 +213,9 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
   // Reason is self-contained (no project prefix) so callers can render it as
   // `${project}: ${reason}` uniformly across skips and errors.
   if (plan.kind === "conflict") return { kind: "skipped", reason: `that domain is already wired to ${plan.existingProject}` };
+  if (plan.kind === "env-conflict") {
+    return { kind: "skipped", reason: `its site's ${plan.environment} endpoint is already wired to ${plan.existingProject}` };
+  }
   if (plan.kind === "wire-endpoint") {
     await api.updateEndpoint(plan.endpointId, { platform: plan.platform, deployProject: plan.deployProject, environment: plan.environment });
     working.endpoints = working.endpoints.map((e) =>
@@ -199,16 +236,18 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
   }
   // new-site: nobody owns the apex → create the site, then its endpoint. The site is filed
   // with its domain family's group when there is one (the fallback group is for genuinely
-  // new families), and its slug is disambiguated against the ones already taken in that
-  // group — an unavoidable 409 here doesn't just fail this run, it strands the project on
-  // every future one.
+  // new families) unless the operator forced their pick, and its slug is disambiguated
+  // against the ones already taken in that group — an unavoidable 409 here doesn't just
+  // fail this run, it strands the project on every future one.
   const host = plan.url === PLACEHOLDER_URL ? "" : epHost(plan.url);
-  const groupId = groupForNewSite(host, working, create.groupId);
+  const groupId = create.forceGroup ? create.groupId : groupForNewSite(host, working, create.groupId);
+  // Landing somewhere other than the selected group is a decision we made FOR the operator;
+  // say so rather than let the run read as "it went where you said".
+  const note = groupId === create.groupId ? undefined : `filed under the group that already monitors ${domainFamily(host)}, not the one selected`;
   const identity = uniqueSiteIdentity({ name: plan.siteName, slug: plan.siteSlug }, host, groupId, working.takenSlugs);
   const site = await api.createSite({ name: identity.name, slug: identity.slug, groupId });
   const slugKey = `${groupId}|${identity.slug}`;
   working.takenSlugs.add(slugKey);
-  working.siteGroup.set(site.id, groupId);
   let ep: EndpointLite;
   try {
     ep = await api.createEndpoint(site.id, { url: plan.url, environment: plan.environment, platform: plan.platform, deployProject: plan.deployProject });
@@ -220,14 +259,11 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
     await api.deleteSite(site.id).catch(() => {
       rolledBack = false;
     });
-    if (rolledBack) {
-      working.takenSlugs.delete(slugKey);
-      working.siteGroup.delete(site.id);
-    }
+    if (rolledBack) working.takenSlugs.delete(slugKey);
     throw e; // report the original failure, not the rollback's outcome
   }
   working.endpoints = [...working.endpoints, ep];
-  return { kind: "created" };
+  return { kind: "created", note };
 }
 
 /** A project that couldn't be added, with a self-contained human reason. */
@@ -253,7 +289,7 @@ export async function runAutoConfigure(
   const working: Working = {
     endpoints,
     takenSlugs: new Set(sites.map((s) => `${s.groupId}|${s.slug}`)),
-    siteGroup: new Map(sites.map((s) => [s.id, s.groupId])),
+    familyGroup: indexFamilyGroups(endpoints, sites),
   };
   return applySequentially(addable, (p) => executeAdd(p, working, api, create), onProgress);
 }

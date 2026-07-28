@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
+import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
 
 // Fixtures mirror the status app's add-project decision table — the planner moved
 // here verbatim, so its discriminants + target ids must be byte-for-byte identical.
@@ -117,5 +117,57 @@ describe("planAddProject — decision table", () => {
     const eps = [ep({ id: "e1", siteId: "s1", url: "https://agenticdeveloperhelp.com", platform: "vercel", deployProject: "other-project" })];
     const plan = planAddProject(proj("help-production", "agenticdeveloperhelp.com"), eps);
     expect(plan).toEqual({ kind: "conflict", endpointId: "e1", existingProject: "other-project" });
+  });
+
+  it("DOMAIN-LESS project joins its sibling's site instead of forking a second one", () => {
+    // A Cloudflare Worker has no domain, so steps 1-2 can't apply — but step 3 still can,
+    // and must: `api-staging` used to short-circuit straight to step 4 and ask for the slug
+    // `api-production`'s site already holds, which 409s on every run, forever.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://api.example.com", platform: "cloudflare", deployProject: "api-production", environment: "production" })];
+    const plan = planAddProject(proj("api-staging", null, "cloudflare"), eps);
+    expect(plan).toEqual({
+      kind: "add-endpoint",
+      siteId: "s1",
+      url: PLACEHOLDER_URL,
+      environment: "staging",
+      platform: "cloudflare",
+      deployProject: "api-staging",
+    });
+  });
+
+  it("domain-less project with NO sibling still gets its own site with the placeholder URL", () => {
+    const plan = planAddProject(proj("worker-production", null, "cloudflare"), []);
+    expect(plan).toEqual({
+      kind: "new-site",
+      siteName: "worker",
+      siteSlug: "worker",
+      url: PLACEHOLDER_URL,
+      environment: "production",
+      platform: "cloudflare",
+      deployProject: "worker-production",
+    });
+  });
+
+  it("a domain-less project must not 'own the apex' of an endpoint whose URL doesn't parse", () => {
+    // Both hosts are "" — an unguarded host/apex comparison silently matched them and
+    // grafted the Worker onto whatever site held the malformed endpoint.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "not a url", platform: "vercel", deployProject: "unrelated" })];
+    const plan = planAddProject(proj("worker-production", null, "cloudflare"), eps);
+    expect(plan).toMatchObject({ kind: "new-site", siteSlug: "worker" });
+  });
+
+  it("sibling site whose SAME env is backed by another project → env-conflict, not a duplicate monitor", () => {
+    // `x` and `x-production` share the base `x` and both resolve to `production`. Adding
+    // the second leaves one site with two `production` monitors pointing at different
+    // deploy projects — a duplicate no display can untangle. Name it; the operator picks.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://x-a.vercel.app", platform: "vercel", deployProject: "x", environment: "production" })];
+    const plan = planAddProject({ platform: "vercel", projectName: "x-production", domain: "x-b.vercel.app" }, eps);
+    expect(plan).toEqual({ kind: "env-conflict", endpointId: "e1", siteId: "s1", environment: "production", existingProject: "x" });
+  });
+
+  it("sibling site whose OTHER envs are taken still accepts a new environment", () => {
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://x-a.vercel.app", platform: "vercel", deployProject: "x", environment: "production" })];
+    const plan = planAddProject({ platform: "vercel", projectName: "x-staging", domain: "x-b.vercel.app", environment: "staging" }, eps);
+    expect(plan).toMatchObject({ kind: "add-endpoint", siteId: "s1", environment: "staging" });
   });
 });
