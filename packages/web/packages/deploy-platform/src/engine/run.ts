@@ -15,7 +15,7 @@
 // builder runner so their sequencing/skip-collection semantics can't drift.
 // ---------------------------------------------------------------------------
 import { domainFamily, epHost, platformCanon, slugify } from "../canon/index.js";
-import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
+import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type PlanOpts, type ProjectLite } from "./plan.js";
 import { endpointUnconfigured } from "./classify.js";
 
 /** Render an unknown thrown value as a display string (Error → message, else String). */
@@ -80,9 +80,11 @@ export interface AutoConfigureResult<T = ProjectLite> {
   added: T[];
   created: T[];
   skipped: { project: T; reason: string }[];
-  /** Items that SUCCEEDED, but not the way the operator asked — a new site filed with its
-   *  domain family's group rather than the selected one. A choice we override is a choice
-   *  we have to report: silence here reads as "it went where you said". */
+  /** Items that SUCCEEDED, with something the operator has to be told: a new site filed
+   *  with its domain family's group rather than the selected one, or a monitor taken over
+   *  from a project the platform no longer has. A decision we make FOR the operator — an
+   *  override, or a rewrite of wiring they can still see — is one we have to report;
+   *  silence here reads as "it went exactly as you asked". */
   notes: { project: T; note: string }[];
 }
 
@@ -145,6 +147,10 @@ interface Working {
    *  already answers both of those the same way, so maintaining it could not change an
    *  answer. The next run rebuilds it from the fleet. */
   familyGroup: ReadonlyMap<string, string | null>;
+  /** The projects the platforms still have (see {@link PlanOpts.liveProjects}). Absent
+   *  when the caller can't enumerate. Immutable for the run: it describes the PLATFORMS,
+   *  and nothing we do to the monitoring config changes what exists on them. */
+  liveProjects?: ReadonlySet<string>;
 }
 
 /** Index `domain family → owning group` across the whole fleet in ONE pass. A family owned
@@ -209,7 +215,11 @@ export function uniqueSiteIdentity(
  *  `create` it stays match-only: an unmonitored project is left for the operator, so
  *  the per-platform "Match" actions can never graft a phantom site. */
 async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, create?: CreateOpts): Promise<ApplyOutcome> {
-  const plan = planAddProject({ platform: p.platform, projectName: p.projectName, domain: p.domain, environment: p.environment }, working.endpoints);
+  const plan = planAddProject(
+    { platform: p.platform, projectName: p.projectName, domain: p.domain, environment: p.environment },
+    working.endpoints,
+    { liveProjects: working.liveProjects },
+  );
   // Reason is self-contained (no project prefix) so callers can render it as
   // `${project}: ${reason}` uniformly across skips and errors.
   if (plan.kind === "conflict") return { kind: "skipped", reason: `that domain is already wired to ${plan.existingProject}` };
@@ -221,7 +231,9 @@ async function executeAdd(p: ProjectLite, working: Working, api: StatusAddApi, c
     working.endpoints = working.endpoints.map((e) =>
       e.id === plan.endpointId ? { ...e, platform: plan.platform, deployProject: plan.deployProject, environment: plan.environment } : e,
     );
-    return { kind: "added" };
+    // Taking a monitor over from a retired project is a REWRITE of wiring the operator
+    // can still see on the board — report it rather than let the row silently change name.
+    return { kind: "added", note: plan.replaces ? `took over the monitor wired to ${plan.replaces}, which ${plan.platform} no longer has` : undefined };
   }
   // add-endpoint / new-site: no existing endpoint monitors this domain. Match-only
   // (no `create`) leaves it for the operator; with `create` we add the monitor.
@@ -282,14 +294,15 @@ export interface SkippedAdd {
  */
 export async function runAutoConfigure(
   addable: ProjectLite[],
-  opts: { api: StatusAddApi; create?: CreateOpts; onProgress?: (done: number, total: number) => void },
+  opts: { api: StatusAddApi; create?: CreateOpts; liveProjects?: PlanOpts["liveProjects"]; onProgress?: (done: number, total: number) => void },
 ): Promise<AutoConfigureResult<ProjectLite>> {
-  const { api, create, onProgress } = opts;
+  const { api, create, liveProjects, onProgress } = opts;
   const [endpoints, sites] = await Promise.all([api.listAllEndpoints(), api.listSites()]);
   const working: Working = {
     endpoints,
     takenSlugs: new Set(sites.map((s) => `${s.groupId}|${s.slug}`)),
     familyGroup: indexFamilyGroups(endpoints, sites),
+    liveProjects,
   };
   return applySequentially(addable, (p) => executeAdd(p, working, api, create), onProgress);
 }

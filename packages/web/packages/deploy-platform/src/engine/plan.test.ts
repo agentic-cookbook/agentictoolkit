@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
+import { PLACEHOLDER_URL, indexLiveProjects, planAddProject, type EndpointLite, type ProjectLite } from "./plan.js";
 
 // Fixtures mirror the status app's add-project decision table — the planner moved
 // here verbatim, so its discriminants + target ids must be byte-for-byte identical.
@@ -169,5 +169,78 @@ describe("planAddProject — decision table", () => {
     const eps = [ep({ id: "e1", siteId: "s1", url: "https://x-a.vercel.app", platform: "vercel", deployProject: "x", environment: "production" })];
     const plan = planAddProject({ platform: "vercel", projectName: "x-staging", domain: "x-b.vercel.app", environment: "staging" }, eps);
     expect(plan).toMatchObject({ kind: "add-endpoint", siteId: "s1", environment: "staging" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A project RENAMED on the platform (`mikefullerton-com` → `mikefullerton-production`)
+// leaves the endpoint carrying the OLD name. The new name then reads "not monitored"
+// (the wired correlation is by NAME) while its own domain sits monitored — and every
+// Auto Configure run refused it as a `conflict`. That is an alert with NO action that
+// can clear it, re-offered forever. These lock in the repair AND its limits.
+// ---------------------------------------------------------------------------
+describe("planAddProject — retired vs live existing wiring", () => {
+  const wiredTo = (deployProject: string, platform = "vercel"): EndpointLite[] => [
+    ep({ id: "e1", siteId: "s1", url: "https://mikefullerton.com", platform, deployProject, environment: "production" }),
+  ];
+
+  it("re-points an endpoint wired to a RETIRED project, naming what it replaced", () => {
+    const live = indexLiveProjects([{ platform: "vercel", projectName: "mikefullerton-production" }]);
+    const plan = planAddProject(proj("mikefullerton-production", "mikefullerton.com"), wiredTo("mikefullerton-com"), { liveProjects: live });
+    expect(plan).toEqual({
+      kind: "wire-endpoint",
+      endpointId: "e1",
+      siteId: "s1",
+      platform: "vercel",
+      deployProject: "mikefullerton-production",
+      environment: "production",
+      replaces: "mikefullerton-com",
+    });
+  });
+
+  it("still refuses when the existing project is LIVE — two real projects on one domain stay ambiguous", () => {
+    const live = indexLiveProjects([
+      { platform: "vercel", projectName: "mikefullerton-production" },
+      { platform: "vercel", projectName: "mikefullerton-com" },
+    ]);
+    const plan = planAddProject(proj("mikefullerton-production", "mikefullerton.com"), wiredTo("mikefullerton-com"), { liveProjects: live });
+    expect(plan).toEqual({ kind: "conflict", endpointId: "e1", existingProject: "mikefullerton-com" });
+  });
+
+  it("refuses with NO live set — an un-enumerated caller must not have its wiring rewritten", () => {
+    const plan = planAddProject(proj("mikefullerton-production", "mikefullerton.com"), wiredTo("mikefullerton-com"));
+    expect(plan).toEqual({ kind: "conflict", endpointId: "e1", existingProject: "mikefullerton-com" });
+  });
+
+  it("refuses across platforms — absence from a vercel set says nothing about a railway name", () => {
+    // The set only ever holds the platforms this run enumerated; treating a name we never
+    // looked for as retired would clobber a live monitor on the strength of an assumption.
+    const live = indexLiveProjects([{ platform: "vercel", projectName: "mikefullerton-production" }]);
+    const plan = planAddProject(proj("mikefullerton-production", "mikefullerton.com"), wiredTo("legacy", "railway"), { liveProjects: live });
+    expect(plan).toEqual({ kind: "conflict", endpointId: "e1", existingProject: "legacy" });
+  });
+
+  it("indexes cloudflare-pages and cloudflare as ONE platform", () => {
+    // The two spellings meet HERE: the enumeration reports `cloudflare-pages`, while the
+    // project being planned reports `cloudflare` — and the lookup keys off the latter.
+    // Keyed literally the set would never match, so a live Pages project would read
+    // retired and its still-correct wiring would be rewritten.
+    const live = indexLiveProjects([{ platform: "cloudflare-pages", projectName: "w" }]);
+    const plan = planAddProject(proj("w2", "w.example.com", "cloudflare"), [
+      ep({ id: "e1", siteId: "s1", url: "https://w.example.com", platform: "cloudflare-pages", deployProject: "w" }),
+    ], { liveProjects: live });
+    expect(plan).toEqual({ kind: "conflict", endpointId: "e1", existingProject: "w" });
+  });
+
+  it("does NOT relax the sibling env-conflict for a retired rival — there is nothing to re-point", () => {
+    // The repair is only ever exact: step 1 rewrites a monitor of THIS project's own domain.
+    // The rival here monitors a different host, so relaxing the guard would add a SECOND
+    // production monitor beside the stale one — two claims on one environment, which is
+    // what the rule exists to prevent — and the cycle's retire would not sweep the stale
+    // one either, because it vetoes on a host that still answers.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://x-a.vercel.app", platform: "vercel", deployProject: "x", environment: "production" })];
+    const live = indexLiveProjects([{ platform: "vercel", projectName: "x-production" }]);
+    const plan = planAddProject({ platform: "vercel", projectName: "x-production", domain: "x-b.vercel.app" }, eps, { liveProjects: live });
+    expect(plan).toEqual({ kind: "env-conflict", endpointId: "e1", siteId: "s1", environment: "production", existingProject: "x" });
   });
 });

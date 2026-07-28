@@ -257,3 +257,38 @@ describe("runAutoConfigure — real-id intra-run chaining", () => {
     expect(res.added).toHaveLength(1); // the wired project
   });
 });
+
+describe("runAutoConfigure — a renamed deploy project", () => {
+  /** One endpoint monitoring `mikefullerton.com`, still wired to the project's OLD name. */
+  const api = () =>
+    makeApi({
+      listSites: vi.fn(async () => [{ id: "s1", slug: "mike", groupId: "g1" }]),
+      listAllEndpoints: vi.fn(async () => [
+        { id: "e1", siteId: "s1", url: "https://mikefullerton.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "mikefullerton-com" },
+      ]),
+    });
+
+  it("takes the monitor over and REPORTS what it replaced", async () => {
+    // Without this the project is offered on every run and refused on every run — the
+    // "N projects not monitored" banner becomes permanent, with no action that clears it.
+    const a = api();
+    const live = new Set(["vercel|mikefullerton-production"]);
+
+    const res = await runAutoConfigure([proj("mikefullerton-production", "mikefullerton.com")], { api: a, liveProjects: live });
+
+    expect(a.updateEndpoint).toHaveBeenCalledWith("e1", expect.objectContaining({ deployProject: "mikefullerton-production" }));
+    expect(res.added).toHaveLength(1);
+    expect(res.skipped).toHaveLength(0);
+    expect(res.notes[0]!.note).toContain("mikefullerton-com"); // the name it took over from
+  });
+
+  it("leaves it alone when the old name is still a live project", async () => {
+    const a = api();
+    const live = new Set(["vercel|mikefullerton-production", "vercel|mikefullerton-com"]);
+
+    const res = await runAutoConfigure([proj("mikefullerton-production", "mikefullerton.com")], { api: a, liveProjects: live });
+
+    expect(a.updateEndpoint).not.toHaveBeenCalled();
+    expect(res.skipped[0]!.reason).toContain("already wired to mikefullerton-com");
+  });
+});
