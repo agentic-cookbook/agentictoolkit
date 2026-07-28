@@ -6,6 +6,18 @@
 // The mount GET does double duty: it supplies the list's copy AND the signed nonce the POST
 // must present back. That round trip is the anti-abuse gate (see audience/nonce.ts), so the
 // form cannot submit before it has loaded — which is also why there is no optimistic path.
+//
+// CONSUMERS. This component has no consumer inside the adh monorepo and is not supposed to
+// acquire one — the hub only ever emits it as a snippet STRING (email-signup/embed-panel.tsx).
+// Its real caller is a different repository:
+//
+//   whatsnow.today — websites/whatsnow/src/app/page.tsx, branch `email-signup`
+//
+// which mounts it with `apiBaseUrl="/api"` through the Next rewrite in that app's
+// next.config.ts. Recorded here because a repo-wide grep makes this file look like dead code,
+// and deleting it would silently break that site's only signup path. Anything that changes the
+// wire shape (the two URLs, the POST body) is a breaking change for a repo that CI here does
+// not build.
 
 import * as React from "react"
 
@@ -15,9 +27,20 @@ export interface EmailSignupFormProps {
   /** The list's public key, from the hub's Embed tab. Safe to ship in public HTML. */
   publicKey: string
   /**
-   * Where the two public endpoints live: an absolute origin
-   * (`https://api.agenticdeveloperhub.com`) or a same-origin path prefix (`/api`) for a host
-   * that already proxies the backend. Either way, no trailing slash.
+   * Where the two public endpoints live, with no trailing slash. Two shapes are supported, and
+   * which one is correct depends on who owns the page — they are not interchangeable:
+   *
+   * - An absolute origin (`https://api.agenticdeveloperhub.com`) for a page on a site with no
+   *   backend of its own. This is what the hub's Embed tab emits, because that snippet is
+   *   pasted onto THIRD-PARTY sites where a relative prefix would resolve against — and POST
+   *   signups to — whichever domain the paste landed on. The origin must then be on the
+   *   backend's CORS allowlist.
+   * - A same-origin path prefix (`/api`) for a site that already proxies the backend, which is
+   *   what whatsnow.today does. Nothing is cross-origin, so no CORS entry is needed; the cost
+   *   is that the proxy rewrite becomes load-bearing (see that repo's api-proxy.test.ts).
+   *
+   * The hub's Embed panel therefore REFUSES to emit a relative base while this prop accepts
+   * one: it cannot know where its snippet will be pasted, and the caller here does.
    */
   apiBaseUrl: string
   /** Override the copy the list itself supplies. */
@@ -51,6 +74,47 @@ interface ListConfig {
 const TIMING_FLOOR_BUFFER_MS = 250
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * How long the config GET may hang before the form gives up on it.
+ *
+ * Without this, a backend that accepts the connection and never answers pins the form on
+ * `Loading…` forever on someone else's marketing page — the one state with no affordance at all,
+ * not even the retry `unavailable` offers. A timeout is what converts "hung" into a state the
+ * visitor can act on. Generous enough that a slow mobile connection is never mistaken for a dead
+ * backend; short enough that nobody stares at a spinner for a minute.
+ */
+export const CONFIG_TIMEOUT_MS = 10_000
+
+/**
+ * The page the signup came from. The backend stores it as the consent record's provenance
+ * (`consent_source_url`) — the evidence that this address opted in HERE and not somewhere else,
+ * which is the whole point of keeping a consent trail.
+ *
+ * A named function rather than an inline ternary so the server-render branch is reachable from a
+ * test: this component is `"use client"`, but a Next app still renders it once on the server
+ * before hydration, where `window` does not exist and reading `.href` would throw during SSR
+ * rather than merely omitting a field.
+ */
+export function signupSourceUrl(): string | undefined {
+  return typeof window === "undefined" ? undefined : window.location.href
+}
+
+/**
+ * The component's ONLY developer-facing signal.
+ *
+ * The visitor-facing copy is deliberately vague — a marketing page must not narrate the
+ * backend's problems — which leaves the site owner who pasted the wrong key looking at a page
+ * that seems fine, with nothing in devtools. Naming the key and the reason is what tells the
+ * three indistinguishable causes apart: a typo'd key (404), a backend outage (500), and a
+ * feature switched off for the ecosystem (also 404 — publicSignup.ts makes those two identical
+ * on the wire on purpose, so a disabled feature is not detectable, which is precisely why the
+ * key has to be in the console message instead).
+ */
+function reportFailure(what: string, publicKey: string, err: unknown): void {
+  const reason = err instanceof Error ? err.message : String(err)
+  console.error(`[EmailSignupForm] ${what} for public key "${publicKey}": ${reason}`)
+}
 
 /**
  * The form's outcomes, kept mutually exclusive so the DOM can only ever be telling the visitor
@@ -125,10 +189,29 @@ export function EmailSignupForm({
    * up again — every retry re-sent the same expired nonce, and the only cure was a page reload.
    */
   const fetchConfig = React.useCallback(async (): Promise<ListConfig> => {
-    const res = await fetch(`${base}/public/signup-lists/${encodeURIComponent(publicKey)}`)
-    if (!res.ok) throw new Error(String(res.status))
+    const res = await fetch(`${base}/public/signup-lists/${encodeURIComponent(publicKey)}`, {
+      // A hung request must become a failure the visitor can see and retry, not an eternal
+      // `Loading…`. `AbortSignal.timeout` rather than a hand-rolled controller so there is no
+      // timer left to clear on the success path.
+      signal: AbortSignal.timeout(CONFIG_TIMEOUT_MS),
+    })
+    // The status is carried in the message rather than discarded, because it is the only thing
+    // that distinguishes a bad key from a dead backend once reportFailure logs it.
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return (await res.json()) as ListConfig
   }, [base, publicKey])
+
+  /**
+   * Bumped by the retry control. It is in the mount effect's deps and nothing else's, so
+   * incrementing it — and ONLY incrementing it — re-runs the config load.
+   *
+   * `unavailable` was previously terminal: both of the effect's other deps are stable
+   * `useCallback`s, so nothing could ever re-enter it, and the copy told the visitor to "try
+   * again later" while offering no way to try. Worse, this is the state every embed starts in
+   * until the ecosystem's `email-signup` flag is switched on, so the dead end was the DEFAULT.
+   * An operator who flips the flag must otherwise get every visitor to reload the page.
+   */
+  const [attempt, setAttempt] = React.useState(0)
 
   React.useEffect(() => {
     let cancelled = false
@@ -138,14 +221,16 @@ export function EmailSignupForm({
         if (cancelled) return
         adoptConfig(body)
         setPhase(body.status === "open" ? "ready" : "closed")
-      } catch {
-        if (!cancelled) setPhase("unavailable")
+      } catch (err) {
+        if (cancelled) return
+        reportFailure("could not load the signup list", publicKey, err)
+        setPhase("unavailable")
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [fetchConfig, adoptConfig])
+  }, [fetchConfig, adoptConfig, publicKey, attempt])
 
   async function submit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -183,8 +268,12 @@ export function EmailSignupForm({
           email: email.trim(),
           name: name.trim() || undefined,
           nonce: config.nonce,
+          // The honeypot's value, forwarded verbatim. This is the ONLY thing that can ever put a
+          // value in this field, and the server's entire content-based bot filter keys off it
+          // (publicSignup.ts: non-empty `website` ⇒ uniform 200, nothing written). Sending a
+          // constant `""` here would disable that defence completely and silently.
           website: honeypot,
-          sourceUrl: typeof window === "undefined" ? undefined : window.location.href,
+          sourceUrl: signupSourceUrl(),
         }),
       })
       if (!res.ok) throw new Error(String(res.status))
@@ -217,8 +306,11 @@ export function EmailSignupForm({
       const body = await fetchConfig()
       adoptConfig(body)
       if (body.status !== "open") setPhase("closed")
-    } catch {
-      /* keep the config we have — see above */
+    } catch (err) {
+      // Silent to the VISITOR, not to the developer: the form the visitor keeps is now carrying
+      // a nonce that may already be dead, so every retry from here can fail for a reason nothing
+      // on the page explains. Logging is the only place that shows up.
+      reportFailure("could not refresh the signup nonce", publicKey, err)
     }
   }
 
@@ -236,8 +328,23 @@ export function EmailSignupForm({
 
   if (phase === "unavailable") {
     return (
-      <div className={cn("text-sm", className)}>
-        <p>Signups are unavailable right now. Please try again later.</p>
+      <div className={cn("flex flex-col items-start gap-2 text-sm", className)}>
+        {/* No longer "try again later" with nothing to try — the copy names an action the
+            control below actually performs. */}
+        <p>Signups are unavailable right now.</p>
+        <button
+          type="button"
+          onClick={() => {
+            // Back to `loading` so the click is visibly acknowledged; the bump is what re-runs
+            // the effect. Both are needed: setting the phase alone would hang on `Loading…`
+            // forever, and bumping alone would leave the failure copy on screen mid-retry.
+            setPhase("loading")
+            setAttempt((n) => n + 1)
+          }}
+          className="rounded-md border px-3 py-1.5 text-sm font-medium"
+        >
+          Try again
+        </button>
       </div>
     )
   }
