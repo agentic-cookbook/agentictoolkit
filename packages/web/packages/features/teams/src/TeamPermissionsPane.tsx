@@ -7,6 +7,7 @@ import { Shield } from "lucide-react";
 import {
   accessApi,
   ACCESS_FEATURES,
+  type AccessFeatureRow,
   type AccessGrantRow,
   type AccessRoleRow,
 } from "@agentic-toolkit/data/access";
@@ -79,7 +80,7 @@ const canonItem = (s: string): string => {
 const canonSub = (s: string): string => formatVerbs(parseVerbs(s).crud, false);
 
 /** The editable draft: `slug` is meaningful only while creating; `grants` is always
- *  one canonical row per ACCESS_FEATURES (in that order) so index-aligned diffing works, and
+ *  one canonical row per RENDERED feature area (in that order) so index-aligned diffing works, and
  *  `carried` holds the grants this pane does NOT render (see {@link carriedGrantsFor}). The two
  *  are kept in SEPARATE arrays precisely so that invariant survives: everything the matrix
  *  renders, edits, and diffs is `grants`, and nothing else can ever land in it. */
@@ -92,16 +93,26 @@ interface RoleInput {
   carried: AccessGrantRow[];
 }
 
-const blankGrants = (): AccessGrantRow[] =>
-  ACCESS_FEATURES.map((f) => ({ feature: f.key, itemVerbs: "", subitemVerbs: "" }));
+/**
+ * The rendered feature areas are a RUNTIME value, not a constant — the pane asks the backend
+ * for its own registry and falls back to {@link ACCESS_FEATURES} (see `loadFeatures` below).
+ * So every projection below takes the list it must project onto; none may reach for the
+ * hardcoded constant, or the fallback path and the resolved path would disagree about which
+ * rows are "rendered" — the exact question `carried` turns on.
+ */
+const blankGrants = (features: readonly AccessFeatureRow[]): AccessGrantRow[] =>
+  features.map((f) => ({ feature: f.key, itemVerbs: "", subitemVerbs: "" }));
 
-const isRenderedFeature = (feature: string): boolean =>
-  ACCESS_FEATURES.some((f) => f.key === feature);
+const isRenderedFeature = (features: readonly AccessFeatureRow[], feature: string): boolean =>
+  features.some((f) => f.key === feature);
 
-// Project a role's grants onto the fixed ACCESS_FEATURES rows (missing features ⇒ empty),
+// Project a role's grants onto the rendered feature rows (missing features ⇒ empty),
 // canonicalized — so every draft has the same shape regardless of what the server sent.
-const grantsFor = (role: AccessRoleRow): AccessGrantRow[] =>
-  ACCESS_FEATURES.map((f) => {
+const grantsFor = (
+  features: readonly AccessFeatureRow[],
+  role: AccessRoleRow,
+): AccessGrantRow[] =>
+  features.map((f) => {
     const g = role.grants.find((x) => x.feature === f.key);
     return {
       feature: f.key,
@@ -111,23 +122,30 @@ const grantsFor = (role: AccessRoleRow): AccessGrantRow[] =>
   });
 
 /**
- * The role's grants for feature areas this build does NOT render, copied VERBATIM so they can be
+ * The role's grants for feature areas this pane is NOT rendering, copied VERBATIM so they can be
  * resubmitted byte-for-byte on save.
  *
- * ACCESS_FEATURES is a fixed list shared by every product built on this toolkit, but the BACKEND's
- * feature-area registry is per-deployment — a server can, and does, hold grants for areas this pane
- * knows nothing about. Save is a FULL REPLACEMENT (the server deletes every grant row and
- * re-inserts exactly what we send), and a feature missing from that payload is recorded as a
- * DELIBERATE revocation, which the deploy-time role backfill then honors by refusing to restore it.
- * So a grant dropped here is destroyed permanently and silently, by an admin who only wanted to
- * tick a box on some unrelated row. Carrying the rows through means this pane can only ever change
- * what it actually shows.
+ * The BACKEND's feature-area registry is per-deployment, and this pane is shared by every product
+ * built on the toolkit. It now ASKS for that registry — but the ask can fail (an older product's
+ * backend has no such endpoint at all), and then the matrix renders the two-area
+ * {@link ACCESS_FEATURES} fallback while the server still holds grants for areas beyond it. This
+ * function is what makes that fallback safe. Save is a FULL REPLACEMENT (the server deletes every
+ * grant row and re-inserts exactly what we send), and a feature missing from that payload is
+ * recorded as a DELIBERATE revocation, which the deploy-time role backfill then honors by refusing
+ * to restore it. So a grant dropped here is destroyed permanently and silently, by an admin who
+ * only wanted to tick a box on some unrelated row. Carrying the rows through means this pane can
+ * only ever change what it actually shows — which is precisely the guarantee a degraded feature
+ * fetch needs, so this must NOT be folded into `grants` on the theory that the list is now
+ * complete. It is complete only when the fetch succeeded.
  *
  * Deliberately NOT canonicalized: we make no claim about verbs we don't understand, and round-trip
  * fidelity is the whole point. The server canonicalizes on write anyway.
  */
-const carriedGrantsFor = (role: AccessRoleRow): AccessGrantRow[] =>
-  role.grants.filter((g) => !isRenderedFeature(g.feature)).map((g) => ({ ...g }));
+const carriedGrantsFor = (
+  features: readonly AccessFeatureRow[],
+  role: AccessRoleRow,
+): AccessGrantRow[] =>
+  role.grants.filter((g) => !isRenderedFeature(features, g.feature)).map((g) => ({ ...g }));
 
 /** What actually goes on the wire: the edited matrix plus the untouched carried rows. Every
  *  submit path (create AND update) must use this — the payload is a full replacement, so a caller
@@ -148,7 +166,10 @@ const isAdminRole = (role: AccessRoleRow | null): boolean =>
 /**
  * The Teams "Permissions" topic: the workspace ROLES editor
  * (docs/workspace-roles-permissions.md). Roles are admin-defined verb bundles per
- * feature area. Built on the shared MasterDetailForm/Level substrate like the sibling
+ * feature area — and WHICH areas exist is the backend's answer (`GET /access/features`), not a
+ * constant here, so a custom role can grant and withhold every area the server enforces rather
+ * than the subset this package happened to be built with. Built on the shared
+ * MasterDetailForm/Level substrate like the sibling
  * AccessPane: the roles list is PUBLISHED as a rail level (master), and this pane
  * renders the selected role's editor (detail). Every call names the workspace by slug.
  */
@@ -165,11 +186,44 @@ export function TeamPermissionsPane({
   leaf?: TopicLeaf;
 }) {
   const [roles, setRoles] = useState<AccessRoleRow[] | null>(null);
+  // The feature areas the matrix RENDERS. The backend's registry is the authority (it refines
+  // every submitted grant against it, and it is what the system roles were seeded from), so the
+  // pane asks for it — but this pane ships in products whose backend has no such endpoint, so an
+  // unreadable answer degrades to the hardcoded ACCESS_FEATURES and the pane behaves exactly as
+  // it did before. Seeded with the fallback so the very first render is already a working matrix.
+  const [features, setFeatures] = useState<readonly AccessFeatureRow[]>(ACCESS_FEATURES);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Creating a role is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new role is selected so its
   // REAL detail (the per-feature permission matrix + default-for) opens.
   const [newOpen, setNewOpen] = useState(false);
+
+  // The feature list already resolved for a workspace slug. Cached because `refresh` runs again
+  // after every save: without it a transient failure on the SECOND fetch would silently regress a
+  // resolved list back to the two-row fallback, moving real rows into `carried` under an open
+  // editor. Resolution happens once per slug and never moves backwards.
+  const featureCache = useRef(new Map<string, readonly AccessFeatureRow[]>());
+  const loadFeatures = useCallback(
+    async (slug: string): Promise<readonly AccessFeatureRow[]> => {
+      const cached = featureCache.current.get(slug);
+      if (cached) return cached;
+      let resolved: readonly AccessFeatureRow[] = ACCESS_FEATURES;
+      try {
+        const rows = await accessApi.listFeatures(slug);
+        // An EMPTY answer counts as unreadable, NOT as "this backend enforces nothing": zero rows
+        // would render a role editor that can grant nothing, and silently sweep every existing
+        // grant into `carried`. The fallback is the safer reading of a nonsensical answer.
+        if (rows.length > 0) resolved = rows;
+      } catch {
+        // 404 (a product whose backend predates the endpoint), 401/403, or a network failure.
+        // Keep the hardcoded list: submitting only areas the server is known to accept is the
+        // safe default, and `carried` preserves the grants those rows do not cover.
+      }
+      featureCache.current.set(slug, resolved);
+      return resolved;
+    },
+    [],
+  );
 
   // Latest-wins guard: a stale in-flight list (from a previous slug) never clobbers the current one.
   const gen = useRef(0);
@@ -183,6 +237,14 @@ export function TeamPermissionsPane({
     }
     setLoadError(null);
     try {
+      // Features FIRST, and `roles` stays null until BOTH land. `toInput`/`differs` close over
+      // `features`, and the hook re-derives the baseline from `toInput` on every render — so a
+      // draft built against one list and re-based against another would diff index-misaligned
+      // rows and could submit a grant under the wrong feature key. Ordering it here means no
+      // role is ever selectable before the list it will be projected onto is final.
+      const list = await loadFeatures(workspaceSlug);
+      if (g !== gen.current) return;
+      setFeatures(list);
       const rows = await accessApi.listRoles(workspaceSlug);
       if (g !== gen.current) return;
       setRoles(rows);
@@ -191,7 +253,7 @@ export function TeamPermissionsPane({
       setRoles([]);
       setLoadError(err instanceof Error ? err.message : "Failed to load roles.");
     }
-  }, [workspaceSlug]);
+  }, [workspaceSlug, loadFeatures]);
 
   useEffect(() => {
     void refresh();
@@ -208,7 +270,7 @@ export function TeamPermissionsPane({
     name: "",
     description: "",
     defaultFor: "",
-    grants: blankGrants(),
+    grants: blankGrants(features),
     // Nothing to carry: `blank()` is only ever the starting draft for a CREATE (the hook calls it
     // from `create()`, and the create modal from its own `blank` prop) — it is never merged onto an
     // existing row, so there are no server grants in play yet.
@@ -257,8 +319,8 @@ export function TeamPermissionsPane({
       name: r.name,
       description: r.description,
       defaultFor: (r.defaultFor === "customer" || r.defaultFor === "persona" ? r.defaultFor : ""),
-      grants: grantsFor(r),
-      carried: carriedGrantsFor(r),
+      grants: grantsFor(features, r),
+      carried: carriedGrantsFor(features, r),
     }),
     validate: roleValidate,
     differs: (a, b) =>
@@ -342,6 +404,7 @@ export function TeamPermissionsPane({
           <RoleDetail
             key={form.detailKey}
             title="Role"
+            features={features}
             draft={form.draft}
             onChange={form.onChange}
             error={form.error}
@@ -413,6 +476,7 @@ export function TeamPermissionsPane({
  *  (their slug is fixed, so the slug field only shows while creating). */
 function RoleDetail({
   title,
+  features,
   draft,
   onChange,
   error,
@@ -420,6 +484,9 @@ function RoleDetail({
   selected,
 }: {
   title: string;
+  /** The rendered feature areas — the same list `draft.grants` was projected onto, so the
+   *  label lookup below and the row order agree by construction. */
+  features: readonly AccessFeatureRow[];
   draft: RoleInput;
   onChange: (next: RoleInput) => void;
   error?: string | null;
@@ -488,18 +555,19 @@ function RoleDetail({
         <p className="text-xs text-apt-text-muted">The admin role is immutable.</p>
       )}
 
-      {/* `draft.grants` is exactly the ACCESS_FEATURES rows, in order, by construction — so this map
+      {/* `draft.grants` is exactly the `features` rows, in order, by construction — so this map
           is complete and its index `i` is the same index the dirty check walks. `draft.carried`
-          (grants for feature areas this build has no label for) is deliberately NOT rendered: it
-          rides along untouched to the save payload. Showing a raw feature key with live toggles
-          would invite an admin to edit verbs the pane cannot even describe. The label fallback
-          below is therefore unreachable, and kept only so a broken invariant degrades to a visible
-          key rather than a blank row. */}
+          (grants for feature areas this pane is not rendering — only ever non-empty when the
+          server's registry could not be read) is deliberately NOT rendered: it rides along
+          untouched to the save payload. Showing a raw feature key with live toggles would invite
+          an admin to edit verbs the pane cannot even describe. The label fallback below is
+          therefore unreachable, and kept only so a broken invariant degrades to a visible key
+          rather than a blank row. */}
       <FieldGroup title="Permissions">
         {draft.grants.map((grant, i) => (
           <FeatureGrantRow
             key={grant.feature}
-            label={ACCESS_FEATURES.find((f) => f.key === grant.feature)?.label ?? grant.feature}
+            label={features.find((f) => f.key === grant.feature)?.label ?? grant.feature}
             grant={grant}
             disabled={disabled}
             onChange={(next) =>

@@ -31,6 +31,7 @@ vi.mock("@agentic-toolkit/data/access", () => ({
     { key: "personas", label: "Personas" },
   ],
   accessApi: {
+    listFeatures: vi.fn(),
     listRoles: vi.fn(),
     createRole: vi.fn(),
     updateRole: vi.fn(),
@@ -45,6 +46,7 @@ import {
 } from "./TeamPermissionsPane";
 import { accessApi, type AccessRoleRow } from "@agentic-toolkit/data/access";
 
+const listFeatures = vi.mocked(accessApi.listFeatures);
 const listRoles = vi.mocked(accessApi.listRoles);
 const updateRole = vi.mocked(accessApi.updateRole);
 
@@ -102,8 +104,22 @@ const WITH_UNKNOWN = role({
   ],
 });
 
+// The three feature areas an adh-shaped backend reports — `audiences` is deliberately NOT in the
+// mocked ACCESS_FEATURES above, so it can only ever reach the matrix via the endpoint.
+const SERVER_FEATURES = [
+  { key: "projects", label: "Projects" },
+  { key: "personas", label: "Personas" },
+  { key: "audiences", label: "Audiences" },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // DEFAULT: the endpoint does not exist. This pane ships in products whose backend predates it,
+  // and that degraded path must stay the pane's exact pre-endpoint behavior — so every test that
+  // does not opt in runs against the hardcoded ACCESS_FEATURES, not the server's list.
+  listFeatures.mockRejectedValue(
+    Object.assign(new Error("Not Found"), { status: 404 }),
+  );
   listRoles.mockResolvedValue([]);
 });
 
@@ -186,6 +202,23 @@ function TestHarness({ workspaceSlug = "acme" }: { workspaceSlug?: string | null
   );
 }
 
+/** A feature area's caption in the grants matrix. Scoped to the `<span>` because the "default for"
+ *  <select> carries an <option>Personas</option> that an unscoped getByText would also match. */
+const featureLabel = (label: string): HTMLElement =>
+  screen.getByText(label, { selector: "span" });
+
+/** The bordered block for one feature area (its label plus both verb lines). */
+const featureRow = (label: string): HTMLElement =>
+  featureLabel(label).closest("div") as HTMLElement;
+
+/** The "Items" verb line inside a feature row ("Sub-items" is the sibling line). */
+const itemVerbs = (label: string): HTMLElement =>
+  within(featureRow(label)).getByText("Items").closest("div") as HTMLElement;
+
+/** The "Sub-items" verb line inside a feature row. */
+const subitemVerbs = (label: string): HTMLElement =>
+  within(featureRow(label)).getByText("Sub-items").closest("div") as HTMLElement;
+
 describe("TeamPermissionsPane", () => {
   it("renders the workspace roles and badges the system ones", async () => {
     listRoles.mockResolvedValue([structuredClone(REVIEWER), structuredClone(USER_SYS)]);
@@ -248,7 +281,49 @@ describe("TeamPermissionsPane", () => {
     );
   });
 
-  it("carries a grant for a feature outside ACCESS_FEATURES through an unrelated save", async () => {
+  it("renders a row for a backend-reported area absent from ACCESS_FEATURES, and round-trips it", async () => {
+    // The server enforces three areas; the hardcoded ACCESS_FEATURES mocked above holds two. The
+    // third can therefore only reach the matrix through GET /access/features — which is the whole
+    // point: without it, `audiences` is an area an admin can neither grant NOR withhold on a
+    // custom role, while the seeded system roles confer it anyway.
+    listFeatures.mockResolvedValue(structuredClone(SERVER_FEATURES));
+    listRoles.mockResolvedValue([structuredClone(REVIEWER)]);
+    updateRole.mockResolvedValue(structuredClone(REVIEWER));
+    render(<TestHarness />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reviewer" }));
+    await screen.findByDisplayValue("Reviewer");
+
+    // The pane asked THIS deployment which areas it enforces, naming the workspace…
+    expect(listFeatures).toHaveBeenCalledWith("acme");
+    // …and the extra row is present, under the server's own label. `REVIEWER` carries no
+    // `audiences` grant at all, so the row exists because the FEATURE list says so, not because
+    // some grant happened to mention it.
+    expect(REVIEWER.grants.some((g) => g.feature === "audiences")).toBe(false);
+    expect(await screen.findByText("Audiences")).not.toBeNull();
+
+    // It is a live editor, not a read-only echo: grant item R + M and sub-item R on it, then save.
+    fireEvent.click(within(itemVerbs("Audiences")).getByRole("button", { name: "R" }));
+    fireEvent.click(within(featureRow("Audiences")).getByRole("button", { name: "M" }));
+    fireEvent.click(within(subitemVerbs("Audiences")).getByRole("button", { name: "R" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(updateRole).toHaveBeenCalledTimes(1));
+    const grants = updateRole.mock.calls[0]![2]!.grants!;
+    expect(grants).toContainEqual({ feature: "audiences", itemVerbs: "R,M", subitemVerbs: "R" });
+    // A FIRST-CLASS row, not a carried passenger: exactly the three server areas go out, once
+    // each — a duplicated `audiences` would mean the rendered row and `carried` both emitted it.
+    expect([...grants].map((g) => g.feature)).toEqual(["projects", "personas", "audiences"]);
+    // The untouched rendered rows still ride along at their stored verbs (the PATCH replaces all).
+    expect(grants).toContainEqual({ feature: "projects", itemVerbs: "R", subitemVerbs: "" });
+  });
+
+  it("falls back to ACCESS_FEATURES when the feature endpoint is unavailable, still carrying unrendered grants", async () => {
+    // The degraded path, and the reason `carried` must survive this change: on a backend that
+    // predates /access/features the matrix is the hardcoded two rows again, so `audiences` is
+    // unrendered — and a save is a full replacement whose omissions are audited as DELIBERATE
+    // revocations the deploy-time backfill refuses to restore.
+    listFeatures.mockRejectedValue(Object.assign(new Error("Not Found"), { status: 404 }));
     listRoles.mockResolvedValue([structuredClone(WITH_UNKNOWN)]);
     updateRole.mockResolvedValue(structuredClone(WITH_UNKNOWN));
     render(<TestHarness />);
@@ -256,19 +331,28 @@ describe("TeamPermissionsPane", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Editor" }));
     await screen.findByDisplayValue("Editor");
 
-    // The unknown area is NOT rendered — this pane edits exactly ACCESS_FEATURES, no more.
+    // PRECONDITION: the fixture really does hold the grant we are about to call "preserved" —
+    // otherwise the assertion below would be satisfied by a role that never had it.
+    expect(WITH_UNKNOWN.grants).toContainEqual({
+      feature: "audiences",
+      itemVerbs: "C,R,U,D",
+      subitemVerbs: "C,R,U,D",
+    });
+    expect(listFeatures).toHaveBeenCalledWith("acme");
+    // A failed fetch degrades to the hardcoded list — NOT to an empty matrix, and not to a crash.
+    expect(featureLabel("Projects")).not.toBeNull();
+    expect(featureLabel("Personas")).not.toBeNull();
+    // The unknown area is NOT rendered — this pane edits exactly what it was told exists.
     expect(screen.queryByText("audiences")).toBeNull();
     expect(screen.queryByText("Audiences")).toBeNull();
 
     // Edit an unrelated (rendered) feature, then save.
-    const projectsRow = screen.getByText("Projects").closest("div") as HTMLElement;
-    fireEvent.click(within(projectsRow).getByRole("button", { name: "M" }));
+    fireEvent.click(within(featureRow("Projects")).getByRole("button", { name: "M" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(updateRole).toHaveBeenCalledTimes(1));
     const grants = updateRole.mock.calls[0]![2]!.grants!;
-    // The edit landed, AND the invisible grant went back out VERBATIM — the PATCH is a full
-    // replacement, so anything missing from this array is revoked.
+    // The edit landed, AND the invisible grant went back out VERBATIM.
     expect(grants).toContainEqual({ feature: "projects", itemVerbs: "R,M", subitemVerbs: "" });
     expect(grants).toContainEqual({
       feature: "audiences",
@@ -280,6 +364,21 @@ describe("TeamPermissionsPane", () => {
       "personas",
       "projects",
     ]);
+  });
+
+  it("treats an EMPTY feature list as unreadable and falls back (never a blank matrix)", async () => {
+    // A server that answers `{ features: [] }` is answering nonsense — no deployment enforces
+    // nothing. Believing it would render zero rows and sweep EVERY grant into `carried`, so the
+    // roles editor would silently become read-only. Fall back exactly as a 404 does.
+    listFeatures.mockResolvedValue([]);
+    listRoles.mockResolvedValue([structuredClone(REVIEWER)]);
+    render(<TestHarness />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reviewer" }));
+    await screen.findByDisplayValue("Reviewer");
+
+    expect(featureLabel("Projects")).not.toBeNull();
+    expect(featureLabel("Personas")).not.toBeNull();
   });
 
   it("stays pristine on a role with a carried grant (Save disabled, nothing submitted)", async () => {

@@ -1,6 +1,17 @@
 // Wire shapes of the backend /access surface (websites/backend/src/routes/access.ts —
 // docs/workspace-roles-permissions.md). Field names match the JSON exactly.
 
+/**
+ * One feature area the BACKEND enforces, as `GET /access/features` reports it: the key grants
+ * are recorded against, plus the display name for it. Both come from the server because both
+ * are one fact — the server refines every submitted grant against its own registry, so a key
+ * it does not hold is a save it rejects, and a name only it knows.
+ */
+export interface AccessFeatureRow {
+  key: string;
+  label: string;
+}
+
 export interface AccessGrantRow {
   feature: string;
   /** Comma-letter subset of 'C,R,U,D,M' (M = manage access). */

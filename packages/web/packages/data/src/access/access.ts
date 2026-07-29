@@ -8,17 +8,34 @@ import { authedJson, authedRequest } from "../http";
 import { enc } from "../client-helpers";
 import type {
   AccessAssignmentRow,
+  AccessFeatureRow,
   AccessGrantRow,
   AccessRoleRow,
   EffectiveAccessRow,
 } from "./wire";
 
-export type { AccessAssignmentRow, AccessGrantRow, AccessRoleRow, EffectiveAccessRow };
+export type {
+  AccessAssignmentRow,
+  AccessFeatureRow,
+  AccessGrantRow,
+  AccessRoleRow,
+  EffectiveAccessRow,
+};
 
 const BASE = "/api/access";
 
-/** The v1 feature areas the roles matrix edits (backend lib/feature-areas.ts). */
-export const ACCESS_FEATURES: ReadonlyArray<{ key: string; label: string }> = [
+/**
+ * The FALLBACK feature areas the roles matrix edits — used only when the backend cannot tell
+ * us its own (see {@link accessApi.listFeatures}).
+ *
+ * The authoritative registry is per-DEPLOYMENT (backend `lib/feature-areas.ts`) and every
+ * submitted grant is refined against it server-side, so this list can never be the source of
+ * truth: a product whose backend has grown an area finds it ungrantable, and one whose backend
+ * lacks an area listed here 400s the save. It stays as the degraded path for a backend that
+ * predates `/access/features`, and holds only the two areas the roles layer shipped with — the
+ * intersection every product on this toolkit is known to enforce. Do NOT widen it.
+ */
+export const ACCESS_FEATURES: ReadonlyArray<AccessFeatureRow> = [
   { key: "projects", label: "Projects" },
   { key: "personas", label: "Personas" },
 ];
@@ -41,6 +58,21 @@ export interface AccessAssignmentInput {
 }
 
 export const accessApi = {
+  /**
+   * The feature areas THIS backend enforces (key + display label), in registration order.
+   * Any workspace member may read it; non-members get the uniform 404.
+   *
+   * REJECTS on a backend that has no such route (404) — that is the expected answer from a
+   * product whose server predates this endpoint, so callers must fall back to
+   * {@link ACCESS_FEATURES} rather than render an empty matrix.
+   */
+  async listFeatures(workspace: string): Promise<AccessFeatureRow[]> {
+    const body = await authedJson<{ features: AccessFeatureRow[] }>(
+      `${BASE}/features?workspace=${enc(workspace)}`,
+    );
+    return body.features;
+  },
+
   async listRoles(workspace: string): Promise<AccessRoleRow[]> {
     const body = await authedJson<{ roles: AccessRoleRow[] }>(
       `${BASE}/roles?workspace=${enc(workspace)}`,
