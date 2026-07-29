@@ -50,6 +50,25 @@ export {
   slowAnimationVars,
   SLOW_ANIM_FACTOR,
 } from "./debug-options"
+// HDV — Hierarchical Document View: the long-form document reader (nav tree,
+// breadcrumbs, prose, frontmatter, scrollspy ToC). Router-agnostic by design; a
+// host injects `LinkComponent` and passes a plain `activePath`. `doc-types.ts` is
+// a `.ts` file, so this barrel is its ONLY public import path — the `./blocks/*`
+// wildcard resolves `.tsx` only.
+export type {
+  DocCrumb,
+  DocLinkComponent,
+  DocMetadataField,
+  HeadingEntry,
+} from "./doc-types"
+export { DefaultDocLink, type DefaultDocLinkProps } from "./doc-link"
+export { DocBreadcrumbs, type DocBreadcrumbsProps } from "./doc-breadcrumbs"
+export { DocMetadata, type DocMetadataProps } from "./doc-metadata"
+export {
+  DocArticle,
+  DOC_ARTICLE_PROSE_CLASS,
+  type DocArticleProps,
+} from "./doc-article"
 export { ViewTabBar, type ViewTabItem, type ViewTabLink } from "./view-tab-bar"
 export { ButtonBar, type ButtonBarActions } from "./button-bar"
 export { PopupMenu, type PopupMenuItem } from "./popup-menu"
