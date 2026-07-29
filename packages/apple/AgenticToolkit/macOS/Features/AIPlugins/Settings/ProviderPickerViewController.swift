@@ -62,7 +62,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public let initialContentSize: NSSize
 
     private let searchField = NSSearchField()
-    private let tableView = NSTableView()
+    private let tableView = ThemedTableView()
     private let tableScroll = NSScrollView()
     private let infoTextView = NSTextView()
     private let infoScroll = NSScrollView()
@@ -231,7 +231,6 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private func configureTable() {
         tableView.headerView = NSTableHeaderView()
         tableView.rowHeight = 24
-        tableView.usesAlternatingRowBackgroundColors = false
         tableView.allowsEmptySelection = false
         tableView.allowsMultipleSelection = false
         tableView.selectionHighlightStyle = .regular
@@ -506,7 +505,8 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public func applyTheme(_ palette: SemanticPalette) {
         view.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
 
-        tableView.backgroundColor = palette.surfaceColor
+        // The table is a `ThemedTableView` and paints its own `.surface`; only
+        // its scroll host needs matching here.
         tableScroll.backgroundColor = palette.surfaceColor
 
         infoTextView.backgroundColor = palette.surfaceColor

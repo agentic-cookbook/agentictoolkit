@@ -60,4 +60,28 @@ struct ThemedControlsTests {
         row.applyTheme(palette)
         #expect(row.palette == palette)
     }
+
+    @Test("ThemedTableView paints its role, not the system control background")
+    func tableView() {
+        let table = ThemedTableView(role: .surface)
+        table.applyTheme(palette)
+        #expect(table.backgroundColor == palette.nsColor(.surface))
+        #expect(table.gridColor == palette.nsColor(.divider))
+        // Banding comes from a system color pair the palette cannot reach.
+        #expect(table.usesAlternatingRowBackgroundColors == false)
+    }
+
+    @Test("ThemedTableView leaves the role of the scroll view hosting it alone")
+    func tableViewDoesNotRestyleItsHost() {
+        // A table fills its clip view, so the host's backdrop is the host's
+        // business. Reaching out to recolor it would override a deliberately
+        // different role (a `.surface` list inside a `.windowBackground` scroll
+        // view) — and only from the *second* theme change onward, since
+        // `enclosingScrollView` is still nil when the observer first fires.
+        let table = ThemedTableView(role: .surface)
+        let scroll = ThemedScrollView(frame: .zero)
+        scroll.documentView = table
+        table.applyTheme(palette)
+        #expect(scroll.backgroundColor == palette.nsColor(.windowBackground))
+    }
 }

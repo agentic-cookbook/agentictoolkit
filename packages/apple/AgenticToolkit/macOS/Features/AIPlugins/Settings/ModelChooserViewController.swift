@@ -54,7 +54,7 @@ public final class ModelChooserViewController: NSViewController {
     private let physicalRAM = SystemMemoryMonitor.shared.physicalRAM
 
     private let searchField = NSSearchField()
-    private let tableView = NSTableView()
+    private let tableView = ThemedTableView()
     private let tableScroll = NSScrollView()
     /// Canonical composable-settings scroll host: top-anchored, width pinned to
     /// the viewport so rebuilt detail content can never tug the split divider.
@@ -157,7 +157,6 @@ public final class ModelChooserViewController: NSViewController {
     private func configureTable() {
         tableView.headerView = nil
         tableView.rowHeight = 24
-        tableView.usesAlternatingRowBackgroundColors = false
         tableView.allowsEmptySelection = false
         tableView.allowsMultipleSelection = false
         tableView.selectionHighlightStyle = .regular
@@ -371,7 +370,8 @@ public final class ModelChooserViewController: NSViewController {
 
     private func applyTheme(_ palette: SemanticPalette) {
         view.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
-        tableView.backgroundColor = palette.surfaceColor
+        // The table is a `ThemedTableView` and paints its own `.surface`; only
+        // its scroll host needs matching here.
         tableScroll.backgroundColor = palette.surfaceColor
         cancelButton.bezelColor = palette.nsColor(.elevatedSurface)
         cancelButton.contentTintColor = palette.primaryTextColor
