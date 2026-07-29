@@ -3,7 +3,7 @@ id: b7a4e24c-3dfe-4a33-b5bc-88736e520d90
 title: Hierarchical Document View
 domain: agenticdeveloperhub://recipes/hierarchical-document-view
 type: ingredient
-version: 1.0.0
+version: 1.1.0
 status: draft
 language: en
 created: '2026-07-29'
@@ -11,7 +11,7 @@ modified: '2026-07-29'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "HDV — the shared long-form document reader. This version covers its centre column: DocBreadcrumbs, DocArticle, and DocMetadata."
+summary: "HDV — the shared long-form document reader. This version covers its centre column (DocBreadcrumbs, DocArticle, DocMetadata) and its scrollspy table of contents."
 platforms:
 - typescript
 - web
@@ -44,12 +44,12 @@ tree; and HTDV stacks *panes* horizontally where HDV nests *one* tree vertically
 arbitrary depth with per-branch collapse. They are different shapes that happen to
 share the word "hierarchical".
 
-**This version covers the centre column only**, landing in stages:
+**The reader lands in stages** — this version adds the right rail to the centre column:
 
 | Component | Status |
 |---|---|
-| `DocBreadcrumbs`, `DocArticle`, `DocMetadata` | **this version** |
-| `DocTableOfContents` + `useScrollSpy` | next |
+| `DocBreadcrumbs`, `DocArticle`, `DocMetadata` | 1.0.0 |
+| `DocTableOfContents` + `useScrollSpy` | **this version** |
 | `ViewSourceDisclosure` (composes `Disclosure`) | next |
 | `DocNavTree` / `DocNav` | next |
 | `HierarchicalDocumentView` (the shell) | next |
@@ -68,6 +68,9 @@ Two seams keep site vocabulary out of the toolkit:
 - **Vocabulary.** HDV lays a frontmatter block out; it never decides what a
   document's frontmatter *contains*. The host maps its own fields to a list of
   label/value pairs.
+- **Chrome.** HDV lists every heading it is given. Which headings are *chrome*
+  rather than argument — a change history, a licence footer — is the host's call,
+  made by naming ids in `excludeIds`. Omit it and nothing is filtered.
 
 ## Behavioral Requirements
 
@@ -82,7 +85,15 @@ Two seams keep site vocabulary out of the toolkit:
 - **must-render-one-row-per-field**: `DocMetadata` MUST render one `dt`/`dd` row per entry of `fields`, in the given order, right-aligned as a single column.
 - **must-group-list-values**: `DocMetadata` MUST render an array `value` as a wrapping right-aligned group of its items, and any other `value` as-is with no wrapper.
 - **must-hide-empty-metadata**: `DocMetadata` MUST render nothing when `fields` is empty.
-- **must-spread-host-attributes**: All three MUST spread remaining host attributes (`data-*`, `id`, handlers) onto their root element.
+- **must-list-every-heading-by-default**: `DocTableOfContents` MUST list every entry of `headings`, in document order, when `excludeIds` is omitted — it MUST hold no opinion of its own about which headings belong.
+- **must-omit-excluded-headings**: `DocTableOfContents` MUST omit exactly the headings whose `id` appears in `excludeIds`, from both the rendered list and the set of observed elements.
+- **must-hide-empty-outline**: `DocTableOfContents` MUST render nothing when no heading survives filtering.
+- **must-indent-by-depth**: `DocTableOfContents` MUST indent a depth-3 heading further than a shallower one, and MUST render the list flat rather than nesting sub-lists.
+- **must-mark-the-current-heading**: `DocTableOfContents` MUST mark exactly one heading — the one the reader has most recently reached — and MUST move that marker rather than accumulating marks.
+- **must-scroll-not-navigate**: `DocTableOfContents` MUST prevent the anchor's default navigation and scroll to the heading smoothly, leaving the URL unchanged.
+- **must-track-by-id-value**: `useScrollSpy` MUST re-subscribe when the ids' VALUES change and MUST NOT re-subscribe when only the array's identity changes, so a caller may derive its ids inline on every render.
+- **must-observe-only-existing-elements**: `useScrollSpy` MUST skip ids with no matching element, and MUST disconnect its observer on unmount.
+- **must-spread-host-attributes**: All of them MUST spread remaining host attributes (`data-*`, `id`, handlers) onto their root element.
 
 ## Appearance
 
@@ -92,15 +103,15 @@ The centre column is a `max-w-3xl` prose measure. Every colour is a flat
 the host's palette without a per-site restyle.
 
 ```
- Home / Principles / Simplicity          ← DocBreadcrumbs (font-mono text-xs, dim)
- ─────────────────────────────────────
- # Simplicity                            ← DocArticle (.prose, trusted HTML)
- Body prose, headings, code, tables…
-                          version 1.2.0  ← DocMetadata (right-aligned dl, 11px mono)
-                        modified 2026-07-28
-                      references a.com  b.com
- ## Change History                       ← a SECOND DocArticle (host splits the HTML)
- | Version | Date | … |
+ Home / Principles / Simplicity          ← DocBreadcrumbs      │ ON THIS PAGE
+ ─────────────────────────────────────                         │
+ # Simplicity                            ← DocArticle          ┃ Simplicity   ← marked
+ Body prose, headings, code, tables…                           │   In practice
+                          version 1.2.0  ← DocMetadata         │
+                        modified 2026-07-28                    │  ↑ DocTableOfContents
+                      references a.com  b.com                  │    (w-56, sticky)
+ ## Change History                       ← a SECOND DocArticle │
+ | Version | Date | … |                    (host splits)       │
 ```
 
 - Breadcrumbs: `nav[aria-label="Breadcrumb"] mb-4` → `ol.flex.items-center.gap-1
@@ -114,6 +125,18 @@ the host's palette without a per-site restyle.
 - Metadata: `dl.flex.flex-col.items-end.gap-0.5 font-mono text-[11px] mb-6`; rows
   `flex gap-2`; `dt` dim, `dd` secondary; a list value wraps in
   `flex flex-wrap justify-end gap-x-3`.
+- Table of contents: `aside.hidden.xl:block w-56 shrink-0 sticky top-14
+  h-[calc(100vh-3.5rem)] overflow-y-auto py-8 pr-4`; header
+  `font-mono text-[10px] font-medium uppercase tracking-widest
+  text-[var(--color-text-dim)] mb-3`; list
+  `flex flex-col gap-1 border-l border-[var(--color-border-subtle)]` with each
+  `li` pulled back `-ml-px` so its own left border sits *on* the rail. Entries are
+  `block border-l py-0.5 text-sm transition-colors` + `pl-3` (depth ≤ 2) or `pl-6`
+  (depth 3); marked entries add
+  `border-[var(--color-accent)] text-[var(--color-text-primary)] font-medium`,
+  unmarked ones `border-transparent text-[var(--color-text-dim)]`.
+- The rail is desktop-only (`hidden xl:block`): below `xl` there is no room beside
+  a `max-w-3xl` measure, and the document's own headings are the outline.
 - No raw hex, no `!important`.
 
 ## States
@@ -126,9 +149,17 @@ the host's palette without a per-site restyle.
 | `DocArticle` | `html: ""` | an empty prose container (the host decides whether to render it) |
 | `DocMetadata` | `fields: []` | renders nothing |
 | `DocMetadata` | array value | items wrap right-aligned across lines |
+| `DocTableOfContents` | no heading survives filtering | renders nothing |
+| `DocTableOfContents` | before any heading is reached | every entry unmarked |
+| `DocTableOfContents` | a heading enters the band | that entry marked, the previous one cleared |
+| `DocTableOfContents` | viewport below `xl` | hidden |
 
-All three are pure and stateless — no internal state, no effects, and therefore no
-`"use client"` boundary. They render identically on the server and the client.
+`DocBreadcrumbs`, `DocArticle`, and `DocMetadata` are pure and stateless — no
+internal state, no effects, and therefore no `"use client"` boundary; they render
+identically on the server and the client. `DocTableOfContents` is a client
+component: it holds the marked id and subscribes an `IntersectionObserver`. It
+server-renders its full list with nothing marked, so the outline is in the HTML
+before hydration.
 
 ## Accessibility
 
@@ -144,6 +175,15 @@ All three are pure and stateless — no internal state, no effects, and therefor
   by the host, since the host owns the link nodes.
 - `DocArticle`'s heading structure comes from the host's rendered HTML; HDV adds no
   headings of its own and so cannot break the document outline.
+- The table of contents is a real list of real `href="#id"` anchors, so it works
+  with JavaScript disabled and is keyboard-navigable by default. The click handler
+  only upgrades the jump to a smooth scroll.
+- `prose-headings:scroll-mt-20` keeps a scrolled-to heading clear of the sticky
+  header, so a keyboard user landing on an anchor sees the heading rather than the
+  text beneath it.
+- The marked entry is styled, not `aria-current`: the rail reflects scroll
+  position, which changes continuously and is not a navigation state a screen
+  reader should announce on every pixel.
 
 ## Conformance Test Vectors
 
@@ -162,6 +202,15 @@ All three are pure and stateless — no internal state, no effects, and therefor
 | T11 | must-group-list-values | an array of 2 nodes | one `dd > span.flex.flex-wrap.justify-end.gap-x-3` with 2 children |
 | T12 | must-group-list-values | a scalar value | no wrapping `span` inside the `dd` |
 | T13 | must-spread-host-attributes | `data-testid` on each | the attribute lands on the root element |
+| T14 | must-list-every-heading-by-default | 3 headings, no `excludeIds` | all 3 listed, including one a host would call chrome |
+| T15 | must-omit-excluded-headings | `excludeIds={['change-history']}` | 2 listed, and exactly those 2 elements observed |
+| T16 | must-hide-empty-outline | `headings={[]}`; and every id excluded | nothing rendered, both times |
+| T17 | must-indent-by-depth | depth 2 and depth 3 | `pl-3` and `pl-6` respectively; `href` is `#<id>` |
+| T18 | must-mark-the-current-heading | drive the observer to heading B | B accented and bold; A still `border-transparent` |
+| T19 | must-scroll-not-navigate | click an entry | the click is default-prevented and `scrollIntoView({behavior:'smooth'})` is called |
+| T20 | must-track-by-id-value | re-render with an equal-valued NEW ids array | one observer total; the marked id survives |
+| T21 | must-track-by-id-value | re-render with DIFFERENT ids | the first observer is disconnected and a second observes the new set |
+| T22 | must-observe-only-existing-elements | an id with no element; then unmount | only the real element is observed; the observer disconnects |
 
 ## Edge Cases
 
@@ -179,6 +228,16 @@ All three are pure and stateless — no internal state, no effects, and therefor
   breaks scroll-to-heading without HDV changing.
 - **Untrusted HTML.** `DocArticle` uses `dangerouslySetInnerHTML` and does no
   escaping. See Configuration.
+- **A document with one heading.** The rail still renders — a one-entry outline is
+  the honest answer, and suppressing it would make the layout jump between pages.
+- **A heading id with no element.** The spy skips it; the entry still renders and
+  its anchor simply does nothing. HDV does not own the document, so it cannot
+  assert the element exists.
+- **Two headings visible at once.** The last one reported by the observer wins, so
+  scrolling down advances the marker and scrolling up walks it back.
+- **A host that renders its own headings client-side.** The spy resolves elements
+  by id when it subscribes; content appearing later is not observed until the ids
+  change.
 
 ## Configuration
 
@@ -191,6 +250,12 @@ All three are pure and stateless — no internal state, no effects, and therefor
 | `DocArticle` | `html` | — | pre-rendered, already-trusted document HTML |
 | | `as` | `"article"` | `article` for a document, `div`/`section` for a fragment |
 | `DocMetadata` | `fields` | — | `{ label, value }[]` in display order; an array `value` renders as a wrapping group |
+| `DocTableOfContents` | `headings` | — | `{ id, text, depth }[]` in document order, as the host's loader extracted them |
+| | `excludeIds` | none | ids to leave out; omit to list everything |
+| | `title` | `"On this page"` | the rail's own label |
+| `useScrollSpy` | `ids` | — | element ids to watch, in document order |
+| | `rootMargin` | `"-80px 0px -60% 0px"` | the band that counts as "here": discounts a sticky header at the top and the lower 60% |
+| | `threshold` | `0` | any visible pixel counts |
 
 ⚠️ **`DocArticle` is trusted-input only.** `html` goes through
 `dangerouslySetInnerHTML`, so it must be markup the host itself produced — a
@@ -205,16 +270,22 @@ site's URL convention into the toolkit.
 
 ## Logging
 
-None. All three components are pure render functions with no effects, no network,
-and no error paths to report — there is nothing to log that the host's own render
-tracing would not already show.
+None. The centre-column components are pure render functions. The table of
+contents' only effect is an `IntersectionObserver` subscription with no network,
+no persistence, and no error path — there is nothing to log that the host's own
+render tracing would not already show.
 
 ## Platform Notes
 
 - **React / Web (TypeScript):**
   `packages/web/packages/ui/src/blocks/doc-breadcrumbs.tsx`, `doc-article.tsx`,
-  `doc-metadata.tsx`, `doc-link.tsx`, and the shared types in `doc-types.ts`.
-  Exported from `@agentic-toolkit/ui/blocks`.
+  `doc-metadata.tsx`, `doc-table-of-contents.tsx`, `doc-link.tsx`, and the shared
+  types in `doc-types.ts`. Exported from `@agentic-toolkit/ui/blocks`.
+- **`useScrollSpy` lives at `src/hooks/useScrollSpy.ts`** and needed its own
+  `./hooks/useScrollSpy` key in the package's `exports` map: unlike
+  `./components/*` and `./blocks/*`, **`./hooks/*` is not a wildcard**, so a new
+  hook is unreachable until its key exists. (`tsup`'s entry list *is* globbed, so
+  the dist build needs no edit.)
 - **`doc-types.ts` is a `.ts` file**, so the package's `./blocks/*` export wildcard
   (which resolves `.tsx` only) does not reach it. The `./blocks` barrel is its one
   public import path — import the types from there.
@@ -264,6 +335,24 @@ tracing would not already show.
   the document; converting it would need a new loader-side GFM-table parser and
   would visibly change the rendered output — a redesign, which this extraction
   explicitly is not (`yagni`).
+- **Decision**: the table of contents filters by an `excludeIds` prop rather than
+  knowing which headings are chrome. **Rationale**: cookbook hides its change
+  history because it relocates it below the frontmatter; another host will want it
+  listed. Baking one site's convention in would make the block wrong for the second
+  consumer, and the default — filter nothing — is the one with no opinion in it
+  (`explicit-over-implicit`).
+- **Decision**: `useScrollSpy` keys its effect on the ids' joined VALUE, not the
+  array's identity. **Rationale**: every real caller derives its ids inline
+  (`headings.filter(...)`), producing a fresh array each render; keying on identity
+  would tear the observer down and rebuild it on every render, losing the marked
+  heading. The site's original component sidestepped this by depending on an
+  unfiltered prop, which is a coincidence rather than a contract
+  (`principle-of-least-astonishment`).
+- **Decision**: the rail's entry classes are composed with a template literal, not
+  `cn()`. **Rationale**: `tailwind-merge` cannot reliably tell `border-l` (a width)
+  from `border-[var(--color-accent)]` (a colour), and dropping either would cost the
+  marker. Nothing merges a host class onto the entries, so `cn()` buys nothing there
+  — it is still used on the root, where the host's `className` does merge.
 - **Decision**: `DocBreadcrumbs` takes resolved crumbs instead of a slug.
   **Rationale**: slug→label is a per-site URL convention; deriving it here would
   make the toolkit wrong for the second consumer (`dry` — the convention has one
@@ -278,10 +367,12 @@ tracing would not already show.
 | No bespoke re-implementation — the site's copies are deleted in the same change | pass | project-guidelines UI |
 | No framework coupling (`next/link` / `next/navigation` never imported) | pass | project-guidelines UI |
 | Labelled breadcrumb `nav`; current page is text, not a self-link; real `dl` semantics | pass | accessibility |
+| Real anchors + list semantics in the outline; works without JS | pass | accessibility |
 | `dangerouslySetInnerHTML` is documented as trusted-input only | reviewed | security |
 
 ## Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.1.0 | 2026-07-29 | Mike Fullerton | Added the right rail: `DocTableOfContents` and `useScrollSpy`, ported from the cookbook site's `TableOfContents`. Its `HIDDEN_HEADINGS` set became the `excludeIds` prop, passed from the host — so the toolkit holds no opinion about which headings are chrome. |
 | 1.0.0 | 2026-07-29 | Mike Fullerton | Initial recipe. HDV's centre column — `DocBreadcrumbs`, `DocArticle`, `DocMetadata` (plus `DefaultDocLink` and the shared `doc-types`) — extracted verbatim from the cookbook site's reader. |

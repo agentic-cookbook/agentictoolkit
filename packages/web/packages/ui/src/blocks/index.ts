@@ -69,6 +69,11 @@ export {
   DOC_ARTICLE_PROSE_CLASS,
   type DocArticleProps,
 } from "./doc-article"
+export {
+  DocTableOfContents,
+  DOC_TABLE_OF_CONTENTS_CLASS,
+  type DocTableOfContentsProps,
+} from "./doc-table-of-contents"
 export { ViewTabBar, type ViewTabItem, type ViewTabLink } from "./view-tab-bar"
 export { ButtonBar, type ButtonBarActions } from "./button-bar"
 export { PopupMenu, type PopupMenuItem } from "./popup-menu"

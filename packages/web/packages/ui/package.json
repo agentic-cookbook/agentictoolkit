@@ -111,6 +111,11 @@
       "development": "./src/hooks/useDirtyDraft.ts",
       "import": "./dist/hooks/useDirtyDraft.js"
     },
+    "./hooks/useScrollSpy": {
+      "types": "./dist/hooks/useScrollSpy.d.ts",
+      "development": "./src/hooks/useScrollSpy.ts",
+      "import": "./dist/hooks/useScrollSpy.js"
+    },
     "./styles/globals.css": "./src/styles/globals.css",
     "./styles/components.css": "./src/styles/components.css",
     "./components/*": {
