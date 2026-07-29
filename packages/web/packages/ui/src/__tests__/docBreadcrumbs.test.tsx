@@ -36,7 +36,7 @@ describe('DocBreadcrumbs', () => {
       (el) => el.textContent === '/',
     )
     expect(separators).toHaveLength(CRUMBS.length)
-    expect(separators[0].className).toBe('text-[var(--color-border)]')
+    expect(separators[0]!.className).toBe('text-[var(--color-border)]')
   })
 
   it('links every crumb but the last — the current page is plain text', () => {
@@ -62,7 +62,7 @@ describe('DocBreadcrumbs', () => {
     expect(routed).toHaveLength(2)
     routed.forEach((a) => expect(a.getAttribute('data-router')).toBe('yes'))
     // The className HDV passes must survive the adapter's prop spread.
-    expect(routed[0].className).toBe('hover:text-[var(--color-text-secondary)]')
+    expect(routed[0]!.className).toBe('hover:text-[var(--color-text-secondary)]')
   })
 
   it('lets the host rename and re-point the home crumb', () => {

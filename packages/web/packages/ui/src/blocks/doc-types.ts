@@ -36,6 +36,40 @@ export type DocLinkComponent = ComponentType<
   >
 >
 
+/**
+ * One node of the document tree: a section, a directory, or a page.
+ *
+ * There is no `kind` discriminator on purpose — a node with `children` is a
+ * branch and one without is a leaf, which is the only distinction the tree
+ * draws. `label` is a string rather than a `ReactNode` because the collapse
+ * control announces itself with it ("Expand Principles").
+ */
+export interface HdvNavNode {
+  /** Display text, and the accessible name of a collapse control. */
+  label: string
+  /** Destination, and the node's identity within the tree. */
+  href: string
+  /**
+   * Headings to inline beneath a leaf, for sites where a page's own outline
+   * belongs in the nav. HDV renders every entry it is given — filtering by
+   * depth, or deciding which pages deserve an outline at all, is the host's
+   * call and stays in the host's adapter.
+   */
+  headings?: HeadingEntry[]
+  /** Child nodes. Present and non-empty makes this node a branch. */
+  children?: HdvNavNode[]
+}
+
+/**
+ * A fixed row above the tree — the pages that are not documents ("Overview",
+ * "Projects"). They are data rather than a slot so the divider beneath them can
+ * disappear along with them.
+ */
+export interface DocNavTopLink {
+  label: ReactNode
+  href: string
+}
+
 /** One breadcrumb segment: what to show, and where it points. */
 export interface DocCrumb {
   label: ReactNode

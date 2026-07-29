@@ -59,9 +59,24 @@ export type {
   DocCrumb,
   DocLinkComponent,
   DocMetadataField,
+  DocNavTopLink,
+  HdvNavNode,
   HeadingEntry,
 } from "./doc-types"
 export { DefaultDocLink, type DefaultDocLinkProps } from "./doc-link"
+export {
+  DocNav,
+  DocNavTree,
+  DOC_NAV_ASIDE_CLASS,
+  DOC_NAV_NAV_CLASS,
+  DOC_NAV_DRAWER_CLASS,
+  DOC_NAV_SECTION_LABEL_CLASS,
+  DOC_NAV_TOP_LINK_CLASS,
+  DOC_NAV_SECTION_LIST_CLASS,
+  DOC_NAV_BRANCH_LIST_CLASS,
+  type DocNavProps,
+  type DocNavTreeProps,
+} from "./doc-nav"
 export { DocBreadcrumbs, type DocBreadcrumbsProps } from "./doc-breadcrumbs"
 export { DocMetadata, type DocMetadataProps } from "./doc-metadata"
 export {
