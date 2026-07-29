@@ -120,7 +120,7 @@ export function BitbagChat({
   // until the reader reaches for him. In the dock he arrives already connected
   // (`engageOn: 'mount'`), so it runs straight through — welcome, beat, greeting,
   // composer open — and the summoning lines are never shown.
-  const { inputDisabled, connected, engaged, statusLine } = useConnectRitual({
+  const { inputDisabled, connected, engagedByUser, statusLine } = useConnectRitual({
     say: session.say,
     welcome: WELCOME,
     greeting: GREETING,
@@ -132,10 +132,11 @@ export function BitbagChat({
   })
 
   // "The reader has deliberately reached for him" — which on the stage the ritual
-  // already tracks (being reached for is what summons him), but in the dock is a
-  // DIFFERENT fact from arriving: he connects at mount there, and reusing the
-  // ritual's flag would have him engaged from the first frame and so never
-  // following a cursor at all. So the dock watches for the reach itself.
+  // already tracks (being reached for is what summons him: `engagedByUser`, NOT
+  // `engaged`, which the 30s give-up timeout also sets without the reader having
+  // touched anything). In the dock it is a DIFFERENT fact from arriving: he
+  // connects at mount there, so the ritual sees no reach at all. The dock watches
+  // for it itself.
   const [dockEngaged, setDockEngaged] = useState(false)
   useEffect(() => {
     const el = wrapperRef.current
@@ -148,7 +149,7 @@ export function BitbagChat({
       el.removeEventListener('focusin', onEngage)
     }
   }, [isDock, dockEngaged])
-  const reached = isDock ? dockEngaged : engaged
+  const reached = isDock ? dockEngaged : engagedByUser
 
   // He's "responding" both while awaiting the reply AND while it streams out.
   const streaming = session.messages.some((m) => m.isStreaming)
