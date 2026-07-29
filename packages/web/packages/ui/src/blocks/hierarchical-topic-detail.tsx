@@ -699,15 +699,33 @@ export function HierarchicalTopicDetail({
   // lost selection lowered the floor the narrow decision was made on). So the detail renders through a
   // PORTAL into this frame-owned, layout-neutral (`display: contents`) element, and the layout
   // effect below re-slots that element into whichever stack is active: the flip MOVES the
-  // detail's DOM, React state intact. On the server there is no document and the portal renders
-  // nothing — every consumer's detail is client-populated, and portals are skipped during
-  // hydration, so the empty server slot matches.
-  const [detailHost] = useState(() => {
-    if (typeof document === "undefined") return null
-    const el = document.createElement("div")
-    el.className = "contents"
-    return el
-  })
+  // detail's DOM, React state intact.
+  //
+  // The host is created in a LAYOUT EFFECT and not in a `useState` initializer, because a lazy
+  // initializer runs during RENDER: `typeof document` is undefined on the server and defined on the
+  // very first client render, so the hydration pass would already be rendering the portal. React
+  // does NOT skip portals while hydrating — it descends into the container and expects to find
+  // markup matching the portal's children there. This container was created microseconds earlier
+  // and is empty, so the trees diverge and React throws away the entire server tree and regenerates
+  // it on the client. That is expensive, and it re-creates every host node the document already
+  // had — including any <script> in the consumer's <head>, which React refuses to create
+  // client-side ("Encountered a script tag while rendering React component"). An effect runs AFTER
+  // the commit, so the first client render returns the same `null` the server did and hydration
+  // matches.
+  //
+  // Layout, not passive, so the extra render is flushed before the browser paints and the detail is
+  // on screen in the frame it always was. The ref makes the element itself survive StrictMode's
+  // double-invoke — re-running bare would strand the first host inside the slot.
+  const detailHostRef = useRef<HTMLDivElement | null>(null)
+  const [detailHost, setDetailHost] = useState<HTMLDivElement | null>(null)
+  useLayoutEffect(() => {
+    if (!detailHostRef.current) {
+      const el = document.createElement("div")
+      el.className = "contents"
+      detailHostRef.current = el
+    }
+    setDetailHost(detailHostRef.current)
+  }, [])
   const [detailSlotEl, setDetailSlotEl] = useState<HTMLDivElement | null>(null)
   useLayoutEffect(() => {
     if (detailHost && detailSlotEl) detailSlotEl.appendChild(detailHost)
