@@ -57,6 +57,21 @@ export interface AccessAssignmentInput {
   roleId: string;
 }
 
+/** True when `v` is a well-formed {@link AccessFeatureRow}: an object with a string `key` and a
+ *  string `label`. `GET /access/features` is the one response this client cannot typecheck away
+ *  — `body.features` was previously returned via a bare cast, so a wrong shape (a string, an
+ *  array of bare strings, an object) reached every consumer looking exactly like real data
+ *  instead of the error it is. Lives beside `listFeatures` so the guard protects every consumer
+ *  of this client, not just the one pane that happens to render the matrix today. */
+function isAccessFeatureRow(v: unknown): v is AccessFeatureRow {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    typeof (v as { key?: unknown }).key === "string" &&
+    typeof (v as { label?: unknown }).label === "string"
+  );
+}
+
 export const accessApi = {
   /**
    * The feature areas THIS backend enforces (key + display label), in registration order.
@@ -64,13 +79,20 @@ export const accessApi = {
    *
    * REJECTS on a backend that has no such route (404) — that is the expected answer from a
    * product whose server predates this endpoint, so callers must fall back to
-   * {@link ACCESS_FEATURES} rather than render an empty matrix.
+   * {@link ACCESS_FEATURES} rather than render an empty matrix. Also REJECTS (throws) when the
+   * body's `features` is not an array of {@link AccessFeatureRow}, so a malformed-but-plausible
+   * answer (e.g. a bare string, or an array of feature keys with no `label`) surfaces to the
+   * caller as a failure to fall back on rather than a value that crashes downstream `.map()`s.
    */
   async listFeatures(workspace: string): Promise<AccessFeatureRow[]> {
-    const body = await authedJson<{ features: AccessFeatureRow[] }>(
+    const body = await authedJson<{ features: unknown }>(
       `${BASE}/features?workspace=${enc(workspace)}`,
     );
-    return body.features;
+    const rows = body.features;
+    if (!Array.isArray(rows) || !rows.every(isAccessFeatureRow)) {
+      throw new Error("GET /access/features returned a malformed feature list");
+    }
+    return rows;
   },
 
   async listRoles(workspace: string): Promise<AccessRoleRow[]> {

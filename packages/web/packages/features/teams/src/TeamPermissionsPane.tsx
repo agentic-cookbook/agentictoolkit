@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Shield } from "lucide-react";
 
+import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { isNotFound } from "@agentic-toolkit/data";
 import {
   accessApi,
   ACCESS_FEATURES,
@@ -198,29 +200,40 @@ export function TeamPermissionsPane({
   // REAL detail (the per-feature permission matrix + default-for) opens.
   const [newOpen, setNewOpen] = useState(false);
 
-  // The feature list already resolved for a workspace slug. Cached because `refresh` runs again
-  // after every save: without it a transient failure on the SECOND fetch would silently regress a
-  // resolved list back to the two-row fallback, moving real rows into `carried` under an open
-  // editor. Resolution happens once per slug and never moves backwards.
+  // The feature list already resolved for a workspace slug — SUCCESSES ONLY. Cached because
+  // `refresh` runs again after every save, and a resolved list never needs re-fetching. A failed
+  // or unreadable attempt is deliberately NOT cached (see `loadFeatures` below): caching the
+  // fallback would pin a transient hiccup to the two hardcoded rows for the component's entire
+  // lifetime, with no retry — not even on the post-save refresh().
   const featureCache = useRef(new Map<string, readonly AccessFeatureRow[]>());
   const loadFeatures = useCallback(
     async (slug: string): Promise<readonly AccessFeatureRow[]> => {
       const cached = featureCache.current.get(slug);
       if (cached) return cached;
-      let resolved: readonly AccessFeatureRow[] = ACCESS_FEATURES;
       try {
         const rows = await accessApi.listFeatures(slug);
         // An EMPTY answer counts as unreadable, NOT as "this backend enforces nothing": zero rows
         // would render a role editor that can grant nothing, and silently sweep every existing
         // grant into `carried`. The fallback is the safer reading of a nonsensical answer.
-        if (rows.length > 0) resolved = rows;
-      } catch {
-        // 404 (a product whose backend predates the endpoint), 401/403, or a network failure.
-        // Keep the hardcoded list: submitting only areas the server is known to accept is the
-        // safe default, and `carried` preserves the grants those rows do not cover.
+        if (rows.length > 0) {
+          featureCache.current.set(slug, rows);
+          return rows;
+        }
+      } catch (err) {
+        // A 404 is the expected degrade path — a product whose backend predates this endpoint —
+        // and must stay silent, matching the pre-endpoint behavior this pane is required to
+        // reproduce exactly. Anything else (a malformed body — `listFeatures` validates the shape
+        // and throws — a 5xx, or a network failure) is unexpected: report it the way this
+        // codebase reports comparable failures (see useMasterDetailForm's save/delete catches)
+        // and surface it, so a transient blip doesn't masquerade as an old backend with no sign
+        // anything went wrong.
+        if (!isNotFound(err)) {
+          reportUnexpectedAuthError(err, { feature: "team-permissions", step: "loadFeatures" });
+          setLoadError(err instanceof Error ? err.message : "Failed to load the feature list.");
+        }
       }
-      featureCache.current.set(slug, resolved);
-      return resolved;
+      // Not cached: the fallback (either branch above) is retried on the next load.
+      return ACCESS_FEATURES;
     },
     [],
   );

@@ -381,6 +381,57 @@ describe("TeamPermissionsPane", () => {
     expect(featureLabel("Personas")).not.toBeNull();
   });
 
+  it("surfaces a genuine (non-404) feature-list failure while still degrading to the fallback", async () => {
+    // Unlike a 404 (a product whose backend predates the endpoint — the expected, silent degrade
+    // path exercised above), a 500 or a network failure is unexpected: the admin should see SOME
+    // sign something went wrong, not a matrix that quietly looks like an old backend.
+    listFeatures.mockRejectedValue(
+      Object.assign(new Error("Feature service unavailable"), { status: 500 }),
+    );
+    listRoles.mockResolvedValue([structuredClone(REVIEWER)]);
+    render(<TestHarness />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reviewer" }));
+    await screen.findByDisplayValue("Reviewer");
+
+    // The matrix still works — a genuine failure degrades exactly like a 404 would.
+    expect(featureLabel("Projects")).not.toBeNull();
+    expect(featureLabel("Personas")).not.toBeNull();
+    // …but the failure itself is surfaced, not swallowed.
+    expect(await screen.findByRole("alert")).toHaveTextContent("Feature service unavailable");
+  });
+
+  it("does not cache a genuine failure, so the next refresh retries the fetch", async () => {
+    // The very first attempt fails for a real reason (not a 404); the second — driven by the
+    // post-save refresh() — succeeds. If the failed attempt had been cached (the bug), the pane
+    // would stay pinned to the two-row fallback for its entire lifetime and `listFeatures` would
+    // never be called again.
+    listFeatures
+      .mockRejectedValueOnce(Object.assign(new Error("boom"), { status: 500 }))
+      .mockResolvedValueOnce(structuredClone(SERVER_FEATURES));
+    listRoles.mockResolvedValue([structuredClone(REVIEWER)]);
+    updateRole.mockResolvedValue(structuredClone(REVIEWER));
+    render(<TestHarness />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reviewer" }));
+    await screen.findByDisplayValue("Reviewer");
+    expect(screen.queryByText("Audiences")).toBeNull();
+
+    // An unrelated edit + save triggers the pane's post-save refresh(), which re-invokes
+    // loadFeatures for the same workspace slug.
+    fireEvent.click(within(featureRow("Projects")).getByRole("button", { name: "M" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(updateRole).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listFeatures).toHaveBeenCalledTimes(2));
+
+    // Re-select to rehydrate the draft against the now-resolved list: proves the retried fetch's
+    // result is live, not still pinned to the fallback cached from the first, failed attempt.
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reviewer" }));
+    await screen.findByDisplayValue("Reviewer");
+    expect(await screen.findByText("Audiences")).not.toBeNull();
+  });
+
   it("stays pristine on a role with a carried grant (Save disabled, nothing submitted)", async () => {
     // The dirty check walks the RENDERED rows index-aligned; carried rows must not tip a
     // never-touched form into dirty (which would offer Save on a form the user never edited).
