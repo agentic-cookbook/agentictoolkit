@@ -90,6 +90,16 @@ export {
   type DocTableOfContentsProps,
 } from "./doc-table-of-contents"
 export {
+  HierarchicalDocumentView,
+  DocPage,
+  HIERARCHICAL_DOCUMENT_VIEW_CLASS,
+  HIERARCHICAL_DOCUMENT_VIEW_CONTENT_CLASS,
+  DOC_PAGE_CLASS,
+  DOC_PAGE_ARTICLE_CLASS,
+  type HierarchicalDocumentViewProps,
+  type DocPageProps,
+} from "./hierarchical-document-view"
+export {
   ViewSourceDisclosure,
   VIEW_SOURCE_DISCLOSURE_CLASS,
   VIEW_SOURCE_TRIGGER_CLASS,

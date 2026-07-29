@@ -3,7 +3,7 @@ id: b7a4e24c-3dfe-4a33-b5bc-88736e520d90
 title: Hierarchical Document View
 domain: agenticdeveloperhub://recipes/hierarchical-document-view
 type: ingredient
-version: 1.3.0
+version: 1.4.0
 status: draft
 language: en
 created: '2026-07-29'
@@ -11,7 +11,7 @@ modified: '2026-07-29'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "HDV — the shared long-form document reader. This version adds its left column: DocNavTree, the collapsible multi-depth document tree, and DocNav, the sticky desktop aside and controlled mobile drawer that carry it — alongside the centre column (DocBreadcrumbs, DocArticle, DocMetadata, ViewSourceDisclosure) and the scrollspy table of contents."
+summary: "HDV — the shared long-form document reader. This version completes it with the frame that places the columns: HierarchicalDocumentView (nav, then the document) wrapping DocPage (the reader's measure, then the rail) — alongside the collapsible tree (DocNavTree, DocNav), the centre column (DocBreadcrumbs, DocArticle, DocMetadata, ViewSourceDisclosure) and the scrollspy table of contents."
 platforms:
 - typescript
 - web
@@ -44,28 +44,38 @@ tree; and HTDV stacks *panes* horizontally where HDV nests *one* tree vertically
 arbitrary depth with per-branch collapse. They are different shapes that happen to
 share the word "hierarchical".
 
-**The reader lands in stages** — this version adds the left column:
+**The reader lands in stages** — this version completes it:
 
 | Component | Status |
 |---|---|
 | `DocBreadcrumbs`, `DocArticle`, `DocMetadata` | 1.0.0 |
 | `DocTableOfContents` + `useScrollSpy` | 1.1.0 |
 | `ViewSourceDisclosure` | 1.2.0 |
-| `DocNavTree` / `DocNav` | **this version** |
-| `HierarchicalDocumentView` (the shell) | next |
+| `DocNavTree` / `DocNav` | 1.3.0 |
+| `HierarchicalDocumentView` + `DocPage` (the frame) | **this version** |
 
 The governing constraint for the whole extraction is that **it is a move, not a
 redesign**: every default here byte-matches what the cookbook site rendered before
 it, so a visual delta is a bug rather than a judgement call. Redesign happens later,
 on a green base.
 
-There is exactly **one** recorded exception, and it is recorded precisely so it is
-not drift: every chevron is lucide's `ChevronRight` rather than the site's
-hand-rolled inline `<svg>` — `ViewSourceDisclosure`'s, and now the nav section's
+There are exactly **two** recorded exceptions, recorded precisely so they are not
+drift.
+
+**The chevrons.** Every one is lucide's `ChevronRight` rather than the site's
+hand-rolled inline `<svg>` — `ViewSourceDisclosure`'s and the nav section's
 collapse control. Same box, same stroke width, same rotation — the glyph itself is
 one pixel narrower at `h-3 w-3`. Copying a bespoke icon path into a toolkit that
 already depends on lucide would duplicate knowledge lucide owns (`dry`); the pixel
 is the price, and it is named here rather than discovered later.
+
+**The content region is a `div`, not a `main`.** The site wrapped the document
+region in `<main className="flex-1 min-w-0">` — *inside* the `main` its shared
+`AppShell` already renders. Two nested `main` landmarks is invalid HTML, and
+extracting the frame forced the choice: rendering a `main` here would bake the bug
+into every future consumer. So the frame renders a `div` and the host keeps its one
+landmark. Zero visual delta (both are `display: block`), one element name changed,
+and one pre-existing a11y defect gone.
 
 The nav column's parity was **measured, not asserted**: the server-rendered aside
 was captured from the cookbook's production build before and after the cutover,
@@ -122,6 +132,11 @@ Three seams keep site vocabulary out of the toolkit:
 - **must-drop-the-divider-with-the-rows**: `DocNav` MUST render the rule above the tree only when `topLinks` is non-empty.
 - **must-control-the-drawer**: `DocNav`'s mobile drawer MUST be controlled by `open`, and MUST call `onClose` from both dismiss targets — the backdrop and the close button — because the control that opens it lives outside HDV.
 - **must-share-one-nav**: `DocNav` MUST render the identical nav — the same fixed rows, rule, and tree — in the desktop column and in the drawer.
+- **must-place-the-nav-before-the-document**: `HierarchicalDocumentView` MUST render `nav` first and the document region after it, and `DocPage` MUST render the document before the rail.
+- **must-slot-columns-unwrapped**: Both frames MUST render a slotted column as a direct child of their flex row, adding no wrapper of their own, so each column's own `sticky` offset resolves against the frame.
+- **must-drop-an-omitted-column**: Omitting `nav` or `toc` MUST leave no element behind — a reader with no tree gets no empty column, not a zero-width one.
+- **must-cap-the-measure**: `DocPage` MUST cap the document at the reader's measure and MUST allow that column to shrink below its content, so a wide code block cannot push the rail off the page.
+- **must-render-no-landmark**: Neither frame MUST render a `main` or any other landmark element. The host's app shell owns its landmarks; HDV owns the columns.
 - **must-spread-host-attributes**: All of them MUST spread remaining host attributes (`data-*`, `id`, handlers) onto their root element.
 
 ## Appearance
@@ -146,6 +161,7 @@ the host's palette without a per-site restyle.
     DocNavTree)│                                                        │
 ```
 
+- The frame is two nested flex rows and nothing else. The outer one (`HIERARCHICAL_DOCUMENT_VIEW_CLASS`) is `flex flex-1`, its content region (`HIERARCHICAL_DOCUMENT_VIEW_CONTENT_CLASS`) `flex-1 min-w-0`; the inner one (`DOC_PAGE_CLASS`) is `flex`, its document column (`DOC_PAGE_ARTICLE_CLASS`) `flex-1 min-w-0 px-6 py-8 lg:px-10 max-w-3xl`. The `max-w-3xl` is the whole reason the frame is shared: prose set to the full width of a 1440px window is unreadable, and `min-w-0` is what stops a wide table from shoving the rail off the edge.
 - Nav column: `aside.hidden.lg:block w-80 shrink-0 border-r
   border-[var(--color-border-subtle)] overflow-y-auto sticky top-14
   h-[calc(100vh-3.5rem)]` — sticky under the family's `3.5rem` header and scrolling
@@ -234,6 +250,10 @@ the host's palette without a per-site restyle.
 | `DocNav` | `topLinks` empty or omitted | no fixed rows **and** no divider |
 | `DocNav` | `open: false` | the desktop aside only — no drawer, no backdrop |
 | `DocNav` | `open: true` | aside + backdrop + drawer, the same nav in both shells |
+| `HierarchicalDocumentView` | `nav` omitted | one child, the content region — no empty column |
+| `HierarchicalDocumentView` | `nav` given | the column, then the content region, as siblings |
+| `DocPage` | `toc` omitted | the document column alone, at full width of the region |
+| `DocPage` | `toc` given | the document at its measure, the rail beside it |
 | `DocBreadcrumbs` | trail non-empty | home + crumbs, last as text |
 | `DocBreadcrumbs` | `crumbs: []` (site root) | renders nothing |
 | `DocBreadcrumbs` | crumb link hover | text lifts dim → secondary |
@@ -248,9 +268,11 @@ the host's palette without a per-site restyle.
 | `ViewSourceDisclosure` | expanded | chevron rotated 90°, `<pre>` panel below the trigger |
 | `ViewSourceDisclosure` | `source: ""` | an empty panel — a document with no body still has a source |
 
-`DocBreadcrumbs`, `DocArticle`, and `DocMetadata` are pure and stateless — no
-internal state, no effects, and therefore no `"use client"` boundary; they render
-identically on the server and the client. `DocTableOfContents` is a client
+`HierarchicalDocumentView`, `DocPage`, `DocBreadcrumbs`, `DocArticle`, and
+`DocMetadata` are pure and stateless — no internal state, no effects, and therefore
+no `"use client"` boundary; they render identically on the server and the client.
+The two frames hold no props but their slots and a `className`, which is why they
+can sit in a server layout with a client tree passed into them. `DocTableOfContents` is a client
 component: it holds the marked id and subscribes an `IntersectionObserver`. It
 server-renders its full list with nothing marked, so the outline is in the HTML
 before hydration. `ViewSourceDisclosure` is a client component too, but holds only
@@ -283,6 +305,7 @@ of its own, since the drawer's belongs to the host.
   same thing, and two names for one action reads as two actions.
 - The drawer is absent from the DOM when closed rather than hidden, so its links
   are never in the tab order behind the page.
+- Neither frame renders a landmark. The nav column brings its own `aside` and `nav`, the rail its own `aside`, and the page's single `main` belongs to the host's app shell — so a screen-reader user gets one main region and three named ones, not a nested pair of mains.
 - The breadcrumb trail is a `nav` labelled `Breadcrumb`, so assistive tech
   announces it as the trail rather than as generic links.
 - The current page is a `span`, not a link — there is no self-referential link to
@@ -372,6 +395,18 @@ of its own, since the drawer's belongs to the host.
 | T52 | must-control-the-drawer | click each control named "Close navigation" | there are exactly 2, and `onClose` fires twice |
 | T53 | must-control-the-drawer | `title="Contents" closeLabel="Dismiss"` | the drawer reads "Contents" and both dismiss targets are named "Dismiss" |
 | T54 | must-spread-host-attributes | `className="w-96"` + `data-testid` | the column keeps `sticky`, carries `w-96`, has no `w-80`, and the attribute lands on it |
+| T55 | must-place-the-nav-before-the-document | `nav` + children | 2 children: the nav node itself, then a region whose class equals `HIERARCHICAL_DOCUMENT_VIEW_CONTENT_CLASS` and which holds the document |
+| T56 | must-slot-columns-unwrapped | `nav` | the nav's `parentElement` is the frame itself, so its `sticky` resolves against the frame |
+| T57 | must-drop-an-omitted-column | no `nav` | exactly 1 child, the content region |
+| T58 | must-render-no-landmark | `nav` + children | no `main` element and no `main` role anywhere in the output |
+| T59 | must-spread-host-attributes | `className="gap-4"` | the frame keeps `flex-1` and gains `gap-4` |
+| T60 | must-spread-host-attributes | `id` + `data-*` | both land on the frame |
+| T61 | must-place-the-nav-before-the-document, must-cap-the-measure | `toc` + children | 2 children: the measure column holding the document, then the rail node |
+| T62 | must-cap-the-measure | — | `DOC_PAGE_ARTICLE_CLASS` contains both `max-w-3xl` and `min-w-0` |
+| T63 | must-drop-an-omitted-column | no `toc` | exactly 1 child, the measure column |
+| T64 | must-slot-columns-unwrapped | `toc` | the rail's `parentElement` is the row itself |
+| T65 | must-spread-host-attributes | `className="items-start"` + `id` | the row keeps `flex`, gains `items-start`, and carries the `id` |
+| T66 | must-slot-columns-unwrapped | a `DocPage` inside a `HierarchicalDocumentView` | nav → content region → row → measure → document, with the rail on the row and the nav on the frame — neither frame reaches into the other |
 
 ## Edge Cases
 
@@ -409,6 +444,8 @@ of its own, since the drawer's belongs to the host.
   outline anchor. The extraction therefore renders what the site rendered (nothing)
   and deletes the dead plumbing; `headings` stays as a capability for the first host
   that actually wants it.
+- **A document set with no tree.** Omit `nav` and the frame is a single-column reader; nothing renders an empty 20rem gutter. Same for `toc` — a document with no headings gets the full width, because `DocTableOfContents` already returns nothing and the frame adds no wrapper around it.
+- **A host whose app shell already renders `main`.** Every one in this family does, which is why the frame renders a `div`. A host that has *no* landmark wraps HDV in its own `main` — one line, and it owns where the landmark starts, which HDV cannot know.
 - **Site root.** `crumbs: []` hides the whole nav — a lone "Home" pointing at the
   page you are on is noise, not navigation.
 - **A document with no change history.** The host's split returns an empty second
@@ -450,6 +487,10 @@ of its own, since the drawer's belongs to the host.
 
 | Component | Prop | Default | Meaning |
 |---|---|---|---|
+| `HierarchicalDocumentView` | `nav` | none | the nav column, normally a `DocNav`; rendered unwrapped, omit for a single-column reader |
+| | `children` | — | the routed document region: one `DocPage` per route |
+| `DocPage` | `toc` | none | the right rail, normally a `DocTableOfContents`; rendered unwrapped, omit to give the document the full width |
+| | `children` | — | the document: breadcrumbs, article, metadata, source |
 | `DocNavTree` | `nodes` | — | top-level sections in display order; each `{ label, href, headings?, children? }` |
 | | `activePath` | — | the current route, spelled exactly as it appears in a node's `href` |
 | | `LinkComponent` | `DefaultDocLink` | the host's router link, taking `to` |
@@ -499,7 +540,7 @@ render tracing would not already show.
 - **React / Web (TypeScript):**
   `packages/web/packages/ui/src/blocks/doc-breadcrumbs.tsx`, `doc-article.tsx`,
   `doc-metadata.tsx`, `doc-table-of-contents.tsx`, `view-source-disclosure.tsx`,
-  `doc-nav.tsx`,
+  `doc-nav.tsx`, `hierarchical-document-view.tsx`,
   `doc-link.tsx`, and the shared types in `doc-types.ts`. Exported from
   `@agentic-toolkit/ui/blocks`.
 - **`useScrollSpy` lives at `src/hooks/useScrollSpy.ts`** and needed its own
@@ -525,7 +566,13 @@ render tracing would not already show.
   `usePathname()`, wired to the header's existing `sidebarOpen`/`setSidebarOpen`).
   Its own copies (`layout/Breadcrumbs.tsx`, `layout/TableOfContents.tsx`,
   `content/RawMarkdownToggle.tsx`, `layout/Sidebar.tsx`) are deleted as each stage
-  lands, so the site never runs two implementations of the same row.
+  lands, so the site never runs two implementations of the same row. The frame
+  lands last and leaves both files thin: `LayoutChrome` is the frame plus the
+  search dialog, `EntryView` is one `DocPage` of six blocks.
+- **The two frames go in different files on purpose.** `HierarchicalDocumentView`
+  belongs in the host's *layout* and `DocPage` in its *page*. Put the nav in the
+  page and the App Router remounts the tree on every navigation, shutting whatever
+  the reader had opened — the one behaviour `DocNavTree` exists to preserve.
 - Demo: `ui-showcase` Topic `hierarchical-document-view` (group
   "Assemblies — master / detail"); regenerate `sources.generated.ts` via
   `gen-sources.py` after source changes.
@@ -690,6 +737,30 @@ render tracing would not already show.
   make the toolkit wrong for the second consumer (`dry` — the convention has one
   home, in the site that owns the URLs).
 
+- **Decision**: the frame is two components — `HierarchicalDocumentView` and
+  `DocPage` — rather than one taking three slots. **Rationale**: the three columns
+  do not live in one place. The nav persists across navigations and belongs to the
+  host's layout; the article and rail are the page. A single component taking all
+  three would force the nav into the page, remounting the tree on every route change
+  and resetting the reader's expanded sections. The split follows the React boundary
+  that already exists (`separation-of-concerns`), and the seam is where the host
+  already has one.
+- **Decision**: the content region is a `div` and the frames render no landmark.
+  **Rationale**: the site nested a second `main` inside its app shell's, which is
+  invalid; baking that into the toolkit would spread it to every consumer. Landmarks
+  are a whole-page concern the host owns, and HDV cannot know where the page's main
+  region begins (`separation-of-concerns`, `principle-of-least-astonishment`).
+- **Decision**: the frames take slots and a `className`, and nothing else — no
+  `contentClassName`, no `articleClassName`, no configurable gap. **Rationale**: the
+  exported class constants are the escape hatch already, and every knob added here is
+  a way for a consumer to disagree with the measure that is the block's reason to
+  exist (`yagni`, `simplicity`).
+- **Decision**: a slotted column is rendered unwrapped. **Rationale**: `DocNav` and
+  `DocTableOfContents` are `sticky` with their own `top-14` offsets, which resolve
+  against the nearest scrolling ancestor. Any wrapper the frame added — even a bare
+  `div` — would silently be that ancestor, and both columns would stop holding
+  position with no error to explain it (`explicit-over-implicit`).
+
 ## Compliance
 
 | Check | Status | Category |
@@ -709,11 +780,15 @@ render tracing would not already show.
 | `type="button"` + `aria-expanded` + a section-naming label on every collapse control | pass | accessibility |
 | Both drawer dismiss targets are real `button`s sharing one accessible name | pass | accessibility |
 | Drawer absent from the DOM when closed — its links never sit in the tab order behind the page | pass | accessibility |
+| The frames render no landmark; the pre-existing nested `main` is gone, asserted on the real page | pass | accessibility |
+| The reader's measure has one home — no page re-derives `max-w-3xl` | pass | project-guidelines UI |
+| Slotted columns are unwrapped, so their `sticky` contract survives composition | pass | project-guidelines UI |
 
 ## Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.4.0 | 2026-07-29 | Mike Fullerton | Completed the reader with the frame that places its columns: `HierarchicalDocumentView` (the nav, then the document region) wrapping `DocPage` (the `max-w-3xl` measure, then the rail). Two components rather than one, because the nav belongs to the host's persistent layout and the document to its page — one component would remount the tree on every navigation. Both are slot-only and render no landmark, which retires a pre-existing bug: the cookbook site nested a second `main` inside its app shell's. `EntryView` and `LayoutChrome` are now compositions of toolkit blocks with no layout of their own. |
 | 1.3.0 | 2026-07-29 | Mike Fullerton | Added the left column: `DocNavTree`, the collapsible multi-depth document tree, and `DocNav`, the sticky desktop aside and controlled mobile drawer that carry it — ported from the cookbook site's `Sidebar`, which is deleted. The site's three mutually-recursive nav functions collapse into one recursive component; its dead `decisionHeadings` side-channel is deleted rather than ported, because it never rendered, and the unread `data-autoscroll` attribute goes with it. Parity was measured, not asserted: a constant 1105-byte delta across four pre/post pages, resolving to the lucide chevron plus the `type="button"` and `aria-expanded` the original toggle lacked. |
 | 1.2.0 | 2026-07-29 | Mike Fullerton | Added `ViewSourceDisclosure`, the "View source" row that closes the centre column, ported from the cookbook site's `RawMarkdownToggle`. It deliberately does NOT compose the existing `Disclosure` — see Design Decisions — and gains `aria-expanded`/`aria-controls`, which the original lacked. One recorded visual delta: lucide's chevron replaces the hand-rolled inline SVG. |
 | 1.1.0 | 2026-07-29 | Mike Fullerton | Added the right rail: `DocTableOfContents` and `useScrollSpy`, ported from the cookbook site's `TableOfContents`. Its `HIDDEN_HEADINGS` set became the `excludeIds` prop, passed from the host — so the toolkit holds no opinion about which headings are chrome. |
