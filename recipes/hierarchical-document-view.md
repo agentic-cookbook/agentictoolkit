@@ -3,7 +3,7 @@ id: b7a4e24c-3dfe-4a33-b5bc-88736e520d90
 title: Hierarchical Document View
 domain: agenticdeveloperhub://recipes/hierarchical-document-view
 type: ingredient
-version: 1.1.0
+version: 1.2.0
 status: draft
 language: en
 created: '2026-07-29'
@@ -11,7 +11,7 @@ modified: '2026-07-29'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "HDV — the shared long-form document reader. This version covers its centre column (DocBreadcrumbs, DocArticle, DocMetadata) and its scrollspy table of contents."
+summary: "HDV — the shared long-form document reader. This version covers its centre column (DocBreadcrumbs, DocArticle, DocMetadata), its scrollspy table of contents, and the ViewSourceDisclosure row that closes the column."
 platforms:
 - typescript
 - web
@@ -44,13 +44,13 @@ tree; and HTDV stacks *panes* horizontally where HDV nests *one* tree vertically
 arbitrary depth with per-branch collapse. They are different shapes that happen to
 share the word "hierarchical".
 
-**The reader lands in stages** — this version adds the right rail to the centre column:
+**The reader lands in stages** — this version closes the centre column:
 
 | Component | Status |
 |---|---|
 | `DocBreadcrumbs`, `DocArticle`, `DocMetadata` | 1.0.0 |
-| `DocTableOfContents` + `useScrollSpy` | **this version** |
-| `ViewSourceDisclosure` (composes `Disclosure`) | next |
+| `DocTableOfContents` + `useScrollSpy` | 1.1.0 |
+| `ViewSourceDisclosure` | **this version** |
 | `DocNavTree` / `DocNav` | next |
 | `HierarchicalDocumentView` (the shell) | next |
 
@@ -58,6 +58,13 @@ The governing constraint for the whole extraction is that **it is a move, not a
 redesign**: every default here byte-matches what the cookbook site rendered before
 it, so a visual delta is a bug rather than a judgement call. Redesign happens later,
 on a green base.
+
+There is exactly **one** recorded exception, and it is recorded precisely so it is
+not drift: `ViewSourceDisclosure`'s chevron is lucide's `ChevronRight` rather than
+the site's hand-rolled inline `<svg>`. Same box, same stroke width, same rotation —
+the glyph itself is one pixel narrower at `h-3 w-3`. Copying a bespoke icon path
+into a toolkit that already depends on lucide would duplicate knowledge lucide owns
+(`dry`); the pixel is the price, and it is named here rather than discovered later.
 
 Two seams keep site vocabulary out of the toolkit:
 
@@ -93,6 +100,10 @@ Two seams keep site vocabulary out of the toolkit:
 - **must-scroll-not-navigate**: `DocTableOfContents` MUST prevent the anchor's default navigation and scroll to the heading smoothly, leaving the URL unchanged.
 - **must-track-by-id-value**: `useScrollSpy` MUST re-subscribe when the ids' VALUES change and MUST NOT re-subscribe when only the array's identity changes, so a caller may derive its ids inline on every render.
 - **must-observe-only-existing-elements**: `useScrollSpy` MUST skip ids with no matching element, and MUST disconnect its observer on unmount.
+- **must-start-collapsed**: `ViewSourceDisclosure` MUST render no source panel until asked, and MUST omit it from the DOM entirely rather than hiding it, so the document's text is never duplicated for search or assistive tech.
+- **must-toggle-both-ways**: `ViewSourceDisclosure` MUST reveal the source on activation and hide it again on the next, and MUST honour `defaultOpen` for the initial state.
+- **must-render-source-verbatim**: `ViewSourceDisclosure` MUST render `source` as text, never as markup — a document whose source contains HTML shows that HTML.
+- **must-announce-its-state**: `ViewSourceDisclosure`'s trigger MUST carry `aria-expanded` reflecting the current state and `aria-controls` naming the panel it reveals.
 - **must-spread-host-attributes**: All of them MUST spread remaining host attributes (`data-*`, `id`, handlers) onto their root element.
 
 ## Appearance
@@ -112,6 +123,8 @@ the host's palette without a per-site restyle.
                       references a.com  b.com                  │    (w-56, sticky)
  ## Change History                       ← a SECOND DocArticle │
  | Version | Date | … |                    (host splits)       │
+ ─────────────────────────────────────                         │
+ › View source                           ← ViewSourceDisclosure│
 ```
 
 - Breadcrumbs: `nav[aria-label="Breadcrumb"] mb-4` → `ol.flex.items-center.gap-1
@@ -137,6 +150,19 @@ the host's palette without a per-site restyle.
   unmarked ones `border-transparent text-[var(--color-text-dim)]`.
 - The rail is desktop-only (`hidden xl:block`): below `xl` there is no room beside
   a `max-w-3xl` measure, and the document's own headings are the outline.
+- View source: the row is `mt-8 border-t border-[var(--color-border-subtle)] pt-4`
+  — a hairline rule *above* the trigger, separating it from the document rather
+  than framing it. The trigger is `flex items-center gap-1.5 font-mono text-xs
+  text-[var(--color-text-dim)]` hovering to `text-[var(--color-text-secondary)]`,
+  with an `h-3 w-3 transition-transform duration-150` chevron that gains
+  `rotate-90` while open. The panel is `mt-3 p-4 rounded-md
+  bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)]
+  overflow-x-auto font-mono text-xs text-[var(--color-text-secondary)]
+  leading-relaxed whitespace-pre-wrap` — it wraps rather than truncating, and
+  scrolls only when a single unbreakable token is wider than the column.
+- The row is deliberately the quietest thing on the page: dim mono micro-type at
+  the very bottom. A reader who wants the markdown will look for it; one who does
+  not should never notice it.
 - No raw hex, no `!important`.
 
 ## States
@@ -153,13 +179,17 @@ the host's palette without a per-site restyle.
 | `DocTableOfContents` | before any heading is reached | every entry unmarked |
 | `DocTableOfContents` | a heading enters the band | that entry marked, the previous one cleared |
 | `DocTableOfContents` | viewport below `xl` | hidden |
+| `ViewSourceDisclosure` | collapsed (default) | rule + trigger only; no panel in the DOM |
+| `ViewSourceDisclosure` | expanded | chevron rotated 90°, `<pre>` panel below the trigger |
+| `ViewSourceDisclosure` | `source: ""` | an empty panel — a document with no body still has a source |
 
 `DocBreadcrumbs`, `DocArticle`, and `DocMetadata` are pure and stateless — no
 internal state, no effects, and therefore no `"use client"` boundary; they render
 identically on the server and the client. `DocTableOfContents` is a client
 component: it holds the marked id and subscribes an `IntersectionObserver`. It
 server-renders its full list with nothing marked, so the outline is in the HTML
-before hydration.
+before hydration. `ViewSourceDisclosure` is a client component too, but holds only
+open/closed state — it server-renders its rule and trigger, collapsed.
 
 ## Accessibility
 
@@ -184,6 +214,15 @@ before hydration.
 - The marked entry is styled, not `aria-current`: the rail reflects scroll
   position, which changes continuously and is not a navigation state a screen
   reader should announce on every pixel.
+- The view-source trigger is a real `button` carrying `aria-expanded` and
+  `aria-controls`, so assistive tech announces both that it expands something and
+  what. The site's original button carried neither — this is a deliberate
+  improvement on extraction, with no visual delta.
+- Its chevron is `aria-hidden`: the trigger's text already names the action, and
+  the rotation is redundant with `aria-expanded`.
+- The source panel is removed from the DOM when collapsed rather than hidden with
+  CSS, so the document's text is never announced twice or matched twice by
+  find-in-page.
 
 ## Conformance Test Vectors
 
@@ -211,6 +250,15 @@ before hydration.
 | T20 | must-track-by-id-value | re-render with an equal-valued NEW ids array | one observer total; the marked id survives |
 | T21 | must-track-by-id-value | re-render with DIFFERENT ids | the first observer is disconnected and a second observes the new set |
 | T22 | must-observe-only-existing-elements | an id with no element; then unmount | only the real element is observed; the observer disconnects |
+| T23 | must-start-collapsed | `<ViewSourceDisclosure source={md} />` | no `pre` in the DOM and the source text is not present |
+| T24 | must-toggle-both-ways | click, then click again | the panel appears with the source, then is removed |
+| T25 | must-toggle-both-ways | `defaultOpen` | the panel is present on first render |
+| T26 | must-render-source-verbatim | a source containing `<script>` | the panel's text equals the source; it has zero child ELEMENTS |
+| T27 | must-announce-its-state | before and after activation | `aria-expanded` flips `false`→`true`; `aria-controls` equals the panel's non-empty `id` |
+| T28 | must-toggle-both-ways | activate | the chevron gains `rotate-90` only while open |
+| T29 | must-spread-host-attributes | default, then `label` | the trigger reads "View source", then the host's label |
+| T30 | must-spread-host-attributes | `data-testid`, `defaultOpen` | row, trigger, and panel `className`s equal their exported contracts EXACTLY |
+| T31 | must-render-source-verbatim | `source=""` with `defaultOpen` | the panel renders and is empty — not absent |
 
 ## Edge Cases
 
@@ -238,6 +286,18 @@ before hydration.
 - **A host that renders its own headings client-side.** The spy resolves elements
   by id when it subscribes; content appearing later is not observed until the ids
   change.
+- **A document whose source contains HTML.** `ViewSourceDisclosure` is the one
+  block in the family that does *not* trust its input: the source is a text child
+  of a `<pre>`, so markup is shown rather than executed. It is safe to point at
+  content `DocArticle` would not be.
+- **A very long source.** The panel grows with the document rather than scrolling
+  internally — the reader who asked for the source wants all of it, and a nested
+  scroll region inside a scrolling page is a trap. Only over-wide lines scroll.
+- **An empty source.** The panel still renders. A document with no body still has
+  a source, and a toggle that opened onto nothing would read as broken.
+- **A host that wants the source open by default.** `defaultOpen` seeds the state;
+  the reader owns it from then on. There is deliberately no controlled mode until
+  a host needs one (`yagni`).
 
 ## Configuration
 
@@ -253,6 +313,9 @@ before hydration.
 | `DocTableOfContents` | `headings` | — | `{ id, text, depth }[]` in document order, as the host's loader extracted them |
 | | `excludeIds` | none | ids to leave out; omit to list everything |
 | | `title` | `"On this page"` | the rail's own label |
+| `ViewSourceDisclosure` | `source` | — | the raw document text; rendered verbatim, never parsed |
+| | `label` | `"View source"` | the trigger's text |
+| | `defaultOpen` | `false` | start expanded; uncontrolled from then on |
 | `useScrollSpy` | `ids` | — | element ids to watch, in document order |
 | | `rootMargin` | `"-80px 0px -60% 0px"` | the band that counts as "here": discounts a sticky header at the top and the lower 60% |
 | | `threshold` | `0` | any visible pixel counts |
@@ -279,8 +342,9 @@ render tracing would not already show.
 
 - **React / Web (TypeScript):**
   `packages/web/packages/ui/src/blocks/doc-breadcrumbs.tsx`, `doc-article.tsx`,
-  `doc-metadata.tsx`, `doc-table-of-contents.tsx`, `doc-link.tsx`, and the shared
-  types in `doc-types.ts`. Exported from `@agentic-toolkit/ui/blocks`.
+  `doc-metadata.tsx`, `doc-table-of-contents.tsx`, `view-source-disclosure.tsx`,
+  `doc-link.tsx`, and the shared types in `doc-types.ts`. Exported from
+  `@agentic-toolkit/ui/blocks`.
 - **`useScrollSpy` lives at `src/hooks/useScrollSpy.ts`** and needed its own
   `./hooks/useScrollSpy` key in the package's `exports` map: unlike
   `./components/*` and `./blocks/*`, **`./hooks/*` is not a wildcard**, so a new
@@ -297,6 +361,9 @@ render tracing would not already show.
   site needs no extra `@source` entry.
 - First consumer: `frontend/src/main/cookbook` — `src/components/content/EntryView.tsx`,
   with its adapters in `src/components/content/HdvLink.tsx` and `src/lib/hdv-meta.tsx`.
+  Its own copies (`layout/Breadcrumbs.tsx`, `layout/TableOfContents.tsx`,
+  `content/RawMarkdownToggle.tsx`) are deleted as each stage lands, so the site
+  never runs two implementations of the same row.
 - Demo: `ui-showcase` Topic `hierarchical-document-view` (group
   "Assemblies — master / detail"); regenerate `sources.generated.ts` via
   `gen-sources.py` after source changes.
@@ -353,6 +420,45 @@ render tracing would not already show.
   from `border-[var(--color-accent)]` (a colour), and dropping either would cost the
   marker. Nothing merges a host class onto the entries, so `cn()` buys nothing there
   — it is still used on the root, where the host's `className` does merge.
+- **Decision**: `ViewSourceDisclosure` does **not** compose the toolkit's existing
+  `Disclosure`. **Rationale**: `Disclosure` is a framed card — rounded border,
+  raised surface, padded header, `text-sm font-medium` title, a ruled content box —
+  and that is exactly what its three consumers (`DeleteEntitySection`, the API
+  explorer's three panels, the showcase) want. This row is the opposite: a hairline
+  rule *above* a mono micro-label, with an unframed `<pre>` beneath. Reaching it
+  through `Disclosure` would mean cancelling every visual decision it makes — card
+  chrome, header padding, chevron size and colour, title family/size/weight/colour,
+  content frame: nine overrides to keep about twenty lines of open/close state, plus
+  a standing coupling that would let a future `Disclosure` restyle silently break
+  the document reader. When every visual property must be cancelled, you are paying
+  a component's cost and taking none of its value. Two disclosures is not a `dry`
+  violation either: `dry` is one representation per piece of *knowledge*, and a
+  framed section and an inline text toggle are different knowledge
+  (`srp` — `Disclosure` stays answerable to its card consumers alone).
+- **Decision**: no `bare` / `contentClassName` escape hatches were added to
+  `Disclosure`. **Rationale**: they were the plan of record until the two components
+  were compared line by line. Once HDV stopped composing `Disclosure`, they would
+  have been props with no caller — speculative surface on a primitive three things
+  depend on (`yagni`).
+- **Decision**: the chevron is lucide's `ChevronRight`, not the site's inline
+  `<svg>`. **Rationale**: the toolkit already depends on lucide and every other
+  block draws from it; copying a bespoke path in would fork the icon set. The cost
+  is one pixel of glyph width at `h-3 w-3` (lucide's chevron spans 6 units of its
+  24-unit box where the site's spanned 7) — the extraction's single recorded visual
+  delta, named in the Overview so it reads as a decision rather than as drift.
+- **Decision**: `aria-expanded` and `aria-controls` were added, which the site's
+  button lacked. **Rationale**: a control that reveals a region must say so; the
+  omission was a bug, and fixing it costs nothing visually. "A move, not a
+  redesign" constrains the *rendering*, not the semantics.
+- **Decision**: the panel is removed from the DOM when collapsed rather than hidden
+  with CSS. **Rationale**: the source is the same text as the rendered document.
+  Keeping a hidden copy would double every document's text for find-in-page, screen
+  readers, and any crawler that ignores `display:none` (`explicit-over-implicit`).
+- **Decision**: `ViewSourceDisclosure` owns the `<pre>` rather than taking
+  `children`. **Rationale**: the panel's typography *is* part of the reader's
+  contract, and every host revealing a document's source wants the same box. A
+  `children` slot would push that decision to each site and let them drift
+  (`dry`).
 - **Decision**: `DocBreadcrumbs` takes resolved crumbs instead of a slug.
   **Rationale**: slug→label is a per-site URL convention; deriving it here would
   make the toolkit wrong for the second consumer (`dry` — the convention has one
@@ -368,11 +474,14 @@ render tracing would not already show.
 | No framework coupling (`next/link` / `next/navigation` never imported) | pass | project-guidelines UI |
 | Labelled breadcrumb `nav`; current page is text, not a self-link; real `dl` semantics | pass | accessibility |
 | Real anchors + list semantics in the outline; works without JS | pass | accessibility |
+| Source panel renders as TEXT — the one block that does not trust its input | pass | security |
+| `aria-expanded` + `aria-controls` on the view-source trigger; chevron `aria-hidden` | pass | accessibility |
 | `dangerouslySetInnerHTML` is documented as trusted-input only | reviewed | security |
 
 ## Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.2.0 | 2026-07-29 | Mike Fullerton | Added `ViewSourceDisclosure`, the "View source" row that closes the centre column, ported from the cookbook site's `RawMarkdownToggle`. It deliberately does NOT compose the existing `Disclosure` — see Design Decisions — and gains `aria-expanded`/`aria-controls`, which the original lacked. One recorded visual delta: lucide's chevron replaces the hand-rolled inline SVG. |
 | 1.1.0 | 2026-07-29 | Mike Fullerton | Added the right rail: `DocTableOfContents` and `useScrollSpy`, ported from the cookbook site's `TableOfContents`. Its `HIDDEN_HEADINGS` set became the `excludeIds` prop, passed from the host — so the toolkit holds no opinion about which headings are chrome. |
 | 1.0.0 | 2026-07-29 | Mike Fullerton | Initial recipe. HDV's centre column — `DocBreadcrumbs`, `DocArticle`, `DocMetadata` (plus `DefaultDocLink` and the shared `doc-types`) — extracted verbatim from the cookbook site's reader. |

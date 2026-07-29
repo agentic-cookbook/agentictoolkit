@@ -74,6 +74,13 @@ export {
   DOC_TABLE_OF_CONTENTS_CLASS,
   type DocTableOfContentsProps,
 } from "./doc-table-of-contents"
+export {
+  ViewSourceDisclosure,
+  VIEW_SOURCE_DISCLOSURE_CLASS,
+  VIEW_SOURCE_TRIGGER_CLASS,
+  VIEW_SOURCE_PRE_CLASS,
+  type ViewSourceDisclosureProps,
+} from "./view-source-disclosure"
 export { ViewTabBar, type ViewTabItem, type ViewTabLink } from "./view-tab-bar"
 export { ButtonBar, type ButtonBarActions } from "./button-bar"
 export { PopupMenu, type PopupMenuItem } from "./popup-menu"
