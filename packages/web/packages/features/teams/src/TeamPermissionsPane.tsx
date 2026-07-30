@@ -206,10 +206,19 @@ export function TeamPermissionsPane({
   // fallback would pin a transient hiccup to the two hardcoded rows for the component's entire
   // lifetime, with no retry — not even on the post-save refresh().
   const featureCache = useRef(new Map<string, readonly AccessFeatureRow[]>());
+  // Latest-wins guard: a stale in-flight list (from a previous slug) never clobbers the current one.
+  // Declared BEFORE loadFeatures because loadFeatures reports its own failures and so has to check
+  // the guard itself — see the `g === gen.current` tests below.
+  const gen = useRef(0);
   const loadFeatures = useCallback(
-    async (slug: string): Promise<readonly AccessFeatureRow[]> => {
+    async (slug: string, g: number): Promise<readonly AccessFeatureRow[]> => {
       const cached = featureCache.current.get(slug);
       if (cached) return cached;
+      // Every failure path lands here: the banner text to show, or null for the one expected
+      // degrade. Collected rather than set inline so the staleness check happens in ONE place —
+      // this function swallows its errors (it returns the fallback), so `refresh`'s own catch can
+      // never see them and its `g !== gen.current` guards cannot cover them.
+      let failure: string | null = null;
       try {
         const rows = await accessApi.listFeatures(slug);
         // An EMPTY answer counts as unreadable, NOT as "this backend enforces nothing": zero rows
@@ -219,6 +228,16 @@ export function TeamPermissionsPane({
           featureCache.current.set(slug, rows);
           return rows;
         }
+        // …and it is exactly as unexpected as a malformed body: no deployment enforces nothing, and
+        // `listFeatures` resolves this shape rather than throwing (a well-formed empty list is a
+        // valid response at that layer — deciding it is unusable is THIS pane's call). Reported and
+        // surfaced on the same footing, or it would be the one unreadable answer that degrades with
+        // no sign anything went wrong.
+        reportUnexpectedAuthError(new Error("GET /access/features returned an empty list"), {
+          feature: "team-permissions",
+          step: "loadFeatures",
+        });
+        failure = "The feature list came back empty. Showing the default list instead.";
       } catch (err) {
         // A 404 is the expected degrade path — a product whose backend predates this endpoint —
         // and must stay silent, matching the pre-endpoint behavior this pane is required to
@@ -229,17 +248,20 @@ export function TeamPermissionsPane({
         // anything went wrong.
         if (!isNotFound(err)) {
           reportUnexpectedAuthError(err, { feature: "team-permissions", step: "loadFeatures" });
-          setLoadError(err instanceof Error ? err.message : "Failed to load the feature list.");
+          failure = err instanceof Error ? err.message : "Failed to load the feature list.";
         }
       }
+      // STALENESS: only the newest load may paint a banner. A slow failure for workspace A that
+      // resolves after B has already loaded would otherwise stamp A's error over B's correct
+      // matrix, permanently — nothing clears `loadError` again until the next refresh(). The
+      // report above is deliberately NOT gated: an error that happened, happened.
+      if (failure !== null && g === gen.current) setLoadError(failure);
       // Not cached: the fallback (either branch above) is retried on the next load.
       return ACCESS_FEATURES;
     },
     [],
   );
 
-  // Latest-wins guard: a stale in-flight list (from a previous slug) never clobbers the current one.
-  const gen = useRef(0);
   const refresh = useCallback(async () => {
     const g = ++gen.current;
     // No workspace ⇒ a DEFINED empty list (not null), so the rail shows the "open from your hub"
@@ -255,7 +277,7 @@ export function TeamPermissionsPane({
       // draft built against one list and re-based against another would diff index-misaligned
       // rows and could submit a grant under the wrong feature key. Ordering it here means no
       // role is ever selectable before the list it will be projected onto is final.
-      const list = await loadFeatures(workspaceSlug);
+      const list = await loadFeatures(workspaceSlug, g);
       if (g !== gen.current) return;
       setFeatures(list);
       const rows = await accessApi.listRoles(workspaceSlug);

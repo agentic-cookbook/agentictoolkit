@@ -99,4 +99,33 @@ describe("accessApi.listFeatures", () => {
     respondWith({ features: [{ key: 1, label: "Projects" }] });
     await expect(accessApi.listFeatures("acme")).rejects.toThrow();
   });
+
+  // `""` is a string, so a `typeof` test alone accepts these — and a NON-empty array carrying one
+  // clears the caller's `rows.length > 0` check too, which is the only other line of defence. Then
+  // the empty value is live: the key is what a grant is submitted under, and the label is the sole
+  // identifier of the column an admin ticks. Rejecting is the only place either can be caught.
+  it("rejects a row whose `key` is the empty string", async () => {
+    respondWith({ features: [{ key: "", label: "Projects" }] });
+    await expect(accessApi.listFeatures("acme")).rejects.toThrow();
+  });
+
+  it("rejects a row whose `label` is the empty string", async () => {
+    respondWith({ features: [{ key: "projects", label: "" }] });
+    await expect(accessApi.listFeatures("acme")).rejects.toThrow();
+  });
+
+  it("rejects the whole list when ONE row among good ones is empty", async () => {
+    respondWith({
+      features: [
+        { key: "projects", label: "Projects" },
+        { key: "", label: "" },
+      ],
+    });
+    await expect(accessApi.listFeatures("acme")).rejects.toThrow();
+  });
+
+  it("rejects a null row (a `typeof v === 'object'` near-miss)", async () => {
+    respondWith({ features: [null] });
+    await expect(accessApi.listFeatures("acme")).rejects.toThrow();
+  });
 });

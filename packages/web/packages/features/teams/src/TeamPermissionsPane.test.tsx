@@ -25,6 +25,15 @@ import {
   type PaneExitGuard,
 } from "@agentic-toolkit/resource";
 
+// Only `reportUnexpectedAuthError` is stubbed — the pane's telemetry seam, which two tests below
+// assert on. Spread the real module rather than replacing it: `@agentic-toolkit/ui`'s
+// create-resource-dialog (the pane's "New role" modal) imports from here too, and a bare factory
+// would silently strip whatever it needs.
+vi.mock("@agentic-toolkit/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agentic-toolkit/auth")>()),
+  reportUnexpectedAuthError: vi.fn(),
+}));
+
 vi.mock("@agentic-toolkit/data/access", () => ({
   ACCESS_FEATURES: [
     { key: "projects", label: "Projects" },
@@ -45,7 +54,9 @@ import {
   formatVerbs,
 } from "./TeamPermissionsPane";
 import { accessApi, type AccessRoleRow } from "@agentic-toolkit/data/access";
+import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 
+const reported = vi.mocked(reportUnexpectedAuthError);
 const listFeatures = vi.mocked(accessApi.listFeatures);
 const listRoles = vi.mocked(accessApi.listRoles);
 const updateRole = vi.mocked(accessApi.updateRole);
@@ -366,10 +377,10 @@ describe("TeamPermissionsPane", () => {
     ]);
   });
 
-  it("treats an EMPTY feature list as unreadable and falls back (never a blank matrix)", async () => {
+  it("treats an EMPTY feature list as unreadable: falls back, AND reports and surfaces it", async () => {
     // A server that answers `{ features: [] }` is answering nonsense — no deployment enforces
     // nothing. Believing it would render zero rows and sweep EVERY grant into `carried`, so the
-    // roles editor would silently become read-only. Fall back exactly as a 404 does.
+    // roles editor would silently become read-only. Fall back on the MATRIX exactly as a 404 does…
     listFeatures.mockResolvedValue([]);
     listRoles.mockResolvedValue([structuredClone(REVIEWER)]);
     render(<TestHarness />);
@@ -379,6 +390,16 @@ describe("TeamPermissionsPane", () => {
 
     expect(featureLabel("Projects")).not.toBeNull();
     expect(featureLabel("Personas")).not.toBeNull();
+
+    // …but NOT on the reporting: a 404 is an old backend (expected, silent), while an empty 200 is
+    // a live backend answering nonsense. `listFeatures` resolves that shape instead of throwing, so
+    // if this pane also stayed quiet it would be the ONE unreadable answer nobody ever hears about
+    // — an admin editing a two-row matrix on a three-area deployment, permanently.
+    expect(await screen.findByRole("alert")).toHaveTextContent("came back empty");
+    expect(reported).toHaveBeenCalledTimes(1);
+    const [err, ctx] = reported.mock.calls[0]!;
+    expect((err as Error).message).toContain("empty list");
+    expect(ctx).toMatchObject({ feature: "team-permissions", step: "loadFeatures" });
   });
 
   it("surfaces a genuine (non-404) feature-list failure while still degrading to the fallback", async () => {
@@ -430,6 +451,48 @@ describe("TeamPermissionsPane", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reviewer" }));
     await screen.findByDisplayValue("Reviewer");
     expect(await screen.findByText("Audiences")).not.toBeNull();
+  });
+
+  it("never paints a STALE feature-list failure over a workspace that already loaded", async () => {
+    // `loadFeatures` swallows its own errors (it returns the fallback), so `refresh`'s
+    // `g !== gen.current` guards can never see them — the banner it paints has to check the
+    // generation ITSELF. Without that check, a slow failure for workspace A landing after B has
+    // loaded stamps A's error over B's correct matrix, and nothing clears `loadError` again until
+    // the next refresh() — so the admin reads a permanent error about a workspace they left.
+    let failAcme: (e: unknown) => void = () => {};
+    listFeatures
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            failAcme = reject;
+          }),
+      )
+      .mockResolvedValueOnce(structuredClone(SERVER_FEATURES));
+    listRoles.mockResolvedValue([structuredClone(REVIEWER)]);
+
+    const { rerender } = render(<TestHarness workspaceSlug="acme" />);
+    await waitFor(() => expect(listFeatures).toHaveBeenCalledWith("acme"));
+
+    // Switch workspaces while acme's feature fetch is still in flight. Same component instance, so
+    // the generation ref survives — which is the whole mechanism under test.
+    rerender(<TestHarness workspaceSlug="beta" />);
+    await waitFor(() => expect(listFeatures).toHaveBeenCalledWith("beta"));
+    fireEvent.click(await screen.findByRole("button", { name: "Reviewer" }));
+    await screen.findByDisplayValue("Reviewer");
+    // beta painted its OWN three-area list, so we can tell its matrix from the fallback.
+    expect(await screen.findByText("Audiences")).not.toBeNull();
+
+    // NOW acme fails, long after beta is on screen.
+    failAcme(Object.assign(new Error("acme is on fire"), { status: 500 }));
+    // The report is deliberately NOT generation-gated: an error that happened, happened.
+    await waitFor(() => expect(reported).toHaveBeenCalledTimes(1));
+    expect((reported.mock.calls[0]![0] as Error).message).toBe("acme is on fire");
+
+    // The BANNER is: beta is fine, and says so.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("acme is on fire")).toBeNull();
+    // And beta's matrix is untouched — not degraded to the two-row fallback acme returned.
+    expect(screen.getByText("Audiences")).not.toBeNull();
   });
 
   it("stays pristine on a role with a carried grant (Save disabled, nothing submitted)", async () => {

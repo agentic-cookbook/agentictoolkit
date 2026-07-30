@@ -57,18 +57,29 @@ export interface AccessAssignmentInput {
   roleId: string;
 }
 
-/** True when `v` is a well-formed {@link AccessFeatureRow}: an object with a string `key` and a
- *  string `label`. `GET /access/features` is the one response this client cannot typecheck away
- *  — `body.features` was previously returned via a bare cast, so a wrong shape (a string, an
- *  array of bare strings, an object) reached every consumer looking exactly like real data
- *  instead of the error it is. Lives beside `listFeatures` so the guard protects every consumer
- *  of this client, not just the one pane that happens to render the matrix today. */
+/** True when `v` is a well-formed {@link AccessFeatureRow}: an object with a NON-EMPTY string `key`
+ *  and a non-empty string `label`. `GET /access/features` is the one response this client cannot
+ *  typecheck away — `body.features` was previously returned via a bare cast, so a wrong shape (a
+ *  string, an array of bare strings, an object) reached every consumer looking exactly like real
+ *  data instead of the error it is. Lives beside `listFeatures` so the guard protects every consumer
+ *  of this client, not just the one pane that happens to render the matrix today.
+ *
+ *  The emptiness checks are the part a `typeof` test misses. `""` is a string, so `{key:"",label:""}`
+ *  would pass and travel on as a live row: the key is what a grant is submitted under (so an empty
+ *  one revokes at the backend's refinement step, or writes a grant nothing can ever match) and the
+ *  label is the only thing identifying the checkbox column to the admin ticking it. Neither has a
+ *  sane empty reading, and no real registry produces one — the reference backend derives both from
+ *  hardcoded string literals — so this rejects the row rather than rendering a nameless column. */
 function isAccessFeatureRow(v: unknown): v is AccessFeatureRow {
+  const key = (v as { key?: unknown } | null)?.key;
+  const label = (v as { label?: unknown } | null)?.label;
   return (
     typeof v === "object" &&
     v !== null &&
-    typeof (v as { key?: unknown }).key === "string" &&
-    typeof (v as { label?: unknown }).label === "string"
+    typeof key === "string" &&
+    key.length > 0 &&
+    typeof label === "string" &&
+    label.length > 0
   );
 }
 
