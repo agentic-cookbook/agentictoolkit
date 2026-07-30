@@ -3,8 +3,8 @@ import { cva, type VariantProps } from 'class-variance-authority'
 /**
  * The family's vertical nav-rail link grammar — ONE home for the "list of
  * navigable things with a gold active item" idiom, shared by the CRUD feature
- * rail (@adh-shared/crud CrudTablePage) and the details-page topic rail
- * (@adh-shared/adh DetailsRail). A left-accent-border pill: muted by default,
+ * rail (@agentic-toolkit/crud CrudTablePage) and the details-page topic rail
+ * (@agentic-toolkit/adh DetailsRail). A left-accent-border pill: muted by default,
  * with a gold left marker, accent-dim fill, and gold text when active.
  *
  * `apt-gold` (= --color-primary) is the unambiguous brand gold. On the details

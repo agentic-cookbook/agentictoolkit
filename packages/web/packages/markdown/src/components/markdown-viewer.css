@@ -1,22 +1,22 @@
 /**
- * @adh-shared/markdown — content + prose styles.
+ * @agentic-toolkit/markdown — content + prose styles.
  *
  * The CONTENT area (`.adh-mv-content` and the rendered prose) styles ONLY via the
  * viewer-owned `var(--mdv-*)` reading palette — concrete values live solely in
  * src/themes/palettes.ts and are applied as inline custom properties on the
  * content root (`data-mdv-theme`). The surrounding chrome (container, toolbar,
- * theme switcher) is styled with @adh-shared/ui + apt-* tokens in the component.
+ * theme switcher) is styled with @agentic-toolkit/ui + apt-* tokens in the component.
  *
  * No raw hex / rgb() / hsl() / arbitrary colors / !important here — every color is
  * a `var(--mdv-*)` reference (the standing palette exception lives in palettes.ts).
  *
- * Import once per host app:  import '@adh-shared/markdown/styles'
+ * Import once per host app:  import '@agentic-toolkit/markdown/styles'
  */
 
 /* Tailwind sources: this package's chrome (MarkdownViewer/Renderer/ThemeSwitcher)
  * styles with apt-* utilities, so it registers its OWN component sources here —
  * every consumer app that imports this stylesheet scans them, no consumer-side
- * @source needed (mirrors @adh-shared/ui's components.css). Paths are relative to
+ * @source needed (mirrors @agentic-toolkit/ui's components.css). Paths are relative to
  * THIS file and travel with the package: they resolve identically through a dev
  * pnpm `link:` symlink and a materialized prod copy. `src` covers `next dev` (the
  * `development` export condition serves src); `dist` covers prod builds, where

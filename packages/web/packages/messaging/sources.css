@@ -1,0 +1,26 @@
+/* Tailwind source self-registration for @agentic-toolkit/messaging.
+ *
+ * Tailwind v4 does not scan node_modules, so a consumer app must be told to scan this
+ * package's className-bearing modules. Rather than every host copying @source globs into
+ * its own globals.css — drift-prone, and a missed line renders unstyled with NO error —
+ * the package owns them here and a host adds one line:
+ *
+ *   @import "@agentic-toolkit/messaging/sources.css";
+ *
+ * Mirrors @agentic-toolkit/{adh,crud,resource,api-explorer}/sources.css. Unlike those,
+ * this package exports no stylesheet of its own to hang the import off, so the host
+ * @import is the only entry point — it is not reachable transitively.
+ *
+ * PACKAGE-WIDE, not per subtree: the DM surfaces (`components/dm-{list,thread,panel}`),
+ * the notification surfaces (`components/notification-{bell,inbox}`) and `presence-dot`
+ * carry ~86 className literals between them, and a new component is covered the day it
+ * is added rather than the day someone remembers to widen a glob.
+ *
+ * Paths are relative to THIS file (the package root) and therefore travel with the
+ * package: they resolve identically through a dev pnpm `link:` symlink and a materialized
+ * prod copy. `src` covers `next dev` — the `development` export condition serves src, so
+ * HMR must see source edits — while `dist` covers prod builds, where `files` ships only
+ * `dist` and this file, and the `src` glob simply matches nothing. Neither is relied on in
+ * the environment where it is absent. */
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

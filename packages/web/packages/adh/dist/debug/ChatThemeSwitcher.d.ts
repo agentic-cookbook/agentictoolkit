@@ -15,5 +15,5 @@ export type ChatThemeSwitcherProps = {
  * `ThemeSwitcher` but takes its theme list + current/onChange as props so the
  * shared debug menu never has to depend on the chat themes package directly.
  */
-export declare function ChatThemeSwitcher({ themes, current, onChange, label, }: ChatThemeSwitcherProps): import("react/jsx-runtime").JSX.Element;
+export declare function ChatThemeSwitcher({ themes, current, onChange, label, }: ChatThemeSwitcherProps): import("react").JSX.Element;
 //# sourceMappingURL=ChatThemeSwitcher.d.ts.map

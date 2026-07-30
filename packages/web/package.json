@@ -19,7 +19,7 @@
     "build:types": "pnpm -r --if-present --workspace-concurrency=1 run build:types",
     "dev": "pnpm -r --parallel --if-present run dev",
     "test": "pnpm -r --if-present run test",
-    "lint": "python3 ../../scripts/check_boundaries.py && pnpm -r --if-present run lint",
+    "lint": "python3 ../../scripts/check_boundaries_test.py && python3 ../../scripts/check_boundaries.py && pnpm -r --if-present run lint",
     "clean": "pnpm -r --if-present run clean && rm -rf node_modules"
   },
   "devDependencies": {

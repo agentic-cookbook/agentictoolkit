@@ -214,3 +214,99 @@
   align-self: center;
   margin-top: 0.75rem;
 }
+
+/* RequireAuth's default loading fallback (RequireAuthSkeleton). A content-area
+ * skeleton — the host's app shell has already painted the header + footer around it,
+ * so this fills only the main region. Theme-adaptive via the host's shared --color-*
+ * tokens (with literal fallbacks, so it degrades to the dark palette if the host ships
+ * no theme layer); the accent-tinted sheen sweeps left-to-right, staggered per block by
+ * an inline --i index (so the card count isn't baked into the CSS); honors
+ * prefers-reduced-motion.
+ *
+ * These rules lived in the adh monorepo's chrome stylesheet until Task 6.4, because
+ * every gated site there imports that sheet while only two import this one. They now
+ * sit with the component they style. A host whose gated pages do NOT import this file
+ * directly must re-import it from a sheet they DO import — adh's chrome sheet does
+ * exactly that, which is what keeps its ~28 HomeGate-rendering marketing sites covered. */
+.adh-auth-skeleton {
+  --adh-skel-block: var(--color-surface-raised, #1c1c24);
+  --adh-skel-border: var(--color-border, #2a2a36);
+  --adh-skel-sheen: color-mix(in srgb, var(--color-accent, #c4a35a) 16%, transparent);
+  --adh-skel-radius: 0.75rem;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Screen-reader-only text naming the role="status" region. */
+.adh-auth-skeleton__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.adh-auth-skeleton__title,
+.adh-auth-skeleton__subtitle,
+.adh-auth-skeleton__card {
+  position: relative;
+  overflow: hidden;
+  background: var(--adh-skel-block);
+  border-radius: var(--adh-skel-radius);
+}
+
+.adh-auth-skeleton__title {
+  width: 38%;
+  min-width: 12rem;
+  height: 2rem;
+  margin-bottom: 1rem;
+}
+
+.adh-auth-skeleton__subtitle {
+  width: 60%;
+  min-width: 16rem;
+  height: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.adh-auth-skeleton__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.25rem;
+}
+
+.adh-auth-skeleton__card {
+  height: 9.5rem;
+  border: 1px solid color-mix(in srgb, var(--adh-skel-border) 60%, transparent);
+}
+
+.adh-auth-skeleton__title::after,
+.adh-auth-skeleton__subtitle::after,
+.adh-auth-skeleton__card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--adh-skel-sheen), transparent);
+  animation: adh-auth-skeleton-sweep 1.5s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.08s);
+}
+
+@keyframes adh-auth-skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adh-auth-skeleton__title::after,
+  .adh-auth-skeleton__subtitle::after,
+  .adh-auth-skeleton__card::after {
+    animation: none;
+  }
+}

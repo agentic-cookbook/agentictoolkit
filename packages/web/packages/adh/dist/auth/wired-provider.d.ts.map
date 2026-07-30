@@ -1,0 +1,1 @@
+{"version":3,"file":"wired-provider.d.ts","sourceRoot":"","sources":["../../src/auth/wired-provider.tsx"],"names":[],"mappings":"AAEA,OAAO,EAAY,KAAK,YAAY,EAAE,MAAM,OAAO,CAAA;AAWnD,OAAO,EAIL,KAAK,iBAAiB,EACtB,KAAK,QAAQ,EACd,MAAM,uBAAuB,CAAA;AA8B9B,mGAAmG;AACnG,wBAAgB,YAAY,CAAC,CAAC,SAAS,QAAQ,GAAG,QAAQ,EACxD,KAAK,EAAE,iBAAiB,CAAC,CAAC,CAAC,GAC1B,YAAY,CAcd"}

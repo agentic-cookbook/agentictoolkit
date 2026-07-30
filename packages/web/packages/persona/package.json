@@ -1,0 +1,77 @@
+{
+  "name": "@agentic-toolkit/persona",
+  "version": "0.1.0",
+  "description": "The single crossing point to @agenticdevelopertoolkit/*. Re-publishes the persona toolkit's chat, themes and viewport vocabulary so consumers never name that scope themselves — which is what keeps exactly one copy of it in a bundle.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./chat": {
+      "types": "./dist/chat.d.ts",
+      "development": "./src/chat.ts",
+      "import": "./dist/chat.js"
+    },
+    "./themes": {
+      "types": "./dist/themes.d.ts",
+      "development": "./src/themes.ts",
+      "import": "./dist/themes.js"
+    },
+    "./viewport": {
+      "types": "./dist/viewport.d.ts",
+      "development": "./src/viewport.ts",
+      "import": "./dist/viewport.js"
+    },
+    "./css/chat/base.css": {
+      "development": "./src/styles/chat/base.css",
+      "default": "./dist/css/chat/base.css"
+    },
+    "./css/chat/modes/*.css": {
+      "development": "./src/styles/chat/modes/*.css",
+      "default": "./dist/css/chat/modes/*.css"
+    },
+    "./css/chat/components/*.css": {
+      "development": "./src/styles/chat/components/*.css",
+      "default": "./dist/css/chat/components/*.css"
+    },
+    "./css/viewport/base.css": {
+      "development": "./src/styles/viewport/base.css",
+      "default": "./dist/css/viewport/base.css"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "mkdir -p dist/css && cp -R src/styles/. dist/css/",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "//peerDependencies": "Declared as peers, not dependencies, for the same reason bitbag declares them: the consumer supplies the copy, so there is one instance rather than one per package that happens to re-export it. `themes` carries React context at module scope (colorMode.tsx), which splits silently across two copies.",
+  "peerDependencies": {
+    "@agenticdevelopertoolkit/chat": "*",
+    "@agenticdevelopertoolkit/themes": "*",
+    "@agenticdevelopertoolkit/viewport": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "//devDependencies": "The three @agenticdevelopertoolkit/* entries are peer deps above; these `link:`s exist only so this package can build and typecheck itself. They target THIS repo's own submodule at external/agenticdevelopertoolkit, so a `git clone --recursive` builds with no sibling checkout anywhere on disk.",
+  "devDependencies": {
+    "@agenticdevelopertoolkit/chat": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/chat",
+    "@agenticdevelopertoolkit/themes": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/themes",
+    "@agenticdevelopertoolkit/viewport": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/viewport",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

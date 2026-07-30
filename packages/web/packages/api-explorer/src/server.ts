@@ -12,7 +12,13 @@ export type { StaticCodeBlockProps } from './StaticCodeBlock'
 
 // Pure metadata helpers (server-usable) for enumerating and resolving the reference routes.
 export { endpointSlug, endpointForSlug, allEndpoints } from './lib/slug'
-export { allTags, endpointsForTag, getEndpoint, endpointKey } from './lib/getEndpoint'
+// Package path (not relative): see the matching comment in ApiBrowser.tsx / tsup.config.ts.
+export {
+  allTags,
+  endpointsForTag,
+  getEndpoint,
+  endpointKey,
+} from '@agentic-toolkit/api-explorer/lib/getEndpoint'
 export type { EndpointMeta, EndpointRef } from './types'
 
 // The authoritative HTTP-method palette (pure string helpers), so a consumer that renders its own

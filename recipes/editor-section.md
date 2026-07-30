@@ -34,7 +34,7 @@ references: []
 
 ## Overview
 
-`EditorSection` in `@adh-shared/ui/blocks/editor-section` is the platform's
+`EditorSection` in `@agentic-toolkit/ui/blocks/editor-section` is the platform's
 standard master/detail **editor shell**: a records rail on the left, an editing
 detail pane on the right, and a fixed editing toolbar across the top. It is a
 **pure assembly** — it owns no visual grammar of its own. It stacks three shared
@@ -183,7 +183,7 @@ Composed shared primitives without their own recipe domains: `Badge`
 - **React / Web (TypeScript):** Block at
   `websites/shared/ui/src/blocks/editor-section.tsx`, exported via `./blocks/*`.
   Assembles `ButtonBar`, `TopicDetail` (+ `TopicDetailItem`), `EmptyState`, and
-  `Badge` — all from `@adh-shared/ui`. Adds no new visual primitives.
+  `Badge` — all from `@agentic-toolkit/ui`. Adds no new visual primitives.
 - Demo: `ui-showcase` Topic `editor-section` (regenerate `sources.generated.ts`
   via `gen-sources.py` after source changes).
 - **Responsive:** Verify via Playwright (ui-showcase) at 375 / 768 / 1440 — the
@@ -191,7 +191,7 @@ Composed shared primitives without their own recipe domains: `Badge`
   are `TopicDetail`/`ButtonBar` behaviors).
 - **SwiftUI / Compose:** Not applicable — web-only shared block.
 
-API (`@adh-shared/ui/blocks/editor-section`):
+API (`@agentic-toolkit/ui/blocks/editor-section`):
 
 ```ts
 interface EditorSectionItem {
@@ -259,7 +259,7 @@ behaviors come from `TopicDetail`.
 |---|---|---|
 | Artifact formatting (recipe) | passed | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` | passed | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | passed | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | passed | project-guidelines UI |
 | Toolbar `role="toolbar"` + labeled, state-aware buttons | passed | accessibility |
 
 ## Change History

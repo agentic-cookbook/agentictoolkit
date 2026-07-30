@@ -2,6 +2,16 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Submodules FIRST — packages/web/packages/{features/bitbag,adh} carry `link:` deps that
+# point into external/agenticdevelopertoolkit. A `link:` to a directory that does not
+# exist fails at pnpm-install time, not at build time, so an uninitialised submodule
+# breaks the web bootstrap below with an error that names a path rather than a cause.
+# Safe to run in a clone made without --recursive, and a no-op once initialised.
+if [ -f .gitmodules ]; then
+  echo "==> Syncing git submodules"
+  git submodule update --init --recursive
+fi
+
 # Apple platform: regenerate XcodeGen-backed Xcode projects from project.yml
 if command -v xcodegen >/dev/null; then
   echo "==> Regenerating Apple Xcode projects from project.yml"

@@ -32,7 +32,7 @@ references: []
 
 ## Overview
 
-The shared `RemovableChip` in `@adh-shared/ui` — a `Badge` with a trailing ✕ remove
+The shared `RemovableChip` in `@agentic-toolkit/ui` — a `Badge` with a trailing ✕ remove
 affordance. It is the one home for the "removable chip" treatment (recipient chips,
 tag/category chips): rather than each caller re-inventing a badge-plus-✕, they render
 this element. It is consumed by `RecipientInput` and `EntityChooser`.
@@ -44,7 +44,7 @@ as its accessible name, so a chip reads to assistive technology as
 `onRemove` callback — the component is stateless, so the consumer owns the list and
 decides what removal does (typically filtering the value out of its state).
 
-A single export ships from `@adh-shared/ui/components/removable-chip`: the
+A single export ships from `@agentic-toolkit/ui/components/removable-chip`: the
 `RemovableChip` component.
 
 ## Behavioral Requirements
@@ -151,7 +151,7 @@ telemetry belong to the consumer's `onRemove` handler, not the chip.
   removable-chip treatment, so those callers do not re-implement a badge-plus-✕.
 - Demo: `ui-showcase` Topic `removable-chip` (regenerate `sources.generated.ts` after
   source changes via `gen-sources.py`).
-- Web/TypeScript only; token-driven so it themes with the rest of `@adh-shared/ui`.
+- Web/TypeScript only; token-driven so it themes with the rest of `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -174,7 +174,7 @@ telemetry belong to the consumer's `onRemove` handler, not the chip.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Remove affordance is a real, named, keyboard-operable button | pass | accessibility |
 
 ## Change History

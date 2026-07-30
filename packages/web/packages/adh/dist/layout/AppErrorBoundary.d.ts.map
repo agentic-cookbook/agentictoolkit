@@ -1,0 +1,1 @@
+{"version":3,"file":"AppErrorBoundary.d.ts","sourceRoot":"","sources":["../../src/layout/AppErrorBoundary.tsx"],"names":[],"mappings":"AAGA,OAAO,EAAa,KAAK,YAAY,EAAE,KAAK,SAAS,EAAE,MAAM,OAAO,CAAA;AAmBpE;;;;;GAKG;AACH,wBAAgB,gBAAgB,CAAC,EAAE,QAAQ,EAAE,EAAE;IAAE,QAAQ,EAAE,SAAS,CAAA;CAAE,GAAG,YAAY,CAEpF"}

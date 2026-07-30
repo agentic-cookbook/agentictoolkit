@@ -30,14 +30,14 @@ references: []
 
 ## Overview
 
-The shared `ToggleGroup` in `@adh-shared/ui` — a segmented control, i.e. a row of
+The shared `ToggleGroup` in `@agentic-toolkit/ui` — a segmented control, i.e. a row of
 mutually-exclusive option buttons (e.g. a light/dark/system theme switcher, or a
 left/center/right alignment picker). It is built on Base UI's `ToggleGroup` +
 `Toggle` primitives so it stays consistent with the family's other base-ui
 primitives (radio/switch), and it is themed entirely from `apt-*` tokens: the group
 sits on the shared field shell and the pressed item takes a gold fill.
 
-Two exports ship from `@adh-shared/ui/components/toggle-group`:
+Two exports ship from `@agentic-toolkit/ui/components/toggle-group`:
 
 - `ToggleGroup` — the container. It renders the Base UI `ToggleGroup` on the
   `fieldShellClass` (border + `apt-bg`) as an `inline-flex w-fit` row with `gap-1 p-1`.
@@ -169,7 +169,7 @@ any telemetry belong to the consumer's `onValueChange` handler, not the control.
 - Carries `"use client"` (Base UI interactivity).
 - Demo: `ui-showcase` Topic `toggle-group` (regenerate `sources.generated.ts` after
   source changes via `gen-sources.py`).
-- Web/TypeScript only; token-driven so it themes with the rest of `@adh-shared/ui`.
+- Web/TypeScript only; token-driven so it themes with the rest of `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -192,7 +192,7 @@ any telemetry belong to the consumer's `onValueChange` handler, not the control.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Keyboard operable (roving focus + activation) + visible focus | pass | accessibility |
 
 ## Change History

@@ -3,6 +3,29 @@
  * The dropdown content itself is portaled and styled by adh-components.css
  * (.adh-dropdown-menu__*); this only positions the trigger.
  */
+
+/* Tailwind @source registration for this package — required, not optional, and this
+ * file is where it first became load-bearing.
+ *
+ * FloatingWindow (debug-env/FloatingWindow.tsx) is written in Tailwind utilities:
+ * `shadow-2xl` on the window frame, `cursor-move` on its drag handle. Until Task 5.2
+ * that file lived in the then-@adh-shared/adh's src/debug-console/, which every consuming
+ * site scanned via a `@source ".../@adh-shared/adh/src/**"` glob in its globals.css. 5.2 moved it
+ * here, and NOTHING registered @agentic-toolkit/adh — so from that commit on the two
+ * utilities stopped being emitted on every site, silently: a dangling scan is not an
+ * error, the debug console and the Help modal just render with no shadow and no drag
+ * cursor. It stayed invisible because no site had been rebuilt since; the CSS class
+ * baseline guard caught it the first time one was (`LOST main/support: cursor-move,
+ * shadow-2xl`).
+ *
+ * This file matters to the fix beyond its own subtree: this package's own
+ * adh-components.css @imports it, which is how all 44 chrome-bearing sites reach the
+ * registration through the one stylesheet import they already have (site →
+ * @agentic-toolkit/adh/styles.css → adh-site.css → adh-components.css → here; it was
+ * @adh-shared/adh's adh-components.css until Task 5.10) — including the two
+ * (local/content-studio, local/ui-showcase) that mount the console without importing
+ * help.css. See the package-root sources.css for the globs themselves. */
+@import "../../sources.css";
 .adh-debug-menu {
   position: fixed;
   top: 0.6rem;

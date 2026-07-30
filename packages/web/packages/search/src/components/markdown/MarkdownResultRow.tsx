@@ -42,7 +42,7 @@ function Highlighted({ text, query }: { text: string; query: string }): ReactNod
  *
  * Styled with the shared `apt-*` design tokens only, so it themes with every variant
  * and renders correctly in the marketing app (whose Tailwind never scans
- * @adh-shared/ui) via this package's own compiled stylesheet.
+ * @agentic-toolkit/ui) via this package's own compiled stylesheet.
  */
 export function MarkdownResultRow({
   hit,

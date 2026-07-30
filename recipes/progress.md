@@ -29,7 +29,7 @@ references: []
 
 ## Overview
 
-The shared `Progress` in `@adh-shared/ui` — a determinate progress bar rendered as
+The shared `Progress` in `@agentic-toolkit/ui` — a determinate progress bar rendered as
 a rounded track with an indicator filled to `value` (a percentage, 0–100). It is a
 self-contained accessible element (`role="progressbar"` carrying
 `aria-valuenow`/`aria-valuemin`/`aria-valuemax`) rather than a wrapper around a
@@ -42,7 +42,7 @@ hides it entirely (`translateX(-100%)`) and a `value` of 100 reveals it fully
 be re-tinted per context via `indicatorClassName` — e.g. amber while a job is
 building, green once it completes.
 
-A single export ships from `@adh-shared/ui/components/progress`: the `Progress`
+A single export ships from `@agentic-toolkit/ui/components/progress`: the `Progress`
 component. It carries `"use client"` (it renders an inline `style` transform) but
 holds no internal state — `value` is fully controlled by the consumer.
 
@@ -142,7 +142,7 @@ telemetry around a job's progress belong to the consumer, not the bar.
   internal state — `value` is controlled by the consumer.
 - Demo: `ui-showcase` Topic `progress` (regenerate `sources.generated.ts` after source
   changes via `gen-sources.py`).
-- Web/TypeScript only; token-driven so it themes with the rest of `@adh-shared/ui`.
+- Web/TypeScript only; token-driven so it themes with the rest of `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -165,7 +165,7 @@ telemetry around a job's progress belong to the consumer, not the bar.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Determinate progress exposes `role=progressbar` + `aria-value*` | pass | accessibility |
 
 ## Change History

@@ -57,6 +57,67 @@ Cross-platform repo with per-platform directories under `packages/`:
 - `packages/windows/` — TBD
 - `packages/android/` — TBD
 
+Plus one non-platform directory:
+- `external/agenticdevelopertoolkit/` — git submodule (see below).
+
+### The `agenticdevelopertoolkit` submodule
+
+`external/agenticdevelopertoolkit` is this repo's only submodule. It is a
+**separate product**, not a vendored copy of ours: it ships four web packages
+(`avatar`, `chat`, `themes`, `viewport`) and has its own consumers that use
+none of `@agentic-toolkit/*`. The dependency is strictly one-way — it imports
+nothing from this repo.
+
+**Run `./install.sh` (or `git clone --recursive`) before `pnpm install`.**
+`packages/web/packages/features/bitbag` and `packages/web/packages/adh` carry
+`link:` deps that resolve into this submodule; a `link:` to a missing directory
+fails at install time with an error that names a path, not a cause.
+
+Two rules govern the crossing:
+
+1. **Two packages own it, and nothing else may.** `packages/persona`
+   (`@agentic-toolkit/persona`) is the crossing for *consumers*: it re-publishes
+   `chat`, `themes` and `viewport` under its own name, keeps every
+   `@agenticdevelopertoolkit/*` specifier bare in its `dist` (tsup `external`), and
+   is what anyone outside this repo imports. `features/bitbag` owns the crossing for
+   *the persona itself* — his avatar rig and chat surface genuinely render that
+   vocabulary. The distinction is infrastructure vs. a persona: a consumer that wants
+   `ViewportShell` without wanting bitbag imports `@agentic-toolkit/persona`, which is
+   why that package exists rather than a re-export bolted onto a specific persona.
+   Every other package reaches persona vocabulary through one of those two — that is
+   what keeps the persona toolkit out of the shipped graph of consumers who want
+   nothing to do with personas. `adh`'s single entry is a **test oracle**
+   (`src/__tests__/footerDock.test.tsx`), devDependency only.
+2. **Never `link:` out of the repo.** Specifiers used to climb five and six levels
+   to a sibling checkout, which resolved inside adh — where both toolkits sit side
+   by side under `frontend/src/external/` — and nowhere else by guarantee.
+   The submodule exists so that stops being true.
+
+⚠️ **adh holds this repo AND `agenticdevelopertoolkit` as sibling submodules**, so in
+an adh checkout there are two copies on disk and **both are live in a site bundle**.
+A site that names both scopes at top level resolves its own `@agenticdevelopertoolkit/*`
+deps to adh's copy, while `bitbag`'s `dist` emits those specifiers bare (tsup
+`external`) and they resolve from the importing file's **real path** — i.e. this
+repo's `node_modules`, hence this submodule. Nothing dedupes across two different
+directories.
+
+Rule 1 above is what makes this finite: a site that reaches persona vocabulary
+through `@agentic-toolkit/persona` or bitbag never names the scope, so there is one
+copy by construction. **adh is there** — all 45 of its sites declared the scope; 38 never
+imported it and were pruned outright, and the other 7 now import `@agentic-toolkit/persona`.
+No adh site manifest names `@agenticdevelopertoolkit/*`
+(`frontend/tools/verify_persona_deps.py` asserts it).
+
+**Do not bump this submodule without bumping adh's alongside it.** The site bundles
+no longer depend on the pins being equal — but adh's `tools/shared_vendor.py` still
+copies `avatar`, `themes` and `viewport` `dist/` out of *adh's* checkout into the two
+backends' committed `web/vendor/` trees, while everything else resolves this
+submodule. So a drift still ships two versions of `themes` to those backends, and
+`colorMode.tsx` builds its context at module scope — `useColorMode` throws, and the
+error names React rather than the boundary. adh's CI enforces the equality
+(`frontend/tools/verify_submodule_pins.py`), and that guard retires when the backend
+vendoring stops reading adh's copy, not before.
+
 ### Apple framework layout
 
 | Target                       | Source dir   | Depends on                                                       |

@@ -34,7 +34,7 @@ references: []
 
 ## Overview
 
-The shared `FieldGroup` in `@adh-shared/ui` — the standard sectioning wrapper for
+The shared `FieldGroup` in `@agentic-toolkit/ui` — the standard sectioning wrapper for
 settings and editor forms. It is a bordered card with an uppercase-mono title row
 across the top and its `Field` children stacked below, so a settings pane reads as a
 series of titled groups instead of a flat wall of inputs.
@@ -54,7 +54,7 @@ field caption, so the group title and the field captions share one visual langua
 |---|---|---|---|---|
 | Field | agenticdeveloperhub://recipes/field | The grouped rows — each caption+control+hint/error that the group stacks | yes | Passed as `children`; the group applies `gap-3` between them |
 
-The group title reuses the shared `fieldCaptionClass` from `@adh-shared/ui/lib/typography`
+The group title reuses the shared `fieldCaptionClass` from `@agentic-toolkit/ui/lib/typography`
 (the same uppercase-mono caption treatment `Field` uses), so titles and field
 captions stay visually identical. `trailing` is an arbitrary caller node
 (status text, a `Button`, a badge) — not a fixed ingredient.
@@ -138,7 +138,7 @@ group.
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/ui/src/blocks/field-group.tsx`,
-  exported via `@adh-shared/ui/blocks/field-group`. Carries `"use client"` (it ships
+  exported via `@agentic-toolkit/ui/blocks/field-group`. Carries `"use client"` (it ships
   alongside interactive form content) and composes `Field`
   (`agenticdeveloperhub://recipes/field`) as its children plus the shared
   `fieldCaptionClass` for the title.
@@ -151,7 +151,7 @@ group.
   title/trailing row and the stacked Fields stay usable on mobile.
 - **SwiftUI / Compose:** Not applicable — web-only shared block.
 
-API (`@adh-shared/ui/blocks/field-group`):
+API (`@agentic-toolkit/ui/blocks/field-group`):
 
 ```ts
 interface FieldGroupProps {
@@ -186,7 +186,7 @@ export function FieldGroup(props: FieldGroupProps): React.ReactElement
 |---|---|---|
 | Artifact formatting (recipe) | passed | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` | passed | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | passed | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | passed | project-guidelines UI |
 | Title rendered as a real heading (`<h3>`) | passed | accessibility |
 
 ## Change History

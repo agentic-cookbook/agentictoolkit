@@ -31,7 +31,7 @@ references: []
 
 ## Overview
 
-The shared `Pagination` in `@adh-shared/ui` — the list pager used above and below the
+The shared `Pagination` in `@agentic-toolkit/ui` — the list pager used above and below the
 paged surfaces across adh. It is a compact `Prev` / "Page X of Y" / `Next` control: a
 centered `nav` landmark holding two shared `Button`s (`variant="outline"`,
 `size="sm"`) around a mono caption.
@@ -43,7 +43,7 @@ and requests a change rather than keeping its own counter. When there is only on
 `{totalPages > 1 && …}` conditional. The `Prev` button is disabled on the first page
 and `Next` on the last, so an out-of-range request can never be issued from the edges.
 
-A single export ships from `@adh-shared/ui/components/pagination`: the `Pagination`
+A single export ships from `@agentic-toolkit/ui/components/pagination`: the `Pagination`
 component. It carries `"use client"` (it composes the client `Button`) but holds no
 internal state — the displayed page is always the `page` prop.
 
@@ -147,7 +147,7 @@ analytics belong to the host that owns the list and the `page` state, not the pa
 - Demo: `ui-showcase` Topic `pagination` in the "Composite controls" group, where
   `PaginationDemo` owns the `page` state (regenerate `sources.generated.ts` via
   `gen-sources.py` after source changes).
-- Web/TypeScript only; token-driven so it themes with the rest of `@adh-shared/ui`.
+- Web/TypeScript only; token-driven so it themes with the rest of `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -173,7 +173,7 @@ analytics belong to the host that owns the list and the `page` state, not the pa
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (Button; no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (Button; no bespoke UI) | pass | project-guidelines UI |
 | Pager wrapped in a `nav` landmark with `aria-label` | pass | accessibility |
 | Edge controls disabled via the native `disabled` attribute | pass | accessibility |
 

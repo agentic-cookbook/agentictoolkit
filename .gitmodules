@@ -1,0 +1,3 @@
+[submodule "agenticdevelopertoolkit"]
+	path = external/agenticdevelopertoolkit
+	url = https://github.com/agentic-cookbook/agenticdevelopertoolkit.git

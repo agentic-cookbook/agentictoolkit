@@ -21,5 +21,5 @@ export type DebugMenuProps = {
  * the site theme switcher (moved here from the user menu) and, when enabled, a
  * chat-theme switcher.
  */
-export declare function DebugMenu({ themeKey, chat }: DebugMenuProps): import("react/jsx-runtime").JSX.Element;
+export declare function DebugMenu({ themeKey, chat }: DebugMenuProps): import("react").JSX.Element;
 //# sourceMappingURL=DebugMenu.d.ts.map

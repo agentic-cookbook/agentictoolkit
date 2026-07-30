@@ -1,0 +1,341 @@
+{
+  "id": "hub",
+  "children": [
+    {
+      "id": "learn",
+      "accent": "oklch(0.82 0.17 68)",
+      "children": [
+        {
+          "id": "academy",
+          "siteId": "academy",
+          "related": [
+            "education",
+            "recipes"
+          ]
+        },
+        {
+          "id": "education",
+          "siteId": "education",
+          "related": [
+            "academy",
+            "recipes"
+          ]
+        },
+        {
+          "id": "recipes",
+          "siteId": "recipes",
+          "related": [
+            "academy",
+            "knowledgebases"
+          ]
+        },
+        {
+          "id": "research",
+          "siteId": "research",
+          "related": [
+            "academy",
+            "recipes",
+            "knowledgebases"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "accent": "oklch(0.78 0.17 245)",
+      "children": [
+        {
+          "id": "personas",
+          "siteId": "personas",
+          "related": [
+            "registries",
+            "ecosystems"
+          ],
+          "children": [
+            {
+              "id": "persona-profiles"
+            },
+            {
+              "id": "persona-data-store"
+            },
+            {
+              "id": "persona-versioning"
+            }
+          ]
+        },
+        {
+          "id": "registries",
+          "siteId": "registries",
+          "related": [
+            "personas",
+            "ecosystems"
+          ]
+        },
+        {
+          "id": "ecosystems",
+          "siteId": "ecosystems",
+          "related": [
+            "personas",
+            "storage",
+            "tools",
+            "narratives"
+          ]
+        },
+        {
+          "id": "knowledgebases",
+          "siteId": "knowledgebases",
+          "related": [
+            "storage",
+            "recipes"
+          ]
+        },
+        {
+          "id": "storage",
+          "siteId": "storage",
+          "related": [
+            "knowledgebases",
+            "ecosystems"
+          ],
+          "children": [
+            {
+              "id": "storage-buckets"
+            },
+            {
+              "id": "storage-files"
+            },
+            {
+              "id": "storage-usage"
+            }
+          ]
+        },
+        {
+          "id": "tools",
+          "siteId": "tools",
+          "related": [
+            "ecosystems",
+            "personas"
+          ]
+        },
+        {
+          "id": "sites",
+          "siteId": "sites",
+          "related": [
+            "domains",
+            "products"
+          ]
+        },
+        {
+          "id": "domains",
+          "siteId": "domains",
+          "related": [
+            "sites",
+            "authentication"
+          ]
+        },
+        {
+          "id": "authentication",
+          "siteId": "authentication",
+          "related": [
+            "customers",
+            "domains"
+          ],
+          "docs": "quickstart/oauth/overview"
+        },
+        {
+          "id": "teamregistry",
+          "siteId": "teamregistry",
+          "related": [
+            "teambuilder",
+            "personas",
+            "registries"
+          ]
+        },
+        {
+          "id": "teambuilder",
+          "siteId": "teambuilder",
+          "related": [
+            "teamregistry",
+            "personas",
+            "ecosystems"
+          ]
+        },
+        {
+          "id": "personabuilder",
+          "siteId": "personabuilder",
+          "related": [
+            "personas",
+            "registries",
+            "teambuilder"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "connect",
+      "accent": "oklch(0.82 0.16 195)",
+      "children": [
+        {
+          "id": "devices",
+          "siteId": "devices",
+          "related": [
+            "notifications",
+            "dashboards"
+          ]
+        },
+        {
+          "id": "notifications",
+          "siteId": "notifications",
+          "related": [
+            "devices",
+            "dashboards"
+          ]
+        },
+        {
+          "id": "dashboards",
+          "siteId": "dashboards",
+          "related": [
+            "notifications",
+            "devices"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "community",
+      "accent": "oklch(0.72 0.19 298)",
+      "children": [
+        {
+          "id": "forums",
+          "siteId": "community",
+          "related": [
+            "communities",
+            "support"
+          ]
+        },
+        {
+          "id": "communities",
+          "siteId": "communities",
+          "related": [
+            "forums",
+            "customers"
+          ]
+        },
+        {
+          "id": "support",
+          "siteId": "support",
+          "related": [
+            "forums",
+            "news"
+          ]
+        },
+        {
+          "id": "news",
+          "siteId": "news",
+          "related": [
+            "support",
+            "forums"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sell",
+      "accent": "oklch(0.82 0.18 150)",
+      "children": [
+        {
+          "id": "products",
+          "siteId": "products",
+          "related": [
+            "customers",
+            "billing"
+          ]
+        },
+        {
+          "id": "customers",
+          "siteId": "customers",
+          "related": [
+            "products",
+            "billing",
+            "authentication"
+          ],
+          "children": [
+            {
+              "id": "customer-profiles"
+            },
+            {
+              "id": "customer-access"
+            },
+            {
+              "id": "customer-lifecycle"
+            }
+          ]
+        },
+        {
+          "id": "billing",
+          "siteId": "billing",
+          "related": [
+            "products",
+            "customers"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "accent": "oklch(0.72 0.19 32)",
+      "children": [
+        {
+          "id": "projects",
+          "siteId": "projects",
+          "related": [
+            "ecosystems",
+            "dashboards",
+            "narratives"
+          ],
+          "children": [
+            {
+              "id": "project-plans"
+            },
+            {
+              "id": "project-tasks"
+            }
+          ]
+        },
+        {
+          "id": "narratives",
+          "siteId": "narratives",
+          "related": [
+            "projects",
+            "ecosystems"
+          ]
+        },
+        {
+          "id": "codereviews",
+          "siteId": "codereviews",
+          "related": [
+            "projects",
+            "narratives"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hire",
+      "accent": "oklch(0.70 0.20 350)",
+      "children": [
+        {
+          "id": "consulting",
+          "siteId": "consulting",
+          "related": []
+        },
+        {
+          "id": "consultants",
+          "siteId": "consultants",
+          "related": [
+            "consulting"
+          ]
+        }
+      ]
+    }
+  ]
+}

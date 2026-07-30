@@ -1,0 +1,6 @@
+/* Passthrough to the persona toolkit's stylesheet, so consumers never name
+ * `@agenticdevelopertoolkit/*` themselves. See ../../../chat.ts for why that
+ * matters: naming the scope directly is what puts a SECOND copy of these
+ * rules in a bundle. This re-imports rather than copying the bytes, so the
+ * CSS can never drift from the components it styles. */
+@import '@agenticdevelopertoolkit/chat/css/modes/three-pane.css';

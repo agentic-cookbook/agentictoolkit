@@ -1,0 +1,71 @@
+/* Styles for the Help modal (@agentic-toolkit/adh/help) — the topic detail panes plus the
+ * dependencies its views render with. Imported by AppShell apps via
+ * `@import "@agentic-toolkit/adh/help.css"` in their globals.
+ *
+ * Deliberately SEPARATE from adh-components.css (the always-loaded bundle): the vendored
+ * status/builder boards ship adh-components.css but do NOT vendor @agentic-toolkit/markdown or
+ * api-explorer, so those packages' @imports must not ride the universal stylesheet. Only sites
+ * that mount the Help modal (AppShell consumers, all resolving packages via workspace/link) pull
+ * this in. Bare specifiers resolve from THIS file's package (@agentic-toolkit/adh), which depends on
+ * both packages, so a consuming app needn't depend on them directly. */
+
+/* Runtime markdown prose (.adh-mv-prose) + render states. Plain, family-owned CSS. */
+@import "@agentic-toolkit/markdown/styles";
+/* The API browser's shiki code-block theming + its Tailwind @source registration, so the
+ * browser's utility classes compile in every app that mounts Help (not just the api-explorer
+ * consumers that already import these). */
+@import "@agentic-toolkit/api-explorer/styles";
+@import "@agentic-toolkit/api-explorer/sources.css";
+
+/* Tailwind @source registration for this package — required, not optional. Without it
+ * Tailwind scans nothing here (it skips node_modules, and no consumer registers
+ * `@agentic-toolkit/adh`), the modal's utilities (`m-4`, `flex min-h-0 min-w-0 flex-1
+ * flex-col`, `flex flex-col items-center gap-2 text-center`) are never emitted, and the
+ * failure is SILENT — a dangling scan produces no error, just an unstyled pane.
+ *
+ * The globs live in the package-root sources.css, covering every subtree at once rather
+ * than help/ alone; see that file for why per-subtree registration is the shape that
+ * grows holes. Reached relatively because it is the SAME package — `../..` is the
+ * package root from `src/styles/` and from `dist/styles/` alike, so this one line
+ * resolves identically wherever the `./help.css` export is served from. */
+@import "../../sources.css";
+
+.adh-help-topic {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+/* Prose topics scroll within the pane and get reading gutters. */
+.adh-help-topic--markdown {
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem;
+}
+
+/* The API browser owns its own scroll + master/detail layout — let it fill the pane. */
+.adh-help-topic--api {
+  overflow: hidden;
+}
+
+/* The chat leaf: the conversation panel sits bottom-center in the pane with breathing room on
+ * every side. The chat is content-hugging and grows upward from its input, so anchoring the
+ * panel to the bottom keeps the input stationary while the transcript stacks above it. Applies
+ * to the site's live chat island and the modal's chat CTA alike, so the two surfaces match. */
+.adh-help-topic--chat {
+  justify-content: flex-end;
+  align-items: center;
+  padding: 1.5rem;
+}
+.adh-help-topic--chat > * {
+  width: 100%;
+  max-width: 44rem;
+}
+
+.adh-help-topic__missing {
+  margin: 1.5rem;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 0.9rem;
+}

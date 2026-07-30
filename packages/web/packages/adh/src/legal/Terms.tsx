@@ -1,9 +1,13 @@
 import type { ReactElement } from 'react'
-import { LegalPageShell, LEGAL_CONTACT_EMAIL } from './LegalPageShell'
+import { LegalPageShell } from '@agentic-toolkit/adh/legal'
+import { LEGAL_CONTACT_EMAIL, LEGAL_EFFECTIVE_DATE } from './constants'
 
-export function Terms(): ReactElement {
+/** The Terms of Service body (headings + paragraphs only), with no page chrome —
+ *  so it can render inside the full /terms page (via LegalPageShell) AND inside
+ *  the footer's Terms modal (whose own header carries the title). */
+export function TermsBody(): ReactElement {
   return (
-    <LegalPageShell prefix="Terms of" title="Service">
+    <>
       <p>
         These Terms of Service (&ldquo;<strong>Terms</strong>&rdquo;) govern your access to and
         use of the websites, applications, and services published at{' '}
@@ -144,6 +148,14 @@ export function Terms(): ReactElement {
         Questions about these Terms? Email{' '}
         <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>.
       </p>
+    </>
+  )
+}
+
+export function Terms(): ReactElement {
+  return (
+    <LegalPageShell prefix="Terms of" title="Service" effectiveDate={LEGAL_EFFECTIVE_DATE}>
+      <TermsBody />
     </LegalPageShell>
   )
 }

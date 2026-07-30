@@ -9,7 +9,7 @@
  *
  * Adding a new theme = add a palette to `./palettes` and a registry entry here.
  * No render-logic changes. (Owner decision 2026-06-26: this palette is the
- * viewer's own, kept separate from the global @adh-shared/themes apt-* tokens.)
+ * viewer's own, kept separate from the global @agentic-toolkit/themes apt-* tokens.)
  */
 
 import { MDV_PALETTES } from './palettes'

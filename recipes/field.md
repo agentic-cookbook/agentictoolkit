@@ -31,7 +31,7 @@ references: []
 
 ## Overview
 
-The shared `Field` in `@adh-shared/ui` — the family's standard form row. It stacks
+The shared `Field` in `@agentic-toolkit/ui` — the family's standard form row. It stacks
 an uppercase-mono caption above whatever control it wraps (`Input`, `Select`,
 `Switch`, `Textarea`, or any other primitive passed as `children`), and it renders
 the whole row inside the shared `Label` so the caption is **implicitly associated**
@@ -149,7 +149,7 @@ any telemetry belong to the control and the owning form, not to `Field`.
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/ui/src/blocks/field.tsx`, exported
-  via `@adh-shared/ui/blocks/field`. Composes the shared `Label`
+  via `@agentic-toolkit/ui/blocks/field`. Composes the shared `Label`
   (`components/label`) and the `fieldCaptionClass` from `lib/typography`.
 - The row is deliberately server-safe (no `"use client"` directive): it is pure
   layout, so it renders in server components; interactivity lives in the control the
@@ -182,7 +182,7 @@ any telemetry belong to the control and the owning form, not to `Field`.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Caption implicitly labels the control (keyboard/AT) | pass | accessibility |
 
 ## Change History

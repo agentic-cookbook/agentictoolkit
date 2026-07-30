@@ -23,7 +23,7 @@ import {
  * many domains. The two entry points that reconcile the cache with the truth are
  * `adoptAppearance` (sign-in: the server's prefs win) and `resetAppearance`
  * (sign-out: back to the OS setting, cache cleared). Both are called by
- * AppearanceSync in @adh-shared/auth.
+ * AppearanceSync in @agentic-toolkit/adh/auth.
  */
 
 let current: AppearancePrefs | null = null

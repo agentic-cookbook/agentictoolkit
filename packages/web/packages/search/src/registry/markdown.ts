@@ -6,7 +6,7 @@ import { MarkdownPreviewHeader } from '../components/markdown/MarkdownPreviewHea
 /**
  * A single cross-author search hit from `GET /public/papers`. Mirrors the backend
  * `PublicPaperSearchHit` contract (websites/backend/src/openapi/paths/public.ts) —
- * defined locally rather than imported from @adh-shared/api-types, since this search
+ * defined locally rather than imported from @agentic-toolkit/adh-api-types, since this search
  * endpoint post-dates the generated snapshot. Matches the marketing convention
  * (papers-api.ts defines its public shapes locally).
  */

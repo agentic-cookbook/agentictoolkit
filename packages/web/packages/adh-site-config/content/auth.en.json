@@ -1,0 +1,74 @@
+{
+  "signup": {
+    "invitationCardBody": "Membership is by invitation only while we're in early access. We're growing the hub carefully with developers who want to help shape it — if that sounds like you, drop us a note and we'll reach out as we open more seats.",
+    "invitationCardButton": "Ask for an invitation",
+    "heading": "Join the hub.",
+    "subheading": "Six projects. One ecosystem.",
+    "providers": {
+      "google": "Continue with Google",
+      "github": "Continue with GitHub",
+      "gitlab": "Continue with GitLab",
+      "bitbucket": "Continue with Bitbucket",
+      "apple": "Continue with Apple"
+    },
+    "emailButton": "Continue with Email →",
+    "legalPrefix": "By joining, you agree to our ",
+    "legalTerms": "Terms of Service",
+    "legalConjunction": " and ",
+    "legalPrivacy": "Privacy Policy",
+    "signupsClosedTitle": "Sign-ups aren't open right now",
+    "signupsClosedBody": "We're not accepting new sign-ups at the moment. Please check back later."
+  },
+  "login": {
+    "heading": "Welcome back.",
+    "subheading": "Log in to your account",
+    "githubButton": "Continue with GitHub",
+    "divider": "or",
+    "emailLabel": "Email, user ID, or phone",
+    "identifierHint": "You can log in with your email, your user ID, or a verified phone number with country code (e.g. +1…).",
+    "passwordLabel": "Password",
+    "emailButton": "Log in with email",
+    "passkeyButton": "Sign in with a passkey",
+    "loadingLabel": "Logging in…",
+    "passkeyEmailRequired": "Enter your email, user ID, or phone to sign in with a passkey.",
+    "passkeyFailed": "Passkey sign-in failed.",
+    "accountLinkNotice": "You already have an account — sign in with your password to connect {provider}.",
+    "signupPrompt": "Don't have an account?",
+    "signupLink": "Sign up"
+  },
+  "invitation": {
+    "intro": "Please tell us about yourself and we will get back to you soon!",
+    "nameLabel": "Name",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "phoneHelper": "For SMS invitations.",
+    "sourceLabel": "How did you hear about the Hub?",
+    "noteLabel": "Send a note to the team",
+    "contactRequirement": "Enter an email, a phone number, or both — we'll send your invitation to each.",
+    "requiredNote": "* Required Field",
+    "otherLabel": "Other",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "sources": [
+      "Search engine",
+      "Social media",
+      "Blog post",
+      "Newsletter",
+      "Word of mouth",
+      "Conference or event",
+      "Friend or colleague",
+      "Podcast",
+      "GitHub",
+      "Advertisement"
+    ],
+    "confirmationTitle": "Request received",
+    "confirmation": "Thanks! We've got your request and will be in touch soon.",
+    "errors": {
+      "name": "Please enter your name.",
+      "contact": "Enter an email or a phone number.",
+      "email": "Enter a valid email address.",
+      "phone": "Enter a valid phone number.",
+      "submitError": "Something went wrong — please try again."
+    }
+  }
+}

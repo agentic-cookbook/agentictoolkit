@@ -1,3 +1,23 @@
+# dist/ IS COMMITTED FOR THIS PACKAGE — deliberately, and it is the only one.
+#
+# Every sibling package builds its dist and tracks none of it. This one ships
+# prebuilt (`files: ["dist"]`, `exports` -> `./dist/*`) because it has consumers that
+# check the submodule pin out and never run a toolchain: for them a missing file is
+# TS2307, or ERR_MODULE_NOT_FOUND at module evaluation for a .js. That is the whole
+# point of chrome living in the toolkit — a site outside this repo can consume it
+# without adopting our build. See c621b02, which started the practice after a stale
+# Vercel node_modules cache was the only thing making builds pass.
+#
+# The rule below stays, so files land in git only via `git add -f`, and a plain
+# `git add` can never sweep in the ~44 internal .d.ts/.d.ts.map byproducts that no
+# consumer resolves. The cost is that `git add` silently skips NEW dist files — which
+# is exactly how 140 of them went missing in the absorb commit, shipping 15 export
+# subpaths with no build product. The net for that is frontend/tools/
+# verify_dist_completeness.py in adh's CI: it walks the exports map, fails on any
+# reached-but-untracked file, and names the on-disk path to `git add -f`.
+#
+# So: after rebuilding, run that guard and force-add what it names. Do not "fix" this
+# by deleting the rule, and do not untrack dist to make the diffs smaller.
 dist/
 .turbo/
 *.tsbuildinfo

@@ -29,13 +29,13 @@ references: []
 
 ## Overview
 
-A generic, selectable, optionally-sortable table primitive in `@adh-shared/ui`.
+A generic, selectable, optionally-sortable table primitive in `@agentic-toolkit/ui`.
 It is a **controlled** table: the caller owns `rows`, the `selectedIds` set, and
 the optional `sort`. The component renders columns, handles pointer + keyboard
 selection, and reports changes up. It is generic over the row type `T` and owns
 the multi-row selection model (click / ⇧-click / ⌘-click / keyboard). It is the
 foundation for `ListWithDetailsPane` and `AddUsersModal`. Nothing comparable
-existed before it (`@adh-shared/crud`'s `CrudTable` is placeholder-grade,
+existed before it (`@agentic-toolkit/crud`'s `CrudTable` is placeholder-grade,
 single-purpose, and has no selection).
 
 ## Behavioral Requirements
@@ -154,7 +154,7 @@ No logging. DataTable is a presentational primitive; it emits no structured log 
 ## Design Decisions
 
 - **Caller-owned sorting.** The component reports `onSortChange` and renders `rows` as given, keeping sorting policy with the data owner rather than duplicating it inside the table.
-- **Replaces CrudTable.** Supersedes `@adh-shared/crud`'s placeholder-grade `CrudTable`, which is single-purpose and has no selection.
+- **Replaces CrudTable.** Supersedes `@agentic-toolkit/crud`'s placeholder-grade `CrudTable`, which is single-purpose and has no selection.
 - **Selection is a capability, not a mandate.** Omitting the selection props turns the same grid into an action-list table (admin's users/flags/feedback/api-tokens lists), so sites never fork a second table for rows whose interaction lives in per-cell controls.
 - **Internal anchor is private.** The anchor id used for range selection is internal state and is not part of the public API.
 

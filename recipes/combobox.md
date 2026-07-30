@@ -143,14 +143,14 @@ No logging. Combobox is a presentational form control; it emits no structured lo
 
 - New file: `websites/shared/ui/src/components/combobox.tsx`.
 - Export: covered by the existing `./components/*` wildcard in `websites/shared/ui/package.json` (no export change needed).
-- Dependency: `@base-ui/react/autocomplete` (already a dependency of `@adh-shared/ui`).
+- Dependency: `@base-ui/react/autocomplete` (already a dependency of `@agentic-toolkit/ui`).
 - Demo: `websites/local/ui-showcase/app/page.tsx` (+ showcase source registry).
 - Replaces: ad-hoc site-local `<input list>` / `<datalist>` usages.
 - Responsive: verify via Playwright (ui-showcase) at 375 / 768 / 1440 — keyboard-only and pointer flows on each.
 
 ## Design Decisions
 
-- **Wrap the native primitive, don't hand-roll.** Combobox ARIA (`role`, `aria-expanded`, `aria-controls`, `aria-activedescendant`), roving activation, filtering, and floating-popup positioning are exactly what Base UI's `Autocomplete` provides; reimplementing them would be error-prone and inconsistent with the rest of `@adh-shared/ui`, which already composes Base UI primitives.
+- **Wrap the native primitive, don't hand-roll.** Combobox ARIA (`role`, `aria-expanded`, `aria-controls`, `aria-activedescendant`), roving activation, filtering, and floating-popup positioning are exactly what Base UI's `Autocomplete` provides; reimplementing them would be error-prone and inconsistent with the rest of `@agentic-toolkit/ui`, which already composes Base UI primitives.
 - **Autocomplete, not Combobox/Select.** The value is the free text the user types (datalist semantics), so Base UI `Autocomplete` is the right primitive rather than the selection-oriented `Combobox`.
 - **Strings, not `{value,label}`.** Suggestions are plain strings to mirror the `<datalist>` it replaces; richer item shapes belong to `ListChooser` / `OptionMenu`.
 - **Theme only.** The wrapper adds no behavior beyond styling and the controlled `value`/`onValueChange` surface, keeping it disposable and easy to track against upstream.

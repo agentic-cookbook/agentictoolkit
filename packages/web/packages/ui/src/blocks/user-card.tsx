@@ -46,7 +46,7 @@ export type UserCardPersona = {
 
 /**
  * Structurally matches `components['schemas']['PublicUserProfile']` from
- * @adh-shared/api-types. Defined here to keep @adh-shared/ui free of that
+ * @agentic-toolkit/adh-api-types. Defined here to keep @agentic-toolkit/ui free of that
  * dependency — pass `SuccessBody<'/public/users/{slug}', 'get'>` directly.
  */
 export type UserCardDto = {
@@ -66,7 +66,7 @@ export type UserCardDto = {
 
 /**
  * Initials from a display name or slug. Mirrors AvatarMenu's unexported helper
- * — if that helper is ever exported from @adh-shared/adh, import it here instead.
+ * — if that helper is ever exported from @agentic-toolkit/adh, import it here instead.
  */
 function initialsOf(name: string | undefined | null): string {
   if (!name) return ''

@@ -1,10 +1,9 @@
 /** True for a local-development hostname (localhost / loopback / *.local /
  *  *.localhost). A generic heuristic, not a site-registry lookup — deliberately
  *  matching the 'local' branch of the adh registry's detectEnv so silent-SSO gating
- *  behaves identically whether a host consumes this package directly or through the
- *  @adh-shared/auth shim.
+ *  behaves identically for every host.
  *
- *  EXPORTED so the adh monorepo's parity test can pin it against @adh-shared/adh's
+ *  EXPORTED so the adh monorepo's parity test can pin it against that registry's
  *  detectEnv 'local' branch — the two are deliberate mirrors (this package can't
  *  import the host registry), and an unpinned mirror is how environment-dependent
  *  login loops slip in.

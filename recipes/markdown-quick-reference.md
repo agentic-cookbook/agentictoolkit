@@ -32,7 +32,7 @@ references: []
 
 ## Overview
 
-A standalone toolbar control in `@adh-shared/ui`
+A standalone toolbar control in `@agentic-toolkit/ui`
 (`components/markdown-quick-reference`). It renders an outline `Button` that
 opens a dismissible `Popover` listing the common GitHub-flavoured markdown
 syntax — headings, bold/italic, inline + fenced code, bullet/numbered lists,
@@ -139,7 +139,7 @@ toolbar can drop it in. It holds no state of its own and takes no value.
 
 ## Configuration
 
-`@adh-shared/ui/components/markdown-quick-reference`
+`@agentic-toolkit/ui/components/markdown-quick-reference`
 
 | Option | Type | Default | Description |
 |---|---|---|---|

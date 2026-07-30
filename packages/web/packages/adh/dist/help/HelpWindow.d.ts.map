@@ -1,0 +1,1 @@
+{"version":3,"file":"HelpWindow.d.ts","sourceRoot":"","sources":["../../src/help/HelpWindow.tsx"],"names":[],"mappings":"AA4BA;;;;;;;GAOG;AACH,wBAAgB,UAAU,CAAC,EACzB,IAAI,EACJ,OAAO,EACP,IAAI,EACJ,YAAY,GACb,EAAE;IACD,IAAI,EAAE,OAAO,CAAA;IACb,OAAO,EAAE,MAAM,IAAI,CAAA;IACnB,IAAI,EAAE,MAAM,EAAE,CAAA;IACd,YAAY,EAAE,CAAC,IAAI,EAAE,MAAM,EAAE,KAAK,IAAI,CAAA;CACvC,+BAsCA"}

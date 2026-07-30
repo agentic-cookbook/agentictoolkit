@@ -1,0 +1,957 @@
+{
+  "hub": {
+    "label": "Hub",
+    "kicker": "Agentic Developer",
+    "blurb": "Agentic Developer Hub is an ecosystem of composable tools — a family of small websites and services for building, shipping, and selling agentic connected software, fast.\n\nThe difficult and complex infrastructure parts are already built.\n\nYou ship the part only you can."
+  },
+  "learn": {
+    "label": "Learn",
+    "kicker": "Get fluent",
+    "blurb": "Get fluent in agentic development — courses, guided paths, and reference you can actually build from."
+  },
+  "academy": {
+    "label": "Academy",
+    "kicker": "Learn agentic dev",
+    "blurb": "Learn agentic software development from the ground up — courses, guided paths, and hands-on lessons for every level.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "The Academy turns the whole Agentic Developer Hub into a curriculum. Start at \"what is an agentic persona\" and finish shipping a real project, with lessons that run against the live platform."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Guided paths from first principles to production.",
+          "Hands-on lessons wired to the real Hub APIs, not toy sandboxes.",
+          "Progress that follows your account across every Hub property."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Guided learning paths from first agent to production ecosystem",
+      "Hands-on lessons that run against the real Hub platform",
+      "Courses for developers, teams, and the agent-curious"
+    ]
+  },
+  "education": {
+    "label": "Education",
+    "kicker": "For teams & schools",
+    "blurb": "Structured agentic-development learning for teams and classrooms — cohorts, assignments, and progress you can track.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Education packages the Academy for groups: enroll a cohort, assign paths, and watch progress roll up to one dashboard."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Cohorts and seats for teams, bootcamps, and schools.",
+          "Assignable paths with completion tracking.",
+          "Built on the same lessons as the Academy."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Cohort-based programs for teams and classrooms",
+      "Assignments and progress your organization can see",
+      "Curricula built on the Academy's guided paths"
+    ]
+  },
+  "recipes": {
+    "label": "Recipes",
+    "kicker": "Patterns that work",
+    "blurb": "Copy-pasteable patterns for building with agents — proven recipes for the problems you hit over and over.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Recipes are short, opinionated, working solutions — the \"how do I do X with an agent\" answers, ready to lift into your own project."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Focused, runnable patterns — not essays.",
+          "Versioned against the platform they run on.",
+          "A natural next step after an Academy path."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Copy-pasteable patterns for everyday agentic problems",
+      "Every recipe proven against the real platform",
+      "Organized by the problem, not the API"
+    ]
+  },
+  "build": {
+    "label": "Compose",
+    "kicker": "Compose it",
+    "blurb": "Compose agents, data, and surfaces into real products — the building blocks of everything you ship on the Hub."
+  },
+  "personas": {
+    "label": "Personas",
+    "kicker": "Define your agents",
+    "blurb": "Define an agentic persona once and reuse it everywhere — identity, capabilities, and memory in one canonical place.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "A persona is your agent’s identity: who it is, what it’s good at, and the data it carries. Define it once; reuse it across every app you build."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "One persona, one canonical home — public profile on the Registry, source of truth on the Hub.",
+          "Avatar, bio, capabilities, model preferences, and links to the persona’s data.",
+          "Versioned: an agent in May vs. July are both still inspectable."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Define identity, capabilities, and memory once",
+      "Reuse one persona across every surface you build",
+      "Version and evolve personas without breaking what uses them"
+    ]
+  },
+  "persona-profiles": {
+    "label": "Profiles",
+    "kicker": "Persona",
+    "blurb": "A canonical public profile page for every agent you register.",
+    "keyPoints": [
+      "Public, shareable profile per persona.",
+      "Avatar, bio, and declared capabilities.",
+      "The agent’s front door across the ecosystem."
+    ]
+  },
+  "persona-data-store": {
+    "label": "Data store",
+    "kicker": "Persona",
+    "blurb": "First-party storage for a persona’s prompts, configs, and per-project memory.",
+    "keyPoints": [
+      "Buckets keyed to a persona, organized by project.",
+      "Versioned writes — roll back a bad prompt without a deploy.",
+      "Reachable from the API, the MCP server, and the Hub UI."
+    ]
+  },
+  "persona-versioning": {
+    "label": "Versioning",
+    "kicker": "Persona",
+    "blurb": "Every revision of a persona stays inspectable over time.",
+    "keyPoints": [
+      "Snapshot a persona at any point.",
+      "Diff how an agent changed between versions.",
+      "Pin an app to a specific revision."
+    ]
+  },
+  "registries": {
+    "label": "Registries",
+    "kicker": "Build directories",
+    "blurb": "Stand up your own registries — searchable directories of agents, tools, or anything else worth naming.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Registries let you publish and browse named things — the same machinery behind the Persona Registry, available for whatever you need to catalog."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Define a registry schema and start publishing.",
+          "Search, claim, and reputation built in.",
+          "Public directory pages, crawlable and shareable."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Stand up searchable directories of anything worth naming",
+      "Curate entries with profiles, ownership, and trust signals",
+      "Publish inside your ecosystem or to the world"
+    ]
+  },
+  "ecosystems": {
+    "label": "Ecosystems",
+    "kicker": "Wire it together",
+    "blurb": "Bundle personas, data, and surfaces into a working ecosystem — the wiring that turns parts into a product.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "An ecosystem is where the pieces meet: pick the features you use, group them, and point your applications at the bundle."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Group the features a product actually uses.",
+          "Many applications can share one ecosystem.",
+          "Move a feature between ecosystems without breaking your tokens."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Bundle personas, data, and surfaces into one product",
+      "Namespaces, ownership, and access wired from the start",
+      "Grow child ecosystems as your product family grows"
+    ]
+  },
+  "knowledgebases": {
+    "label": "Knowledge Bases",
+    "kicker": "Ground your agents",
+    "blurb": "Give your agents something to stand on — curated knowledge bases they can search and cite.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Knowledge Bases store and index the documents your agents reason over, with retrieval that’s queryable from anywhere."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Ingest documents, get back searchable, citable knowledge.",
+          "Project-scoped and token-gated.",
+          "Reachable from the REST API and the MCP server."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Curated sources your agents can search and cite",
+      "Ground answers in your documents, not the open web",
+      "Update the knowledge once — every agent sees it"
+    ]
+  },
+  "storage": {
+    "label": "Storage",
+    "kicker": "Manage storage",
+    "blurb": "Manage the storage behind your ecosystems — buckets, files, and data, with usage and access in clear view.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Storage is the durable layer under everything you build: object buckets, files, and structured data, all addressable over the API."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Buckets and files, project-scoped by default.",
+          "Usage and access visible at a glance.",
+          "Same API surface as the rest of the Hub."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Buckets, files, and data behind your ecosystems",
+      "Usage and access always in clear view",
+      "One storage layer shared by agents and apps alike"
+    ]
+  },
+  "storage-buckets": {
+    "label": "Buckets",
+    "kicker": "Storage",
+    "blurb": "Object buckets scoped to a project.",
+    "keyPoints": [
+      "Create, scope, and meter buckets.",
+      "Token-gated access per application."
+    ]
+  },
+  "storage-files": {
+    "label": "Files",
+    "kicker": "Storage",
+    "blurb": "Upload, serve, and manage files.",
+    "keyPoints": [
+      "Direct upload and signed reads.",
+      "Browse and manage from the Hub UI."
+    ]
+  },
+  "storage-usage": {
+    "label": "Usage",
+    "kicker": "Storage",
+    "blurb": "See what you’re storing and what it costs.",
+    "keyPoints": [
+      "Per-bucket usage and trends.",
+      "Rolls up to billing."
+    ]
+  },
+  "tools": {
+    "label": "Tools",
+    "kicker": "Reusable capabilities",
+    "blurb": "Reusable capabilities your agents can call — define a tool once and hand it to any persona.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Tools are the verbs your agents can use. Define them centrally, scope them to an ecosystem, and they’re available over the API and MCP."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Define a tool once, reuse it across personas.",
+          "Exposed over both the REST API and MCP.",
+          "Scoped and audited per application."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Define a capability once, hand it to any persona",
+      "Typed inputs and outputs your agents can trust",
+      "Share tools across teams and ecosystems"
+    ]
+  },
+  "sites": {
+    "label": "Sites",
+    "kicker": "Quick landing pages",
+    "blurb": "Spin up quick landing pages for what you build — no build step, just content and a URL.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Sites gives every project a fast public page: pick a template, drop in content, attach a domain."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Templated pages, live in minutes.",
+          "Attach a custom domain from Domains.",
+          "Crawlable, themed to the family look."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Spin up a landing page from content alone",
+      "No build step — edit it and it's live",
+      "Every site wired into your ecosystem's domains"
+    ]
+  },
+  "domains": {
+    "label": "Domains",
+    "kicker": "Custom domains",
+    "blurb": "Bring your own domains to everything you ship — one place to manage names across the whole ecosystem.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Domains manages custom hostnames across your sites, apps, and APIs — verification, DNS, and certificates handled."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Verify and attach domains across products.",
+          "Automatic certificates.",
+          "One inventory of every name you own."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Bring your own names to everything you ship",
+      "One place to manage DNS across the ecosystem",
+      "Point domains at sites, products, and apps"
+    ]
+  },
+  "authentication": {
+    "label": "Authentication",
+    "kicker": "Customer auth",
+    "blurb": "Authentication for the customers of your products — sign-in, sessions, and access you don’t have to build.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Authentication gives your apps a sign-in layer for end customers: providers, sessions, and access control, ready to wire in."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Drop-in sign-in for your customers.",
+          "Sessions and access shared across your apps.",
+          "Backed by the Hub’s identity model."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Sign-in, sessions, and access for your customers",
+      "OAuth and SSO without building it yourself",
+      "One identity across every product you ship"
+    ]
+  },
+  "connect": {
+    "label": "Connect",
+    "kicker": "Wire it up",
+    "blurb": "Wire your products to the world — devices, channels, and the signals that keep everything in sync."
+  },
+  "devices": {
+    "label": "Devices",
+    "kicker": "Connect devices",
+    "blurb": "Connect and manage the devices in your ecosystem — register hardware and reach it from your agents.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Devices registers the hardware your agents talk to, with identity and access that fit the rest of the Hub."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Register and group devices per project.",
+          "Reach them over the API and MCP.",
+          "Token-scoped access per application."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Register hardware into your ecosystem",
+      "Reach devices from your agents and apps",
+      "Track presence, health, and ownership"
+    ]
+  },
+  "notifications": {
+    "label": "Notifications",
+    "kicker": "Reach your users",
+    "blurb": "Send notifications across channels — let your agents and apps reach people where they are.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Notifications is one API for reaching users: email, push, and more, with delivery you can track."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "One API, many channels.",
+          "Triggered by your agents or your app.",
+          "Delivery status and history."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Reach people across email, SMS, and in-app channels",
+      "Let agents notify humans — with guardrails",
+      "Templates and delivery tracking built in"
+    ]
+  },
+  "dashboards": {
+    "label": "Dashboards",
+    "kicker": "See it all",
+    "blurb": "See everything in one glance — dashboards that pull your ecosystem’s signals into one view.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Dashboards compose the metrics and statuses across your products into pages you and your customers can watch."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Compose signals from across the Hub.",
+          "Share one view, or many.",
+          "Embeddable widgets and feeds."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Pull your ecosystem's signals into one view",
+      "Watch agents, apps, and infrastructure together",
+      "Share live views with your whole team"
+    ]
+  },
+  "community": {
+    "label": "Community",
+    "kicker": "Find your people",
+    "blurb": "Find people, news, and help around the ecosystem — the human side of building with agents."
+  },
+  "forums": {
+    "label": "Forums",
+    "kicker": "Discussion",
+    "blurb": "Forums and discussion for agentic developers — ask, answer, and share what you’re building.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "The community forums are where builders gather: questions, show-and-tell, and the conversations that don’t fit a docs page."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Threaded discussion across the ecosystem.",
+          "Tied to your Hub identity.",
+          "Searchable and crawlable."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Ask, answer, and share what you're building",
+      "Forums for every corner of the agentic stack",
+      "Where the Hub's builders compare notes"
+    ]
+  },
+  "communities": {
+    "label": "Communities",
+    "kicker": "Build communities",
+    "blurb": "Build and run your own communities — spaces for the people around your products.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Communities lets you stand up dedicated spaces for your own users — membership, posts, and moderation, on your terms."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Spin up a space per product or audience.",
+          "Membership tied to your customers.",
+          "Moderation and roles built in."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Spaces for the people around your products",
+      "Members, moderation, and discussion built in",
+      "Run one community or a network of them"
+    ]
+  },
+  "support": {
+    "label": "Support",
+    "kicker": "Get unstuck",
+    "blurb": "Get unstuck, fast — support for everything you build on the Agentic Developer Hub.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Support is the front door for help: search known answers, then open a ticket that lands with the right team."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Searchable answers first, tickets second.",
+          "Context from your account travels with the ticket.",
+          "Status visible end to end."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Get unstuck on anything you build on the Hub",
+      "Search past answers or open a request",
+      "Backed by the team that builds the platform"
+    ]
+  },
+  "news": {
+    "label": "News",
+    "kicker": "What's new",
+    "blurb": "What’s new across the Hub — releases, changes, and stories from the ecosystem.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "News is the running record of the ecosystem: launches, changelog highlights, and the occasional deeper story."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Releases and changes in one feed.",
+          "Subscribe by RSS or email.",
+          "Linked to the products it’s about."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Releases and changes across the whole Hub",
+      "Stories from the ecosystem's builders",
+      "The changelog behind every site in the family"
+    ]
+  },
+  "sell": {
+    "label": "Sell",
+    "kicker": "Make it a business",
+    "blurb": "Turn what you build into a business — products, the customers who use them, and the billing behind it."
+  },
+  "products": {
+    "label": "Products",
+    "kicker": "Define products",
+    "blurb": "Define your products, showcase them, and wire them up to the rest of your Agentic Developer Hub components.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Products is where what you build becomes something you offer: define it, describe it, and connect it to billing and customers."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Describe a product once, reuse it everywhere.",
+          "Connect it to billing plans and customers.",
+          "Public, crawlable product pages."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Define and showcase what you sell",
+      "Wire products to customers, billing, and auth",
+      "One catalog across your whole ecosystem"
+    ]
+  },
+  "customers": {
+    "label": "Customers",
+    "kicker": "Manage customers",
+    "blurb": "Manage the customers of your products — profiles, access, and lifecycle — across everything you build on the Hub.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Customers is one record for every person who uses what you ship: identity, the products they use, and where they are in their lifecycle."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Every customer in one synced record.",
+          "Access and roles that follow them across products.",
+          "Lifecycle and retention on one timeline."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Profiles, access, and lifecycle in one place",
+      "Shared customer records across your products",
+      "See every relationship your ecosystem holds"
+    ]
+  },
+  "customer-profiles": {
+    "label": "Profiles",
+    "kicker": "Customers",
+    "blurb": "Unified profiles for the people who use your products.",
+    "keyPoints": [
+      "Identity, contact, and product usage in one record.",
+      "Synced across your ecosystem."
+    ]
+  },
+  "customer-access": {
+    "label": "Access & roles",
+    "kicker": "Customers",
+    "blurb": "Grant, scope, and revoke access per product.",
+    "keyPoints": [
+      "Role-based permissions per product.",
+      "Access that follows the customer everywhere."
+    ]
+  },
+  "customer-lifecycle": {
+    "label": "Lifecycle",
+    "kicker": "Customers",
+    "blurb": "See sign-ups, activity, and churn on one timeline.",
+    "keyPoints": [
+      "Know who’s thriving and who needs a nudge.",
+      "Retention signals in plain view."
+    ]
+  },
+  "billing": {
+    "label": "Billing",
+    "kicker": "Get paid",
+    "blurb": "Bill the customers of your products — plans, usage, and invoices, wired into everything else.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Billing turns usage into revenue: define plans, meter usage, and send invoices, all connected to Products and Customers."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Plans, metered usage, and invoices.",
+          "Connected to Products and Customers automatically.",
+          "Usage rolls up from across the Hub."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Plans, usage, and invoices wired to your products",
+      "Bill customers without building a billing stack",
+      "Revenue in view across the ecosystem"
+    ]
+  },
+  "plan": {
+    "label": "Plan",
+    "kicker": "Organize the work",
+    "blurb": "Organize the work behind your agentic software — one place for projects, plans, and tasks."
+  },
+  "projects": {
+    "label": "Projects",
+    "kicker": "Plan the work",
+    "blurb": "Plan, organize, and track the work behind your agentic software — projects, plans, and tasks, wired into the Hub.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Projects is the home for the work itself: bundle the features a product uses, then plan and track the tasks that move it forward."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "A project bundles the features it uses — opt out of what you don’t need.",
+          "Plans and tasks live next to the thing they build.",
+          "Many applications can share one project."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Plan and track the work behind your software",
+      "Humans, agents, and teams on one board",
+      "Projects wired into the Hub's records"
+    ]
+  },
+  "project-plans": {
+    "label": "Plans",
+    "kicker": "Projects",
+    "blurb": "Lightweight plans for what you’re building.",
+    "keyPoints": [
+      "Plans next to the project they belong to.",
+      "Shareable with your team."
+    ]
+  },
+  "project-tasks": {
+    "label": "Tasks",
+    "kicker": "Projects",
+    "blurb": "Track the work, item by item.",
+    "keyPoints": [
+      "Tasks tied to a project.",
+      "Status visible at a glance."
+    ]
+  },
+  "narratives": {
+    "label": "Narratives",
+    "kicker": "Tell the story",
+    "blurb": "Turn your projects’ real history into a living story — gather the git history, docs, and notes across everything you’ve built, and let the Hub synthesize the narrative.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Narratives reads the trail you’ve already left — commits, docs, and notes across your projects — and synthesizes it into a story you can actually show: the journey, the pivots, the elevator pitch, and the decisions behind the work."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Gathers git history, docs, and memories across every project — no extra writing.",
+          "Synthesizes a journey thread, elevator pitch, and landing copy on demand.",
+          "A living site that refreshes as the work moves forward."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Turn real project history into a living story",
+      "Gathers git history, docs, and notes automatically",
+      "Tell stakeholders what actually happened"
+    ]
+  },
+  "hire": {
+    "label": "Hire",
+    "kicker": "Get expert help",
+    "blurb": "Bring in expertise to go faster — help from the people who built the ecosystem."
+  },
+  "consulting": {
+    "label": "Consulting",
+    "kicker": "Let us help",
+    "blurb": "Expert consulting in agentic development — adoption roadmaps and custom tooling, from the creators of the Hub.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Consulting brings the team behind the Hub to your team: strategy for adopting agentic development, and custom tooling built on proven patterns."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Agentic-adoption roadmaps for engineering teams.",
+          "Custom pipelines, persona systems, and toolkits.",
+          "From the people who built the ecosystem."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Adoption roadmaps from the creators of the Hub",
+      "Custom tooling built for your stack",
+      "Hands-on help from first agent to production"
+    ],
+    "ctas": [
+      {
+        "label": "Get in touch",
+        "href": "mailto:hello@fishlamp.com",
+        "external": true
+      }
+    ]
+  },
+  "teamregistry": {
+    "label": "Team Registry",
+    "kicker": "Publish your teams",
+    "blurb": "Register agentic teams and give each one a profile the whole ecosystem can find, use, and trust.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "The Team Registry is the public home for agentic teams: register a team once, give it a profile, and make it discoverable and usable from anywhere in the ecosystem."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "A claimable public profile for every team you register.",
+          "Discoverable by what a team does, so the right one is easy to find.",
+          "Usable in place — point an application at a team and go."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Give every agentic team a public profile",
+      "Discover teams the whole ecosystem can trust",
+      "Track versions as teams evolve"
+    ]
+  },
+  "teambuilder": {
+    "label": "Team Builder",
+    "kicker": "Assemble your teams",
+    "blurb": "Configure and assemble agentic teams for any purpose — pick the personas, wire their roles, and ship a team that works together.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Team Builder is where a team comes together: choose the personas, define how they collaborate, and configure a team for whatever you’re trying to get done."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Compose a team from personas you already trust.",
+          "Define roles, hand-offs, and how the team coordinates.",
+          "Publish a finished team straight to the Team Registry."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Pick the personas, wire the roles, ship a team",
+      "Compose specialists into teams that work together",
+      "Register finished teams for anyone to run"
+    ]
+  },
+  "codereviews": {
+    "label": "Code Reviews",
+    "kicker": "Reviews in the open",
+    "blurb": "See the code reviews the Agentic Development Team performs — findings, rationale, and fixes, out in the open.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Code Reviews publishes the reviews the Agentic Development Team runs: what was flagged, why it mattered, and how it was resolved — a public record of the work getting better."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Every review with its findings and rationale.",
+          "Browse by repository, severity, or outcome.",
+          "A transparent record of how quality improves over time."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Watch the Agentic Development Team review code in the open",
+      "Findings, rationale, and fixes — fully visible",
+      "Learn how agents reason about real changes"
+    ]
+  },
+  "personabuilder": {
+    "label": "Persona Builder",
+    "kicker": "Craft your personas",
+    "blurb": "Configure agentic personas from the ground up — identity, capabilities, and voice — ready to register on the Agentic Persona Registry.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Persona Builder is the workshop for a single agent: shape its identity, capabilities, and voice, then register the finished persona on the Agentic Persona Registry for everyone to use."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "Configure identity, capabilities, model preferences, and voice in one place.",
+          "Preview a persona before you publish it.",
+          "Register straight to the Agentic Persona Registry."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Craft identity, capabilities, and voice from scratch",
+      "Test a persona before you publish it",
+      "Register the result on the Agentic Persona Registry"
+    ]
+  },
+  "research": {
+    "label": "Research",
+    "kicker": "Capture what you learn",
+    "blurb": "Store and review the research your people and your agents produce — one searchable home for what you’ve learned.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Research is the shared notebook for the ecosystem: capture findings from people and agents alike, then revisit, review, and build on them."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "One home for research from people and agents.",
+          "Searchable, citable, and easy to revisit.",
+          "Review and annotate findings as a team."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "One searchable home for what your people and agents learn",
+      "Capture findings as you work — review them as a team",
+      "Feed curated research straight into knowledge bases"
+    ]
+  },
+  "consultants": {
+    "label": "Consultants",
+    "kicker": "Find expert help",
+    "blurb": "Find registered agentic-development consultants — the right expertise to move your project forward, on demand.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "Consultants is the directory of vetted agentic-development experts: browse registered consultants, see what they specialize in, and reach the right person for the work."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "A searchable directory of registered consultants.",
+          "Profiles that show specialties and track record.",
+          "Connect directly when you find the right fit."
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Registered experts in agentic development",
+      "Match expertise to your project, on demand",
+      "Every consultant profiled and vetted"
+    ]
+  }
+}

@@ -10,40 +10,209 @@
     "**/*.css"
   ],
   "files": [
-    "dist"
+    "dist",
+    "src/styles",
+    "sources.css"
   ],
+  "comment:exports": "THE CANONICAL RATIONALE — every sibling's `comment:exports` says \"see @agentic-toolkit/adh for the full rationale\" and means this key. (1) `development` → src so `next dev` and vitest compile this package's TypeScript in-process: HMR on a source edit, and no `pnpm build` between editing a component here and seeing it in a consuming site. A production build (NODE_ENV=production) does not match the condition and falls through to `import` → dist, which is what ships. (2) It is SELF-DEGRADING: a bundler that ignores unknown conditions just takes `import`/dist, so the worst case is the pre-condition behavior (rebuild to see a change), never a broken resolve — which is why it is safe to carry in every package. (3) `types` stays first and always points at dist: editors and `tsc` read the built .d.ts, so a consumer's typecheck never depends on this package's src being compilable in the consumer's own tsconfig. (4) The pairing is load-bearing in BOTH directions — a src file the prod `import` condition points at but tsup never built is invisible in dev and a hard resolve failure in prod, so entry globs and this map must name the same files and extensions (an exports map has no extension fallback). verify-shared-dist-exports.py gates that link. (5) `./sources.css` is the Tailwind @source self-registration a host @imports once; see sources.css itself for why it is package-wide.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
     "./server": {
       "types": "./dist/server.d.ts",
+      "development": "./src/server.ts",
       "import": "./dist/server.js"
     },
     "./header": {
       "types": "./dist/header/index.d.ts",
+      "development": "./src/header/index.ts",
       "import": "./dist/header/index.js"
+    },
+    "./header/recents": {
+      "types": "./dist/header/recents.d.ts",
+      "development": "./src/header/recents.ts",
+      "import": "./dist/header/recents.js"
+    },
+    "./header-auth": {
+      "types": "./dist/header/header-auth.d.ts",
+      "development": "./src/header/header-auth.ts",
+      "import": "./dist/header/header-auth.js"
+    },
+    "./flags": {
+      "types": "./dist/flags/index.d.ts",
+      "development": "./src/flags/index.ts",
+      "import": "./dist/flags/index.js"
     },
     "./footer": {
       "types": "./dist/footer/index.d.ts",
+      "development": "./src/footer/index.ts",
       "import": "./dist/footer/index.js"
+    },
+    "./layout": {
+      "types": "./dist/layout/index.d.ts",
+      "development": "./src/layout/index.ts",
+      "import": "./dist/layout/index.js"
     },
     "./legal": {
       "types": "./dist/legal/index.d.ts",
+      "development": "./src/legal/index.ts",
       "import": "./dist/legal/index.js"
     },
     "./themes": {
       "types": "./dist/themes/index.d.ts",
+      "development": "./src/themes/index.ts",
       "import": "./dist/themes/index.js"
+    },
+    "./themes/DbThemeApplier": {
+      "types": "./dist/themes/DbThemeApplier.d.ts",
+      "development": "./src/themes/DbThemeApplier.tsx",
+      "import": "./dist/themes/DbThemeApplier.js"
+    },
+    "./telemetry": {
+      "types": "./dist/telemetry/index.d.ts",
+      "development": "./src/telemetry/index.ts",
+      "import": "./dist/telemetry/index.js"
+    },
+    "./telemetry/retry": {
+      "types": "./dist/telemetry/retry.d.ts",
+      "development": "./src/telemetry/retry.ts",
+      "import": "./dist/telemetry/retry.js"
+    },
+    "./telemetry/report-error": {
+      "types": "./dist/telemetry/report-error.d.ts",
+      "development": "./src/telemetry/report-error.ts",
+      "import": "./dist/telemetry/report-error.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "development": "./src/auth/index.ts",
+      "import": "./dist/auth/index.js"
     },
     "./debug": {
       "types": "./dist/debug/index.d.ts",
+      "development": "./src/debug/index.ts",
       "import": "./dist/debug/index.js"
     },
-    "./styles.css": "./dist/styles/adh-components.css",
+    "./debug-env": {
+      "types": "./dist/debug-env/index.d.ts",
+      "development": "./src/debug-env/index.ts",
+      "import": "./dist/debug-env/index.js"
+    },
+    "./help": {
+      "types": "./dist/help/index.d.ts",
+      "development": "./src/help/index.ts",
+      "import": "./dist/help/index.js"
+    },
+    "./help/HelpWindow": {
+      "types": "./dist/help/HelpWindow.d.ts",
+      "development": "./src/help/HelpWindow.tsx",
+      "import": "./dist/help/HelpWindow.js"
+    },
+    "./help/surface": {
+      "types": "./dist/help/surface.d.ts",
+      "development": "./src/help/surface.ts",
+      "import": "./dist/help/surface.js"
+    },
+    "./help/HelpMasterDetail": {
+      "types": "./dist/help/HelpMasterDetail.d.ts",
+      "development": "./src/help/HelpMasterDetail.tsx",
+      "import": "./dist/help/HelpMasterDetail.js"
+    },
+    "./docs": {
+      "types": "./dist/docs/index.d.ts",
+      "development": "./src/docs/index.ts",
+      "import": "./dist/docs/index.js"
+    },
+    "./settings-dialogs": {
+      "types": "./dist/settings-dialogs/index.d.ts",
+      "development": "./src/settings-dialogs/index.ts",
+      "import": "./dist/settings-dialogs/index.js"
+    },
+    "./persona-chat": {
+      "types": "./dist/persona-chat/index.d.ts",
+      "development": "./src/persona-chat/index.ts",
+      "import": "./dist/persona-chat/index.js"
+    },
+    "./visitor-chat": {
+      "types": "./dist/visitor-chat/index.d.ts",
+      "development": "./src/visitor-chat/index.ts",
+      "import": "./dist/visitor-chat/index.js"
+    },
+    "./concepts": {
+      "types": "./dist/concepts/index.d.ts",
+      "development": "./src/concepts/index.ts",
+      "import": "./dist/concepts/index.js"
+    },
+    "./concepts/participating": {
+      "types": "./dist/concepts/participating.d.ts",
+      "development": "./src/concepts/participating.ts",
+      "import": "./dist/concepts/participating.js"
+    },
+    "./footer/FooterChatInner": {
+      "types": "./dist/footer/FooterChatInner.d.ts",
+      "development": "./src/footer/FooterChatInner.tsx",
+      "import": "./dist/footer/FooterChatInner.js"
+    },
+    "./graph": {
+      "types": "./dist/graph/index.d.ts",
+      "development": "./src/graph/index.ts",
+      "import": "./dist/graph/index.js"
+    },
+    "./graph/ConceptGraphClient": {
+      "types": "./dist/graph/ConceptGraphClient.d.ts",
+      "development": "./src/graph/ConceptGraphClient.tsx",
+      "import": "./dist/graph/ConceptGraphClient.js"
+    },
+    "./details": {
+      "types": "./dist/details/index.d.ts",
+      "development": "./src/details/index.ts",
+      "import": "./dist/details/index.js"
+    },
+    "./details/DetailsRail": {
+      "types": "./dist/details/DetailsRail.d.ts",
+      "development": "./src/details/DetailsRail.tsx",
+      "import": "./dist/details/DetailsRail.js"
+    },
+    "./theme-editor": {
+      "types": "./dist/theme-editor/index.d.ts",
+      "development": "./src/theme-editor/index.ts",
+      "import": "./dist/theme-editor/index.js"
+    },
+    "./debug-console": {
+      "types": "./dist/debug-console/index.d.ts",
+      "development": "./src/debug-console/index.tsx",
+      "import": "./dist/debug-console/index.js"
+    },
+    "./marketing": {
+      "types": "./dist/marketing/index.d.ts",
+      "development": "./src/marketing/index.ts",
+      "import": "./dist/marketing/index.js"
+    },
+    "./marketing/LandingHeroGate": {
+      "types": "./dist/marketing/LandingHeroGate.d.ts",
+      "development": "./src/marketing/LandingHeroGate.tsx",
+      "import": "./dist/marketing/LandingHeroGate.js"
+    },
+    "./marketing/SiteWordmark": {
+      "types": "./dist/marketing/SiteWordmark.d.ts",
+      "development": "./src/marketing/SiteWordmark.tsx",
+      "import": "./dist/marketing/SiteWordmark.js"
+    },
+    "./marketing/MarketingSiteHeader": {
+      "types": "./dist/marketing/MarketingSiteHeader.d.ts",
+      "development": "./src/marketing/MarketingSiteHeader.tsx",
+      "import": "./dist/marketing/MarketingSiteHeader.js"
+    },
+    "./styles.css": "./dist/styles/adh-site.css",
+    "./sources.css": "./sources.css",
     "./legal.css": "./dist/styles/adh-legal.css",
-    "./debug.css": "./dist/styles/adh-debug.css"
+    "./debug.css": "./dist/styles/adh-debug.css",
+    "./help.css": "./dist/styles/adh-help.css",
+    "./docs.css": "./dist/styles/adh-docs.css",
+    "./concepts.css": "./dist/styles/adh-concepts.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",
@@ -51,17 +220,29 @@
     "build:css": "node ../../copy-css.mjs",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@agentic-toolkit/adh-registry": "workspace:*",
+    "@agentic-toolkit/adh-site-config": "workspace:*",
+    "@agentic-toolkit/api-explorer": "workspace:*",
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/bitbag": "workspace:*",
+    "@agentic-toolkit/markdown": "workspace:*",
     "@agentic-toolkit/themes": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
+    "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-slot": "^1.1.1",
+    "@sentry/react": "^10.57.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
+    "monaco-editor": "^0.55.1",
+    "motion": "^12.40.0",
+    "posthog-js": "^1.386.1",
     "tailwind-merge": "^2.6.0"
   },
   "peerDependencies": {
@@ -69,12 +250,20 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
+  "//devDependencies": "@agenticdevelopertoolkit/themes is a TEST ORACLE, deliberately not a runtime dep: only src/__tests__/footerDock.test.tsx names it, rendering <ThemeStyle> to compute the CSS a theme should produce. This package's own src reaches theme vocabulary through @agentic-toolkit/bitbag's re-export, which is what keeps the persona toolkit out of the shipped graph — that indirection is the layering, not a workaround, and must stay. `link:` because that toolkit is a SEPARATE pnpm workspace — workspace:* cannot reach it. The target is THIS repo's own submodule at external/agenticdevelopertoolkit, so it resolves in any recursive clone; it used to climb out of the repo to a sibling checkout and resolved only by luck of the consumer's directory layout. Depth is one shallower than bitbag's identical entries, which sit under packages/features/.",
+  "comment:exports./styles.css": "It resolves to adh-site.css, NOT adh-components.css: the site sheet's first line is `@import \"./adh-components.css\"`, so this one subpath still delivers both halves in the order they need (primitives first — several site rules beat a primitive rule at equal specificity and depend on source order). The two sheets arrived in one package from opposite sides of a package boundary that no longer exists; keeping them as separate FILES keeps that layering legible without asking 44 sites to import twice. This note lives at the package.json ROOT, not inside `exports`, because Node rejects an exports map that mixes `.`-prefixed keys with non-prefixed ones (ERR_INVALID_PACKAGE_CONFIG) — a comment key in there is a load-time crash for every consumer, not a comment.",
+  "comment:devDependencies.next": "16, not the 15 this package used to build against — the merge brought in the former `@adh/chrome`, which was always on 16, and its details/metadata.ts spreads a `Metadata` produced by @agentic-toolkit/adh-registry (also 16). Next 15 and 16 disagree on that type (15's `metadataBase` admits a string, 16's does not), so building this package against 15 while a sibling builds against 16 fails the spread with TS2322. `peerDependencies.next` stays `>=15.0.0`: the floor is what a CONSUMER must have, and nothing here needs a 16-only runtime — this pin only decides whose .d.ts we typecheck against, and it has to be the one the 44 sites ship.",
   "devDependencies": {
+    "@agenticdevelopertoolkit/themes": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/themes",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
-    "next": "^15.1.0",
+    "jsdom": "^29.0.2",
+    "next": "^16.2.9",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
   }
 }

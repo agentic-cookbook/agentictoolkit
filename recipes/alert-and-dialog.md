@@ -33,7 +33,7 @@ references: []
 ## Overview
 
 The canonical styled alert / confirm / modal-dialog treatment for ADH. It is
-realized by evolving `@adh-shared/ui`'s existing `AlertModal`
+realized by evolving `@agentic-toolkit/ui`'s existing `AlertModal`
 (`websites/shared/ui/src/components/alert-modal.tsx`) **backward-compatibly** —
 current call-sites (`LoginCard`, `ProviderLinkHandler`, `SsoCallback`, admin
 `authentication/page.tsx`, tests) keep working. Larger modal dialogs (e.g. the hub

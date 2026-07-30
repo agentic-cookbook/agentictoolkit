@@ -120,7 +120,7 @@ function AuthCallbackInner({
  * redirects to the stashed returnTo (or `redirectTo`). A site's
  * `app/auth/callback/page.tsx` is just:
  *
- *   import { AuthCallback } from '@adh-shared/auth'
+ *   import { AuthCallback } from '@agentic-toolkit/auth'
  *   export default function Page() { return <AuthCallback /> }
  */
 export function AuthCallback({

@@ -29,13 +29,13 @@ references: []
 
 ## Overview
 
-The shared `Button` in `@adh-shared/ui` — a Base UI button primitive dressed in
+The shared `Button` in `@agentic-toolkit/ui` — a Base UI button primitive dressed in
 the shadcn token vocabulary so the whole ~40-site platform renders one button.
 It exposes seven visual `variant`s × a size scale, the standard disabled/focus/
 invalid states, and a **pointer-driven pressed state** that reflects a real press
 the way CSS `:active` cannot.
 
-Two exports ship from `@adh-shared/ui/components/button`:
+Two exports ship from `@agentic-toolkit/ui/components/button`:
 
 - `buttonVariants` — the `cva` styling function. It MUST stay callable from
   server components (e.g. `<Link className={buttonVariants()}/>`), so `button.tsx`
@@ -185,7 +185,7 @@ telemetry belong to the consumer's handler, not the button.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Keyboard operable + visible focus | pass | accessibility |
 
 ## Change History

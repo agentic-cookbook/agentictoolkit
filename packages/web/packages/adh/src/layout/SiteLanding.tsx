@@ -1,0 +1,112 @@
+import type { CSSProperties, ReactNode } from 'react'
+
+export type SiteLandingProps = {
+  /** Small uppercase mono line above the title (e.g. the site's tagline). */
+  eyebrow: string
+  /** Non-accented lead of the headline. Defaults to "Agentic Developer". */
+  titleLead?: string
+  /** The accented (gold, italic) word(s) ending the headline. */
+  titleAccent: string
+  /** Body copy under the headline. */
+  blurb: ReactNode
+}
+
+// Renders against the shared theme tokens, but every token carries a fallback so
+// the hero looks right even before/without <AdhThemeStyle/> (consumer sites keep
+// no local palette).
+const SERIF = 'var(--font-serif, ui-serif, Georgia, serif)'
+const SANS = 'var(--font-sans, ui-sans-serif, system-ui, sans-serif)'
+const MONO = 'var(--font-mono, ui-monospace, monospace)'
+const TEXT = 'var(--color-text-primary, #e8e6e3)'
+const MUTED = 'var(--color-text-secondary, #8a8a9a)'
+const ACCENT = 'var(--color-accent, #c4a35a)'
+const BORDER = 'var(--color-border, #2a2a35)'
+
+const wrap: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center',
+  padding: '5rem 1.5rem',
+  fontFamily: SERIF,
+  color: TEXT,
+}
+
+/**
+ * The shared landing hero for the ADH family's sites. Renders entirely against
+ * the shared theme tokens injected by <AdhThemeStyle/> (--color-*, --font-*), so
+ * consumer sites need no local palette. One source of truth for all family
+ * landings — see websites/scripts/scaffold-sites.py.
+ *
+ * The hero carries no "placeholder / coming soon" marker: the family's pre-launch
+ * status is stated once, by the shared header's "Preview Release" badge
+ * (DEV_PREVIEW_BADGES), so repeating it per landing is noise.
+ */
+export function SiteLanding({
+  eyebrow,
+  titleLead = 'Agentic Developer',
+  titleAccent,
+  blurb,
+}: SiteLandingProps) {
+  return (
+    <main style={wrap}>
+      <div style={{ maxWidth: 720 }}>
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: '0.7rem',
+            letterSpacing: '0.24em',
+            textTransform: 'uppercase',
+            color: MUTED,
+            marginBottom: '1.75rem',
+          }}
+        >
+          {eyebrow}
+        </div>
+
+        <h1
+          style={{
+            fontSize: 'clamp(2.6rem, 6vw, 4.5rem)',
+            lineHeight: 1.04,
+            letterSpacing: '-0.02em',
+            fontWeight: 400,
+            margin: '0 0 1.5rem',
+          }}
+        >
+          {titleLead}{' '}
+          <span style={{ color: ACCENT, fontStyle: 'italic' }}>
+            {titleAccent}
+          </span>
+        </h1>
+
+        <p
+          style={{
+            fontFamily: SANS,
+            fontSize: '1.1rem',
+            lineHeight: 1.7,
+            color: MUTED,
+            margin: '0 auto 2.75rem',
+            maxWidth: 560,
+          }}
+        >
+          {blurb}
+        </p>
+
+        {/* Decorative closer for the hero — with the note gone it separates the
+            hero from whatever the page stacks below it (e.g. StorySections). */}
+        <div
+          role="separator"
+          aria-hidden="true"
+          style={{
+            height: 1,
+            background:
+              `linear-gradient(to right, transparent, ${BORDER}, transparent)`,
+            margin: '1rem 0 0',
+          }}
+        />
+      </div>
+    </main>
+  )
+}

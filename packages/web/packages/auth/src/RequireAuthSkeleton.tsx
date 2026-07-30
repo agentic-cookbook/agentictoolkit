@@ -18,8 +18,9 @@ const staggerIndex = (i: number): CSSProperties => ({ ['--i']: i + 2 }) as CSSPr
  * that opts out of optimistic restore) instead of a bare spinner, so the page
  * reads as "loading" rather than blank.
  *
- * Styles live in @adh-shared/adh's chrome CSS (.adh-auth-skeleton), which every
- * gated site imports — theme-adaptive via the shared --color-* tokens, with an
+ * Styles live in this package's own stylesheet (./styles/auth.css, the
+ * `./styles.css` export) as .adh-auth-skeleton — theme-adaptive via the host's
+ * shared --color-* tokens, with an
  * accent-tinted shimmer that honors prefers-reduced-motion. role="status" + the
  * visually-hidden "Loading…" text name the region for assistive tech; the
  * decorative blocks are aria-hidden.

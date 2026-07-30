@@ -9,12 +9,12 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:files": "`src/styles` ships ALONGSIDE dist: the `./styles/globals.css` export resolves to `./src/styles/globals.css` unconditionally (prod too), and `pnpm deploy`/`npm pack` only include listed paths. See @adh-shared/adh comment:files for the full rationale.",
+  "comment:files": "`src/styles` ships ALONGSIDE dist: the `./styles/globals.css` export resolves to `./src/styles/globals.css` unconditionally (prod too), and `pnpm deploy`/`npm pack` only include listed paths. See @agentic-toolkit/adh comment:files for the full rationale.",
   "files": [
     "dist",
     "src/styles"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Self-degrading if the bundler ignores it. See @adh-shared/adh for the full rationale. Wildcards: components/* and blocks/* are all .tsx (blocks/index.ts is served by the exact ./blocks key, never the wildcard).",
+  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Self-degrading if the bundler ignores it. See @agentic-toolkit/adh for the full rationale. Wildcards: components/* and blocks/* are all .tsx (blocks/index.ts is served by the exact ./blocks key, never the wildcard).",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

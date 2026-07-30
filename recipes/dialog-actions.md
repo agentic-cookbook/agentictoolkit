@@ -33,7 +33,7 @@ references: []
 
 ## Overview
 
-`DialogActions` (`@adh-shared/ui`) is the standard footer for a dialog or alert:
+`DialogActions` (`@agentic-toolkit/ui`) is the standard footer for a dialog or alert:
 a cancel button (optional) and a confirm button, laid out per the rule in
 **alert-and-dialog §Layout**, which resolves to one of two shapes according to how
 much room the container gives them:
@@ -50,7 +50,7 @@ The layout engine therefore resolves equal-vs-natural during first layout, and t
 first painted frame is the final one. The component also sets initial focus on
 mount (defaulting to the safe button) and renders a spinner while `busy`.
 
-One symbol ships from `@adh-shared/ui/components/dialog-actions`: the
+One symbol ships from `@agentic-toolkit/ui/components/dialog-actions`: the
 `DialogActions` component. There is no exported layout helper — see *Design
 Decisions*.
 
@@ -245,7 +245,7 @@ belongs to the host's `onConfirm`/`onCancel` handlers, not to the component.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (uses shared `Button`, no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (uses shared `Button`, no bespoke UI) | pass | project-guidelines UI |
 | Keyboard operable + deliberate initial focus + `role="status"` busy | pass | accessibility |
 
 ## Change History

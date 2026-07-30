@@ -3,6 +3,12 @@
    the on-brand dark/gold palette so the pages render correctly on any host
    (app, admin, docs) without depending on the full component stylesheet. */
 
+/* Tailwind @source registration for this package. 43 sites import this stylesheet, and
+ * legal/ carries its own className literals, so a host that imports ONLY legal.css must
+ * still get the scan — the rules below are hand-written CSS and would otherwise be the
+ * whole of what it receives. See the package-root sources.css. */
+@import "../../sources.css";
+
 .adh-legal {
   flex: 1;
   padding: 2rem;
@@ -51,7 +57,7 @@
   margin: 0 auto;
   padding: 1rem 0 4rem;
   font-family: var(--font-serif, ui-serif, Georgia, serif);
-  color: #c8c6c0;
+  color: var(--adh-legal-prose, #c8c6c0);
   line-height: 1.65;
   font-size: 1.05rem;
 }
@@ -80,7 +86,7 @@
   font-size: 1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #e8e6e3;
+  color: var(--color-text-primary, #e8e6e3);
   margin: 1.5rem 0 0.5rem;
 }
 
@@ -100,7 +106,7 @@
 .adh-legal-doc a {
   color: var(--color-accent, #c4a35a);
   text-decoration: underline;
-  text-decoration-color: rgba(196, 163, 90, 0.4);
+  text-decoration-color: color-mix(in srgb, var(--color-accent, #c4a35a) 40%, transparent);
   text-underline-offset: 3px;
 }
 .adh-legal-doc a:hover {
@@ -108,6 +114,6 @@
 }
 
 .adh-legal-doc strong {
-  color: #e8e6e3;
+  color: var(--color-text-primary, #e8e6e3);
   font-weight: 600;
 }

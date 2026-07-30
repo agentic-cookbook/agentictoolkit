@@ -17,6 +17,18 @@ const external = [
   // Externalized so the consuming Next app bundles it (and code-splits the
   // dynamic import); keeps a heavy wasm/langs payload out of dist and lazy.
   'shiki',
+  // lib/getEndpoint.ts and lib/highlight.ts both hold top-level mutable state
+  // (`_tags`/`_byTag` lazy-cache Maps; `highlighterPromise`) and are imported by
+  // BOTH the client barrel (ApiBrowser.tsx / index.ts) and the server entry
+  // (ApiReferenceShell.tsx / server.ts). This package deliberately builds those
+  // two as SEPARATE, non-shared chunk graphs (see the comment on the two-build
+  // array below), so without this, each graph would inline its own private copy
+  // of that state — same shape as @agentic-toolkit/adh's flags/telemetry/
+  // DbThemeApplier preserved imports. Preserved import ⇒ one copy per resolving
+  // bundler (the consumer's, for the client half; Node's module cache, for the
+  // server half), never a silent per-entry fork.
+  '@agentic-toolkit/api-explorer/lib/getEndpoint',
+  '@agentic-toolkit/api-explorer/lib/highlight',
 ]
 
 const shared = {
@@ -55,6 +67,10 @@ export default defineConfig([
       // directly in prod-like CI runs, and the package.json `exports` map's
       // `import` condition points at dist.
       'generated/endpoints.generated': 'src/generated/endpoints.generated.ts',
+      // Their own entries so the `external` preserved-import above resolves to a
+      // real built file — see that comment for why these can't stay inlined.
+      'lib/getEndpoint': 'src/lib/getEndpoint.ts',
+      'lib/highlight': 'src/lib/highlight.ts',
     },
     clean: true,
   },

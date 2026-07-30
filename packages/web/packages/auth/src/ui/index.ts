@@ -1,9 +1,10 @@
 'use client'
 
-// The adh-chrome header family (SiteHeader, MarketingSiteHeader, header-auth)
-// deliberately does NOT live here: HeaderAuthState is derived from
-// @adh-shared/adh's AdhHeaderAuthProps so it can't drift from the header's
-// contract, which pins those modules to the @adh-shared/auth shim package.
+// The adh-chrome header family (SiteHeader, MarketingSiteHeader) deliberately does
+// NOT live here: it resolves adh's own 45-site registry, so it belongs to adh's app
+// tier (@agentic-toolkit/adh). The generic half — the header primitives and the pluggable
+// auth-source contract whose HeaderAuthState is derived from AdhHeaderAuthProps, so
+// it can't drift from the header's contract — lives in @agentic-toolkit/adh.
 export { LoginCard } from './LoginCard'
 export type { LoginCardProps } from './LoginCard'
 export { SignupCard } from './SignupCard'

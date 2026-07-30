@@ -3,177 +3,26 @@
 "use client";
 
 // src/header/AdhHeader.tsx
-import Link3 from "next/link";
+import "react";
 
 // src/header/AvatarMenu.tsx
 import Link2 from "next/link";
 import { usePathname as usePathname2 } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
-
-// src/components/ui/avatar.tsx
-import * as React from "react";
-import * as AvatarPrimitive from "@radix-ui/react-avatar";
-import { jsx } from "react/jsx-runtime";
-function joinClasses(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-var Avatar = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  AvatarPrimitive.Root,
-  {
-    ref,
-    className: joinClasses("adh-avatar", className),
-    ...props
-  }
-));
-Avatar.displayName = AvatarPrimitive.Root.displayName;
-var AvatarImage = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  AvatarPrimitive.Image,
-  {
-    ref,
-    className: joinClasses("adh-avatar__image", className),
-    ...props
-  }
-));
-AvatarImage.displayName = AvatarPrimitive.Image.displayName;
-var AvatarFallback = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  AvatarPrimitive.Fallback,
-  {
-    ref,
-    className: joinClasses("adh-avatar__fallback", className),
-    ...props
-  }
-));
-AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
-
-// src/components/ui/dropdown-menu.tsx
-import * as React2 from "react";
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronRight, Circle } from "lucide-react";
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
-function joinClasses2(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-var DropdownMenu = DropdownMenuPrimitive.Root;
-var DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
-var DropdownMenuSubTrigger = React2.forwardRef(({ className, inset, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.SubTrigger,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__sub-trigger",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props,
-    children: [
-      children,
-      /* @__PURE__ */ jsx2(ChevronRight, { className: "adh-dropdown-menu__sub-trigger-chevron" })
-    ]
-  }
-));
-DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
-var DropdownMenuSubContent = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.SubContent,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-));
-DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
-var DropdownMenuContent = React2.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsx2(DropdownMenuPrimitive.Portal, { children: /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Content,
-  {
-    ref,
-    sideOffset,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-) }));
-DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
-var DropdownMenuItem = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Item,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
-var DropdownMenuCheckboxItem = React2.forwardRef(({ className, children, checked, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.CheckboxItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    checked,
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx2(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx2(Check, { className: "adh-dropdown-menu__indicator-check" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
-var DropdownMenuRadioItem = React2.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.RadioItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx2(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx2(Circle, { className: "adh-dropdown-menu__indicator-dot" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
-var DropdownMenuLabel = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Label,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__label",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
-var DropdownMenuSeparator = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Separator,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__separator", className),
-    ...props
-  }
-));
-DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
-var DropdownMenuShortcut = ({ className, ...props }) => {
-  return /* @__PURE__ */ jsx2(
-    "span",
-    {
-      className: joinClasses2("adh-dropdown-menu__shortcut", className),
-      ...props
-    }
-  );
-};
-DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
+import { Avatar, AvatarFallback, AvatarImage } from "@agentic-toolkit/ui/components/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLinkItem,
+  DropdownMenuSeparator
+} from "@agentic-toolkit/ui/components/dropdown-menu";
 
 // src/header/NavLink.tsx
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { jsx as jsx3 } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 function pathMatches(pathname, pattern) {
   if (pattern === pathname) return true;
   if (pattern.endsWith("/*")) {
@@ -186,7 +35,7 @@ function NavLinkItem({ link }) {
   const pathname = usePathname() ?? "";
   const matchers = link.matchPaths ?? [link.href];
   const active = matchers.some((m) => pathMatches(pathname, m));
-  return /* @__PURE__ */ jsx3(
+  return /* @__PURE__ */ jsx(
     Link,
     {
       href: link.href,
@@ -199,7 +48,7 @@ function NavLinkItem({ link }) {
 }
 
 // src/header/AvatarMenu.tsx
-import { Fragment, jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
 function initialsOf(name) {
   if (!name) return "";
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
@@ -213,74 +62,74 @@ function AvatarMenu({
   children
 }) {
   const pathname = usePathname2() ?? "";
-  const avatarInner = /* @__PURE__ */ jsxs2(Avatar, { className: "adh-avatar-menu-trigger__avatar", children: [
-    user.imageUrl && /* @__PURE__ */ jsx4(AvatarImage, { src: user.imageUrl, alt: user.name }),
-    /* @__PURE__ */ jsx4(AvatarFallback, { children: initialsOf(user.name) || /* @__PURE__ */ jsx4(UserIcon, { className: "adh-avatar-menu-trigger__fallback-icon" }) })
+  const avatarInner = /* @__PURE__ */ jsxs(Avatar, { className: "adh-avatar-menu-trigger__avatar", children: [
+    user.imageUrl && /* @__PURE__ */ jsx2(AvatarImage, { src: user.imageUrl, alt: user.name }),
+    /* @__PURE__ */ jsx2(AvatarFallback, { children: initialsOf(user.name) || /* @__PURE__ */ jsx2(UserIcon, { className: "adh-avatar-menu-trigger__fallback-icon" }) })
   ] });
-  const settingsItem = settingsHref ? /* @__PURE__ */ jsx4(DropdownMenuItem, { asChild: true, children: /* @__PURE__ */ jsxs2(Link2, { href: settingsHref, className: "adh-avatar-menu__item", children: [
-    /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
-    /* @__PURE__ */ jsx4(Settings, { className: "adh-avatar-menu__item-icon" })
-  ] }) }) : onSettings ? /* @__PURE__ */ jsxs2(DropdownMenuItem, { onSelect: onSettings, className: "adh-avatar-menu__item", children: [
-    /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
-    /* @__PURE__ */ jsx4(Settings, { className: "adh-avatar-menu__item-icon" })
+  const settingsItem = settingsHref ? /* @__PURE__ */ jsxs(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx2(Link2, { href: settingsHref }), className: "adh-avatar-menu__item", children: [
+    /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
+    /* @__PURE__ */ jsx2(Settings, { className: "adh-avatar-menu__item-icon" })
+  ] }) : onSettings ? /* @__PURE__ */ jsxs(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: [
+    /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
+    /* @__PURE__ */ jsx2(Settings, { className: "adh-avatar-menu__item-icon" })
   ] }) : null;
-  return /* @__PURE__ */ jsxs2(DropdownMenu, { children: [
-    /* @__PURE__ */ jsxs2(
+  return /* @__PURE__ */ jsxs(DropdownMenu, { children: [
+    /* @__PURE__ */ jsxs(
       DropdownMenuTrigger,
       {
         className: "adh-avatar-menu-trigger",
         "aria-label": `Open ${user.name} menu`,
         children: [
-          /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu-trigger__name", children: user.name }),
-          /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
-          /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx4(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
+          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
+          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx2(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
         ]
       }
     ),
-    /* @__PURE__ */ jsxs2(DropdownMenuContent, { className: "adh-avatar-menu", align: "end", sideOffset: 8, children: [
-      /* @__PURE__ */ jsx4("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsxs2("div", { className: "adh-avatar-menu__identity", children: [
-        /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__name", children: user.name }),
-        user.email && /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__email", children: user.email })
+    /* @__PURE__ */ jsxs(DropdownMenuContent, { className: "adh-avatar-menu", align: "end", sideOffset: 8, children: [
+      /* @__PURE__ */ jsx2("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsxs("div", { className: "adh-avatar-menu__identity", children: [
+        /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__name", children: user.name }),
+        user.email && /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__email", children: user.email })
       ] }) }),
-      navLinks.length > 0 && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      navLinks.length > 0 && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
         navLinks.map((link) => {
           const Icon = link.icon;
           const matchers = link.matchPaths ?? [link.href];
           const active = matchers.some((m) => pathMatches(pathname, m));
-          return /* @__PURE__ */ jsx4(DropdownMenuItem, { asChild: true, children: /* @__PURE__ */ jsxs2(
-            Link2,
+          return /* @__PURE__ */ jsxs(
+            DropdownMenuLinkItem,
             {
-              href: link.href,
+              render: /* @__PURE__ */ jsx2(Link2, { href: link.href }),
               className: "adh-avatar-menu__item",
               "aria-current": active ? "page" : void 0,
               "data-active": active ? "" : void 0,
               children: [
-                /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: link.label }),
-                Icon ? /* @__PURE__ */ jsx4(Icon, { className: "adh-avatar-menu__item-icon" }) : null
+                /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: link.label }),
+                Icon ? /* @__PURE__ */ jsx2(Icon, { className: "adh-avatar-menu__item-icon" }) : null
               ]
-            }
-          ) }, link.href + link.label);
+            },
+            link.href + link.label
+          );
         })
       ] }),
-      settingsItem && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      settingsItem && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
         settingsItem
       ] }),
-      children && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      children && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
         children
       ] }),
-      onLogout && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
-        /* @__PURE__ */ jsxs2(
+      onLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
+        /* @__PURE__ */ jsxs(
           DropdownMenuItem,
           {
-            onSelect: onLogout,
+            onClick: onLogout,
             className: "adh-avatar-menu__item",
             children: [
-              /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: "Log out" }),
-              /* @__PURE__ */ jsx4(LogOut, { className: "adh-avatar-menu__item-icon" })
+              /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Log out" }),
+              /* @__PURE__ */ jsx2(LogOut, { className: "adh-avatar-menu__item-icon" })
             ]
           }
         )
@@ -290,40 +139,545 @@ function AvatarMenu({
 }
 
 // src/header/AuthButtons.tsx
-import { Fragment as Fragment2, jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 function AuthButtons({
   onSignup,
   onLogin,
   signupHref,
   loginHref,
-  signupLabel = "signup",
+  signupLabel = "join",
   loginLabel = "login"
 }) {
-  const loginNode = onLogin ? /* @__PURE__ */ jsx5("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel }) : loginHref ? /* @__PURE__ */ jsx5("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
-  const signupNode = onSignup ? /* @__PURE__ */ jsx5("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel }) : signupHref ? /* @__PURE__ */ jsx5("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
-  return /* @__PURE__ */ jsxs3(Fragment2, { children: [
+  const loginNode = onLogin ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel }) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
+  const signupNode = onSignup ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel }) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
+  return /* @__PURE__ */ jsxs2(Fragment2, { children: [
     loginNode,
     signupNode
   ] });
+}
+
+// src/header/SiteSwitcher.tsx
+import Link3 from "next/link";
+import "react";
+
+// src/header/NavigationPopover.tsx
+import {
+  Fragment as Fragment3,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+import { ChevronDown as ChevronDown2 } from "lucide-react";
+import { cn } from "@agentic-toolkit/ui";
+import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
+import {
+  DropdownMenu as DropdownMenu2,
+  DropdownMenuTrigger as DropdownMenuTrigger2,
+  DropdownMenuContent as DropdownMenuContent2,
+  DropdownMenuSeparator as DropdownMenuSeparator2,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
+} from "@agentic-toolkit/ui/components/dropdown-menu";
+import { Fragment as Fragment4, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
+var GUARDED_NAV_PROPS = { [GUARDED_NAV_ATTR]: "" };
+function highlightMatch(text, query) {
+  const needle = query.trim();
+  if (!needle) return text;
+  const lower = text.toLowerCase();
+  const ln = needle.toLowerCase();
+  const out = [];
+  let i = 0;
+  let key = 0;
+  while (i < text.length) {
+    const at = lower.indexOf(ln, i);
+    if (at === -1) {
+      out.push(text.slice(i));
+      break;
+    }
+    if (at > i) out.push(text.slice(i, at));
+    out.push(
+      /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__hl", children: text.slice(at, at + needle.length) }, key++)
+    );
+    i = at + needle.length;
+  }
+  return out;
+}
+function IconSlot({ icon: Icon }) {
+  if (!Icon) return null;
+  return /* @__PURE__ */ jsx4(Icon, { className: "adh-dropdown-menu__item-icon adh-nav-popover__icon", "aria-hidden": true });
+}
+function isModifiedClick(event) {
+  return event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+}
+function NavigationPopover({
+  entries,
+  triggerLabel,
+  triggerContent,
+  triggerText,
+  triggerIcon,
+  triggerClassName,
+  placeholder = "Search, or browse topics",
+  emptyLabel = "No matches",
+  onChoose,
+  commandTrailing,
+  searchCommand
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [nav, setNav] = useState({ kind: "none" });
+  const [searchIndex, setSearchIndex] = useState(0);
+  const inputRef = useRef(null);
+  const uid = useId();
+  const navByKeyboard = useRef(false);
+  const suppressFocusRestore = useRef(false);
+  const close = useCallback((opts) => {
+    if (opts?.restoreFocus === false) suppressFocusRestore.current = true;
+    setOpen(false);
+  }, []);
+  const chooseItem = useCallback(
+    (item) => {
+      setOpen(false);
+      if (item.onSelect) {
+        item.onSelect();
+        return;
+      }
+      if (onChoose) {
+        onChoose(item);
+        return;
+      }
+      if (item.href && item.href !== "#") {
+        const href = item.href;
+        void confirmNavigation().then((ok) => {
+          if (ok) window.location.assign(href);
+        });
+      }
+    },
+    [onChoose]
+  );
+  const searchTargets = useMemo(() => {
+    const out = [];
+    for (const e of entries) {
+      if (e.kind === "topic") {
+        for (const item of e.items) out.push({ item, area: e.label });
+      } else {
+        out.push({ item: e.item, area: null });
+      }
+    }
+    return out;
+  }, [entries]);
+  const searchResults = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+    return searchTargets.filter(
+      (t) => t.item.label.toLowerCase().includes(needle) || (t.item.description?.toLowerCase().includes(needle) ?? false)
+    );
+  }, [searchTargets, query]);
+  const trimmed = query.trim();
+  const searching = trimmed.length > 0;
+  const cmdActive = searching && (searchCommand?.matches(trimmed) ?? false);
+  const searchActive = searchResults.length === 0 ? -1 : Math.min(searchIndex, searchResults.length - 1);
+  const selectCommand = useCallback(() => {
+    if (!searchCommand) return;
+    close({ restoreFocus: false });
+    searchCommand.onSelect();
+  }, [close, searchCommand]);
+  const disclosed = nav.kind === "sub" ? nav.entry : nav.kind === "top" && nav.open ? nav.entry : null;
+  const activeKey = searching ? cmdActive ? "cmd" : searchActive >= 0 ? `s${searchActive}` : null : nav.kind === "sub" ? `e${nav.entry}s${nav.item}` : nav.kind === "top" ? `e${nav.entry}` : null;
+  const activeId = activeKey ? `${uid}-${activeKey}` : void 0;
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, nav, searching]);
+  useEffect(() => {
+    if (!navByKeyboard.current || !activeKey) return;
+    document.getElementById(`${uid}-${activeKey}`)?.scrollIntoView({ block: "nearest" });
+  }, [uid, activeKey, query]);
+  function moveSel(dir) {
+    navByKeyboard.current = true;
+    if (nav.kind === "sub") {
+      const entry = entries[nav.entry];
+      if (entry?.kind === "topic") {
+        const next = nav.item + dir;
+        if (next >= 0 && next < entry.items.length) {
+          setNav({ kind: "sub", entry: nav.entry, item: next });
+          return;
+        }
+        const siblingIdx = nav.entry + dir;
+        const sibling = entries[siblingIdx];
+        if (sibling?.kind === "topic") {
+          setNav({ kind: "sub", entry: siblingIdx, item: dir > 0 ? 0 : sibling.items.length - 1 });
+        }
+        return;
+      }
+    }
+    const n = entries.length;
+    if (!n) return;
+    const cur = nav.kind === "none" ? null : nav.entry;
+    const nextEntry = cur === null ? dir > 0 ? 0 : n - 1 : (cur + dir + n) % n;
+    setNav({ kind: "top", entry: nextEntry, open: false });
+  }
+  function discloseRight() {
+    if (nav.kind !== "top") return;
+    if (entries[nav.entry]?.kind !== "topic") return;
+    navByKeyboard.current = true;
+    setNav({ kind: "sub", entry: nav.entry, item: 0 });
+  }
+  function collapseLeft() {
+    navByKeyboard.current = true;
+    if (nav.kind === "sub" || nav.kind === "top" && nav.open) {
+      setNav({ kind: "top", entry: nav.entry, open: false });
+    }
+  }
+  function choose() {
+    if (searching) {
+      if (cmdActive) {
+        selectCommand();
+        return;
+      }
+      const target = searchResults[searchActive]?.item;
+      if (!target) return;
+      chooseItem(target);
+      return;
+    }
+    if (nav.kind === "none") return;
+    const entry = entries[nav.entry];
+    if (!entry) return;
+    if (nav.kind === "top") {
+      if (entry.kind === "topic") {
+        discloseRight();
+        return;
+      }
+      chooseItem(entry.item);
+      return;
+    }
+    if (entry.kind === "topic") {
+      const item = entry.items[nav.item];
+      if (item) chooseItem(item);
+    }
+  }
+  function handleOpenChange(next) {
+    setOpen(next);
+    if (next) {
+      setQuery("");
+      setNav({ kind: "none" });
+      setSearchIndex(0);
+    }
+  }
+  function handleInputKeyDown(event) {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        event.stopPropagation();
+        navByKeyboard.current = true;
+        if (searching) setSearchIndex(Math.min(searchActive + 1, searchResults.length - 1));
+        else moveSel(1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        event.stopPropagation();
+        navByKeyboard.current = true;
+        if (searching) setSearchIndex(Math.max(searchActive - 1, 0));
+        else moveSel(-1);
+        break;
+      case "ArrowRight":
+        if (!searching) {
+          event.preventDefault();
+          event.stopPropagation();
+          discloseRight();
+        } else {
+          event.stopPropagation();
+        }
+        break;
+      case "ArrowLeft":
+        if (!searching) {
+          event.preventDefault();
+          event.stopPropagation();
+          collapseLeft();
+        } else {
+          event.stopPropagation();
+        }
+        break;
+      case "Enter":
+        event.preventDefault();
+        event.stopPropagation();
+        choose();
+        break;
+      case "Tab":
+        event.preventDefault();
+        event.stopPropagation();
+        break;
+      case "Escape":
+        break;
+      default:
+        event.stopPropagation();
+    }
+  }
+  function renderItem(item, entryIndex, j) {
+    const isActive = nav.kind === "sub" && nav.entry === entryIndex && nav.item === j;
+    return /* @__PURE__ */ jsxs3(
+      "a",
+      {
+        id: `${uid}-e${entryIndex}s${j}`,
+        "data-nav": `e${entryIndex}s${j}`,
+        role: "menuitem",
+        "aria-current": item.current ? "page" : void 0,
+        href: item.href,
+        ...GUARDED_NAV_PROPS,
+        className: cn("adh-dropdown-menu__item", {
+          "adh-nav-popover__item--active": isActive,
+          "adh-nav-popover__item--current": item.current
+        }),
+        onMouseDown: (event) => event.preventDefault(),
+        onMouseMove: () => {
+          navByKeyboard.current = false;
+          setNav({ kind: "sub", entry: entryIndex, item: j });
+        },
+        onClick: (event) => {
+          if (isModifiedClick(event)) return;
+          event.preventDefault();
+          chooseItem(item);
+        },
+        children: [
+          /* @__PURE__ */ jsx4(IconSlot, { icon: item.icon }),
+          /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: item.label }),
+          item.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: item.description })
+        ]
+      },
+      `${item.key}-${entryIndex}-${j}`
+    );
+  }
+  return (
+    // Controlled so `close()` actually closes the menu — trailing controls and
+    // the search command both close it programmatically before handing off.
+    /* @__PURE__ */ jsxs3(DropdownMenu2, { open, onOpenChange: handleOpenChange, children: [
+      /* @__PURE__ */ jsx4(
+        DropdownMenuTrigger2,
+        {
+          className: cn("adh-header__title adh-nav-popover__trigger", triggerClassName),
+          "aria-label": triggerLabel,
+          children: triggerContent ?? /* @__PURE__ */ jsxs3(Fragment4, { children: [
+            triggerIcon,
+            /* @__PURE__ */ jsx4("span", { children: triggerText ?? triggerLabel }),
+            /* @__PURE__ */ jsx4(ChevronDown2, { className: "adh-nav-popover__chevron", "aria-hidden": true })
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsxs3(
+        DropdownMenuContent2,
+        {
+          align: "start",
+          className: "adh-nav-popover__menu",
+          onMouseLeave: (event) => {
+            const to = event.relatedTarget;
+            if (to instanceof Element && to.closest('[role="menu"]')) return;
+            setNav(
+              (cur) => cur.kind === "top" && cur.open ? { kind: "top", entry: cur.entry, open: false } : cur
+            );
+          },
+          finalFocus: () => {
+            if (suppressFocusRestore.current) {
+              suppressFocusRestore.current = false;
+              return false;
+            }
+            return true;
+          },
+          children: [
+            /* @__PURE__ */ jsxs3("div", { className: "adh-nav-popover__search", children: [
+              /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__prompt", "aria-hidden": true, children: ">" }),
+              /* @__PURE__ */ jsx4(
+                "input",
+                {
+                  ref: inputRef,
+                  type: "text",
+                  className: "adh-nav-popover__search-input",
+                  placeholder,
+                  "aria-label": placeholder,
+                  role: "combobox",
+                  "aria-expanded": true,
+                  "aria-controls": `${uid}-list`,
+                  "aria-activedescendant": activeId,
+                  autoComplete: "off",
+                  spellCheck: false,
+                  value: query,
+                  onChange: (event) => {
+                    navByKeyboard.current = true;
+                    setQuery(event.target.value);
+                    setSearchIndex(0);
+                    setNav({ kind: "none" });
+                  },
+                  onKeyDown: handleInputKeyDown
+                }
+              ),
+              commandTrailing?.({ close })
+            ] }),
+            /* @__PURE__ */ jsx4(DropdownMenuSeparator2, {}),
+            /* @__PURE__ */ jsxs3("div", { id: `${uid}-list`, className: "adh-nav-popover__list", children: [
+              !searching && entries.map((entry, index) => {
+                const prev = entries[index - 1];
+                const divider = prev !== void 0 && prev.section !== entry.section;
+                const sep = divider ? /* @__PURE__ */ jsx4("div", { className: "adh-dropdown-menu__separator", role: "separator" }) : null;
+                if (entry.kind === "topic") {
+                  return /* @__PURE__ */ jsxs3(Fragment3, { children: [
+                    sep,
+                    /* @__PURE__ */ jsxs3(
+                      DropdownMenuSub,
+                      {
+                        open: index === disclosed,
+                        onOpenChange: (next) => {
+                          if (next) {
+                            navByKeyboard.current = false;
+                            setNav({ kind: "top", entry: index, open: true });
+                          }
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxs3(
+                            DropdownMenuSubTrigger,
+                            {
+                              "data-nav": `e${index}`,
+                              className: cn("adh-nav-popover__topic", {
+                                "adh-nav-popover__item--active": nav.kind === "top" && nav.entry === index,
+                                "adh-nav-popover__item--indent": entry.indent
+                              }),
+                              onMouseDown: (event) => event.preventDefault(),
+                              onMouseMove: () => {
+                                navByKeyboard.current = false;
+                                setNav({ kind: "top", entry: index, open: true });
+                              },
+                              children: [
+                                /* @__PURE__ */ jsx4(IconSlot, { icon: entry.icon }),
+                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, children: entry.label })
+                              ]
+                            }
+                          ),
+                          /* @__PURE__ */ jsx4(DropdownMenuSubContent, { className: "adh-nav-popover__submenu", children: entry.items.map((item, j) => renderItem(item, index, j)) })
+                        ]
+                      }
+                    )
+                  ] }, `topic-${index}`);
+                }
+                const isActive = nav.kind === "top" && nav.entry === index;
+                return /* @__PURE__ */ jsxs3(Fragment3, { children: [
+                  sep,
+                  /* @__PURE__ */ jsxs3(
+                    "a",
+                    {
+                      id: `${uid}-e${index}`,
+                      "data-nav": `e${index}`,
+                      role: "menuitem",
+                      "aria-current": entry.item.current ? "page" : void 0,
+                      href: entry.item.href,
+                      ...GUARDED_NAV_PROPS,
+                      className: cn("adh-dropdown-menu__item", {
+                        "adh-nav-popover__item--active": isActive,
+                        "adh-nav-popover__item--current": entry.item.current,
+                        "adh-nav-popover__item--indent": entry.indent
+                      }),
+                      onMouseDown: (event) => event.preventDefault(),
+                      onMouseMove: () => {
+                        navByKeyboard.current = false;
+                        setNav({ kind: "top", entry: index, open: false });
+                      },
+                      onClick: (event) => {
+                        if (isModifiedClick(event)) return;
+                        event.preventDefault();
+                        chooseItem(entry.item);
+                      },
+                      children: [
+                        /* @__PURE__ */ jsx4(IconSlot, { icon: entry.item.icon }),
+                        /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: entry.item.label }),
+                        entry.blurb && entry.item.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: entry.item.description })
+                      ]
+                    }
+                  )
+                ] }, `leaf-${entry.item.key}`);
+              }),
+              searching && cmdActive && searchCommand && /* @__PURE__ */ jsxs3(
+                "button",
+                {
+                  type: "button",
+                  id: `${uid}-cmd`,
+                  role: "menuitem",
+                  className: "adh-dropdown-menu__item adh-nav-popover__item--active adh-nav-popover__help-row",
+                  onMouseDown: (event) => event.preventDefault(),
+                  onClick: selectCommand,
+                  children: [
+                    /* @__PURE__ */ jsx4("span", { children: searchCommand.label }),
+                    searchCommand.shortcut && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: searchCommand.shortcut })
+                  ]
+                }
+              ),
+              searching && !cmdActive && searchResults.map((result, index) => {
+                const { item, area } = result;
+                const isActive = index === searchActive;
+                return /* @__PURE__ */ jsxs3(
+                  "a",
+                  {
+                    id: `${uid}-s${index}`,
+                    "data-search": index,
+                    role: "menuitem",
+                    "aria-current": item.current ? "page" : void 0,
+                    href: item.href,
+                    ...GUARDED_NAV_PROPS,
+                    className: cn("adh-dropdown-menu__item adh-nav-popover__match", {
+                      "adh-nav-popover__item--active": isActive,
+                      "adh-nav-popover__item--current": item.current
+                    }),
+                    onMouseDown: (event) => event.preventDefault(),
+                    onMouseMove: () => {
+                      navByKeyboard.current = false;
+                      setSearchIndex(index);
+                    },
+                    onClick: (event) => {
+                      if (isModifiedClick(event)) return;
+                      event.preventDefault();
+                      chooseItem(item);
+                    },
+                    children: [
+                      /* @__PURE__ */ jsx4(IconSlot, { icon: item.icon }),
+                      area && /* @__PURE__ */ jsxs3(Fragment4, { children: [
+                        /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__area", children: area }),
+                        /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__arrow", "aria-hidden": true, children: "\u2192" })
+                      ] }),
+                      /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: highlightMatch(item.label, query) }),
+                      item.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: highlightMatch(item.description, query) })
+                    ]
+                  },
+                  `${item.key}-${index}`
+                );
+              })
+            ] }),
+            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel })
+          ]
+        }
+      )
+    ] })
+  );
 }
 
 // src/header/SiteOptionsMenu.tsx
 import { Grid3x3 } from "lucide-react";
 
 // src/components/ui/button.tsx
-import * as React3 from "react";
+import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { jsx as jsx6 } from "react/jsx-runtime";
-function joinClasses3(...parts) {
+import { jsx as jsx5 } from "react/jsx-runtime";
+function joinClasses(...parts) {
   return parts.filter(Boolean).join(" ");
 }
-var Button = React3.forwardRef(
+var Button = React.forwardRef(
   ({ className, variant = "default", size = "default", asChild = false, type, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return /* @__PURE__ */ jsx6(
+    return /* @__PURE__ */ jsx5(
       Comp,
       {
-        className: joinClasses3(
+        className: joinClasses(
           "adh-button",
           `adh-button--${variant}`,
           `adh-button--size-${size}`,
@@ -338,23 +692,148 @@ var Button = React3.forwardRef(
 );
 Button.displayName = "Button";
 
+// src/components/ui/dropdown-menu.tsx
+import * as React2 from "react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Check, ChevronRight, Circle } from "lucide-react";
+import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
+function joinClasses2(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+var DropdownMenu3 = DropdownMenuPrimitive.Root;
+var DropdownMenuTrigger3 = DropdownMenuPrimitive.Trigger;
+var DropdownMenuSubTrigger2 = React2.forwardRef(({ className, inset, children, ...props }, ref) => /* @__PURE__ */ jsxs4(
+  DropdownMenuPrimitive.SubTrigger,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item adh-dropdown-menu__sub-trigger",
+      inset && "adh-dropdown-menu__item--inset",
+      className
+    ),
+    ...props,
+    children: [
+      children,
+      /* @__PURE__ */ jsx6(ChevronRight, { className: "adh-dropdown-menu__sub-trigger-chevron" })
+    ]
+  }
+));
+DropdownMenuSubTrigger2.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
+var DropdownMenuSubContent2 = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.SubContent,
+  {
+    ref,
+    className: joinClasses2("adh-dropdown-menu__content", className),
+    ...props
+  }
+));
+DropdownMenuSubContent2.displayName = DropdownMenuPrimitive.SubContent.displayName;
+var DropdownMenuContent3 = React2.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsx6(DropdownMenuPrimitive.Portal, { children: /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Content,
+  {
+    ref,
+    sideOffset,
+    className: joinClasses2("adh-dropdown-menu__content", className),
+    ...props
+  }
+) }));
+DropdownMenuContent3.displayName = DropdownMenuPrimitive.Content.displayName;
+var DropdownMenuItem2 = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Item,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item",
+      inset && "adh-dropdown-menu__item--inset",
+      className
+    ),
+    ...props
+  }
+));
+DropdownMenuItem2.displayName = DropdownMenuPrimitive.Item.displayName;
+var DropdownMenuCheckboxItem = React2.forwardRef(({ className, children, checked, ...props }, ref) => /* @__PURE__ */ jsxs4(
+  DropdownMenuPrimitive.CheckboxItem,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
+      className
+    ),
+    checked,
+    ...props,
+    children: [
+      /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx6(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx6(Check, { className: "adh-dropdown-menu__indicator-check" }) }) }),
+      children
+    ]
+  }
+));
+DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
+var DropdownMenuRadioItem = React2.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs4(
+  DropdownMenuPrimitive.RadioItem,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
+      className
+    ),
+    ...props,
+    children: [
+      /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx6(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx6(Circle, { className: "adh-dropdown-menu__indicator-dot" }) }) }),
+      children
+    ]
+  }
+));
+DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
+var DropdownMenuLabel = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Label,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__label",
+      inset && "adh-dropdown-menu__item--inset",
+      className
+    ),
+    ...props
+  }
+));
+DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
+var DropdownMenuSeparator3 = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Separator,
+  {
+    ref,
+    className: joinClasses2("adh-dropdown-menu__separator", className),
+    ...props
+  }
+));
+DropdownMenuSeparator3.displayName = DropdownMenuPrimitive.Separator.displayName;
+var DropdownMenuShortcut = ({ className, ...props }) => {
+  return /* @__PURE__ */ jsx6(
+    "span",
+    {
+      className: joinClasses2("adh-dropdown-menu__shortcut", className),
+      ...props
+    }
+  );
+};
+DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
+
 // src/header/SiteOptionsMenu.tsx
-import { jsx as jsx7, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs5 } from "react/jsx-runtime";
 function SiteOptionsMenu({
   sites,
   triggerLabel = "Sites",
-  groupLabel = "Agentic Developer Hub"
+  groupLabel = "Sites"
 }) {
   if (sites.length === 0) return null;
-  return /* @__PURE__ */ jsxs4(DropdownMenu, { children: [
-    /* @__PURE__ */ jsx7(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ jsxs4(Button, { variant: "ghost", size: "sm", "aria-label": triggerLabel, children: [
+  return /* @__PURE__ */ jsxs5(DropdownMenu3, { children: [
+    /* @__PURE__ */ jsx7(DropdownMenuTrigger3, { asChild: true, children: /* @__PURE__ */ jsxs5(Button, { variant: "ghost", size: "sm", "aria-label": triggerLabel, children: [
       /* @__PURE__ */ jsx7(Grid3x3, { className: "adh-button__icon" }),
       /* @__PURE__ */ jsx7("span", { children: triggerLabel })
     ] }) }),
-    /* @__PURE__ */ jsxs4(DropdownMenuContent, { align: "end", children: [
+    /* @__PURE__ */ jsxs5(DropdownMenuContent3, { align: "end", children: [
       /* @__PURE__ */ jsx7(DropdownMenuLabel, { children: groupLabel }),
-      /* @__PURE__ */ jsx7(DropdownMenuSeparator, {}),
-      sites.map((site) => /* @__PURE__ */ jsx7(DropdownMenuItem, { asChild: true, children: /* @__PURE__ */ jsxs4("a", { href: site.href, children: [
+      /* @__PURE__ */ jsx7(DropdownMenuSeparator3, {}),
+      sites.map((site) => /* @__PURE__ */ jsx7(DropdownMenuItem2, { asChild: true, children: /* @__PURE__ */ jsxs5("a", { href: site.href, children: [
         /* @__PURE__ */ jsx7("span", { children: site.label }),
         site.description && /* @__PURE__ */ jsx7("span", { className: "adh-dropdown-menu__shortcut", children: site.description })
       ] }) }, site.href))
@@ -362,16 +841,64 @@ function SiteOptionsMenu({
   ] });
 }
 
+// src/header/SiteSwitcher.tsx
+import { jsx as jsx8 } from "react/jsx-runtime";
+function SiteSwitcher({
+  siteName,
+  siteNameHref = "/",
+  sites = [],
+  onSwitchSite
+}) {
+  if (sites.length === 0) {
+    return /* @__PURE__ */ jsx8(Link3, { href: siteNameHref, className: "adh-header__title", children: siteName });
+  }
+  const entries = sites.map((site) => ({
+    kind: "leaf",
+    section: 0,
+    item: {
+      //  `id` is optional on the published `SiteLink` (its owner, SiteOptionsMenu,
+      //  never reads it), so fall back to the href — unique among switch targets by
+      //  construction, and a stable key either way.
+      key: site.id ?? site.href,
+      label: site.label,
+      description: site.description,
+      href: site.href
+    }
+  }));
+  return /* @__PURE__ */ jsx8(
+    NavigationPopover,
+    {
+      entries,
+      triggerLabel: `${siteName} \u2014 switch site`,
+      triggerText: siteName,
+      triggerClassName: "adh-header__title",
+      onChoose: (item) => {
+        const href = onSwitchSite?.(item.key) ?? item.href;
+        if (href) window.location.assign(href);
+      }
+    }
+  );
+}
+
 // src/header/AdhHeader.tsx
-import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
+import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
+var DEV_PREVIEW_BADGES = [{ label: "Preview Release", tone: "neutral" }];
 function AdhHeader({
   siteName,
   siteNameHref = "/",
+  sites,
+  onSwitchSite,
+  siteSwitcher,
   pageTitle,
+  center,
+  badges = DEV_PREVIEW_BADGES,
+  leadingActions,
   navLinks = [],
   trailingNavLinks = [],
-  sites,
+  preAuthLinks,
   user,
+  authLoading = false,
   loginHref,
   signupHref,
   onLogin,
@@ -380,14 +907,45 @@ function AdhHeader({
   settingsHref,
   onSettings
 }) {
-  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref);
-  return /* @__PURE__ */ jsx8("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
-    /* @__PURE__ */ jsx8(Link3, { href: siteNameHref, className: "adh-header__title", children: siteName }),
-    pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
-    /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
-      barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)),
-      sites && sites.length > 0 && /* @__PURE__ */ jsx8(SiteOptionsMenu, { sites }),
-      user ? /* @__PURE__ */ jsx8(
+  const barLinks = user ? [] : navLinks;
+  return /* @__PURE__ */ jsx9("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
+    /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
+      siteSwitcher ?? /* @__PURE__ */ jsx9(
+        SiteSwitcher,
+        {
+          siteName,
+          siteNameHref,
+          sites,
+          onSwitchSite
+        }
+      ),
+      badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
+        // The ui Badge owns the skin; the adh-header__badge* classes stay
+        // as stable hooks — they're a theme-editor surface.
+        /* @__PURE__ */ jsx9(
+          Badge,
+          {
+            variant: badge.tone ?? "neutral",
+            className: badge.tone ? `adh-header__badge adh-header__badge--${badge.tone}` : "adh-header__badge",
+            children: badge.label
+          },
+          badge.label
+        )
+      )) })
+    ] }),
+    center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
+    /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
+      leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
+      barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
+      preAuthLinks,
+      authLoading && !user ? /* @__PURE__ */ jsx9(
+        "span",
+        {
+          className: "adh-header__auth-spinner",
+          role: "status",
+          "aria-label": "Checking sign-in"
+        }
+      ) : user ? /* @__PURE__ */ jsx9(
         AvatarMenu,
         {
           user,
@@ -396,7 +954,7 @@ function AdhHeader({
           settingsHref,
           onSettings
         }
-      ) : /* @__PURE__ */ jsx8(
+      ) : /* @__PURE__ */ jsx9(
         AuthButtons,
         {
           loginHref,
@@ -405,15 +963,968 @@ function AdhHeader({
           onSignup
         }
       ),
-      trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
+      trailingNavLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label))
     ] })
   ] }) });
 }
+
+// src/header/HubMark.tsx
+import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
+function HubMark({ className }) {
+  return /* @__PURE__ */ jsxs7(
+    "svg",
+    {
+      viewBox: "0 0 1024 1024",
+      className,
+      fill: "currentColor",
+      "aria-hidden": true,
+      focusable: "false",
+      children: [
+        /* @__PURE__ */ jsx10("path", { d: "M816,58 Q816,208 966,208 Q816,208 816,358 Q816,208 666,208 Q816,208 816,58 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M816,666 Q816,816 966,816 Q816,816 816,966 Q816,816 666,816 Q816,816 816,666 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M208,666 Q208,816 358,816 Q208,816 208,966 Q208,816 58,816 Q208,816 208,666 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M208,58 Q208,208 358,208 Q208,208 208,358 Q208,208 58,208 Q208,208 208,58 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M512,72 Q512,512 952,512 Q512,512 512,952 Q512,512 72,512 Q512,512 512,72 Z" })
+      ]
+    }
+  );
+}
+
+// src/header/routeEntries.ts
+function isDynamicPath(path) {
+  return path.includes("[");
+}
+function currentRoutePath(navigablePaths, pathname) {
+  let best = null;
+  for (const path of navigablePaths) {
+    const matches = path === pathname || path !== "/" && pathname.startsWith(`${path}/`);
+    if (matches && (best === null || path.length > best.length)) best = path;
+  }
+  return best;
+}
+function buildRouteItems(sections, pathname) {
+  const routes = sections.flatMap((section) => section.routes);
+  const current = currentRoutePath(
+    routes.filter((route) => !isDynamicPath(route.path)).map((route) => route.path),
+    pathname
+  );
+  return routes.slice().sort((a, b) => a.path.localeCompare(b.path)).map((route) => {
+    const navigable = !isDynamicPath(route.path);
+    return {
+      key: route.path,
+      label: route.path,
+      description: route.description,
+      href: navigable ? route.path : void 0,
+      current: navigable && route.path === current
+    };
+  });
+}
+
+// src/header/useClientHost.ts
+import { useEffect as useEffect2, useState as useState2 } from "react";
+function useClientHost() {
+  const [host, setHost] = useState2(null);
+  useEffect2(() => setHost(window.location.host), []);
+  return host;
+}
+
+// src/header/workspaces-menu.tsx
+import { createContext, useContext } from "react";
+import { jsx as jsx11 } from "react/jsx-runtime";
+var WorkspacesMenuContext = createContext(null);
+function WorkspacesMenuProvider({
+  value,
+  children
+}) {
+  return /* @__PURE__ */ jsx11(WorkspacesMenuContext.Provider, { value, children });
+}
+function useWorkspacesMenu() {
+  return useContext(WorkspacesMenuContext);
+}
+
+// src/header/SiteHeader.tsx
+import "react";
+import {
+  AdhHeader as AdhHeader2,
+  useClientHost as useClientHost4
+} from "@agentic-toolkit/adh/header";
+import { useAnonymousHeaderAuth } from "@agentic-toolkit/adh/header-auth";
+import { getSite as getSite3, siteHeaderTitle as siteHeaderTitle2, siteHomePath, siteProdUrl as siteProdUrl2, siteUrl as siteUrl2 } from "@agentic-toolkit/adh-registry";
+import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
+
+// src/header/SiteMenuSwitcher.tsx
+import { Fragment as Fragment6 } from "react";
+import { usePathname as usePathname5 } from "next/navigation";
+
+// src/header/SiteMenu.tsx
+import { useEffect as useEffect3, useMemo as useMemo3, useState as useState3 } from "react";
+import { usePathname as usePathname4 } from "next/navigation";
+import dynamic from "next/dynamic";
+import { CircleHelp as CircleHelp2, Settings as Settings2 } from "lucide-react";
+
+// src/footer/SitesOverview.tsx
+import { FOOTER_SITES, groupSitesByCategory, siteProdUrl } from "@agentic-toolkit/adh-registry";
+import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
+var SITES_OVERVIEW_POPOVER_ID = "adh-sites-overview";
+
+// src/header/SiteMenu.tsx
+import { detectEnv as detectEnv3, getSite as getSite2, siteHeaderTitle } from "@agentic-toolkit/adh-registry";
+import {
+  HubMark as HubMark2,
+  NavigationPopover as NavigationPopover2,
+  useClientHost as useClientHost3,
+  useWorkspacesMenu as useWorkspacesMenu2
+} from "@agentic-toolkit/adh/header";
+import { useRecents } from "@agentic-toolkit/adh/header/recents";
+
+// src/header/useSiteMenu.ts
+import { useCallback as useCallback2, useMemo as useMemo2 } from "react";
+import { usePathname as usePathname3, useRouter } from "next/navigation";
+import { confirmNavigation as confirmNavigation2 } from "@agentic-toolkit/ui/lib/navigation-guard";
+import {
+  buildSiteHref,
+  detectEnv,
+  getSite,
+  hubSwitchHref,
+  hubWorkspaceSlug,
+  isHubWorkspacePath,
+  HUB_WORKSPACE_SEGMENTS,
+  siteUrl
+} from "@agentic-toolkit/adh-registry";
+import { appendThemePreview, readPreviewTheme } from "@agentic-toolkit/adh/themes";
+import {
+  useClientHost as useClientHost2
+} from "@agentic-toolkit/adh/header";
+
+// src/header/menu-icons.ts
+import {
+  Activity,
+  BadgeCheck,
+  Bell,
+  BookOpen,
+  BookText,
+  BookUser,
+  Bot,
+  Boxes,
+  Briefcase,
+  Bug,
+  Building,
+  ChefHat,
+  CircleHelp,
+  Code,
+  Contact,
+  CreditCard,
+  Fingerprint,
+  FlaskConical,
+  FolderKanban,
+  GitPullRequest,
+  Globe,
+  GraduationCap,
+  Hammer,
+  Handshake,
+  HardDrive,
+  Hexagon,
+  History,
+  House,
+  LayoutDashboard,
+  LayoutTemplate,
+  Library,
+  LifeBuoy,
+  LogIn,
+  MonitorSmartphone,
+  Network,
+  Newspaper,
+  NotebookText,
+  Package,
+  Route,
+  School,
+  ScrollText,
+  ShieldCheck,
+  Sparkles,
+  UserCircle,
+  UserCog,
+  UserPlus,
+  Users,
+  UsersRound,
+  Wrench
+} from "lucide-react";
+var MENU_ICONS = {
+  // --- Hub + its ecosystem sites (inline sub-items under Hub) ---
+  hub: Hexagon,
+  bitbag: Bot,
+  // the hub's AI persona
+  community: Users,
+  // matches FEATURE_META `communities`
+  personaregistry: UserCircle,
+  // matches FEATURE_META `personas`
+  toolkit: Wrench,
+  // matches the myagenticteams landing's toolkit glyph
+  cookbook: ChefHat,
+  // recipes/cookbook
+  devteam: UsersRound,
+  // matches FEATURE_META `teams`
+  myagenticteams: Sparkles,
+  // matches the myagenticteams landing
+  narratives: ScrollText,
+  // matches FEATURE_META `narratives`
+  help: CircleHelp,
+  // matches SiteMenu's existing help affordance
+  "hub-help": CircleHelp,
+  // the promoted family Help site (help.adh.com)
+  news: Newspaper,
+  // --- In-hub destination rows (logged-in only), keyed by route path ---
+  "/products": Network,
+  // matches FEATURE_META `products` (Products replaced /ecosystems)
+  "/personas": UserCircle,
+  // matches FEATURE_META `personas`
+  "/organizations": Building,
+  // matches WorkspaceShell's organization type icon
+  "/research": FlaskConical,
+  // matches FEATURE_META `research`
+  // --- Chrome rows (the auth-conditional top section, + the dev-only tools
+  //     appended after the Marketing/Main sites submenus) ---
+  home: House,
+  workspaces: Boxes,
+  recents: History,
+  login: LogIn,
+  signup: UserPlus,
+  routes: Route,
+  debug: Bug,
+  // --- Remaining MAIN family sites (websites/main/), for the dev "Main sites"
+  //     submenu. The rest of the family (hub, bitbag, community, cookbook,
+  //     devteam, help, myagenticteams, news, personaregistry, toolkit) is mapped
+  //     among the Hub-core rows above. ---
+  admin: ShieldCheck,
+  // operations console
+  api: Code,
+  docs: BookText,
+  // guides & API reference
+  learntruefacts: BadgeCheck,
+  // "true facts"
+  status: Activity,
+  // system status / pulse
+  support: LifeBuoy,
+  // --- MARKETING family sites (websites/marketing/), for the dev "Marketing
+  //     sites" submenu. Where a site mirrors a hub feature, it reuses the
+  //     FEATURE_META glyph so the menu matches the workspace rail. ('narratives'
+  //     is mapped among the Hub-core rows above.) ---
+  academy: GraduationCap,
+  authentication: Fingerprint,
+  // customer auth / identity
+  billing: CreditCard,
+  // matches FEATURE_META `billing`
+  codereviews: GitPullRequest,
+  communities: Users,
+  // matches FEATURE_META `communities`
+  consultants: Briefcase,
+  consulting: Handshake,
+  // services CTA
+  customers: Contact,
+  dashboards: LayoutDashboard,
+  // matches FEATURE_META `dashboards`
+  devices: MonitorSmartphone,
+  domains: Globe,
+  ecosystems: Network,
+  // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
+  education: School,
+  knowledgebases: BookOpen,
+  // matches FEATURE_META `knowledgebases`
+  notifications: Bell,
+  personabuilder: UserCog,
+  // configure personas
+  personas: UserCircle,
+  // matches FEATURE_META `personas` (+ the '/personas' route)
+  products: Package,
+  projects: FolderKanban,
+  // matches FEATURE_META `projects`
+  recipes: NotebookText,
+  registries: Library,
+  research: FlaskConical,
+  // matches FEATURE_META `research` (+ the '/research' route)
+  sites: LayoutTemplate,
+  // quick landing pages
+  storage: HardDrive,
+  teambuilder: UsersRound,
+  // matches FEATURE_META `teams`
+  teamregistry: BookUser,
+  // a directory of teams
+  tools: Hammer
+};
+function menuIcon(key) {
+  return key ? MENU_ICONS[key] : void 0;
+}
+
+// src/header/useSiteMenu.ts
+function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
+  const pathname = usePathname3() ?? "/";
+  const router = useRouter();
+  const workspaceSlug = currentSiteId === "hub" && isHubWorkspacePath(pathname) ? hubWorkspaceSlug(pathname) ?? personalSlug ?? null : null;
+  const hostname = useClientHost2();
+  const currentEnv = useMemo2(() => hostname ? detectEnv(hostname) : null, [hostname]);
+  const previewTheme = readPreviewTheme();
+  const hrefFor = useCallback2(
+    (site, external) => {
+      if (workspaceSlug && !external) {
+        if (site.id === "hub") return `/${workspaceSlug}/home`;
+        const hubRoute = hubSwitchHref(workspaceSlug, site);
+        if (hubRoute) return hubRoute;
+      }
+      if (site.id === currentSiteId) return "/";
+      if (!hostname) return "#";
+      const carriedPath = external ? "/" : pathname;
+      const href = appendThemePreview(buildSiteHref(site, hostname, carriedPath), previewTheme);
+      if (!resolveHref) return href;
+      try {
+        return detectEnv(new URL(href).hostname) === currentEnv ? resolveHref(href) : href;
+      } catch {
+        return href;
+      }
+    },
+    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, previewTheme]
+  );
+  const routeHref = useCallback2(
+    (route) => {
+      if (currentSiteId === "hub") {
+        const seg = route.split("/").filter(Boolean)[0];
+        const slug = workspaceSlug ?? personalSlug;
+        return slug && seg != null && HUB_WORKSPACE_SEGMENTS.has(seg) ? `/${slug}${route}` : route;
+      }
+      if (!hostname) return "#";
+      const href = appendThemePreview(siteUrl("hub", route, hostname), previewTheme);
+      if (!resolveHref) return href;
+      try {
+        return detectEnv(new URL(href).hostname) === currentEnv ? resolveHref(href) : href;
+      } catch {
+        return href;
+      }
+    },
+    [currentSiteId, workspaceSlug, personalSlug, hostname, resolveHref, currentEnv, previewTheme]
+  );
+  const entries = useMemo2(() => {
+    const path = pathname || "/";
+    const toItem = (link) => {
+      if ("route" in link) {
+        const href = routeHref(link.route);
+        return {
+          key: `route:${link.route}`,
+          label: link.label,
+          description: link.description,
+          href,
+          icon: menuIcon(link.route),
+          current: href.startsWith("/") && !href.startsWith("//") && (path === href || path.startsWith(`${href}/`))
+        };
+      }
+      const site = getSite(link.site);
+      if (!site) return null;
+      return {
+        key: site.id,
+        label: link.label ?? site.label,
+        description: link.description ?? site.description,
+        href: hrefFor(site, link.external),
+        icon: menuIcon(site.id),
+        current: site.id === currentSiteId
+      };
+    };
+    const out = [];
+    for (const g of groups) {
+      if (g.kind === "topic") {
+        const items = g.links.map(toItem).filter((r) => r !== null);
+        if (items.length) out.push({ kind: "topic", section: g.section, label: g.label, items });
+      } else {
+        const item = toItem(g.link);
+        if (item)
+          out.push({
+            kind: "leaf",
+            section: g.section,
+            blurb: g.blurb ?? false,
+            indent: g.kind === "inline",
+            item
+          });
+      }
+    }
+    return out;
+  }, [groups, pathname, routeHref, hrefFor, currentSiteId]);
+  const navigate = useCallback2(
+    (item) => {
+      const href = item.href;
+      if (!href || href === "#") return;
+      void confirmNavigation2().then((ok) => {
+        if (!ok) return;
+        if (href.startsWith("/") && !href.startsWith("//")) {
+          router.push(href);
+          return;
+        }
+        window.location.assign(href);
+      });
+    },
+    [router]
+  );
+  const homeHref = routeHref("/home");
+  return { entries, navigate, homeHref };
+}
+
+// src/header/debugSiteGroups.ts
+import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from "@agentic-toolkit/adh-registry";
+var DEBUG_SECTION = 2;
+function buildDebugSiteGroups() {
+  return [
+    {
+      kind: "topic",
+      section: DEBUG_SECTION,
+      label: "Marketing sites",
+      links: MARKETING_SITE_IDS.map((site) => ({ site, external: true }))
+    },
+    {
+      kind: "topic",
+      section: DEBUG_SECTION,
+      label: "Main sites",
+      links: MAIN_SITE_IDS.map((site) => ({ site, external: true }))
+    }
+  ];
+}
+
+// src/header/devToolsEntries.ts
+import "@agentic-toolkit/adh-registry";
+import {
+  buildRouteItems as buildRouteItems2
+} from "@agentic-toolkit/adh/header";
+var DEV_TOOLS_BUILD_ENABLED = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging";
+var DEV_ENVS = ["local", "testing", "staging"];
+function isDevEnv(env) {
+  return env !== null && DEV_ENVS.includes(env);
+}
+function buildDevToolsEntries({
+  routes,
+  effectiveEnv,
+  realEnv,
+  adminUnlocked,
+  override,
+  pathname,
+  onOpenDebug
+}) {
+  const out = [];
+  if (routes && routes.length > 0 && (adminUnlocked || isDevEnv(effectiveEnv))) {
+    out.push({
+      kind: "topic",
+      section: DEBUG_SECTION,
+      label: "Routes",
+      icon: menuIcon("routes"),
+      items: buildRouteItems2(routes, pathname)
+    });
+  }
+  if (adminUnlocked || isDevEnv(realEnv)) {
+    out.push({
+      kind: "leaf",
+      section: DEBUG_SECTION,
+      // `blurb` is what actually RENDERS a leaf's description (see NavigationPopover's
+      // leaf branch) — without it the "Sim: prod" hint below would be set but invisible.
+      blurb: true,
+      item: {
+        key: "debug-options",
+        label: "Debug Options",
+        // Carries the old header pill's "Sim: prod" state, so it stays obvious the
+        // site is being viewed AS production rather than for real. Kept OUT of the
+        // label so the row's accessible name is stably "Debug Options".
+        description: override === "production" ? "Sim: prod" : void 0,
+        icon: menuIcon("debug"),
+        onSelect: onOpenDebug
+      }
+    });
+  }
+  return out;
+}
+
+// src/header/envOverride.ts
+import { useSyncExternalStore } from "react";
+import { detectEnv as detectEnv2 } from "@agentic-toolkit/adh-registry";
+var STORAGE_KEY = "adh:debug:env-override";
+var ENV_VALUES = ["production", "staging", "testing", "local"];
+function parseEnvOverride(raw) {
+  return raw != null && ENV_VALUES.includes(raw) ? raw : null;
+}
+function resolveEffectiveEnv(override, detected) {
+  return override ?? detected;
+}
+function readOverride() {
+  if (typeof window === "undefined") return null;
+  try {
+    return parseEnvOverride(window.localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+var listeners = globalThis.__adhEnvOverrideListeners ??= /* @__PURE__ */ new Set();
+function emit() {
+  for (const fn of listeners) fn();
+}
+function subscribe(onChange) {
+  listeners.add(onChange);
+  const onStorage = (e) => {
+    if (e.key === STORAGE_KEY) onChange();
+  };
+  if (typeof window !== "undefined") window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(onChange);
+    if (typeof window !== "undefined") window.removeEventListener("storage", onStorage);
+  };
+}
+function getEnvOverride() {
+  return readOverride();
+}
+function setEnvOverride(env) {
+  if (typeof window === "undefined") return;
+  try {
+    if (env !== null) window.localStorage.setItem(STORAGE_KEY, env);
+    else window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+  }
+  emit();
+}
+function useEnvOverride() {
+  return useSyncExternalStore(subscribe, readOverride, () => null);
+}
+function useEffectiveEnv(hostname) {
+  const override = useEnvOverride();
+  return resolveEffectiveEnv(override, hostname ? detectEnv2(hostname) : null);
+}
+
+// src/header/SiteMenu.tsx
+import { useHelp } from "@agentic-toolkit/adh/help";
+import { Fragment as Fragment5, jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
+var DebugConsoleWindow = dynamic(
+  () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
+);
+function SiteMenu({
+  groups,
+  currentSiteId,
+  authenticated,
+  triggerContent,
+  triggerClassName,
+  resolveHref,
+  personalSlug,
+  settingsHref,
+  onSettings,
+  loginHref,
+  signupHref,
+  routes,
+  userIsAdmin,
+  suppressDevTools
+}) {
+  const hub = getSite2("hub");
+  const label = hub ? siteHeaderTitle(hub) : "Agentic Developer Hub";
+  const devToolsUnlocked = DEV_TOOLS_BUILD_ENABLED || userIsAdmin === true;
+  const menuGroups = useMemo3(
+    () => devToolsUnlocked ? [...groups, ...buildDebugSiteGroups()] : groups,
+    [groups, devToolsUnlocked]
+  );
+  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug });
+  const pathname = usePathname4() ?? "/";
+  const workspacesMenu = useWorkspacesMenu2();
+  const recents = useRecents();
+  const topSection = useMemo3(() => {
+    if (!authenticated) {
+      const out2 = [];
+      if (loginHref) out2.push({ kind: "leaf", section: 0, item: { key: "login", label: "Login", href: loginHref, icon: menuIcon("login") } });
+      if (signupHref) out2.push({ kind: "leaf", section: 0, item: { key: "signup", label: "Sign up", href: signupHref, icon: menuIcon("signup") } });
+      return out2;
+    }
+    const out = [
+      {
+        kind: "leaf",
+        section: 0,
+        item: {
+          key: "home",
+          label: "Home",
+          href: homeHref,
+          icon: menuIcon("home"),
+          current: homeHref.startsWith("/") && !homeHref.startsWith("//") && pathname === homeHref
+        }
+      }
+    ];
+    if (workspacesMenu && (workspacesMenu.workspaces.length || workspacesMenu.loading)) {
+      const items = workspacesMenu.workspaces.map((w) => ({
+        key: `ws:${w.id}`,
+        label: w.label,
+        href: w.href,
+        current: w.current
+      }));
+      out.push({
+        kind: "topic",
+        section: 0,
+        label: "Workspaces",
+        icon: menuIcon("workspaces"),
+        indent: true,
+        items: items.length ? items : [{ key: "ws:loading", label: "Loading\u2026" }]
+      });
+    }
+    if (recents.length) {
+      const items = recents.map((r) => ({
+        key: `recent:${r.url}`,
+        label: r.label,
+        href: r.url,
+        icon: menuIcon(r.iconKey),
+        current: r.url === pathname
+      }));
+      out.push({ kind: "topic", section: 0, label: "Recents", icon: menuIcon("recents"), items });
+    }
+    return out;
+  }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, recents, pathname]);
+  const [generated, setGenerated] = useState3();
+  const wantGeneratedRoutes = devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0);
+  useEffect3(() => {
+    if (!wantGeneratedRoutes) return;
+    let cancelled = false;
+    void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES }) => {
+      if (cancelled) return;
+      const paths = SITE_ROUTES[currentSiteId];
+      setGenerated({
+        siteId: currentSiteId,
+        sections: paths?.length ? [{ label: "Site", routes: paths.map((path) => ({ path })) }] : []
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantGeneratedRoutes, currentSiteId]);
+  const generatedRoutes = generated && generated.siteId === currentSiteId ? generated.sections : void 0;
+  const effectiveRoutes = routes && routes.length > 0 ? routes : generatedRoutes;
+  const host = useClientHost3();
+  const effectiveEnv = useEffectiveEnv(host);
+  const realEnv = host ? detectEnv3(host) : null;
+  const override = useEnvOverride();
+  const [debugOpen, setDebugOpen] = useState3(false);
+  const devToolsSection = useMemo3(
+    () => devToolsUnlocked && !suppressDevTools ? buildDevToolsEntries({
+      routes: effectiveRoutes,
+      effectiveEnv,
+      realEnv,
+      adminUnlocked: userIsAdmin === true,
+      override,
+      pathname,
+      onOpenDebug: () => setDebugOpen(true)
+    }) : [],
+    [devToolsUnlocked, suppressDevTools, effectiveRoutes, effectiveEnv, realEnv, userIsAdmin, override, pathname]
+  );
+  const openHelp = useHelp().open;
+  const allEntries = useMemo3(
+    () => [
+      ...topSection,
+      {
+        kind: "leaf",
+        section: 0,
+        item: { key: "help", label: "Help", icon: menuIcon("help"), onSelect: () => openHelp() }
+      },
+      ...entries,
+      ...devToolsSection
+    ],
+    [topSection, entries, devToolsSection, openHelp]
+  );
+  function showOverview() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById(SITES_OVERVIEW_POPOVER_ID);
+      if (!el || el.matches(":popover-open")) return;
+      try {
+        el.showPopover?.();
+      } catch {
+        return;
+      }
+      el.focus?.();
+      const onKeyDown = (e) => {
+        if (e.key === "Escape") el.hidePopover?.();
+      };
+      const onToggle = () => {
+        if (!el.matches(":popover-open")) {
+          document.removeEventListener("keydown", onKeyDown, true);
+          el.removeEventListener("toggle", onToggle);
+        }
+      };
+      document.addEventListener("keydown", onKeyDown, true);
+      el.addEventListener("toggle", onToggle);
+    });
+  }
+  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
+    /* @__PURE__ */ jsx13(
+      NavigationPopover2,
+      {
+        entries: allEntries,
+        onChoose: navigate,
+        triggerLabel: `${label} \u2014 switch site`,
+        triggerText: label,
+        triggerIcon: /* @__PURE__ */ jsx13(HubMark2, { className: "adh-nav-popover__mark" }),
+        triggerContent,
+        triggerClassName,
+        placeholder: "Search sites, or browse topics",
+        emptyLabel: "No matching sites",
+        searchCommand: {
+          matches: (q) => q.toLowerCase() === "help",
+          label: "Help \u2014 about the sites",
+          shortcut: "overview",
+          onSelect: showOverview
+        },
+        commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx13(
+          "button",
+          {
+            type: "button",
+            className: "adh-site-switcher__help",
+            "aria-label": "User settings",
+            onClick: () => {
+              close({ restoreFocus: false });
+              requestAnimationFrame(() => onSettings());
+            },
+            children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+          }
+        ) : authenticated && settingsHref ? (
+          // A real link so middle-click / new-tab work; native nav tears down the
+          // page, so no explicit close needed.
+          /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
+        ) : /* @__PURE__ */ jsx13(
+          "button",
+          {
+            type: "button",
+            className: "adh-site-switcher__help",
+            "aria-label": "About the Agentic Developer family",
+            onClick: () => {
+              close({ restoreFocus: false });
+              showOverview();
+            },
+            children: /* @__PURE__ */ jsx13(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+          }
+        )
+      }
+    ),
+    debugOpen && !suppressDevTools && /* @__PURE__ */ jsx13(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
+  ] });
+}
+
+// src/header/MarketingSiteMenu.tsx
+import { useMemo as useMemo4 } from "react";
+
+// src/header/hubCoreGroups.ts
+var HUB_SECTION = 1;
+var inline = (link) => ({
+  kind: "inline",
+  section: HUB_SECTION,
+  blurb: true,
+  link
+});
+var ALWAYS_SUBITEMS = [
+  inline({ site: "bitbag", description: "The hub's AI Persona, here to help!" }),
+  inline({ site: "community", description: "The hub's forums & discussions" }),
+  inline({ site: "personaregistry" }),
+  inline({ site: "toolkit" }),
+  inline({ site: "cookbook" }),
+  inline({ site: "devteam", description: "Your LLM agentic dev team" }),
+  inline({ site: "myagenticteams", description: "Build your own agentic teams" }),
+  inline({ site: "narratives", description: "Your project development story" }),
+  // hub-help (help.adh.com), not the delisted 'help' landing — the family's Help
+  // destination since its promotion; also keeps this row's key distinct from the
+  // Help-modal action row SiteMenu adds (both keyed by site id / 'help' before).
+  inline({ site: "hub-help", description: "Top level help site" })
+];
+var AUTHED_SUBITEMS = [
+  inline({ site: "news", description: "The latest Hub news!" }),
+  // Products replaced the old /ecosystems rail feature (each product IS an ecosystem).
+  inline({ route: "/products", label: "Products", description: "Build and manage your products" }),
+  inline({ route: "/personas", label: "Personas", description: "Register and configure your personas" }),
+  inline({ route: "/organizations", label: "Organizations", description: "Manage your organizations" }),
+  inline({ route: "/research", label: "Research", description: "Write, organize, and publish your research" })
+];
+function hubCoreGroups(authenticated) {
+  return [
+    { kind: "leaf", section: HUB_SECTION, blurb: true, link: { site: "hub", description: "The center of the Agentic Developer ecosystem" } },
+    ...ALWAYS_SUBITEMS,
+    ...authenticated ? AUTHED_SUBITEMS : []
+  ];
+}
+
+// src/header/MarketingSiteMenu.tsx
+import { jsx as jsx14 } from "react/jsx-runtime";
+function MarketingSiteMenu(props) {
+  const groups = useMemo4(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
+  return /* @__PURE__ */ jsx14(SiteMenu, { groups, ...props });
+}
+
+// src/header/WorkspaceSiteMenu.tsx
+import { useMemo as useMemo5 } from "react";
+import { jsx as jsx15 } from "react/jsx-runtime";
+function WorkspaceSiteMenu(props) {
+  const groups = useMemo5(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
+  return /* @__PURE__ */ jsx15(SiteMenu, { groups, ...props });
+}
+
+// src/header/activeMenuGroups.ts
+import { isHubWorkspacePath as isHubWorkspacePath2 } from "@agentic-toolkit/adh-registry";
+function isWorkspaceMenuRoute(currentSiteId, pathname) {
+  return currentSiteId === "hub" && isHubWorkspacePath2(pathname);
+}
+
+// src/header/PrefetchSiblingSites.tsx
+import { useEffect as useEffect4 } from "react";
+import { detectEnv as detectEnv4 } from "@agentic-toolkit/adh-registry";
+function PrefetchSiblingSites() {
+  useEffect4(() => {
+    if (typeof window === "undefined") return;
+    if (detectEnv4(window.location.hostname) !== "local") return;
+    const hostPattern = window.location.host.replace(/^[^.]+/, "*");
+    const rules = {
+      prerender: [
+        {
+          where: { href_matches: `${window.location.protocol}//${hostPattern}/*` },
+          eagerness: "moderate"
+        }
+      ]
+    };
+    const script = document.createElement("script");
+    script.type = "speculationrules";
+    script.textContent = JSON.stringify(rules);
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, []);
+  return null;
+}
+
+// src/header/SiteMenuSwitcher.tsx
+import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
+function SiteMenuSwitcher(props) {
+  const pathname = usePathname5() ?? "/";
+  const onWorkspaceRoute = isWorkspaceMenuRoute(props.currentSiteId, pathname);
+  return /* @__PURE__ */ jsxs10(Fragment6, { children: [
+    /* @__PURE__ */ jsx16(PrefetchSiblingSites, {}),
+    onWorkspaceRoute ? /* @__PURE__ */ jsx16(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx16(MarketingSiteMenu, { ...props })
+  ] });
+}
+
+// src/header/SiteHeader.tsx
+import { jsx as jsx17 } from "react/jsx-runtime";
+function SiteHeader({
+  siteId,
+  pageTitle,
+  center,
+  badges,
+  leadingActions,
+  navLinks,
+  trailingNavLinks = [],
+  routes,
+  personalSlug,
+  clientId,
+  onAfterLogout,
+  useAuthSource = useAnonymousHeaderAuth,
+  ...authOverrides
+}) {
+  const source = useAuthSource({ clientId, onAfterLogout });
+  const {
+    resolveSwitchHref,
+    user,
+    userIsAdmin,
+    authLoading = false,
+    loginHref,
+    signupHref,
+    onLogin,
+    onSignup,
+    onLogout,
+    settingsHref,
+    onSettings
+  } = { ...source, ...authOverrides };
+  const resolvedNavLinks = (typeof navLinks === "function" ? navLinks(user != null) : navLinks) ?? [];
+  const hostname = useClientHost4();
+  const conceptSite = isConceptSite(siteId);
+  const site = getSite3(siteId);
+  const siteName = site ? siteHeaderTitle2(site) : siteId;
+  const resolveHubHref = (path) => hostname ? siteUrl2("hub", path, hostname) : siteProdUrl2("hub", path);
+  const selfReturn = hostname ? siteUrl2(siteId, siteHomePath(siteId), hostname) : siteProdUrl2(siteId, siteHomePath(siteId));
+  const hubAuthHref = (path) => `${resolveHubHref(path)}?return_to=${encodeURIComponent(selfReturn)}`;
+  const resolvedLoginHref = loginHref ?? (onLogin ? void 0 : hubAuthHref("/login"));
+  const resolvedSignupHref = signupHref ?? (onSignup ? void 0 : hubAuthHref("/signup"));
+  const switcherSettingsHref = onSettings ? void 0 : settingsHref ?? resolveHubHref("/home/settings");
+  return /* @__PURE__ */ jsx17(
+    AdhHeader2,
+    {
+      siteName,
+      siteSwitcher: /* @__PURE__ */ jsx17(
+        SiteMenuSwitcher,
+        {
+          currentSiteId: siteId,
+          resolveHref: resolveSwitchHref,
+          personalSlug,
+          authenticated: user != null,
+          onSettings,
+          settingsHref: switcherSettingsHref,
+          loginHref: resolvedLoginHref,
+          signupHref: resolvedSignupHref,
+          routes,
+          userIsAdmin
+        }
+      ),
+      pageTitle,
+      center,
+      badges,
+      leadingActions,
+      navLinks: resolvedNavLinks,
+      trailingNavLinks,
+      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx17("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      user,
+      authLoading,
+      loginHref: resolvedLoginHref,
+      signupHref: resolvedSignupHref,
+      onLogin,
+      onSignup,
+      onLogout,
+      settingsHref,
+      onSettings
+    }
+  );
+}
+
+// src/header/index.ts
+import {
+  RECENTS_CAP,
+  clearRecents,
+  readRecents,
+  recordRecent,
+  useRecents as useRecents2
+} from "@agentic-toolkit/adh/header/recents";
 export {
   AdhHeader,
   AuthButtons,
   AvatarMenu,
+  DEBUG_SECTION,
+  DEV_PREVIEW_BADGES,
+  DEV_TOOLS_BUILD_ENABLED,
+  HubMark,
+  MarketingSiteMenu,
   NavLinkItem,
-  SiteOptionsMenu
+  NavigationPopover,
+  PrefetchSiblingSites,
+  RECENTS_CAP,
+  SiteHeader,
+  SiteMenu,
+  SiteMenuSwitcher,
+  SiteOptionsMenu,
+  SiteSwitcher,
+  WorkspaceSiteMenu,
+  WorkspacesMenuProvider,
+  buildDebugSiteGroups,
+  buildDevToolsEntries,
+  buildRouteItems,
+  clearRecents,
+  currentRoutePath,
+  getEnvOverride,
+  hubCoreGroups,
+  isWorkspaceMenuRoute,
+  menuIcon,
+  parseEnvOverride,
+  pathMatches,
+  readRecents,
+  recordRecent,
+  resolveEffectiveEnv,
+  setEnvOverride,
+  useClientHost,
+  useEffectiveEnv,
+  useEnvOverride,
+  useRecents2 as useRecents,
+  useSiteMenu,
+  useWorkspacesMenu
 };
 //# sourceMappingURL=index.js.map

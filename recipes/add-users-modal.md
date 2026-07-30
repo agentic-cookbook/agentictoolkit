@@ -32,7 +32,7 @@ references: []
 
 ## Overview
 
-A modal in `@adh-shared/ui` for building a list of users to add. It composes
+A modal in `@agentic-toolkit/ui` for building a list of users to add. It composes
 `Dialog` + `DataTable` + `Input` + `AlertModal` + `Button`. Each "Add" appends
 the entry row to a table above; the dialog's final "Add" hands the rows to a
 caller callback (`onAdd`) — stubbed in Phase 2, wired in Phase 3.
@@ -141,7 +141,7 @@ Composed shared primitives without their own recipe domains: `Input` and `Field`
   staging table and entry row stay usable on mobile.
 - **SwiftUI / Compose:** Not applicable — web-only shared block.
 
-API (`@adh-shared/ui/blocks/add-users-modal`):
+API (`@agentic-toolkit/ui/blocks/add-users-modal`):
 
 ```ts
 interface DraftUser { name: string; email: string; phone: string; note: string }

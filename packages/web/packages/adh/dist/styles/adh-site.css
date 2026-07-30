@@ -1,0 +1,560 @@
+/* The SITE-tier half of this package's stylesheet — the rules whose components resolve
+ * adh's own site registry or legal copy (SiteHeader, SiteFooter, the marketing shell),
+ * as opposed to the registry-free primitives styled by adh-components.css.
+ *
+ * THIS is what `@agentic-toolkit/adh/styles.css` resolves to, and it leads with the
+ * component sheet so a site still needs ONE import: the primitives' base rules always
+ * precede the overrides below, several of which beat a primitive rule at EQUAL
+ * specificity and therefore depend on source order, not weight. Relative, not the
+ * `@agentic-toolkit/adh/styles.css` package path this line used to carry — that
+ * specifier now names this very file, so it would be a self-import loop.
+ *
+ * Was `adh-chrome.css` in the adh-owned `@adh/chrome` package until that whole tier
+ * moved here; before that, `@adh-shared/adh/styles.css` (Task 5.9c) — see the git
+ * history of its long-retired path frontend/src/shared/adh/src/styles/adh-components.css
+ * for anything below. */
+@import "./adh-components.css";
+
+/* Tailwind @source registration for this package — see the package-root sources.css.
+ * Without it a host that imports this sheet but carries no @source globs of its own
+ * silently loses every utility mentioned only inside this package. */
+@import "../../sources.css";
+
+/* RequireAuthSkeleton's styles, re-imported so every site that mounts HomeGate gets
+ * them — only admin and hub import the auth stylesheet directly, but ~28 marketing
+ * sites render the skeleton through HomeGate and reach these rules only here. Moved to
+ * their owning package in Task 6.4 (they sat inline at the foot of this file, parked by
+ * 5.9c); kept reachable here for the same reason @agentic-toolkit/adh/styles.css
+ * re-imports themes and ui. Placed with the other @imports rather than where the block
+ * stood: @import is only honored before the first style rule. */
+@import "@agentic-toolkit/auth/styles.css";
+
+/* NOTE: bitbag's CSS — the chat package's base.css + inline.css, and the bitbag
+ * package's own chat + dock sheets — is NOT imported here. It all rides with the
+ * lazily-loaded chat chunk (see FooterChatInner.tsx) so pages that never open the
+ * chat don't pay for it. Only where the dock PARKS (`.adh-footer__chat` below)
+ * lives in this always-loaded stylesheet; his skin is his own toolkit theme,
+ * injected scoped by BitbagChat. */
+
+/* The studio brand name in the copyright line — a link to fishlamp.com, tinted
+   with the site's highlight (accent) color so it reads as the brand. */
+.adh-footer__copyright {
+  white-space: nowrap;
+}
+
+.adh-footer__brand-link {
+  color: var(--adh-footer-brand-color, var(--color-accent));
+  text-decoration: none;
+  transition: color calc(0.2s * var(--apt-anim-scale, 1));
+}
+
+.adh-footer__brand-link:hover {
+  color: var(--adh-footer-brand-color-hover, var(--color-accent-bright));
+}
+
+/* WHERE BITBAG PARKS — positioning only.
+   His SKIN is his own (the toolkit theme BitbagChat injects scoped to itself,
+   plus the bitbag package's chat + dock sheets), so that he is the same bitbag
+   here as on bitbag.ai and on fishlamp.com. Overriding it from the family's
+   `--pc-*` tokens is what USED to happen here, and it produced a third
+   appearance belonging to none of the three. This block therefore says only
+   where the dock sits and how wide it is.
+
+   FLOATS at the footer's bottom-center, absolutely positioned relative to the
+   (sticky, so positioned) .adh-footer. Being out of the bar's flex flow it NEVER
+   affects the footer bar's height, and it is bottom-anchored, so when the
+   transcript grows up (the chat package releasing `.pc-collapsed`) the column
+   climbs in Z-ORDER — a floating overlay ON TOP of the page — while the bar
+   stays put. The dock itself is pointer-transparent (see bitbag-dock.css), so
+   the empty width beside bitbag's face never eats a click meant for the page. */
+.adh-footer__chat {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 20;
+  /* 560px, matching the studio site's dock — the same fixture at the same size. */
+  width: min(35rem, calc(100% - 2rem));
+}
+
+/* WHAT THE DOCK COSTS THE PAGE. The column is ~8.2rem tall: the collapsed
+   composer (~3.6rem) plus bitbag's own layout box riding above it (his 350×195
+   viewBox at 132px wide ≈ 4.6rem, and that box keeps its height while he's dozing
+   — the doze is a transform, which doesn't reflow). Being absolute it reserves
+   NOTHING, so whatever it overhangs is page content — and the overhang is not
+   click-through: only the empty width BESIDE bitbag is pointer-transparent, while
+   `.bb-dock__avatar` and `.bb-dock__chat` (the full 560px box) are both
+   pointer-events:auto. So the overhang has to be paid for here, once, or every
+   page's last row (buttons, list actions, form footers) silently loses its clicks.
+
+   Above 64rem the dock sits INSIDE the bar (bottom:0), so only the part clearing
+   the bar's ~2.5rem overhangs — ≈5.7rem, rounded up to 6. This must stay ABOVE the
+   media query below (same specificity, so a later rule would win in both modes). */
+.adh-app-shell__main {
+  padding-bottom: 6rem;
+}
+
+/* Below ~64rem the footer bar's copyright + nav fill enough of the width that a
+   bottom-centered overlay would sit ON TOP of (and intercept clicks on) the
+   Sites/Terms/Privacy links. So until there's clear room in the center, lift the
+   dock ABOVE the bar (floating over page content) instead of overlapping it.
+   Above 64rem it centers in the bar's empty middle. */
+@media (max-width: 64rem) {
+  .adh-footer__chat {
+    bottom: 100%;
+    margin-bottom: 0.4rem;
+  }
+  /* Lifted clear of the bar, the WHOLE column overhangs page content — so reserve
+     its full height rather than the 6rem above. */
+  .adh-app-shell__main {
+    padding-bottom: 8rem;
+  }
+}
+
+/* The shared footer modal dialog (native HTML Popover API) — used by the Sites,
+   Terms and Privacy triggers. Open state is centered in the top layer with a
+   dimmed backdrop; a flex column pins the header while the body scrolls.
+
+   CLOSED state must be `display:none` so the modal doesn't render inline in the
+   footer (and intercept clicks across the page). The UA stylesheet's
+   `[popover]:not(:popover-open){display:none}` would do that, BUT an author rule
+   setting `display` on `.adh-modal` overrides it (author beats UA origin) — so we
+   scope the layout `display:flex` to `:popover-open` and keep an explicit closed
+   rule. The <a href>s inside stay in the DOM (display:none → still crawlable). */
+.adh-modal:not(:popover-open) {
+  display: none;
+}
+.adh-modal {
+  flex-direction: column;
+  width: min(92vw, 44rem);
+  max-height: 80vh;
+  margin: auto; /* UA sets inset:0; this centers it in the viewport */
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--pc-radius, 0.5rem);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  box-shadow: 0 16px 40px -12px color-mix(in srgb, var(--color-shadow, #000) 60%, transparent);
+  font-family: var(--font-mono);
+}
+.adh-modal:popover-open {
+  display: flex;
+}
+
+.adh-modal::backdrop {
+  background: color-mix(in srgb, var(--color-shadow, #000) 50%, transparent);
+}
+
+/* Header — title (left) + close box (right), pinned above the scrolling body. */
+.adh-modal__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.adh-modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.adh-modal__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 2rem;
+  margin: -0.25rem -0.35rem -0.25rem 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color calc(0.15s * var(--apt-anim-scale, 1)), background-color calc(0.15s * var(--apt-anim-scale, 1));
+}
+
+.adh-modal__close:hover,
+.adh-modal__close:focus-visible {
+  color: var(--color-accent);
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.06));
+  outline: none;
+}
+
+.adh-modal__close-icon {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+/* Body — the scrolling content region (site groups, or legal prose). */
+.adh-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+/* Legal content inside the modal: drop the standalone page's centering/width so
+   it reads as modal-body prose (legal.css styles the headings/paragraphs). */
+.adh-modal__body--legal .adh-legal-doc {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.adh-sites-popover__group {
+  margin-bottom: 1.25rem;
+}
+
+.adh-sites-popover__group:last-child {
+  margin-bottom: 0;
+}
+
+.adh-sites-popover__group-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-dim);
+}
+
+.adh-sites-popover__list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 34rem) {
+  .adh-sites-popover__list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.adh-sites-popover__item {
+  display: block;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  color: var(--color-text-primary);
+  transition: background-color calc(0.15s * var(--apt-anim-scale, 1));
+}
+
+.adh-sites-popover__item:hover,
+.adh-sites-popover__item:focus-visible {
+  background: var(--color-surface-hover);
+  outline: none;
+}
+
+.adh-sites-popover__name {
+  display: block;
+  color: var(--color-accent);
+}
+
+.adh-sites-popover__blurb {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-text-dim);
+}
+
+/* Hide everything popover-related in browsers without the Popover API so the
+   panel never dumps inline and the dead trigger isn't shown. The <a href>s are
+   still in the server HTML, so crawlers follow them regardless of this. */
+@supports not selector(:popover-open) {
+  .adh-modal,
+  .adh-footer__sites-trigger {
+    display: none;
+  }
+}
+
+/* Site switcher — the header title rendered as a dropdown trigger. Inherits
+   .adh-header__title for the type treatment; this adds the button reset + caret. */
+.adh-nav-popover__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.adh-nav-popover__chevron {
+  height: 0.85em;
+  width: 0.85em;
+  opacity: 0.7;
+}
+
+/* The hub brand mark (sparkle + orbit dots, small-size cut) before the trigger
+   label. Slightly larger than the cap height so the orbit dots stay legible;
+   fills currentColor, so it inherits the trigger's accent color + hover
+   brightening from .adh-header__title. */
+.adh-nav-popover__mark {
+  height: 1.2em;
+  width: 1.2em;
+  flex-shrink: 0;
+}
+
+.adh-nav-popover__item--current {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* Command field — the VS Code-style command box pinned at the top of the open
+   switcher. Focused on open; a `>` prompt leads it; typing a site name filters
+   the list below. */
+.adh-nav-popover__menu {
+  min-width: 22rem;
+  padding-top: 0;
+  /* Grow to fit the content; cap width AND height at what Radix has between the
+     trigger and the viewport edge, so the menu isn't curtailed when it fits — and
+     never overflows a narrow (mobile) viewport now that it's the sole site nav. */
+  display: flex;
+  flex-direction: column;
+  max-width: var(--radix-dropdown-menu-content-available-width, 90vw);
+  max-height: var(--radix-dropdown-menu-content-available-height, 90vh);
+}
+
+.adh-nav-popover__search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+}
+
+/* The `>` command prompt — monospace + gold so the box reads as a command line. */
+.adh-nav-popover__prompt {
+  flex-shrink: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-accent);
+  user-select: none;
+}
+
+.adh-nav-popover__search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.adh-nav-popover__search-input::placeholder {
+  color: var(--color-text-dim);
+}
+
+/* "?" help icon at the right of the command row — opens the sites-overview
+   popover (same panel as the footer trigger + the "help" command). */
+.adh-site-switcher__help {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0.15rem;
+  cursor: pointer;
+  color: var(--color-text-dim);
+  transition: color calc(0.15s * var(--apt-anim-scale, 1));
+}
+
+.adh-site-switcher__help:hover,
+.adh-site-switcher__help:focus-visible {
+  color: var(--color-accent);
+  outline: none;
+}
+
+.adh-site-switcher__help-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+/* The "help" command row shown when the user types "help". */
+.adh-nav-popover__help-row {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* The list scrolls vertically within the menu rather than growing the popover
+   off short viewports. overflow-x is pinned to hidden: with only overflow-y set,
+   CSS computes the x-axis to `auto`, which would surface a horizontal scrollbar
+   on a long row — clip instead. A subtle enter animation plays once when the
+   menu opens. */
+.adh-nav-popover__list {
+  /* Flex within the menu's available height: shows every row when it fits,
+     scrolls only when the content would overflow the window. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: adh-site-switcher-enter calc(0.12s * var(--apt-anim-scale, 1)) ease-out;
+}
+
+@keyframes adh-site-switcher-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adh-nav-popover__list {
+    animation: none;
+  }
+}
+
+/* Section dividers carry a negative side margin to bleed to the edge of the
+   content's padding; the list has no horizontal padding, so reset it here to
+   avoid a few px of horizontal overflow (clipped, not scrollable). */
+.adh-nav-popover__list .adh-dropdown-menu__separator {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Keyboard/pointer highlight — mirrors the dropdown item's hover state so the
+   active row reads the same whether reached by arrow keys or the mouse. Applies
+   to leaves, search results, AND topic rows; an OPEN topic header additionally
+   gets the same fill from `.adh-dropdown-menu__sub-trigger[data-popup-open]`. */
+.adh-nav-popover__item--active {
+  background: var(--color-surface-hover);
+}
+
+.adh-nav-popover__empty {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+/* Topic row in the top-level list — a sub-trigger that pops out a flyout. The
+   wrapper appends its own chevron (.adh-dropdown-menu__sub-trigger-chevron),
+   right-aligned via margin-left:auto. A disclosed topic keeps the base
+   sub-trigger's `[data-popup-open]` background so it reads as "open" even when
+   the keyboard highlight is on a site inside its flyout. */
+.adh-nav-popover__topic {
+  width: 100%;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* All menu rows — the top-level entries, the flat search results, AND the flyout
+   submenu site rows — read at one size (a couple points under the base item) and
+   one line-height. The topic rows are <button>s carrying `font: inherit`, whose
+   shorthand resets line-height back to the body's 1.7 and made them taller than
+   the leaf/submenu rows; pin 1.2 here so the main-menu rows match the submenu. */
+.adh-nav-popover__list .adh-nav-popover__topic,
+.adh-nav-popover__list > a.adh-dropdown-menu__item,
+.adh-nav-popover__submenu .adh-dropdown-menu__item {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+/* Blurbs (the right-aligned site taglines, everywhere in the switcher) read
+   smaller and italic. Scoped to <a> rows so it never touches topic triggers.
+   `margin-left: auto` pushes the tagline to the row's right edge: the switcher
+   loads @agentic-toolkit/ui's components.css, which carries the flex
+   .adh-dropdown-menu__item base but NOT a .adh-dropdown-menu__shortcut rule (that
+   right-align lives only in @agentic-toolkit/adh, which this chain doesn't import),
+   so the switcher owns its own right-align here rather than inheriting one. */
+.adh-nav-popover__list a.adh-dropdown-menu__item .adh-dropdown-menu__shortcut,
+.adh-nav-popover__submenu a.adh-dropdown-menu__item .adh-dropdown-menu__shortcut {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-style: italic;
+}
+
+/* Tighter rows — less vertical padding than the base dropdown item so the menu
+   reads compact (covers topic triggers, leaves, search results, and flyouts). */
+.adh-nav-popover__list .adh-dropdown-menu__item,
+.adh-nav-popover__submenu .adh-dropdown-menu__item {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+/* The leading icon slot on a row — muted so the label + tagline stay primary.
+   Sizing/flex-shrink come from the shared .adh-dropdown-menu__item-icon. */
+.adh-nav-popover__icon {
+  color: var(--color-text-dim);
+}
+
+/* Inline sub-item — an always-visible row indented under the row above it (Hub's
+   ecosystem sites; Workspaces under Home). Extra left padding past the base row
+   inset (0.75rem); the icon slot stays the first flex child so icons line up in a
+   single indented column. Applies to both leaf <a> rows and topic <button>s. */
+.adh-nav-popover__list .adh-nav-popover__item--indent {
+  padding-left: 1.75rem;
+}
+
+/* A topic's cascading submenu flyout — the popped-out list of that topic's
+   sites. Inherits the shared dropdown content surface; `width: max-content`
+   makes the flyout hug its content (overriding the base content's 14rem floor)
+   so the box is exactly as wide as its widest row — name + a single gap + blurb
+   — rather than padding out to a fixed width. The viewport-relative cap keeps an
+   unusually long row from running off-screen, and a tall list scrolls. */
+.adh-nav-popover__submenu {
+  min-width: 0;
+  width: max-content;
+  max-width: var(--radix-dropdown-menu-content-available-width, 90vw);
+  max-height: var(--radix-dropdown-menu-content-available-height, 80vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Autocomplete result — "{area} → {site}". The area + arrow are dim so the
+   matched site name reads as the primary text; the site's tagline keeps the
+   shared right-aligned shortcut style. */
+.adh-nav-popover__match {
+  gap: 0.4rem;
+}
+
+.adh-nav-popover__area {
+  color: var(--color-text-dim);
+}
+
+.adh-nav-popover__arrow {
+  color: var(--color-text-dim);
+  opacity: 0.7;
+}
+
+/* The chars an autocomplete query matched — underlined in the warning orange so
+   the typed run stands out within the result name/tagline. */
+.adh-nav-popover__hl {
+  color: var(--color-warning, #e08a3c);
+  text-decoration: underline;
+  text-decoration-color: var(--color-warning, #e08a3c);
+}
+
+/* Hovering a destination link underlines its name (the part that navigates) —
+   submenu sites, leaf links, autocomplete matches. Topic/consulting submenu
+   triggers (which only disclose) are buttons, so they're unaffected. */
+a.adh-dropdown-menu__item:hover .adh-nav-popover__link-name {
+  text-decoration: underline;
+}

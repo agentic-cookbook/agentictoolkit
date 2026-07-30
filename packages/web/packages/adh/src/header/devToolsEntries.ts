@@ -1,0 +1,121 @@
+import { type SiteEnv } from '@agentic-toolkit/adh-registry'
+import {
+  buildRouteItems,
+  type PopoverEntry,
+  type RouteSection,
+} from '@agentic-toolkit/adh/header'
+import { DEBUG_SECTION } from './debugSiteGroups'
+import { menuIcon } from './menu-icons'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The dev-only tail of the site menu: a "Routes" flyout (this site's own routes)
+// and a "Debug Options" row (opens the Debug console). Both used to be pills in
+// the header bar; they live in the menu now so the header fits a phone.
+//
+// Appended after the Marketing/Main site-family flyouts and sharing their
+// DEBUG_SECTION, so the whole dev tail reads as one contiguous run (a divider
+// falls between sections, never within one).
+//
+// Pure (no hooks/DOM) so the env gating below — the part that must never leak a
+// debug affordance to an ordinary production visitor — is unit-testable.
+// {@link SiteMenu} supplies the envs and the admin unlock.
+
+/**
+ * Whether this BUILD carries the dev tooling for everyone: true in the three dev
+ * envs, false in production. NEXT_PUBLIC_DEPLOYMENT_ENV is inlined per build, so
+ * this is a literal boolean the bundler can fold. An explicit allowlist (not
+ * `!== 'production'`) keeps an unset/unknown env fail-safe: hidden, never shown
+ * in a misconfigured build. Evaluated once at module load.
+ *
+ * NOT the only door anymore: a signed-in adh admin unlocks the same rows at
+ * runtime in ANY env, production included (see {@link SiteMenu}'s
+ * `devToolsUnlocked` and DevToolsOptions.adminUnlocked).
+ */
+export const DEV_TOOLS_BUILD_ENABLED =
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
+
+/** The envs that carry dev tooling. An explicit allowlist (not `!== 'production'`)
+ *  so an unknown/absent env is fail-safe: hidden, never shown by accident. */
+const DEV_ENVS: readonly SiteEnv[] = ['local', 'testing', 'staging']
+
+export function isDevEnv(env: SiteEnv | null): boolean {
+  return env !== null && DEV_ENVS.includes(env)
+}
+
+export type DevToolsOptions = {
+  /** This site's route map. Absent ⇒ no Routes flyout (the site passed none). */
+  routes?: RouteSection[]
+  /** Env AFTER the dev override — gates Routes, so simulating production hides it
+   *  and the preview stays honest. */
+  effectiveEnv: SiteEnv | null
+  /** Env BEFORE the dev override — gates Debug Options, so simulating production
+   *  can never lock a developer out of un-simulating. */
+  realEnv: SiteEnv | null
+  /** The signed-in user is an adh admin: show BOTH rows regardless of env —
+   *  production included. Overrides every env gate below (an admin simulating
+   *  production keeps Routes too: the simulation is for previewing what visitors
+   *  get, and an admin never stops being an admin). */
+  adminUnlocked: boolean
+  /** The active dev override, surfaced in the Debug row's label. */
+  override: SiteEnv | null
+  pathname: string
+  onOpenDebug: () => void
+}
+
+/**
+ * The dev-only Routes / Debug Options rows for the current env, or `[]`.
+ *
+ * The two rows read DIFFERENT envs on purpose:
+ *  - Routes follows the EFFECTIVE env — while you simulate production it hides,
+ *    so what you're previewing matches what production would render.
+ *  - Debug Options follows the REAL env — it stays reachable even while
+ *    simulating production, so the simulation is always reversible.
+ *
+ * `adminUnlocked` bypasses both env reads: a signed-in adh admin always gets the
+ * full dev tail, in every env including production.
+ */
+export function buildDevToolsEntries({
+  routes,
+  effectiveEnv,
+  realEnv,
+  adminUnlocked,
+  override,
+  pathname,
+  onOpenDebug,
+}: DevToolsOptions): PopoverEntry[] {
+  const out: PopoverEntry[] = []
+
+  if (routes && routes.length > 0 && (adminUnlocked || isDevEnv(effectiveEnv))) {
+    out.push({
+      kind: 'topic',
+      section: DEBUG_SECTION,
+      label: 'Routes',
+      icon: menuIcon('routes'),
+      items: buildRouteItems(routes, pathname),
+    })
+  }
+
+  if (adminUnlocked || isDevEnv(realEnv)) {
+    out.push({
+      kind: 'leaf',
+      section: DEBUG_SECTION,
+      // `blurb` is what actually RENDERS a leaf's description (see NavigationPopover's
+      // leaf branch) — without it the "Sim: prod" hint below would be set but invisible.
+      blurb: true,
+      item: {
+        key: 'debug-options',
+        label: 'Debug Options',
+        // Carries the old header pill's "Sim: prod" state, so it stays obvious the
+        // site is being viewed AS production rather than for real. Kept OUT of the
+        // label so the row's accessible name is stably "Debug Options".
+        description: override === 'production' ? 'Sim: prod' : undefined,
+        icon: menuIcon('debug'),
+        onSelect: onOpenDebug,
+      },
+    })
+  }
+
+  return out
+}

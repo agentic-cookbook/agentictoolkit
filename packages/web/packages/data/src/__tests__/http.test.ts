@@ -9,7 +9,7 @@ import { AuthHttpError as ToolkitAuthHttpError } from "@agentic-toolkit/auth/cli
 import { isNotFound, isConflict, isForbidden, isServiceUnavailable } from "../http";
 
 // A distinct constructor standing in for a host's own AuthHttpError (e.g.
-// @adh-shared/auth): same numeric `.status`, different class identity.
+// atop this one): same numeric `.status`, different class identity.
 class HostAuthHttpError extends Error {
   constructor(
     readonly status: number,

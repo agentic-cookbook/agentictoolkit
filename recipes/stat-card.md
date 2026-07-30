@@ -34,7 +34,7 @@ references: []
 
 ## Overview
 
-`StatCard` in `@adh-shared/ui` is the dashboard stat card: an `InfoPanel` headed by
+`StatCard` in `@agentic-toolkit/ui` is the dashboard stat card: an `InfoPanel` headed by
 an icon + title with an optional "{tool} ↗" deep link (plus optional extra header
 controls via `actions`) in the header actions slot, over a vertical stack of `StatRow` figures, optional freeform content, and a muted
 mono footnote. It is **pure assembly** — the shell is `InfoPanel`, the rows are
@@ -158,7 +158,7 @@ into a composed part; nothing flows back up except the browser navigation an
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/ui/src/blocks/stat-card.tsx`,
-  exported from `@adh-shared/ui` (`@adh-shared/ui/blocks/stat-card`). Composes
+  exported from `@agentic-toolkit/ui` (`@agentic-toolkit/ui/blocks/stat-card`). Composes
   `InfoPanel` (`../blocks/info-panel`), `StatRow` (`../components/stat`), and
   `ExternalLink` (`../components/external-link`). Exports `StatCard`, `StatCardProps`,
   and the `StatCardStat` type.
@@ -207,7 +207,7 @@ into a composed part; nothing flows back up except the browser navigation an
 |---|---|---|
 | Artifact formatting (recipe) | pass | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` (uses `apt-*` tokens) | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Labeled region (InfoPanel), decorative icon `aria-hidden`, deep link opens `noopener` new tab | pass | accessibility |
 
 ## Change History

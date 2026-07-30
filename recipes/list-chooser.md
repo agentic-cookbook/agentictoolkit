@@ -47,7 +47,7 @@ the research category/tag UI). It is built by composing the same primitives as
 with a hand-managed roving selection, rather than forking `OptionMenu`: that
 control has a fixed list with a separate editable "Other" row at the bottom, while
 this control's single field _is_ both the filter and the add-new field. It differs
-from `Combobox` (`@adh-shared/ui/components/combobox`), an inline free-text input
+from `Combobox` (`@agentic-toolkit/ui/components/combobox`), an inline free-text input
 with a typeahead dropdown and no trigger, list, or OK/Cancel commit step.
 
 ## Behavioral Requirements

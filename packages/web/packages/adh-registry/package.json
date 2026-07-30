@@ -1,0 +1,41 @@
+{
+  "name": "@agentic-toolkit/adh-registry",
+  "version": "0.1.0",
+  "description": "The 48-site registry, its per-site SEO derivation, and the generated route table. Framework-free and React-free: the one package every adh site imports to learn what the other sites are.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./seo": {
+      "types": "./dist/seo/index.d.ts",
+      "development": "./src/seo/index.ts",
+      "import": "./dist/seo/index.js"
+    },
+    "./routes": {
+      "types": "./dist/sites/routes.generated.d.ts",
+      "development": "./src/sites/routes.generated.ts",
+      "import": "./dist/sites/routes.generated.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "clean": "rm -rf dist .turbo",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "next": "^16.2.9",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vite": "^7.1.0",
+    "vitest": "^4.1.4"
+  }
+}

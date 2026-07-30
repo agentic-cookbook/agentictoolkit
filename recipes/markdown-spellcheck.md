@@ -36,7 +36,7 @@ references:
 
 ## Overview
 
-A standalone editor-toolbar control in `@adh-shared/ui`
+A standalone editor-toolbar control in `@agentic-toolkit/ui`
 (`components/markdown-spellcheck`) that adds an **optional**, **markdown-aware**
 spelling & grammar check to a markdown editor. It is built for the
 `MarkdownEditor` `toolbarExtras` slot: the consumer passes the same markdown
@@ -182,7 +182,7 @@ toolbar ────────────────────────
 
 ## Configuration
 
-`@adh-shared/ui/components/markdown-spellcheck`
+`@agentic-toolkit/ui/components/markdown-spellcheck`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -240,8 +240,8 @@ is surfaced to the user via the error state rather than logged.
 
 - **React / Web (TypeScript):** Component at
   `websites/shared/ui/src/components/markdown-spellcheck.tsx`, exported from
-  `@adh-shared/ui/components/markdown-spellcheck`. Built on the shared `Popover` +
-  `Button` + `Badge` + `Spinner`. harper.js is a dependency of `@adh-shared/ui`,
+  `@agentic-toolkit/ui/components/markdown-spellcheck`. Built on the shared `Popover` +
+  `Button` + `Badge` + `Spinner`. harper.js is a dependency of `@agentic-toolkit/ui`,
   marked `external` in `tsup.config.ts` so the dist re-emits the dynamic
   `import('harper.js')` verbatim and the **consumer's** bundler (Next.js)
   code-splits + lazy-loads the WASM. Consumed by hub's `ResearchDetail` (in the

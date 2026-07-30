@@ -13,5 +13,5 @@ export type AvatarMenuProps = {
     onSettings?: () => void;
     children?: ReactNode;
 };
-export declare function AvatarMenu({ user, navLinks, onLogout, settingsHref, onSettings, children, }: AvatarMenuProps): import("react/jsx-runtime").JSX.Element;
+export declare function AvatarMenu({ user, navLinks, onLogout, settingsHref, onSettings, children, }: AvatarMenuProps): import("react").JSX.Element;
 //# sourceMappingURL=AvatarMenu.d.ts.map

@@ -164,7 +164,10 @@ import { Palette } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // src/themes/adh-themes.ts
+import { themes } from "@agentic-toolkit/themes/manifest";
 var ADH_THEME_COOKIE = "adh-theme";
+var BASE_CUT_ALIASES = ["adh-iosevka"];
+var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
 var ADH_THEMES = [
   { key: "adh", label: "ADH" },
   { key: "adh-iosevka", label: "Iosevka" },
@@ -173,8 +176,8 @@ var ADH_THEMES = [
   { key: "adh-comic", label: "Comic" },
   { key: "adh-jetbrains", label: "JetBrains" },
   { key: "adh-fira", label: "Fira" }
-];
-var DEFAULT_ADH_THEME = "adh-manrope";
+].filter((t) => !isBaseCutAlias(t.key));
+var DEFAULT_ADH_THEME = "adh";
 
 // src/themes/ThemeSwitcher.tsx
 import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
@@ -214,7 +217,7 @@ import { MessageSquare } from "lucide-react";
 import { jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 var DEFAULT_VALUE = "__default";
 function ChatThemeSwitcher({
-  themes,
+  themes: themes2,
   current,
   onChange,
   label = "Chat theme"
@@ -231,7 +234,7 @@ function ChatThemeSwitcher({
         onValueChange: (value) => onChange(value === DEFAULT_VALUE ? null : value),
         children: [
           /* @__PURE__ */ jsx4(DropdownMenuRadioItem, { value: DEFAULT_VALUE, children: "App default" }),
-          themes.map((theme) => /* @__PURE__ */ jsx4(DropdownMenuRadioItem, { value: theme.key, children: theme.label }, theme.key))
+          themes2.map((theme) => /* @__PURE__ */ jsx4(DropdownMenuRadioItem, { value: theme.key, children: theme.label }, theme.key))
         ]
       }
     ) }) })

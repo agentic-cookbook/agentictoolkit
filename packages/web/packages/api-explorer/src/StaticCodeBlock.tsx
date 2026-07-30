@@ -5,7 +5,10 @@
 // reference's code is in the server HTML: crawlable, no client highlight pass, no flash. (The
 // interactive CodeBlock keeps its copy button; the read-only reference is plain selectable text.)
 
-import { highlightToHtml, type HighlightLang } from './lib/highlight'
+// Package path (not relative): lib/highlight caches a lazy shiki highlighter
+// promise shared with the client entry's own import of it — see the `external`
+// entry + comment in tsup.config.ts for why a relative import here would fork it.
+import { highlightToHtml, type HighlightLang } from '@agentic-toolkit/api-explorer/lib/highlight'
 
 export interface StaticCodeBlockProps {
   code: string

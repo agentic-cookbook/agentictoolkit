@@ -33,7 +33,7 @@ references: []
 
 ## Overview
 
-`StatList` and `StatListRow` in `@adh-shared/ui` are the shared **status list** — a
+`StatList` and `StatListRow` in `@agentic-toolkit/ui` are the shared **status list** — a
 vertical stack of "tone dot + truncating label + trailing figure" rows. It is the
 fleet/telemetry idiom: a monitor's *down sites* (name · duration), a card's *top
 error issues* (title · count · deep link). Each row is a `StatusDot` (size 7) at the
@@ -127,7 +127,7 @@ composed `StatusDot`; nothing flows back up.
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/ui/src/blocks/stat-list.tsx`,
-  exported from `@adh-shared/ui` (`@adh-shared/ui/blocks/stat-list`). Composes
+  exported from `@agentic-toolkit/ui` (`@agentic-toolkit/ui/blocks/stat-list`). Composes
   `StatusDot` (`../components/status-dot`). Exports `StatList`, `StatListRow`,
   `StatListProps`, `StatListRowProps`.
 - Historical source: the fleet `MonitorCard` down-site list and the status backend's
@@ -162,7 +162,7 @@ composed `StatusDot`; nothing flows back up.
 |---|---|---|
 | Artifact formatting (recipe) | pass | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` (uses `apt-*` tokens) | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (composes StatusDot; no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (composes StatusDot; no bespoke UI) | pass | project-guidelines UI |
 | Decorative dot (no double-announce); truncated label has a `title` tooltip | pass | accessibility |
 
 ## Change History

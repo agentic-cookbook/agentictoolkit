@@ -1,0 +1,16 @@
+{
+  "name": "@agentic-toolkit/adh-site-config",
+  "version": "0.1.0",
+  "description": "Canonical ecosystem shape + content: the concept taxonomy (structure.json) and its per-locale copy (content/<locale>.json). Pure data — no build. Consumed by @agentic-toolkit/adh (which applies the types + bundles it); edited by hand or via the content studio.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./structure.json": "./structure.json",
+    "./content/*": "./content/*"
+  },
+  "files": [
+    "structure.json",
+    "content"
+  ]
+}

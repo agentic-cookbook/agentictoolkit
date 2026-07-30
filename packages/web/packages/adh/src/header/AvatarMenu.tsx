@@ -4,14 +4,15 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@agentic-toolkit/ui/components/avatar'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
-} from '../components/ui/dropdown-menu'
+} from '@agentic-toolkit/ui/components/dropdown-menu'
 import { pathMatches, type NavLink } from './NavLink'
 
 export type AvatarMenuUser = {
@@ -56,14 +57,12 @@ export function AvatarMenu({
   )
 
   const settingsItem = settingsHref ? (
-    <DropdownMenuItem asChild>
-      <Link href={settingsHref} className="adh-avatar-menu__item">
-        <span className="adh-avatar-menu__item-label">Settings</span>
-        <Settings className="adh-avatar-menu__item-icon" />
-      </Link>
-    </DropdownMenuItem>
+    <DropdownMenuLinkItem render={<Link href={settingsHref} />} className="adh-avatar-menu__item">
+      <span className="adh-avatar-menu__item-label">Settings</span>
+      <Settings className="adh-avatar-menu__item-icon" />
+    </DropdownMenuLinkItem>
   ) : onSettings ? (
-    <DropdownMenuItem onSelect={onSettings} className="adh-avatar-menu__item">
+    <DropdownMenuItem onClick={onSettings} className="adh-avatar-menu__item">
       <span className="adh-avatar-menu__item-label">Settings</span>
       <Settings className="adh-avatar-menu__item-icon" />
     </DropdownMenuItem>
@@ -75,7 +74,6 @@ export function AvatarMenu({
         className="adh-avatar-menu-trigger"
         aria-label={`Open ${user.name} menu`}
       >
-        <span className="adh-avatar-menu-trigger__name">{user.name}</span>
         <span className="adh-avatar-menu-trigger__avatar-wrap">{avatarInner}</span>
         <span className="adh-avatar-menu-trigger__chevron" aria-hidden="true">
           <ChevronDown className="adh-avatar-menu-trigger__chevron-icon" />
@@ -98,17 +96,16 @@ export function AvatarMenu({
               const matchers = link.matchPaths ?? [link.href]
               const active = matchers.some((m) => pathMatches(pathname, m))
               return (
-                <DropdownMenuItem asChild key={link.href + link.label}>
-                  <Link
-                    href={link.href}
-                    className="adh-avatar-menu__item"
-                    aria-current={active ? 'page' : undefined}
-                    data-active={active ? '' : undefined}
-                  >
-                    <span className="adh-avatar-menu__item-label">{link.label}</span>
-                    {Icon ? <Icon className="adh-avatar-menu__item-icon" /> : null}
-                  </Link>
-                </DropdownMenuItem>
+                <DropdownMenuLinkItem
+                  key={link.href + link.label}
+                  render={<Link href={link.href} />}
+                  className="adh-avatar-menu__item"
+                  aria-current={active ? 'page' : undefined}
+                  data-active={active ? '' : undefined}
+                >
+                  <span className="adh-avatar-menu__item-label">{link.label}</span>
+                  {Icon ? <Icon className="adh-avatar-menu__item-icon" /> : null}
+                </DropdownMenuLinkItem>
               )
             })}
           </>
@@ -129,7 +126,7 @@ export function AvatarMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onSelect={onLogout}
+              onClick={onLogout}
               className="adh-avatar-menu__item"
             >
               <span className="adh-avatar-menu__item-label">Log out</span>

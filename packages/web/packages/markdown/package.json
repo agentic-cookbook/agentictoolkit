@@ -13,7 +13,7 @@
     "dist",
     "src/components/markdown-viewer.css"
   ],
-  "comment:exports": "`development` \u2192 src for `next dev` (HMR, no build/restart); prod skips it \u2192 dist. Mirrors the @adh-shared/ui convention.",
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR, no build/restart); prod skips it \u2192 dist. Mirrors the @agentic-toolkit/ui convention.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

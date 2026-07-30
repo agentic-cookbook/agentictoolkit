@@ -1,0 +1,1 @@
+{"version":3,"file":"SiteNotFound.d.ts","sourceRoot":"","sources":["../../src/layout/SiteNotFound.tsx"],"names":[],"mappings":"AAEA,OAAO,EAAa,KAAK,SAAS,EAAE,MAAM,OAAO,CAAA;AAGjD,MAAM,MAAM,iBAAiB,GAAG;IAC9B;;;;;iFAK6E;IAC7E,cAAc,EAAE,MAAM,CAAA;IACtB,uEAAuE;IACvE,QAAQ,CAAC,EAAE,SAAS,CAAA;CACrB,CAAA;AAED;;;;;;GAMG;AACH,wBAAgB,YAAY,CAAC,EAAE,cAAc,EAAE,QAAQ,EAAE,EAAE,iBAAiB,+BAkC3E"}

@@ -15,7 +15,7 @@ import type { PaperSearchHit } from '../../registry/markdown'
 import { DEFAULT_TIMEOUT_MS } from '../../data/useDocumentSearch'
 
 /**
- * The markdown PREVIEW BODY (criterion c4): reuses @adh-shared/markdown's
+ * The markdown PREVIEW BODY (criterion c4): reuses @agentic-toolkit/markdown's
  * `MarkdownRenderer` — the same GitHub-flavoured, shiki-highlighted, rehype-sanitised
  * pipeline every adh site uses — rather than a bespoke parser. It fetches the selected
  * paper's full content from the public-by-(slug, route) endpoint through the injected

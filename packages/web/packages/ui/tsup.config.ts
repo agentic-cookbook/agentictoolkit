@@ -6,7 +6,7 @@ export default defineConfig({
   // entry without anyone editing this file — the tsup-entry gap (a src file that
   // the `exports` map's prod `import` condition points at, missing from dist
   // because dev resolves the `development` condition → src) becomes structurally
-  // impossible. The set mirrors @adh-shared/ui's `exports`, which is itself glob
+  // impossible. The set mirrors @agentic-toolkit/ui's `exports`, which is itself glob
   // based (`./components/*`, `./blocks/*`). esbuild's outbase is the common
   // ancestor `src/` (guaranteed by `src/index.ts`), so each file emits at the
   // same dist path the old hand-list produced (verified byte-identical). Keep in

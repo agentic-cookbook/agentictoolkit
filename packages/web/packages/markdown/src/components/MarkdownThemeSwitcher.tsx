@@ -14,7 +14,7 @@ export interface MarkdownThemeSwitcherProps {
 /**
  * Theme picker for the MarkdownViewer.
  *
- * Reuses the @adh-shared/ui Select primitive (a styled native <select>).
+ * Reuses the @agentic-toolkit/ui Select primitive (a styled native <select>).
  * The <label> provides an accessible name; the Select element exposes the
  * native listbox role, so no additional ARIA is needed.
  */

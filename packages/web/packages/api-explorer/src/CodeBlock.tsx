@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { cn } from '@agentic-toolkit/ui'
 import { CopyButton } from './CopyButton'
-import { highlightToHtml, type HighlightLang } from './lib/highlight'
+// Package path (not relative): see the matching comment in StaticCodeBlock.tsx / tsup.config.ts.
+import { highlightToHtml, type HighlightLang } from '@agentic-toolkit/api-explorer/lib/highlight'
 
 /**
  * Shiki-highlighted, copyable code. Renders a plain <pre> immediately (correct

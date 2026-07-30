@@ -8,7 +8,7 @@
 // are two halves of one factor lifecycle.
 //
 // The response types are authored locally (mirroring the backend's
-// /account/mfa OpenAPI schemas) — the hub's generated @adh-shared/api-types
+// /account/mfa OpenAPI schemas) — the hub's generated @agentic-toolkit/adh-api-types
 // is a monorepo coupling this package can't take.
 import { startRegistration } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'

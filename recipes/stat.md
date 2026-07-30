@@ -31,7 +31,7 @@ references: []
 
 ## Overview
 
-The stat family in `@adh-shared/ui` renders one label/value figure in the shared
+The stat family in `@agentic-toolkit/ui` renders one label/value figure in the shared
 dashboard grammar: a micro **uppercase mono** caption paired with a big, bold, mono
 **value** tinted by a status tone. Two exports ship the same grammar in two shapes:
 
@@ -151,7 +151,7 @@ No interactive states — the primitive is not focusable, hoverable, or disable-
 | `valueClassName` | `string` | — | Extra classes for the value; merged after the tone class (escape hatch for categorical hues). |
 | `className` | `string` | — | Extra classes for the wrapper; merged via `cn()`. |
 
-Exports from `@adh-shared/ui/components/stat`: `StatRow`, `Stat`, the `StatTone`
+Exports from `@agentic-toolkit/ui/components/stat`: `StatRow`, `Stat`, the `StatTone`
 type, and the `StatProps` interface.
 
 ## Logging
@@ -190,7 +190,7 @@ and any telemetry around it belong to the host, not the display element.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` (uses `apt-*` tokens) | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Meaning carried by the text label, not tone color alone | pass | accessibility |
 
 ## Change History

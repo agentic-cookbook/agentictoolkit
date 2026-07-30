@@ -3,8 +3,8 @@
 // `/api` before forwarding). These hand-written routes are the sole surface for a
 // user's markdown research papers (list/search, CRUD, publish/unpublish); see
 // websites/backend/src/routes/markdownDocuments.ts. Row/body shapes live in
-// ./wire.ts, narrowed from the generated OpenAPI schema (@adh-shared/api-types) —
-// the toolkit can't import that hub-only package directly, so a backend contract
+// ./wire.ts, narrowed from the generated OpenAPI schema (@agentic-toolkit/adh-api-types) —
+// a generic data client must not import that adh-specific package, so a backend contract
 // change is only caught by keeping wire.ts in sync, not by the build.
 import { authedJson, authedRequest, isConflict } from "../http";
 import { enc, workspaceQuery } from "../client-helpers";

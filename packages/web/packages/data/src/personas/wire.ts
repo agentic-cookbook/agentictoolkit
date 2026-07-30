@@ -1,6 +1,6 @@
 // Wire types for the personas domain — package-local mirrors of the OpenAPI-generated
 // request/response shapes the hub previously imported as `RequestBody`/`SuccessBody` from
-// `@adh-shared/api-types`. The persona GRANT surfaces (tools/user-tools/may-act) now live under
+// `@agentic-toolkit/adh-api-types`. The persona GRANT surfaces (tools/user-tools/may-act) now live under
 // `/access/personas/*`, approvals under `/processing/personas/*`, token-mint under
 // `/persona/personas/*` (moved out of the old `/registry/personas/*` base by the schema reorg).
 // These carry full backend-schema fidelity (not just the fields today's call sites touch) so the

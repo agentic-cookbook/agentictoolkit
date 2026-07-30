@@ -10,5 +10,5 @@ export type NavLinkItemProps = {
     link: NavLink;
 };
 export declare function pathMatches(pathname: string, pattern: string): boolean;
-export declare function NavLinkItem({ link }: NavLinkItemProps): import("react/jsx-runtime").JSX.Element;
+export declare function NavLinkItem({ link }: NavLinkItemProps): import("react").JSX.Element;
 //# sourceMappingURL=NavLink.d.ts.map

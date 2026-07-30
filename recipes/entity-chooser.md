@@ -36,7 +36,7 @@ references: []
 
 `EntityChooser` is a browse / filter / select / add surface for a list of string
 entities — the account's categories or tags. It is a thin composition over
-`ListChooser` (`@adh-shared/ui/components/list-chooser`), which supplies the
+`ListChooser` (`@agentic-toolkit/ui/components/list-chooser`), which supplies the
 disclosed, text-filtered list with a roving keyboard highlight and an "add a new
 one" affordance. `EntityChooser` adds only the **selection semantics** on top:
 

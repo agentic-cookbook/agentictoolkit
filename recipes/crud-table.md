@@ -11,7 +11,7 @@ modified: '2026-07-03'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "Metadata-driven row list from @adh-shared/crud: renders a table's PK + scalar columns from its CrudTableMeta, with per-row Edit/Delete and a New action."
+summary: "Metadata-driven row list from @agentic-toolkit/crud: renders a table's PK + scalar columns from its CrudTableMeta, with per-row Edit/Delete and a New action."
 platforms:
 - typescript
 - web
@@ -30,7 +30,7 @@ references: []
 
 ## Overview
 
-`CrudTable` in `@adh-shared/crud` is a **metadata-driven** row list for one
+`CrudTable` in `@agentic-toolkit/crud` is a **metadata-driven** row list for one
 generic-CRUD table. Given a `CrudTableMeta` (generated from the backend OpenAPI
 spec) plus the current `rows`, it renders a plain table whose columns are chosen
 from the metadata: the primary-key column(s) first, then the remaining **scalar**
@@ -176,10 +176,10 @@ handlers (and `useCrudResource`) own any telemetry or error reporting.
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/crud/src/CrudTable.tsx`, exported
-  from `@adh-shared/crud`. Built from the shared `Button`, `Spinner`, and the
-  package-local `ErrorText`; typography from `@adh-shared/ui/lib/typography`
-  (`fieldCaptionClass`). Note it lives in `@adh-shared/crud`, not
-  `@adh-shared/ui`.
+  from `@agentic-toolkit/crud`. Built from the shared `Button`, `Spinner`, and the
+  package-local `ErrorText`; typography from `@agentic-toolkit/ui/lib/typography`
+  (`fieldCaptionClass`). Note it lives in `@agentic-toolkit/crud`, not
+  `@agentic-toolkit/ui`.
 - Metadata comes from `src/generated/table-metadata.ts`, emitted by
   `scripts/gen_table_metadata.py` from the backend OpenAPI spec. `rows`/`loading`/
   `error` are typically supplied by `useCrudResource(meta)`.
@@ -215,7 +215,7 @@ handlers (and `useCrudResource`) own any telemetry or error reporting.
 |---|---|---|
 | Artifact formatting (ingredient) | passed | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` | passed | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | passed | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | passed | project-guidelines UI |
 | Semantic table + labeled actions column | passed | accessibility |
 
 ## Change History

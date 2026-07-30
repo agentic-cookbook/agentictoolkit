@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { reportUnexpectedAuthError, setAuthErrorReporter } from '../report'
 import { AuthHttpError } from '../client'
 
-// Stand-in for a HOST's own AuthHttpError class (e.g. @adh-shared/auth): a
+// Stand-in for a HOST's own AuthHttpError class layered atop this package's: a
 // DISTINCT constructor carrying the same numeric `.status`. The duck-typed gate
 // must treat it identically to this package's own AuthHttpError, so a host that
 // layers its own auth client atop this package doesn't leak expected 4xx noise.

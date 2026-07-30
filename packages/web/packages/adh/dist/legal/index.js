@@ -1,8 +1,11 @@
 // src/legal/LegalPageShell.tsx
 import { jsx, jsxs } from "react/jsx-runtime";
-var LEGAL_EFFECTIVE_DATE = "May 19, 2026";
-var LEGAL_CONTACT_EMAIL = "hello@agenticdeveloperhub.com";
-function LegalPageShell({ prefix, title, children }) {
+function LegalPageShell({
+  prefix,
+  title,
+  effectiveDate,
+  children
+}) {
   return /* @__PURE__ */ jsxs("div", { className: "adh-legal", children: [
     /* @__PURE__ */ jsxs("div", { className: "adh-legal__hero", children: [
       /* @__PURE__ */ jsx("div", { className: "adh-legal__prefix", children: prefix }),
@@ -12,7 +15,7 @@ function LegalPageShell({ prefix, title, children }) {
     /* @__PURE__ */ jsxs("article", { className: "adh-legal-doc", children: [
       /* @__PURE__ */ jsxs("p", { className: "adh-legal-doc__meta", children: [
         "Effective ",
-        LEGAL_EFFECTIVE_DATE
+        effectiveDate
       ] }),
       children
     ] })
@@ -20,9 +23,16 @@ function LegalPageShell({ prefix, title, children }) {
 }
 
 // src/legal/Terms.tsx
-import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
-function Terms() {
-  return /* @__PURE__ */ jsxs2(LegalPageShell, { prefix: "Terms of", title: "Service", children: [
+import { LegalPageShell as LegalPageShell2 } from "@agentic-toolkit/adh/legal";
+
+// src/legal/constants.ts
+var LEGAL_EFFECTIVE_DATE = "June 23, 2026";
+var LEGAL_CONTACT_EMAIL = "hello@agenticdeveloperhub.com";
+
+// src/legal/Terms.tsx
+import { Fragment, jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
+function TermsBody() {
+  return /* @__PURE__ */ jsxs2(Fragment, { children: [
     /* @__PURE__ */ jsxs2("p", { children: [
       "These Terms of Service (\u201C",
       /* @__PURE__ */ jsx2("strong", { children: "Terms" }),
@@ -97,11 +107,15 @@ function Terms() {
     ] })
   ] });
 }
+function Terms() {
+  return /* @__PURE__ */ jsx2(LegalPageShell2, { prefix: "Terms of", title: "Service", effectiveDate: LEGAL_EFFECTIVE_DATE, children: /* @__PURE__ */ jsx2(TermsBody, {}) });
+}
 
 // src/legal/Privacy.tsx
-import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
-function Privacy() {
-  return /* @__PURE__ */ jsxs3(LegalPageShell, { prefix: "Privacy", title: "Policy", children: [
+import { LegalPageShell as LegalPageShell3 } from "@agentic-toolkit/adh/legal";
+import { Fragment as Fragment2, jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
+function PrivacyBody() {
+  return /* @__PURE__ */ jsxs3(Fragment2, { children: [
     /* @__PURE__ */ jsxs3("p", { children: [
       "This Privacy Policy explains how Mike Fullerton (\u201C",
       /* @__PURE__ */ jsx3("strong", { children: "we" }),
@@ -154,13 +168,22 @@ function Privacy() {
         " We may share information for any other purpose disclosed to you and with your consent."
       ] })
     ] }),
-    /* @__PURE__ */ jsx3("h2", { children: "4. Public Profile Information" }),
+    /* @__PURE__ */ jsx3("h2", { children: "4. Text Messages (SMS)" }),
+    /* @__PURE__ */ jsx3("p", { children: "If you add and verify a mobile phone number in your account settings, you may receive text messages (SMS) from us for account verification, two-factor authentication, and account-security alerts. We send SMS only to numbers you have provided and verified, and only for those purposes \u2014 we do not send marketing or promotional text messages." }),
+    /* @__PURE__ */ jsxs3("p", { children: [
+      "Message and data rates may apply, and message frequency varies. Reply STOP to any message to unsubscribe, or HELP for help; you can also remove your number at any time in your account settings.",
+      " ",
+      /* @__PURE__ */ jsx3("strong", { children: "We do not share mobile phone numbers or SMS opt-in consent with third parties or affiliates for their own marketing or promotional purposes." }),
+      " ",
+      "We share your number only with the telecommunications provider that delivers the messages on our behalf."
+    ] }),
+    /* @__PURE__ */ jsx3("h2", { children: "5. Public Profile Information" }),
     /* @__PURE__ */ jsx3("p", { children: "If you publish a profile on the Service, information you mark public (such as your display name, slug, and avatar) may be visible to anyone who visits your profile. Do not include information in public fields that you wish to keep private." }),
-    /* @__PURE__ */ jsx3("h2", { children: "5. Data Retention" }),
+    /* @__PURE__ */ jsx3("h2", { children: "6. Data Retention" }),
     /* @__PURE__ */ jsx3("p", { children: "We retain personal information for as long as your account is active or as needed to provide the Service, comply with legal obligations, resolve disputes, and enforce our agreements. When information is no longer required, we delete or de-identify it." }),
-    /* @__PURE__ */ jsx3("h2", { children: "6. Security" }),
+    /* @__PURE__ */ jsx3("h2", { children: "7. Security" }),
     /* @__PURE__ */ jsx3("p", { children: "We use reasonable administrative, technical, and physical safeguards to protect information. No method of transmission or storage is fully secure, and we cannot guarantee absolute security. You are responsible for keeping your account credentials confidential." }),
-    /* @__PURE__ */ jsx3("h2", { children: "7. Your Choices" }),
+    /* @__PURE__ */ jsx3("h2", { children: "8. Your Choices" }),
     /* @__PURE__ */ jsxs3("ul", { children: [
       /* @__PURE__ */ jsxs3("li", { children: [
         /* @__PURE__ */ jsx3("strong", { children: "Access & update." }),
@@ -178,7 +201,7 @@ function Privacy() {
         " Transactional emails (e.g., security and account notices) cannot be opted out of while you maintain an account."
       ] })
     ] }),
-    /* @__PURE__ */ jsx3("h2", { children: "8. California Privacy Rights" }),
+    /* @__PURE__ */ jsx3("h2", { children: "9. California Privacy Rights" }),
     /* @__PURE__ */ jsx3("p", { children: "If you are a California resident, the California Consumer Privacy Act, as amended by the California Privacy Rights Act (\u201CCCPA/CPRA\u201D), gives you the right to:" }),
     /* @__PURE__ */ jsxs3("ul", { children: [
       /* @__PURE__ */ jsx3("li", { children: "Know what personal information we collect, use, disclose, and (if applicable) sell or share." }),
@@ -195,15 +218,15 @@ function Privacy() {
       /* @__PURE__ */ jsx3("a", { href: `mailto:${LEGAL_CONTACT_EMAIL}`, children: LEGAL_CONTACT_EMAIL }),
       ". We will verify your request using information associated with your account. You may also designate an authorized agent to make a request on your behalf."
     ] }),
-    /* @__PURE__ */ jsx3("h2", { children: "9. International Users" }),
+    /* @__PURE__ */ jsx3("h2", { children: "10. International Users" }),
     /* @__PURE__ */ jsx3("p", { children: "The Service is operated from the United States. If you access the Service from outside the United States, you understand that your information may be transferred to, stored, and processed in the United States and other countries where our service providers operate. We rely on appropriate legal mechanisms for any such transfers as required by applicable law." }),
-    /* @__PURE__ */ jsx3("h2", { children: "10. Children\u2019s Privacy" }),
+    /* @__PURE__ */ jsx3("h2", { children: "11. Children\u2019s Privacy" }),
     /* @__PURE__ */ jsx3("p", { children: "The Service is not directed to children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, please contact us so we can delete it." }),
-    /* @__PURE__ */ jsx3("h2", { children: "11. Third-Party Links" }),
+    /* @__PURE__ */ jsx3("h2", { children: "12. Third-Party Links" }),
     /* @__PURE__ */ jsx3("p", { children: "The Service may link to third-party websites or services that we do not operate. We are not responsible for the privacy practices of those third parties; review their policies before sharing information with them." }),
-    /* @__PURE__ */ jsx3("h2", { children: "12. Changes to This Policy" }),
+    /* @__PURE__ */ jsx3("h2", { children: "13. Changes to This Policy" }),
     /* @__PURE__ */ jsx3("p", { children: "We may update this Privacy Policy from time to time. When we do, we will revise the \u201CEffective\u201D date above and, when appropriate, notify you through the Service or by other reasonable means. Your continued use of the Service after changes take effect constitutes acceptance of the updated Policy." }),
-    /* @__PURE__ */ jsx3("h2", { children: "13. Contact" }),
+    /* @__PURE__ */ jsx3("h2", { children: "14. Contact" }),
     /* @__PURE__ */ jsxs3("p", { children: [
       "Privacy questions, requests, or concerns? Email",
       " ",
@@ -212,11 +235,16 @@ function Privacy() {
     ] })
   ] });
 }
+function Privacy() {
+  return /* @__PURE__ */ jsx3(LegalPageShell3, { prefix: "Privacy", title: "Policy", effectiveDate: LEGAL_EFFECTIVE_DATE, children: /* @__PURE__ */ jsx3(PrivacyBody, {}) });
+}
 export {
   LEGAL_CONTACT_EMAIL,
   LEGAL_EFFECTIVE_DATE,
   LegalPageShell,
   Privacy,
-  Terms
+  PrivacyBody,
+  Terms,
+  TermsBody
 };
 //# sourceMappingURL=index.js.map

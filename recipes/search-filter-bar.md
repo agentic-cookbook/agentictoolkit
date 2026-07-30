@@ -31,7 +31,7 @@ references: []
 
 ## Overview
 
-A search-and-filter bar in `@adh-shared/ui` that sits above a list. It combines a
+A search-and-filter bar in `@agentic-toolkit/ui` that sits above a list. It combines a
 single icon-led search `Input` with a configurable row of filter `Select`s. Every
 axis is **fully controlled** by the caller (value + `onChange`), and the option
 sets for each select are supplied by the caller — so narrowing the list (which
@@ -133,7 +133,7 @@ role="search"
 
 ## Configuration
 
-`@adh-shared/ui/components/search-filter-bar`
+`@agentic-toolkit/ui/components/search-filter-bar`
 
 | Option | Type | Default | Description |
 |---|---|---|---|

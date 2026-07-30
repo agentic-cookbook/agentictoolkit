@@ -3,12 +3,52 @@
  * (see @agentic-toolkit/themes/styles/adh*.css). Import this once
  * globally in the consumer app (e.g. app/globals.css).
  *
- * No Tailwind utilities are used inside the component package, because
- * Tailwind v4 in a consumer app does not scan node_modules by default,
- * so utility classes used here would not be generated.
+ * The rules below are semantic classes, but the premise this header used to state —
+ * "no Tailwind utilities are used inside the component package, because Tailwind v4 in
+ * a consumer app does not scan node_modules by default" — is no longer true of the
+ * package as a whole, and believing it is what left the gap Task 5.5 closed. The
+ * package now carries ~150 className literals across header/, debug-env/, help/,
+ * legal/, footer/, components/, debug/ and themes/. The second half of that sentence
+ * was always right and is exactly why the registration below is needed: an unscanned
+ * utility is not a build error, it is an unstyled component.
  */
 
+/* The family's Tailwind @theme (apt-* color utilities → M3 role vars) lives in the
+ * themes package — the token owner. Re-imported here so every site gets it through
+ * the one stylesheet import it already has: a site imports @agentic-toolkit/adh/styles.css,
+ * which resolves to adh-site.css, whose first line is this file. (Until Task 5.10
+ * that one import was @adh-shared/adh/styles.css; that package no longer exists.) */
+@import "@agentic-toolkit/themes/tailwind.css";
+
+/* Skins for the ui primitives that style via semantic classes (a public
+ * theming surface — see that file's header). Owned by @agentic-toolkit/ui;
+ * re-imported here so every site gets it through this one import. */
+@import "@agentic-toolkit/ui/styles/components.css";
+
+/* The debug trigger's positioning AND — the load-bearing half — the Tailwind @source
+ * registration for @agentic-toolkit/adh's debug-env sources, which own FloatingWindow:
+ * the shell BOTH the debug console and the Help modal render inside. Task 5.2 moved
+ * that subtree out of this package, so the `@source "../../../adh/src/**"` below stopped
+ * covering it and `shadow-2xl`/`cursor-move` silently stopped being emitted fleet-wide
+ * (see that file's header for the full account). Imported here for the same reason as
+ * the ui skins above: this is the one stylesheet every chrome-bearing site reaches, so
+ * the registration rides along with it.
+ *
+ * RELATIVE, unlike the two imports above, and deliberately: adh-debug.css is a sibling
+ * file inside THIS package, so `./` travels with the package into `pnpm deploy`'s
+ * materialized tree. The bare-specifier argument that used to be written here belonged
+ * to the version of this import that lived in @adh-shared/adh, where reaching this file
+ * meant crossing into the submodule and a relative `../../../external/...` path would
+ * silently dangle. Same-package now, so there is nothing to cross. */
+@import "./adh-debug.css";
+
+/* Tailwind @source registration for this package — see the package-root sources.css. */
+@import "../../sources.css";
+
 .adh-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-primary);
@@ -18,7 +58,7 @@
   position: relative;
   width: 100%;
   padding: 0 1.5rem;
-  height: 3.5rem;
+  height: var(--adh-header-height, 3.5rem);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -79,7 +119,7 @@
   font: inherit;
   letter-spacing: inherit;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color calc(0.2s * var(--apt-anim-scale, 1));
 }
 
 .adh-header__nav-link:hover {
@@ -94,7 +134,108 @@
   cursor: pointer;
 }
 
+/* Interactive centre slot (e.g. the status site's live indicator + refresh).
+   Absolutely centred like the page title, but stays clickable and lets its
+   content size itself. */
+.adh-header__center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  max-width: 60%;
+}
+
+/* Left cluster: the site-name switcher, with its status badge(s) stacked
+   underneath (nav stays pinned right via the container's space-between). Stacking
+   (rather than the old inline badge row) is what keeps this cluster narrow enough
+   for a phone-width header.
+   `flex-shrink: 0` is load-bearing: the nav is content-sized (min-width: auto), so
+   without it the brand is the only thing that CAN shrink and a crowded bar crushes
+   it to zero width — wrapping the title over three lines and pushing the badge out
+   of the bar. The brand holds its width; anything that doesn't fit is the nav's
+   problem (see .adh-header__links). */
+.adh-header__lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* One line, always — a wrapped brand is what blows out the fixed-height bar. */
+.adh-header__lead .adh-header__title {
+  white-space: nowrap;
+}
+
+/* Status badges, stacked under the site-name switcher (see .adh-header__lead). */
+.adh-header__badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* .adh-header__badge* are hook classes only (theme-editor surface): the skin
+   is the ui <Badge> the header renders. */
+
+/* Auth-cluster spinner: shown in the login slot while the session is still
+   resolving, so a sign-in that resolves in the background never flashes the
+   "login / join" buttons first. Sized to sit where those buttons would. */
+.adh-header__auth-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-text-secondary);
+  border-radius: 50%;
+  animation: adh-header-auth-spin 0.7s linear infinite;
+}
+
+@keyframes adh-header-auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Site-specific functional controls injected at the start of the right-hand
+   nav cluster (e.g. cookbook's search/sidebar/theme). */
+.adh-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* The primary nav links (signed out). A pure grouping box — `display: contents`
+   means it creates NO box of its own, so the links stay direct participants in
+   the nav's flex row and the bar looks exactly as it did before they were
+   wrapped. The wrapper exists solely so they can collapse as a unit below. */
+.adh-header__links {
+  display: contents;
+}
+
+/* On a phone the bar holds the brand (+ its badge) and the auth cluster — the
+   primary links would push the nav clean off the right edge. They're not lost:
+   the site menu (the brand dropdown, now the nav hub) carries the destinations,
+   and signed in they already live in the avatar dropdown. Login / join stay in
+   the bar, since signing in is the one thing a signed-out visitor came to do. */
+@media (max-width: 768px) {
+  .adh-header__links {
+    display: none;
+  }
+}
+
 .adh-footer {
+  /* Pinned to the bottom of the window: sticky keeps it in flow (sits at the
+     viewport bottom on short pages, stays visible while tall pages scroll
+     behind it) without breaking window-scroll-based JS. Solid background so
+     content scrolling behind it stays covered. */
+  position: sticky;
+  bottom: 0;
+  z-index: 45;
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   font-family: var(--adh-footer-font, var(--font-mono));
   font-size: var(--adh-footer-size, 0.7rem);
@@ -141,11 +282,11 @@
   color: inherit;
   cursor: pointer;
   font: inherit;
-  transition: color 0.2s, background-color 0.2s;
+  transition: color calc(0.2s * var(--apt-anim-scale, 1)), background-color calc(0.2s * var(--apt-anim-scale, 1));
 }
 
 .adh-avatar-menu-trigger:hover,
-.adh-avatar-menu-trigger[data-state='open'] {
+.adh-avatar-menu-trigger[data-popup-open] {
   color: var(--color-accent);
   background: var(--color-surface-hover, rgba(255, 255, 255, 0.04));
 }
@@ -197,7 +338,7 @@
   border: 1px solid var(--color-border, #2a2a35);
   padding: 0.5rem;
   color: var(--color-text-primary, #e8e6e3);
-  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 40px -12px color-mix(in srgb, var(--color-shadow, #000) 60%, transparent);
 }
 
 .adh-avatar-menu__header {
@@ -240,7 +381,7 @@
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: color 0.2s, background-color 0.2s;
+  transition: color calc(0.2s * var(--apt-anim-scale, 1)), background-color calc(0.2s * var(--apt-anim-scale, 1));
 }
 
 .adh-avatar-menu__settings:hover {
@@ -291,33 +432,12 @@
   flex-shrink: 0;
 }
 
-/* Avatar primitive */
-.adh-avatar {
-  position: relative;
-  display: flex;
-  height: 2.5rem;
-  width: 2.5rem;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: 9999px;
-}
-
-.adh-avatar__image {
-  aspect-ratio: 1 / 1;
-  height: 100%;
-  width: 100%;
-}
-
-.adh-avatar__fallback {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: var(--color-surface-raised);
-  color: var(--color-text-primary);
-}
+/* Avatar primitive (.adh-avatar / __image / __fallback) is owned by
+ * @agentic-toolkit/ui/styles/components.css, @import'ed at the top of this file — a
+ * drifted duplicate used to live here. Because it landed BELOW this file's own
+ * .adh-avatar-menu* block, and both @import order plus these two rule families share
+ * (0,1,0) specificity with no @layer, the duplicate silently demoted the header avatar
+ * menu fleet-wide (fix round 1, C1/I2). Removed; ui's copy is the only one now. */
 
 /* Button primitive */
 .adh-button {
@@ -410,106 +530,117 @@
   flex-shrink: 0;
 }
 
-/* Dropdown menu primitive */
-.adh-dropdown-menu__content {
-  z-index: 50;
-  min-width: 14rem;
-  overflow: hidden;
-  border-radius: var(--pc-radius, 0.375rem);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-raised);
-  padding: 0.25rem;
-  color: var(--color-text-primary);
-  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.5);
-}
-
-.adh-dropdown-menu__item {
-  position: relative;
-  display: flex;
-  cursor: default;
-  user-select: none;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 0.25rem;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.9rem;
-  line-height: 1.2;
-  outline: none;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.adh-dropdown-menu__item[data-highlighted],
-.adh-dropdown-menu__item:focus {
-  background: var(--color-surface-hover);
-}
-
-.adh-dropdown-menu__item[data-disabled] {
-  pointer-events: none;
-  opacity: 0.5;
-}
-
-.adh-dropdown-menu__item--inset {
-  padding-left: 2rem;
-}
-
-.adh-dropdown-menu__item--indicator-left {
-  padding-left: 2rem;
-  padding-right: 0.5rem;
-}
-
-.adh-dropdown-menu__item-icon {
-  height: 1rem;
-  width: 1rem;
-  flex-shrink: 0;
-}
-
-.adh-dropdown-menu__sub-trigger[data-state='open'] {
-  background: var(--color-surface-hover);
-}
-
-.adh-dropdown-menu__sub-trigger-chevron {
-  margin-left: auto;
-  height: 1rem;
-  width: 1rem;
-}
-
-.adh-dropdown-menu__indicator-slot {
-  position: absolute;
-  left: 0.5rem;
-  display: flex;
-  height: 0.875rem;
-  width: 0.875rem;
-  align-items: center;
-  justify-content: center;
-}
-
-.adh-dropdown-menu__indicator-check {
-  height: 1rem;
-  width: 1rem;
-}
-
-.adh-dropdown-menu__indicator-dot {
-  height: 0.5rem;
-  width: 0.5rem;
-  fill: currentColor;
-}
-
-.adh-dropdown-menu__label {
-  padding: 0.6rem 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-.adh-dropdown-menu__separator {
-  margin: 0.25rem -0.25rem;
-  height: 1px;
-  background: var(--color-border);
-}
-
+/* Dropdown menu primitive (.adh-dropdown-menu__content/__item/__label/__separator/etc,
+ * plus the 13 other selectors that duplicated @agentic-toolkit/ui/styles/components.css,
+ * @import'ed at the top of this file) is owned by ui — a drifted duplicate used to live
+ * here, including a stale Radix-era `[data-state='open']` sub-trigger variant that
+ * matched nothing (ui's own base-ui-powered `[data-popup-open]` rule is the live one).
+ * Removed in fix round 1 (C1/I2); ui's copy is the only one now. .adh-dropdown-menu__shortcut
+ * below is NOT part of this — ui does not define it, it stays toolkit-owned. */
 .adh-dropdown-menu__shortcut {
   margin-left: auto;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   color: var(--color-text-dim);
+}
+
+/* Shared app shell — the basic layout every site renders. The flex column +
+   full viewport height + flex-growing main pins the footer to the bottom of
+   the window on short pages (sticky-footer pattern) without overlapping
+   content on tall ones. */
+.adh-app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.adh-app-shell__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* --adh-header-height is consumed by .adh-header__container (above). It was
+   declared alongside the slide-out nav drawer's own vars; the drawer was
+   removed, so only this still-live var is kept here. */
+:root {
+  --adh-header-height: 3.5rem;
+}
+
+/* Shared not-found body. */
+.adh-not-found {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 5rem 1.5rem;
+  text-align: center;
+}
+
+.adh-not-found__title {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  color: var(--color-accent);
+  margin: 0;
+}
+
+.adh-not-found__text {
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.adh-not-found__link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.adh-not-found__link:hover {
+  text-decoration: underline;
+}
+
+/* Shared /home placeholder. */
+.adh-home-placeholder {
+  width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 5rem 1.5rem 6rem;
+}
+
+.adh-home-placeholder__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin: 0 0 1.25rem;
+}
+
+.adh-home-placeholder__title {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  margin: 0 0 1rem;
+}
+
+.adh-home-placeholder__accent {
+  color: var(--color-accent);
+  font-style: italic;
+}
+
+.adh-home-placeholder__text {
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 36rem;
 }

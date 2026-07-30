@@ -19,6 +19,26 @@
  * to share. A host that genuinely needs him elsewhere still overrides `.bb-dock`.
  */
 
+/* The STRUCTURAL sheets the panel's chat needs — `.persona-chat`, `.pc-input-area`,
+ * `.pc-input` and friends are DEFINED there, not here. `BitbagChat` renders
+ * `@agenticdevelopertoolkit/chat`'s `InlineChatView`, so those sheets are bitbag's own
+ * render dependency, not the host's: a consumer that imports
+ * `@agentic-toolkit/bitbag/css/bitbag-dock.css` and nothing else gets a working chat,
+ * and nobody outside this package has to know which chat package is underneath.
+ *
+ * This is not the skin that used to live in `bitbag-chat.css`. That sheet was deleted
+ * because its rules selected `.pc-theme-scope .persona-chat …` — (0,3,0), which outranked
+ * every theme's own `@scope`d block and is why no theme ever painted the chat. These two
+ * define structure and set no theme tokens, so importing them first (as the cascade
+ * requires of `@import` anyway) leaves the theme on top where it belongs.
+ *
+ * `build:css` is a plain `cp`, so these specifiers survive verbatim into
+ * `dist/css/bitbag-dock.css` and resolve from THIS package's realpath — the toolkit's own
+ * `external/agenticdevelopertoolkit` submodule — for every consumer, which is the same
+ * one-copy guarantee `@agentic-toolkit/persona` gives the JS side. */
+@import "@agenticdevelopertoolkit/chat/css/base.css";
+@import "@agenticdevelopertoolkit/chat/css/modes/inline.css";
+
 /* The rig: a bottom-anchored, non-interactive column [ avatar, panel ]. */
 .bb-dock {
   position: fixed;

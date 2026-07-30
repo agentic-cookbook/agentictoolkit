@@ -29,7 +29,7 @@ references: []
 
 ## Overview
 
-A removable-chips / token input in `@adh-shared/ui`. None exists today. It is
+A removable-chips / token input in `@agentic-toolkit/ui`. None exists today. It is
 used by `SendInvitationModal` for the email + SMS recipient boxes.
 
 It displays a list of string values as removable `Badge` chips plus an inline
@@ -114,7 +114,7 @@ text field that tokenizes typed entries. It is controlled via `value: string[]`.
 
 ## Configuration
 
-`@adh-shared/ui/components/recipient-input`
+`@agentic-toolkit/ui/components/recipient-input`
 
 | Option | Type | Default | Description |
 |---|---|---|---|

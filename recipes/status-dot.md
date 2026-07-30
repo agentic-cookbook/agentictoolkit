@@ -30,7 +30,7 @@ references: []
 
 ## Overview
 
-The shared `StatusDot` in `@adh-shared/ui` — the family's "live light": a small
+The shared `StatusDot` in `@agentic-toolkit/ui` — the family's "live light": a small
 round dot whose **fill and soft glow both derive from one tone class**. The tone
 class sets `currentColor` (`text-apt-green`, `text-apt-red`, …); the fill is
 `background: currentColor` and the glow is a `box-shadow` whose color is a
@@ -47,7 +47,7 @@ Accessibility is driven by `label`: pass the status word and the dot becomes an
 accessible image (`role="img"` + `aria-label`); omit it — the common case, where
 visible text already carries the meaning — and the dot is `aria-hidden`
 decoration. A single export ships from
-`@adh-shared/ui/components/status-dot`: the `StatusDot` component. It is a pure
+`@agentic-toolkit/ui/components/status-dot`: the `StatusDot` component. It is a pure
 presentational span with no internal state and no `"use client"` directive.
 
 ## Behavioral Requirements
@@ -159,7 +159,7 @@ tone, not the dot.
 - Demo: `ui-showcase` Topic `status-dot` in the "Primitives — display" group
   (regenerate `sources.generated.ts` via `gen-sources.py` after source changes).
 - Web/TypeScript only; token-driven so it themes with the rest of
-  `@adh-shared/ui`.
+  `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -183,7 +183,7 @@ tone, not the dot.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` (tones are `apt-*`, glow is `color-mix` of `currentColor`) | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Standalone indicator can carry an accessible name (`label` → `role=img`) | pass | accessibility |
 | Decorative-by-default avoids redundant AT announcements | pass | accessibility |
 

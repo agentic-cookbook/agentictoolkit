@@ -1,0 +1,38 @@
+/* Tailwind source self-registration for @agentic-toolkit/adh.
+ *
+ * Tailwind v4 does not scan node_modules, so a consumer app must be told to scan this
+ * package's className-bearing modules. Rather than every host copying @source globs into
+ * its own globals.css — drift-prone, and a missed line renders unstyled with NO error —
+ * the package owns them here and a host adds one line:
+ *
+ *   @import "@agentic-toolkit/adh/sources.css";
+ *
+ * Every stylesheet this package exports imports it already, so importing any one of
+ * them (styles.css, help.css, docs.css, legal.css, debug.css) is enough. Mirrors
+ * @agentic-toolkit/api-explorer/sources.css and @agentic-toolkit/ui's components.css.
+ *
+ * PACKAGE-WIDE, not per subtree, and deliberately so. Registering subtree by subtree is
+ * how this package came to have a gap: `help` and `debug-env` were registered when they
+ * were ported in, and the other seven subtrees — `header` (62 className literals),
+ * `legal` (7), `footer` (6), `components` (5), `debug` (3), `themes` (1), `docs` — were
+ * not, because nothing forced the question. They survived only because the sites' own
+ * globs scanned `@adh-shared/adh/dist/**` as well as `@adh/chrome/dist/**`, and those
+ * bundles inlined much of this code — an accident of `bundle: true`, and one that expired
+ * the day `@adh-shared` was deleted, which is why the package-wide pair below is now the
+ * only thing registering these subtrees. One glob pair over the whole package cannot
+ * develop that kind of hole, and a new subtree is covered the day it is added.
+ *
+ * The failure this prevents is silent by construction: a dangling @source is not an
+ * error and an unregistered utility is not a build failure — the class is simply never
+ * emitted and the component renders unstyled. It has already happened once here, when
+ * Task 5.2 moved FloatingWindow into this package and `shadow-2xl` / `cursor-move`
+ * stopped being emitted fleet-wide for twelve hours without anything noticing.
+ *
+ * Paths are relative to THIS file (the package root) and therefore travel with the
+ * package: they resolve identically through a dev pnpm `link:` symlink and a
+ * materialized prod copy. `src` covers `next dev` — the `development` export condition
+ * serves src, so HMR must see source edits — while `dist` covers prod builds, where
+ * `files` ships only `dist`, `src/styles` and this file, and the `src` glob simply
+ * matches nothing. Neither is relied on in the environment where it is absent. */
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

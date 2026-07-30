@@ -1,6 +1,14 @@
-// Framework-free rdid grammar — a FRONTEND MIRROR of websites/backend/src/lib/rdid.ts.
-// No React, no Hono. Kept in lockstep with the backend by rdid.parity.test.ts. An rdid is
-// `<type>.<scope>.<name>`; <type>+<scope> are fixed/inherited, only the leaf <name> is editable.
+// Framework-free rdid grammar — a FRONTEND MIRROR of adh's `backend/src/adh/src/lib/rdid.ts`.
+// No React, no Hono. An rdid is `<type>.<scope>.<name>`; <type>+<scope> are fixed/inherited,
+// only the leaf <name> is editable.
+//
+// Kept in lockstep with the backend by adh's `frontend/tools/verify-rdid-parity.py`, which
+// reads BOTH files as TEXT and pins the prefix map (values AND declaration order), the two
+// regex literals, the length cap, and validateLeaf's messages. It cannot live on either
+// side: the backend module imports hono so it can never be loaded into a test environment,
+// and this package is a submodule that must not reach into adh. The guard's counterpart —
+// the behaviour of buildRdid/parseRdid/isRdid, which text matching cannot see diverge —
+// is pinned by golden vectors in `src/__tests__/rdid.test.ts`.
 
 export const RDID_TYPE_TO_ENTITY_TYPE = {
   // Principals. `org.<slug>` and `user.<ecosystem path>.<slug>` are the addresses of the

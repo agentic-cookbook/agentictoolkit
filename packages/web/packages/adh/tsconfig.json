@@ -1,10 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
+  "comment:paths": "This package imports ITSELF by package path ~110 times, across ~30 subpaths — every one of them deliberate: tsup bundles with `bundle: true, splitting: false`, so a relative specifier inlines a private copy of the target's module state, and the full package path (paired with a matching `external` in tsup.config.ts) is what keeps it one shared copy. See that file for the per-entry rationale. Those specifiers would otherwise resolve through this package.json's own exports map, whose `types` condition points at ./dist — .d.ts files that build:types is in the middle of EMITTING, so on a clean tree every self-reference fails with TS2307 and the build cannot bootstrap. The wildcard below maps them straight at source instead, which is also what dev/vitest see (the `development` export condition serves src). Three longer patterns override it, and a longest-prefix match wins, so those are the ones tsc uses for their specifiers: `header-auth` because it is the one subpath whose name does not mirror its directory (the exports map publishes src/header/header-auth.ts at the package root), and the two `next/dynamic(() => import(...))` targets because their DEFAULT export type has to be known at the call site. Keep all of this paired with tsup.config.ts's `entry` + `external` and the exports map; all three name the same files.",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@agentic-toolkit/adh": ["./src/index.ts"],
+      "@agentic-toolkit/adh/*": ["./src/*"],
+      "@agentic-toolkit/adh/header-auth": ["./src/header/header-auth.ts"],
+      "@agentic-toolkit/adh/footer/FooterChatInner": ["./src/footer/FooterChatInner.tsx"],
+      "@agentic-toolkit/adh/marketing/LandingHeroGate": ["./src/marketing/LandingHeroGate.tsx"]
     }
   },
   "include": ["src"]

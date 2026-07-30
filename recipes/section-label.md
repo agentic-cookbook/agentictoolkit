@@ -31,10 +31,10 @@ references: []
 
 ## Overview
 
-The shared `SectionLabel` in `@adh-shared/ui` — the **display micro-heading**: the
+The shared `SectionLabel` in `@agentic-toolkit/ui` — the **display micro-heading**: the
 quiet, wide-tracked uppercase-mono label that heads a pane or an in-card section
 ("RECENT ACTIVITY", "SOCIAL LINKS", "MONITORED SITES"). It ships as two exports
-from `@adh-shared/ui/components/section-label`: the `sectionLabelClass` string (so
+from `@agentic-toolkit/ui/components/section-label`: the `sectionLabelClass` string (so
 any element can wear the treatment) and the `SectionLabel` component (the div
 that applies it, with an optional trailing slot).
 
@@ -159,7 +159,7 @@ no action.
 - Demo: `ui-showcase` Topic `section-label` in the "Primitives — display" group
   (regenerate `sources.generated.ts` via `gen-sources.py` after source changes).
 - Web/TypeScript only; token-driven so it themes with the rest of
-  `@adh-shared/ui`.
+  `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -184,7 +184,7 @@ no action.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` (color is `apt-text-dim`) | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | Treatment kept distinct from `fieldCaptionClass` / `SectionHeader` | pass | project-guidelines UI |
 | Display label does not masquerade as a semantic heading | pass | accessibility |
 

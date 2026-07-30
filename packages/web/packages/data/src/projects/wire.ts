@@ -1,7 +1,7 @@
 // Local wire types for the Projects clients — the backend row + request-body
 // shapes each client reads/sends. These replace the hub's generated
-// `SuccessBody<...>` / `RequestBody<...>` (from `@adh-shared/api-types`), which
-// is a monorepo coupling the toolkit can't take. Each interface carries exactly
+// `SuccessBody<...>` / `RequestBody<...>` (from `@agentic-toolkit/adh-api-types`), which
+// is adh product vocabulary a generic data client must not take on. Each interface carries exactly
 // the fields the `toX()` mappers and call sites touch — no more. Type-only file.
 
 /* ── Projects (GET rows) ──────────────────────────────────────────────── */

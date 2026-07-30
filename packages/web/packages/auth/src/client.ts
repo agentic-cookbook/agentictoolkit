@@ -14,7 +14,7 @@ export { tokensFromResponse, readAccessToken, readTokenSubject, type BackendToke
 // until a host wires it; untagged telemetry is the only cost.
 let retryMarker: ((init: object) => void) | null = null
 
-/** Wire the host's retried-request marker (e.g. @adh-shared/adh's
+/** Wire the host's retried-request marker (e.g. @agentic-toolkit/adh's
  *  `markRetriedRequest`). Pass null to unregister. */
 export function setAuthRetryMarker(fn: ((init: object) => void) | null): void {
   retryMarker = fn

@@ -38,7 +38,7 @@ Other field), `Button` (the OK affordance) — with a hand-managed roving
 **selection** so the keyboard model below is exact. It deliberately does **not**
 build on `DropdownMenu` / Base-UI menu: menu roles hijack typeahead and focus and
 fight an embedded text input. It is distinct from the rail filter `PopupMenu`
-block (`@adh-shared/ui/blocks/popup-menu`), which keeps its own `allLabel`/`onNew`
+block (`@agentic-toolkit/ui/blocks/popup-menu`), which keeps its own `allLabel`/`onNew`
 filter semantics and is unchanged.
 
 ## Behavioral Requirements

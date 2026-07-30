@@ -155,7 +155,7 @@ actions + Delete), `Input` (filter box), and `Separator` (`dividerBefore`).
   master/detail split (via `ResizableSplit`) and toolbar stay usable on mobile.
 - **SwiftUI / Compose:** Not applicable — web-only shared block.
 
-API (`@adh-shared/ui/blocks/list-with-details-pane`):
+API (`@agentic-toolkit/ui/blocks/list-with-details-pane`):
 
 ```ts
 interface ListAction {

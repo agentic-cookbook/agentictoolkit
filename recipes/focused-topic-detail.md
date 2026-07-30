@@ -49,7 +49,7 @@ kind* (ecosystems, teams, persona-services, …). At any moment the user is eith
 
 The user moves between entities (and into "All") through a single **selector
 popup** at the top-left of the view. The canonical implementation is the shared
-`focused-topic-detail` block in `@adh-shared/ui/blocks` (master/detail layout) —
+`focused-topic-detail` block in `@agentic-toolkit/ui/blocks` (master/detail layout) —
 all FTD routes compose it; none hand-roll the layout.
 
 **Terminology / parameters.** Every FTD route binds these parameters (Ecosystems
@@ -99,7 +99,7 @@ identifier can change without breaking UUID foreign keys.
 - **must-resume-last-selected**: On entering the bare base path, after the entity list loads the view MUST focus the last-selected entity under `adh:ftd:{basePath}:lastId` when it still matches a live entity, otherwise show the All view.
 - **must-clear-laststate-on-delete**: When an entity is deleted, the view MUST clear `…:lastId` if it pointed at that entity.
 - **must-resolve-after-list-load**: Local-storage resolution MUST occur after the list has loaded (to avoid SSR hydration mismatch), showing the normal loading state until then.
-- **must-keep-shared-pieces-in-adh-shared**: New shared pieces (Danger zone / delete-confirm dialog, All toolbar, list-mode renderer) MUST go into `@adh-shared`, never forked into a site.
+- **must-keep-shared-pieces-in-the-toolkit**: New shared pieces (Danger zone / delete-confirm dialog, All toolbar, list-mode renderer) MUST go into `@agentic-toolkit`, never forked into a site.
 - **must-handle-loading-empty-error**: Every new surface MUST handle loading, empty, and error states (All list loading, no entities yet, filter-no-match, delete error inline, identifier-collision inline).
 - **must-be-accessible**: Dialogs MUST be `role="dialog"` with focus trap + restore and labelled controls; the type-to-confirm input MUST have a `<label htmlFor>`; the toolbar/toggle MUST carry ARIA roles; full keyboard operability (Esc cancels dialogs) is required.
 
@@ -191,7 +191,7 @@ success. The ecosystem PUT keeps ignoring `identifier` (id is server-managed).
 
 - `websites/main/hub/src/components/settings/topics.ts` — reorder/rename topics: move `settings` → top as **Ecosystem**, rename `schemas` → **Buckets**, drop the divider.
 - `websites/main/hub/src/components/settings/ecosystems/EcosystemDetail.tsx` — editable Identifier; Danger section.
-- `@adh-shared/ui/blocks` — new shared `danger-zone` / `delete-entity-dialog` block (parameterized by `Entity`, `rdid`, `childEntities`).
+- `@agentic-toolkit/ui/blocks` — new shared `danger-zone` / `delete-entity-dialog` block (parameterized by `Entity`, `rdid`, `childEntities`).
 - `websites/main/hub/src/components/home/resource/ResourcePopup.tsx` — New action (trailing `DropdownMenuSeparator` + non-radio `New {Entity}…`).
 - `websites/main/hub/src/components/home/resource/ResourceActionBar.tsx` — removed from the FTD composition.
 - `websites/main/hub/src/components/home/resource/ResourceLanding.tsx` — All toolbar: filter + card/list toggle + list renderer.
@@ -241,7 +241,7 @@ separate, reversible decision and add a redirect.
 
 | Check | Status | Category |
 |---|---|---|
-| Components reused from / promoted into `@adh-shared` | required | adh-ui-guidelines |
+| Components reused from / promoted into `@agentic-toolkit` | required | adh-ui-guidelines |
 | Tokens — `apt-*` only, no raw hex / `!important` | required | adh-ui-guidelines |
 | Loading / empty / error states on every new surface | required | states |
 | Accessibility — dialog roles, labelled type-to-confirm, card/list toggle `role="radiogroup"` + `aria-label="View as"`, keyboard | required | accessibility |

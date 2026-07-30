@@ -8,7 +8,7 @@ import { cn } from "../lib/utils"
  * The bare horizontal split-SEPARATOR primitive: a draggable + keyboard-operable
  * `role="separator"` that reports a new top/bottom RATIO (0…1, the fraction of the
  * split height given to the pane ABOVE it). It owns NO panes and NO collapse state —
- * the caller renders the regions and applies the ratio (e.g. @adh-shared/search's
+ * the caller renders the regions and applies the ratio (e.g. @agentic-toolkit/search's
  * result-list / preview-dock stack).
  *
  * Relationship to {@link ResizableSplit}: ResizableSplit is the MANAGED two-pane

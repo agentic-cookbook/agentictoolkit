@@ -29,7 +29,7 @@ export interface RdidEditorProps {
  * The one control for editing a type-prefixed rdid: the fixed `<prefix>` (type + inherited
  * scope, never user-edited) as static text, plus an input for the leaf — mirroring how the
  * backend rejects any type/scope change. Backend-agnostic: the caller derives `prefix` (e.g. via
- * @adh-shared/adh/rdid `prefixFor`) and `error` (via `validateLeaf`). Input is lowercased.
+ * @agentic-toolkit/adh/rdid `prefixFor`) and `error` (via `validateLeaf`). Input is lowercased.
  */
 export function RdidEditor({
   label, prefix, value, onChange, placeholder, hint, error, disabled, id,

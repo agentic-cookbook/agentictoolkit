@@ -3,7 +3,7 @@ import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
 export default defineConfig({
   // Globbed entries mirror the exports map so a new module auto-builds
-  // without editing this file — same pattern as @adh-shared/ui.
+  // without editing this file — same pattern as @agentic-toolkit/ui.
   entry: [
     'src/index.ts',
     'src/hooks/*.ts',

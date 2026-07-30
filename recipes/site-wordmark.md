@@ -29,7 +29,7 @@ references: []
 
 ## Overview
 
-A compact brand wordmark in `@adh-shared/adh` for ADH marketing sites. Given a
+A compact brand wordmark in `@adh/chrome` for ADH marketing sites. Given a
 `siteId`, it renders the site's full name (from the site registry) with its
 trailing accent word in gold italic — the **same** lead/accent split that the
 `MarketingLanding` hero uses, via `splitSiteTitle` (the single source of truth for
@@ -42,12 +42,14 @@ pages, instead of hand-rolling a bespoke header. It is pure presentational (no
 hooks, no client state) and styled entirely with `apt-*` tokens, so it renders
 correctly inside both server and client trees.
 
-It lives in `@adh-shared/adh` (not `@adh-shared/ui`) because marketing apps
-`@source` the `adh` package for Tailwind but not the `ui` package, so the `apt-*`
-utilities it uses are generated in those apps. It ships on its OWN subpath
-(`@adh-shared/adh/marketing/SiteWordmark`), importing only the pure registry, so a
-`'use client'` consumer can pull just the wordmark without co-bundling
-`MarketingLanding`'s content prose.
+It lives in adh's **app** tier (`@adh/chrome`), not in the toolkit, because it
+resolves the ADH site registry — `getSite` + `splitSiteTitle` from `@adh/registry`
+turn a `siteId` into this family's brand string. That is ADH vocabulary, and the
+placement rule is mechanism → toolkit, vocabulary → app. (Only the `HubMark` glyph
+inside it is registry-free, so that one piece comes from `@agentic-toolkit/adh/header`.)
+It ships on its OWN subpath (`@adh/chrome/marketing/SiteWordmark`), importing only
+the pure registry, so a `'use client'` consumer can pull just the wordmark without
+co-bundling `MarketingLanding`'s content prose.
 
 ## Behavioral Requirements
 
@@ -124,7 +126,7 @@ STORE & REVIEW RESEARCH           <- font-mono, uppercase, tracked, apt-text-dim
 
 ## Configuration
 
-`@adh-shared/adh/marketing/SiteWordmark`
+`@adh/chrome/marketing/SiteWordmark`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -148,8 +150,8 @@ Presentational and static; emits no log events.
 ## Platform Notes
 
 - **React / Web (TypeScript):** Component at
-  `websites/shared/adh/src/marketing/SiteWordmark.tsx`, exported on its own subpath
-  `@adh-shared/adh/marketing/SiteWordmark` (with a dedicated `tsup` entry +
+  `frontend/src/app/chrome/src/marketing/SiteWordmark.tsx`, exported on its own subpath
+  `@adh/chrome/marketing/SiteWordmark` (with a dedicated `tsup` entry +
   `exports` key). Reuses `getSite` + `splitSiteTitle` from the registry. Demoed in
   `ui-showcase` (Chrome group); first consumer is the research site's
   `AuthorPapersIndex`.
@@ -161,10 +163,15 @@ Presentational and static; emits no log events.
   re-deriving it. **Rationale**: dry — the brand split has one authoritative
   representation (shared with the landing hero and the concept graph), so the
   wordmark can never drift from the rest of the brand system.
-- **Decision**: Place the component in `@adh-shared/adh`, not `@adh-shared/ui`.
-  **Rationale**: native-controls / consistency — marketing apps `@source` the adh
-  package (so its `apt-*` utilities are generated) but not the ui package; a
-  ui-package wordmark would render unstyled in those apps.
+- **Decision**: Place the component in adh's app tier (`@adh/chrome`), not in the
+  toolkit. **Rationale**: separation-of-concerns — it resolves the ADH site registry
+  to produce the brand string, and the tier boundary is mechanism → toolkit,
+  vocabulary → app; a registry-bound component in the toolkit would make the toolkit
+  depend on one consumer's site list. (Originally it sat in `@adh-shared/adh` for a
+  Tailwind reason — marketing apps `@source`d the `adh` package but not `ui`, so a
+  ui-package wordmark rendered unstyled. That reason has since expired: those apps
+  `@source` `@adh/chrome` too, and `@agentic-toolkit/ui` self-registers its own
+  sources. The tier rule is what governs now.)
 - **Decision**: Ship on its own subpath, importing only the pure registry.
   **Rationale**: separation-of-concerns — keeps `MarketingLanding`'s heavy
   concepts/content-prose graph out of a `'use client'` consumer's bundle.

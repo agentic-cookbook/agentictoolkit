@@ -22,7 +22,8 @@ import {
   type ApiResult,
 } from './lib/buildRequest'
 import { describeFields, schemaToExample } from './lib/schema'
-import { prettyJson } from './lib/highlight'
+// Package path (not relative): see the matching comment in StaticCodeBlock.tsx / tsup.config.ts.
+import { prettyJson } from '@agentic-toolkit/api-explorer/lib/highlight'
 import { methodBadgeClass, statusTone } from './lib/tone'
 import { PUBLIC_API_ORIGIN, SNIPPET_LANGS, snippetFor } from './lib/snippets'
 import type { EndpointMeta, EndpointParam, EndpointResponse } from './types'

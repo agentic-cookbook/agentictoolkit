@@ -1045,7 +1045,7 @@ arguments — the measuring stays in the component, the deciding is tested.
   levels and render only the leaf; standalone they render their own frame. The
   dismantled master/detail bridge is `useMasterDetailLevel` (publishes the list level +
   registers the editor's `guard` from `useMasterDetailForm`, whose `save()` returns a
-  boolean). Reduce-motion is honoured by the global `@adh-shared/themes` accessibility
+  boolean). Reduce-motion is honoured by the global `@agentic-toolkit/themes` accessibility
   CSS (zeroes transition durations). Hub home is gated — verify shared UI on the
   **ui-showcase** (`hierarchical-topic-detail` demo) via Playwright at 375 / 768 / 1440,
   and the hub routes via `e2e/hierarchical-resource.spec.ts` (seeded mock-auth).

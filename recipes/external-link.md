@@ -31,7 +31,7 @@ references: []
 
 ## Overview
 
-The shared `ExternalLink` in `@adh-shared/ui` — the "{label} ↗" deep link out of
+The shared `ExternalLink` in `@agentic-toolkit/ui` — the "{label} ↗" deep link out of
 the app: an anchor that **always opens in a new tab** (`target="_blank"`) with
 the safe `rel="noopener noreferrer"`, ending in a trailing ↗ arrow affordance.
 Its default skin is the dashboard deep-link grammar — small, mono, info-blue,
@@ -47,7 +47,7 @@ already carries the "external" meaning — UserCard's social links do this
 (lucide `ExternalLink` icon + restyled to sans, muted text), and StatCard puts
 the default-skin link in its header actions slot.
 
-A single export ships from `@adh-shared/ui/components/external-link`: the
+A single export ships from `@agentic-toolkit/ui/components/external-link`: the
 `ExternalLink` component. It is a stateless anchor with no `"use client"`
 directive.
 
@@ -156,7 +156,7 @@ at the call site.
 - Demo: `ui-showcase` Topic `external-link` in the "Primitives — display" group
   (regenerate `sources.generated.ts` via `gen-sources.py` after source changes).
 - Web/TypeScript only; token-driven so it themes with the rest of
-  `@adh-shared/ui`.
+  `@agentic-toolkit/ui`.
 
 ## Design Decisions
 
@@ -179,7 +179,7 @@ at the call site.
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors / `!important` (colors are `apt-*` tokens) | pass | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | pass | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | pass | project-guidelines UI |
 | New-tab links carry `rel="noopener noreferrer"` | pass | security |
 | Decorative glyph is `aria-hidden`; visible focus ring | pass | accessibility |
 

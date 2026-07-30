@@ -4,7 +4,15 @@ import { useState, type ReactNode } from 'react'
 import { cn } from '@agentic-toolkit/ui'
 import { HierarchicalDetailView } from '@agentic-toolkit/ui/blocks/hierarchical-detail-view'
 import { type TopicLevel } from '@agentic-toolkit/ui/blocks/hierarchical-topic-detail'
-import { allTags, endpointsForTag, getEndpoint, endpointKey as toKey } from './lib/getEndpoint'
+// Package path (not relative): lib/getEndpoint holds a lazy-cache Map shared with
+// the server entry's own import of it — see the `external` entry + comment in
+// tsup.config.ts for why a relative import here would fork that cache.
+import {
+  allTags,
+  endpointsForTag,
+  getEndpoint,
+  endpointKey as toKey,
+} from '@agentic-toolkit/api-explorer/lib/getEndpoint'
 import { methodDotClass } from './lib/tone'
 import { ApiEndpointDetail } from './ApiEndpointDetail'
 import type { EndpointRef } from './types'

@@ -1,9 +1,13 @@
 import type { ReactElement } from 'react'
-import { LegalPageShell, LEGAL_CONTACT_EMAIL } from './LegalPageShell'
+import { LegalPageShell } from '@agentic-toolkit/adh/legal'
+import { LEGAL_CONTACT_EMAIL, LEGAL_EFFECTIVE_DATE } from './constants'
 
-export function Privacy(): ReactElement {
+/** The Privacy Policy body (headings + paragraphs only), with no page chrome —
+ *  so it can render inside the full /privacy page (via LegalPageShell) AND inside
+ *  the footer's Privacy modal (whose own header carries the title). */
+export function PrivacyBody(): ReactElement {
   return (
-    <LegalPageShell prefix="Privacy" title="Policy">
+    <>
       <p>
         This Privacy Policy explains how Mike Fullerton (&ldquo;<strong>we</strong>&rdquo;,
         &ldquo;<strong>us</strong>&rdquo;, or &ldquo;<strong>our</strong>&rdquo;) collects,
@@ -85,7 +89,27 @@ export function Privacy(): ReactElement {
         </li>
       </ul>
 
-      <h2>4. Public Profile Information</h2>
+      <h2>4. Text Messages (SMS)</h2>
+      <p>
+        If you add and verify a mobile phone number in your account settings, you may
+        receive text messages (SMS) from us for account verification, two-factor
+        authentication, and account-security alerts. We send SMS only to numbers you
+        have provided and verified, and only for those purposes — we do not send
+        marketing or promotional text messages.
+      </p>
+      <p>
+        Message and data rates may apply, and message frequency varies. Reply STOP to any
+        message to unsubscribe, or HELP for help; you can also remove your number at any
+        time in your account settings.{' '}
+        <strong>
+          We do not share mobile phone numbers or SMS opt-in consent with third parties or
+          affiliates for their own marketing or promotional purposes.
+        </strong>{' '}
+        We share your number only with the telecommunications provider that delivers the
+        messages on our behalf.
+      </p>
+
+      <h2>5. Public Profile Information</h2>
       <p>
         If you publish a profile on the Service, information you mark public (such as
         your display name, slug, and avatar) may be visible to anyone who visits your
@@ -93,7 +117,7 @@ export function Privacy(): ReactElement {
         private.
       </p>
 
-      <h2>5. Data Retention</h2>
+      <h2>6. Data Retention</h2>
       <p>
         We retain personal information for as long as your account is active or as
         needed to provide the Service, comply with legal obligations, resolve
@@ -101,7 +125,7 @@ export function Privacy(): ReactElement {
         we delete or de-identify it.
       </p>
 
-      <h2>6. Security</h2>
+      <h2>7. Security</h2>
       <p>
         We use reasonable administrative, technical, and physical safeguards to
         protect information. No method of transmission or storage is fully secure,
@@ -109,7 +133,7 @@ export function Privacy(): ReactElement {
         your account credentials confidential.
       </p>
 
-      <h2>7. Your Choices</h2>
+      <h2>8. Your Choices</h2>
       <ul>
         <li>
           <strong>Access &amp; update.</strong> You can review and update your account
@@ -126,7 +150,7 @@ export function Privacy(): ReactElement {
         </li>
       </ul>
 
-      <h2>8. California Privacy Rights</h2>
+      <h2>9. California Privacy Rights</h2>
       <p>
         If you are a California resident, the California Consumer Privacy Act, as
         amended by the California Privacy Rights Act (&ldquo;CCPA/CPRA&rdquo;), gives
@@ -158,7 +182,7 @@ export function Privacy(): ReactElement {
         designate an authorized agent to make a request on your behalf.
       </p>
 
-      <h2>9. International Users</h2>
+      <h2>10. International Users</h2>
       <p>
         The Service is operated from the United States. If you access the Service
         from outside the United States, you understand that your information may be
@@ -167,7 +191,7 @@ export function Privacy(): ReactElement {
         mechanisms for any such transfers as required by applicable law.
       </p>
 
-      <h2>10. Children&rsquo;s Privacy</h2>
+      <h2>11. Children&rsquo;s Privacy</h2>
       <p>
         The Service is not directed to children under 13, and we do not knowingly
         collect personal information from children under 13. If you believe a child
@@ -175,14 +199,14 @@ export function Privacy(): ReactElement {
         it.
       </p>
 
-      <h2>11. Third-Party Links</h2>
+      <h2>12. Third-Party Links</h2>
       <p>
         The Service may link to third-party websites or services that we do not
         operate. We are not responsible for the privacy practices of those third
         parties; review their policies before sharing information with them.
       </p>
 
-      <h2>12. Changes to This Policy</h2>
+      <h2>13. Changes to This Policy</h2>
       <p>
         We may update this Privacy Policy from time to time. When we do, we will
         revise the &ldquo;Effective&rdquo; date above and, when appropriate, notify
@@ -191,11 +215,19 @@ export function Privacy(): ReactElement {
         Policy.
       </p>
 
-      <h2>13. Contact</h2>
+      <h2>14. Contact</h2>
       <p>
         Privacy questions, requests, or concerns? Email{' '}
         <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>.
       </p>
+    </>
+  )
+}
+
+export function Privacy(): ReactElement {
+  return (
+    <LegalPageShell prefix="Privacy" title="Policy" effectiveDate={LEGAL_EFFECTIVE_DATE}>
+      <PrivacyBody />
     </LegalPageShell>
   )
 }

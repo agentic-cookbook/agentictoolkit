@@ -1,5 +1,5 @@
 // Wire types for the invitations domain — package-local mirrors of the OpenAPI-generated
-// response shapes the hub previously imported as `SuccessBody` from `@adh-shared/api-types`
+// response shapes the hub previously imported as `SuccessBody` from `@agentic-toolkit/adh-api-types`
 // (for /public/invitations/*, /auth/invitations/accept, /auth/register). These carry full
 // backend-schema fidelity (not just the fields today's call sites touch) so the toolkit
 // stays decoupled from the hub's generated types without narrowing what a caller can rely on.

@@ -36,7 +36,7 @@ references: []
 
 ## Overview
 
-The shared `DeleteEntitySection` in `@adh-shared/ui` — the "Danger Zone" that closes
+The shared `DeleteEntitySection` in `@agentic-toolkit/ui` — the "Danger Zone" that closes
 an entity's own settings pane (every focused-topic-detail route reuses it). It is a
 `Disclosure` that is **collapsed and neutral by default**, so a settings pane does
 not shout its most destructive action; the `apt-red` accent appears **only once the
@@ -187,7 +187,7 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/ui/src/blocks/delete-entity-section.tsx`
-  (`"use client"`), exported via `@adh-shared/ui/blocks/delete-entity-section`.
+  (`"use client"`), exported via `@agentic-toolkit/ui/blocks/delete-entity-section`.
   Composes `Disclosure`, `Button`, `Dialog` (+ `DialogHeader`/`Title`/`Description`/
   `Footer`), `Input`, and `Label`, with the `Trash2`/`TriangleAlert` glyphs.
 - Props: `entityNoun` (singular noun), `confirmValue` (the exact rdid to type),
@@ -229,7 +229,7 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
 |---|---|---|
 | Artifact formatting (recipe) | passed | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` | passed | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | passed | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | passed | project-guidelines UI |
 | Destructive action double-gated (acknowledge + type-to-confirm) | passed | safety |
 | Confirm input has an `sr-only` label; dialog traps focus | passed | accessibility |
 

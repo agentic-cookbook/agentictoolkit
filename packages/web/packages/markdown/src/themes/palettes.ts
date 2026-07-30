@@ -1,6 +1,6 @@
-// STANDING palette exception — owner-approved 2026-06-26: the markdown viewer owns its reading-theme palette (--mdv-*), separate from @adh-shared/themes apt-* tokens. Recorded as a project memory. Do not add raw color outside this file.
+// STANDING palette exception — owner-approved 2026-06-26: the markdown viewer owns its reading-theme palette (--mdv-*), separate from @agentic-toolkit/themes apt-* tokens. Recorded as a project memory. Do not add raw color outside this file.
 //
-// This is the ONE module in @adh-shared/markdown permitted to contain concrete
+// This is the ONE module in @agentic-toolkit/markdown permitted to contain concrete
 // color literals. Every theme below is a self-contained palette mapping the
 // viewer's own CSS-variable namespace (`--mdv-*`) to values. The component,
 // renderer, CSS, and switcher reference ONLY `var(--mdv-*)` — never these hex

@@ -34,7 +34,7 @@ references: []
 
 ## Overview
 
-A composition in `@adh-shared/ui` (`blocks/markdown-editor`) that encapsulates
+A composition in `@agentic-toolkit/ui` (`blocks/markdown-editor`) that encapsulates
 markdown **body** editing: a labelled `Textarea` for the raw markdown source with
 an `EditorToolbar` row above it. The toolbar carries an optional built-in
 `.md` upload control, a built-in `MarkdownQuickReference` popover, and a slot for
@@ -56,7 +56,7 @@ title, category, or classification fields — those stay with the consuming form
 | MarkdownQuickReference | agenticdeveloperhub://recipes/markdown-quick-reference | Built-in quick-reference popover control | optional (`quickReference`, default on) | side/align defaults |
 | Button | agenticdeveloperhub://recipes/button | The "Upload .md" trigger | optional (only when `onUpload` set) | `variant="outline" size="sm"` |
 
-> The Textarea, Label, and EditorToolbar are atomic `@adh-shared/ui` primitives
+> The Textarea, Label, and EditorToolbar are atomic `@agentic-toolkit/ui` primitives
 > reused as-is; the `.md` upload control wraps a hidden native `<input
 > type="file">` (the only way to open a file picker — recorded with an
 > `adh-ui-allow: cs-no-bespoke` marker in the source).
@@ -156,7 +156,7 @@ title, category, or classification fields — those stay with the consuming form
 
 - **React / Web (TypeScript):** Block at
   `websites/shared/ui/src/blocks/markdown-editor.tsx`, exported from
-  `@adh-shared/ui/blocks`. Composes `Textarea` + `Label` + `EditorToolbar`
+  `@agentic-toolkit/ui/blocks`. Composes `Textarea` + `Label` + `EditorToolbar`
   (`components/editor-toolbar`) + `MarkdownQuickReference`
   (`components/markdown-quick-reference`) + `Button`. Consumed by hub's
   `ResearchDetail`. Demo lives in `ui-showcase` (Compositions group); re-run

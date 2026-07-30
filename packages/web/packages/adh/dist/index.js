@@ -3,177 +3,26 @@
 "use client";
 
 // src/header/AdhHeader.tsx
-import Link3 from "next/link";
+import "react";
 
 // src/header/AvatarMenu.tsx
 import Link2 from "next/link";
 import { usePathname as usePathname2 } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
-
-// src/components/ui/avatar.tsx
-import * as React from "react";
-import * as AvatarPrimitive from "@radix-ui/react-avatar";
-import { jsx } from "react/jsx-runtime";
-function joinClasses(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-var Avatar = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  AvatarPrimitive.Root,
-  {
-    ref,
-    className: joinClasses("adh-avatar", className),
-    ...props
-  }
-));
-Avatar.displayName = AvatarPrimitive.Root.displayName;
-var AvatarImage = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  AvatarPrimitive.Image,
-  {
-    ref,
-    className: joinClasses("adh-avatar__image", className),
-    ...props
-  }
-));
-AvatarImage.displayName = AvatarPrimitive.Image.displayName;
-var AvatarFallback = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx(
-  AvatarPrimitive.Fallback,
-  {
-    ref,
-    className: joinClasses("adh-avatar__fallback", className),
-    ...props
-  }
-));
-AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
-
-// src/components/ui/dropdown-menu.tsx
-import * as React2 from "react";
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronRight, Circle } from "lucide-react";
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
-function joinClasses2(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-var DropdownMenu = DropdownMenuPrimitive.Root;
-var DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
-var DropdownMenuSubTrigger = React2.forwardRef(({ className, inset, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.SubTrigger,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__sub-trigger",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props,
-    children: [
-      children,
-      /* @__PURE__ */ jsx2(ChevronRight, { className: "adh-dropdown-menu__sub-trigger-chevron" })
-    ]
-  }
-));
-DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
-var DropdownMenuSubContent = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.SubContent,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-));
-DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
-var DropdownMenuContent = React2.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsx2(DropdownMenuPrimitive.Portal, { children: /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Content,
-  {
-    ref,
-    sideOffset,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-) }));
-DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
-var DropdownMenuItem = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Item,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
-var DropdownMenuCheckboxItem = React2.forwardRef(({ className, children, checked, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.CheckboxItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    checked,
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx2(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx2(Check, { className: "adh-dropdown-menu__indicator-check" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
-var DropdownMenuRadioItem = React2.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.RadioItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx2(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx2(Circle, { className: "adh-dropdown-menu__indicator-dot" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
-var DropdownMenuLabel = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Label,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__label",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
-var DropdownMenuSeparator = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Separator,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__separator", className),
-    ...props
-  }
-));
-DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
-var DropdownMenuShortcut = ({ className, ...props }) => {
-  return /* @__PURE__ */ jsx2(
-    "span",
-    {
-      className: joinClasses2("adh-dropdown-menu__shortcut", className),
-      ...props
-    }
-  );
-};
-DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
+import { Avatar, AvatarFallback, AvatarImage } from "@agentic-toolkit/ui/components/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLinkItem,
+  DropdownMenuSeparator
+} from "@agentic-toolkit/ui/components/dropdown-menu";
 
 // src/header/NavLink.tsx
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { jsx as jsx3 } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 function pathMatches(pathname, pattern) {
   if (pattern === pathname) return true;
   if (pattern.endsWith("/*")) {
@@ -186,7 +35,7 @@ function NavLinkItem({ link }) {
   const pathname = usePathname() ?? "";
   const matchers = link.matchPaths ?? [link.href];
   const active = matchers.some((m) => pathMatches(pathname, m));
-  return /* @__PURE__ */ jsx3(
+  return /* @__PURE__ */ jsx(
     Link,
     {
       href: link.href,
@@ -199,7 +48,7 @@ function NavLinkItem({ link }) {
 }
 
 // src/header/AvatarMenu.tsx
-import { Fragment, jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
 function initialsOf(name) {
   if (!name) return "";
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
@@ -213,74 +62,74 @@ function AvatarMenu({
   children
 }) {
   const pathname = usePathname2() ?? "";
-  const avatarInner = /* @__PURE__ */ jsxs2(Avatar, { className: "adh-avatar-menu-trigger__avatar", children: [
-    user.imageUrl && /* @__PURE__ */ jsx4(AvatarImage, { src: user.imageUrl, alt: user.name }),
-    /* @__PURE__ */ jsx4(AvatarFallback, { children: initialsOf(user.name) || /* @__PURE__ */ jsx4(UserIcon, { className: "adh-avatar-menu-trigger__fallback-icon" }) })
+  const avatarInner = /* @__PURE__ */ jsxs(Avatar, { className: "adh-avatar-menu-trigger__avatar", children: [
+    user.imageUrl && /* @__PURE__ */ jsx2(AvatarImage, { src: user.imageUrl, alt: user.name }),
+    /* @__PURE__ */ jsx2(AvatarFallback, { children: initialsOf(user.name) || /* @__PURE__ */ jsx2(UserIcon, { className: "adh-avatar-menu-trigger__fallback-icon" }) })
   ] });
-  const settingsItem = settingsHref ? /* @__PURE__ */ jsx4(DropdownMenuItem, { asChild: true, children: /* @__PURE__ */ jsxs2(Link2, { href: settingsHref, className: "adh-avatar-menu__item", children: [
-    /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
-    /* @__PURE__ */ jsx4(Settings, { className: "adh-avatar-menu__item-icon" })
-  ] }) }) : onSettings ? /* @__PURE__ */ jsxs2(DropdownMenuItem, { onSelect: onSettings, className: "adh-avatar-menu__item", children: [
-    /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
-    /* @__PURE__ */ jsx4(Settings, { className: "adh-avatar-menu__item-icon" })
+  const settingsItem = settingsHref ? /* @__PURE__ */ jsxs(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx2(Link2, { href: settingsHref }), className: "adh-avatar-menu__item", children: [
+    /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
+    /* @__PURE__ */ jsx2(Settings, { className: "adh-avatar-menu__item-icon" })
+  ] }) : onSettings ? /* @__PURE__ */ jsxs(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: [
+    /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
+    /* @__PURE__ */ jsx2(Settings, { className: "adh-avatar-menu__item-icon" })
   ] }) : null;
-  return /* @__PURE__ */ jsxs2(DropdownMenu, { children: [
-    /* @__PURE__ */ jsxs2(
+  return /* @__PURE__ */ jsxs(DropdownMenu, { children: [
+    /* @__PURE__ */ jsxs(
       DropdownMenuTrigger,
       {
         className: "adh-avatar-menu-trigger",
         "aria-label": `Open ${user.name} menu`,
         children: [
-          /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu-trigger__name", children: user.name }),
-          /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
-          /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx4(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
+          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
+          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx2(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
         ]
       }
     ),
-    /* @__PURE__ */ jsxs2(DropdownMenuContent, { className: "adh-avatar-menu", align: "end", sideOffset: 8, children: [
-      /* @__PURE__ */ jsx4("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsxs2("div", { className: "adh-avatar-menu__identity", children: [
-        /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__name", children: user.name }),
-        user.email && /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__email", children: user.email })
+    /* @__PURE__ */ jsxs(DropdownMenuContent, { className: "adh-avatar-menu", align: "end", sideOffset: 8, children: [
+      /* @__PURE__ */ jsx2("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsxs("div", { className: "adh-avatar-menu__identity", children: [
+        /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__name", children: user.name }),
+        user.email && /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__email", children: user.email })
       ] }) }),
-      navLinks.length > 0 && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      navLinks.length > 0 && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
         navLinks.map((link) => {
           const Icon = link.icon;
           const matchers = link.matchPaths ?? [link.href];
           const active = matchers.some((m) => pathMatches(pathname, m));
-          return /* @__PURE__ */ jsx4(DropdownMenuItem, { asChild: true, children: /* @__PURE__ */ jsxs2(
-            Link2,
+          return /* @__PURE__ */ jsxs(
+            DropdownMenuLinkItem,
             {
-              href: link.href,
+              render: /* @__PURE__ */ jsx2(Link2, { href: link.href }),
               className: "adh-avatar-menu__item",
               "aria-current": active ? "page" : void 0,
               "data-active": active ? "" : void 0,
               children: [
-                /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: link.label }),
-                Icon ? /* @__PURE__ */ jsx4(Icon, { className: "adh-avatar-menu__item-icon" }) : null
+                /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: link.label }),
+                Icon ? /* @__PURE__ */ jsx2(Icon, { className: "adh-avatar-menu__item-icon" }) : null
               ]
-            }
-          ) }, link.href + link.label);
+            },
+            link.href + link.label
+          );
         })
       ] }),
-      settingsItem && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      settingsItem && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
         settingsItem
       ] }),
-      children && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      children && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
         children
       ] }),
-      onLogout && /* @__PURE__ */ jsxs2(Fragment, { children: [
-        /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
-        /* @__PURE__ */ jsxs2(
+      onLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
+        /* @__PURE__ */ jsxs(
           DropdownMenuItem,
           {
-            onSelect: onLogout,
+            onClick: onLogout,
             className: "adh-avatar-menu__item",
             children: [
-              /* @__PURE__ */ jsx4("span", { className: "adh-avatar-menu__item-label", children: "Log out" }),
-              /* @__PURE__ */ jsx4(LogOut, { className: "adh-avatar-menu__item-icon" })
+              /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Log out" }),
+              /* @__PURE__ */ jsx2(LogOut, { className: "adh-avatar-menu__item-icon" })
             ]
           }
         )
@@ -290,40 +139,545 @@ function AvatarMenu({
 }
 
 // src/header/AuthButtons.tsx
-import { Fragment as Fragment2, jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 function AuthButtons({
   onSignup,
   onLogin,
   signupHref,
   loginHref,
-  signupLabel = "signup",
+  signupLabel = "join",
   loginLabel = "login"
 }) {
-  const loginNode = onLogin ? /* @__PURE__ */ jsx5("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel }) : loginHref ? /* @__PURE__ */ jsx5("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
-  const signupNode = onSignup ? /* @__PURE__ */ jsx5("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel }) : signupHref ? /* @__PURE__ */ jsx5("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
-  return /* @__PURE__ */ jsxs3(Fragment2, { children: [
+  const loginNode = onLogin ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel }) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
+  const signupNode = onSignup ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel }) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
+  return /* @__PURE__ */ jsxs2(Fragment2, { children: [
     loginNode,
     signupNode
   ] });
+}
+
+// src/header/SiteSwitcher.tsx
+import Link3 from "next/link";
+import "react";
+
+// src/header/NavigationPopover.tsx
+import {
+  Fragment as Fragment3,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+import { ChevronDown as ChevronDown2 } from "lucide-react";
+import { cn } from "@agentic-toolkit/ui";
+import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
+import {
+  DropdownMenu as DropdownMenu2,
+  DropdownMenuTrigger as DropdownMenuTrigger2,
+  DropdownMenuContent as DropdownMenuContent2,
+  DropdownMenuSeparator as DropdownMenuSeparator2,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
+} from "@agentic-toolkit/ui/components/dropdown-menu";
+import { Fragment as Fragment4, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
+var GUARDED_NAV_PROPS = { [GUARDED_NAV_ATTR]: "" };
+function highlightMatch(text, query) {
+  const needle = query.trim();
+  if (!needle) return text;
+  const lower = text.toLowerCase();
+  const ln = needle.toLowerCase();
+  const out = [];
+  let i = 0;
+  let key = 0;
+  while (i < text.length) {
+    const at = lower.indexOf(ln, i);
+    if (at === -1) {
+      out.push(text.slice(i));
+      break;
+    }
+    if (at > i) out.push(text.slice(i, at));
+    out.push(
+      /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__hl", children: text.slice(at, at + needle.length) }, key++)
+    );
+    i = at + needle.length;
+  }
+  return out;
+}
+function IconSlot({ icon: Icon }) {
+  if (!Icon) return null;
+  return /* @__PURE__ */ jsx4(Icon, { className: "adh-dropdown-menu__item-icon adh-nav-popover__icon", "aria-hidden": true });
+}
+function isModifiedClick(event) {
+  return event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+}
+function NavigationPopover({
+  entries,
+  triggerLabel,
+  triggerContent,
+  triggerText,
+  triggerIcon,
+  triggerClassName,
+  placeholder = "Search, or browse topics",
+  emptyLabel = "No matches",
+  onChoose,
+  commandTrailing,
+  searchCommand
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [nav, setNav] = useState({ kind: "none" });
+  const [searchIndex, setSearchIndex] = useState(0);
+  const inputRef = useRef(null);
+  const uid = useId();
+  const navByKeyboard = useRef(false);
+  const suppressFocusRestore = useRef(false);
+  const close = useCallback((opts) => {
+    if (opts?.restoreFocus === false) suppressFocusRestore.current = true;
+    setOpen(false);
+  }, []);
+  const chooseItem = useCallback(
+    (item) => {
+      setOpen(false);
+      if (item.onSelect) {
+        item.onSelect();
+        return;
+      }
+      if (onChoose) {
+        onChoose(item);
+        return;
+      }
+      if (item.href && item.href !== "#") {
+        const href = item.href;
+        void confirmNavigation().then((ok) => {
+          if (ok) window.location.assign(href);
+        });
+      }
+    },
+    [onChoose]
+  );
+  const searchTargets = useMemo(() => {
+    const out = [];
+    for (const e of entries) {
+      if (e.kind === "topic") {
+        for (const item of e.items) out.push({ item, area: e.label });
+      } else {
+        out.push({ item: e.item, area: null });
+      }
+    }
+    return out;
+  }, [entries]);
+  const searchResults = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+    return searchTargets.filter(
+      (t) => t.item.label.toLowerCase().includes(needle) || (t.item.description?.toLowerCase().includes(needle) ?? false)
+    );
+  }, [searchTargets, query]);
+  const trimmed = query.trim();
+  const searching = trimmed.length > 0;
+  const cmdActive = searching && (searchCommand?.matches(trimmed) ?? false);
+  const searchActive = searchResults.length === 0 ? -1 : Math.min(searchIndex, searchResults.length - 1);
+  const selectCommand = useCallback(() => {
+    if (!searchCommand) return;
+    close({ restoreFocus: false });
+    searchCommand.onSelect();
+  }, [close, searchCommand]);
+  const disclosed = nav.kind === "sub" ? nav.entry : nav.kind === "top" && nav.open ? nav.entry : null;
+  const activeKey = searching ? cmdActive ? "cmd" : searchActive >= 0 ? `s${searchActive}` : null : nav.kind === "sub" ? `e${nav.entry}s${nav.item}` : nav.kind === "top" ? `e${nav.entry}` : null;
+  const activeId = activeKey ? `${uid}-${activeKey}` : void 0;
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, nav, searching]);
+  useEffect(() => {
+    if (!navByKeyboard.current || !activeKey) return;
+    document.getElementById(`${uid}-${activeKey}`)?.scrollIntoView({ block: "nearest" });
+  }, [uid, activeKey, query]);
+  function moveSel(dir) {
+    navByKeyboard.current = true;
+    if (nav.kind === "sub") {
+      const entry = entries[nav.entry];
+      if (entry?.kind === "topic") {
+        const next = nav.item + dir;
+        if (next >= 0 && next < entry.items.length) {
+          setNav({ kind: "sub", entry: nav.entry, item: next });
+          return;
+        }
+        const siblingIdx = nav.entry + dir;
+        const sibling = entries[siblingIdx];
+        if (sibling?.kind === "topic") {
+          setNav({ kind: "sub", entry: siblingIdx, item: dir > 0 ? 0 : sibling.items.length - 1 });
+        }
+        return;
+      }
+    }
+    const n = entries.length;
+    if (!n) return;
+    const cur = nav.kind === "none" ? null : nav.entry;
+    const nextEntry = cur === null ? dir > 0 ? 0 : n - 1 : (cur + dir + n) % n;
+    setNav({ kind: "top", entry: nextEntry, open: false });
+  }
+  function discloseRight() {
+    if (nav.kind !== "top") return;
+    if (entries[nav.entry]?.kind !== "topic") return;
+    navByKeyboard.current = true;
+    setNav({ kind: "sub", entry: nav.entry, item: 0 });
+  }
+  function collapseLeft() {
+    navByKeyboard.current = true;
+    if (nav.kind === "sub" || nav.kind === "top" && nav.open) {
+      setNav({ kind: "top", entry: nav.entry, open: false });
+    }
+  }
+  function choose() {
+    if (searching) {
+      if (cmdActive) {
+        selectCommand();
+        return;
+      }
+      const target = searchResults[searchActive]?.item;
+      if (!target) return;
+      chooseItem(target);
+      return;
+    }
+    if (nav.kind === "none") return;
+    const entry = entries[nav.entry];
+    if (!entry) return;
+    if (nav.kind === "top") {
+      if (entry.kind === "topic") {
+        discloseRight();
+        return;
+      }
+      chooseItem(entry.item);
+      return;
+    }
+    if (entry.kind === "topic") {
+      const item = entry.items[nav.item];
+      if (item) chooseItem(item);
+    }
+  }
+  function handleOpenChange(next) {
+    setOpen(next);
+    if (next) {
+      setQuery("");
+      setNav({ kind: "none" });
+      setSearchIndex(0);
+    }
+  }
+  function handleInputKeyDown(event) {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        event.stopPropagation();
+        navByKeyboard.current = true;
+        if (searching) setSearchIndex(Math.min(searchActive + 1, searchResults.length - 1));
+        else moveSel(1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        event.stopPropagation();
+        navByKeyboard.current = true;
+        if (searching) setSearchIndex(Math.max(searchActive - 1, 0));
+        else moveSel(-1);
+        break;
+      case "ArrowRight":
+        if (!searching) {
+          event.preventDefault();
+          event.stopPropagation();
+          discloseRight();
+        } else {
+          event.stopPropagation();
+        }
+        break;
+      case "ArrowLeft":
+        if (!searching) {
+          event.preventDefault();
+          event.stopPropagation();
+          collapseLeft();
+        } else {
+          event.stopPropagation();
+        }
+        break;
+      case "Enter":
+        event.preventDefault();
+        event.stopPropagation();
+        choose();
+        break;
+      case "Tab":
+        event.preventDefault();
+        event.stopPropagation();
+        break;
+      case "Escape":
+        break;
+      default:
+        event.stopPropagation();
+    }
+  }
+  function renderItem(item, entryIndex, j) {
+    const isActive = nav.kind === "sub" && nav.entry === entryIndex && nav.item === j;
+    return /* @__PURE__ */ jsxs3(
+      "a",
+      {
+        id: `${uid}-e${entryIndex}s${j}`,
+        "data-nav": `e${entryIndex}s${j}`,
+        role: "menuitem",
+        "aria-current": item.current ? "page" : void 0,
+        href: item.href,
+        ...GUARDED_NAV_PROPS,
+        className: cn("adh-dropdown-menu__item", {
+          "adh-nav-popover__item--active": isActive,
+          "adh-nav-popover__item--current": item.current
+        }),
+        onMouseDown: (event) => event.preventDefault(),
+        onMouseMove: () => {
+          navByKeyboard.current = false;
+          setNav({ kind: "sub", entry: entryIndex, item: j });
+        },
+        onClick: (event) => {
+          if (isModifiedClick(event)) return;
+          event.preventDefault();
+          chooseItem(item);
+        },
+        children: [
+          /* @__PURE__ */ jsx4(IconSlot, { icon: item.icon }),
+          /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: item.label }),
+          item.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: item.description })
+        ]
+      },
+      `${item.key}-${entryIndex}-${j}`
+    );
+  }
+  return (
+    // Controlled so `close()` actually closes the menu — trailing controls and
+    // the search command both close it programmatically before handing off.
+    /* @__PURE__ */ jsxs3(DropdownMenu2, { open, onOpenChange: handleOpenChange, children: [
+      /* @__PURE__ */ jsx4(
+        DropdownMenuTrigger2,
+        {
+          className: cn("adh-header__title adh-nav-popover__trigger", triggerClassName),
+          "aria-label": triggerLabel,
+          children: triggerContent ?? /* @__PURE__ */ jsxs3(Fragment4, { children: [
+            triggerIcon,
+            /* @__PURE__ */ jsx4("span", { children: triggerText ?? triggerLabel }),
+            /* @__PURE__ */ jsx4(ChevronDown2, { className: "adh-nav-popover__chevron", "aria-hidden": true })
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsxs3(
+        DropdownMenuContent2,
+        {
+          align: "start",
+          className: "adh-nav-popover__menu",
+          onMouseLeave: (event) => {
+            const to = event.relatedTarget;
+            if (to instanceof Element && to.closest('[role="menu"]')) return;
+            setNav(
+              (cur) => cur.kind === "top" && cur.open ? { kind: "top", entry: cur.entry, open: false } : cur
+            );
+          },
+          finalFocus: () => {
+            if (suppressFocusRestore.current) {
+              suppressFocusRestore.current = false;
+              return false;
+            }
+            return true;
+          },
+          children: [
+            /* @__PURE__ */ jsxs3("div", { className: "adh-nav-popover__search", children: [
+              /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__prompt", "aria-hidden": true, children: ">" }),
+              /* @__PURE__ */ jsx4(
+                "input",
+                {
+                  ref: inputRef,
+                  type: "text",
+                  className: "adh-nav-popover__search-input",
+                  placeholder,
+                  "aria-label": placeholder,
+                  role: "combobox",
+                  "aria-expanded": true,
+                  "aria-controls": `${uid}-list`,
+                  "aria-activedescendant": activeId,
+                  autoComplete: "off",
+                  spellCheck: false,
+                  value: query,
+                  onChange: (event) => {
+                    navByKeyboard.current = true;
+                    setQuery(event.target.value);
+                    setSearchIndex(0);
+                    setNav({ kind: "none" });
+                  },
+                  onKeyDown: handleInputKeyDown
+                }
+              ),
+              commandTrailing?.({ close })
+            ] }),
+            /* @__PURE__ */ jsx4(DropdownMenuSeparator2, {}),
+            /* @__PURE__ */ jsxs3("div", { id: `${uid}-list`, className: "adh-nav-popover__list", children: [
+              !searching && entries.map((entry, index) => {
+                const prev = entries[index - 1];
+                const divider = prev !== void 0 && prev.section !== entry.section;
+                const sep = divider ? /* @__PURE__ */ jsx4("div", { className: "adh-dropdown-menu__separator", role: "separator" }) : null;
+                if (entry.kind === "topic") {
+                  return /* @__PURE__ */ jsxs3(Fragment3, { children: [
+                    sep,
+                    /* @__PURE__ */ jsxs3(
+                      DropdownMenuSub,
+                      {
+                        open: index === disclosed,
+                        onOpenChange: (next) => {
+                          if (next) {
+                            navByKeyboard.current = false;
+                            setNav({ kind: "top", entry: index, open: true });
+                          }
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxs3(
+                            DropdownMenuSubTrigger,
+                            {
+                              "data-nav": `e${index}`,
+                              className: cn("adh-nav-popover__topic", {
+                                "adh-nav-popover__item--active": nav.kind === "top" && nav.entry === index,
+                                "adh-nav-popover__item--indent": entry.indent
+                              }),
+                              onMouseDown: (event) => event.preventDefault(),
+                              onMouseMove: () => {
+                                navByKeyboard.current = false;
+                                setNav({ kind: "top", entry: index, open: true });
+                              },
+                              children: [
+                                /* @__PURE__ */ jsx4(IconSlot, { icon: entry.icon }),
+                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, children: entry.label })
+                              ]
+                            }
+                          ),
+                          /* @__PURE__ */ jsx4(DropdownMenuSubContent, { className: "adh-nav-popover__submenu", children: entry.items.map((item, j) => renderItem(item, index, j)) })
+                        ]
+                      }
+                    )
+                  ] }, `topic-${index}`);
+                }
+                const isActive = nav.kind === "top" && nav.entry === index;
+                return /* @__PURE__ */ jsxs3(Fragment3, { children: [
+                  sep,
+                  /* @__PURE__ */ jsxs3(
+                    "a",
+                    {
+                      id: `${uid}-e${index}`,
+                      "data-nav": `e${index}`,
+                      role: "menuitem",
+                      "aria-current": entry.item.current ? "page" : void 0,
+                      href: entry.item.href,
+                      ...GUARDED_NAV_PROPS,
+                      className: cn("adh-dropdown-menu__item", {
+                        "adh-nav-popover__item--active": isActive,
+                        "adh-nav-popover__item--current": entry.item.current,
+                        "adh-nav-popover__item--indent": entry.indent
+                      }),
+                      onMouseDown: (event) => event.preventDefault(),
+                      onMouseMove: () => {
+                        navByKeyboard.current = false;
+                        setNav({ kind: "top", entry: index, open: false });
+                      },
+                      onClick: (event) => {
+                        if (isModifiedClick(event)) return;
+                        event.preventDefault();
+                        chooseItem(entry.item);
+                      },
+                      children: [
+                        /* @__PURE__ */ jsx4(IconSlot, { icon: entry.item.icon }),
+                        /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: entry.item.label }),
+                        entry.blurb && entry.item.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: entry.item.description })
+                      ]
+                    }
+                  )
+                ] }, `leaf-${entry.item.key}`);
+              }),
+              searching && cmdActive && searchCommand && /* @__PURE__ */ jsxs3(
+                "button",
+                {
+                  type: "button",
+                  id: `${uid}-cmd`,
+                  role: "menuitem",
+                  className: "adh-dropdown-menu__item adh-nav-popover__item--active adh-nav-popover__help-row",
+                  onMouseDown: (event) => event.preventDefault(),
+                  onClick: selectCommand,
+                  children: [
+                    /* @__PURE__ */ jsx4("span", { children: searchCommand.label }),
+                    searchCommand.shortcut && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: searchCommand.shortcut })
+                  ]
+                }
+              ),
+              searching && !cmdActive && searchResults.map((result, index) => {
+                const { item, area } = result;
+                const isActive = index === searchActive;
+                return /* @__PURE__ */ jsxs3(
+                  "a",
+                  {
+                    id: `${uid}-s${index}`,
+                    "data-search": index,
+                    role: "menuitem",
+                    "aria-current": item.current ? "page" : void 0,
+                    href: item.href,
+                    ...GUARDED_NAV_PROPS,
+                    className: cn("adh-dropdown-menu__item adh-nav-popover__match", {
+                      "adh-nav-popover__item--active": isActive,
+                      "adh-nav-popover__item--current": item.current
+                    }),
+                    onMouseDown: (event) => event.preventDefault(),
+                    onMouseMove: () => {
+                      navByKeyboard.current = false;
+                      setSearchIndex(index);
+                    },
+                    onClick: (event) => {
+                      if (isModifiedClick(event)) return;
+                      event.preventDefault();
+                      chooseItem(item);
+                    },
+                    children: [
+                      /* @__PURE__ */ jsx4(IconSlot, { icon: item.icon }),
+                      area && /* @__PURE__ */ jsxs3(Fragment4, { children: [
+                        /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__area", children: area }),
+                        /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__arrow", "aria-hidden": true, children: "\u2192" })
+                      ] }),
+                      /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: highlightMatch(item.label, query) }),
+                      item.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: highlightMatch(item.description, query) })
+                    ]
+                  },
+                  `${item.key}-${index}`
+                );
+              })
+            ] }),
+            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel })
+          ]
+        }
+      )
+    ] })
+  );
 }
 
 // src/header/SiteOptionsMenu.tsx
 import { Grid3x3 } from "lucide-react";
 
 // src/components/ui/button.tsx
-import * as React3 from "react";
+import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { jsx as jsx6 } from "react/jsx-runtime";
-function joinClasses3(...parts) {
+import { jsx as jsx5 } from "react/jsx-runtime";
+function joinClasses(...parts) {
   return parts.filter(Boolean).join(" ");
 }
-var Button = React3.forwardRef(
+var Button = React.forwardRef(
   ({ className, variant = "default", size = "default", asChild = false, type, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return /* @__PURE__ */ jsx6(
+    return /* @__PURE__ */ jsx5(
       Comp,
       {
-        className: joinClasses3(
+        className: joinClasses(
           "adh-button",
           `adh-button--${variant}`,
           `adh-button--size-${size}`,
@@ -338,23 +692,148 @@ var Button = React3.forwardRef(
 );
 Button.displayName = "Button";
 
+// src/components/ui/dropdown-menu.tsx
+import * as React2 from "react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Check, ChevronRight, Circle } from "lucide-react";
+import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
+function joinClasses2(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+var DropdownMenu3 = DropdownMenuPrimitive.Root;
+var DropdownMenuTrigger3 = DropdownMenuPrimitive.Trigger;
+var DropdownMenuSubTrigger2 = React2.forwardRef(({ className, inset, children, ...props }, ref) => /* @__PURE__ */ jsxs4(
+  DropdownMenuPrimitive.SubTrigger,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item adh-dropdown-menu__sub-trigger",
+      inset && "adh-dropdown-menu__item--inset",
+      className
+    ),
+    ...props,
+    children: [
+      children,
+      /* @__PURE__ */ jsx6(ChevronRight, { className: "adh-dropdown-menu__sub-trigger-chevron" })
+    ]
+  }
+));
+DropdownMenuSubTrigger2.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
+var DropdownMenuSubContent2 = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.SubContent,
+  {
+    ref,
+    className: joinClasses2("adh-dropdown-menu__content", className),
+    ...props
+  }
+));
+DropdownMenuSubContent2.displayName = DropdownMenuPrimitive.SubContent.displayName;
+var DropdownMenuContent3 = React2.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsx6(DropdownMenuPrimitive.Portal, { children: /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Content,
+  {
+    ref,
+    sideOffset,
+    className: joinClasses2("adh-dropdown-menu__content", className),
+    ...props
+  }
+) }));
+DropdownMenuContent3.displayName = DropdownMenuPrimitive.Content.displayName;
+var DropdownMenuItem2 = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Item,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item",
+      inset && "adh-dropdown-menu__item--inset",
+      className
+    ),
+    ...props
+  }
+));
+DropdownMenuItem2.displayName = DropdownMenuPrimitive.Item.displayName;
+var DropdownMenuCheckboxItem = React2.forwardRef(({ className, children, checked, ...props }, ref) => /* @__PURE__ */ jsxs4(
+  DropdownMenuPrimitive.CheckboxItem,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
+      className
+    ),
+    checked,
+    ...props,
+    children: [
+      /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx6(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx6(Check, { className: "adh-dropdown-menu__indicator-check" }) }) }),
+      children
+    ]
+  }
+));
+DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
+var DropdownMenuRadioItem = React2.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs4(
+  DropdownMenuPrimitive.RadioItem,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
+      className
+    ),
+    ...props,
+    children: [
+      /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx6(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx6(Circle, { className: "adh-dropdown-menu__indicator-dot" }) }) }),
+      children
+    ]
+  }
+));
+DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
+var DropdownMenuLabel = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Label,
+  {
+    ref,
+    className: joinClasses2(
+      "adh-dropdown-menu__label",
+      inset && "adh-dropdown-menu__item--inset",
+      className
+    ),
+    ...props
+  }
+));
+DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
+var DropdownMenuSeparator3 = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx6(
+  DropdownMenuPrimitive.Separator,
+  {
+    ref,
+    className: joinClasses2("adh-dropdown-menu__separator", className),
+    ...props
+  }
+));
+DropdownMenuSeparator3.displayName = DropdownMenuPrimitive.Separator.displayName;
+var DropdownMenuShortcut = ({ className, ...props }) => {
+  return /* @__PURE__ */ jsx6(
+    "span",
+    {
+      className: joinClasses2("adh-dropdown-menu__shortcut", className),
+      ...props
+    }
+  );
+};
+DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
+
 // src/header/SiteOptionsMenu.tsx
-import { jsx as jsx7, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs5 } from "react/jsx-runtime";
 function SiteOptionsMenu({
   sites,
   triggerLabel = "Sites",
-  groupLabel = "Agentic Developer Hub"
+  groupLabel = "Sites"
 }) {
   if (sites.length === 0) return null;
-  return /* @__PURE__ */ jsxs4(DropdownMenu, { children: [
-    /* @__PURE__ */ jsx7(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ jsxs4(Button, { variant: "ghost", size: "sm", "aria-label": triggerLabel, children: [
+  return /* @__PURE__ */ jsxs5(DropdownMenu3, { children: [
+    /* @__PURE__ */ jsx7(DropdownMenuTrigger3, { asChild: true, children: /* @__PURE__ */ jsxs5(Button, { variant: "ghost", size: "sm", "aria-label": triggerLabel, children: [
       /* @__PURE__ */ jsx7(Grid3x3, { className: "adh-button__icon" }),
       /* @__PURE__ */ jsx7("span", { children: triggerLabel })
     ] }) }),
-    /* @__PURE__ */ jsxs4(DropdownMenuContent, { align: "end", children: [
+    /* @__PURE__ */ jsxs5(DropdownMenuContent3, { align: "end", children: [
       /* @__PURE__ */ jsx7(DropdownMenuLabel, { children: groupLabel }),
-      /* @__PURE__ */ jsx7(DropdownMenuSeparator, {}),
-      sites.map((site) => /* @__PURE__ */ jsx7(DropdownMenuItem, { asChild: true, children: /* @__PURE__ */ jsxs4("a", { href: site.href, children: [
+      /* @__PURE__ */ jsx7(DropdownMenuSeparator3, {}),
+      sites.map((site) => /* @__PURE__ */ jsx7(DropdownMenuItem2, { asChild: true, children: /* @__PURE__ */ jsxs5("a", { href: site.href, children: [
         /* @__PURE__ */ jsx7("span", { children: site.label }),
         site.description && /* @__PURE__ */ jsx7("span", { className: "adh-dropdown-menu__shortcut", children: site.description })
       ] }) }, site.href))
@@ -362,16 +841,64 @@ function SiteOptionsMenu({
   ] });
 }
 
+// src/header/SiteSwitcher.tsx
+import { jsx as jsx8 } from "react/jsx-runtime";
+function SiteSwitcher({
+  siteName,
+  siteNameHref = "/",
+  sites = [],
+  onSwitchSite
+}) {
+  if (sites.length === 0) {
+    return /* @__PURE__ */ jsx8(Link3, { href: siteNameHref, className: "adh-header__title", children: siteName });
+  }
+  const entries = sites.map((site) => ({
+    kind: "leaf",
+    section: 0,
+    item: {
+      //  `id` is optional on the published `SiteLink` (its owner, SiteOptionsMenu,
+      //  never reads it), so fall back to the href — unique among switch targets by
+      //  construction, and a stable key either way.
+      key: site.id ?? site.href,
+      label: site.label,
+      description: site.description,
+      href: site.href
+    }
+  }));
+  return /* @__PURE__ */ jsx8(
+    NavigationPopover,
+    {
+      entries,
+      triggerLabel: `${siteName} \u2014 switch site`,
+      triggerText: siteName,
+      triggerClassName: "adh-header__title",
+      onChoose: (item) => {
+        const href = onSwitchSite?.(item.key) ?? item.href;
+        if (href) window.location.assign(href);
+      }
+    }
+  );
+}
+
 // src/header/AdhHeader.tsx
-import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
+import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
+var DEV_PREVIEW_BADGES = [{ label: "Preview Release", tone: "neutral" }];
 function AdhHeader({
   siteName,
   siteNameHref = "/",
+  sites,
+  onSwitchSite,
+  siteSwitcher,
   pageTitle,
+  center,
+  badges = DEV_PREVIEW_BADGES,
+  leadingActions,
   navLinks = [],
   trailingNavLinks = [],
-  sites,
+  preAuthLinks,
   user,
+  authLoading = false,
   loginHref,
   signupHref,
   onLogin,
@@ -380,14 +907,45 @@ function AdhHeader({
   settingsHref,
   onSettings
 }) {
-  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref);
-  return /* @__PURE__ */ jsx8("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
-    /* @__PURE__ */ jsx8(Link3, { href: siteNameHref, className: "adh-header__title", children: siteName }),
-    pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
-    /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
-      barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)),
-      sites && sites.length > 0 && /* @__PURE__ */ jsx8(SiteOptionsMenu, { sites }),
-      user ? /* @__PURE__ */ jsx8(
+  const barLinks = user ? [] : navLinks;
+  return /* @__PURE__ */ jsx9("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
+    /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
+      siteSwitcher ?? /* @__PURE__ */ jsx9(
+        SiteSwitcher,
+        {
+          siteName,
+          siteNameHref,
+          sites,
+          onSwitchSite
+        }
+      ),
+      badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
+        // The ui Badge owns the skin; the adh-header__badge* classes stay
+        // as stable hooks — they're a theme-editor surface.
+        /* @__PURE__ */ jsx9(
+          Badge,
+          {
+            variant: badge.tone ?? "neutral",
+            className: badge.tone ? `adh-header__badge adh-header__badge--${badge.tone}` : "adh-header__badge",
+            children: badge.label
+          },
+          badge.label
+        )
+      )) })
+    ] }),
+    center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
+    /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
+      leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
+      barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
+      preAuthLinks,
+      authLoading && !user ? /* @__PURE__ */ jsx9(
+        "span",
+        {
+          className: "adh-header__auth-spinner",
+          role: "status",
+          "aria-label": "Checking sign-in"
+        }
+      ) : user ? /* @__PURE__ */ jsx9(
         AvatarMenu,
         {
           user,
@@ -396,7 +954,7 @@ function AdhHeader({
           settingsHref,
           onSettings
         }
-      ) : /* @__PURE__ */ jsx8(
+      ) : /* @__PURE__ */ jsx9(
         AuthButtons,
         {
           loginHref,
@@ -405,36 +963,51 @@ function AdhHeader({
           onSignup
         }
       ),
-      trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
+      trailingNavLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label))
     ] })
   ] }) });
 }
 
 // src/footer/AdhFooter.tsx
 import Link4 from "next/link";
-import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
-var DEFAULT_LINKS = [
-  { label: "Terms", href: "/terms" },
-  { label: "Contact", href: "/contact" },
-  { label: "Privacy", href: "/privacy" }
-];
-function AdhFooter({ links = DEFAULT_LINKS, copyright }) {
-  return /* @__PURE__ */ jsx9("footer", { className: "adh-footer", role: "contentinfo", children: /* @__PURE__ */ jsxs6("div", { className: "adh-footer__container", children: [
-    copyright && /* @__PURE__ */ jsx9("span", { className: "adh-footer__copyright", children: copyright }),
-    links.length > 0 && /* @__PURE__ */ jsx9("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map((link) => /* @__PURE__ */ jsx9(
-      Link4,
-      {
-        href: link.href,
-        className: "adh-footer__link",
-        children: link.label
-      },
-      link.href + link.label
-    )) })
-  ] }) });
+import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
+function AdhFooter({ links = [], copyright, trailing }) {
+  return /* @__PURE__ */ jsxs7("footer", { className: "adh-footer", role: "contentinfo", children: [
+    /* @__PURE__ */ jsxs7("div", { className: "adh-footer__container", children: [
+      copyright && /* @__PURE__ */ jsx10("span", { className: "adh-footer__copyright", children: copyright }),
+      links.length > 0 && /* @__PURE__ */ jsx10("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map(
+        (link) => "popoverTarget" in link ? /* @__PURE__ */ jsx10(
+          "button",
+          {
+            type: "button",
+            popoverTarget: link.popoverTarget,
+            "aria-label": link.ariaLabel,
+            className: "adh-footer__link adh-footer__sites-trigger",
+            children: link.label
+          },
+          `popover:${link.popoverTarget}`
+        ) : /* @__PURE__ */ jsx10(
+          Link4,
+          {
+            href: link.href,
+            className: "adh-footer__link",
+            onClick: link.onSelect,
+            prefetch: link.prefetch,
+            children: link.label
+          },
+          `href:${link.href}:${link.label}`
+        )
+      ) })
+    ] }),
+    trailing
+  ] });
 }
 
 // src/themes/adh-themes.ts
+import { themes } from "@agentic-toolkit/themes/manifest";
 var ADH_THEME_COOKIE = "adh-theme";
+var BASE_CUT_ALIASES = ["adh-iosevka"];
+var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
 var ADH_THEMES = [
   { key: "adh", label: "ADH" },
   { key: "adh-iosevka", label: "Iosevka" },
@@ -443,8 +1016,8 @@ var ADH_THEMES = [
   { key: "adh-comic", label: "Comic" },
   { key: "adh-jetbrains", label: "JetBrains" },
   { key: "adh-fira", label: "Fira" }
-];
-var DEFAULT_ADH_THEME = "adh-manrope";
+].filter((t) => !isBaseCutAlias(t.key));
+var DEFAULT_ADH_THEME = "adh";
 export {
   ADH_THEMES,
   ADH_THEME_COOKIE,

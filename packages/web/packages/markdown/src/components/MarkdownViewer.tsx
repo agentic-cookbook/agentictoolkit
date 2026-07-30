@@ -87,11 +87,11 @@ export interface MarkdownViewerProps {
  * Architecture (single-responsibility modules):
  *   MarkdownViewer         — fetch state + theme persistence + chrome layout
  *   useMarkdownDocument    — abortable, timed fetch with an injectable fetcher
- *   MarkdownThemeSwitcher  — @adh-shared/ui Select control
+ *   MarkdownThemeSwitcher  — @agentic-toolkit/ui Select control
  *   MarkdownRenderer       — async markdown → sanitised HTML (theme-independent)
  *   themes/registry+palettes — data-driven `--mdv-*` reading palettes
  *
- * Theming: the CHROME (container, toolbar, switcher) uses @adh-shared/ui + apt-*
+ * Theming: the CHROME (container, toolbar, switcher) uses @agentic-toolkit/ui + apt-*
  * tokens for platform consistency; only the CONTENT root carries the viewer-owned
  * `--mdv-*` palette (data-mdv-theme), kept separate from the platform tokens.
  */

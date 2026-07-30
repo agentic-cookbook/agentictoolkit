@@ -1,8 +1,8 @@
 /**
- * @adh-shared/markdown — public API barrel.
+ * @agentic-toolkit/markdown — public API barrel.
  *
  * Import the CSS separately (once per host app):
- *   import '@adh-shared/markdown/styles'
+ *   import '@agentic-toolkit/markdown/styles'
  */
 
 // Main viewer component

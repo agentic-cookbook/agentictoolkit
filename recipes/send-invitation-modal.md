@@ -32,7 +32,7 @@ references: []
 
 ## Overview
 
-A modal in `@adh-shared/ui` for sending invitations over email and/or SMS. It
+A modal in `@agentic-toolkit/ui` for sending invitations over email and/or SMS. It
 composes `Dialog` + `RecipientInput` + `Textarea` + `AlertModal` + `Button`. It is
 invoked with seed lists of emails/phones (e.g. from the admin "Pending Users"
 selection). The actual send is a caller callback (`onSend`) — stubbed in Phase 2,
@@ -122,7 +122,7 @@ labels), and `Button` (footer Cancel/Send).
 - **Responsive:** Verify via Playwright (ui-showcase) at 375 / 768 / 1440 — sections stack and the footer (`[ Cancel ][ Send ]`) stays reachable on mobile.
 - **SwiftUI / Compose:** Not applicable — web-only shared block.
 
-API (`@adh-shared/ui/blocks/send-invitation-modal`):
+API (`@agentic-toolkit/ui/blocks/send-invitation-modal`):
 
 ```ts
 interface SendInvitationPayload {

@@ -46,7 +46,7 @@ type RouteHandler = (req: Request, ctx: RouteContext) => Promise<Response>
  * Build the `{ GET, POST, PUT, PATCH, DELETE }` handlers for a catch-all
  * `app/<prefix>/[...path]/route.ts`. A site's route file is then just:
  *
- *   import { makeProxyHandlers } from '@adh-shared/auth/server'
+ *   import { makeProxyHandlers } from '@agentic-toolkit/auth/server'
  *   export const dynamic = 'force-dynamic'
  *   export const { GET, POST, PUT, PATCH, DELETE } = makeProxyHandlers('api')
  */

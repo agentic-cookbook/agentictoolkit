@@ -11,7 +11,7 @@ modified: '2026-07-03'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "Metadata-driven create/edit form from @adh-shared/crud: builds Fields from CrudTableMeta (enum→Select, boolean→Checkbox), skips server-managed columns."
+summary: "Metadata-driven create/edit form from @agentic-toolkit/crud: builds Fields from CrudTableMeta (enum→Select, boolean→Checkbox), skips server-managed columns."
 platforms:
 - typescript
 - web
@@ -32,7 +32,7 @@ references: []
 
 ## Overview
 
-`CrudRecordForm` in `@adh-shared/crud` is a **metadata-driven** create/edit form
+`CrudRecordForm` in `@agentic-toolkit/crud` is a **metadata-driven** create/edit form
 for one generic-CRUD table. From a `CrudTableMeta` it builds one control per
 **writable** column — skipping every `serverManaged` column (ids, timestamps) —
 picking the control by column type: enum → `Select`, boolean → `Checkbox`,
@@ -168,9 +168,9 @@ orchestration). The metadata→payload logic (`writableColumns`, `toDraft`,
 ## Platform Notes
 
 - **React / Web (TypeScript):** `websites/shared/crud/src/CrudRecordForm.tsx`,
-  exported from `@adh-shared/crud`. Composes the shared `Field`, `Button`,
-  `useAction` (from `@adh-shared/ui`) and the package-local `CrudFieldInput` +
-  `ErrorText`. Note it lives in `@adh-shared/crud`, not `@adh-shared/ui`.
+  exported from `@agentic-toolkit/crud`. Composes the shared `Field`, `Button`,
+  `useAction` (from `@agentic-toolkit/ui`) and the package-local `CrudFieldInput` +
+  `ErrorText`. Note it lives in `@agentic-toolkit/crud`, not `@agentic-toolkit/ui`.
 - The pure metadata→payload helpers are exported for reuse/testing: `writableColumns`,
   `toDraft`, `buildPayload`, plus the `CrudDraft` / `CrudFormMode` types.
 - Metadata comes from `src/generated/table-metadata.ts` (backend OpenAPI →
@@ -208,7 +208,7 @@ orchestration). The metadata→payload logic (`writableColumns`, `toDraft`,
 |---|---|---|
 | Artifact formatting (recipe) | passed | artifact-formatting |
 | No raw hex / arbitrary colors / `!important` | passed | project-guidelines UI |
-| Components sourced from `@adh-shared` (no bespoke UI) | passed | project-guidelines UI |
+| Components sourced from `@agentic-toolkit` (no bespoke UI) | passed | project-guidelines UI |
 | Labeled fields (via `Field`) + keyboard-operable controls | passed | accessibility |
 
 ## Change History
