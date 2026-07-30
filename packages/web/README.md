@@ -17,6 +17,13 @@ Foundation — everything else builds on these:
 | `@agentic-toolkit/search` | Search index + dialog | `markdown`, `ui` |
 | `@agentic-toolkit/controls` | filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner | `model` |
 
+Marketing pages — standalone; nothing here builds on it and it builds on
+nothing, which is why it is its own group rather than a Foundation row:
+
+| Package | Description | Depends on |
+|---|---|---|
+| `@agentic-toolkit/landing` | Scroll-snapping landing deck (`Deck`, `Screen`, `NavChrome`) plus ~20 presentational blocks. Names no colour, font or copy — every visual value reads a `--lp-*` custom property, every block takes its content as props | — |
+
 Application platform — auth, data access, and the generated-CRUD stack:
 
 | Package | Description | Depends on |

@@ -30,6 +30,9 @@ The Web platform is a pnpm monorepo. Libraries live under
 - `@agentic-toolkit/adh` — family site chrome: header, footer, legal.
 - `@agentic-toolkit/auth` / `data` / `resource` / `crud` — the app platform.
 - `@agentic-toolkit/chat` (under `features/chat`) — chat surfaces + backends.
+- `@agentic-toolkit/landing` — a scroll-snapping landing deck and the section
+  vocabulary that fills it. The host supplies the colours, through `--lp-*`
+  tokens, and every word.
 
 The full table, with each package's dependencies, is in
 [`packages/web/README.md`](packages/web/README.md).

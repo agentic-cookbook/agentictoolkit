@@ -1,0 +1,798 @@
+/* ---- hero ----
+ * Centred in its screen, and the only centred block on the page — everything
+ * below it is left-aligned, because a landing page is skimmed down its left
+ * edge and centred headings make the eye hunt for each new start. The hero is
+ * the exception because it has no neighbours to line up with.
+ *
+ * It is also the one screen that still centres VERTICALLY, while every
+ * section below parks its content in the top third. Same reason: the
+ * top-third rule exists so that many headings land at one height as you flick
+ * past them, and the hero has nothing to line up with — it is a composition
+ * (mark, headline, buttons, chips) that wants to sit in the middle of its own
+ * screen, with the glow centred under it.
+ *
+ * `100vh` to match the sections: it is the first snap point, and a snap unit
+ * that changes when Safari's toolbar collapses moves every point below it.
+ *
+ * The mechanism behind all of that — `min-height: 100vh`, the flex centring,
+ * the gap, and the asymmetric vertical padding (the foot reserves whatever
+ * fixed chrome the host docks at the bottom, via `--lp-hero-pad-bottom`'s
+ * default of `--lp-dock-clear`) — already lives in `css/base.css`'s
+ * `.lp-screen` and `.lp-screen--center`, because `Hero` is built from
+ * `Screen` with `align="center"`. All that is left for this rule to add is
+ * the horizontal inset the source's `padding` shorthand also carried. */
+.lp-screen.lp-hero {
+  /* The compound selector — not a bare `.lp-hero` — is load-bearing: it lifts
+   * this rule to specificity (0,2,0), which beats `.lp-screen--center`'s
+   * (0,1,0) regardless of which order a host imports base.css and
+   * blocks.css. This declaration doesn't currently share a property with
+   * `.lp-screen--center`, but the next edit to either file shouldn't have to
+   * know that to stay safe — see the identical reasoning on
+   * `.lp-closer.lp-contact` below. */
+  padding-inline: 1.5rem;
+}
+.lp-hero img {
+  width: min(132px, 34vw);
+  height: auto;
+}
+/* The headline is a CLAIM, not the product name — the name is already in the
+ * fixed header, in the mark above it and in the browser tab. A landing page
+ * gets one line to say what the thing does. */
+.lp-hero h1 {
+  font-size: clamp(1.85rem, 5.2vw, 3.3rem);
+  font-weight: 200;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  max-width: 20ch;
+  text-wrap: balance;
+}
+.lp-hero h1 b {
+  font-weight: 400;
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+/* Compound (element + class), not a bare `.lp-tag`: the source scoped this to
+ * `.hero p.tag` rather than a standalone utility class, so the port keeps the
+ * same element requirement and the same (0,2,1) specificity rather than
+ * flattening it to (0,1,0). */
+.lp-hero p.lp-tag {
+  max-width: 46ch;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-size: 1.05rem;
+  text-wrap: pretty;
+}
+.lp-hero p.lp-tag em {
+  color: var(--lp-ink, #ededed);
+  font-style: normal;
+}
+
+/* A pill. Used for a hero's shipping status via `StatusPill`, and — same
+ * shape, a deliberately shared idea of what a small standalone label looks
+ * like — by `Chips` for the model providers.
+ *
+ * `--lp-font-mono`, not `--lp-font`: the source's `--font` and `--font-mono`
+ * are byte-identical on this site, but this is the one place the page
+ * deliberately asks for monospace rather than inheriting the page's own
+ * face — a small technical label. Folding the two would be fine here and
+ * wrong on a host that sets a proportional `--lp-font` for prose while still
+ * wanting this pill in mono; keeping them separate keeps that host possible. */
+.lp-status {
+  font: 600 0.62rem/1 var(--lp-font-mono, ui-monospace, "SF Mono", monospace);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.32rem 0.6rem;
+  border-radius: 99px;
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  color: var(--lp-accent, #9a9a9a);
+  white-space: nowrap;
+}
+/* The border-color literal had no backing site variable — tokenized the same
+ * way as the other bare rgba()s in this file. Compound selector kept (not
+ * `.lp-status--free` alone) for the same reason as `.lp-btn.lp-btn--primary`
+ * below: it preserves the source's (0,2,0) specificity. */
+.lp-status.lp-status--free {
+  border-color: var(--lp-status-free-border, rgba(216, 216, 216, 0.5));
+  background: var(--lp-accent-dim, rgba(216, 216, 216, 0.14));
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+
+/* ---- buttons ---- */
+.lp-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Comfortably past the 44px touch target at every root size the page can
+   * land on, without pinning a height that would clip a wrapped label. */
+  padding: 0.78rem 1.4rem;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+}
+/* `.lp-btn.lp-btn--primary`, not `.lp-btn--primary` alone: the compound keeps
+ * this at (0,2,0), matching the source's `.btn.primary`, so it isn't left
+ * tied with a same-specificity sibling rule by accident later. */
+.lp-btn.lp-btn--primary {
+  background: var(--lp-accent, #9a9a9a);
+  /* This is the ink printed ON the accent fill, not the accent itself — close
+   * to but not the same value as `--lp-ground` (see §Tokens), so it gets its
+   * own token rather than being folded into an existing one. */
+  color: var(--lp-btn-primary-ink, #101010);
+  font-weight: 700;
+}
+.lp-btn.lp-btn--primary:hover {
+  background: var(--lp-accent-bright, #d8d8d8);
+  transform: translateY(-1px);
+}
+.lp-btn.lp-btn--ghost {
+  border-color: var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  color: var(--lp-ink, #ededed);
+}
+.lp-btn.lp-btn--ghost:hover {
+  border-color: var(--lp-accent, #9a9a9a);
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+
+/* ---- trust strip ----
+ * The things a visitor wants settled before they read a feature list, on one
+ * line under the hero's buttons. Deliberately not `Cards`: these are claims,
+ * not features, and boxing them would give them the same weight as the
+ * product's actual capabilities. */
+.lp-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+.lp-trust li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.lp-trust li::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--lp-accent, #9a9a9a);
+}
+
+/* ---- section headings ----
+ * An eyebrow, a claim, and a lede. The eyebrow is what a drawer link calls
+ * this section, so a reader who jumped here can see they arrived. */
+.lp-head {
+  max-width: 48rem;
+  margin-bottom: 2.6rem;
+}
+/* The section label. It is the only thing on screen that says which of many
+ * screens you are on, so it has to survive a fast scroll — at 0.7rem, dim and
+ * unmarked it did not, and readers went past it to the headline without
+ * registering that the subject had changed.
+ *
+ * Louder on four dials at once, because no single one was enough: bigger,
+ * heavier, the bright accent rather than the dim, and a rule leading into it
+ * so there is a shape at the left margin before there is a word. Still
+ * small — a label that competes with the h2 below it just moves the problem. */
+.lp-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: fit-content;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--lp-accent-bright, #d8d8d8);
+  margin-bottom: 1.2rem;
+}
+.lp-eyebrow::before {
+  content: "";
+  flex: none;
+  width: 2.2rem;
+  height: 2px;
+  background: var(--lp-accent, #9a9a9a);
+}
+.lp-head h2 {
+  font-size: clamp(1.5rem, 3.6vw, 2.3rem);
+  font-weight: 200;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.lp-head h2 b {
+  font-weight: 400;
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+/* Deliberately a standalone class rather than `.lp-head .lp-lede`: the same
+ * voice and measure are wanted for the odd paragraph that follows a card grid
+ * or a chip list, not only for the one under a heading. */
+.lp-lede {
+  margin-top: 1.15rem;
+  /* Wider than the 60ch a proportional face would want: the whole site is set
+   * in one monospace, where a character is narrower than the average
+   * proportional one, so 60ch measures visibly short of a comfortable line. */
+  max-width: 72ch;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-weight: 300;
+  font-size: 1.02rem;
+  text-wrap: pretty;
+}
+.lp-lede em {
+  color: var(--lp-accent-bright, #d8d8d8);
+  font-style: normal;
+}
+.lp-lede + .lp-lede {
+  margin-top: 0.9rem;
+}
+/* Standing clear of whatever it follows, which is a block rather than a
+ * heading. */
+.lp-wrap > .lp-lede {
+  margin-top: 1.8rem;
+}
+
+/* ---- cards ----
+ * `auto-fit` with a `minmax` floor rather than a fixed column count: the number
+ * of cards per section varies (two in one, three in another) and the same rule
+ * has to lay all of them out without a per-section override. The floor is the
+ * narrowest a card can be before its heading wraps mid-word. Both counts divide
+ * cleanly into what that floor fits, so neither leaves an orphan. */
+.lp-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+}
+/* Four cards, laid out 2×2 rather than as the three-plus-an-orphan the shared
+ * floor produces at this measure.
+ *
+ * An explicit column count, not a wider `minmax` floor: the root font is
+ * 87.5% (see the Dynamic Type block in css/base.css), so a rem inside a rule
+ * is 14px and not 16, and a floor chosen to just exclude a third column is
+ * arithmetic that stops being true the moment either the measure or the root
+ * size moves — silently, and only in this one section.
+ *
+ * A rem in the media query below is a different unit: media-query lengths
+ * resolve against the initial font size, not the root's, so `48rem` there is
+ * 768px while `16.5rem` above is 231px. Every breakpoint on this page is in
+ * the 16px currency; every track floor is in the 14px one. */
+.lp-cards.lp-cards--pair {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 48rem) {
+  .lp-cards.lp-cards--pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* A card grid under a placeholder stands off it the same distance the
+ * placeholder stands off whatever it follows. */
+.lp-shot + .lp-cards {
+  margin-top: 2rem;
+}
+.lp-card {
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: var(--lp-radius, 14px);
+  background: var(--lp-card, rgba(255, 255, 255, 0.04));
+  padding: 1.35rem 1.4rem 1.5rem;
+  transition: border-color 0.25s, background 0.25s;
+}
+/* Neither hover colour had a site-level token behind it — both were literal
+ * rgba baked into the rule — so each becomes its own role-named token rather
+ * than an unthemeable literal. */
+.lp-card:hover {
+  border-color: var(--lp-card-hover-border, rgba(216, 216, 216, 0.4));
+  background: var(--lp-card-hover-bg, rgba(28, 28, 28, 0.62));
+}
+.lp-card h3 {
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--lp-accent-bright, #d8d8d8);
+  margin-bottom: 0.5rem;
+}
+.lp-card p {
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-weight: 300;
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+.lp-card p em {
+  color: var(--lp-ink, #ededed);
+  font-style: normal;
+}
+
+/* ---- shot: a macOS window frame around a screenshot, or a placeholder ----
+ * Until a real capture exists the body is a hatched placeholder that names
+ * what belongs there — deliberately, obviously unfinished, so one shipped by
+ * accident is caught rather than mistaken for a screenshot of a product that
+ * looks like that. Nothing else in this package fakes a window: illustrations
+ * built from the package's own type (`.lp-rule`, `.lp-stats`) never pretend to
+ * be captures. */
+.lp-shot {
+  width: 100%;
+  margin-top: 2rem;
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--lp-raise, #1c1c1c);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+/* Neither hover colour had a site-level token behind it either — see the
+ * card hover comment above. */
+.lp-shot:hover {
+  border-color: var(--lp-shot-hover-border, rgba(216, 216, 216, 0.45));
+  box-shadow: 0 0 50px -18px var(--lp-shot-hover-glow, rgba(216, 216, 216, 0.5));
+}
+.lp-shot__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  /* The gradient's second stop is another literal rgba with no backing site
+   * variable — tokenized the same way as the rest on this page. */
+  background: linear-gradient(var(--lp-raise, #1c1c1c), var(--lp-shot-bar-shade, rgba(16, 16, 16, 0.6)));
+}
+.lp-shot__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lp-shot-dot, rgba(237, 237, 237, 0.22));
+}
+.lp-shot__name {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+/* `object-fit: contain` under a clamped max-height: a tall capture scales down
+ * rather than running the section far past a screen. */
+.lp-shot img,
+.lp-shot video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: clamp(16rem, 52svh, 32rem);
+  object-fit: contain;
+  background: var(--lp-ground, #101010);
+}
+.lp-shot__placeholder {
+  display: grid;
+  place-items: center;
+  min-height: clamp(11rem, 30svh, 17rem);
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-accent, #9a9a9a);
+  /* The hatch tint is a fourth literal rgba with no backing site variable. */
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 10px,
+    var(--lp-shot-hatch, rgba(216, 216, 216, 0.05)) 10px 20px
+  );
+}
+.lp-shot__placeholder b {
+  display: block;
+  margin-top: 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+
+/* ---- the wedge ----
+ * Two panels side by side: what every other tool does, and what this one does
+ * instead. The comparison IS the argument, so it gets a shape of its own rather
+ * than being a pair of ordinary cards — the second panel is lit and the first
+ * is not, which is the whole point read at a glance. */
+.lp-versus {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+.lp-versus > div {
+  border: 1px solid var(--lp-versus-border, rgba(237, 237, 237, 0.09));
+  border-radius: var(--lp-radius, 14px);
+  padding: 1.6rem 1.5rem;
+}
+/* The child combinator plus the repeated `div` here is load-bearing, not
+ * decoration: it lifts this rule's specificity to (0,2,2) so it beats
+ * `.lp-versus h3` (0,1,1) below regardless of source order. Write it as the
+ * flat `.lp-versus__them h3` (0,1,1) and the two rules tie, and a tie is
+ * decided by file order — so a future reorder of this file would silently
+ * turn "them"'s heading accent-coloured instead of dimmed. */
+.lp-versus > div.lp-versus__them h3 {
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+/* Same reason as above: `.lp-versus__us` alone is (0,1,0), which loses the
+ * `border-color` it sets here to `.lp-versus > div`'s `border` shorthand
+ * (0,1,1) — the "us" panel would render with the same border as "them",
+ * exactly the distinction this section exists to draw. */
+.lp-versus > div.lp-versus__us {
+  border-color: var(--lp-versus-us-border, rgba(216, 216, 216, 0.4));
+  background: var(--lp-card, rgba(255, 255, 255, 0.04));
+  box-shadow: 0 0 70px -30px var(--lp-versus-us-glow, rgba(216, 216, 216, 0.55));
+}
+.lp-versus h3 {
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--lp-accent, #9a9a9a);
+  margin-bottom: 1rem;
+}
+.lp-versus p {
+  font-weight: 300;
+  font-size: 1.02rem;
+  color: var(--lp-ink, #ededed);
+}
+/* Descendant, not child (`.lp-versus > div.lp-versus__them p` would also
+ * work, but the source used `.versus .them p` — a descendant combinator —
+ * and (0,2,1) is (0,2,1) either way, so there's no reason to write a
+ * narrower selector than the source did). Same specificity reasoning as the
+ * `h3` rule above: flattened to `.lp-versus__them p` this ties `.lp-versus p`
+ * (0,1,1) and only renders right today because this rule happens to come
+ * after it in the file. */
+.lp-versus .lp-versus__them p {
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+.lp-versus ul {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-weight: 300;
+}
+/* The glyph is the host's to choose, like every other visible value here — a
+ * checklist that wants an arrow, or a versus list that wants no bullet at all,
+ * should not have to override the rule to get one. `content` takes a var() with
+ * a string fallback, so this follows the same inline-default pattern as the
+ * colours rather than needing a :root block. */
+.lp-versus ul li::before {
+  content: var(--lp-versus-bullet, "· ");
+  color: var(--lp-accent, #9a9a9a);
+}
+
+/* ---- a rule, written out ----
+ * Not a screenshot and not pretending to be one: it is the shape of an
+ * oversight rule set in the site's own typeface, which is the honest way to
+ * show a feature whose UI has not been captured yet. */
+.lp-rule {
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: var(--lp-radius, 14px);
+  background: var(--lp-rule-bg, rgba(16, 16, 16, 0.65));
+  padding: 1.2rem 1.35rem;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  /* Two columns — the labels in the first, the clause in the second — so a
+   * clause that wraps stays inside its own column. Laid out inline instead,
+   * the second line of "a session has been idle since its last Stop event"
+   * returns to the left edge and sits under its own WHEN, which reads as a
+   * sixth clause with no label. */
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 1.1rem;
+  row-gap: 0.5rem;
+  align-items: baseline;
+}
+.lp-rule dt {
+  color: var(--lp-accent, #9a9a9a);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+.lp-rule dd {
+  color: var(--lp-ink, #ededed);
+  font-weight: 300;
+}
+.lp-rule dd b {
+  color: var(--lp-accent-bright, #d8d8d8);
+  font-weight: 400;
+}
+
+/* ---- stat strip ----
+ * Three cells, and an explicit three across rather than an `auto-fit` floor:
+ * the strip lives in the narrow column of a `.lp-split`, where a floor wide
+ * enough to keep "Quota windows, counted down per second" off four lines only
+ * fits two across — which laid the third out alone under an empty cell. The
+ * numbers are meant to be scanned in one horizontal sweep, so the row matters
+ * more than the caption's line count. Same reason as `.lp-cards.lp-cards--pair`:
+ * a `minmax` floor tuned to produce a column count is arithmetic against a
+ * 14px rem that stops being true the moment the measure moves. */
+.lp-stats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 2rem;
+}
+@media (min-width: 34rem) {
+  .lp-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.lp-stats div {
+  border-left: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  padding-left: 1rem;
+}
+.lp-stats dt {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-weight: 200;
+  color: var(--lp-accent-bright, #d8d8d8);
+  line-height: 1.3;
+}
+.lp-stats dd {
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+
+/* ---- provider chips ---- */
+.lp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+.lp-chips li {
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: 99px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--lp-ink, #ededed);
+  background: var(--lp-chip-bg, rgba(28, 28, 28, 0.35));
+}
+.lp-chips li.lp-chip--open {
+  border-color: var(--lp-chip-open-border, rgba(216, 216, 216, 0.5));
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+
+/* ---- the roadmap block ----
+ * Planned agents, kept visibly separate from the shipped provider chips above.
+ * A reader who skims a list of names and comes away thinking Codex is supported
+ * today has been misled by the LAYOUT, whatever the sentence beside it says — so
+ * the separation is structural (its own label, its own rule, its own container)
+ * rather than a caveat in prose that a skimmer never reaches.
+ *
+ * `border-top` and not a card: this is a continuation of the list above, not a
+ * competing panel, and boxing it would make the planned agents look like their
+ * own product surface. */
+.lp-roadmap {
+  margin-top: 2.6rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+}
+.lp-roadmap .lp-lede {
+  margin-bottom: 1.4rem;
+}
+
+/* Dashed, dimmed, and no accent. The three signals stack because each one alone
+ * is deniable at a glance: dashed alone reads as decoration, dim alone reads as
+ * a disabled control. Together they say "not yet" without a legend. */
+.lp-chips.lp-chips--soon li {
+  border-style: dashed;
+  border-color: var(--lp-chip-soon-border, rgba(160, 160, 160, 0.28));
+  color: var(--lp-ink-dim, #a0a0a0);
+  background: transparent;
+}
+
+/* ---- feature checklist ----
+ * The long tail: everything the app does that didn't earn a section of its
+ * own. Columns of ticked lines, grouped under quiet headings. Dense on purpose —
+ * this is the section a reader scans to find the one thing they came for.
+ *
+ * Three across, declared rather than derived: there are six groups, and three
+ * divides them into two full rows. An `auto-fit` floor fitted four at this
+ * measure and left the last row two-thirds empty, which reads as a list that
+ * was cut off rather than one that ended. Adding a seventh group is the moment
+ * to revisit this number — nothing else here will notice. */
+.lp-checklist {
+  display: grid;
+  gap: 2rem 2.5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 34rem) {
+  .lp-checklist {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 58rem) {
+  .lp-checklist {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.lp-checklist h3 {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--lp-accent, #9a9a9a);
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+}
+.lp-checklist ul {
+  display: grid;
+  gap: 0.6rem;
+}
+.lp-checklist li {
+  display: grid;
+  grid-template-columns: 1.2rem 1fr;
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.65;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+/* Tokenized for the same reason as the versus bullet above: the mark is content
+ * the host picks, not a fact about the package. Note the grid column it sits in
+ * is a fixed 1.2rem, so a replacement wants to be about this wide. */
+.lp-checklist li::before {
+  content: var(--lp-checklist-mark, "✓");
+  color: var(--lp-accent, #9a9a9a);
+}
+
+/* ---- FAQ ----
+ * <details>, so it opens and closes with no JavaScript at all and stays
+ * keyboard-operable and readable to assistive tech for free. Do not replace
+ * it with state. */
+.lp-faq {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 52rem;
+}
+.lp-faq details {
+  border-bottom: 1px solid var(--lp-faq-divider, rgba(237, 237, 237, 0.09));
+}
+.lp-faq summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 2rem 1rem 0;
+  position: relative;
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--lp-ink, #ededed);
+  transition: color 0.2s;
+}
+.lp-faq summary::-webkit-details-marker {
+  display: none;
+}
+.lp-faq summary:hover {
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+/* A plus that becomes a minus. Two rules crossed, the vertical one rotated
+ * away on open — one glyph, no icon font, and it can't fall out of sync with
+ * the element's actual state because it is driven by `[open]`. Both lines of
+ * the grouped selector need the `lp-` prefix, not just the first — a mistake
+ * here silently drops the icon's base position rather than erroring. */
+.lp-faq summary::before,
+.lp-faq summary::after {
+  content: "";
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  width: 12px;
+  height: 1.5px;
+  background: var(--lp-accent, #9a9a9a);
+  transition: transform 0.25s;
+}
+.lp-faq summary::after {
+  transform: rotate(90deg);
+}
+/* `.lp-faq details[open] summary::after` at (0,2,3) beats the rule above,
+ * `.lp-faq summary::after` at (0,1,2), by specificity — not by source order.
+ * Ported exactly as the source wrote it (an attribute selector plus one more
+ * element in the chain, not a modifier class), so the override still holds
+ * however this file gets reordered. */
+.lp-faq details[open] summary::after {
+  transform: rotate(0deg);
+}
+.lp-faq details p {
+  padding: 0 2rem 1.3rem 0;
+  /* The same physical measure as `.lp-lede`, not the same ch count: `ch`
+   * scales with the element's own font-size, and this text is set at
+   * 0.94rem against the lede's 1.02, so 72ch here would come out a
+   * line-length shorter. 78ch is 72 × 1.02 ÷ 0.94 — the number that lands
+   * both on the same width. Left at 62ch, an answer wrapped at barely half
+   * the width of the row it opens under, which reads as a column that ran
+   * out rather than a paragraph that ended. */
+  max-width: 78ch;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-weight: 300;
+  font-size: 0.94rem;
+}
+.lp-faq details p em {
+  color: var(--lp-ink, #ededed);
+  font-style: normal;
+}
+.lp-faq details p + p {
+  padding-top: 0;
+  margin-top: -0.6rem;
+}
+
+/* ---- closing call to action ----
+ * The one place below the hero that centres, because it is the end of the
+ * argument rather than another point in it. */
+.lp-closer {
+  position: relative;
+  text-align: center;
+  border-top: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  padding-top: var(--lp-gap, clamp(3.75rem, 8vw, 6.5rem));
+}
+.lp-closer h2 {
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  font-weight: 200;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.lp-closer h2 b {
+  font-weight: 400;
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+.lp-closer p {
+  margin: 1.1rem auto 2rem;
+  max-width: 48ch;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-weight: 300;
+}
+
+/* ---- contact + colophon ----
+ * `Contact` composes `Closer` (see blocks/Contact.tsx) rather than
+ * duplicating its markup, so the rendered element carries both `lp-closer`
+ * and `lp-contact` — the source page has `class="closer contact"` on one
+ * div. Same reasoning as `.lp-screen.lp-hero` above: the compound selector
+ * beats `.lp-closer` by specificity regardless of a host's import order.
+ * `text-align: center` here is redundant with `.lp-closer`'s own value of
+ * the same property — kept anyway, so a future edit to one can't silently
+ * desync the other. */
+.lp-closer.lp-contact {
+  text-align: center;
+}
+.lp-contact a.lp-mail {
+  font-size: clamp(1.15rem, 3.4vw, 1.6rem);
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--lp-accent-bright, #d8d8d8);
+  text-decoration: none;
+  border-bottom: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  padding-bottom: 0.3rem;
+}
+.lp-contact a.lp-mail:hover {
+  border-color: var(--lp-accent, #9a9a9a);
+}
+.lp-contact p {
+  margin-top: 1.2rem;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-size: 0.9rem;
+}
+/* Maker byline and copyright — the page's foot. Quietest type here by size
+ * alone: no dimmed colour, because the copyright is the one line that has to
+ * stay legible after everything else has been skimmed past. Specificity
+ * beats `.lp-contact p` above. */
+.lp-contact .lp-colophon {
+  margin-top: 2.8rem;
+  line-height: 1.9;
+  font-size: 0.8rem;
+}
+.lp-contact .lp-colophon a {
+  color: var(--lp-ink, #ededed);
+  text-decoration: none;
+  border-bottom: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+}
+.lp-contact .lp-colophon a:hover {
+  border-color: var(--lp-accent, #9a9a9a);
+}
+.lp-contact .lp-colophon small {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}

@@ -1,0 +1,196 @@
+/* ---- header / hamburger ----
+ *
+ * Fixed above the ordinary page content (sections sit at z-index 1) but below
+ * the scrim and drawer (50/60), so it stays visible while the reader scrolls and
+ * yields the moment the drawer opens over it.
+ *
+ * The bar itself passes pointer events straight through and only the BUTTON
+ * takes them back. It is fixed, full-width chrome sitting on top of whatever
+ * content is scrolled beneath it — without this, its empty padding would swallow
+ * taps and scroll gestures meant for that content. A tap on the bar's empty
+ * width, or on the wordmark (which isn't a control), falls straight through to
+ * the page underneath; the burger is the one thing up here that still
+ * activates. */
+.lp-bar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(var(--lp-ground, #101010) 40%, transparent);
+  pointer-events: none;
+}
+.lp-burger {
+  pointer-events: auto;
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: 8px;
+  /* Translucent chip backdrop behind the icon — not one of the site's named
+   * palette variables originally, just a literal rgba baked into the rule, so
+   * it becomes its own token rather than an unthemeable literal. */
+  background: var(--lp-burger-bg, rgba(16, 16, 16, 0.6));
+  backdrop-filter: blur(6px);
+  display: grid;
+  /* `place-content` centres the STACK, which also stops the rows stretching to
+   * fill the button. That distinction matters: while they stretch, the bars are
+   * spread evenly over the full 32px and the gap below is inert — the icon is
+   * whatever height the button happens to be, and no spacing you write has any
+   * effect. Sized to content, the three bars become a figure with its own
+   * proportions, and `gap` is what sets them. */
+  place-content: center;
+  justify-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+/* The button is drawn small; it is not TAPPED small. This pseudo-element pushes
+ * the hit area back out to 44px — the size a thumb actually needs — without
+ * putting a single visible pixel back. */
+.lp-burger::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+/* Proportions, not pixels picked one at a time: each bar is half the button
+ * wide and a twelfth of it thick, and the gap is a little over one bar. Solid
+ * strokes with fully rounded caps — at this weight a hairline would read as a
+ * seam rather than a mark, and square ends would fight the button's own
+ * rounding. */
+.lp-burger span {
+  display: block;
+  width: 16px;
+  height: 2.5px;
+  border-radius: 999px;
+  background: var(--lp-accent, #9a9a9a);
+  transition: 0.25s;
+}
+.lp-burger:hover span {
+  background: var(--lp-accent-bright, #d8d8d8);
+}
+.lp-brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  /* Optically centred on the VIEWPORT, not in the space left over beside the
+   * burger — which is why it's positioned rather than a flex item. The explicit
+   * width is what makes that work: `left: 50%` shrink-to-fits against only the
+   * right half of the bar, so without it the wordmark starts wrapping at half
+   * the width it actually has. That was invisible while the page was pinned at
+   * 14px and it fit either way; now that the root follows Dynamic Type, it
+   * shows up as a two-line wordmark a couple of notches up the slider.
+   * `max-content` gives the element its true width, and the max-width reserves
+   * the burger's column on BOTH sides so the centring stays honest and the text
+   * stops before it reaches the button. */
+  width: max-content;
+  max-width: calc(100% - 2 * (32px + 1.25rem + 0.75rem));
+  text-align: center;
+  /* The bar around it is fixed chrome — a 32px button and a hairline gradient —
+   * so the label inside it can't grow without limit the way body copy does. It
+   * follows the slider up to the point where it would outgrow the bar it sits
+   * in, and holds there. */
+  font-size: min(0.8rem, 15px);
+  letter-spacing: 0.35em;
+  text-transform: lowercase;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+.lp-brand b {
+  color: var(--lp-ink, #ededed);
+  font-weight: 500;
+}
+
+/* ---- drawer ---- */
+.lp-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(320px, 85vw);
+  z-index: 60;
+  background: linear-gradient(160deg, var(--lp-raise, #1c1c1c), var(--lp-ground, #101010) 70%);
+  border-right: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  transform: translateX(-102%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.28, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 5.5rem 2.2rem 2rem;
+  /* The link list is longer than it was and a short laptop window can run out
+   * of room for it; the drawer is a fixed-height box, so the overflow has to go
+   * somewhere rather than off the bottom edge. */
+  overflow-y: auto;
+}
+.lp-drawer.lp-drawer--open {
+  transform: none;
+  box-shadow: 40px 0 120px var(--lp-drawer-shadow, rgba(0, 0, 0, 0.55));
+}
+.lp-drawer a.lp-nav {
+  display: block;
+  padding: 0.72rem 0;
+  color: var(--lp-ink, #ededed);
+  text-decoration: none;
+  font-size: 1.08rem;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  /* Another literal rgba in the original with no backing site variable;
+   * tokenized the same way as the backdrop above. */
+  border-bottom: 1px solid var(--lp-nav-divider, rgba(237, 237, 237, 0.07));
+  transition: color 0.2s, padding-left 0.2s;
+}
+.lp-drawer a.lp-nav:hover {
+  color: var(--lp-accent-bright, #d8d8d8);
+  padding-left: 0.5rem;
+}
+.lp-drawer .lp-foot {
+  margin-top: auto;
+  padding-top: 1.6rem;
+  font-size: 0.85rem;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+.lp-drawer .lp-foot a {
+  color: var(--lp-accent, #9a9a9a);
+  text-decoration: none;
+}
+/* Studio credit under the address. `block` with a top margin rather than a
+ * <br />, so the gap is a rule that can be tuned rather than a line height. */
+.lp-drawer .lp-foot .lp-by {
+  display: block;
+  margin-top: 1.1rem;
+  font-size: 0.78rem;
+}
+.lp-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--lp-scrim-bg, rgba(16, 16, 16, 0.55));
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.3s;
+  border: 0;
+}
+.lp-scrim.lp-scrim--show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.lp-drawer-close {
+  position: absolute;
+  top: 1.15rem;
+  left: 1.25rem;
+}
+/* The close glyph is the burger with a bar removed and the other two crossed.
+ * Crossing them needs the bars concentric, and the honest way to say that is to
+ * put them in the same grid cell — .lp-burger's centring then puts both on the
+ * one point, and all that's left is the rotation. The alternative, translating
+ * each bar back onto the shared centre, only looks simpler: the offset it needs
+ * is a function of the row height and the gap, so the figure silently degrades
+ * into a chevron the moment either is retuned. Overlaying derives nothing from
+ * the bar geometry and so survives every change to it. */
+.lp-drawer-close span {
+  grid-area: 1 / 1;
+}
+.lp-drawer-close span:first-child {
+  transform: rotate(45deg);
+}
+.lp-drawer-close span:last-child {
+  transform: rotate(-45deg);
+}

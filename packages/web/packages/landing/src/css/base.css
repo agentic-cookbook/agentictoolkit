@@ -1,0 +1,294 @@
+html {
+  /* Everything on the page is sized in rem, so the root size is the site's one
+   * type dial: a touch under the browser's default takes ~2pt off every run of
+   * text at once, and carries the rhythm (gaps, padding, the section column)
+   * down with it rather than leaving the old spacing around smaller words.
+   *
+   * A PERCENTAGE, never a px value. `font-size: 14px` pins the dial to an
+   * absolute size and silently discards whatever the reader set — a larger
+   * default font in the browser, or an OS text-size setting the browser maps
+   * onto it, both of which are accessibility settings people rely on. 87.5%
+   * is relative to that default instead, so it lands on the same 14px for a
+   * reader at the standard 16px and scales with anyone who has changed it. */
+  font-size: var(--lp-root-size, 87.5%);
+}
+
+/* ...except on iOS, where that percentage never moves. The system text-size
+ * slider (Settings ▸ Display & Brightness ▸ Text Size, and the larger sizes
+ * under Accessibility) drives Dynamic Type — it is NOT the browser's default
+ * font size, so the 87.5% above has nothing to scale against and the page stays
+ * at 14px however far the reader drags it.
+ *
+ * The one thing on the web that reads Dynamic Type is an `-apple-system-*` text
+ * style, and only through the `font` SHORTHAND: `font: -apple-system-subheadline`
+ * resolves to the reader's current size for that style and re-resolves when they
+ * change it. The keyword therefore IS the base size — a percentage after it
+ * would resolve against the inherited 16px, not against the keyword, so there is
+ * no scaling it afterwards. That makes the only decision which style to adopt:
+ * at the default slider position body is 17px and subheadline 15px, against the
+ * 14px this page is drawn at, so subheadline it is. Touch readers land a hair
+ * larger than desktop, and from there the whole page — type, gaps, section
+ * column, all of it rem-based — follows the slider.
+ *
+ * Guarded on `pointer: coarse` as well as `@supports`, because macOS Safari
+ * understands these keywords too while macOS has no Dynamic Type at all:
+ * unguarded, this would quietly repin the desktop site to a fixed 15px in one
+ * browser and leave every other desktop browser at 14px.
+ *
+ * The shorthand resets the rest of the font properties, which costs nothing
+ * here: it sets the family to San Francisco, so the next line puts ours back,
+ * and the others (weight, style, variant, stretch, line-height) land on values
+ * this element was already at — body is where line-height 1.7 is declared. */
+@media (pointer: coarse) {
+  @supports (font: -apple-system-subheadline) {
+    html {
+      font: -apple-system-subheadline;
+      font-family: var(--lp-font, ui-monospace, "SF Mono", monospace);
+    }
+  }
+}
+
+/* ---- the scroll container is the DOCUMENT ----
+ * The page scrolls itself, and that is a deliberate trade for screen space.
+ * Safari collapses its own toolbar only in response to the document scroller
+ * moving. Measured side by side on iOS 26, same device, same flick: on a plain
+ * document scroller the bottom bar shrinks to a bare URL pill — back,
+ * page-settings, reload and ellipsis all gone; with the content in an inner
+ * container the full five-control bar stays put, because as far as Safari is
+ * concerned nobody has scrolled the page since it loaded.
+ *
+ * `overflow-x: clip` for the horizontal axis the glow would otherwise widen;
+ * the vertical axis is left alone, which is what keeps pull-to-refresh. Safari
+ * offers that gesture where the page can rubber-band, and `overflow: hidden`
+ * takes the rubber band away. (`clip` is the one overflow value that pairs with
+ * `visible`, so this really does leave `overflow-y: visible` — measured.)
+ *
+ * Sections snap into place, as they do on the fishlamp site, and the mechanism
+ * is ported from it: <html> ships as `scroll-snap-type: none` and is promoted
+ * to `y mandatory` by ARM_SNAPPING in layout.tsx on the reader's first input.
+ * The snap worth avoiding is the one taken during LOAD — a snap area picked
+ * while the section heights are still settling strands the reader between two
+ * screens, with no scroll event ever having fired. Snapping has nothing to do
+ * until the reader moves the page, so the surest way not to take that snap is
+ * not to be snapping yet; arming on first input also means the page is provably
+ * at rest at a section top when the property flips, so turning it on moves
+ * nothing.
+ *
+ * `mandatory` and not `proximity`, even though four sections outgrow the screen
+ * (`#sessions`, `#features`, and the `.split` pair on a short viewport). A snap
+ * AREA taller than the snapport does not trap the reader: the spec makes every
+ * position where the area still covers the snapport a valid snap position, so a
+ * long section scrolls through normally and only its edges pull. Verified in
+ * Chromium at 430x932, resting mid-`#features` — see tools/check-scroll-snap.py,
+ * which is the check to re-run if this is ever changed to `proximity`.
+ *
+ * `scroll-behavior: smooth` is what eases an in-page jump, so following a
+ * drawer link needs no script of its own — the browser does it, and honours
+ * `prefers-reduced-motion` through the override at the foot of this file. */
+html {
+  scroll-snap-type: none;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+html[data-snap] {
+  scroll-snap-type: y mandatory;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+body {
+  background: var(--lp-ground, #101010);
+  color: var(--lp-ink, #ededed);
+  font-family: var(--lp-font, ui-monospace, "SF Mono", monospace);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* <main> is just the flow parent of the sections — it does not scroll, so it
+ * carries no height and no overflow. It stays focusable because a key press has
+ * to land somewhere, and keys scroll the nearest scrollable ancestor of the
+ * focused element, which is the document.
+ *
+ * No ring around it. It is out of the tab order and never reached BY the
+ * keyboard — the two things that focus it are a click on the page and a drawer
+ * jump. A ring at either moment frames the whole screen to say "you are on the
+ * page", which is not news. Anything inside it that can be tabbed to keeps its
+ * own ring. */
+.lp-deck:focus-visible {
+  outline: none;
+}
+
+/* ---- every section is a screen, and every screen snaps ----
+ * Each section reserves a full viewport and is a snap point, so one scroll
+ * lands on one idea.
+ *
+ * `100vh`, and specifically NOT `dvh` or `svh`. Every section top is a snap
+ * point now, so the unit has to hold still while Safari's toolbar collapses:
+ *
+ *   - `dvh` tracks the toolbar, so every snap point below the first would move
+ *     mid-gesture — a URL-bar resize answered with a snap, which reads as the
+ *     page sliding out from under the flick.
+ *   - `svh` is the toolbar-EXPANDED height, so once the bar collapses a section
+ *     no longer fills the screen and the next one peeks in under it. (This was
+ *     the right unit while nothing snapped, which is why it was here before.)
+ *   - `vh` is the toolbar-COLLAPSED height on iOS — also what the layout
+ *     viewport already is — so the snap unit never changes.
+ *
+ * `min-height`, not `height`: a section with more to say than fits (the feature
+ * checklist, `#sessions`, the `.split` pair on a short viewport) grows rather
+ * than spilling out of its box, and a taller-than-screen snap area reads
+ * through normally — see the <html> comment for why mandatory snapping does not
+ * trap the reader in one.
+ *
+ * Deliberately NO `scroll-snap-stop: always`, which is the one thing here that
+ * differs from fishlamp. That property makes a flick unable to skip a section,
+ * so the page becomes strictly one-screen-per-gesture. Fishlamp has five
+ * screens and can afford it; this page has thirteen, and thirteen compulsory
+ * flicks to reach the FAQ is the deck-like feel the redesign was meant to shed.
+ * Left at the default, momentum still carries across several sections and the
+ * reader still lands square on one.
+ *
+ * Content parks in the TOP THIRD rather than centring. Two reasons: after a
+ * snap the eye is already where the last section's heading was, and every
+ * section's heading then sits at the same height, so flicking through reads as
+ * one steady column rather than twelve blocks bobbing around the middle.
+ * `flex-start` + a top offset rather than centring inside a fixed top band: a
+ * band cannot know how tall its content is, so the tallest sections would
+ * overflow back up under the fixed header. Starting the content high and
+ * letting it run down puts every section in the top third and can't collide
+ * with anything. The offset is proportional (`svh`) but clamped, so it clears
+ * the header on a short viewport and doesn't drift to mid-page on a tall one.
+ *
+ * No `scroll-margin-top` any more, and it must not come back: `scroll-margin`
+ * shrinks the SNAP AREA too, so a 4rem margin here would land every snap 4rem
+ * above the section top with a strip of the previous one showing. The top
+ * padding below is what clears the fixed header instead — its floor, 5.5rem, is
+ * comfortably past the header's ~4.5rem. */
+.lp-screen {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: var(--lp-screen-pad-top, clamp(5.5rem, 14svh, 9rem));
+  padding-bottom: var(--lp-dock-clear, 0px);
+  scroll-snap-align: start;
+  /* The one dial the two sites differ on. fishlamp sets `always` — five
+   * screens, and a flick may not skip one. Left `normal` by default: on a
+   * thirteen-screen page, thirteen compulsory flicks to reach the FAQ is the
+   * deck feel a long-scroll page is trying to shed. */
+  scroll-snap-stop: var(--lp-snap-stop, normal);
+  /* A glow wider than a phone is in flow (absolute, not fixed), so without
+   * this it widens the DOCUMENT — and mobile Chrome/Safari answer an over-wide
+   * document by zooming out, stretching the layout viewport past the real
+   * screen. `clip`, not `hidden`, so a screen never becomes a scroll container
+   * in its own right. */
+  overflow-x: clip;
+}
+
+.lp-screen--center {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 1.6rem;
+  padding-top: var(--lp-hero-pad-top, 6.5rem);
+  padding-bottom: var(--lp-hero-pad-bottom, var(--lp-dock-clear, 0px));
+}
+
+/* The content column. Every section's children sit in one of these rather than
+ * the section itself being width-limited, so a section can still paint edge to
+ * edge (the divider rules below do) while its content stays in the column. */
+.lp-wrap {
+  width: min(100% - 2.5rem, var(--lp-measure, 70rem));
+  margin-inline: auto;
+}
+
+::selection {
+  background: var(--lp-accent-dim, rgba(216, 216, 216, 0.14));
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+
+/* ---- glow: the hero's ----
+ * Absolute inside .hero rather than fixed to the viewport. Pinned, it would hang
+ * at the top of the screen over every section you scrolled to; owned by the
+ * hero, it lights the mark and then scrolls away. Negative z-index puts it
+ * behind the hero's own content; .hero's `z-index: 1` makes the hero a stacking
+ * context, so it can't fall behind the page.
+ *
+ * Centred on the hero's CONTENT, both axes, so the light lands behind the mark
+ * and the headline instead of behind the empty space above them. It used to be
+ * pinned `-26rem` from the top, which put its centre 5rem into the hero: fine at
+ * 800px tall, a bright blob floating alone in the top third at 1500px. Anything
+ * anchored to one edge drifts off the content as the viewport grows; a
+ * percentage cannot. */
+.lp-glow {
+  position: absolute;
+  /* `50%` alone is the BOX centre, and the content only sits there while the
+   * screen's two paddings match. On a hero they don't — the foot reserves the
+   * dock — so half their difference corrects for it: with a heavier bottom
+   * padding the content rides high, and so must the light. Written from the
+   * padding variables rather than as a measured constant so the two cannot
+   * drift apart the next time either is touched.
+   *
+   * The alternative was to make them equal at `--lp-dock-clear` and keep the
+   * glow on the box centre. That grows a hero screen past one viewport at
+   * 1180x820 and 1024x768 — two of the commonest laptops — to reserve at the
+   * top a strip nothing needs. Better to let the light follow the
+   * composition. */
+  top: calc(50% + (var(--lp-hero-pad-top, 6.5rem) - var(--lp-hero-pad-bottom, var(--lp-dock-clear, 0px))) / 2);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 62rem;
+  height: 62rem;
+  border-radius: 50%;
+  background: var(--lp-glow, radial-gradient(circle, rgba(216, 216, 216, 0.1), transparent 65%));
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---- feature section: prose column beside its shot ----
+ * Below a wide enough viewport the copy and the window frame sit side by side,
+ * which is what stops a twelve-section page from being twelve stacked
+ * paragraphs. Under it they stack, copy first. The breakpoint is in `rem` so it
+ * moves with the root size — a reader who has turned their text up gets the
+ * single column sooner, which is the right direction. */
+.lp-split {
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+}
+@media (min-width: 62rem) {
+  .lp-split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 3rem;
+  }
+  .lp-split .lp-shot {
+    margin-top: 0;
+  }
+  /* The shot is taller than the copy beside it more often than not; letting it
+   * sit at the top of its cell keeps the two headings on one line. */
+  .lp-split > * {
+    align-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Snapping stays on; only its ANIMATION goes. A snap is a real position
+   * change the reader asked for by scrolling, and turning it off would leave
+   * this reader on a different page from everyone else. `auto` makes the
+   * adjustment instant instead of a glide, which is the movement that actually
+   * bothers a vestibular reader — and it takes the drawer jumps with it. */
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

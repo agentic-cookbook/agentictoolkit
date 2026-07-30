@@ -99,6 +99,45 @@ workspace. It depends on the packages via
 `file:../../packages/web/packages/<name>` refs so its wiring mirrors
 what external consumers will use.
 
+#### `@agentic-toolkit/landing` is a sibling of `viewport`, not a layer on it
+
+`@agenticdevelopertoolkit/viewport` — in the sibling agenticdevelopertoolkit
+repo, which the same consumer sites tend to load — locks the page with
+`html, body { overflow: hidden }` so an inner shell can scroll. `landing`
+needs the document itself to be the scroller, because Safari only collapses
+its toolbar in response to the document scroller moving. The two stylesheets
+can never be loaded on the same element. A site may use both packages;
+composing them on one element is not a missing feature to add, it is a
+conflict to resolve first.
+
+#### Three rules the landing extraction actually broke
+
+Each shipped at least once during the port, and each is invisible to vitest,
+`tsc`, ESLint and a screenshot. That is what makes them worth writing down
+rather than leaving to review.
+
+- **Package CSS may name only the neutral scale.** Every visual value is a
+  `--lp-*` token whose inline fallback is greyscale, so an unconfigured host
+  renders something legible and obviously unthemed. Put a host's own colour in
+  a fallback and it looks right on that host forever, because that host
+  overrides it — the defect only appears on the *second* site. The same holds
+  for prose: a doc line saying a button "is gold-filled" is a colour claim
+  about the package's behaviour, and it is false for every other host. Name
+  the token or the role instead.
+- **A renamed selector keeps its source specificity.** Flattening `.shot .bar`
+  to `.lp-shot__bar` drops (0,2,0) to (0,1,0) and can hand the cascade to a
+  different rule. jsdom does not resolve the cascade, so no test can see it.
+  When a rename changes a selector's shape, the replacement has to carry the
+  original's weight.
+- **The package owns the UI; the host owns the words.** No component renders a
+  literal string — every visible character arrives as a prop, a child, or a
+  token. This one is easier to break in CSS than in JSX: `content: "✓"` in a
+  `::before` is copy the host cannot reach, which is why such glyphs are
+  tokens (`--lp-checklist-mark`, `--lp-versus-bullet`) for the same reason the
+  colours are. The one deliberate exception is a component's default
+  *accessible* names (`NavChrome`'s "Open menu" and friends) — overridable
+  props, where a default saves every host from restating four labels.
+
 ## Conventions
 
 - AppKit only for macOS UI

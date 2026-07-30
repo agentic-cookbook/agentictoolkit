@@ -12,4 +12,5 @@ packages:
   - './packages/resource'
   - './packages/adh'
   - './packages/deploy-platform'
+  - './packages/landing'
   - './packages/features/*'
