@@ -40,6 +40,16 @@ export function useScrollSpy(
 
     const order = key.split("\n")
 
+    // A different set of ids is a different document — the reader navigated. The
+    // "keep the last known position" rule below is about staying put inside ONE
+    // document; carried across a navigation it is someone else's position, and it
+    // survives until an observer callback happens to replace it. Usually that looks
+    // like nothing (an id from the old page matches no row on the new one), which
+    // is exactly why it can sit here: the visible failure needs the two documents
+    // to share a heading id — `#overview`, `#usage` — and then the new page opens
+    // with its rail already pointing at a heading the reader has not reached.
+    setActiveId((previous) => (order.includes(previous) ? previous : ""))
+
     // Which headings are in the band RIGHT NOW, carried across callbacks.
     // Two reasons it has to be a running set rather than a scan of `entries`:
     // an IntersectionObserver callback reports only what CHANGED (so a heading

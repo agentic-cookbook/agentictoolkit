@@ -141,6 +141,31 @@ describe('useScrollSpy', () => {
     ])
   })
 
+  it('drops a position the new ids do not contain', () => {
+    // A new set of ids is a new document. The rule above — hold the last position
+    // when the band is empty — is about staying put inside ONE document; carried
+    // across a navigation it points the rail at a heading from the page the reader
+    // has left, and nothing corrects it until an observer callback happens to fire.
+    withTargets(['a', 'b', 'shared'])
+    const { rerender, getByTestId } = render(<Probe ids={['a', 'b']} />)
+    act(() => FakeIntersectionObserver.current.enter('b'))
+    expect(getByTestId('active').textContent).toBe('b')
+
+    rerender(<Probe ids={['shared', 'c']} />)
+    expect(getByTestId('active').textContent).toBe('')
+  })
+
+  it('keeps a position the new ids still contain', () => {
+    // The other half of the same rule: two documents that share a heading id are
+    // not a reason to blank the rail — `shared` is still a place the reader can be.
+    withTargets(['a', 'shared'])
+    const { rerender, getByTestId } = render(<Probe ids={['a', 'shared']} />)
+    act(() => FakeIntersectionObserver.current.enter('shared'))
+
+    rerender(<Probe ids={['shared', 'a']} />)
+    expect(getByTestId('active').textContent).toBe('shared')
+  })
+
   it('lets a host widen or narrow the band', () => {
     withTargets(['a'])
     render(<Probe ids={['a']} options={{ rootMargin: '0px' }} />)
