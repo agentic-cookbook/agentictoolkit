@@ -53,8 +53,10 @@ const THEME_SCOPE = 'pc-theme-scope'
 
 /**
  * How bitbag occupies the page — the one axis the two mountings differ on, so
- * they can't drift into two forks of him (which is what happened the last time
- * a site wanted the dock).
+ * they can't drift into two forks of him. (Which is what they WERE: fishlamp.com
+ * ran a vendored copy of this file for months, and the two bitbags diverged down
+ * to his eye color. fishlamp's is the version that shipped, so it is the one
+ * folded back in here — see the `dock` notes below and `DEFAULT_THEME`.)
  *
  * - `stage`: he IS the page (bitbag.ai). He is summoned — the composer stays
  *   shut while a status line cycles "bitbag summoned, success unlikely..." and
@@ -256,7 +258,14 @@ export function BitbagChat({
         thinkingColorful
         statusWhileStreaming={!inputDisabled}
         idlePhrase={inputDisabled ? undefined : `waiting to ${idleWord}`}
-        statusUtterance={inputDisabled ? statusLine : echo}
+        /* The status line is the stage's — it is how the summoning is PERFORMED,
+         * and the dock has no summoning. The dock's ritual runs at mount, so
+         * showing it here would flash "bitbag connecting, brace for mediocrity..."
+         * → "bitbag connected, against my better judgment." in the corner of
+         * someone else's page, unprompted, before anyone had asked him anything.
+         * `statusLine` is null in the dock's steady state anyway; what this
+         * removes is the two frames on the way there. */
+        statusUtterance={isDock ? echo : inputDisabled ? statusLine : echo}
         inputDisabled={inputDisabled}
         fadeOlder
         sizing={sizing}

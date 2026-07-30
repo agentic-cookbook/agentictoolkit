@@ -3,7 +3,9 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ChatBackend, GazeVector } from '@agenticdevelopertoolkit/chat'
 import type { ThemeKey } from '@agenticdevelopertoolkit/themes'
+import { useKeyboardInset } from '@agenticdevelopertoolkit/viewport'
 import { BitbagChat } from './BitbagChat'
+import { BitbagInfo } from './BitbagInfo'
 import { Bitbag, type BitbagExpression } from './avatar'
 import { DEFAULT_THEME } from './voice'
 
@@ -33,11 +35,17 @@ export interface BitbagDockProps {
  * until it has finished performing just reads as broken. Both drive the same
  * `BitbagChat` (see `BitbagVariant`), so his voice and reflexes can't fork.
  *
- * DELIBERATELY UNPOSITIONED: the column is a plain flex stack, so the host
- * decides where he parks (`position: fixed` on a marketing page, absolute
- * inside a footer bar) without fighting a position baked in here. What the dock
- * does own is that the column ignores the pointer while its children take their
- * own clicks — so it never eats a scroll or tap meant for the page behind it.
+ * WHERE HE PARKS IS PART OF HIM: the column fixes itself to the bottom of the
+ * viewport, centred, riding above the on-screen keyboard when one opens. That
+ * used to be left to the host, and the result was that every host invented its
+ * own — fishlamp.com's fixed rig against the adh footer's absolute strip — which
+ * is drift in the one dimension the two mountings were supposed to share. The
+ * geometry now lives in `bitbag-dock.css` next to the scrim that dims the page
+ * behind him, because the two only make sense together. A host that genuinely
+ * needs him elsewhere overrides `.bb-dock` from its own stylesheet.
+ *
+ * The column ignores the pointer while its children take their own clicks, so
+ * the empty air around him never eats a scroll or tap meant for the page behind.
  */
 export function BitbagDock({
   theme = DEFAULT_THEME,
@@ -50,6 +58,12 @@ export function BitbagDock({
   // chat's mood hints, his eyes follow the caret, and his idle chatter is muted
   // while he's working so the status line holds the thinking spinner, not his
   // asides.
+  // He sits on the bottom edge, which is exactly where a phone keyboard opens.
+  // The hook publishes the keyboard's height as `--kb-inset` and the dock's CSS
+  // rides its `bottom` on it, so tapping his composer lifts him clear instead of
+  // burying him under the keys.
+  useKeyboardInset()
+
   const [chatHint, setChatHint] = useState<BitbagExpression | null>(null)
   const [gaze, setGaze] = useState<GazeVector | null>(null)
   const [utterance, setUtterance] = useState<{ text: string; id: number } | null>(null)
@@ -74,17 +88,23 @@ export function BitbagDock({
       <div ref={bitbagRef} className="bb-dock__avatar" style={{ width: size }}>
         <Bitbag expression={chatHint ?? undefined} gaze={gaze} onSpeak={onSpeak} mute={mute} />
       </div>
-      <BitbagChat
-        className="bb-dock__chat"
-        variant="dock"
-        theme={theme}
-        backend={backend}
-        anchorRef={bitbagRef}
-        onExpressionHint={onHint}
-        onGazeHint={onGaze}
-        utterance={utterance}
-        onMute={onMute}
-      />
+      {/* The panel is the frame his chat and his `i` share: it fixes the box's
+          width (the column itself is viewport-wide, so the chat can't set it)
+          and gives the `i` a corner to hang off. */}
+      <div className="bb-dock__panel">
+        <BitbagChat
+          className="bb-dock__chat"
+          variant="dock"
+          theme={theme}
+          backend={backend}
+          anchorRef={bitbagRef}
+          onExpressionHint={onHint}
+          onGazeHint={onGaze}
+          utterance={utterance}
+          onMute={onMute}
+        />
+        <BitbagInfo />
+      </div>
     </div>
   )
 }

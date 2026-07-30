@@ -47,18 +47,24 @@ export const EXPRESSIONS: BitbagExpression[] = [
 
 // Body palette — bitbag's emotional color. The irises always stay lit; this
 // only colors the letterform (the `b` stems + bowls + the eyebrows) via the
-// per-pose `body` tween. Warm adh gold is his resting/calm identity; emotions
-// take a hue; withdrawn moods fade toward the dark page so he camouflages,
-// leaving only his eyes.
+// per-pose `body` tween.
+//
+// The lamp palette — ember on ink, from fishlamp.com, which is the source of
+// truth for how bitbag looks. His resting hue is the signature ember
+// (--color-ember #e8a33d); emotions warm or cool off it; withdrawn moods fade
+// toward the ink ground (#0b0a09) so he camouflages, leaving just his eyes.
+// These are HIS colors, not any one site's, so they hold wherever he mounts —
+// he was a different creature on adh than on fishlamp for exactly as long as
+// this map had two versions.
 const BODY = {
-  gold: "#d9bb74", // idle / thinking — bb's lit resting gold (the adh accent-bright)
-  amber: "#ff9f43", // excited / laughing / silly — warm, energized
-  yellow: "#ffd400", // surprised — bright pop
-  flash: "#fff7e0", // startled — near-white jolt
-  red: "#ff4d3d", // mad — anger
-  blue: "#6f8cff", // sad — melancholy
-  dimmer: "#8a7a4e", // bored — dimmed gold-gray, but never past ~50% faded
-  hidden: "#5e5436", // asleep — most faded he gets: ~50%, still clearly visible
+  gold: "#e8a33d", // idle / thinking — his lit resting ember (the site accent)
+  amber: "#f5c877", // excited / laughing / silly — warm, energized (ember-bright)
+  yellow: "#ffd98a", // surprised — bright warm pop
+  flash: "#fff3dc", // startled — near-white warm jolt
+  red: "#d9573b", // mad — a burnt ember-red (anger, still in the warm world)
+  blue: "#8797b3", // sad — dusty slate; the one cool note, deliberately "off"
+  dimmer: "#8f7c52", // bored — dimmed ember-brown, fading toward the page
+  hidden: "#4a3f2b", // asleep — deepest fade, near the ink ground, just eyes left
 } as const;
 
 // The per-expression look is the engine's generic `Pose`. bitbag wires only the

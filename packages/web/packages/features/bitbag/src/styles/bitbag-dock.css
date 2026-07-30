@@ -1,15 +1,65 @@
 /*
- * bitbag's dock — his face riding above his chat, as a column.
+ * bitbag's dock — his face riding above his chat, parked on the bottom edge.
  *
- * STRUCTURE ONLY, and deliberately unpositioned: where the dock parks is the
- * host's call (fixed on a marketing page, absolute inside a footer bar), and a
- * `position` baked in here would have to be fought off at every mount. The skin
- * is the host's too — the chat is painted by whichever toolkit theme BitbagChat
- * scopes to it. What lives here is only what is true of the dock everywhere:
- * the column, the pointer contract, and how he dozes when the chat folds away.
+ * A port of fishlamp.com's rig (websites/main/src/components/chat/site-chat.css
+ * in the fishlamp repo), which is the source of truth for how bitbag is mounted:
+ * that is where the geometry was drawn and measured. Keep the rules diffable
+ * against that file — same order, same comments — so a change there can be
+ * carried across by reading a diff.
+ *
+ * This is POSITIONING, not skin. The chat box itself is painted by whichever
+ * toolkit theme BitbagChat scopes to it (the shipping one is `fishlamp`); what
+ * lives here is where the rig sits, how it clears a phone keyboard, how the page
+ * behind it falls back when he's engaged, and how he dozes when the chat folds.
+ *
+ * Where he parks used to be left to each host, on the theory that a position
+ * baked in here would have to be fought off at every mount. In practice every
+ * host invented its own instead — fishlamp's fixed rig against the adh footer's
+ * absolute strip — which is drift in the one dimension the mountings were meant
+ * to share. A host that genuinely needs him elsewhere still overrides `.bb-dock`.
  */
 
+/* The rig: a bottom-anchored, non-interactive column [ avatar, panel ]. */
 .bb-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* iPhone keyboard. iOS does NOT shrink the layout viewport when the soft
+   * keyboard opens (`dvh`, `interactive-widget`, and `position: fixed` all keep
+   * measuring the full screen), so a bottom-anchored rig ends up *behind* the
+   * keyboard, typing into a box you can't see. `--kb-inset` is the live keyboard
+   * height read from `visualViewport` (the only API that reports it) by
+   * useKeyboardInset, which BitbagDock mounts itself — the dock cannot be correct
+   * on a phone without it, so it is not left to the host to remember. It's 0 on
+   * desktop and on Android, where the layout viewport already resizes, so this
+   * one rule covers every platform.
+   *
+   * The home indicator is cleared the same way — by LIFTING the rig, never by
+   * padding the chat box. Which matters because the safe-area inset is not a
+   * constant: with Safari's address bar at the top, the bottom toolbar covers
+   * the indicator until it scrolls away, and the inset goes 0 → 34pt mid-scroll.
+   * As padding inside the panel (where this used to live) that made the entry
+   * view GROW as the toolbar left, opening a band of dead space under the
+   * composer. Out here it changes where the box sits, not how tall it is.
+   *
+   * `max()` rather than a sum: both insets clear the same edge, and the keyboard
+   * covers the indicator whenever it's up, so adding them would strand the
+   * composer 34pt above the keys.
+   *
+   * Both vars carry fallbacks because they are declared by the viewport package's
+   * `css/base.css`, and importing that file is NOT a precondition of docking
+   * bitbag — it also locks html/body to `overflow: hidden`, which would freeze
+   * the scroll on any ordinary page he rides on. The fallbacks are that file's
+   * own values, so the rig behaves the same whether or not the host loads it. */
+  bottom: max(var(--kb-inset, 0px), var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  /* Ride up/down with the keyboard rather than teleporting. */
+  transition: bottom 180ms ease-out;
+  /* fishlamp's value, which clears ordinary content and a sticky header while
+   * staying under a modal scrim + drawer, so opening a menu dims the chat too.
+   * A host whose own chrome is stacked differently raises it from its side (the
+   * adh footer does: its header is at 50). */
+  z-index: 45;
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -18,12 +68,71 @@
   pointer-events: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .bb-dock,
+  .bb-dock::before,
+  .bb-dock__avatar {
+    transition: none;
+  }
+}
+
+/* --- dormant vs. engaged --------------------------------------------------
+ *
+ * One signal drives both effects below. The chat package puts `.pc-collapsed` on
+ * `.persona-chat` whenever the composer is unfocused (its `minimal` inactive
+ * sizing), so `:has()` lets this rig react to its own descendant's state with no
+ * React plumbing at all — the chat already owns that truth, and nothing here can
+ * drift out of sync with it.
+ *
+ * Polarity is picked per property so a browser without `:has()` degrades to the
+ * quiet appearance instead of a broken one: the avatar's DEFAULT is full size
+ * (the collapsed rule shrinks him), and the scrim's DEFAULT is invisible (the
+ * engaged rule paints it).
+ */
+
+/* Engaged, the page falls back so the conversation is the only lit thing. A
+ * fixed, full-viewport wash painted at the BOTTOM of this rig's own stacking
+ * context: `z-index: -1` puts it under the rig's block-level children (bitbag
+ * and his chat) while still covering everything the rig itself sits above — so
+ * one pseudo-element dims the whole page behind BOTH of them, with no second
+ * element anywhere else in the tree. */
+.bb-dock::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  /* Deep, because the chat is 42%-alpha glass and supplies little contrast of
+   * its own: the page behind it has to fall further back than it would behind an
+   * opaque panel before the chat reads as the lit thing. */
+  background: rgba(5, 4, 3, 0.82);
+  opacity: 0;
+  /* Dormant, the wash is inert — the page takes its own clicks and scrolls. */
+  pointer-events: none;
+  transition: opacity 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Engaged, the wash also becomes the dismiss target. It catches the tap, which
+ * collapses the chat — the sizing hook disengages on any pointerdown outside
+ * `.persona-chat`, and a hit on this pseudo targets the rig, which is not inside
+ * it — and the tap STOPS there, so the gesture that closes the chat never also
+ * trips a link, a nav, or a scroll on the page underneath.
+ *
+ * It seals only the page: bitbag and his chat are block-level children of the
+ * rig and so paint above a `z-index: -1` pseudo, which means hit-testing still
+ * finds them first and they keep taking their own clicks. */
+.bb-dock:has(.persona-chat:not(.pc-collapsed))::before {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* His face, riding just above the chat. `overflow: visible` on his SVG lets his
  * emotional scale/spin spill up past this box into the empty space above,
  * uncropped. */
 .bb-dock__avatar {
   pointer-events: auto;
   margin-bottom: 0.2rem;
+  /* His own drop-shadow so he reads as lit, not pasted on. */
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.45));
   /* He grows out of his chat, so the scale is pinned to the edge he sits on:
    * shrinking pulls him DOWN onto the composer rather than collapsing toward his
    * own middle and leaving him hovering. Transform rather than width so the
@@ -33,20 +142,121 @@
   transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.bb-dock__chat {
-  pointer-events: auto;
-  width: 100%;
-}
-
-/* Chat folded away → he dozes at half size, sitting on his own entry line.
- *
- * The chat package puts `.pc-collapsed` on `.persona-chat` whenever the composer
- * is unfocused (its `minimal` inactive sizing), so `:has()` lets the dock react
- * to its own descendant's state with no React plumbing at all — the chat already
- * owns that truth, and nothing here can drift out of sync with it. The polarity
- * is picked so a browser without `:has()` degrades to full size rather than to a
- * permanently shrunken bitbag: full is the DEFAULT, and the collapsed rule is
- * what shrinks him. */
+/* Chat folded away → he dozes at half size, sitting on his own entry line. */
 .bb-dock:has(.persona-chat.pc-collapsed) .bb-dock__avatar {
   transform: scale(0.5);
+}
+
+/* His chat and the `i` on its corner, the last item in the column, so they land
+ * flush on the bottom edge. The wrapper carries the width — the column is
+ * viewport-wide, so the chat can't set its own — and is the frame the button
+ * positions against. It stays transparent to the pointer like the column above
+ * it; the chat and the button each take their own. */
+.bb-dock__panel {
+  position: relative;
+  width: min(560px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.bb-dock__chat {
+  pointer-events: auto;
+}
+
+/* --- the `i`: where else bitbag lives ------------------------------------- */
+
+/* Sat astride the chat's top-right corner rather than inside it. Inside, it
+ * would land on top of the send button whenever the box is folded down to a
+ * single entry line — which is most of the time. Half-on/half-off keeps it in
+ * the same place in both states, clear of the composer and clear of bitbag
+ * himself (he rides the middle of the column).
+ *
+ * Outside the chat box is also outside the theme's `@scope` root, so the palette
+ * below cannot be inherited from the theme the way the chat's is — it is restated
+ * here, under the theme's own token NAMES, declared on `.bb-info` so the copy is
+ * one block at the top instead of hex scattered through the rules, and so the
+ * names stay local to the button rather than leaking onto the host page. Diff it
+ * against `--color-*` in the themes package's `styles/fishlamp.css`; that file is
+ * the palette's source of truth. Being outside the chat is deliberate and worth
+ * the copy: a tap in here must not reach the chat's focus-reclaim, which would
+ * refocus the composer and unfold the box under the panel that just opened. */
+.bb-info {
+  --color-ink-soft: #17130f;
+  --color-ember: #e8a33d;
+  --color-ember-bright: #f5c877;
+  --color-ember-dim: rgba(232, 163, 61, 0.14);
+  --color-parchment: #f0e4d0;
+  --color-parchment-dim: #a8968a;
+  --color-hairline: rgba(232, 163, 61, 0.18);
+
+  position: absolute;
+  top: 0;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+.bb-info__btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--color-hairline);
+  border-radius: 50%;
+  /* Opaque, not glass: it overlaps the chat's own edge, and a translucent disc
+   * there would show the hairline running through it. */
+  background: var(--color-ink-soft);
+  color: var(--color-parchment-dim);
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.bb-info__btn:hover,
+.bb-info__btn[aria-expanded="true"] {
+  color: var(--color-ember-bright);
+  border-color: rgba(232, 163, 61, 0.7);
+}
+
+/* The panel opens UP from the button — the dock is on the bottom edge, so there
+ * is nowhere below to open into — and hangs from its right edge, which is the
+ * one that can't run off the screen. */
+.bb-info__pop {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  right: 0;
+  width: max-content;
+  max-width: min(21rem, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: 11px;
+  /* The chat's own glass, so the two read as one fixture. */
+  background: rgba(17, 14, 11, 0.92);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 50px -12px rgba(0, 0, 0, 0.7);
+}
+.bb-info__link {
+  display: block;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  color: var(--color-parchment);
+  text-decoration: none;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  transition: background 0.2s, color 0.2s;
+}
+.bb-info__link:hover {
+  background: var(--color-ember-dim);
+}
+/* The address itself, in bitbag's outbound-link idiom — ember, tracked out, one
+ * size down. */
+.bb-info__url {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--color-ember);
 }

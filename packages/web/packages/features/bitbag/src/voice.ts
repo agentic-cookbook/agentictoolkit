@@ -207,11 +207,14 @@ export const INTRO = [
 ] as const;
 
 /**
- * bitbag's default chat skin is the adh house style (gold-on-charcoal, Manrope)
- * so the chat reads as part of the adh suite. The terminal theme is one click
- * away in the switcher.
+ * bitbag's skin is the lamp: ember on ink, the look drawn and measured on
+ * fishlamp.com, which is the source of truth for how he looks. This is what
+ * SHIPS, everywhere he mounts — the stage at bitbag.ai and the dock in the adh
+ * footer — so he is one creature with one appearance rather than a different one
+ * per site. The other themes are for looking at during development; they are not
+ * alternate versions of him.
  */
-export const DEFAULT_THEME: ThemeKey = 'adh'
+export const DEFAULT_THEME: ThemeKey = 'fishlamp'
 
 /**
  * The one theme that swaps the native I-beam for a drawn block cursor (its CSS

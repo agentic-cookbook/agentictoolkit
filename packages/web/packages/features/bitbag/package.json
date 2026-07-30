@@ -18,10 +18,6 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
-    "./css/bitbag-chat.css": {
-      "development": "./src/styles/bitbag-chat.css",
-      "default": "./dist/css/bitbag-chat.css"
-    },
     "./css/bitbag-dock.css": {
       "development": "./src/styles/bitbag-dock.css",
       "default": "./dist/css/bitbag-dock.css"

@@ -11,9 +11,9 @@ import {
 } from "@agenticdevelopertoolkit/avatar";
 import { POSES, type BitbagExpression } from "./expressions";
 
-const GOLD = "#d9bb74"; // bb's lit resting color (the adh accent-bright)
-const IRIS = "#ffe8c2"; // warm bright iris (fixed — never changes with mood)
-const EYE_BG = "#1a1308"; // eye interior — warm near-black, opaque (not a see-through hole)
+const GOLD = "#e8a33d"; // bb's lit resting color — his signature ember (see expressions.ts BODY)
+const IRIS = "#ffe9c6"; // warm cream iris spark (fixed — pops bright against the ember ring)
+const EYE_BG = "#17130f"; // eye interior — warm near-black ink, opaque (not a see-through hole)
 const IRIS_BASE_R = 9; // base iris radius (viewBox units); poses scale it via `pupil`
 
 // ── How bitbag configures the engine's behavior (all mood-vocabulary lives here,
@@ -283,8 +283,8 @@ export function Bitbag({ expression, gaze = null, onSpeak, mute = false }: Bitba
 
               {/* tiny pinprick pupils — OUTSIDE the face + eye-scale groups, so no
                   tint and no eyelid-squish. Faded in only when his eyes shut. */}
-              <circle ref={leftDotRef} cx={123} cy={72} r={2.6} fill={IRIS} opacity={0} style={{ filter: "drop-shadow(0 0 3px #ffe8c2) drop-shadow(0 0 1.5px #ffe8c2)" }} />
-              <circle ref={rightDotRef} cx={197} cy={72} r={2.6} fill={IRIS} opacity={0} style={{ filter: "drop-shadow(0 0 3px #ffe8c2) drop-shadow(0 0 1.5px #ffe8c2)" }} />
+              <circle ref={leftDotRef} cx={123} cy={72} r={2.6} fill={IRIS} opacity={0} style={{ filter: "drop-shadow(0 0 3px #ffe9c6) drop-shadow(0 0 1.5px #ffe9c6)" }} />
+              <circle ref={rightDotRef} cx={197} cy={72} r={2.6} fill={IRIS} opacity={0} style={{ filter: "drop-shadow(0 0 3px #ffe9c6) drop-shadow(0 0 1.5px #ffe9c6)" }} />
             </g>
           </g>
         </g>
