@@ -40,7 +40,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog"
-import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
+import {
+  TopicRail,
+  FULL_RAIL,
+  COLLAPSED_RAIL,
+  DETAIL_PANE_ATTR,
+  type TopicDetailItem,
+  type RailSlot,
+} from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
@@ -313,7 +320,11 @@ class DetailCrossfade extends Component<{
   private snapshotContent(): HTMLElement | null {
     const el = this.contentRef.current
     if (!el || el.offsetWidth === 0 || el.offsetHeight === 0 || el.childElementCount === 0) return null
-    return el.cloneNode(true) as HTMLElement
+    const clone = el.cloneNode(true) as HTMLElement
+    // The copy is deep and includes the pane element itself, so it arrives wearing the `live`
+    // marker too. Re-stamp it: exactly one `live` pane exists at any instant, mid-fade included.
+    clone.setAttribute(DETAIL_PANE_ATTR, "ghost")
+    return clone
   }
 
   private crossfade(outgoing: HTMLElement): void {
@@ -401,7 +412,11 @@ class DetailCrossfade extends Component<{
   override render(): ReactElement {
     return (
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div ref={this.contentRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          ref={this.contentRef}
+          {...{ [DETAIL_PANE_ATTR]: "live" }}
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+        >
           {this.props.children}
         </div>
         {/* The outgoing snapshot's home, above the content. A static clone: no listeners, no React,

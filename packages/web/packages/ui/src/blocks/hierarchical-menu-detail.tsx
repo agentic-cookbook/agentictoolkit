@@ -45,7 +45,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog"
-import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
+import {
+  TopicRail,
+  FULL_RAIL,
+  COLLAPSED_RAIL,
+  DETAIL_PANE_ATTR,
+  type TopicDetailItem,
+  type RailSlot,
+} from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
 import { useShowDebugFrames, useSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
 // The cascade's DECISIONS — the selection chain's weight, the entrance bounce, the exit curve, the
@@ -1283,6 +1290,7 @@ function DetailContent({
        viewport. */
     <div
       ref={ref}
+      {...{ [DETAIL_PANE_ATTR]: "live" }}
       className="flex min-h-0 w-full flex-1 flex-col"
       style={{ minWidth: `min(${minWidth}, 100%)` }}
     >

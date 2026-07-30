@@ -4,6 +4,10 @@ export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor"
 export { Field } from "./field"
 export { FieldGroup } from "./field-group"
 export { TopicDetail, type TopicDetailItem, type RailSlot } from "./topic-detail"
+// How to name the detail pane the user is actually looking at, rather than HTDV's outgoing
+// crossfade snapshot of the previous one. Exported for e2e specs and anything else reading the
+// DOM directly (the snapshot is hidden from the accessibility tree, not from the DOM).
+export { DETAIL_PANE_ATTR, LIVE_DETAIL_PANE } from "./topic-detail"
 // TopicSelectHint is THE "select something" placeholder card — every pane that waits on a
 // choice renders it (the stack frontier does so automatically); EmptyState stays the home
 // for genuinely empty/loading/error panes.
