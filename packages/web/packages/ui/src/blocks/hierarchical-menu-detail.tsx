@@ -45,15 +45,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog"
-import {
-  TopicRail,
-  FULL_RAIL,
-  COLLAPSED_RAIL,
-  DETAIL_PANE_ATTR,
-  type TopicDetailItem,
-  type RailSlot,
-} from "./topic-detail"
+import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
+import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
 import { useShowDebugFrames, useSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
 // The cascade's DECISIONS — the selection chain's weight, the entrance bounce, the exit curve, the
 // ground's release rule, the rail-click plan and the detection frames' arming — live there as named,

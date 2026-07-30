@@ -40,15 +40,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog"
-import {
-  TopicRail,
-  FULL_RAIL,
-  COLLAPSED_RAIL,
-  DETAIL_PANE_ATTR,
-  type TopicDetailItem,
-  type RailSlot,
-} from "./topic-detail"
+import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
+import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a

@@ -56,6 +56,11 @@
       "development": "./src/lib/tone.ts",
       "import": "./dist/lib/tone.js"
     },
+    "./lib/detail-pane": {
+      "types": "./dist/lib/detail-pane.d.ts",
+      "development": "./src/lib/detail-pane.ts",
+      "import": "./dist/lib/detail-pane.js"
+    },
     "./lib/invitations-types": {
       "types": "./dist/lib/invitations-types.d.ts",
       "development": "./src/lib/invitations-types.ts",

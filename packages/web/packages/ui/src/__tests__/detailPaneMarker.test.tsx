@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react"
 
 import { HierarchicalTopicDetail, type TopicLevel } from "../blocks/hierarchical-topic-detail"
 import { HierarchicalMenuDetail } from "../blocks/hierarchical-menu-detail"
-import { DETAIL_PANE_ATTR, LIVE_DETAIL_PANE } from "../blocks/topic-detail"
+import { DETAIL_PANE_ATTR, LIVE_DETAIL_PANE } from "../lib/detail-pane"
 
 /**
  * `data-detail-pane` — which pane is the one the user is actually looking at.
