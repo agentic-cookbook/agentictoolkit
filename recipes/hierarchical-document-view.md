@@ -3,7 +3,7 @@ id: b7a4e24c-3dfe-4a33-b5bc-88736e520d90
 title: Hierarchical Document View
 domain: agenticdeveloperhub://recipes/hierarchical-document-view
 type: ingredient
-version: 1.4.0
+version: 1.5.0
 status: draft
 language: en
 created: '2026-07-29'
@@ -11,7 +11,7 @@ modified: '2026-07-29'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
-summary: "HDV — the shared long-form document reader. This version completes it with the frame that places the columns: HierarchicalDocumentView (nav, then the document) wrapping DocPage (the reader's measure, then the rail) — alongside the collapsible tree (DocNavTree, DocNav), the centre column (DocBreadcrumbs, DocArticle, DocMetadata, ViewSourceDisclosure) and the scrollspy table of contents."
+summary: "HDV — the shared long-form document reader: the frame that places the columns (HierarchicalDocumentView wrapping DocPage), the collapsible tree (DocNavTree, DocNav), the centre column (DocBreadcrumbs, DocArticle, DocMetadata, ViewSourceDisclosure) and the scrollspy table of contents. This version hardens the extraction against four review findings — one collapse state behind both nav shells, a single announced dismiss control, a scrollspy that resolves the topmost visible heading across observer batches, and no dangling aria-controls."
 platforms:
 - typescript
 - web
@@ -114,14 +114,16 @@ Three seams keep site vocabulary out of the toolkit:
 - **must-omit-excluded-headings**: `DocTableOfContents` MUST omit exactly the headings whose `id` appears in `excludeIds`, from both the rendered list and the set of observed elements.
 - **must-hide-empty-outline**: `DocTableOfContents` MUST render nothing when no heading survives filtering.
 - **must-indent-by-depth**: `DocTableOfContents` MUST indent a depth-3 heading further than a shallower one, and MUST render the list flat rather than nesting sub-lists.
-- **must-mark-the-current-heading**: `DocTableOfContents` MUST mark exactly one heading — the one the reader has most recently reached — and MUST move that marker rather than accumulating marks.
+- **must-mark-the-current-heading**: `DocTableOfContents` MUST mark exactly one heading — the FIRST, in the order the ids were given, of those currently inside the band — and MUST move that marker rather than accumulating marks.
 - **must-scroll-not-navigate**: `DocTableOfContents` MUST prevent the anchor's default navigation and scroll to the heading smoothly, leaving the URL unchanged.
 - **must-track-by-id-value**: `useScrollSpy` MUST re-subscribe when the ids' VALUES change and MUST NOT re-subscribe when only the array's identity changes, so a caller may derive its ids inline on every render.
 - **must-observe-only-existing-elements**: `useScrollSpy` MUST skip ids with no matching element, and MUST disconnect its observer on unmount.
+- **must-carry-visibility-across-callbacks**: `useScrollSpy` MUST remember which ids are inside the band across callbacks, and MUST resolve the marked id from the ORDER OF `ids` rather than from the order the observer reported. An `IntersectionObserver` callback carries only what CHANGED, in no guaranteed order, so a consumer that re-reads each batch in isolation loses every heading it was not told about again.
+- **must-hold-the-last-position**: `useScrollSpy` MUST keep its marked id when the band empties — a reader between two headings is still somewhere.
 - **must-start-collapsed**: `ViewSourceDisclosure` MUST render no source panel until asked, and MUST omit it from the DOM entirely rather than hiding it, so the document's text is never duplicated for search or assistive tech.
 - **must-toggle-both-ways**: `ViewSourceDisclosure` MUST reveal the source on activation and hide it again on the next, and MUST honour `defaultOpen` for the initial state.
 - **must-render-source-verbatim**: `ViewSourceDisclosure` MUST render `source` as text, never as markup — a document whose source contains HTML shows that HTML.
-- **must-announce-its-state**: `ViewSourceDisclosure`'s trigger MUST carry `aria-expanded` reflecting the current state and `aria-controls` naming the panel it reveals.
+- **must-announce-its-state**: `ViewSourceDisclosure`'s trigger MUST carry `aria-expanded` reflecting the current state, and `aria-controls` naming the panel it reveals — present only while that panel is in the DOM, because `aria-controls` is an IDREF and one pointing at nothing is an authoring error (axe: `aria-valid-attr-value`), not a harmless no-op.
 - **must-collapse-only-the-top-level**: `DocNavTree` MUST render a collapse control for top-level sections only; every directory below that MUST render its children unconditionally.
 - **must-open-the-active-section**: `DocNavTree` MUST open, on mount, exactly those sections that contain or are the active page, and leave every other section closed.
 - **must-keep-the-readers-collapse-state**: `DocNavTree` MUST NOT re-derive a section's open state when `activePath` changes — once mounted, that state belongs to the reader.
@@ -130,8 +132,9 @@ Three seams keep site vocabulary out of the toolkit:
 - **must-inline-supplied-headings**: `DocNavTree` MUST render a leaf's `headings` beneath its link when the host supplies them, MUST filter none of them, and MUST render no sub-list when it supplies none.
 - **must-scroll-when-already-on-the-page**: A heading link MUST scroll smoothly and write the hash without navigating when its own page is the active one, and MUST behave as an ordinary link from anywhere else.
 - **must-drop-the-divider-with-the-rows**: `DocNav` MUST render the rule above the tree only when `topLinks` is non-empty.
-- **must-control-the-drawer**: `DocNav`'s mobile drawer MUST be controlled by `open`, and MUST call `onClose` from both dismiss targets — the backdrop and the close button — because the control that opens it lives outside HDV.
-- **must-share-one-nav**: `DocNav` MUST render the identical nav — the same fixed rows, rule, and tree — in the desktop column and in the drawer.
+- **must-control-the-drawer**: `DocNav`'s mobile drawer MUST be controlled by `open`, and MUST call `onClose` from both dismiss targets — the scrim and the close button — because the control that opens it lives outside HDV.
+- **must-announce-one-dismiss-control**: The drawer MUST expose exactly ONE control named `closeLabel` to assistive tech. The scrim dismisses on click but MUST be `aria-hidden` and out of the tab order: two identically-named controls read as two different actions, and a named `button` spanning the viewport is announced over the whole document.
+- **must-share-one-nav**: `DocNav` MUST render the identical nav — the same fixed rows, rule, and tree — in the desktop column and in the drawer, and both MUST read ONE collapse state: a section the reader opens in the drawer is open in the column too, and stays open when the drawer closes.
 - **must-place-the-nav-before-the-document**: `HierarchicalDocumentView` MUST render `nav` first and the document region after it, and `DocPage` MUST render the document before the rail.
 - **must-slot-columns-unwrapped**: Both frames MUST render a slotted column as a direct child of their flex row, adding no wrapper of their own, so each column's own `sticky` offset resolves against the frame.
 - **must-drop-an-omitted-column**: Omitting `nav` or `toc` MUST leave no element behind — a reader with no tree gets no empty column, not a zero-width one.
@@ -192,7 +195,7 @@ the host's palette without a per-site restyle.
   hovering to secondary — a notch smaller and dimmer than the page links they hang
   under, so an outline never competes with the tree.
 - Drawer: `div.fixed.inset-0.z-50.lg:hidden` holding a full-bleed `bg-black/50`
-  backdrop button and `aside.fixed.inset-y-0.left-0 w-72
+  scrim (`div[aria-hidden]`, click-to-dismiss) and `aside.fixed.inset-y-0.left-0 w-72
   bg-[var(--color-surface)] shadow-xl overflow-y-auto`, headed by
   `flex items-center justify-between px-6 py-4 border-b
   border-[var(--color-border-subtle)]` with a `font-mono text-sm font-medium` title
@@ -278,11 +281,18 @@ server-renders its full list with nothing marked, so the outline is in the HTML
 before hydration. `ViewSourceDisclosure` is a client component too, but holds only
 open/closed state — it server-renders its rule and trigger, collapsed.
 
-`DocNavTree` is a client component holding one boolean per top-level section, and
-it server-renders the tree with the active section **already open** — so a reader's
-first paint is the correct tree, not a closed one that expands on hydration.
-`DocNav` is a client component only because it wraps that tree; it holds no state
-of its own, since the drawer's belongs to the host.
+`DocNavTree` is a client component carrying one open/closed boolean per top-level
+section, and it server-renders the tree with the active section **already open** —
+so a reader's first paint is the correct tree, not a closed one that expands on
+hydration. It holds that state itself when it stands alone, and takes it from above
+(`expandedSections` + `onToggleSection`) when something has to share it.
+
+`DocNav` is that something. Its desktop column and its drawer are two component
+INSTANCES of one element description, so each would otherwise keep its own copy of
+the expansion state — and the drawer's would be destroyed with the drawer, silently
+losing whatever the reader had just opened. `DocNav` therefore owns the state and
+hands the same one to both shells. The drawer's `open` still belongs to the host,
+because the control that opens it does.
 
 ## Accessibility
 
@@ -299,10 +309,12 @@ of its own, since the drawer's belongs to the host.
 - Inlined headings are ordinary `href="…#id"` anchors, so they work with
   JavaScript off; the click handler only upgrades a same-page jump to a smooth
   scroll, and writes the hash so the position stays linkable.
-- The drawer's backdrop is a real `button` carrying the same accessible name as
-  the close control, so dismissing is reachable by keyboard instead of being a
-  click-only affordance on a `div`. Both share one name deliberately: they do the
-  same thing, and two names for one action reads as two actions.
+- The drawer's scrim dismisses on click, but it is an `aria-hidden` `div` with no
+  tab stop and no name — so the drawer offers assistive tech exactly ONE control
+  named `closeLabel`. An earlier draft made the scrim a named `button` instead,
+  which announced two identical controls for one action and put a viewport-sized
+  button over the document; keyboard dismissal is already served by the close
+  control in the drawer's own header, and by `Escape` from the host's trigger.
 - The drawer is absent from the DOM when closed rather than hidden, so its links
   are never in the tab order behind the page.
 - Neither frame renders a landmark. The nav column brings its own `aside` and `nav`, the rail its own `aside`, and the page's single `main` belongs to the host's app shell — so a screen-reader user gets one main region and three named ones, not a nested pair of mains.
@@ -368,6 +380,7 @@ of its own, since the drawer's belongs to the host.
 | T25 | must-toggle-both-ways | `defaultOpen` | the panel is present on first render |
 | T26 | must-render-source-verbatim | a source containing `<script>` | the panel's text equals the source; it has zero child ELEMENTS |
 | T27 | must-announce-its-state | before and after activation | `aria-expanded` flips `false`→`true`; `aria-controls` equals the panel's non-empty `id` |
+| T27b | must-announce-its-state | collapsed, expanded, collapsed again | `aria-controls` is ABSENT both times the panel is — no dangling IDREF |
 | T28 | must-toggle-both-ways | activate | the chevron gains `rotate-90` only while open |
 | T29 | must-spread-host-attributes | default, then `label` | the trigger reads "View source", then the host's label |
 | T30 | must-spread-host-attributes | `data-testid`, `defaultOpen` | row, trigger, and panel `className`s equal their exported contracts EXACTLY |
@@ -392,8 +405,8 @@ of its own, since the drawer's belongs to the host.
 | T49 | must-mark-the-active-page | `activePath` equal to a fixed row's `href` | exactly one accent bar, inside that row's `h3` |
 | T50 | must-control-the-drawer | `open` omitted | one `aside`, whose `className` equals `DOC_NAV_ASIDE_CLASS`; the `nav`'s equals `DOC_NAV_NAV_CLASS` |
 | T51 | must-share-one-nav | `open` | two `aside`s in order [aside, drawer], and two `nav`s |
-| T52 | must-control-the-drawer | click each control named "Close navigation" | there are exactly 2, and `onClose` fires twice |
-| T53 | must-control-the-drawer | `title="Contents" closeLabel="Dismiss"` | the drawer reads "Contents" and both dismiss targets are named "Dismiss" |
+| T52 | must-control-the-drawer, must-announce-one-dismiss-control | click the scrim, then the close control | exactly ONE announced control named "Close navigation"; the scrim is an `aria-hidden` `div` with no `tabindex`; `onClose` fires twice |
+| T53 | must-control-the-drawer | `title="Contents" closeLabel="Dismiss"` | the drawer reads "Contents" and there is exactly ONE control named "Dismiss" |
 | T54 | must-spread-host-attributes | `className="w-96"` + `data-testid` | the column keeps `sticky`, carries `w-96`, has no `w-80`, and the attribute lands on it |
 | T55 | must-place-the-nav-before-the-document | `nav` + children | 2 children: the nav node itself, then a region whose class equals `HIERARCHICAL_DOCUMENT_VIEW_CONTENT_CLASS` and which holds the document |
 | T56 | must-slot-columns-unwrapped | `nav` | the nav's `parentElement` is the frame itself, so its `sticky` resolves against the frame |
@@ -407,6 +420,12 @@ of its own, since the drawer's belongs to the host.
 | T64 | must-slot-columns-unwrapped | `toc` | the rail's `parentElement` is the row itself |
 | T65 | must-spread-host-attributes | `className="items-start"` + `id` | the row keeps `flex`, gains `items-start`, and carries the `id` |
 | T66 | must-slot-columns-unwrapped | a `DocPage` inside a `HierarchicalDocumentView` | nav → content region → row → measure → document, with the rail on the row and the nav on the frame — neither frame reaches into the other |
+| T67 | must-mark-the-current-heading, must-carry-visibility-across-callbacks | ONE callback reporting `c`, `a`, `b` as entering together | `a` is marked — the first in `ids` order, not the last reported |
+| T68 | must-carry-visibility-across-callbacks | `a` enters; `b` enters in a SECOND callback; then `a` leaves | `a`, still `a`, then `b` — `b`'s visibility survived a callback that never mentioned it |
+| T69 | must-hold-the-last-position | the only visible heading leaves the band | the marker stays where it was rather than clearing |
+| T70 | must-carry-visibility-across-callbacks | DOM order `b`, `a` with `ids = ['a','b']` | `a` is marked — document order comes from `ids`, not from the DOM |
+| T71 | must-share-one-nav | expand a section in the drawer, then close the drawer | the desktop column's section is still expanded |
+| T72 | must-route-through-injected-link | a leaf's inlined `headings` with a `LinkComponent` | the heading anchors carry the adapter's marker too — a heading link is a route, not a document load |
 
 ## Edge Cases
 
@@ -465,8 +484,14 @@ of its own, since the drawer's belongs to the host.
 - **A heading id with no element.** The spy skips it; the entry still renders and
   its anchor simply does nothing. HDV does not own the document, so it cannot
   assert the element exists.
-- **Two headings visible at once.** The last one reported by the observer wins, so
-  scrolling down advances the marker and scrolling up walks it back.
+- **Two headings visible at once.** The FIRST in `ids` order wins — the reader's
+  position is the topmost heading they can see. Taking the last one the observer
+  mentioned instead makes the marker depend on scroll direction and on batching:
+  a callback reports only what CHANGED, so scrolling up (where the heading that
+  changed is the *higher* one) and scrolling down disagree about the same viewport.
+- **No heading visible at all.** The marker holds its last position. A reader
+  between two headings, or inside one long section, is still somewhere — clearing
+  the rail there would blank it for most of a long document.
 - **A host that renders its own headings client-side.** The spy resolves elements
   by id when it subscribes; content appearing later is not observed until the ids
   change.
@@ -494,12 +519,14 @@ of its own, since the drawer's belongs to the host.
 | `DocNavTree` | `nodes` | — | top-level sections in display order; each `{ label, href, headings?, children? }` |
 | | `activePath` | — | the current route, spelled exactly as it appears in a node's `href` |
 | | `LinkComponent` | `DefaultDocLink` | the host's router link, taking `to` |
+| | `expandedSections` | none | the open sections' `href`s, when a caller owns the state; omit and the tree keeps its own |
+| | `onToggleSection` | none | called with a section's `href` when its control is used; pass it with `expandedSections` |
 | `DocNav` | `nodes` / `activePath` / `LinkComponent` | — | passed straight through to `DocNavTree` |
 | | `topLinks` | `[]` | fixed `{ label, href }` rows above the tree; empty drops their divider too |
 | | `open` | `false` | whether the mobile drawer is showing — controlled, always |
-| | `onClose` | none | called from the backdrop and from the close button |
+| | `onClose` | none | called from the close control and from the scrim |
 | | `title` | `"Navigation"` | the drawer's heading |
-| | `closeLabel` | `"Close navigation"` | accessible name for both dismiss targets |
+| | `closeLabel` | `"Close navigation"` | accessible name for the drawer's close control; the scrim is `aria-hidden` and takes no name |
 | `DocBreadcrumbs` | `crumbs` | — | `{ label, path }[]`, root-first; the last is the current page |
 | | `homeLabel` | `"Home"` | label for the fixed first crumb |
 | | `homeHref` | `"/"` | destination for the fixed first crumb |
@@ -778,7 +805,10 @@ render tracing would not already show.
 | Nav byte-parity measured against the pre-extraction production build, 4 pages | pass | project-guidelines UI |
 | The tree server-renders with the active section already open — no hydration flash | pass | project-guidelines UI |
 | `type="button"` + `aria-expanded` + a section-naming label on every collapse control | pass | accessibility |
-| Both drawer dismiss targets are real `button`s sharing one accessible name | pass | accessibility |
+| Exactly ONE announced dismiss control; the scrim dismisses but is `aria-hidden` and untabbable | pass | accessibility |
+| One collapse state behind both drawer and column — a drawer expansion outlives the drawer | pass | accessibility |
+| `aria-controls` present only while the panel is — no dangling IDREF while collapsed | pass | accessibility |
+| The rail's marked heading is the topmost visible one, not the last the observer mentioned | pass | project-guidelines UI |
 | Drawer absent from the DOM when closed — its links never sit in the tab order behind the page | pass | accessibility |
 | The frames render no landmark; the pre-existing nested `main` is gone, asserted on the real page | pass | accessibility |
 | The reader's measure has one home — no page re-derives `max-w-3xl` | pass | project-guidelines UI |
@@ -788,6 +818,7 @@ render tracing would not already show.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.5.0 | 2026-07-29 | Mike Fullerton | Hardened the extraction against four defects a code review found, each with the rule and vectors that pin it: the drawer and the desktop column are two INSTANCES of one element description, so they now share one collapse state hoisted into `DocNav` — before, a section opened in the drawer was lost the moment the drawer closed; the scrim stops being a viewport-sized named `button` and becomes an `aria-hidden` `div`, leaving exactly one announced dismiss control; `useScrollSpy` carries visibility across callbacks and resolves the marked heading by the order of `ids`, because an `IntersectionObserver` batch reports only what CHANGED and guarantees nothing about order — taking the last entry made the rail depend on scroll direction; and `aria-controls` on the view-source trigger appears only while the panel does, since an IDREF pointing at nothing is an axe `aria-valid-attr-value` error. An inlined heading link now routes through `LinkComponent` too, instead of forcing a document load to reach a heading already on screen. |
 | 1.4.0 | 2026-07-29 | Mike Fullerton | Completed the reader with the frame that places its columns: `HierarchicalDocumentView` (the nav, then the document region) wrapping `DocPage` (the `max-w-3xl` measure, then the rail). Two components rather than one, because the nav belongs to the host's persistent layout and the document to its page — one component would remount the tree on every navigation. Both are slot-only and render no landmark, which retires a pre-existing bug: the cookbook site nested a second `main` inside its app shell's. `EntryView` and `LayoutChrome` are now compositions of toolkit blocks with no layout of their own. |
 | 1.3.0 | 2026-07-29 | Mike Fullerton | Added the left column: `DocNavTree`, the collapsible multi-depth document tree, and `DocNav`, the sticky desktop aside and controlled mobile drawer that carry it — ported from the cookbook site's `Sidebar`, which is deleted. The site's three mutually-recursive nav functions collapse into one recursive component; its dead `decisionHeadings` side-channel is deleted rather than ported, because it never rendered, and the unread `data-autoscroll` attribute goes with it. Parity was measured, not asserted: a constant 1105-byte delta across four pre/post pages, resolving to the lucide chevron plus the `type="button"` and `aria-expanded` the original toggle lacked. |
 | 1.2.0 | 2026-07-29 | Mike Fullerton | Added `ViewSourceDisclosure`, the "View source" row that closes the centre column, ported from the cookbook site's `RawMarkdownToggle`. It deliberately does NOT compose the existing `Disclosure` — see Design Decisions — and gains `aria-expanded`/`aria-controls`, which the original lacked. One recorded visual delta: lucide's chevron replaces the hand-rolled inline SVG. |

@@ -13,6 +13,9 @@ import { useEffect, useState } from "react"
  * Effects re-subscribe on the ids' VALUE, not the array's identity, so a caller
  * may pass a freshly derived array (`headings.filter(...)`) every render without
  * tearing down and rebuilding the observer each time.
+ *
+ * `ids` MUST be in document order — that order is what decides which of several
+ * simultaneously-visible headings is the reader's position.
  */
 export interface UseScrollSpyOptions {
   /** Observer `rootMargin`. Defaults to a sticky-header-aware upper band. */
@@ -35,18 +38,34 @@ export function useScrollSpy(
   useEffect(() => {
     if (key.length === 0) return
 
+    const order = key.split("\n")
+
+    // Which headings are in the band RIGHT NOW, carried across callbacks.
+    // Two reasons it has to be a running set rather than a scan of `entries`:
+    // an IntersectionObserver callback reports only what CHANGED (so a heading
+    // that is still visible from three scrolls ago is simply absent), and the
+    // entries within one callback are in no guaranteed order. Setting the id of
+    // each intersecting entry as it arrives would therefore be last-write-wins —
+    // it would land on whichever heading the observer happened to mention last.
+    const visible = new Set<string>()
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
-          }
+          if (entry.isIntersecting) visible.add(entry.target.id)
+          else visible.delete(entry.target.id)
         }
+        // The reader's position is the FIRST visible heading in document order:
+        // with several in the band they are reading under the topmost one.
+        const current = order.find((id) => visible.has(id))
+        // Nothing in the band (scrolled into a long section, or past the end)
+        // keeps the last known position rather than clearing the rail.
+        if (current) setActiveId(current)
       },
       { rootMargin, threshold },
     )
 
-    for (const id of key.split("\n")) {
+    for (const id of order) {
       const el = document.getElementById(id)
       if (el) observer.observe(el)
     }

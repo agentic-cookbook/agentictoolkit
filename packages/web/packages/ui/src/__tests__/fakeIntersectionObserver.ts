@@ -33,14 +33,34 @@ export class FakeIntersectionObserver {
     this.disconnected = true
   }
 
+  /**
+   * Deliver ONE callback carrying several changes, in the order given.
+   *
+   * The real observer batches this way and guarantees nothing about the order
+   * within a batch, which is exactly what a consumer must not depend on — so
+   * tests need to be able to hand the changes over deliberately shuffled.
+   */
+  report(changes: { id: string; isIntersecting: boolean }[]) {
+    const entries = changes.map(({ id, isIntersecting }) => {
+      const target = this.observed.find((el) => el.id === id)
+      if (!target) throw new Error(`#${id} is not observed`)
+      return { isIntersecting, target } as unknown as IntersectionObserverEntry
+    })
+    this.callback(entries, this as unknown as IntersectionObserver)
+  }
+
   /** Report `id` as the element now inside the observed band. */
   enter(id: string) {
-    const target = this.observed.find((el) => el.id === id)
-    if (!target) throw new Error(`#${id} is not observed`)
-    this.callback(
-      [{ isIntersecting: true, target } as unknown as IntersectionObserverEntry],
-      this as unknown as IntersectionObserver,
-    )
+    this.report([{ id, isIntersecting: true }])
+  }
+
+  /**
+   * Report `id` as having scrolled out of the band. The real observer only ever
+   * mentions what CHANGED, so a consumer that re-scans its entries each callback
+   * loses track of everything still visible from an earlier one.
+   */
+  leave(id: string) {
+    this.report([{ id, isIntersecting: false }])
   }
 
   /** The observer created most recently — i.e. the one currently subscribed. */

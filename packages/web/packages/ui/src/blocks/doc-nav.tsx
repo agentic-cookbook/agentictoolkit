@@ -22,7 +22,7 @@
 // client component — see doc-types.ts.
 
 import type { HTMLAttributes, ReactNode } from "react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { ChevronRight, X } from "lucide-react"
 
 import { cn } from "../lib/utils"
@@ -77,7 +77,7 @@ interface LevelProps {
  * already open scrolls instead of navigating, and writes the hash so the
  * position is linkable; from any other page it is an ordinary link.
  */
-function NavHeadings({ node, activePath }: Omit<LevelProps, "LinkComponent">) {
+function NavHeadings({ node, activePath, LinkComponent }: LevelProps) {
   const headings = node.headings ?? []
   if (headings.length === 0) return null
 
@@ -89,10 +89,14 @@ function NavHeadings({ node, activePath }: Omit<LevelProps, "LinkComponent">) {
         const href = `${node.href}#${heading.id}`
         return (
           <li key={heading.id}>
-            {/* A plain anchor, not `LinkComponent`: this is a scroll target on
-                the page the reader is already on. */}
-            <a
-              href={href}
+            {/* The host's link, not a bare anchor. On the page it points at
+                there is nothing to navigate, so the handler below scrolls and
+                writes the hash — but from ANY OTHER page this row is a real
+                navigation, and a plain `<a href>` would take the whole document
+                down with it: a full load, this nav remounted, and every section
+                the reader had opened shut again. */}
+            <LinkComponent
+              to={href}
               onClick={(event) => {
                 if (!onPage) return
                 event.preventDefault()
@@ -105,7 +109,7 @@ function NavHeadings({ node, activePath }: Omit<LevelProps, "LinkComponent">) {
               style={ITEM_INDENT}
             >
               {heading.text}
-            </a>
+            </LinkComponent>
           </li>
         )
       })}
@@ -134,7 +138,11 @@ function NavLeaf({ node, activePath, LinkComponent }: LevelProps) {
         )}
         {node.label}
       </LinkComponent>
-      <NavHeadings node={node} activePath={activePath} />
+      <NavHeadings
+        node={node}
+        activePath={activePath}
+        LinkComponent={LinkComponent}
+      />
     </li>
   )
 }
@@ -224,24 +232,57 @@ function NavChildren({
   return wrapInListItem ? <li>{list}</li> : list
 }
 
+/** True when `activePath` is this node's own page or any page beneath it. */
+const isWithin = (activePath: string, node: HdvNavNode) =>
+  activePath === node.href || activePath.startsWith(node.href + "/")
+
+/**
+ * Which top-level sections are open, and how to flip one.
+ *
+ * Seeded from `activePath` ONCE, at mount, and the reader's from then on —
+ * re-deriving it on every route change would slam a section shut under someone
+ * who had just opened it to browse.
+ */
+function useExpandedSections(nodes: HdvNavNode[], activePath: string) {
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
+    () =>
+      new Set(
+        nodes.filter((node) => isWithin(activePath, node)).map((n) => n.href),
+      ),
+  )
+
+  const toggle = useCallback((href: string) => {
+    setExpanded((previous) => {
+      const next = new Set(previous)
+      // `delete` reports whether it was there, which is the whole test.
+      if (!next.delete(href)) next.add(href)
+      return next
+    })
+  }, [])
+
+  return { expanded, toggle }
+}
+
 /**
  * A top-level section: the one level that collapses.
  *
- * It opens if the reader is inside it WHEN IT MOUNTS, and is theirs from then
- * on — re-deriving the state on every route change would slam a section shut
- * under someone who had just opened it to browse.
+ * Its open state is passed in rather than held here — see `DocNavTree`.
  */
-function NavSection({ node, activePath, LinkComponent }: LevelProps) {
+function NavSection({
+  node,
+  activePath,
+  LinkComponent,
+  expanded,
+  onToggle,
+}: LevelProps & { expanded: boolean; onToggle: () => void }) {
   const selected = activePath === node.href
-  const inside = activePath.startsWith(node.href + "/")
-  const [expanded, setExpanded] = useState(selected || inside)
 
   return (
     <div className="flex flex-col gap-1">
       <div className="relative flex items-center gap-1">
         <button
           type="button"
-          onClick={() => setExpanded(!expanded)}
+          onClick={onToggle}
           aria-expanded={expanded}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${node.label}`}
           className="p-0.5 text-[var(--color-text-dim)] hover:text-[var(--color-text-secondary)] transition-colors"
@@ -280,13 +321,31 @@ export interface DocNavTreeProps {
   activePath: string
   /** The host's router link. Defaults to a plain `<a href>`. */
   LinkComponent?: DocLinkComponent
+  /**
+   * Which sections are open, by `href`. Omit it and the tree owns the state
+   * itself, which is what a single-shell host wants.
+   *
+   * `DocNav` supplies it because it renders one nav into TWO shells — a desktop
+   * column and a mobile drawer. Those are two React instances of this component,
+   * so per-instance state would let the two disagree, and the drawer's copy
+   * would be discarded every time it closed.
+   */
+  expandedSections?: ReadonlySet<string>
+  /** Called with a section's `href` when its control is used. Pass it with `expandedSections`. */
+  onToggleSection?: (href: string) => void
 }
 
 export function DocNavTree({
   nodes,
   activePath,
   LinkComponent = DefaultDocLink,
+  expandedSections,
+  onToggleSection,
 }: DocNavTreeProps) {
+  const own = useExpandedSections(nodes, activePath)
+  const expanded = expandedSections ?? own.expanded
+  const toggle = onToggleSection ?? own.toggle
+
   return (
     <>
       {nodes.map((node) => (
@@ -295,12 +354,21 @@ export function DocNavTree({
           node={node}
           activePath={activePath}
           LinkComponent={LinkComponent}
+          expanded={expanded.has(node.href)}
+          onToggle={() => toggle(node.href)}
         />
       ))}
     </>
   )
 }
 
+/**
+ * `className` and any other DOM attribute land on the DESKTOP column, which is
+ * the element a host is styling or naming when it reaches for them. They are
+ * deliberately not copied onto the drawer: that column is `hidden lg:block`, so
+ * it stays in the DOM at every width, and spreading an `id` onto both shells
+ * would put a duplicate id in the document whenever the drawer was open.
+ */
 export interface DocNavProps
   extends Omit<HTMLAttributes<HTMLElement>, "children" | "title"> {
   /** Top-level sections of the document tree. */
@@ -317,7 +385,7 @@ export interface DocNavProps
   onClose?: () => void
   /** The drawer's heading. */
   title?: ReactNode
-  /** Accessible name for both dismiss targets. */
+  /** Accessible name for the drawer's dismiss button. */
   closeLabel?: string
 }
 
@@ -333,8 +401,14 @@ export function DocNav({
   className,
   ...rest
 }: DocNavProps) {
-  // One nav, rendered into both shells. Two copies would be two things to keep
-  // in step, and the drawer is the one nobody checks.
+  // The tree's open/closed state lives HERE, above both shells, because `nav`
+  // below is one element DESCRIPTION rendered at two positions — and React makes
+  // that two component instances, not one element in two places. Held inside the
+  // tree it would be per-instance: the drawer and the desktop column would drift
+  // apart, and the drawer's copy would be destroyed by the `open &&` unmount
+  // every time the reader closed it, so mobile expansions would never survive.
+  const { expanded, toggle } = useExpandedSections(nodes, activePath)
+
   const nav = (
     <nav className={DOC_NAV_NAV_CLASS}>
       {topLinks.map((link) => (
@@ -362,6 +436,8 @@ export function DocNav({
         nodes={nodes}
         activePath={activePath}
         LinkComponent={LinkComponent}
+        expandedSections={expanded}
+        onToggleSection={toggle}
       />
     </nav>
   )
@@ -374,9 +450,13 @@ export function DocNav({
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label={closeLabel}
+          {/* A scrim, not a control. It dismisses on click for a pointer user,
+              but it is neither focusable nor announced: a full-screen <button>
+              is read out as a button covering the whole page, and — carrying
+              `closeLabel` as well — as a SECOND control with the same name as
+              the X. The X is the keyboard and screen-reader path. */}
+          <div
+            aria-hidden="true"
             className="fixed inset-0 bg-black/50"
             onClick={onClose}
           />

@@ -187,6 +187,19 @@ describe('DocNavTree — a leaf with its own headings', () => {
     expect(screen.getByRole('link', { name: 'Outcome' })).toBeTruthy()
   })
 
+  it('routes an inlined heading through the host component too', () => {
+    // A heading link that skips the router is a full document load — the reader
+    // sees a white flash and loses the tree's state, to reach a heading that was
+    // already on screen. It was a plain <a> until this was asserted.
+    const Link = ({ to, children, ...rest }: { to: string; children?: React.ReactNode }) => (
+      <a href={to} data-router="host" {...rest}>
+        {children}
+      </a>
+    )
+    render(<DocNavTree nodes={WITH_HEADINGS} activePath="/appendix" LinkComponent={Link} />)
+    expect(screen.getByRole('link', { name: 'Context' }).getAttribute('data-router')).toBe('host')
+  })
+
   it('renders no heading list for a leaf without headings', () => {
     render(<DocNavTree nodes={NODES} activePath="/principles" />)
     expect(
@@ -275,18 +288,33 @@ describe('DocNav', () => {
     expect(container.querySelectorAll('nav')).toHaveLength(2)
   })
 
-  it('dismisses from the backdrop and from the button', () => {
-    // Both are named the same thing, which is why this asserts on the count.
-    const onClose = vi.fn()
-    render(<DocNav nodes={NODES} activePath="/" open onClose={onClose} />)
+  it('offers exactly ONE announced dismiss control', () => {
+    // The scrim used to be a full-screen <button> carrying `closeLabel` too, so
+    // a screen reader met two identically-named controls and a button covering
+    // the whole page. Asserting the count is what keeps that from coming back.
+    render(<DocNav nodes={NODES} activePath="/" open onClose={vi.fn()} />)
+    expect(screen.getAllByRole('button', { name: 'Close navigation' })).toHaveLength(1)
+  })
 
-    const dismissers = screen.getAllByRole('button', { name: 'Close navigation' })
-    expect(dismissers).toHaveLength(2)
-    dismissers.forEach((button) => fireEvent.click(button))
+  it('still dismisses from the scrim, which is not in the a11y tree', () => {
+    const onClose = vi.fn()
+    const { container } = render(
+      <DocNav nodes={NODES} activePath="/" open onClose={onClose} />,
+    )
+
+    // A scrim, not a control: it dismisses for a pointer user, but it is
+    // neither focusable nor announced. The X is the keyboard/SR path.
+    const scrim = container.querySelector('div.fixed.inset-0.bg-black\\/50')!
+    expect(scrim.getAttribute('aria-hidden')).toBe('true')
+    expect(scrim.tagName).toBe('DIV')
+    expect(scrim.hasAttribute('tabindex')).toBe(false)
+
+    fireEvent.click(scrim)
+    fireEvent.click(control('Close navigation'))
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
-  it('lets the host rename the drawer and its dismiss controls', () => {
+  it('lets the host rename the drawer and its dismiss control', () => {
     render(
       <DocNav
         nodes={NODES}
@@ -297,7 +325,22 @@ describe('DocNav', () => {
       />,
     )
     expect(screen.getByText('Contents')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Dismiss' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Dismiss' })).toHaveLength(1)
+  })
+
+  it('keeps a drawer expansion after the drawer closes', () => {
+    // The tree's open/closed state is hoisted above both shells because the two
+    // shells are two component INSTANCES of one element description. Held inside
+    // the tree, the drawer's copy would die with the `open &&` unmount and every
+    // mobile expansion would be lost the moment the reader closed the drawer.
+    const { rerender } = render(<DocNav nodes={NODES} activePath="/" open />)
+
+    // Two shells ⇒ two controls with this name; either one drives both.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Expand Principles' })[0]!)
+    expect(screen.getAllByRole('link', { name: 'Overview' })).toHaveLength(2)
+
+    rerender(<DocNav nodes={NODES} activePath="/" />)
+    expect(screen.getByRole('link', { name: 'Overview' })).toBeTruthy()
   })
 
   it('merges a host className onto the desktop column and spreads its attributes', () => {

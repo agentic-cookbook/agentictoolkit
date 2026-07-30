@@ -42,6 +42,65 @@ describe('useScrollSpy', () => {
     expect(getByTestId('active').textContent).toBe('b')
   })
 
+  it('reads the topmost visible heading, not the last one reported', () => {
+    // A tall viewport holds several headings at once, and the entries inside one
+    // callback are in no guaranteed order. Taking whichever arrived last would
+    // put the marker on an arbitrary one of them.
+    withTargets(['a', 'b', 'c'])
+    const { getByTestId } = render(<Probe ids={['a', 'b', 'c']} />)
+
+    act(() =>
+      FakeIntersectionObserver.current.report([
+        { id: 'c', isIntersecting: true },
+        { id: 'a', isIntersecting: true },
+        { id: 'b', isIntersecting: true },
+      ]),
+    )
+    expect(getByTestId('active').textContent).toBe('a')
+  })
+
+  it('remembers headings still visible from an earlier callback', () => {
+    // The observer reports only CHANGES, so when `b` enters, `a` — visible since
+    // the last scroll — is simply absent from the batch. Scanning the batch alone
+    // would move the marker down to `b` while the reader is still under `a`.
+    withTargets(['a', 'b'])
+    const { getByTestId } = render(<Probe ids={['a', 'b']} />)
+
+    act(() => FakeIntersectionObserver.current.enter('a'))
+    act(() => FakeIntersectionObserver.current.enter('b'))
+    expect(getByTestId('active').textContent).toBe('a')
+
+    // ...and once `a` scrolls out, `b` is the reader's position.
+    act(() => FakeIntersectionObserver.current.leave('a'))
+    expect(getByTestId('active').textContent).toBe('b')
+  })
+
+  it('holds the last position when the band is empty', () => {
+    // Deep inside a long section no heading is in the band. Clearing the marker
+    // there would blank the rail exactly where the reader most needs it.
+    withTargets(['a', 'b'])
+    const { getByTestId } = render(<Probe ids={['a', 'b']} />)
+
+    act(() => FakeIntersectionObserver.current.enter('b'))
+    act(() => FakeIntersectionObserver.current.leave('b'))
+    expect(getByTestId('active').textContent).toBe('b')
+  })
+
+  it('takes document order from the ids, not from the DOM', () => {
+    // The hook never reads the document to sort them — `ids` IS the order, which
+    // is the contract the ToC's own filtered list satisfies.
+    withTargets(['b', 'a'])
+    const { getByTestId } = render(<Probe ids={['a', 'b']} />)
+
+    act(() =>
+      FakeIntersectionObserver.current.report([
+        { id: 'b', isIntersecting: true },
+        { id: 'a', isIntersecting: true },
+      ]),
+    )
+    expect(getByTestId('active').textContent).toBe('a')
+  })
+
   it('observes only ids that resolve to a real element', () => {
     withTargets(['a'])
     render(<Probe ids={['a', 'ghost']} />)

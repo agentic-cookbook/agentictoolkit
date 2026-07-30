@@ -61,7 +61,12 @@ export function ViewSourceDisclosure({
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        aria-controls={panelId}
+        // Only while the panel exists. `aria-controls` is an IDREF, and one
+        // pointing at nothing is an authoring error (axe: aria-valid-attr-value),
+        // not a harmless no-op. The alternative — rendering the `<pre>` always and
+        // hiding it — would put every document's full source into every prerendered
+        // page; `aria-expanded` alone already announces the state.
+        aria-controls={open ? panelId : undefined}
         className={VIEW_SOURCE_TRIGGER_CLASS}
       >
         <ChevronRight

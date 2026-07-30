@@ -66,6 +66,21 @@ describe('ViewSourceDisclosure', () => {
     expect(panel(container)!.id).not.toBe('')
   })
 
+  it('claims to control the panel only while the panel exists', () => {
+    // `aria-controls` is an IDREF. While collapsed the <pre> is not rendered, so
+    // pointing at its id would be a dangling reference — an authoring error
+    // (axe: aria-valid-attr-value), not a harmless no-op. `aria-expanded` is
+    // what announces the collapsed state.
+    render(<ViewSourceDisclosure source={SOURCE} />)
+    expect(trigger().hasAttribute('aria-controls')).toBe(false)
+
+    fireEvent.click(trigger())
+    expect(trigger().hasAttribute('aria-controls')).toBe(true)
+
+    fireEvent.click(trigger())
+    expect(trigger().hasAttribute('aria-controls')).toBe(false)
+  })
+
   it('rotates the chevron only while open', () => {
     const { container } = render(<ViewSourceDisclosure source={SOURCE} />)
     const chevron = () => container.querySelector('svg')!
