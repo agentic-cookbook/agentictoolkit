@@ -37,9 +37,25 @@ export const DOC_NAV_ASIDE_CLASS =
 export const DOC_NAV_NAV_CLASS =
   "flex flex-col gap-6 px-6 py-6 overflow-y-auto h-full"
 
-/** The mobile slide-over panel. */
+/** The slide-over's viewport: everything below the 3.5rem header, and nothing
+ *  above it. It used to be `fixed inset-0 z-50`, which is the same z-index the
+ *  shared header carries — so with equal specificity the header's own stacking
+ *  lost to DOM order and the drawer painted straight over it, burying the very
+ *  control you had just pressed. Starting at `top-14` instead of restacking is
+ *  what makes that unrepresentable rather than merely fixed: the two boxes no
+ *  longer overlap, so no future z-index change can put them back in contention.
+ *  `z-40` then keeps the header above the scrim by declaration, not by luck.
+ *  The 3.5rem matches DOC_NAV_ASIDE_CLASS's `top-14` — one header height. */
+export const DOC_NAV_OVERLAY_CLASS =
+  "fixed top-14 right-0 bottom-0 left-0 z-40"
+
+/** The scrim. `absolute`, so it fills the overlay above rather than the
+ *  viewport — a `fixed inset-0` here would reach back up over the header. */
+export const DOC_NAV_SCRIM_CLASS = "absolute inset-0 bg-black/50"
+
+/** The slide-over panel itself, filling the overlay's height. */
 export const DOC_NAV_DRAWER_CLASS =
-  "fixed inset-y-0 left-0 w-72 bg-[var(--color-surface)] shadow-xl overflow-y-auto"
+  "absolute inset-y-0 left-0 w-72 bg-[var(--color-surface)] shadow-xl overflow-y-auto"
 
 /** A section's label: mono, uppercase, accented — the tree's loudest type. */
 export const DOC_NAV_SECTION_LABEL_CLASS =
@@ -449,7 +465,7 @@ export function DocNav({
       </aside>
 
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className={DOC_NAV_OVERLAY_CLASS}>
           {/* A scrim, not a control. It dismisses on click for a pointer user,
               but it is neither focusable nor announced: a full-screen <button>
               is read out as a button covering the whole page, and — carrying
@@ -457,7 +473,7 @@ export function DocNav({
               the X. The X is the keyboard and screen-reader path. */}
           <div
             aria-hidden="true"
-            className="fixed inset-0 bg-black/50"
+            className={DOC_NAV_SCRIM_CLASS}
             onClick={onClose}
           />
           <aside className={DOC_NAV_DRAWER_CLASS}>

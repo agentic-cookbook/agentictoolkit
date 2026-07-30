@@ -11,6 +11,8 @@ import {
   DOC_NAV_BRANCH_LIST_CLASS,
   DOC_NAV_DRAWER_CLASS,
   DOC_NAV_NAV_CLASS,
+  DOC_NAV_OVERLAY_CLASS,
+  DOC_NAV_SCRIM_CLASS,
   DOC_NAV_SECTION_LIST_CLASS,
 } from '../blocks/doc-nav'
 import type { HdvNavNode } from '../blocks/doc-types'
@@ -288,6 +290,43 @@ describe('DocNav', () => {
     expect(container.querySelectorAll('nav')).toHaveLength(2)
   })
 
+  it('opens the drawer BELOW the header, never over or under it', () => {
+    // The overlay used to be `fixed inset-0 z-50` — the same z-index the shared
+    // header carries, so DOM order decided which won and the drawer painted over
+    // the header, burying the toggle that had just been pressed. The fix is
+    // geometric, not a restack: the overlay starts one header-height down, so the
+    // two boxes cannot overlap however their z-indexes drift. Asserting all three
+    // legs, because losing any one silently restores the collision.
+    const { container } = render(<DocNav nodes={NODES} activePath="/" open />)
+    const overlay = container.querySelector(`div.${CSS.escape('top-14')}`)!
+
+    expect(overlay.className).toBe(DOC_NAV_OVERLAY_CLASS)
+    // Below the header, and never reaching back up over it.
+    expect(overlay.className).toContain('top-14')
+    expect(overlay.className).not.toContain('inset-0')
+    // Under the header in the stack too, so the header stays clickable.
+    expect(overlay.className).toContain('z-40')
+    // Both children position against the overlay, not the viewport — a `fixed`
+    // scrim or panel here would climb back over the header on its own.
+    expect(DOC_NAV_SCRIM_CLASS.startsWith('absolute ')).toBe(true)
+    expect(DOC_NAV_DRAWER_CLASS.startsWith('absolute ')).toBe(true)
+  })
+
+  it('gates the drawer on `open` alone — no responsive gate anywhere', () => {
+    // The overlay was `lg:hidden` while the host's toggle was `lg:hidden` too, so
+    // the pair only agreed by coincidence. A host that shows the button at every
+    // width (cookbook now does) got a control that did nothing above 1024px, with
+    // no failing test anywhere to say so. `open` is the only gate there is.
+    const { container } = render(<DocNav nodes={NODES} activePath="/" open />)
+    const overlay = container.querySelector(`div.${CSS.escape('top-14')}`)!
+
+    for (const cls of overlay.className.split(' ')) {
+      expect(cls).not.toMatch(/^(sm|md|lg|xl|2xl):/)
+    }
+    expect(DOC_NAV_SCRIM_CLASS).not.toMatch(/\b(sm|md|lg|xl|2xl):/)
+    expect(DOC_NAV_DRAWER_CLASS).not.toMatch(/\b(sm|md|lg|xl|2xl):/)
+  })
+
   it('offers exactly ONE announced dismiss control', () => {
     // The scrim used to be a full-screen <button> carrying `closeLabel` too, so
     // a screen reader met two identically-named controls and a button covering
@@ -304,7 +343,9 @@ describe('DocNav', () => {
 
     // A scrim, not a control: it dismisses for a pointer user, but it is
     // neither focusable nor announced. The X is the keyboard/SR path.
-    const scrim = container.querySelector('div.fixed.inset-0.bg-black\\/50')!
+    const scrim = container.querySelector(
+      `div.${DOC_NAV_SCRIM_CLASS.split(' ').join('.').replace('/', '\\/')}`,
+    )!
     expect(scrim.getAttribute('aria-hidden')).toBe('true')
     expect(scrim.tagName).toBe('DIV')
     expect(scrim.hasAttribute('tabindex')).toBe(false)
