@@ -23,14 +23,18 @@
 html:root {
   color-scheme: dark;
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --color-surface: #14141a;
   --color-surface-raised: #1c1c24;
   --color-surface-hover: #25252e;
   --color-border: #2a2a36;
   --color-border-subtle: #1e1e28;
   --color-text-primary: #e8e6e3;
-  --color-text-secondary: #8a8a9a;
+  --color-text-secondary: #8b8b9b; /* nudged for AA; was #8a8a9a */
   --color-text-dim: #5a5a6a;
   --color-accent: #c4a35a;
   --color-accent-dim: rgba(196, 163, 90, 0.08);
@@ -69,7 +73,7 @@ html:root {
   --color-inverse-primary: #ccb27a;
   --color-primary-bright: #ccb27a;
   --color-primary-dim: rgba(196, 163, 90, 0.08);
-  --color-secondary: #8a8a9a;
+  --color-secondary: #8b8b9b;
   --color-on-secondary: #14141a;
   --color-secondary-container: #1c1c24;
   --color-on-secondary-container: #e8e6e3;
@@ -88,7 +92,7 @@ html:root {
   --color-surface-container-high: #25252e;
   --color-surface-container-highest: #292934;
   --color-on-surface: #e8e6e3;
-  --color-on-surface-variant: #8a8a9a;
+  --color-on-surface-variant: #8b8b9b;
   --color-outline: #2a2a36;
   --color-outline-variant: #1e1e28;
   --color-outline-strong: #6a6971;
@@ -112,6 +116,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -119,7 +124,11 @@ html:root {
 html:root[data-color-mode]:not(.dark) {
   color-scheme: light;
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --color-surface: #fafafa;
   --color-surface-raised: #f0f0f4;
   --color-surface-hover: #e6e6ec;
@@ -130,7 +139,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-text-dim: #8a8a9c;
   --color-accent: #8a6d20;
   --color-accent-dim: rgba(138, 109, 32, 0.08);
-  --color-success: #2d8b45;
+  --color-success: #308e48; /* nudged for AA; was #2d8b45 */
   --color-error: #b03939;
   --color-info: #3565a8;
   --pc-persona-bg: rgba(138, 109, 32, 0.06);
@@ -177,7 +186,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-error-container: #f1d8d5;
   --color-on-error-container: #332229;
   --color-surface-dim: #fafafa;
-  --color-surface-bright: #d4d4dc;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #fafafa;
   --color-surface-container-low: #f5f5f7;
   --color-surface-container: #f0f0f4;
@@ -192,13 +201,13 @@ html:root[data-color-mode]:not(.dark) {
   --color-inverse-on-surface: #fafafa;
   --color-scrim: #000000;
   --color-shadow: #000000;
-  --color-on-success: #fafafa;
-  --color-success-container: #d7e6d8;
-  --color-on-success-container: #202d2b;
-  --color-warning: #806e3f;
+  --color-on-success: #141210;
+  --color-success-container: #d7e7d9;
+  --color-on-success-container: #212d2c;
+  --color-warning: #816f41;
   --color-on-warning: #fafafa;
   --color-warning-container: #e3e0d7;
-  --color-on-warning-container: #2a282a;
+  --color-on-warning-container: #2a282b;
   --color-on-info: #fafafa;
   --color-info-container: #d5dfec;
   --color-on-info-container: #202739;
@@ -208,6 +217,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

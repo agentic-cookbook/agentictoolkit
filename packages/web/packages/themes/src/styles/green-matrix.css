@@ -24,7 +24,11 @@ html:root {
   color-scheme: dark;
   /* Dark-only aesthetic: the light block below repeats this palette. */
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --gm-green: #00ff41;
   --gm-green-bright: #aaffaa;
   --gm-green-soft: rgba(0, 255, 65, 0.5);
@@ -35,7 +39,7 @@ html:root {
   --color-border: var(--gm-border);
   --color-border-subtle: rgba(0, 255, 65, 0.18);
   --color-text-primary: var(--gm-green);
-  --color-text-secondary: var(--gm-green-soft);
+  --color-text-secondary: rgba(0, 255, 65, 0.56); /* nudged for AA; was var(--gm-green-soft) */
   --color-text-dim: rgba(0, 255, 65, 0.4);
   --color-accent: var(--gm-green);
   --color-accent-dim: rgba(0, 255, 65, 0.08);
@@ -68,7 +72,7 @@ html:root {
   --color-inverse-primary: #00ff41;
   --color-primary-bright: #00ff41;
   --color-primary-dim: rgba(0, 255, 65, 0.08);
-  --color-secondary: rgba(0, 255, 65, 0.5);
+  --color-secondary: #008f24;
   --color-on-secondary: #000000;
   --color-secondary-container: #050805;
   --color-on-secondary-container: #00ff41;
@@ -87,7 +91,7 @@ html:root {
   --color-surface-container-high: #0a0f0a;
   --color-surface-container-highest: #0a4715;
   --color-on-surface: #00ff41;
-  --color-on-surface-variant: rgba(0, 255, 65, 0.5);
+  --color-on-surface-variant: rgba(0, 255, 65, 0.56);
   --color-outline: rgba(0, 255, 65, 0.35);
   --color-outline-variant: rgba(0, 255, 65, 0.18);
   --color-outline-strong: #009326;
@@ -111,6 +115,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -119,7 +124,11 @@ html:root[data-color-mode]:not(.dark) {
   color-scheme: dark;
   /* Repeats the dark palette (see above). */
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --gm-green: #00ff41;
   --gm-green-bright: #aaffaa;
   --gm-green-soft: rgba(0, 255, 65, 0.5);
@@ -130,7 +139,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-border: var(--gm-border);
   --color-border-subtle: rgba(0, 255, 65, 0.18);
   --color-text-primary: var(--gm-green);
-  --color-text-secondary: var(--gm-green-soft);
+  --color-text-secondary: rgba(0, 255, 65, 0.56); /* nudged for AA; was var(--gm-green-soft) */
   --color-text-dim: rgba(0, 255, 65, 0.4);
   --color-accent: var(--gm-green);
   --color-accent-dim: rgba(0, 255, 65, 0.08);
@@ -163,7 +172,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-inverse-primary: #00ff41;
   --color-primary-bright: #00ff41;
   --color-primary-dim: rgba(0, 255, 65, 0.08);
-  --color-secondary: rgba(0, 255, 65, 0.5);
+  --color-secondary: #008f24;
   --color-on-secondary: #000000;
   --color-secondary-container: #050805;
   --color-on-secondary-container: #00ff41;
@@ -182,7 +191,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-surface-container-high: #0a0f0a;
   --color-surface-container-highest: #0a4715;
   --color-on-surface: #00ff41;
-  --color-on-surface-variant: rgba(0, 255, 65, 0.5);
+  --color-on-surface-variant: rgba(0, 255, 65, 0.56);
   --color-outline: rgba(0, 255, 65, 0.35);
   --color-outline-variant: rgba(0, 255, 65, 0.18);
   --color-outline-strong: #009326;
@@ -206,6 +215,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

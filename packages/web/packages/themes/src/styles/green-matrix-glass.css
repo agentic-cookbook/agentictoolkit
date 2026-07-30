@@ -3,9 +3,12 @@
  * (border + glow + 2px radius) and "// " persona prefix as green-matrix; the
  * only real change is opacity. Single mode (always dark). JetBrains Mono.
  *
- * Translucency requires --color-surface: transparent — otherwise ThemeStyle's
- * scope wrapper paints opaque black behind the chat and blocks the rain (this
- * is the same trick old-school-terminal uses).
+ * The chat dock's copy of this theme sets --color-surface: transparent, so
+ * olylo's matrix rain shows through the chat panel behind it. This SITE copy
+ * cannot: here --color-surface is the PAGE background (`body { background-color:
+ * var(--color-surface) }` below), and transparent there means the browser's
+ * white shows through under #00ff41 text. The translucency this theme is named
+ * for lives in --pc-surface, which is still an rgba() over the black page.
  */
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -29,18 +32,22 @@ html:root {
   color-scheme: dark;
   /* Dark-only aesthetic: the light block below repeats this palette. */
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --gmg-green: #00ff41;
   --gmg-green-bright: #aaffaa;
   --gmg-green-soft: rgba(0, 255, 65, 0.5);
   --gmg-border: rgba(0, 255, 65, 0.35);
-  --color-surface: transparent;
+  --color-surface: #000000;
   --color-surface-raised: #050805;
   --color-surface-hover: #0a0f0a;
   --color-border: var(--gmg-border);
   --color-border-subtle: rgba(0, 255, 65, 0.18);
   --color-text-primary: var(--gmg-green);
-  --color-text-secondary: var(--gmg-green-soft);
+  --color-text-secondary: rgba(0, 255, 65, 0.56); /* nudged for AA; was var(--gmg-green-soft) */
   --color-text-dim: rgba(0, 255, 65, 0.4);
   --color-accent: var(--gmg-green);
   --color-accent-dim: rgba(0, 255, 65, 0.08);
@@ -67,48 +74,48 @@ html:root {
   /* --- M3 colour roles, derived from the palette above by
      scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
   --color-primary: #00ff41;
-  --color-on-primary: #050805;
-  --color-primary-container: #102c11;
+  --color-on-primary: #000000;
+  --color-primary-container: #001201;
   --color-on-primary-container: #00ff41;
   --color-inverse-primary: #00ff41;
   --color-primary-bright: #00ff41;
   --color-primary-dim: rgba(0, 255, 65, 0.08);
-  --color-secondary: rgba(0, 255, 65, 0.5);
-  --color-on-secondary: #050805;
+  --color-secondary: #008f24;
+  --color-on-secondary: #000000;
   --color-secondary-container: #050805;
   --color-on-secondary-container: #00ff41;
   --color-tertiary: #aaffaa;
-  --color-on-tertiary: #050805;
-  --color-tertiary-container: #1c2b1c;
+  --color-on-tertiary: #000000;
+  --color-tertiary-container: #081208;
   --color-on-tertiary-container: #47ff5b;
-  --color-on-error: #050805;
-  --color-error-container: #2a1711;
+  --color-on-error: #000000;
+  --color-error-container: #120202;
   --color-on-error-container: #85e648;
-  --color-surface-dim: #050805;
-  --color-surface-bright: #035e1a;
-  --color-surface-container-lowest: #050805;
-  --color-surface-container-low: #050805;
+  --color-surface-dim: #000000;
+  --color-surface-bright: #005917;
+  --color-surface-container-lowest: #000000;
+  --color-surface-container-low: #010101;
   --color-surface-container: #050805;
   --color-surface-container-high: #0a0f0a;
-  --color-surface-container-highest: #0d4b18;
+  --color-surface-container-highest: #0a4715;
   --color-on-surface: #00ff41;
-  --color-on-surface-variant: rgba(0, 255, 65, 0.5);
+  --color-on-surface-variant: rgba(0, 255, 65, 0.56);
   --color-outline: rgba(0, 255, 65, 0.35);
   --color-outline-variant: rgba(0, 255, 65, 0.18);
-  --color-outline-strong: #049628;
+  --color-outline-strong: #009326;
   --color-inverse-surface: #00ff41;
-  --color-inverse-on-surface: #050805;
+  --color-inverse-on-surface: #000000;
   --color-scrim: #000000;
   --color-shadow: #000000;
-  --color-on-success: #050805;
-  --color-success-container: #102c11;
+  --color-on-success: #000000;
+  --color-success-container: #001201;
   --color-on-success-container: #00ff41;
   --color-warning: #c4bd4f;
-  --color-on-warning: #050805;
-  --color-warning-container: #202311;
+  --color-on-warning: #000000;
+  --color-warning-container: #0b0a02;
   --color-on-warning-container: #5ef444;
-  --color-on-info: #050805;
-  --color-info-container: #1c2b1c;
+  --color-on-info: #000000;
+  --color-info-container: #081208;
   --color-on-info-container: #47ff5b;
 
   /* --- Compat aliases: one authoritative value per colour. --- */
@@ -116,6 +123,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -124,18 +132,22 @@ html:root[data-color-mode]:not(.dark) {
   color-scheme: dark;
   /* Repeats the dark palette (see above). */
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --gmg-green: #00ff41;
   --gmg-green-bright: #aaffaa;
   --gmg-green-soft: rgba(0, 255, 65, 0.5);
   --gmg-border: rgba(0, 255, 65, 0.35);
-  --color-surface: transparent;
+  --color-surface: #000000;
   --color-surface-raised: #050805;
   --color-surface-hover: #0a0f0a;
   --color-border: var(--gmg-border);
   --color-border-subtle: rgba(0, 255, 65, 0.18);
   --color-text-primary: var(--gmg-green);
-  --color-text-secondary: var(--gmg-green-soft);
+  --color-text-secondary: rgba(0, 255, 65, 0.56); /* nudged for AA; was var(--gmg-green-soft) */
   --color-text-dim: rgba(0, 255, 65, 0.4);
   --color-accent: var(--gmg-green);
   --color-accent-dim: rgba(0, 255, 65, 0.08);
@@ -162,48 +174,48 @@ html:root[data-color-mode]:not(.dark) {
   /* --- M3 colour roles, derived from the palette above by
      scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
   --color-primary: #00ff41;
-  --color-on-primary: #050805;
-  --color-primary-container: #102c11;
+  --color-on-primary: #000000;
+  --color-primary-container: #001201;
   --color-on-primary-container: #00ff41;
   --color-inverse-primary: #00ff41;
   --color-primary-bright: #00ff41;
   --color-primary-dim: rgba(0, 255, 65, 0.08);
-  --color-secondary: rgba(0, 255, 65, 0.5);
-  --color-on-secondary: #050805;
+  --color-secondary: #008f24;
+  --color-on-secondary: #000000;
   --color-secondary-container: #050805;
   --color-on-secondary-container: #00ff41;
   --color-tertiary: #aaffaa;
-  --color-on-tertiary: #050805;
-  --color-tertiary-container: #1c2b1c;
+  --color-on-tertiary: #000000;
+  --color-tertiary-container: #081208;
   --color-on-tertiary-container: #47ff5b;
-  --color-on-error: #050805;
-  --color-error-container: #2a1711;
+  --color-on-error: #000000;
+  --color-error-container: #120202;
   --color-on-error-container: #85e648;
-  --color-surface-dim: #050805;
-  --color-surface-bright: #035e1a;
-  --color-surface-container-lowest: #050805;
-  --color-surface-container-low: #050805;
+  --color-surface-dim: #000000;
+  --color-surface-bright: #005917;
+  --color-surface-container-lowest: #000000;
+  --color-surface-container-low: #010101;
   --color-surface-container: #050805;
   --color-surface-container-high: #0a0f0a;
-  --color-surface-container-highest: #0d4b18;
+  --color-surface-container-highest: #0a4715;
   --color-on-surface: #00ff41;
-  --color-on-surface-variant: rgba(0, 255, 65, 0.5);
+  --color-on-surface-variant: rgba(0, 255, 65, 0.56);
   --color-outline: rgba(0, 255, 65, 0.35);
   --color-outline-variant: rgba(0, 255, 65, 0.18);
-  --color-outline-strong: #049628;
+  --color-outline-strong: #009326;
   --color-inverse-surface: #00ff41;
-  --color-inverse-on-surface: #050805;
+  --color-inverse-on-surface: #000000;
   --color-scrim: #000000;
   --color-shadow: #000000;
-  --color-on-success: #050805;
-  --color-success-container: #102c11;
+  --color-on-success: #000000;
+  --color-success-container: #001201;
   --color-on-success-container: #00ff41;
   --color-warning: #c4bd4f;
-  --color-on-warning: #050805;
-  --color-warning-container: #202311;
+  --color-on-warning: #000000;
+  --color-warning-container: #0b0a02;
   --color-on-warning-container: #5ef444;
-  --color-on-info: #050805;
-  --color-info-container: #1c2b1c;
+  --color-on-info: #000000;
+  --color-info-container: #081208;
   --color-on-info-container: #47ff5b;
 
   /* --- Compat aliases: one authoritative value per colour. --- */
@@ -211,6 +223,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

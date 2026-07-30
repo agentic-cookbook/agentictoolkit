@@ -111,6 +111,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -118,14 +119,18 @@ html:root {
 html:root[data-color-mode]:not(.dark) {
   color-scheme: light;
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --color-surface: #ffffff;
   --color-surface-raised: #f6f8fa;
   --color-surface-hover: #eaeef2;
   --color-border: #d0d7de;
   --color-border-subtle: #d8dee4;
   --color-text-primary: #1f2328;
-  --color-text-secondary: #656d76;
+  --color-text-secondary: #646c75; /* nudged for AA; was #656d76 */
   --color-text-dim: #8c959f;
   --color-accent: #1a7f37;
   --color-accent-dim: rgba(26, 127, 55, 0.10);
@@ -163,7 +168,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-inverse-primary: #226a36;
   --color-primary-bright: #226a36;
   --color-primary-dim: rgba(26, 127, 55, 0.10);
-  --color-secondary: #656d76;
+  --color-secondary: #646c75;
   --color-on-secondary: #ffffff;
   --color-secondary-container: #f6f8fa;
   --color-on-secondary-container: #1f2328;
@@ -175,14 +180,14 @@ html:root[data-color-mode]:not(.dark) {
   --color-error-container: #fcdbd8;
   --color-on-error-container: #3e292b;
   --color-surface-dim: #ffffff;
-  --color-surface-bright: #d0d7de;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #ffffff;
   --color-surface-container-low: #fafbfc;
   --color-surface-container: #f6f8fa;
   --color-surface-container-high: #eaeef2;
   --color-surface-container-highest: #d6dce3;
   --color-on-surface: #1f2328;
-  --color-on-surface-variant: #656d76;
+  --color-on-surface-variant: #646c75;
   --color-outline: #d0d7de;
   --color-outline-variant: #d8dee4;
   --color-outline-strong: #898f95;
@@ -206,6 +211,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

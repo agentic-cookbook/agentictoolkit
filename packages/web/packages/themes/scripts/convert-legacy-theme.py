@@ -45,10 +45,15 @@ follows the other containers instead of the fit's success-tinted anchor, and the
 three-plain, because one rule is one piece of knowledge and both sit inside the same error
 band.
 
-AUTHORED VALUES ALWAYS WIN. The recipe only fills what the theme never declared, so a
-theme's own palette, chat (`--pc-*`) and font tokens survive verbatim and stay hand-editable
-afterwards. This is a ONE-SHOT conversion, not a build step — the rewritten CSS is the
-source of truth from here on, and the script refuses a file it has already converted.
+AUTHORED VALUES WIN, EXCEPT WHERE THEY CANNOT DO THE JOB. The recipe only fills what the
+theme never declared, so a theme's own palette, chat (`--pc-*`) and font tokens survive
+verbatim and stay hand-editable afterwards. The one exception is legibility: M3 puts a few
+of those tokens to work in a job a ~13-token palette was never checked for — an accent
+becomes a FILL that has to carry a label — and a value that cannot do that job makes the
+theme fail WCAG AA the moment it becomes pickable. `DUTIES` names those tokens and nudges
+them along their own lightness ramp by the smallest step that works, marking each in the
+output. This is a ONE-SHOT conversion, not a build step — the rewritten CSS is the source of
+truth from here on, and the script refuses a file it has already converted.
 
 Usage:
     python3 scripts/convert-legacy-theme.py src/styles/terminal.css [...]
@@ -86,8 +91,15 @@ def parse_rgba(value: str) -> Rgba | None:
         parts = [p for p in re.split(r"[,\s/]+", m.group(1).strip()) if p]
         if len(parts) not in (3, 4):
             return None
+        # A percentage means a fraction of the channel's FULL RANGE, and the ranges differ:
+        # a colour channel runs 0..255, alpha runs 0..1. So `50%` is 127.5 in r/g/b and 0.5
+        # in alpha — dividing both by 100 and then the colours by 255 turns rgb(50% 40% 30%)
+        # into near-black instead of #806b4d.
         try:
-            n = [float(p[:-1]) / 100 if p.endswith("%") else float(p) for p in parts]
+            n = [
+                (float(p[:-1]) / 100 * (1 if i == 3 else 255)) if p.endswith("%") else float(p)
+                for i, p in enumerate(parts)
+            ]
         except ValueError:
             return None
         a = n[3] if len(parts) == 4 else 1.0
@@ -164,9 +176,31 @@ def mix(a: Rgb, b: Rgb, t: float) -> str:
     return to_hex(from_oklab(tuple(x + t * (y - x) for x, y in zip(la, lb))))  # type: ignore[arg-type]
 
 
+def luminance(rgb: Rgb) -> float:
+    """WCAG relative luminance. OKLab's L is the perceptual lightness and is what the mixes
+    ramp on; WCAG contrast is defined on THIS one, so legibility decisions use it."""
+    r, g, b = (_srgb_to_linear(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a: Rgb, b: Rgb) -> float:
+    """WCAG 2.x contrast ratio, 1..21."""
+    la, lb = luminance(a), luminance(b)
+    hi, lo = (la, lb) if la >= lb else (lb, la)
+    return (hi + 0.05) / (lo + 0.05)
+
+
 # ---------------------------------------------------------------------------- recipe
 
-# The palette a legacy theme authors, and the only input the recipe may read.
+# The palette a legacy theme authors, and the only input the recipe may read. Every one of
+# these is REQUIRED: `derive` warns for each that is missing, because a role anchored on an
+# absent token is silently dropped from the output and the theme then falls back to the adh
+# base for it — a half-reskin, which is the exact failure this script exists to prevent.
+# Four of them (`error`, `success`, `info`, `text-dim`) are ALSO M3 role names, so they need
+# no recipe entry: the theme's own value IS the role, and `render_block` emits authored
+# values first. Listing them here is what covers them; a `("=", itself)` recipe line could
+# never emit anything (it resolves to the authored value, which is already written) and only
+# looked like coverage.
 CORE = (
     "--color-surface",
     "--color-surface-raised",
@@ -191,15 +225,29 @@ CORE = (
 # so the float-over-rain effect survives while menus and text stay solid.
 BG = "@bg"
 
+# WCAG AA for normal text — the bar scripts/contrast-check.mjs holds every on-<X>/<X> pair to.
+TEXT_CONTRAST = 4.5
+
+# The whole vocabulary the 14 reference themes use for an on-* role: the page background, or
+# one of these two inks. Across all 28 of their token blocks no other value appears — notably
+# NOT `--color-on-surface`, which is a soft grey chosen to sit on the page, not on a fill.
+INKS = ("#ffffff", "#141210")
+
 # role -> ("=", anchor) to take an anchor verbatim, ("over", anchor) to composite it onto
-# @bg (for roles that must be solid), ("mix", a, b, t) to interpolate, or ("lit", value).
-# Order is adh.css's own role order, so a converted file diffs cleanly against the
-# reference themes.
+# @bg (for roles that must be solid), ("mix", a, b, t) to interpolate, ("on", fill) for a
+# foreground that has to be legible on `fill`, ("bright", anchor) for the top of the surface
+# ramp, or ("lit", value). Order is adh.css's own role order, so a converted file diffs
+# cleanly against the reference themes.
 RECIPE: dict[str, tuple] = {
     "--color-primary": ("=", "--color-accent"),
-    # Every M3 "on-<X>" foreground is the background colour: unanimous across the reference
-    # themes, and what adh.css itself does (on-primary IS its surface).
-    "--color-on-primary": ("=", BG),
+    # An "on-<X>" is the LABEL drawn on an X-coloured fill, so it is chosen for legibility
+    # on X, not copied from the page background. It still comes from the theme's own two
+    # extremes — the background and the primary text colour — so nothing is invented; `on`
+    # just picks whichever of them reads on the fill. On a dark palette that is the
+    # background every time (which is why "always the background" fitted the reference
+    # themes at all), but a light palette with a mid-tone accent needs the dark one: taking
+    # the background there put white-on-#6db26b at 2.39:1.
+    "--color-on-primary": ("on", "--color-primary"),
     "--color-primary-container": ("mix", BG, "--color-accent", 0.18),
     "--color-on-primary-container": ("mix", "--color-text-primary", "--color-accent", 0.18),
     "--color-inverse-primary": ("mix", "--color-text-primary", "--color-accent", 0.78),
@@ -207,19 +255,22 @@ RECIPE: dict[str, tuple] = {
     # Pass-through, not a mix: accent-dim is already the palette's translucent accent
     # (an rgba()), and the point of primary-dim is exactly that value.
     "--color-primary-dim": ("=", "--color-accent-dim"),
-    "--color-secondary": ("=", "--color-text-secondary"),
-    "--color-on-secondary": ("=", BG),
+    # Solid, unlike on-surface-variant: secondary is a FILL (chips, badges, quiet buttons),
+    # and several legacy palettes give text-secondary an alpha. As a fill that turns the
+    # role see-through and its own on-secondary unreadable, so it is composited down to the
+    # colour the eye already sees it as.
+    "--color-secondary": ("over", "--color-text-secondary"),
+    "--color-on-secondary": ("on", "--color-secondary"),
     "--color-secondary-container": ("over", "--color-surface-raised"),
     "--color-on-secondary-container": ("=", "--color-text-primary"),
     # No legacy palette has a third accent hue, so tertiary rides the informational blue —
     # the loosest fit in the set (worst case 0.33 OKLab on cobalt2, whose tertiary is its
     # own hue), and the only non-inventing choice available.
     "--color-tertiary": ("=", "--color-info"),
-    "--color-on-tertiary": ("=", BG),
+    "--color-on-tertiary": ("on", "--color-tertiary"),
     "--color-tertiary-container": ("mix", BG, "--color-info", 0.18),
     "--color-on-tertiary-container": ("mix", "--color-text-primary", "--color-info", 0.18),
-    "--color-error": ("=", "--color-error"),
-    "--color-on-error": ("=", BG),
+    "--color-on-error": ("on", "--color-error"),
     "--color-error-container": ("mix", BG, "--color-error", 0.18),
     "--color-on-error-container": ("mix", "--color-text-primary", "--color-error", 0.18),
     "--color-surface": ("=", BG),
@@ -228,7 +279,13 @@ RECIPE: dict[str, tuple] = {
     # onto surface too (t=0 in 19-20 of 28 samples), so they collapse here rather than
     # inventing a shade. Cards keep their edge from outline, not from these.
     "--color-surface-dim": ("=", BG),
-    "--color-surface-bright": ("over", "--color-border"),
+    # The TOP of the surface ramp, so it may never land darker than surface. Lifting the
+    # background by the border tint does that on a dark palette, where the border is the
+    # lighter colour; on a LIGHT palette the border is the darker one and that same rule
+    # inverts the ramp (measured: 0.66 against a 1.00 surface across all ten converted light
+    # palettes). A light palette holds nothing above its near-white surface, so bright is
+    # white — which is where the reference light themes put it too.
+    "--color-surface-bright": ("bright", "--color-border"),
     "--color-surface-container-lowest": ("=", BG),
     "--color-surface-container-low": ("mix", BG, "--color-surface-raised", 0.51),
     "--color-surface-container": ("over", "--color-surface-raised"),
@@ -236,31 +293,28 @@ RECIPE: dict[str, tuple] = {
     "--color-surface-container-highest": ("mix", "--color-surface-hover", "--color-border", 0.77),
     "--color-on-surface": ("=", "--color-text-primary"),
     "--color-on-surface-variant": ("=", "--color-text-secondary"),
-    "--color-text-dim": ("=", "--color-text-dim"),
     "--color-outline": ("=", "--color-border"),
     "--color-outline-variant": ("=", "--color-border-subtle"),
     "--color-outline-strong": ("mix", "--color-border", "--color-text-primary", 0.37),
     "--color-inverse-surface": ("=", "--color-text-primary"),
-    "--color-inverse-on-surface": ("=", BG),
+    "--color-inverse-on-surface": ("on", "--color-inverse-surface"),
     # A scrim is a dark overlay and a shadow is cast light in BOTH modes — adh.css uses
     # black for both and color-mode-light.css does not override them.
     "--color-scrim": ("lit", "#000000"),
     "--color-shadow": ("lit", "#000000"),
-    "--color-success": ("=", "--color-success"),
-    "--color-on-success": ("=", BG),
+    "--color-on-success": ("on", "--color-success"),
     "--color-success-container": ("mix", BG, "--color-success", 0.18),
     "--color-on-success-container": ("mix", "--color-text-primary", "--color-success", 0.18),
     # No legacy palette has a warning hue either. Mixing the theme's own green and red
     # lands between them, which is where the reference themes put warning as well.
     "--color-warning": ("mix", "--color-success", "--color-error", 0.46),
-    "--color-on-warning": ("=", BG),
+    "--color-on-warning": ("on", "--color-warning"),
     # Departure from the raw fit (which read this as surface tinted toward SUCCESS, an
     # artefact of warning not being an anchor): it follows its own hue at the same ratio as
     # every other container.
     "--color-warning-container": ("mix", BG, "--color-warning", 0.18),
     "--color-on-warning-container": ("mix", "--color-text-primary", "--color-warning", 0.18),
-    "--color-info": ("=", "--color-info"),
-    "--color-on-info": ("=", BG),
+    "--color-on-info": ("on", "--color-info"),
     "--color-info-container": ("mix", BG, "--color-info", 0.18),
     "--color-on-info-container": ("mix", "--color-text-primary", "--color-info", 0.18),
 }
@@ -280,6 +334,11 @@ ALIASES: dict[str, str] = {
     "--color-accent-dim": "--color-primary-dim",
     "--color-link": "--color-primary",
     "--color-link-hover": "--color-primary-bright",
+    # The WCAG 1.4.11 focus indicator. adh.css already defines this same alias, so a theme
+    # that stays silent still gets a working ring — but the contrast gate reads ONE theme
+    # file at a time, so a role it never declares is unresolvable rather than checked, and
+    # its ring goes ungated. All 14 reference themes declare it for that reason.
+    "--focus-ring-color": "--color-primary",
     "--color-surface-tint": "--color-primary",
     # The settings topic rail. adh.css leaves it to the Tailwind @theme literal in dark,
     # but color-mode-light.css pins a warm cream at 0-3-0 — so a theme that stays silent
@@ -297,14 +356,54 @@ LIGHT_SELECTOR = "html:root[data-color-mode]:not(.dark)"
 Decls = list[tuple[str, str]]
 
 
+COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
+DECL_RE = re.compile(r"\s*(--[a-z0-9-]+)\s*:\s*(.+?)\s*\Z", re.S)
+
+
+def split_decls(body: str) -> list[str]:
+    """A rule body split on its TOP-LEVEL semicolons. Depth- and quote-aware, so a `;`
+    inside `url(...)` or a string can't end a declaration early, and the last declaration
+    needs no trailing `;` (both legal CSS the naive `([^;]+);` scan got wrong)."""
+    chunks: list[str] = []
+    buf: list[str] = []
+    depth = 0
+    quote = ""
+    for ch in body:
+        if quote:
+            if ch == quote:
+                quote = ""
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(0, depth - 1)
+        elif ch == ";" and depth == 0:
+            chunks.append("".join(buf))
+            buf = []
+            continue
+        buf.append(ch)
+    if "".join(buf).strip():
+        chunks.append("".join(buf))
+    return chunks
+
+
 def find_block(css: str, selector: str) -> tuple[int, int, Decls] | None:
-    """(start, end, declarations) for a top-level `<selector> { ... }`, or None."""
+    """(start, end, declarations) for a top-level `<selector> { ... }`, or None.
+
+    Loud, never lossy: a declaration this fails to read is silently missing from the
+    converted theme — the output still looks complete, and the only symptom is one colour
+    that quietly falls back to the adh base. So anything that looks like a custom property
+    and doesn't parse stops the run instead."""
     m = re.search(r"^" + re.escape(selector) + r"\s*\{(.*?)^\}\n?", css, re.S | re.M)
     if not m:
         return None
-    decls = [
-        (k, v.strip()) for k, v in re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", m.group(1))
-    ]
+    decls: Decls = []
+    for chunk in split_decls(COMMENT_RE.sub("", m.group(1))):
+        if d := DECL_RE.fullmatch(chunk):
+            decls.append((d.group(1), d.group(2)))
+        elif re.search(r"--[a-z0-9-]+\s*:", chunk):
+            raise SystemExit(f"{selector}: cannot parse declaration {chunk.strip()!r}")
     return m.start(), m.end(), decls
 
 
@@ -335,18 +434,110 @@ def backdrop_of(p: dict[str, str]) -> Rgb | None:
     return None
 
 
-def derive(palette: dict[str, str]) -> tuple[dict[str, str], list[str]]:
-    """The 49 M3 roles for one mode. Returns (roles, warnings)."""
+# ------------------------------------------------------------------------- legibility
+
+# WCAG AA for non-text UI and large text — the bar the gate holds a coloured-text pair to.
+UI_CONTRAST = 3.0
+
+# The authored tokens the M3 layer puts to work in a job the legacy palette was never checked
+# for, and the job. "text": body copy, so it must clear AA on every surface tier the theme
+# ships, not just the page. "fill": a chip/badge background that has to carry a label (one of
+# INKS, at AA) while still reading as coloured text on the page (3:1). A legacy palette chose
+# these for ONE duty — text on one background — which is why several of them sit in the dead
+# zone where neither black nor white can label them.
+DUTIES: dict[str, str] = {
+    "--color-text-primary": "text",
+    "--color-text-secondary": "text",
+    "--color-accent": "fill",
+    "--color-error": "fill",
+    "--color-success": "fill",
+    "--color-info": "fill",
+}
+
+
+def relight(value: str, bg: Rgb, ok) -> str | None:
+    """`value` moved by the SMALLEST step that satisfies `ok`, or None if nothing does.
+
+    An opaque token moves along its own OKLab lightness ramp, hue and chroma untouched, so
+    the theme's colour stays the theme's colour. A TRANSLUCENT one moves its alpha instead:
+    what `rgba(0, 255, 65, 0.5)` renders as is a point on the line from the page to the
+    theme's green, so alpha is already its lightness dial — and turning it up keeps the token
+    translucent, which is the phosphor themes' whole look."""
+    c = parse_rgba(value)
+    if c is None:
+        return None
+    r, g, b, a = c
+    if a < 1.0:
+        head = f"rgba({round(r * 255)}, {round(g * 255)}, {round(b * 255)}"
+        # Only upward: toward the page is away from contrast, in every direction.
+        for step in range(1, 101):
+            if (alpha := a + step / 100) > 1.0:
+                break
+            cand = f"{head}, {alpha:.2f})"
+            if (rendered := over(cand, bg)) is not None and ok(rendered):
+                return cand
+        return None
+    base, ca, cb = to_oklab((r, g, b))
+    for step in range(1, 1001):
+        for lightness in (base - step / 1000, base + step / 1000):
+            if not 0.0 <= lightness <= 1.0:
+                continue
+            # Judged on the ROUNDED value, since that is what ships.
+            cand = to_hex(from_oklab((lightness, ca, cb)))
+            if (rendered := parse_color(cand)) is not None and ok(rendered):
+                return cand
+    return None
+
+
+def derive(palette: dict[str, str]) -> tuple[dict[str, str], list[str], dict[str, str]]:
+    """The M3 roles for one mode. Returns (roles, warnings, nudged-authored-tokens)."""
     p = resolve(palette)
     roles: dict[str, str] = {}
     warnings: list[str] = []
 
     bg = backdrop_of(p)
     if bg is None:
-        return {}, [
-            "no opaque surface in the palette "
-            f"({', '.join(SURFACE_FALLBACKS)}) — cannot derive any role"
-        ]
+        return (
+            {},
+            [
+                "no opaque surface in the palette "
+                f"({', '.join(SURFACE_FALLBACKS)}) — cannot derive any role"
+            ],
+            {},
+        )
+
+    for key in CORE:
+        if key not in p:
+            warnings.append(f"palette has no {key} — every role anchored on it is dropped")
+
+    # Every background the theme ships, since "legible" has to hold on the lightest tier as
+    # well as the page — that is where the near-misses live.
+    tiers = [bg]
+    for key in SURFACE_FALLBACKS[1:]:
+        if (v := p.get(key)) and (c := over(v, bg)) is not None:
+            tiers.append(c)
+
+    def reads_as_text(c: Rgb) -> bool:
+        return all(contrast(c, tier) >= TEXT_CONTRAST for tier in tiers)
+
+    def works_as_fill(c: Rgb) -> bool:
+        labelled = max(contrast(parse_color(i), c) for i in INKS)  # type: ignore[arg-type]
+        return labelled >= TEXT_CONTRAST and contrast(c, bg) >= UI_CONTRAST
+
+    adjusted: dict[str, str] = {}
+    for token, duty in DUTIES.items():
+        v = p.get(token)
+        rendered = over(v, bg) if v is not None else None
+        if v is None or rendered is None:
+            continue
+        ok = reads_as_text if duty == "text" else works_as_fill
+        if ok(rendered):
+            continue
+        if (fixed := relight(v, bg, ok)) is None:
+            warnings.append(f"{token}: {v} cannot serve as {duty} at any lightness")
+            continue
+        adjusted[token] = fixed
+        p[token] = fixed
 
     def anchor(key: str) -> str | None:
         """An anchor's raw CSS value. `@bg` is the effective background; a derived role is
@@ -377,6 +568,25 @@ def derive(palette: dict[str, str]) -> tuple[dict[str, str], list[str]]:
                 warnings.append(f"{role}: cannot make a solid from {rule[1]}")
                 continue
             roles[role] = to_hex(c)
+        elif rule[0] == "on":
+            # Keep the theme's own background as the label colour whenever it actually
+            # reads on this fill — that is the look every reference theme has — and fall
+            # back to a universal ink when it doesn't. A fixed "always the background" only
+            # ever looked right because all 14 reference themes are dark-first; on a light
+            # palette with a mid-tone accent it put white on #6db26b at 2.39:1.
+            fill = solid(rule[1])
+            if fill is None:
+                warnings.append(f"{role}: cannot pick a foreground — no usable {rule[1]}")
+                continue
+            if contrast(bg, fill) >= TEXT_CONTRAST:
+                roles[role] = to_hex(bg)
+            else:
+                roles[role] = max(INKS, key=lambda v: contrast(parse_color(v), fill))  # type: ignore[arg-type]
+        elif rule[0] == "bright":
+            if (c := solid(rule[1])) is None:
+                warnings.append(f"{role}: cannot make a solid from {rule[1]}")
+                continue
+            roles[role] = to_hex(c if luminance(c) >= luminance(bg) else (1.0, 1.0, 1.0))
         else:
             _, ka, kb, t = rule
             a, b = solid(ka), solid(kb)
@@ -385,22 +595,38 @@ def derive(palette: dict[str, str]) -> tuple[dict[str, str], list[str]]:
                 warnings.append(f"{role}: cannot mix — no usable {bad} ({anchor(bad)!r})")
                 continue
             roles[role] = mix(a, b, t)
-    return roles, warnings
+    return roles, warnings, adjusted
 
 
 def render_block(
-    selector: str, scheme: str, note: str, authored: Decls, roles: dict[str, str]
+    selector: str,
+    scheme: str,
+    note: str,
+    authored: Decls,
+    roles: dict[str, str],
+    adjusted: dict[str, str],
 ) -> str:
-    """One token block: the theme's own declarations first (its voice, untouched), then the
-    derived role layer and the aliases it never declared."""
+    """One token block: the theme's own declarations first (its voice), then the derived
+    role layer and the aliases it never declared. A token the legibility pass nudged is
+    written at its new value and says so, so the change is never silent."""
     lines = [f"{selector} {{", f"  color-scheme: {scheme};"]
     if note:
         lines.append(f"  /* {note} */")
     if authored:
         lines.append("")
-        lines.append("  /* --- The theme's own tokens, as authored. --- */")
+        if adjusted:
+            lines.append("  /* --- The theme's own tokens. The ones marked `nudged` could not")
+            lines.append("     carry the job the M3 layer gives them (see DUTIES in")
+            lines.append("     scripts/convert-legacy-theme.py) and were moved along their own")
+            lines.append("     lightness ramp — hue and chroma untouched — by the smallest step")
+            lines.append("     that clears WCAG AA. Everything else is exactly as authored. --- */")
+        else:
+            lines.append("  /* --- The theme's own tokens, as authored. --- */")
         for k, v in authored:
-            lines.append(f"  {k}: {v};")
+            if k in adjusted:
+                lines.append(f"  {k}: {adjusted[k]}; /* nudged for AA; was {v} */")
+            else:
+                lines.append(f"  {k}: {v};")
     written = {k for k, _ in authored}
     derived = [(k, v) for k, v in roles.items() if k not in written]
     if derived:
@@ -473,18 +699,20 @@ def convert(path: Path, check: bool) -> int:
         dark_decls = list(l_decls)
         dark_note = "Dark-only aesthetic: the light block below repeats this palette."
 
-    dark_roles, w1 = derive(dict(dark_decls))
-    light_roles, w2 = derive(light_palette)
+    dark_roles, w1, dark_adjusted = derive(dict(dark_decls))
+    light_roles, w2, light_adjusted = derive(light_palette)
     for w in dict.fromkeys(w1 + w2):
         print(f"{path.name}: warning: {w}", file=sys.stderr)
 
-    dark_block = render_block(DARK_SELECTOR, "dark", dark_note, dark_decls, dark_roles)
+    dark_block = render_block(
+        DARK_SELECTOR, "dark", dark_note, dark_decls, dark_roles, dark_adjusted
+    )
     light_scheme = "dark" if d_start is None else "light"
     light_note = (
         "Repeats the dark palette (see above)." if d_start is None else ""
     )
     light_block = render_block(
-        LIGHT_SELECTOR, light_scheme, light_note, l_decls, light_roles
+        LIGHT_SELECTOR, light_scheme, light_note, l_decls, light_roles, light_adjusted
     )
 
     # Splice: header note + the two new blocks in place of the old ones, everything else

@@ -105,6 +105,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -163,7 +164,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-error-container: #e9cbb3;
   --color-on-error-container: #362113;
   --color-surface-dim: #f4ebd3;
-  --color-surface-bright: #8a7a4a;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #f4ebd3;
   --color-surface-container-low: #f0e6c9;
   --color-surface-container: #ede1c0;
@@ -194,6 +195,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

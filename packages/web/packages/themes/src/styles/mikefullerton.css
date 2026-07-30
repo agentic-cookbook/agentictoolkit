@@ -111,6 +111,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -118,7 +119,11 @@ html:root {
 html:root[data-color-mode]:not(.dark) {
   color-scheme: light;
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --color-surface: #fafaf7;
   --color-surface-raised: rgba(255, 255, 255, 0.7);
   --color-surface-hover: rgba(245, 245, 240, 0.7);
@@ -129,7 +134,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-text-dim: #8a8a9c;
   --color-accent: #8a6d20;
   --color-accent-dim: rgba(138, 109, 32, 0.08);
-  --color-success: #2d8b45;
+  --color-success: #308e48; /* nudged for AA; was #2d8b45 */
   --color-error: #b03939;
   --color-info: #3565a8;
   --pc-surface: rgba(255, 255, 255, 0.55);
@@ -175,7 +180,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-error-container: #f1d8d3;
   --color-on-error-container: #332229;
   --color-surface-dim: #fafaf7;
-  --color-surface-bright: #dedcd6;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #fafaf7;
   --color-surface-container-low: #fcfcfa;
   --color-surface-container: #fefefd;
@@ -190,13 +195,13 @@ html:root[data-color-mode]:not(.dark) {
   --color-inverse-on-surface: #fafaf7;
   --color-scrim: #000000;
   --color-shadow: #000000;
-  --color-on-success: #fafaf7;
-  --color-success-container: #d7e6d6;
-  --color-on-success-container: #202d2b;
-  --color-warning: #806e3f;
+  --color-on-success: #141210;
+  --color-success-container: #d7e7d6;
+  --color-on-success-container: #212d2c;
+  --color-warning: #816f41;
   --color-on-warning: #fafaf7;
-  --color-warning-container: #e3e0d4;
-  --color-on-warning-container: #2a282a;
+  --color-warning-container: #e3e0d5;
+  --color-on-warning-container: #2a282b;
   --color-on-info: #fafaf7;
   --color-info-container: #d5dfea;
   --color-on-info-container: #202739;
@@ -206,6 +211,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

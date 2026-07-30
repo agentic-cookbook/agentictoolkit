@@ -115,6 +115,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -183,7 +184,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-error-container: #f6dbd8;
   --color-on-error-container: #342231;
   --color-surface-dim: #ffffff;
-  --color-surface-bright: #d1d5db;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #ffffff;
   --color-surface-container-low: #fbfbfc;
   --color-surface-container: #f7f8fa;
@@ -214,6 +215,7 @@ html:root[data-color-mode]:not(.dark) {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

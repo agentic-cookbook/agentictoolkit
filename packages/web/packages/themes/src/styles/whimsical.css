@@ -115,6 +115,7 @@ html:root {
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }
@@ -122,20 +123,24 @@ html:root {
 html:root[data-color-mode]:not(.dark) {
   color-scheme: light;
 
-  /* --- The theme's own tokens, as authored. --- */
+  /* --- The theme's own tokens. The ones marked `nudged` could not
+     carry the job the M3 layer gives them (see DUTIES in
+     scripts/convert-legacy-theme.py) and were moved along their own
+     lightness ramp — hue and chroma untouched — by the smallest step
+     that clears WCAG AA. Everything else is exactly as authored. --- */
   --color-surface: #fff5fb;
   --color-surface-raised: #ffe8f3;
   --color-surface-hover: #ffd9eb;
   --color-border: #f1c2dd;
   --color-border-subtle: #fadcec;
   --color-text-primary: #4a2040;
-  --color-text-secondary: #7b5ea7;
+  --color-text-secondary: #7457a0; /* nudged for AA; was #7b5ea7 */
   --color-text-dim: #b18ad1;
-  --color-accent: #c0547a;
+  --color-accent: #bd5278; /* nudged for AA; was #c0547a */
   --color-accent-dim: rgba(192, 84, 122, 0.12);
-  --color-success: #6db26b;
-  --color-error: #d54a4a;
-  --color-info: #7b9fd9;
+  --color-success: #5b9f59; /* nudged for AA; was #6db26b */
+  --color-error: #d84d4c; /* nudged for AA; was #d54a4a */
+  --color-info: #6e91ca; /* nudged for AA; was #7b9fd9 */
   --pc-surface: rgba(255, 255, 255, 0.7);
   --pc-persona-bg: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
   --pc-persona-text: #4a2040;
@@ -164,33 +169,33 @@ html:root[data-color-mode]:not(.dark) {
 
   /* --- M3 colour roles, derived from the palette above by
      scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
-  --color-primary: #c0547a;
-  --color-on-primary: #fff5fb;
-  --color-primary-container: #f6d8e3;
-  --color-on-primary-container: #5e294a;
-  --color-inverse-primary: #a4486d;
-  --color-primary-bright: #a4486d;
+  --color-primary: #bd5278;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #f6d7e2;
+  --color-on-primary-container: #5d294a;
+  --color-inverse-primary: #a2476b;
+  --color-primary-bright: #a2476b;
   --color-primary-dim: rgba(192, 84, 122, 0.12);
-  --color-secondary: #7b5ea7;
+  --color-secondary: #7457a0;
   --color-on-secondary: #fff5fb;
   --color-secondary-container: #ffe8f3;
   --color-on-secondary-container: #4a2040;
-  --color-tertiary: #7b9fd9;
-  --color-on-tertiary: #fff5fb;
-  --color-tertiary-container: #e7e5f6;
-  --color-on-tertiary-container: #563659;
-  --color-on-error: #fff5fb;
-  --color-error-container: #fbd8da;
-  --color-on-error-container: #612844;
+  --color-tertiary: #6e91ca;
+  --color-on-tertiary: #141210;
+  --color-tertiary-container: #e4e3f3;
+  --color-on-tertiary-container: #533457;
+  --color-on-error: #141210;
+  --color-error-container: #fcd8da;
+  --color-on-error-container: #612944;
   --color-surface-dim: #fff5fb;
-  --color-surface-bright: #f1c2dd;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #fff5fb;
   --color-surface-container-low: #ffeef7;
   --color-surface-container: #ffe8f3;
   --color-surface-container-high: #ffd9eb;
   --color-surface-container-highest: #f4c7e0;
   --color-on-surface: #4a2040;
-  --color-on-surface-variant: #7b5ea7;
+  --color-on-surface-variant: #7457a0;
   --color-outline: #f1c2dd;
   --color-outline-variant: #fadcec;
   --color-outline-strong: #b0829f;
@@ -198,22 +203,23 @@ html:root[data-color-mode]:not(.dark) {
   --color-inverse-on-surface: #fff5fb;
   --color-scrim: #000000;
   --color-shadow: #000000;
-  --color-on-success: #fff5fb;
-  --color-success-container: #e5e9e1;
-  --color-on-success-container: #543a49;
-  --color-warning: #ac8a5c;
-  --color-on-warning: #fff5fb;
-  --color-warning-container: #f0e1de;
-  --color-on-warning-container: #5b3347;
-  --color-on-info: #fff5fb;
-  --color-info-container: #e7e5f6;
-  --color-on-info-container: #563659;
+  --color-on-success: #141210;
+  --color-success-container: #e2e6dd;
+  --color-on-success-container: #513846;
+  --color-warning: #a38153;
+  --color-on-warning: #141210;
+  --color-warning-container: #eedfdc;
+  --color-on-warning-container: #593145;
+  --color-on-info: #141210;
+  --color-info-container: #e4e3f3;
+  --color-on-info-container: #533457;
 
   /* --- Compat aliases: one authoritative value per colour. --- */
   --color-border-strong: var(--color-outline-strong);
   --color-accent-bright: var(--color-primary-bright);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
   --color-surface-tint: var(--color-primary);
   --color-apt-nav: var(--color-surface-container-high);
 }

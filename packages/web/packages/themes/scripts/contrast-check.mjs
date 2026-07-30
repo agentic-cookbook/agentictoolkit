@@ -4,18 +4,36 @@
 // theme to literal colors and asserts every text/background and UI pair meets
 // 4.5:1 (normal text) or 3:1 (large text + non-text UI). Exits non-zero on any
 // failure so CI fails fast. Run: node scripts/contrast-check.mjs [--report]
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 
 const REPORT_ONLY = process.argv.includes('--report')
 // adh-family themes share one dark `:root` color layer (check both anyway). Full-palette
 // themes ship their OWN complete M3 palette in dual blocks — a dark `html:root` and a light
 // `html:root[data-color-mode]:not(.dark)` override — so each is gated in BOTH modes.
 const ADH_THEMES = ['adh', 'adh-manrope']
-const FULL_PALETTE_THEMES = [
-  'signal', 'nord', 'solarized', 'rose-pine', 'gruvbox',
-  'github', 'tokyo-night', 'catppuccin', 'one-dark', 'dracula',
-  'monokai', 'cobalt2', 'synthwave84', 'vesper',
-]
+
+const STYLES_DIR = new URL('../src/styles/', import.meta.url)
+const DARK_BLOCK = 'html:root {'
+const LIGHT_BLOCK = 'html:root[data-color-mode]:not(.dark) {'
+
+// DISCOVERED, never listed. Carrying a second hand-maintained roster here is what let the
+// 13 converted legacy themes ship ungated: they were added to the manifest and to the
+// switcher, and this file — the only thing that would have caught their contrast — kept
+// checking the original 14. A full-palette theme IS a stylesheet with both mode blocks,
+// so ask the directory. A new theme is gated the moment it exists.
+async function discoverFullPaletteThemes() {
+  const found = []
+  for (const name of (await readdir(STYLES_DIR)).sort()) {
+    if (!name.endsWith('.css')) continue
+    const theme = name.slice(0, -4)
+    if (ADH_THEMES.includes(theme)) continue
+    const css = await readFile(new URL(name, STYLES_DIR), 'utf8')
+    if (css.includes(DARK_BLOCK) || css.includes(LIGHT_BLOCK)) found.push(theme)
+  }
+  return found
+}
+
+const FULL_PALETTE_THEMES = await discoverFullPaletteThemes()
 
 // pairs: [foreground role, background role, minRatio, label]
 const TEXT = 4.5
@@ -128,7 +146,7 @@ for (const theme of ADH_THEMES) {
   targets.push({ label: theme, map: parseVars(css) })
 }
 for (const theme of FULL_PALETTE_THEMES) {
-  const css = await readFile(new URL(`../src/styles/${theme}.css`, import.meta.url), 'utf8')
+  const css = await readFile(new URL(`${theme}.css`, STYLES_DIR), 'utf8')
   const darkBody = blockBody(css, 'html:root')
   const lightBody = blockBody(css, 'html:root[data-color-mode]:not(.dark)')
   if (darkBody == null || lightBody == null) {
