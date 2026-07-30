@@ -6,67 +6,38 @@
 
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap');
 
-/* === Tokens (light = default, dark = override) === */
+/* === Tokens ===
+ * Dark is the default (html:root); light overrides under
+ * html:root[data-color-mode]:not(.dark) — matching the appearance system, whose pre-paint
+ * stamps data-color-mode. The leading `html` type selector adds an element-column point so
+ * BOTH blocks outrank the always-on adh base theme (:root, 0-1-0) AND color-mode-light
+ * (:root[data-color-mode]:not(.dark), 0-3-0) regardless of stylesheet source order. BOTH
+ * are load-bearing: drop the light block and light mode silently reverts to the base
+ * palette, because 0-3-0 beats the dark block's 0-1-1.
+ *
+ * Converted from this theme's legacy `:root` / `:root.dark` token blocks by
+ * scripts/convert-legacy-theme.py, which derived the M3 color roles from the palette below
+ * — see that script for why a legacy theme cannot be switched to as-is, and for how each
+ * role is derived. The conversion was ONE-SHOT: this file is hand-maintained from here on,
+ * nothing regenerates it. */
 
-:root {
-  /* Site color tokens — light (paper tape) */
-  --color-surface: #f4ebd3;
-  --color-surface-raised: #ede1c0;
-  --color-surface-hover: #e6d8b0;
-  --color-border: #8a7a4a;
-  --color-border-subtle: #b8a878;
+html:root {
+  color-scheme: dark;
 
-  --color-text-primary: #1f1a0e;
-  --color-text-secondary: #3a3322;
-  --color-text-dim: #6b5d3a;
-
-  --color-accent: #1f1a0e;
-  --color-accent-dim: rgba(31, 26, 14, 0.10);
-  --color-success: #5a6b1f;
-  --color-error: #a8362a;
-  --color-info: #3f5a78;
-
-  /* Chat color tokens — light */
-  --pc-persona-name: #1f1a0e;
-  --pc-persona-text: #1f1a0e;
-  --pc-user-name: #a8362a;
-  --pc-user-text: #1f1a0e;
-  --pc-surface: #f4ebd3;
-  --pc-input-bg: #f4ebd3;
-  --pc-input-border: #8a7a4a;
-  --pc-input-focus: #1f1a0e;
-  --pc-time-color: #6b5d3a;
-
-  /* Code highlighting (Shiki) — light */
-  --scp-shiki-theme: 'github-light';
-
-  /* Shared (non-color) tokens */
-  --font-display: 'IBM Plex Mono', 'Courier New', monospace;
-  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
-  --font-sans: 'IBM Plex Mono', 'Courier New', monospace;
-  --pc-font: 'IBM Plex Mono', 'Courier New', monospace;
-  --pc-gutter: 8px;
-}
-
-:root.dark {
-  /* Site color overrides — dark (phosphor) */
+  /* --- The theme's own tokens, as authored. --- */
   --color-surface: #0a0a0a;
   --color-surface-raised: #111111;
   --color-surface-hover: #1a1a1a;
   --color-border: #333333;
   --color-border-subtle: #222222;
-
   --color-text-primary: #b0b0b0;
   --color-text-secondary: #888888;
   --color-text-dim: #555555;
-
   --color-accent: #33ff33;
   --color-accent-dim: rgba(51, 255, 51, 0.12);
   --color-success: #33ff33;
   --color-error: #ff5555;
   --color-info: #66ddff;
-
-  /* Chat color overrides — dark */
   --pc-persona-name: #33ff33;
   --pc-persona-text: #b0b0b0;
   --pc-user-name: #ffcc00;
@@ -76,8 +47,156 @@
   --pc-input-border: #333333;
   --pc-input-focus: #33ff33;
   --pc-time-color: #444444;
-
   --scp-shiki-theme: 'github-dark';
+  --font-display: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-sans: 'IBM Plex Mono', 'Courier New', monospace;
+  --pc-font: 'IBM Plex Mono', 'Courier New', monospace;
+  --pc-gutter: 8px;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #33ff33;
+  --color-on-primary: #0a0a0a;
+  --color-primary-container: #182e17;
+  --color-on-primary-container: #a5bfa2;
+  --color-inverse-primary: #67ef62;
+  --color-primary-bright: #67ef62;
+  --color-primary-dim: rgba(51, 255, 51, 0.12);
+  --color-secondary: #888888;
+  --color-on-secondary: #0a0a0a;
+  --color-secondary-container: #111111;
+  --color-on-secondary-container: #b0b0b0;
+  --color-tertiary: #66ddff;
+  --color-on-tertiary: #0a0a0a;
+  --color-tertiary-container: #1b292e;
+  --color-on-tertiary-container: #a7b8be;
+  --color-on-error: #0a0a0a;
+  --color-error-container: #2f1817;
+  --color-on-error-container: #c3a3a0;
+  --color-surface-dim: #0a0a0a;
+  --color-surface-bright: #333333;
+  --color-surface-container-lowest: #0a0a0a;
+  --color-surface-container-low: #0e0e0e;
+  --color-surface-container: #111111;
+  --color-surface-container-high: #1a1a1a;
+  --color-surface-container-highest: #2d2d2d;
+  --color-on-surface: #b0b0b0;
+  --color-on-surface-variant: #888888;
+  --color-outline: #333333;
+  --color-outline-variant: #222222;
+  --color-outline-strong: #5e5e5e;
+  --color-inverse-surface: #b0b0b0;
+  --color-inverse-on-surface: #0a0a0a;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #0a0a0a;
+  --color-success-container: #182e17;
+  --color-on-success-container: #a5bfa2;
+  --color-warning: #c7bd4b;
+  --color-on-warning: #0a0a0a;
+  --color-warning-container: #262517;
+  --color-on-warning-container: #b4b3a1;
+  --color-on-info: #0a0a0a;
+  --color-info-container: #1b292e;
+  --color-on-info-container: #a7b8be;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
+}
+
+html:root[data-color-mode]:not(.dark) {
+  color-scheme: light;
+
+  /* --- The theme's own tokens, as authored. --- */
+  --color-surface: #f4ebd3;
+  --color-surface-raised: #ede1c0;
+  --color-surface-hover: #e6d8b0;
+  --color-border: #8a7a4a;
+  --color-border-subtle: #b8a878;
+  --color-text-primary: #1f1a0e;
+  --color-text-secondary: #3a3322;
+  --color-text-dim: #6b5d3a;
+  --color-accent: #1f1a0e;
+  --color-accent-dim: rgba(31, 26, 14, 0.10);
+  --color-success: #5a6b1f;
+  --color-error: #a8362a;
+  --color-info: #3f5a78;
+  --pc-persona-name: #1f1a0e;
+  --pc-persona-text: #1f1a0e;
+  --pc-user-name: #a8362a;
+  --pc-user-text: #1f1a0e;
+  --pc-surface: #f4ebd3;
+  --pc-input-bg: #f4ebd3;
+  --pc-input-border: #8a7a4a;
+  --pc-input-focus: #1f1a0e;
+  --pc-time-color: #6b5d3a;
+  --scp-shiki-theme: 'github-light';
+  --font-display: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-sans: 'IBM Plex Mono', 'Courier New', monospace;
+  --pc-font: 'IBM Plex Mono', 'Courier New', monospace;
+  --pc-gutter: 8px;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #1f1a0e;
+  --color-on-primary: #f4ebd3;
+  --color-primary-container: #c9c1ab;
+  --color-on-primary-container: #1f1a0e;
+  --color-inverse-primary: #1f1a0e;
+  --color-primary-bright: #1f1a0e;
+  --color-primary-dim: rgba(31, 26, 14, 0.10);
+  --color-secondary: #3a3322;
+  --color-on-secondary: #f4ebd3;
+  --color-secondary-container: #ede1c0;
+  --color-on-secondary-container: #1f1a0e;
+  --color-tertiary: #3f5a78;
+  --color-on-tertiary: #f4ebd3;
+  --color-tertiary-container: #d1d0c3;
+  --color-on-tertiary-container: #252520;
+  --color-on-error: #f4ebd3;
+  --color-error-container: #e9cbb3;
+  --color-on-error-container: #362113;
+  --color-surface-dim: #f4ebd3;
+  --color-surface-bright: #8a7a4a;
+  --color-surface-container-lowest: #f4ebd3;
+  --color-surface-container-low: #f0e6c9;
+  --color-surface-container: #ede1c0;
+  --color-surface-container-high: #e6d8b0;
+  --color-surface-container-highest: #9e8f61;
+  --color-on-surface: #1f1a0e;
+  --color-on-surface-variant: #3a3322;
+  --color-outline: #8a7a4a;
+  --color-outline-variant: #b8a878;
+  --color-outline-strong: #605432;
+  --color-inverse-surface: #1f1a0e;
+  --color-inverse-on-surface: #f4ebd3;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #f4ebd3;
+  --color-success-container: #d6d3b2;
+  --color-on-success-container: #292712;
+  --color-warning: #835825;
+  --color-on-warning: #f4ebd3;
+  --color-warning-container: #dfcfb3;
+  --color-on-warning-container: #2f2413;
+  --color-on-info: #f4ebd3;
+  --color-info-container: #d1d0c3;
+  --color-on-info-container: #252520;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
 }
 
 /* === Site surface === */

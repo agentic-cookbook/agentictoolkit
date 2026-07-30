@@ -1,0 +1,342 @@
+/* Old School Terminal — a variation on green-matrix.
+ * Same phosphor green-on-black, but stripped to a raw console: no chat
+ * border, no input-area divider, no send-button box, and no "// " comment
+ * prefix on persona lines (that prefix is a green-matrix flourish). Keeps a
+ * soft green phosphor glow around the chat (no hard frame). Uses VT323 — a
+ * recreation of the DEC VT320 terminal ROM font — for an authentic CRT feel.
+ * Single mode (always dark).
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* === Tokens ===
+ * Dark is the default (html:root); light overrides under
+ * html:root[data-color-mode]:not(.dark) — matching the appearance system, whose pre-paint
+ * stamps data-color-mode. The leading `html` type selector adds an element-column point so
+ * BOTH blocks outrank the always-on adh base theme (:root, 0-1-0) AND color-mode-light
+ * (:root[data-color-mode]:not(.dark), 0-3-0) regardless of stylesheet source order. BOTH
+ * are load-bearing: drop the light block and light mode silently reverts to the base
+ * palette, because 0-3-0 beats the dark block's 0-1-1.
+ *
+ * Converted from this theme's legacy `:root` / `:root.dark` token blocks by
+ * scripts/convert-legacy-theme.py, which derived the M3 color roles from the palette below
+ * — see that script for why a legacy theme cannot be switched to as-is, and for how each
+ * role is derived. The conversion was ONE-SHOT: this file is hand-maintained from here on,
+ * nothing regenerates it. */
+
+html:root {
+  color-scheme: dark;
+  /* Dark-only aesthetic: the light block below repeats this palette. */
+
+  /* --- The theme's own tokens, as authored. --- */
+  --ost-green: #00ff41;
+  --ost-green-bright: #aaffaa;
+  --ost-green-soft: rgba(0, 255, 65, 0.5);
+  --ost-border: rgba(0, 255, 65, 0.35);
+  --color-surface: transparent;
+  --color-surface-raised: #050805;
+  --color-surface-hover: #0a0f0a;
+  --color-border: var(--ost-border);
+  --color-border-subtle: rgba(0, 255, 65, 0.18);
+  --color-text-primary: var(--ost-green);
+  --color-text-secondary: var(--ost-green-soft);
+  --color-text-dim: rgba(0, 255, 65, 0.4);
+  --color-accent: var(--ost-green);
+  --color-accent-dim: rgba(0, 255, 65, 0.08);
+  --color-success: var(--ost-green);
+  --color-error: #ff5555;
+  --color-info: var(--ost-green-bright);
+  --pc-surface: rgba(5, 8, 5, 0.8);
+  --pc-persona-name: var(--ost-green);
+  --pc-persona-text: var(--ost-green);
+  --pc-user-name: var(--ost-green-bright);
+  --pc-user-text: var(--ost-green-bright);
+  --pc-input-bg: transparent;
+  --pc-input-border: var(--ost-border);
+  --pc-input-focus: var(--ost-green);
+  --pc-time-color: rgba(0, 255, 65, 0.4);
+  --scp-shiki-theme: 'github-dark';
+  --font-display: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-sans: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --pc-font: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --pc-gutter: 12px;
+  --pc-radius: 0;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #00ff41;
+  --color-on-primary: #050805;
+  --color-primary-container: #102c11;
+  --color-on-primary-container: #00ff41;
+  --color-inverse-primary: #00ff41;
+  --color-primary-bright: #00ff41;
+  --color-primary-dim: rgba(0, 255, 65, 0.08);
+  --color-secondary: rgba(0, 255, 65, 0.5);
+  --color-on-secondary: #050805;
+  --color-secondary-container: #050805;
+  --color-on-secondary-container: #00ff41;
+  --color-tertiary: #aaffaa;
+  --color-on-tertiary: #050805;
+  --color-tertiary-container: #1c2b1c;
+  --color-on-tertiary-container: #47ff5b;
+  --color-on-error: #050805;
+  --color-error-container: #2a1711;
+  --color-on-error-container: #85e648;
+  --color-surface-dim: #050805;
+  --color-surface-bright: #035e1a;
+  --color-surface-container-lowest: #050805;
+  --color-surface-container-low: #050805;
+  --color-surface-container: #050805;
+  --color-surface-container-high: #0a0f0a;
+  --color-surface-container-highest: #0d4b18;
+  --color-on-surface: #00ff41;
+  --color-on-surface-variant: rgba(0, 255, 65, 0.5);
+  --color-outline: rgba(0, 255, 65, 0.35);
+  --color-outline-variant: rgba(0, 255, 65, 0.18);
+  --color-outline-strong: #049628;
+  --color-inverse-surface: #00ff41;
+  --color-inverse-on-surface: #050805;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #050805;
+  --color-success-container: #102c11;
+  --color-on-success-container: #00ff41;
+  --color-warning: #c4bd4f;
+  --color-on-warning: #050805;
+  --color-warning-container: #202311;
+  --color-on-warning-container: #5ef444;
+  --color-on-info: #050805;
+  --color-info-container: #1c2b1c;
+  --color-on-info-container: #47ff5b;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
+}
+
+html:root[data-color-mode]:not(.dark) {
+  color-scheme: dark;
+  /* Repeats the dark palette (see above). */
+
+  /* --- The theme's own tokens, as authored. --- */
+  --ost-green: #00ff41;
+  --ost-green-bright: #aaffaa;
+  --ost-green-soft: rgba(0, 255, 65, 0.5);
+  --ost-border: rgba(0, 255, 65, 0.35);
+  --color-surface: transparent;
+  --color-surface-raised: #050805;
+  --color-surface-hover: #0a0f0a;
+  --color-border: var(--ost-border);
+  --color-border-subtle: rgba(0, 255, 65, 0.18);
+  --color-text-primary: var(--ost-green);
+  --color-text-secondary: var(--ost-green-soft);
+  --color-text-dim: rgba(0, 255, 65, 0.4);
+  --color-accent: var(--ost-green);
+  --color-accent-dim: rgba(0, 255, 65, 0.08);
+  --color-success: var(--ost-green);
+  --color-error: #ff5555;
+  --color-info: var(--ost-green-bright);
+  --pc-surface: rgba(5, 8, 5, 0.8);
+  --pc-persona-name: var(--ost-green);
+  --pc-persona-text: var(--ost-green);
+  --pc-user-name: var(--ost-green-bright);
+  --pc-user-text: var(--ost-green-bright);
+  --pc-input-bg: transparent;
+  --pc-input-border: var(--ost-border);
+  --pc-input-focus: var(--ost-green);
+  --pc-time-color: rgba(0, 255, 65, 0.4);
+  --scp-shiki-theme: 'github-dark';
+  --font-display: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-sans: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --pc-font: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace;
+  --pc-gutter: 12px;
+  --pc-radius: 0;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #00ff41;
+  --color-on-primary: #050805;
+  --color-primary-container: #102c11;
+  --color-on-primary-container: #00ff41;
+  --color-inverse-primary: #00ff41;
+  --color-primary-bright: #00ff41;
+  --color-primary-dim: rgba(0, 255, 65, 0.08);
+  --color-secondary: rgba(0, 255, 65, 0.5);
+  --color-on-secondary: #050805;
+  --color-secondary-container: #050805;
+  --color-on-secondary-container: #00ff41;
+  --color-tertiary: #aaffaa;
+  --color-on-tertiary: #050805;
+  --color-tertiary-container: #1c2b1c;
+  --color-on-tertiary-container: #47ff5b;
+  --color-on-error: #050805;
+  --color-error-container: #2a1711;
+  --color-on-error-container: #85e648;
+  --color-surface-dim: #050805;
+  --color-surface-bright: #035e1a;
+  --color-surface-container-lowest: #050805;
+  --color-surface-container-low: #050805;
+  --color-surface-container: #050805;
+  --color-surface-container-high: #0a0f0a;
+  --color-surface-container-highest: #0d4b18;
+  --color-on-surface: #00ff41;
+  --color-on-surface-variant: rgba(0, 255, 65, 0.5);
+  --color-outline: rgba(0, 255, 65, 0.35);
+  --color-outline-variant: rgba(0, 255, 65, 0.18);
+  --color-outline-strong: #049628;
+  --color-inverse-surface: #00ff41;
+  --color-inverse-on-surface: #050805;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #050805;
+  --color-success-container: #102c11;
+  --color-on-success-container: #00ff41;
+  --color-warning: #c4bd4f;
+  --color-on-warning: #050805;
+  --color-warning-container: #202311;
+  --color-on-warning-container: #5ef444;
+  --color-on-info: #050805;
+  --color-info-container: #1c2b1c;
+  --color-on-info-container: #47ff5b;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
+}
+
+/* === Site surface === */
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  /* VT323 renders small per px — bump up a notch vs the JetBrains Mono themes. */
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+::selection { background: var(--ost-green); color: #000; }
+
+.prose {
+  --tw-prose-body: var(--color-text-primary);
+  --tw-prose-headings: var(--color-accent);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--ost-green-bright);
+  --tw-prose-code: var(--color-accent);
+  --tw-prose-pre-bg: var(--color-surface-raised);
+  --tw-prose-pre-code: var(--color-text-primary);
+  --tw-prose-quotes: var(--color-text-secondary);
+  --tw-prose-quote-borders: var(--color-accent);
+  --tw-prose-hr: var(--color-border);
+}
+
+/* === Chat surface — borderless, but with a soft green phosphor glow === */
+
+.persona-chat {
+  font-family: var(--pc-font);
+  background: var(--pc-surface);
+  color: var(--ost-green);
+  font-size: 16px;
+  line-height: 1.5;
+  border: none;
+  border-radius: 0;
+  box-shadow:
+    0 0 60px -20px rgba(0, 255, 65, 0.45),
+    inset 0 0 40px -10px rgba(0, 255, 65, 0.06);
+}
+
+.persona-chat .pc-message.pc-persona .pc-bubble { color: var(--pc-persona-text); }
+.persona-chat .pc-message.pc-user .pc-bubble { color: var(--pc-user-text); }
+
+.persona-chat .pc-persona .pc-sender { color: var(--pc-persona-name); }
+.persona-chat .pc-user .pc-sender { color: var(--pc-user-name); }
+
+.persona-chat .pc-time {
+  color: var(--pc-time-color);
+  font-size: 11px;
+}
+
+/* Borderless input row — no divider above it */
+.persona-chat .pc-input-area {
+  border-top: none;
+  background: var(--pc-input-bg);
+}
+
+.persona-chat .pc-input {
+  background: transparent;
+  border: none;
+  color: var(--ost-green);
+  font-family: var(--pc-font);
+  font-size: 16px;
+  /* The native thin I-beam is hidden by OlyloChat in JS (input.style.caretColor),
+   * not here — so if the client never hydrates, the input degrades to the native
+   * caret rather than no caret at all. OlyloChat then draws the blinking block
+   * over the insertion point (a native caret can't be reshaped in CSS). */
+}
+
+/* The placeholder stays visible at the prompt even when focused. The input is
+ * always-focused (OlyloChat's focus keeper), so hiding it on :focus — as this
+ * theme used to — meant it never showed at all. The block cursor parks at the
+ * empty prompt and blinks over the placeholder's first glyph; the blink keeps
+ * that glyph legible. */
+.persona-chat .pc-input::placeholder { color: var(--ost-border); }
+
+/* Old-school block cursor. OlyloChat positions this overlay (left/top/width/
+ * height all set inline, in px, from the input's own font-size) at the caret,
+ * since an <input> exposes no caret-shape styling; this rule supplies the
+ * phosphor look + blink. Scoped to .pc-theme-scope by ThemeStyle, matching where
+ * OlyloChat renders the span. */
+.pc-input-caret {
+  position: fixed;
+  background: var(--ost-green);
+  box-shadow: 0 0 6px var(--ost-green-soft); /* phosphor bloom */
+  pointer-events: none;
+  z-index: 2;
+  animation: ost-caret-blink 1.06s steps(1) infinite;
+}
+
+@keyframes ost-caret-blink { 50% { opacity: 0; } } /* hard on/off, CRT-style */
+
+/* Borderless send button — a terminal return glyph instead of the paper plane */
+.persona-chat .pc-send-btn {
+  background: transparent;
+  border: none;
+  color: var(--ost-green);
+  padding: 2px 8px;
+}
+.persona-chat .pc-send-btn svg { display: none; }
+.persona-chat .pc-send-btn::before {
+  content: "\21B5"; /* ↵ return */
+  font-family: var(--pc-font);
+  font-size: 20px;
+  line-height: 1;
+}
+.persona-chat .pc-send-btn:not(:disabled):hover { background: rgba(0, 255, 65, 0.08); }
+.persona-chat .pc-send-btn:disabled { opacity: 0.3; }
+
+/* Typing indicator — blinking phosphor dots */
+.persona-chat .pc-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ost-green);
+  opacity: 0.6;
+  animation: ost-dot-blink 1.2s infinite ease-in-out;
+}
+.persona-chat .pc-dots span:nth-child(2) { animation-delay: 0.15s; }
+.persona-chat .pc-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes ost-dot-blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 0.9; }
+}

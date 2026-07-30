@@ -5,73 +5,38 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
 
-/* === Tokens (light = default, dark = override) === */
+/* === Tokens ===
+ * Dark is the default (html:root); light overrides under
+ * html:root[data-color-mode]:not(.dark) — matching the appearance system, whose pre-paint
+ * stamps data-color-mode. The leading `html` type selector adds an element-column point so
+ * BOTH blocks outrank the always-on adh base theme (:root, 0-1-0) AND color-mode-light
+ * (:root[data-color-mode]:not(.dark), 0-3-0) regardless of stylesheet source order. BOTH
+ * are load-bearing: drop the light block and light mode silently reverts to the base
+ * palette, because 0-3-0 beats the dark block's 0-1-1.
+ *
+ * Converted from this theme's legacy `:root` / `:root.dark` token blocks by
+ * scripts/convert-legacy-theme.py, which derived the M3 color roles from the palette below
+ * — see that script for why a legacy theme cannot be switched to as-is, and for how each
+ * role is derived. The conversion was ONE-SHOT: this file is hand-maintained from here on,
+ * nothing regenerates it. */
 
-:root {
-  /* Site color tokens — light */
-  --color-surface: #fafaf7;
-  --color-surface-raised: rgba(255, 255, 255, 0.7);
-  --color-surface-hover: rgba(245, 245, 240, 0.7);
-  --color-border: rgba(180, 175, 165, 0.4);
-  --color-border-subtle: rgba(200, 195, 185, 0.3);
+html:root {
+  color-scheme: dark;
 
-  --color-text-primary: #1a1a24;
-  --color-text-secondary: #55556a;
-  --color-text-dim: #8a8a9c;
-
-  --color-accent: #8a6d20;
-  --color-accent-dim: rgba(138, 109, 32, 0.08);
-  --color-success: #2d8b45;
-  --color-error: #b03939;
-  --color-info: #3565a8;
-
-  /* Chat color tokens — light */
-  --pc-surface: rgba(255, 255, 255, 0.55);
-  --pc-persona-bg: rgba(138, 109, 32, 0.06);
-  --pc-persona-border: rgba(138, 109, 32, 0.20);
-  --pc-persona-text: #1a1a24;
-  --pc-persona-name: #8a6d20;
-  --pc-user-bg: rgba(53, 101, 168, 0.06);
-  --pc-user-border: rgba(53, 101, 168, 0.20);
-  --pc-user-text: #1a1a24;
-  --pc-user-name: #3565a8;
-  --pc-input-bg: rgba(255, 255, 255, 0.6);
-  --pc-input-border: #c8c4ba;
-  --pc-input-focus: #8a6d20;
-  --pc-send-bg: transparent;
-  --pc-send-text: #8a6d20;
-  --pc-time-color: #8a8a9c;
-
-  /* Code highlighting (Shiki) — light */
-  --scp-shiki-theme: 'github-light';
-
-  /* Shared (non-color) tokens */
-  --font-display: 'Instrument Serif', Georgia, serif;
-  --font-mono: 'DM Mono', ui-monospace, monospace;
-  --font-sans: 'DM Mono', ui-monospace, monospace;
-  --pc-font: 'DM Mono', monospace;
-  --pc-radius: 3px;
-}
-
-:root.dark {
-  /* Site color overrides — dark */
+  /* --- The theme's own tokens, as authored. --- */
   --color-surface: #0e0e14;
   --color-surface-raised: rgba(20, 20, 28, 0.7);
   --color-surface-hover: rgba(30, 30, 40, 0.7);
   --color-border: rgba(42, 42, 54, 0.6);
   --color-border-subtle: rgba(30, 30, 40, 0.5);
-
   --color-text-primary: #e8e6e3;
   --color-text-secondary: #8a8a9a;
   --color-text-dim: #5a5a6a;
-
   --color-accent: #c4a35a;
   --color-accent-dim: rgba(196, 163, 90, 0.10);
   --color-success: #5cb270;
   --color-error: #d45454;
   --color-info: #5a8fd4;
-
-  /* Chat color overrides — dark */
   --pc-surface: rgba(14, 14, 20, 0.55);
   --pc-persona-bg: rgba(196, 163, 90, 0.08);
   --pc-persona-border: rgba(196, 163, 90, 0.15);
@@ -87,8 +52,162 @@
   --pc-send-bg: transparent;
   --pc-send-text: #c4a35a;
   --pc-time-color: #5a5a6a;
-
   --scp-shiki-theme: 'github-dark';
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+  --font-sans: 'DM Mono', ui-monospace, monospace;
+  --pc-font: 'DM Mono', monospace;
+  --pc-radius: 3px;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #c4a35a;
+  --color-on-primary: #0e0e14;
+  --color-primary-container: #292522;
+  --color-on-primary-container: #e2dacb;
+  --color-inverse-primary: #ccb27a;
+  --color-primary-bright: #ccb27a;
+  --color-primary-dim: rgba(196, 163, 90, 0.10);
+  --color-secondary: #8a8a9a;
+  --color-on-secondary: #0e0e14;
+  --color-secondary-container: #12121a;
+  --color-on-secondary-container: #e8e6e3;
+  --color-tertiary: #5a8fd4;
+  --color-on-tertiary: #0e0e14;
+  --color-tertiary-container: #1b2231;
+  --color-on-tertiary-container: #ced7e2;
+  --color-on-error: #0e0e14;
+  --color-error-container: #2d1b1f;
+  --color-on-error-container: #e8cdc8;
+  --color-surface-dim: #0e0e14;
+  --color-surface-bright: #1f1f28;
+  --color-surface-container-lowest: #0e0e14;
+  --color-surface-container-low: #101017;
+  --color-surface-container: #12121a;
+  --color-surface-container-high: #191922;
+  --color-surface-container-highest: #1d1d27;
+  --color-on-surface: #e8e6e3;
+  --color-on-surface-variant: #8a8a9a;
+  --color-outline: rgba(42, 42, 54, 0.6);
+  --color-outline-variant: rgba(30, 30, 40, 0.5);
+  --color-outline-strong: #626167;
+  --color-inverse-surface: #e8e6e3;
+  --color-inverse-on-surface: #0e0e14;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #0e0e14;
+  --color-success-container: #1c2724;
+  --color-on-success-container: #d0ddce;
+  --color-warning: #a58e63;
+  --color-on-warning: #0e0e14;
+  --color-warning-container: #252222;
+  --color-on-warning-container: #dcd6cb;
+  --color-on-info: #0e0e14;
+  --color-info-container: #1b2231;
+  --color-on-info-container: #ced7e2;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
+}
+
+html:root[data-color-mode]:not(.dark) {
+  color-scheme: light;
+
+  /* --- The theme's own tokens, as authored. --- */
+  --color-surface: #fafaf7;
+  --color-surface-raised: rgba(255, 255, 255, 0.7);
+  --color-surface-hover: rgba(245, 245, 240, 0.7);
+  --color-border: rgba(180, 175, 165, 0.4);
+  --color-border-subtle: rgba(200, 195, 185, 0.3);
+  --color-text-primary: #1a1a24;
+  --color-text-secondary: #55556a;
+  --color-text-dim: #8a8a9c;
+  --color-accent: #8a6d20;
+  --color-accent-dim: rgba(138, 109, 32, 0.08);
+  --color-success: #2d8b45;
+  --color-error: #b03939;
+  --color-info: #3565a8;
+  --pc-surface: rgba(255, 255, 255, 0.55);
+  --pc-persona-bg: rgba(138, 109, 32, 0.06);
+  --pc-persona-border: rgba(138, 109, 32, 0.20);
+  --pc-persona-text: #1a1a24;
+  --pc-persona-name: #8a6d20;
+  --pc-user-bg: rgba(53, 101, 168, 0.06);
+  --pc-user-border: rgba(53, 101, 168, 0.20);
+  --pc-user-text: #1a1a24;
+  --pc-user-name: #3565a8;
+  --pc-input-bg: rgba(255, 255, 255, 0.6);
+  --pc-input-border: #c8c4ba;
+  --pc-input-focus: #8a6d20;
+  --pc-send-bg: transparent;
+  --pc-send-text: #8a6d20;
+  --pc-time-color: #8a8a9c;
+  --scp-shiki-theme: 'github-light';
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+  --font-sans: 'DM Mono', ui-monospace, monospace;
+  --pc-font: 'DM Mono', monospace;
+  --pc-radius: 3px;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #8a6d20;
+  --color-on-primary: #fafaf7;
+  --color-primary-container: #e5e0d1;
+  --color-on-primary-container: #2c2828;
+  --color-inverse-primary: #6f5a28;
+  --color-primary-bright: #6f5a28;
+  --color-primary-dim: rgba(138, 109, 32, 0.08);
+  --color-secondary: #55556a;
+  --color-on-secondary: #fafaf7;
+  --color-secondary-container: #fefefd;
+  --color-on-secondary-container: #1a1a24;
+  --color-tertiary: #3565a8;
+  --color-on-tertiary: #fafaf7;
+  --color-tertiary-container: #d5dfea;
+  --color-on-tertiary-container: #202739;
+  --color-on-error: #fafaf7;
+  --color-error-container: #f1d8d3;
+  --color-on-error-container: #332229;
+  --color-surface-dim: #fafaf7;
+  --color-surface-bright: #dedcd6;
+  --color-surface-container-lowest: #fafaf7;
+  --color-surface-container-low: #fcfcfa;
+  --color-surface-container: #fefefd;
+  --color-surface-container-high: #f6f6f2;
+  --color-surface-container-highest: #e4e2dd;
+  --color-on-surface: #1a1a24;
+  --color-on-surface-variant: #55556a;
+  --color-outline: rgba(180, 175, 165, 0.4);
+  --color-outline-variant: rgba(200, 195, 185, 0.3);
+  --color-outline-strong: #8e8d8f;
+  --color-inverse-surface: #1a1a24;
+  --color-inverse-on-surface: #fafaf7;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #fafaf7;
+  --color-success-container: #d7e6d6;
+  --color-on-success-container: #202d2b;
+  --color-warning: #806e3f;
+  --color-on-warning: #fafaf7;
+  --color-warning-container: #e3e0d4;
+  --color-on-warning-container: #2a282a;
+  --color-on-info: #fafaf7;
+  --color-info-container: #d5dfea;
+  --color-on-info-container: #202739;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
 }
 
 /* === Site surface === */

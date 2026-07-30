@@ -5,73 +5,38 @@
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
 
-/* === Tokens (light = default, dark = override) === */
+/* === Tokens ===
+ * Dark is the default (html:root); light overrides under
+ * html:root[data-color-mode]:not(.dark) — matching the appearance system, whose pre-paint
+ * stamps data-color-mode. The leading `html` type selector adds an element-column point so
+ * BOTH blocks outrank the always-on adh base theme (:root, 0-1-0) AND color-mode-light
+ * (:root[data-color-mode]:not(.dark), 0-3-0) regardless of stylesheet source order. BOTH
+ * are load-bearing: drop the light block and light mode silently reverts to the base
+ * palette, because 0-3-0 beats the dark block's 0-1-1.
+ *
+ * Converted from this theme's legacy `:root` / `:root.dark` token blocks by
+ * scripts/convert-legacy-theme.py, which derived the M3 color roles from the palette below
+ * — see that script for why a legacy theme cannot be switched to as-is, and for how each
+ * role is derived. The conversion was ONE-SHOT: this file is hand-maintained from here on,
+ * nothing regenerates it. */
 
-:root {
-  /* Site color tokens — light (GitHub-light feel) */
-  --color-surface: #ffffff;
-  --color-surface-raised: #f6f8fa;
-  --color-surface-hover: #eaeef2;
-  --color-border: #d0d7de;
-  --color-border-subtle: #d8dee4;
+html:root {
+  color-scheme: dark;
 
-  --color-text-primary: #1f2328;
-  --color-text-secondary: #656d76;
-  --color-text-dim: #8c959f;
-
-  --color-accent: #1a7f37;
-  --color-accent-dim: rgba(26, 127, 55, 0.10);
-  --color-success: #1a7f37;
-  --color-error: #cf222e;
-  --color-info: #0969da;
-
-  /* Chat color tokens — light */
-  --pc-persona-bg: rgba(26, 127, 55, 0.08);
-  --pc-persona-border: rgba(26, 127, 55, 0.25);
-  --pc-persona-text: #1f2328;
-  --pc-persona-name: #1a7f37;
-  --pc-user-bg: rgba(9, 105, 218, 0.08);
-  --pc-user-border: rgba(9, 105, 218, 0.25);
-  --pc-user-text: #1f2328;
-  --pc-user-name: #0969da;
-  --pc-surface: #f6f8fa;
-  --pc-input-bg: #ffffff;
-  --pc-input-border: #d0d7de;
-  --pc-input-focus: #1a7f37;
-  --pc-send-bg: #1a7f37;
-  --pc-send-text: #ffffff;
-  --pc-time-color: #8c959f;
-
-  /* Code highlighting (Shiki) — light */
-  --scp-shiki-theme: 'github-light';
-
-  /* Shared (non-color) tokens */
-  --font-display: 'JetBrains Mono', ui-monospace, monospace;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --pc-font-mono: 'JetBrains Mono', monospace;
-  --pc-radius: 2px;
-}
-
-:root.dark {
-  /* Site color overrides — dark (GitHub-dark feel) */
+  /* --- The theme's own tokens, as authored. --- */
   --color-surface: #0d1117;
   --color-surface-raised: #161b22;
   --color-surface-hover: #1c2330;
   --color-border: #30363d;
   --color-border-subtle: #21262d;
-
   --color-text-primary: #c9d1d9;
   --color-text-secondary: #8b949e;
   --color-text-dim: #484f58;
-
   --color-accent: #00ff88;
   --color-accent-dim: rgba(0, 255, 136, 0.08);
   --color-success: #00ff88;
   --color-error: #f85149;
   --color-info: #00d4ff;
-
-  /* Chat color overrides — dark */
   --pc-persona-bg: rgba(0, 255, 136, 0.08);
   --pc-persona-border: rgba(0, 255, 136, 0.3);
   --pc-persona-text: #c9d1d9;
@@ -87,8 +52,162 @@
   --pc-send-bg: #00ff88;
   --pc-send-text: #0d1117;
   --pc-time-color: #484f58;
-
   --scp-shiki-theme: 'github-dark';
+  --font-display: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --pc-font-mono: 'JetBrains Mono', monospace;
+  --pc-radius: 2px;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #00ff88;
+  --color-on-primary: #0d1117;
+  --color-primary-container: #18352b;
+  --color-on-primary-container: #b8dacc;
+  --color-inverse-primary: #64f69d;
+  --color-primary-bright: #64f69d;
+  --color-primary-dim: rgba(0, 255, 136, 0.08);
+  --color-secondary: #8b949e;
+  --color-on-secondary: #0d1117;
+  --color-secondary-container: #161b22;
+  --color-on-secondary-container: #c9d1d9;
+  --color-tertiary: #00d4ff;
+  --color-on-tertiary: #0d1117;
+  --color-tertiary-container: #172e3a;
+  --color-on-tertiary-container: #b5d2e0;
+  --color-on-error: #0d1117;
+  --color-error-container: #321f22;
+  --color-on-error-container: #d7bec0;
+  --color-surface-dim: #0d1117;
+  --color-surface-bright: #30363d;
+  --color-surface-container-lowest: #0d1117;
+  --color-surface-container-low: #12161d;
+  --color-surface-container: #161b22;
+  --color-surface-container-high: #1c2330;
+  --color-surface-container-highest: #2b323a;
+  --color-on-surface: #c9d1d9;
+  --color-on-surface-variant: #8b949e;
+  --color-outline: #30363d;
+  --color-outline-variant: #21262d;
+  --color-outline-strong: #646b73;
+  --color-inverse-surface: #c9d1d9;
+  --color-inverse-on-surface: #0d1117;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #0d1117;
+  --color-success-container: #18352b;
+  --color-on-success-container: #b8dacc;
+  --color-warning: #c1bb6a;
+  --color-on-warning: #0d1117;
+  --color-warning-container: #282b26;
+  --color-on-warning-container: #c7cdc6;
+  --color-on-info: #0d1117;
+  --color-info-container: #172e3a;
+  --color-on-info-container: #b5d2e0;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
+}
+
+html:root[data-color-mode]:not(.dark) {
+  color-scheme: light;
+
+  /* --- The theme's own tokens, as authored. --- */
+  --color-surface: #ffffff;
+  --color-surface-raised: #f6f8fa;
+  --color-surface-hover: #eaeef2;
+  --color-border: #d0d7de;
+  --color-border-subtle: #d8dee4;
+  --color-text-primary: #1f2328;
+  --color-text-secondary: #656d76;
+  --color-text-dim: #8c959f;
+  --color-accent: #1a7f37;
+  --color-accent-dim: rgba(26, 127, 55, 0.10);
+  --color-success: #1a7f37;
+  --color-error: #cf222e;
+  --color-info: #0969da;
+  --pc-persona-bg: rgba(26, 127, 55, 0.08);
+  --pc-persona-border: rgba(26, 127, 55, 0.25);
+  --pc-persona-text: #1f2328;
+  --pc-persona-name: #1a7f37;
+  --pc-user-bg: rgba(9, 105, 218, 0.08);
+  --pc-user-border: rgba(9, 105, 218, 0.25);
+  --pc-user-text: #1f2328;
+  --pc-user-name: #0969da;
+  --pc-surface: #f6f8fa;
+  --pc-input-bg: #ffffff;
+  --pc-input-border: #d0d7de;
+  --pc-input-focus: #1a7f37;
+  --pc-send-bg: #1a7f37;
+  --pc-send-text: #ffffff;
+  --pc-time-color: #8c959f;
+  --scp-shiki-theme: 'github-light';
+  --font-display: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --pc-font-mono: 'JetBrains Mono', monospace;
+  --pc-radius: 2px;
+
+  /* --- M3 colour roles, derived from the palette above by
+     scripts/convert-legacy-theme.py. Hand-editable from here on. --- */
+  --color-primary: #1a7f37;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #d8e8da;
+  --color-on-primary-container: #22332c;
+  --color-inverse-primary: #226a36;
+  --color-primary-bright: #226a36;
+  --color-primary-dim: rgba(26, 127, 55, 0.10);
+  --color-secondary: #656d76;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #f6f8fa;
+  --color-on-secondary-container: #1f2328;
+  --color-tertiary: #0969da;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #d6e5fb;
+  --color-on-tertiary-container: #213045;
+  --color-on-error: #ffffff;
+  --color-error-container: #fcdbd8;
+  --color-on-error-container: #3e292b;
+  --color-surface-dim: #ffffff;
+  --color-surface-bright: #d0d7de;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #fafbfc;
+  --color-surface-container: #f6f8fa;
+  --color-surface-container-high: #eaeef2;
+  --color-surface-container-highest: #d6dce3;
+  --color-on-surface: #1f2328;
+  --color-on-surface-variant: #656d76;
+  --color-outline: #d0d7de;
+  --color-outline-variant: #d8dee4;
+  --color-outline-strong: #898f95;
+  --color-inverse-surface: #1f2328;
+  --color-inverse-on-surface: #ffffff;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+  --color-on-success: #ffffff;
+  --color-success-container: #d8e8da;
+  --color-on-success-container: #22332c;
+  --color-warning: #8a6633;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #e9e2d9;
+  --color-on-warning-container: #312f2c;
+  --color-on-info: #ffffff;
+  --color-info-container: #d6e5fb;
+  --color-on-info-container: #213045;
+
+  /* --- Compat aliases: one authoritative value per colour. --- */
+  --color-border-strong: var(--color-outline-strong);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --color-surface-tint: var(--color-primary);
+  --color-apt-nav: var(--color-surface-container-high);
 }
 
 /* === Site surface === */

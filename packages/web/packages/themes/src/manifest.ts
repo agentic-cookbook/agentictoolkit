@@ -9,9 +9,12 @@ import {
   adhManropeCss,
   agenticcookbookwebCss,
   devTeamCss,
+  greenMatrixCss,
+  greenMatrixGlassCss,
   mikefullertonCss,
   myprojectsCss,
   myprojectsoverviewCss,
+  oldSchoolTerminalCss,
   professionalCss,
   techyCss,
   terminalCss,
@@ -44,9 +47,12 @@ export type ThemeKey =
   | 'adh-manrope'
   | 'agenticcookbookweb'
   | 'dev-team'
+  | 'green-matrix'
+  | 'green-matrix-glass'
   | 'mikefullerton'
   | 'myprojects'
   | 'myprojectsoverview'
+  | 'old-school-terminal'
   | 'professional'
   | 'techy'
   | 'terminal'
@@ -84,9 +90,20 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   'adh-manrope': { id: 'adh-manrope', label: 'ADH · Manrope', css: adhManropeCss },
   agenticcookbookweb: { id: 'agenticcookbookweb', label: 'Agentic Cookbook', css: agenticcookbookwebCss },
   'dev-team': { id: 'dev-team', label: 'Dev Team', css: devTeamCss },
+  'green-matrix': { id: 'green-matrix', label: 'Green Matrix', css: greenMatrixCss },
+  'green-matrix-glass': {
+    id: 'green-matrix-glass',
+    label: 'Green Matrix (Glass)',
+    css: greenMatrixGlassCss,
+  },
   mikefullerton: { id: 'mikefullerton', label: 'Mike Fullerton', css: mikefullertonCss },
   myprojects: { id: 'myprojects', label: 'My Projects', css: myprojectsCss },
   myprojectsoverview: { id: 'myprojectsoverview', label: 'Projects Overview', css: myprojectsoverviewCss },
+  'old-school-terminal': {
+    id: 'old-school-terminal',
+    label: 'Old School Terminal',
+    css: oldSchoolTerminalCss,
+  },
   professional: { id: 'professional', label: 'Professional', css: professionalCss },
   techy: { id: 'techy', label: 'Techy', css: techyCss },
   terminal: { id: 'terminal', label: 'Terminal', css: terminalCss },
