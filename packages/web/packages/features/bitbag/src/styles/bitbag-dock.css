@@ -117,6 +117,13 @@
  * it — and the tap STOPS there, so the gesture that closes the chat never also
  * trips a link, a nav, or a scroll on the page underneath.
  *
+ * The tap is not the only way out, and saying so here matters: while this is lit
+ * it is `pointer-events: auto` over the whole viewport, so on a page where bitbag
+ * is a footer widget rather than the main event, a reader who arrived by TAB has
+ * sealed the page. They didn't — `useChatSizing` also disengages on Escape, from
+ * a document-level listener, so the keyboard has the same exit the pointer does.
+ * Anyone weighing a change to this rule should check that hook first.
+ *
  * It seals only the page: bitbag and his chat are block-level children of the
  * rig and so paint above a `z-index: -1` pseudo, which means hit-testing still
  * finds them first and they keep taking their own clicks. */
