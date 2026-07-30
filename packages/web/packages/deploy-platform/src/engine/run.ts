@@ -14,9 +14,9 @@
 // apply-with-rollback loop (`applySequentially`) is shared by this runner AND the
 // builder runner so their sequencing/skip-collection semantics can't drift.
 // ---------------------------------------------------------------------------
-import { domainFamily, epHost, platformCanon, slugify } from "../canon/index.js";
-import { PLACEHOLDER_URL, planAddProject, type EndpointLite, type LiveProjectIndex, type PlanOpts, type ProjectLite } from "./plan.js";
-import { endpointUnconfigured } from "./classify.js";
+import { deployProjectKey, domainFamily, epHost, platformCanon, slugify } from "../canon/index.js";
+import { PLACEHOLDER_URL, indexLiveProjects, planAddProject, type EndpointLite, type LiveProjectIndex, type PlanOpts, type ProjectLite } from "./plan.js";
+import { endpointNeedsWiring, endpointUnconfigured, type EndpointLike } from "./classify.js";
 
 /** Render an unknown thrown value as a display string (Error → message, else String). */
 const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -393,6 +393,203 @@ export async function wireMatchingEndpoints(
     onProgress?.(done, targets.length);
   }
   return { wired, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// The REMOVAL axis — the SAME two lists, read the other way round.
+//
+// Adding asks "which project has no monitor?"; removing asks "which monitor has no
+// project?". One rule answers it, because a deleted project claims no domains:
+//
+//   • an endpoint WIRED to a project → the project it names is the authority. Gone
+//     from the platform's list ⇒ the monitor describes something that stopped
+//     existing. (This subsumes the old Vercel-project-keyed rule, on every platform.)
+//   • an endpoint with NO wiring → the domain lists are the authority. No project
+//     serves its host ⇒ same verdict.
+//
+// A wired endpoint is deliberately NOT judged on its host: a live project may serve
+// a host its domain list doesn't report (Cloudflare enumerates one representative
+// host per worker), and "the operator pointed this monitor somewhere the project
+// list can't see" is not evidence that anything was deleted.
+//
+// DNS says NOTHING here. A name that stopped resolving is how a DOWN endpoint is
+// explained, not proof that the deployment behind it is gone — and a broken site's
+// monitor is the alarm, not the mess.
+// ---------------------------------------------------------------------------
+
+/**
+ * Provider-assigned default hosts. Every provider's domain read deliberately OMITS
+ * them — Vercel filters `.vercel.app` out of its project domain list, and Cloudflare's
+ * map carries custom domains only — so their absence from the claim index is a property
+ * of the READ, never evidence about the project. An endpoint monitoring one can never
+ * be a removal candidate.
+ *
+ * Railway is deliberately NOT here: it reports each service's `*.up.railway.app`
+ * provider domains alongside its custom ones, so a Railway provider host missing from
+ * the index really is a host nothing serves.
+ */
+export const UNLISTED_PROVIDER_SUFFIXES = [".vercel.app", ".workers.dev", ".pages.dev"] as const;
+
+/** True when a host is absent from the domain lists BY CONSTRUCTION, so its absence
+ *  carries no information (see {@link UNLISTED_PROVIDER_SUFFIXES}). */
+export function hostOmittedFromDomainLists(host: string): boolean {
+  return UNLISTED_PROVIDER_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
+
+/**
+ * The endpoint's host, or "" when its URL isn't a URL at all.
+ *
+ * `epHost` deliberately falls back to the RAW string, which is right for the wiring
+ * match (a bare `example.com` still matches a project domain) and wrong here: a value
+ * no domain list could ever contain would read as a vanished host every pass. That
+ * covers real config — `PLACEHOLDER_URL` ("https://"), the URL-less row the create path
+ * leaves for a domain-less project to be filled in — which is unfinished config, not
+ * config describing something deleted.
+ */
+function judgeableHost(url: string): string {
+  try {
+    return epHost(new URL(url).href);
+  } catch {
+    return "";
+  }
+}
+
+/** The endpoint fields the removal rule reads: the configuration axis
+ *  ({@link EndpointLike}) plus the URL whose host is looked up in the claim index. */
+export type ClaimableEndpoint = EndpointLike & { url: string };
+
+/**
+ * "Both lists are up to date" as a PRECONDITION rather than a hope — the three facts
+ * that decide what this pass may conclude from an absence. Every one of them is a
+ * property of the reads that just happened, so a degraded pass withholds judgement
+ * instead of condemning live config.
+ */
+export interface ClaimEvidence {
+  /** Canonical platforms the board holds credentials for. Nothing configured ⇒ the
+   *  inventory cannot speak for any host, and nothing is judged at all. */
+  configuredPlatforms: readonly string[];
+  /** Canonical platforms whose PROJECT list is complete and authenticated this pass —
+   *  what licenses "the project this monitor names is gone". */
+  verifiedPlatforms: readonly string[];
+  /** Canonical platforms whose DOMAIN lists are complete this pass — what licenses
+   *  "no project serves this host". Separate from `verifiedPlatforms` because listing an
+   *  account's projects and listing one project's domains are different calls that fail
+   *  independently (and the domain fan-out fails PARTIALLY). */
+  verifiedDomains: readonly string[];
+}
+
+export interface UnclaimedEndpoints<T> {
+  /** Endpoints describing something no platform has any more. */
+  doomed: T[];
+  /** Why judgement was WITHHELD from part (or all) of the board this pass — one line per
+   *  reason, empty when every candidate was judged. Callers MUST log these: an empty
+   *  `doomed` from a blind pass and an empty `doomed` from a healthy fleet are opposite
+   *  facts, and they must never look alike in an operator's log. */
+  withheld: string[];
+}
+
+/**
+ * The monitors that describe something no longer on any platform — the removal rule
+ * above, applied to one pass's inventory.
+ *
+ * Every safety condition is a REFUSAL to judge, never a heuristic that guesses:
+ *
+ *  • **Nothing configured** ⇒ judge nothing. An empty inventory is not an empty fleet.
+ *  • **Per-platform blindness** ⇒ judge nothing on that platform. A wired monitor needs
+ *    its own platform's project list; an unwired one needs EVERY configured platform's
+ *    domain list, since any of them could be the one serving its host.
+ *  • **The inventory claims none of the monitored hosts** ⇒ judge nothing. A re-scoped
+ *    or swapped token returns a perfectly successful list of somebody ELSE's projects;
+ *    two lists that overlap nowhere are not the same fleet.
+ *  • **Every one of a platform's wired monitors reads vanished** ⇒ judge none of them.
+ *    Mass deletion is what a credential change looks like; a real deletion is one row.
+ *  • **Operator opt-out** — `ignoreProjectWarning` (the per-endpoint "Ignore" button)
+ *    exempts an endpoint from removal exactly as it exempts it from the "not configured"
+ *    warning. It is the ONE escape hatch for a monitor that legitimately has no deploy
+ *    project (a third-party dependency watched on a deploy-backed kind); infra kinds
+ *    (`health`/`dns`/`custom`) are excluded outright.
+ *
+ * What this function deliberately does NOT own is the probe: a monitor whose URL is
+ * SERVING is a site worth watching whatever the inventory says, and the caller — which
+ * is the only thing holding this cycle's probe results — applies that veto. It is
+ * load-bearing, not belt-and-braces: it is what stands between a partially-wrong
+ * inventory and the deletion of a live site's monitor.
+ */
+export function endpointsClaimedByNothing<T extends ClaimableEndpoint>(
+  endpoints: readonly T[],
+  projects: readonly WireableProject[],
+  evidence: ClaimEvidence,
+): UnclaimedEndpoints<T> {
+  const configured = new Set(evidence.configuredPlatforms.map(platformCanon));
+  if (configured.size === 0) {
+    return { doomed: [], withheld: ["no deploy platform is configured — the inventory cannot speak for any host"] };
+  }
+
+  const withheld: string[] = [];
+  const live = indexLiveProjects(projects, evidence.verifiedPlatforms);
+  const verifiedDomains = new Set(evidence.verifiedDomains.map(platformCanon));
+  const claims = indexEndpointWiring([...projects]);
+
+  // Removal candidates: deploy-backed kinds the operator hasn't exempted, with a
+  // parseable host the domain lists actually cover.
+  const candidates = endpoints
+    .filter((e) => endpointNeedsWiring(e.kind) && !e.ignoreProjectWarning)
+    .map((e) => ({ e, host: judgeableHost(e.url) }))
+    .filter((c) => !!c.host && !hostOmittedFromDomainLists(c.host));
+  if (candidates.length === 0) return { doomed: [], withheld };
+
+  // Do the two lists describe the same fleet at all? `null` (a host two projects claim)
+  // counts as claimed — ambiguous wiring is emphatically not an absence.
+  if (!candidates.some((c) => claims.get(c.host) !== undefined)) {
+    return {
+      doomed: [],
+      withheld: [
+        `the ${plural(projects.length, "enumerated project")} claim none of the ${plural(candidates.length, "monitored host")} — treating that as a credential/scope change, not a deleted fleet`,
+      ],
+    };
+  }
+
+  const doomed: T[] = [];
+
+  // ── Wired: the project each one NAMES is the authority ────────────────────
+  const byPlatform = new Map<string, { e: T; host: string }[]>();
+  for (const c of candidates) {
+    if (!c.e.platform || !c.e.deployProject) continue;
+    const platform = platformCanon(c.e.platform);
+    const group = byPlatform.get(platform);
+    if (group) group.push(c);
+    else byPlatform.set(platform, [c]);
+  }
+  for (const [platform, group] of byPlatform) {
+    if (!live.platforms.has(platform)) {
+      withheld.push(`${platform}: project list not complete this pass — ${plural(group.length, "wired monitor")} not judged`);
+      continue;
+    }
+    const gone = group.filter((c) => !live.keys.has(deployProjectKey(platform, c.e.deployProject!)));
+    if (gone.length === group.length) {
+      withheld.push(
+        `${platform}: ALL ${plural(group.length, "wired monitor")} name a project the enumeration didn't return — treating that as a credential/scope change, not mass deletion`,
+      );
+      continue;
+    }
+    doomed.push(...gone.map((c) => c.e));
+  }
+
+  // ── Unwired: the domain lists are the authority ───────────────────────────
+  const unwired = candidates.filter((c) => !c.e.platform || !c.e.deployProject);
+  if (unwired.length > 0) {
+    // Any platform could be the one serving these hosts, so judging them needs EVERY
+    // configured platform's domain list — a blind spot on any one of them could be
+    // hiding exactly the project that claims the host.
+    const blind = [...configured].filter((p) => !verifiedDomains.has(p)).sort();
+    if (blind.length > 0) {
+      withheld.push(`domain lists not complete for ${blind.join(", ")} — ${plural(unwired.length, "unwired monitor")} not judged`);
+    } else {
+      doomed.push(...unwired.filter((c) => claims.get(c.host) === undefined).map((c) => c.e));
+    }
+  }
+
+  return { doomed, withheld };
 }
 
 export interface AutoConfigureSummary {

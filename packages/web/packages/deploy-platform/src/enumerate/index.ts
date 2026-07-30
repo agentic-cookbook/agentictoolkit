@@ -50,6 +50,19 @@ export interface DeployEnumeration {
    *  from a call this function makes, so only the caller that refreshed that table knows
    *  whether the read behind it was complete. It adds `vercel` itself when it was. */
   verifiedPlatforms: string[];
+  /** The canonical platforms whose DOMAIN reads all succeeded this pass — i.e. the ones
+   *  whose `domains` lists are complete enough that a host's ABSENCE from them proves no
+   *  project serves it.
+   *
+   *  A separate fact from {@link verifiedPlatforms}, because they fail separately: listing
+   *  an account's projects and listing one project's domains are different calls with
+   *  different scopes, and the domain fan-out is the one that fails PARTIALLY (a 403 on a
+   *  single project, one project's timeout). Every such failure collapses to an EMPTY
+   *  domain list, which reads exactly like "this project serves nothing" — so a caller
+   *  that DELETES a monitor for being unclaimed needs this set, not merely a complete
+   *  project list. Unlike `verifiedPlatforms`, `vercel` CAN appear here: the domain lists
+   *  are fetched by this function (the meta mirror only supplies the canonical domain). */
+  verifiedDomains: string[];
 }
 
 /**
@@ -86,7 +99,7 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
   ).finally(() => railwayTimer.done());
   const railwayProjectsP = railwayListingP.then((l) => l.projects);
 
-  const [metas, railwayListing, cf, railwayDomainByProject] = await Promise.all([
+  const [metas, railwayListing, cf, railwayDomains] = await Promise.all([
     db.select().from(deployProjectMeta),
     railwayListingP,
     // Resolve the CF account ONCE (a blank CLOUDFLARE_ACCOUNT_ID is discovered from the
@@ -106,6 +119,7 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
   ]);
 
   const railwayProjects = railwayListing.projects;
+  const railwayDomainByProject = railwayDomains.byProject;
   const workerScripts = cf?.scripts ?? conn.cloudflare.workerScripts ?? [];
   // The live worker custom-domain map (the SAME source Cloudflare routes with),
   // inverted to worker→host. Vercel writes domains into deployProjectMeta, but CF/Railway
@@ -127,10 +141,16 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
   // so a slow/absent Vercel degrades to the single canonical domain (below) rather
   // than stalling the enumeration.
   const vercelDomains = new Map<string, string[]>();
+  // Every Vercel project's domain read succeeded — the precondition for reading a host's
+  // absence from these lists as "no Vercel project serves it". ONE project's failed read
+  // (403, timeout, 5xx) disqualifies the platform: its domains are missing from the index,
+  // and a caller can't know which host that cost it. A tokenless run never looks at all.
+  let vercelDomainsLive = !!conn.vercel.token;
   if (conn.vercel.token) {
     const vercelPairs = [...pairs.values()].filter((p) => platformCanon(p.platform) === 'vercel');
     await mapLimit(vercelPairs, 8, async (p) => {
-      const ds = await fetchProjectDomains(conn.vercel.token!, conn.vercel.teamId, p.projectName);
+      const { domains: ds, live } = await fetchProjectDomains(conn.vercel.token!, conn.vercel.teamId, p.projectName);
+      if (!live) vercelDomainsLive = false;
       if (ds.length) vercelDomains.set(p.projectName, ds);
     });
   }
@@ -192,6 +212,16 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
   // list — which cannot be read as the complete truth about what exists.
   const verifiedPlatforms = [...(railwayListing.live ? ["railway"] : []), ...(cf?.scripts ? ["cloudflare"] : [])];
 
+  // Domain provenance, per platform. Each needs BOTH halves — a complete project list AND
+  // complete domain reads over it — because a project missing from the list contributes no
+  // domains just as surely as a project whose domain read failed. Cloudflare's domains come
+  // from the account-wide `/workers/domains` map, so its one null is the whole platform's.
+  const verifiedDomains = [
+    ...(vercelDomainsLive ? ["vercel"] : []),
+    ...(railwayListing.live && railwayDomains.complete ? ["railway"] : []),
+    ...(cf?.scripts && cf.hostToWorker ? ["cloudflare"] : []),
+  ];
+
   const projects = [...vercelCf, ...railway].sort(
     (a, b) =>
       a.platform.localeCompare(b.platform) ||
@@ -203,7 +233,7 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
       (a.environment ?? '').localeCompare(b.environment ?? ''),
   );
 
-  return { projects, verifiedPlatforms };
+  return { projects, verifiedPlatforms, verifiedDomains };
 }
 
 /**
@@ -214,22 +244,37 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
  * entry per environment. Each project is queried under its own time box and independently
  * fault-tolerant, so one slow/unauthorized project can't block or fail the others; a
  * project with no monitorable host in any env is simply absent from the map.
+ *
+ * `complete` is that fault tolerance made VISIBLE: absent from the map means "serves no
+ * host" for a project that answered and "we never saw it" for one that timed out, and only
+ * a caller told which happened can act on an absence. It is false the moment ONE project's
+ * read fails — including the tokenless case, where nothing was read at all.
  */
 async function resolveRailwayDomains(
   token: string | undefined,
   projects: { id: string; name: string }[],
-): Promise<Map<string, RailwayEnvDomains[]>> {
+): Promise<{ byProject: Map<string, RailwayEnvDomains[]>; complete: boolean }> {
   const out = new Map<string, RailwayEnvDomains[]>();
-  if (!token || projects.length === 0) return out;
+  if (!token) return { byProject: out, complete: false };
+  if (projects.length === 0) return { byProject: out, complete: true };
+  let complete = true;
   // Bounded concurrency (not an unbounded Promise.all): an account token can list many
   // projects, and Railway's GraphQL is rate-limited — a 100-wide fan-out would get
   // throttled, dropping domains. 4 in flight keeps it gentle.
   await mapLimit(projects, 4, async (p) => {
-    if (!p.id) return;
+    // A project the list named without an id can't be queried at all — a blind spot, not
+    // a project without domains.
+    if (!p.id) {
+      complete = false;
+      return;
+    }
     const timer = withTimeout(6_000);
     try {
       const services = await listRailwayProjectDomains(token, p.id, timer.signal);
-      if (!services) return;
+      if (!services) {
+        complete = false;
+        return;
+      }
       const envs = railwayProjectEnvironments(services);
       // Only record projects that expose a real host in at least one env; provider-only /
       // Postgres projects (no domains anywhere) stay absent so they enumerate "no domain".
@@ -238,9 +283,10 @@ async function resolveRailwayDomains(
       // One project's failure must never fail the others (or the whole endpoint) —
       // it simply contributes no domain. listRailwayProjectDomains already swallows
       // its own errors; this guards anything unexpected in the pick.
+      complete = false;
     } finally {
       timer.done();
     }
   });
-  return out;
+  return { byProject: out, complete };
 }
