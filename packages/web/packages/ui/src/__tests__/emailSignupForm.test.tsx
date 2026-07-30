@@ -23,7 +23,11 @@ const fetchMock = vi.fn()
  * output would otherwise bury a real one. The tests that care about the log assert its CONTENT
  * off this spy, which is stronger than reading it in the terminal.
  */
-let consoleError: ReturnType<typeof vi.spyOn>
+// Typed off the call, not off `vi.spyOn` itself: a bare `ReturnType<typeof vi.spyOn>` leaves the
+// generics unresolved, so `.mock.calls` degrades to an untyped array and every callback that
+// reads one is an implicit any — which `tsc --noEmit` rejects, taking the package's lint with it.
+const silenceConsoleError = () => vi.spyOn(console, 'error').mockImplementation(() => {})
+let consoleError: ReturnType<typeof silenceConsoleError>
 
 /** The body every green config GET in this file returns. */
 const OPEN_CONFIG = { name: 'Launch list', description: 'Be first to know.', status: 'open', nonce: 'n1' }
@@ -32,7 +36,7 @@ const configOk = (body: Record<string, unknown> = OPEN_CONFIG) => ({ ok: true, j
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
   fetchMock.mockReset()
-  consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  consoleError = silenceConsoleError()
   // The mount GET that fetches display config + the nonce.
   fetchMock.mockResolvedValueOnce(configOk())
 })
