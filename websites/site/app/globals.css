@@ -4,18 +4,6 @@
 @source "../examples/**/*.{ts,tsx}";
 @source "../src/**/*.{ts,tsx}";
 
-@import '@agentic-toolkit/layout/css/base.css';
-@import '@agentic-toolkit/layout/css/header.css';
-@import '@agentic-toolkit/layout/css/sidebar.css';
-@import '@agentic-toolkit/layout/css/breadcrumbs.css';
-@import '@agentic-toolkit/layout/css/toc.css';
-@import '@agentic-toolkit/layout/css/app-shell.css';
-
-@import '@agentic-toolkit/content/css/cards.css';
-@import '@agentic-toolkit/content/css/home-page.css';
-@import '@agentic-toolkit/content/css/section-index.css';
-@import '@agentic-toolkit/content/css/markdown-view.css';
-
 @import '@agentic-toolkit/chat/css/base.css';
 @import '@agentic-toolkit/chat/css/modes/inline.css';
 @import '@agentic-toolkit/chat/css/modes/three-pane.css';

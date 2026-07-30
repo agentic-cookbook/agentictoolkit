@@ -20,6 +20,21 @@ For day-to-day usage, prefer:
 
 This doc is the *historical* and *architectural* record.
 
+> **Note (July 2026):** three of the eight original packages —
+> `@agentic-toolkit/layout`, `@agentic-toolkit/content`, and
+> `site-templates/reference-web-site` — have since been **deleted**. They
+> had no importers left: the cookbook site that descended from
+> `reference-web-site` had long since forked away from it, and its
+> document-reading UI was re-extracted into `@agentic-toolkit/ui`'s
+> `blocks/` as the HDV (Hierarchical Document View) family instead. The
+> workspace root also moved from `packaging/` to `packages/web/`, and the
+> examples site from `site/` to `websites/site/`.
+>
+> The tables and paths below are left as they were, because this doc records
+> what the conversion shipped in May 2026 — not what the tree holds today.
+> For the current package list see
+> [`packages/web/README.md`](../../packages/web/README.md).
+
 ---
 
 ## What the toolkit ships now

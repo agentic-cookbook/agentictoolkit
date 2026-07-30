@@ -28,7 +28,6 @@ export default defineConfig({
     'next',
     'next/headers',
     'next/navigation',
-    '@agentic-toolkit/layout',
     '@agentic-toolkit/themes',
     '@agentic-toolkit/themes/manifest',
     '@agentic-toolkit/ui',

@@ -5,9 +5,9 @@ app's aliases (@/...). See the monorepo's docs/feature-platform.md.
 
 Catches the ban in EVERY import form — `from '…'` (default/named import +
 re-export), a side-effect `import '…'`, a dynamic `import('…')`, and a
-`require('…')` — for both banned specifier prefixes. `site-templates` is
-consumer-style scaffolding, so a `@/` self-alias is legitimate there and
-exempt; the `@adh-shared/` ban still applies everywhere. stdlib-only,
+`require('…')` — for both banned specifier prefixes. Both bans are absolute:
+every package under `packages/` is library code, so neither a consumer alias
+nor monorepo-internal code has any business in one. stdlib-only,
 Python-3.9-safe."""
 from __future__ import annotations
 
@@ -19,24 +19,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent / "packages"
 
 # Any import/require form immediately followed by a quoted banned specifier.
-# Group 1 is the specifier itself, so the site-templates `@/` exemption can be
-# decided per match:
+# A match is a violation outright — there is no per-match decision to make, so
+# nothing here captures:
 #   from '…' / export … from '…'   default/named import + re-export
 #   import '…'                      side-effect import (no binding)
 #   import('…')                     dynamic import
 #   require('…')                    CommonJS require
 BAD = re.compile(
-    r"(?:from\s+['\"]|import\s+['\"]|import\s*\(\s*['\"]|require\s*\(\s*['\"])(@adh-shared/|@/)"
+    r"(?:from\s+['\"]|import\s+['\"]|import\s*\(\s*['\"]|require\s*\(\s*['\"])(?:@adh-shared/|@/)"
 )
-
-
-def is_violation(specifier: str, path: Path) -> bool:
-    """A banned specifier is a violation unless it is a `@/` self-alias inside
-    site-templates (consumer-style scaffolding, where `@/` is legitimate). The
-    `@adh-shared/` ban is absolute everywhere."""
-    if specifier == "@/" and "site-templates" in path.parts:
-        return False
-    return True
 
 
 def is_comment_line(line: str) -> bool:
@@ -71,10 +62,8 @@ def main() -> int:
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if is_comment_line(line):
                 continue
-            for m in BAD.finditer(line):
-                if is_violation(m.group(1), path):
-                    offenders.append(f"{path.relative_to(ROOT.parent)}:{lineno}: {line.strip()}")
-                    break
+            if BAD.search(line):
+                offenders.append(f"{path.relative_to(ROOT.parent)}:{lineno}: {line.strip()}")
     if offenders:
         print("BOUNDARY VIOLATIONS (toolkit must not import consumer-repo code):")
         print("\n".join(offenders))

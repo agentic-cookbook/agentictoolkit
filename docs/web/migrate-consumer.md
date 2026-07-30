@@ -45,8 +45,8 @@ packages:
 
 Adjust the first entries to match your repo's app layout. The `**` glob
 is necessary because some toolkit packages live one level deeper
-(`packages/features/chat`, `packages/site-templates/reference-web-site`).
-pnpm filters by `package.json` presence so this is safe.
+(`packages/features/chat`, `packages/features/personas`, …). pnpm filters
+by `package.json` presence so this is safe.
 
 ### 3. Swap the dep in the consumer's `package.json`
 
@@ -63,9 +63,7 @@ subset of:
 {
   "dependencies": {
     "@agentic-toolkit/chat": "workspace:*",
-    "@agentic-toolkit/content": "workspace:*",
     "@agentic-toolkit/controls": "workspace:*",
-    "@agentic-toolkit/layout": "workspace:*",
     "@agentic-toolkit/model": "workspace:*",
     "@agentic-toolkit/themes": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*"
@@ -85,11 +83,20 @@ roots:
 | --------------------------------------------------------- | ------------------------------------------------------- |
 | `@agentic-cookbook/agentic-web-toolkit/themes/...`        | `@agentic-toolkit/themes/...`                       |
 | `@agentic-cookbook/agentic-web-toolkit/model/...`         | `@agentic-toolkit/model/...`                        |
-| `@agentic-cookbook/agentic-web-toolkit/layout/...`        | `@agentic-toolkit/layout/...`                       |
-| `@agentic-cookbook/agentic-web-toolkit/content/...`       | `@agentic-toolkit/content/...`                      |
 | `@agentic-cookbook/agentic-web-toolkit/controls/<ctrl>`   | `@agentic-toolkit/controls/<ctrl>`                  |
 | `@agentic-cookbook/agentic-web-toolkit/features/chat/...` | `@agentic-toolkit/chat/...`                         |
-| `@agentic-cookbook/agentic-web-toolkit/site-templates/reference-web-site/...` | `@agentic-toolkit/reference-web-site/...` |
+
+Three of the old umbrella sub-paths have **no successor** — `layout/…`,
+`content/…`, and `site-templates/reference-web-site/…` were deleted in July
+2026 once nothing imported them. If your repo still imports one of them:
+
+- the document-reading UI they were used for (nav tree, breadcrumbs, ToC,
+  prose, metadata) now lives in `@agentic-toolkit/ui/blocks` as the **HDV**
+  (Hierarchical Document View) family, which is a re-extraction rather than
+  a rename — the props differ, so this is a port, not a `sed`;
+- everything else in those packages was `awt-*` BEM CSS that the family
+  replaced with Tailwind over `--color-*` tokens. Restyle against the
+  tokens in `@agentic-toolkit/themes` rather than reviving the CSS.
 
 A codemod-grade `sed` per row (one rule per package) handles most repos.
 For a one-shot transform, the row mapping above is enough to drive a

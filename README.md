@@ -21,16 +21,18 @@ The Apple platform is a workspace of three XcodeGen-backed Xcode projects:
 and `AIPlugins` (`AIPluginsShared.framework` plus five `.aiplugin` bundles).
 
 The Web platform is a pnpm monorepo. Libraries live under
-`packages/web/packages/`:
+`packages/web/packages/`, a few of the load-bearing ones being:
 
-- `@agentic-toolkit/ui` — shadcn slot, `cn` helper, globals.
+- `@agentic-toolkit/ui` — shadcn slot, `cn` helper, blocks, globals.
 - `@agentic-toolkit/themes` — `ColorModeProvider`, `ThemeStyle`, themes.
 - `@agentic-toolkit/model` — providers, hooks, lib helpers.
-- `@agentic-toolkit/layout` — header, sidebar, breadcrumbs, app-shell CSS.
-- `@agentic-toolkit/content` — markdown view, cards, section index.
 - `@agentic-toolkit/controls` — settings, search, dev banner, etc.
+- `@agentic-toolkit/adh` — family site chrome: header, footer, legal.
+- `@agentic-toolkit/auth` / `data` / `resource` / `crud` — the app platform.
 - `@agentic-toolkit/chat` (under `features/chat`) — chat surfaces + backends.
-- `@agentic-toolkit/reference-web-site` — Vite-only reference site template.
+
+The full table, with each package's dependencies, is in
+[`packages/web/README.md`](packages/web/README.md).
 
 The reference demo site sits at `websites/site/` and consumes the packages
 via `file:` refs (it deliberately lives **outside** the pnpm workspace so

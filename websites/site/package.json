@@ -10,9 +10,7 @@
   },
   "dependencies": {
     "@agentic-toolkit/chat": "file:../../packages/web/packages/features/chat",
-    "@agentic-toolkit/content": "file:../../packages/web/packages/content",
     "@agentic-toolkit/controls": "file:../../packages/web/packages/controls",
-    "@agentic-toolkit/layout": "file:../../packages/web/packages/layout",
     "@agentic-toolkit/model": "file:../../packages/web/packages/model",
     "@agentic-toolkit/themes": "file:../../packages/web/packages/themes",
     "@agentic-toolkit/ui": "file:../../packages/web/packages/ui",

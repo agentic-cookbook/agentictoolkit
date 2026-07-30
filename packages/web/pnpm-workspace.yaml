@@ -4,8 +4,6 @@ packages:
   - './packages/markdown'
   - './packages/search'
   - './packages/model'
-  - './packages/layout'
-  - './packages/content'
   - './packages/controls'
   - './packages/auth'
   - './packages/api-explorer'
@@ -15,4 +13,3 @@ packages:
   - './packages/adh'
   - './packages/deploy-platform'
   - './packages/features/*'
-  - './packages/site-templates/reference-web-site'

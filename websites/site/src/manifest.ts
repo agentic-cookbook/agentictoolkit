@@ -3,9 +3,7 @@ import Chat from '../examples/chat'
 import UserSettings from '../examples/user-settings'
 import Theme from '../examples/theme'
 import SiteModel from '../examples/site-model'
-import Layout from '../examples/layout'
 import Controls from '../examples/controls'
-import Content from '../examples/content'
 import FilteredList from './examples/filtered-list'
 import SourceCodePanel from './examples/source-code-panel'
 import LoggingPanel from './examples/logging-panel'
@@ -38,8 +36,6 @@ export const groups: ExampleGroup[] = [
       { id: 'controls',          label: 'Controls',          Component: Controls },
     ],
   },
-  { id: 'layout',   label: 'Layout',   examples: [{ id: 'layout',     label: 'Layout',     Component: Layout }] },
-  { id: 'content',  label: 'Content',  examples: [{ id: 'content',    label: 'Content',    Component: Content }] },
   { id: 'features', label: 'Features', examples: [{ id: 'chat',       label: 'Chat',       Component: Chat }] },
   { id: 'themes',   label: 'Themes',   examples: [{ id: 'theme',      label: 'Theme',      Component: Theme }] },
   { id: 'model',    label: 'Model',    examples: [{ id: 'site-model', label: 'Site Model', Component: SiteModel }] },
