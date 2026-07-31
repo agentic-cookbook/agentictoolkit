@@ -203,7 +203,7 @@ handling (it transitions to error and reveals `Avatar.Fallback`).
   client-side upgrade fetch.
 - **DTO structural alignment**: `UserCardDto` is intentionally a local structural
   duplicate of `components['schemas']['PublicUserProfile']` from
-  `@adh/api-types`. The duplicate keeps `@agentic-toolkit/ui` free of the
+  `@agentic-toolkit/adh-api-types`. The duplicate keeps `@agentic-toolkit/ui` free of the
   api-types dependency; callers may pass `SuccessBody<'/public/users/{slug}', 'get'>`
   directly since the shapes are identical.
 - **Responsive**: verified at 375 / 768 / 1440 via Playwright.
@@ -223,7 +223,7 @@ handling (it transitions to error and reveals `Avatar.Fallback`).
   requiring an allowlist.
 - **Structural DTO duplicate, not an import**: `UserCardDto` mirrors
   `PublicUserProfile` from api-types rather than importing it, keeping
-  `@agentic-toolkit/ui` from depending on `@adh/api-types`. The structural
+  `@agentic-toolkit/ui` from depending on `@agentic-toolkit/adh-api-types`. The structural
   match is enforced at the hub's call site by the TypeScript compiler.
 - **`PLATFORM_LABELS` exported**: The platform label map is exported so the social-
   links settings editor can import it, making this file the single source of truth

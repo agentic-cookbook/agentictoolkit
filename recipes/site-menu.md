@@ -42,10 +42,10 @@ the header wordmark. It renders a vertical list of rows, each `[icon] [label]
 **both** the marketing (logged-out) and workspace (logged-in `/home`) surfaces;
 only the **top section** differs by auth state.
 
-It is chrome, and it straddles the tier boundary: the menu itself — `SiteMenu` and
-the `menu-icons` map — is ADH vocabulary and lives in `@adh/chrome/header`, while the
-registry-free machinery it composes (`NavigationPopover`, the recents store) is
-`@agentic-toolkit/adh/header`. It is built by composing that
+It is chrome. The menu itself — `SiteMenu` and the `menu-icons` map — is ADH
+vocabulary, and the registry-free machinery it composes (`NavigationPopover`, the
+recents store) is generic; both halves now live in `@agentic-toolkit/adh/header`,
+so the tier boundary this recipe once straddled is gone. It is built by composing that
 `NavigationPopover` (surface, search, keyboard nav, flyout submenus) with a
 declarative config (`MenuGroup[]`). This recipe defines the enhanced menu:
 per-row **icons** from a single source of truth, a new **inline sub-item** row
@@ -60,7 +60,7 @@ the user actually landed on and deep-links back to each.
 |---|---|---|---|---|
 | NavigationPopover | `@agentic-toolkit/adh/header` | Popover surface, search box, keyboard navigation, row rendering, flyout submenus | yes | Consumes `PopoverEntry[]` with icon + inline-subitem support |
 | SiteWordmark | agenticdeveloperhub://recipes/site-wordmark | The header trigger that opens the menu | yes | Unchanged |
-| menu-icons map | `@adh/chrome/header` `menu-icons.ts` (app tier — it is keyed by `SiteId`) | Single source of truth for every row's icon — keyed by SiteId, in-hub route path, or chrome key | yes | `MENU_ICONS` record + `menuIcon(key)` resolver |
+| menu-icons map | `@agentic-toolkit/adh/header` `menu-icons.ts` (ADH vocabulary — it is keyed by `SiteId`) | Single source of truth for every row's icon — keyed by SiteId, in-hub route path, or chrome key | yes | `MENU_ICONS` record + `menuIcon(key)` resolver |
 | lucide-react icons | (library) | The icon glyphs | yes | Only icons already used elsewhere on the platform are reused where one exists |
 | `useWorkspaces` | `@/api/workspaces` (hub) | Supplies the Workspaces flyout entries | yes (logged-in) | react-query; `{ slug, name, type }[]` |
 | Recents store | `@agentic-toolkit/adh/header/recents` — import that subpath, never `./recents`; it holds module-level state and a second inlined copy would silently fork the history | Persists + reads the last 10 visited places | yes (logged-in) | localStorage, `ftd-storage` pattern |
@@ -220,8 +220,7 @@ LOGGED OUT (marketing)               LOGGED IN (/home + workspace)
   both auth states with seeded workspaces + recents.
 - Responsive: verify via Playwright at 375 / 768 / 1440; keyboard + pointer.
 - Tailwind sources: no new package boundary; icons are lucide (already a dependency
-  of both `@adh/chrome` and `@agentic-toolkit/adh`, externalized by each so the two
-  tiers share one copy).
+  of `@agentic-toolkit/adh` and externalized by it, so the host supplies the one copy).
 
 ## Design Decisions
 
@@ -255,7 +254,7 @@ LOGGED OUT (marketing)               LOGGED IN (/home + workspace)
 | Check | Status | Category |
 |---|---|---|
 | No raw hex / arbitrary colors (`check_ui.py`) | required | ui-tokens |
-| Reuses `@adh/chrome` + `@agentic-toolkit/adh` chrome; no bespoke menu | required | ui-consistency |
+| Reuses `@agentic-toolkit/adh` chrome; no bespoke menu | required | ui-consistency |
 | Keyboard + ARIA (menu roles, focus return) | required | accessibility |
 | Recents stores no PII beyond local place labels/URLs on-device | n/a | privacy |
 
