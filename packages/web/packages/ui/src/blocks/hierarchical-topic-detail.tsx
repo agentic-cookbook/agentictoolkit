@@ -456,6 +456,7 @@ export function HierarchicalTopicDetail({
   manualCollapse = true,
   disclosureStyle = "covered",
   layoutMode = "auto",
+  ssrDetail = false,
   children,
 }: {
   /** The rail levels, outermost first. Each level's selection scopes the next. */
@@ -504,6 +505,30 @@ export function HierarchicalTopicDetail({
    *  phone therefore starts and stays narrow). The threshold does not depend on what is selected, so
    *  the mode never flips under a click. `"wide"` / `"narrow"` force one (a showcase, a test). */
   layoutMode?: "auto" | "wide" | "narrow"
+  /**
+   * SERVER-RENDER the detail pane as well as portaling it. Default false, which is this stack's
+   * historical behaviour: the detail exists only inside the client-created portal host, so it is
+   * absent from the server's HTML entirely and arrives at hydration.
+   *
+   * That default is right for a stack whose detail is a data browser, a form or anything behind
+   * auth — there is nothing to render on the server and nothing that wants indexing. It is wrong
+   * for a stack whose detail IS the page's content: a documentation or topic browser that renders
+   * no prose on the server is invisible to a crawler and blank without JavaScript, and no test
+   * catches it because a client-side render always populates the host.
+   *
+   * When true, the detail also renders as ordinary children of the active stack's detail slot for
+   * exactly as long as the portal host does not exist — the server pass and the hydrating client
+   * render, which produce identical markup. The layout effect then creates the host, this seed
+   * unmounts, and the portal takes over the same DOM position. The handoff is invisible: it lands
+   * in the commit BEFORE the browser paints, and it remounts {@link DetailCrossfade} with an
+   * unchanged token, which that component reads as "a remount of the same detail" and does not
+   * fade.
+   *
+   * It is opt-in rather than the default because the seed's one visible consequence — content in
+   * the pre-hydration paint — is an improvement for a topic browser and a regression for a pane
+   * that would rather show nothing until it is live.
+   */
+  ssrDetail?: boolean
   /** Innermost detail content for the current selection (lands in the rightmost
    *  detail pane). */
   children: ReactNode
@@ -814,6 +839,21 @@ export function HierarchicalTopicDetail({
     </DetailCrossfade>
   )
 
+  // THE SERVER SEED (`ssrDetail`). The portal above contributes NOTHING until a layout effect has
+  // built its host, so on the server — and on the hydrating render that has to match it — the pane
+  // is empty. For a stack whose detail is the page's content that is the whole page missing from
+  // the HTML. So the same `detail` also renders as ordinary children of the active stack's slot for
+  // exactly the window in which the host does not exist, and the two renders that must agree (the
+  // server's and hydration's) both see `detailHost === null` and emit it identically.
+  //
+  // It is the SAME element in the same DOM position, so the handoff is a remount, not a move: the
+  // seed unmounts as the portal mounts, in the commit the host-creating layout effect schedules —
+  // before paint. `DetailCrossfade` sees a remount carrying an unchanged token and treats it as
+  // "the same detail", so nothing fades. Deliberately NOT `display: none`-ed while it waits: a
+  // hidden seed would satisfy a crawler and still leave the page blank without JavaScript, which is
+  // half the reason to render it at all.
+  const detailSeed = ssrDetail && !detailHost ? detail : null
+
   // The layouts share the same selection / breadcrumb / exit-guard semantics above and differ ONLY in
   // how the lists yield room to the detail — so each is its own subcomponent owning its layout state
   // (kept distinct so any one can evolve or be deleted independently).
@@ -834,6 +874,7 @@ export function HierarchicalTopicDetail({
     setNarrowTop,
     containerW,
     detailSlot: setDetailSlotEl,
+    detailSeed,
   }
 
   return (
@@ -1023,6 +1064,10 @@ interface StackProps {
    *  EMPTY. The frame moves its one persistent detail host (a `display: contents` portal target)
    *  into whichever slot is mounted, so the detail's React subtree survives stack flips. */
   detailSlot: (el: HTMLDivElement | null) => void
+  /** What the detail slot renders as ORDINARY children, which is nothing at all unless the frame
+   *  was asked to server-render its detail (`ssrDetail`) and the portal host does not exist yet.
+   *  See the seed comment beside `detail` in the frame. */
+  detailSeed: ReactNode
 }
 
 /* PARKED — the AUTO-HIDE mode and its root-list toggle button were removed here (Mike: "remove the
@@ -1240,6 +1285,7 @@ function MinimizedStack({
   levels,
   manualCollapse,
   detailSlot,
+  detailSeed,
 }: Omit<StackProps, "containerW"> & { levels: TopicLevel[]; manualCollapse: boolean }) {
   // `pins` (from the frame) is this stack's manual collapse-to-icon-strip intent; width pressure
   // adds collapses on top of it — the same two layers the covered stack uses, drawn as an icon strip
@@ -1500,12 +1546,15 @@ function MinimizedStack({
         {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
             the viewport, so on a phone (where every list has drilled off) the form reflows to the
             full width instead of forcing a horizontal scroll. Rendered EMPTY — the frame slots its
-            persistent detail host in here (see StackProps.detailSlot). */}
+            persistent detail host in here (see StackProps.detailSlot) — except for the window
+            before that host exists, when `detailSeed` may hold the server-rendered detail. */}
         <div
           ref={detailSlot}
           className="flex min-h-0 w-full flex-1 flex-col"
           style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
-        />
+        >
+          {detailSeed}
+        </div>
       </section>
     </div>
   )
@@ -1533,6 +1582,7 @@ function CoveredStack({
   setHoverId,
   containerW,
   detailSlot,
+  detailSeed,
 }: StackProps) {
   const minPx = minDetailPx(minDetailWidth)
   // Per-level rail width: a DRAGGED width (the trailing-border handle) wins, else the level's own
@@ -2041,12 +2091,15 @@ function CoveredStack({
         {/* Hold the leaf to its min width so it scrolls rather than crushing — but never wider than
             the viewport, so on a phone the form reflows to the full width instead of scrolling.
             Rendered EMPTY — the frame slots its persistent detail host in here (see
-            StackProps.detailSlot). */}
+            StackProps.detailSlot) — except for the window before that host exists, when
+            `detailSeed` may hold the server-rendered detail. */}
         <div
           ref={detailSlot}
           className="flex min-h-0 w-full flex-1 flex-col"
           style={{ minWidth: `min(${minDetailWidth}, 100%)` }}
-        />
+        >
+          {detailSeed}
+        </div>
       </section>
     </div>
   )
@@ -2085,6 +2138,7 @@ function NarrowStack({
   narrowTop,
   setNarrowTop,
   detailSlot,
+  detailSeed,
 }: StackProps & { levels: TopicLevel[] }) {
   // The top of the navigation stack: the detail (index `levels.length`) once every level is selected,
   // else the frontier list — the one with nothing chosen in it yet.
@@ -2220,8 +2274,12 @@ function NarrowStack({
           </div>
         )}
         {/* Rendered EMPTY — the frame slots its persistent detail host in here (see
-            StackProps.detailSlot), which is how the deep detail SURVIVES the flip into narrow. */}
-        <div ref={detailSlot} className="flex min-h-0 w-full flex-1 flex-col" />
+            StackProps.detailSlot), which is how the deep detail SURVIVES the flip into narrow.
+            `detailSeed` is the one exception: the server-rendered detail, held only until the
+            host exists. */}
+        <div ref={detailSlot} className="flex min-h-0 w-full flex-1 flex-col">
+          {detailSeed}
+        </div>
       </section>
     </div>
   )

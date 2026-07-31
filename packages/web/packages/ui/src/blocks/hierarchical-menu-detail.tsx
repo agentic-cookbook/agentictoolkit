@@ -423,6 +423,20 @@ export function HierarchicalMenuDetail({
    *  detail can fit — the container is narrower than one topic list plus `minDetailWidth` — or the
    *  browser is a phone. `"wide"` / `"narrow"` force one (for a showcase or a test). */
   layoutMode?: "auto" | "wide" | "narrow"
+  /**
+   * ACCEPTED AND IGNORED — this stack always server-renders its detail.
+   *
+   * HTDV portals its detail into a host built by a layout effect, so its pane is empty in the
+   * server's HTML unless it is asked for the seed (`ssrDetail` there). This stack renders `detail`
+   * as an ordinary child of whichever stack is active, on every render, server included — there is
+   * no host and nothing to opt into.
+   *
+   * The prop exists here because {@link HierarchicalDetailViewProps} IS this component's prop type:
+   * the switch's surface is the wider of the two, so a prop only HTDV acts on still has to be
+   * nameable to reach it. A consumer that wants its detail indexed passes `ssrDetail` once and gets
+   * it under either view — true here by construction, true there by the seed.
+   */
+  ssrDetail?: boolean
   /** Innermost detail content for the current selection (lands in the rightmost
    *  detail pane). */
   children: ReactNode
