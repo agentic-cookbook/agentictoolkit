@@ -162,12 +162,14 @@ export const SITES: SiteDef[] = [
   // agenticdeveloperhelp.com — a landing-only site now (its guide/reference/chat surface moved to
   // help.adh.com, id 'hub-help'). listed:false: stays registered (its own header resolves, the
   // landing keeps serving and links across to hub-help), but every family "Help" link — switcher,
-  // footer, story next-steps — points at hub-help instead. Mirrored in adh-new-sites.json.
+  // footer, story next-steps — points at hub-help instead. Mirrored in adh's `.shipr`
+  // ([adh.sites.help]), which is what scaffold-sites.py generates this row from.
   { id: 'help', label: 'Help', fullLabel: 'Agentic Developer Help', description: 'Help topics', prodHost: 'agenticdeveloperhelp.com', hasStaging: true, hasTesting: true, hasHome: false, listed: false },
   // help.adh.com — the consolidated SSR help surface (chat, quickstart, reference, rest-api, mcp,
   // hub), duplicated from the agenticdeveloperhelp.com app (id 'help') into frontend/src/main/hub-help.
-  // LISTED: this is the family's Help destination (the landing above is delisted). Hand-managed
-  // inside the gen block — it is not an adh-new-sites.json site.
+  // LISTED: this is the family's Help destination (the landing above is delisted). HAND-MANAGED
+  // inside the gen block: adh's `.shipr` marks it `core`, not `generated`, so scaffold-sites.py
+  // does not emit this row — and re-running that generator DELETES it. Restore it by hand.
   { id: 'hub-help', label: 'Help', fullLabel: 'Agentic Developer Hub Help', description: 'Help topics', prodHost: 'help.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false },
   { id: 'news', label: 'News', fullLabel: 'Agentic Developer News', description: 'News & updates', prodHost: 'agenticdevelopernews.com', hasStaging: true, hasTesting: true, hasHome: false },
   { id: 'academy', label: 'Academy', fullLabel: 'Agentic Developer Academy', description: 'Learn agentic dev', prodHost: 'agenticdeveloperacademy.com', hasStaging: true, hasTesting: true, hasHome: true },

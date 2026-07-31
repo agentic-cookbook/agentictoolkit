@@ -202,7 +202,8 @@ describe('LISTED_SITES (switcher list)', () => {
       'community',
       'support',
       // hub-help (help.adh.com) is the family's listed Help site; the old landing
-      // (id 'help') is delisted. Hand-managed — not an adh-new-sites.json site.
+      // (id 'help') is delisted. HAND-MANAGED — adh's `.shipr` marks it `core`, not
+      // `generated`, so re-running scaffold-sites.py deletes this line.
       'hub-help',
       'news',
       'academy',
