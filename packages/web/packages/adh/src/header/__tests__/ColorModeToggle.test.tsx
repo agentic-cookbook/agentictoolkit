@@ -64,17 +64,20 @@ describe('ColorModeToggle', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
-  it('cycles the document auto → dark → light → auto', async () => {
+  // The order is Appearance settings' order — System, Light, Dark — because this button
+  // and that panel set the same preference, and a control that cycles them in a different
+  // order than the panel lists them is two designs for one setting.
+  it('cycles the document auto → light → dark → auto', async () => {
     await renderToggle()
     expect(mode()).toBeUndefined() // nothing applied until something is chosen
 
     click()
-    expect(mode()).toBe('dark')
-    expect(isDark()).toBe(true)
-
-    click()
     expect(mode()).toBe('light')
     expect(isDark()).toBe(false)
+
+    click()
+    expect(mode()).toBe('dark')
+    expect(isDark()).toBe(true)
 
     click()
     expect(mode()).toBe('auto')
@@ -84,20 +87,22 @@ describe('ColorModeToggle', () => {
   it('`auto` follows the OS, not the last explicit choice', async () => {
     systemPrefersDark(true)
     await renderToggle()
-    click() // dark
     click() // light — explicitly against the OS
     expect(isDark()).toBe(false)
+    click() // dark
     click() // auto
     expect(isDark()).toBe(true)
   })
 
   it('names the mode and the next mode for a screen reader', async () => {
+    // The family's words, not the store's keys: the panel calls `auto` "System", so a
+    // screen reader hears the same three names from either control.
     await renderToggle()
-    expect(await screen.findByLabelText(/Auto \(currently light\)/)).toBeTruthy()
-    expect(screen.getByRole('button').getAttribute('aria-label')).toMatch(/switch to dark/)
+    expect(await screen.findByLabelText(/System \(currently light\)/)).toBeTruthy()
+    expect(screen.getByRole('button').getAttribute('aria-label')).toMatch(/switch to Light/)
     click()
     expect(screen.getByRole('button').getAttribute('aria-label')).toMatch(
-      /Theme: dark\. Click to switch to light\./,
+      /Theme: Light\. Click to switch to Dark\./,
     )
   })
 
@@ -112,28 +117,31 @@ describe('ColorModeToggle', () => {
     expect(markup).not.toContain('title=')
   })
 
-  it('renders all three glyphs in every mode — which one shows is CSS', async () => {
-    // The sun/moon pair and the auto badge are chosen by `html.dark` / `html[data-color-mode]`,
-    // both of which the pre-paint script sets before first paint. A JS branch here would be a
-    // frame late and wrong in prerendered HTML. Rendering all three unconditionally is what
-    // makes that possible, so it is asserted rather than left to the CSS to imply.
+  it('renders all three faces in every mode — which one shows is CSS', async () => {
+    // The monitor/sun/moon are chosen by `html[data-color-mode]`, which the pre-paint script
+    // sets before first paint. A JS branch here would be a frame late and wrong in prerendered
+    // HTML. Rendering all three unconditionally is what makes that possible, so it is asserted
+    // rather than left to the CSS to imply.
     const { container } = await renderToggle()
-    const glyphs = () => [
-      container.querySelector('.adh-color-mode-toggle__moon'),
-      container.querySelector('.adh-color-mode-toggle__sun'),
-      container.querySelector('.adh-color-mode-toggle__badge'),
+    const faces = () => [
+      container.querySelector('.adh-color-mode-toggle__auto'),
+      container.querySelector('.adh-color-mode-toggle__light'),
+      container.querySelector('.adh-color-mode-toggle__dark'),
     ]
-    expect(glyphs().every(Boolean)).toBe(true)
-    click() // dark
-    expect(glyphs().every(Boolean)).toBe(true)
+    expect(faces().every(Boolean)).toBe(true)
+    expect(container.querySelectorAll('.adh-color-mode-toggle__face')).toHaveLength(3)
     click() // light
-    expect(glyphs().every(Boolean)).toBe(true)
+    expect(faces().every(Boolean)).toBe(true)
+    click() // dark
+    expect(faces().every(Boolean)).toBe(true)
   })
 
   it('signed OUT: changes the document but saves nothing', async () => {
+    systemPrefersDark(true) // so `auto` starts dark and the first click has somewhere to go
     await renderToggle()
-    click()
-    expect(isDark()).toBe(true)
+    click() // light
+    expect(mode()).toBe('light')
+    expect(isDark()).toBe(false)
     expect(authedRequest).not.toHaveBeenCalled() // no account to save to
   })
 
@@ -146,6 +154,6 @@ describe('ColorModeToggle', () => {
     expect(path).toBe('/api/me/appearance')
     expect(init.method).toBe('PUT')
     // The whole shape, not just the patch — PUT is a full replacement.
-    expect(JSON.parse(String(init.body))).toMatchObject({ colorMode: 'dark' })
+    expect(JSON.parse(String(init.body))).toMatchObject({ colorMode: 'light' })
   })
 })

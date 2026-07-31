@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useSyncExternalStore, type ReactElement } from 'react'
-import { Moon, RefreshCw, Sun } from 'lucide-react'
+import { Monitor, Moon, Sun } from 'lucide-react'
 import type { ColorModePref } from '@agentic-toolkit/themes'
 // PACKAGE PATH, not '../auth' — `src/auth/index.ts` is its own tsup entry and is listed
 // in this package's `external`. A relative specifier would inline a private copy of that
@@ -24,14 +24,29 @@ import { useAppearanceSettings } from '@agentic-toolkit/adh/auth'
  * a different mechanism entirely (`data-appearance-mode` + `awt:appearance-cycle` events)
  * for the toolkit's own demo site. Same picture, unrelated plumbing.
  *
- * Everything visual is CSS (`.adh-color-mode-toggle__*`): which face shows, and whether the
- * auto badge shows, are both decided from attributes the pre-paint script has already put
- * on `<html>`, so they are right in the first painted frame rather than a frame after
- * hydration. See adh-components.css. The one thing that cannot be is the accessible NAME —
- * hence `mounted` below.
+ * The three faces are the family's, not this button's: Appearance settings draws exactly
+ * this vocabulary — System is a `Monitor`, light a `Sun`, dark a `Moon` — and cycles them
+ * in that order. A control that sets the same preference has no business wearing a
+ * different picture of it, which is what a moon with a `RefreshCw` badge stuck in its
+ * corner was: a fourth glyph, in a family that already had three.
+ *
+ * Everything visual is CSS (`.adh-color-mode-toggle__*`): which of the three shows is
+ * decided from attributes the pre-paint script has already put on `<html>`, so it is right
+ * in the first painted frame rather than a frame after hydration. See adh-components.css.
+ * The one thing that cannot be is the accessible NAME — hence `mounted` below.
  */
 
-const CYCLE: readonly ColorModePref[] = ['auto', 'dark', 'light']
+/**
+ * The three modes, in the order and the words Appearance settings uses — System, Light,
+ * Dark — so the button cycles them the way the panel lists them and names them the way
+ * the panel names them. A total `Record` rather than an array walked with `%`: every mode
+ * has a successor by construction, so there is no index to fall off the end of.
+ */
+const MODES: Record<ColorModePref, { label: string; next: ColorModePref }> = {
+  auto: { label: 'System', next: 'light' },
+  light: { label: 'Light', next: 'dark' },
+  dark: { label: 'Dark', next: 'auto' },
+}
 
 const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)'
 
@@ -67,8 +82,7 @@ function getServerSystemDark(): boolean {
 }
 
 function title(mode: ColorModePref, resolved: 'light' | 'dark'): string {
-  if (mode === 'auto') return `Following system (${resolved})`
-  return mode === 'dark' ? 'Dark mode — click for light' : 'Light mode — click for auto'
+  return mode === 'auto' ? `System (${resolved})` : MODES[mode].label
 }
 
 export function ColorModeToggle(): ReactElement {
@@ -94,7 +108,7 @@ export function ColorModeToggle(): ReactElement {
 
   const mode = prefs.colorMode
   const resolved: 'light' | 'dark' = mode === 'auto' ? (systemDark ? 'dark' : 'light') : mode
-  const next = CYCLE[(CYCLE.indexOf(mode) + 1) % CYCLE.length]
+  const next = MODES[mode].next
 
   return (
     // adh-ui-allow: cs-no-bespoke — an icon control in the header's actions row, wearing
@@ -108,14 +122,15 @@ export function ColorModeToggle(): ReactElement {
       className="adh-header__icon-button adh-color-mode-toggle"
       aria-label={
         mounted
-          ? `Theme: ${mode === 'auto' ? `Auto (currently ${resolved})` : mode}. Click to switch to ${next}.`
+          ? `Theme: ${mode === 'auto' ? `System (currently ${resolved})` : MODES[mode].label}. Click to switch to ${MODES[next].label}.`
           : 'Theme'
       }
       title={mounted ? title(mode, resolved) : undefined}
     >
-      <Moon className="adh-color-mode-toggle__moon" strokeWidth={2} />
-      <Sun className="adh-color-mode-toggle__sun" strokeWidth={2} />
-      <RefreshCw className="adh-color-mode-toggle__badge" strokeWidth={3} />
+      {/* All three, always — see the CSS note above. */}
+      <Monitor className="adh-color-mode-toggle__face adh-color-mode-toggle__auto" strokeWidth={2} />
+      <Sun className="adh-color-mode-toggle__face adh-color-mode-toggle__light" strokeWidth={2} />
+      <Moon className="adh-color-mode-toggle__face adh-color-mode-toggle__dark" strokeWidth={2} />
     </button>
   )
 }

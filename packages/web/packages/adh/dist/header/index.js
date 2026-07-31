@@ -871,10 +871,14 @@ function AdhHeader({
 
 // src/header/ColorModeToggle.tsx
 import { useEffect as useEffect2, useState as useState2, useSyncExternalStore } from "react";
-import { Moon, RefreshCw, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useAppearanceSettings } from "@agentic-toolkit/adh/auth";
 import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
-var CYCLE = ["auto", "dark", "light"];
+var MODES = {
+  auto: { label: "System", next: "light" },
+  light: { label: "Light", next: "dark" },
+  dark: { label: "Dark", next: "auto" }
+};
 var SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
 function subscribeSystemDark(onStoreChange) {
   const mq = typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia(SYSTEM_DARK_QUERY) : null;
@@ -891,8 +895,7 @@ function getServerSystemDark() {
   return false;
 }
 function title(mode, resolved) {
-  if (mode === "auto") return `Following system (${resolved})`;
-  return mode === "dark" ? "Dark mode \u2014 click for light" : "Light mode \u2014 click for auto";
+  return mode === "auto" ? `System (${resolved})` : MODES[mode].label;
 }
 function ColorModeToggle() {
   const { prefs, set } = useAppearanceSettings();
@@ -905,7 +908,7 @@ function ColorModeToggle() {
   useEffect2(() => setMounted(true), []);
   const mode = prefs.colorMode;
   const resolved = mode === "auto" ? systemDark ? "dark" : "light" : mode;
-  const next = CYCLE[(CYCLE.indexOf(mode) + 1) % CYCLE.length];
+  const next = MODES[mode].next;
   return (
     // adh-ui-allow: cs-no-bespoke — an icon control in the header's actions row, wearing
     // the header's own `.adh-header__icon-button` identity. A ui <Button> brings a labelled
@@ -918,12 +921,12 @@ function ColorModeToggle() {
         type: "button",
         onClick: () => set({ colorMode: next }),
         className: "adh-header__icon-button adh-color-mode-toggle",
-        "aria-label": mounted ? `Theme: ${mode === "auto" ? `Auto (currently ${resolved})` : mode}. Click to switch to ${next}.` : "Theme",
+        "aria-label": mounted ? `Theme: ${mode === "auto" ? `System (currently ${resolved})` : MODES[mode].label}. Click to switch to ${MODES[next].label}.` : "Theme",
         title: mounted ? title(mode, resolved) : void 0,
         children: [
-          /* @__PURE__ */ jsx9(Moon, { className: "adh-color-mode-toggle__moon", strokeWidth: 2 }),
-          /* @__PURE__ */ jsx9(Sun, { className: "adh-color-mode-toggle__sun", strokeWidth: 2 }),
-          /* @__PURE__ */ jsx9(RefreshCw, { className: "adh-color-mode-toggle__badge", strokeWidth: 3 })
+          /* @__PURE__ */ jsx9(Monitor, { className: "adh-color-mode-toggle__face adh-color-mode-toggle__auto", strokeWidth: 2 }),
+          /* @__PURE__ */ jsx9(Sun, { className: "adh-color-mode-toggle__face adh-color-mode-toggle__light", strokeWidth: 2 }),
+          /* @__PURE__ */ jsx9(Moon, { className: "adh-color-mode-toggle__face adh-color-mode-toggle__dark", strokeWidth: 2 })
         ]
       }
     )
