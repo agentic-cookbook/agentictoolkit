@@ -6,8 +6,14 @@ export interface NavLink {
 }
 
 export interface NavChromeProps {
-  /** The wordmark. Rendered inside the fixed bar; not a control. */
-  brand: ReactNode
+  /**
+   * The wordmark, rendered centred in the fixed bar. Optional: a host that
+   * already has its own site header has no second wordmark to draw, and an
+   * empty `.lp-brand` would still occupy the middle of the bar. Omit it and
+   * the bar carries the burger alone — see `--lp-chrome-top` in chrome.css
+   * for putting that burger below the host's header rather than over it.
+   */
+  brand?: ReactNode
   links: NavLink[]
   /** Rendered in the drawer's foot — a mailto, a byline, whatever. */
   footer?: ReactNode
@@ -15,8 +21,6 @@ export interface NavChromeProps {
   openLabel?: string
   /** Accessible name for the close button. Default "Close menu". */
   closeLabel?: string
-  /** Accessible name for the scrim that dismisses the drawer. Default "Dismiss menu". */
-  dismissLabel?: string
   /** Accessible name for the drawer's <nav> landmark. Default "Site". */
   navLabel?: string
 }

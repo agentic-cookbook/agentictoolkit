@@ -100,11 +100,98 @@ describe('NavChrome', () => {
     target.remove()
   })
 
-  it('applies a host-supplied dismissLabel and navLabel', () => {
-    const { getByLabelText, getByRole } = render(
-      <NavChrome brand="M" links={LINKS} dismissLabel="Shut menu" navLabel="Primary" />
-    )
-    expect(getByLabelText('Shut menu')).toBeTruthy()
+  it('applies a host-supplied navLabel', () => {
+    const { getByRole } = render(<NavChrome brand="M" links={LINKS} navLabel="Primary" />)
     expect(getByRole('navigation', { name: 'Primary' })).toBeTruthy()
+  })
+
+  // A host with its own site header has no second wordmark to draw here, and an
+  // empty .lp-brand would still sit centred in the bar.
+  it('draws no brand element when the host gives no brand', () => {
+    const { container } = render(<NavChrome links={LINKS} />)
+    expect(container.querySelector('.lp-brand')).toBeNull()
+    expect(container.querySelector('.lp-burger')).toBeTruthy()
+  })
+
+  // The scrim dismisses on click but is not a control: focus is trapped inside
+  // the drawer while it is open, so a button out here is unreachable by
+  // keyboard however it is labelled — leaving only a full-viewport control
+  // announced as covering the page.
+  it('leaves the scrim unfocusable and unannounced', () => {
+    const { container } = render(<NavChrome links={LINKS} />)
+    const scrim = container.querySelector('.lp-scrim')!
+    expect(scrim.tagName).toBe('DIV')
+    expect(scrim.getAttribute('aria-hidden')).toBe('true')
+    expect(scrim.hasAttribute('tabindex')).toBe(false)
+  })
+
+  describe('while open, the keyboard is held inside the drawer', () => {
+    it('wraps forward off the last control back to the first', () => {
+      const { getByLabelText, getByText } = render(<NavChrome links={LINKS} />)
+      fireEvent.click(getByLabelText('Open menu'))
+      const close = getByLabelText('Close menu')
+      const last = getByText('Two')
+      last.focus()
+      fireEvent.keyDown(document, { key: 'Tab' })
+      expect(document.activeElement).toBe(close)
+    })
+
+    it('wraps backward off the first control onto the last', () => {
+      const { getByLabelText, getByText } = render(<NavChrome links={LINKS} />)
+      fireEvent.click(getByLabelText('Open menu'))
+      getByLabelText('Close menu').focus()
+      fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+      expect(document.activeElement).toBe(getByText('Two'))
+    })
+
+    // The case an onKeyDown on the <nav> could never see: focus already outside
+    // it — a stray click on the scrim, a browser restoring it after an alt-tab.
+    it('pulls focus back in when Tab is pressed from outside', () => {
+      const stray = document.createElement('button')
+      document.body.append(stray)
+      const { getByLabelText } = render(<NavChrome links={LINKS} />)
+      fireEvent.click(getByLabelText('Open menu'))
+      stray.focus()
+      fireEvent.keyDown(document, { key: 'Tab' })
+      expect(document.activeElement).toBe(getByLabelText('Close menu'))
+      stray.remove()
+    })
+
+    it('lets Tab go where it likes once the drawer is shut', () => {
+      const stray = document.createElement('button')
+      document.body.append(stray)
+      const { getByLabelText } = render(<NavChrome links={LINKS} />)
+      stray.focus()
+      fireEvent.keyDown(document, { key: 'Tab' })
+      expect(document.activeElement).toBe(stray)
+      stray.remove()
+    })
+  })
+
+  // The focus-return on close is for a DISMISSAL. Arriving somewhere by picking
+  // a link is not one, and letting the return run would take the focus `go` just
+  // placed on the target and announce the menu button instead.
+  it('leaves focus on the target when a link closed the drawer', () => {
+    const target = document.createElement('section')
+    target.id = 'two'
+    target.scrollIntoView = () => {}
+    document.body.append(target)
+    const { getByLabelText, getByText } = render(<NavChrome links={LINKS} />)
+    fireEvent.click(getByLabelText('Open menu'))
+    fireEvent.click(getByText('Two'))
+    expect(document.activeElement).toBe(target)
+    target.remove()
+  })
+
+  // ...but a link that goes off-page has no arrival to announce, so the burger
+  // still gets focus back.
+  it('returns focus to the burger when the link went off-page', () => {
+    const { getByLabelText, getByText } = render(
+      <NavChrome links={[{ href: 'https://example.com/x', label: 'Docs' }]} />
+    )
+    const burger = getByLabelText('Open menu')
+    fireEvent.click(burger)
+    fireEvent.click(getByText('Docs'))
+    expect(document.activeElement).toBe(burger)
   })
 })

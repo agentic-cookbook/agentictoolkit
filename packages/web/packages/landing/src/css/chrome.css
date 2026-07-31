@@ -10,15 +10,32 @@
  * taps and scroll gestures meant for that content. A tap on the bar's empty
  * width, or on the wordmark (which isn't a control), falls straight through to
  * the page underneath; the burger is the one thing up here that still
- * activates. */
+ * activates.
+ *
+ * `--lp-chrome-top` is where this whole chrome starts, and it is the one token
+ * three rules share (here, .lp-scrim and .lp-drawer): a host with a fixed site
+ * header of its own sets it to that header's height, and the bar, the scrim and
+ * the drawer all begin below it instead of covering it. At the default `0` this
+ * is the original full-viewport chrome. One token rather than three, because a
+ * scrim that started at a different line from the drawer it dims would be a bug
+ * no host should be able to write.
+ *
+ * `--lp-bar-bg` exists for that same host: the gradient below is what lifts a
+ * floating burger off the page it sits on, and under a real header there is
+ * nothing to lift it off — the header is already there. Setting it to `none`
+ * leaves the bar as pure positioning. */
 .lp-bar {
   position: fixed;
-  inset: 0 0 auto 0;
+  inset: var(--lp-chrome-top, 0) 0 auto 0;
   z-index: 40;
   display: flex;
   align-items: center;
-  padding: 1.1rem 1.25rem;
-  background: linear-gradient(var(--lp-ground, #101010) 40%, transparent);
+  /* The gutter the burger sits in — the corner it is inset into. Two tokens
+   * rather than one shorthand because the drawer's ✕ reads the same pair (see
+   * .lp-drawer-close), and a shorthand cannot be split back apart. A host
+   * aligning the burger with its own header's container padding sets these. */
+  padding: var(--lp-bar-pad-y, 1.1rem) var(--lp-bar-pad-x, 1.25rem);
+  background: var(--lp-bar-bg, linear-gradient(var(--lp-ground, #101010) 40%, transparent));
   pointer-events: none;
 }
 .lp-burger {
@@ -103,7 +120,7 @@
 /* ---- drawer ---- */
 .lp-drawer {
   position: fixed;
-  top: 0;
+  top: var(--lp-chrome-top, 0);
   bottom: 0;
   left: 0;
   width: min(320px, 85vw);
@@ -114,7 +131,13 @@
   transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.28, 1);
   display: flex;
   flex-direction: column;
-  padding: 5.5rem 2.2rem 2rem;
+  /* The top pad clears the bar the drawer opens UNDER, so it is the bar's
+   * height plus a gap — not a spacing choice, a consequence of one. A host that
+   * moved the chrome below its own header (`--lp-chrome-top`) has no bar over
+   * the drawer to clear, only the close button inside it, and sets this
+   * smaller. The close button is positioned against the drawer's own top edge
+   * and does not move with it. */
+  padding: var(--lp-drawer-pad-top, 5.5rem) 2.2rem 2rem;
   /* The link list is longer than it was and a short laptop window can run out
    * of room for it; the drawer is a fixed-height box, so the overflow has to go
    * somewhere rather than off the bottom edge. */
@@ -158,24 +181,36 @@
   margin-top: 1.1rem;
   font-size: 0.78rem;
 }
+/* Starts on the same line as the drawer it dims (see `--lp-chrome-top` on
+ * .lp-bar): a scrim drawn over a host's header would bury the burger that was
+ * just pressed, or win on nothing better than declaration order. */
 .lp-scrim {
   position: fixed;
-  inset: 0;
+  inset: var(--lp-chrome-top, 0) 0 0 0;
   z-index: 50;
   background: var(--lp-scrim-bg, rgba(16, 16, 16, 0.55));
   opacity: 0;
   pointer-events: none;
   transition: 0.3s;
-  border: 0;
 }
 .lp-scrim.lp-scrim--show {
   opacity: 1;
   pointer-events: auto;
 }
+/* The ✕ sits exactly where the ☰ was, so opening the drawer swaps one for the
+ * other in place rather than making the reader look for the way out somewhere
+ * new. It reads the bar's own gutter to do it — the drawer starts at
+ * `--lp-chrome-top` and so does the bar, so the same inset lands on the same
+ * point however the host has moved them.
+ *
+ * The default top is the reference site's own 1.15rem rather than the bar's
+ * 1.1rem: 0.7px of optical nudge that was in the original stylesheet, kept so
+ * an unconfigured host is unchanged. A host that sets the gutter gets the two
+ * exactly concentric, which is what anyone setting it is asking for. */
 .lp-drawer-close {
   position: absolute;
-  top: 1.15rem;
-  left: 1.25rem;
+  top: var(--lp-bar-pad-y, 1.15rem);
+  left: var(--lp-bar-pad-x, 1.25rem);
 }
 /* The close glyph is the burger with a bar removed and the other two crossed.
  * Crossing them needs the bars concentric, and the honest way to say that is to

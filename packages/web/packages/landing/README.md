@@ -118,7 +118,7 @@ under **Install**.
 | `Wrap` | deck | The width-limited content column inside a `Screen`. |
 | `Split` | deck | Two panels side by side above a breakpoint, stacked below it. |
 | `Glow` | deck | The hero's decorative radial glow (`aria-hidden`). |
-| `NavChrome` | chrome · **client** | Fixed header + burger + drawer + scrim, as one client component. |
+| `NavChrome` | chrome · **client** | Fixed header + burger + drawer + scrim, as one client component. `brand` is optional: omit it and the bar carries the burger alone, for a host that already has a site header — set `--lp-chrome-top` to that header's height and the whole chrome opens below it. Focus is trapped inside the open drawer; Escape and the close button are the exits, and the scrim is a pointer-only dismiss (`aria-hidden`, unfocusable), matching `@agentic-toolkit/ui`'s DocNav drawer. |
 | `Head` | blocks | A section's eyebrow + title + lede slot. |
 | `Lede` | blocks | The standalone paragraph under a `Head` (or after a card grid, a chip list…). |
 | `Cards` / `Card` | blocks | A tile grid and its tiles. `Cards pair` forces an explicit two-column track. |
@@ -189,8 +189,10 @@ deliberately-monospaced role — the small technical label on `StatusPill`
 body face can still ask for that one label in mono. It is not a Stenographer
 literal, which is why it sits in this table rather than the minted one below.
 
-Seven tokens are new to the package — the dials that let a second site differ
-from the first:
+Twelve tokens are new to the package — the dials that let a second site differ
+from the first. The five chrome ones below (`--lp-chrome-top` through
+`--lp-drawer-pad-top`) came in together, from the first host that already had a
+site header of its own and wanted only the burger and drawer under it:
 
 | Token | Fallback | What it does |
 | --- | --- | --- |
@@ -199,6 +201,10 @@ from the first:
 | `--lp-hero-pad-top` | `6.5rem` | Hero head padding; the glow's offset is derived from it. |
 | `--lp-hero-pad-bottom` | `var(--lp-dock-clear, 0px)` | Hero foot padding; reserves whatever fixed chrome the site docks at the bottom. |
 | `--lp-root-size` | `87.5%` | The root type dial. |
+| `--lp-chrome-top` | `0` | Where `NavChrome` starts — the bar, the scrim and the drawer together. A host with a fixed site header of its own sets this to that header's height, so the chrome opens *below* it instead of over it. One token for all three, so a scrim can never start on a different line from the drawer it dims. |
+| `--lp-bar-bg` | `linear-gradient(var(--lp-ground) 40%, transparent)` | The bar's own backdrop, which is what lifts a floating burger off the page under it. A host that set `--lp-chrome-top` already has a real header doing that job and sets this to `none`. |
+| `--lp-bar-pad-y` / `--lp-bar-pad-x` | `1.1rem` / `1.25rem` | The corner the burger is inset into. A host aligns these with its own header's container padding so the two line up in the same column. The drawer's ✕ reads the same pair, so it stays on top of the ☰ it replaces — its `y` fallback is `1.15rem`, the reference site's optical nudge, which a host that sets the pair trades for exact concentricity. |
+| `--lp-drawer-pad-top` | `5.5rem` | Space above the drawer's first link. The default clears the bar the drawer opens under; a host that moved the chrome below its own header only has the close button to clear and sets this smaller. |
 | `--lp-checklist-mark` | `"✓"` | The mark before each checklist item. A CSS string, quotes included. It sits in a fixed `1.2rem` grid column, so a replacement wants to be about that wide. |
 | `--lp-versus-bullet` | `"· "` | The bullet before each wedge-panel point. A CSS string; set it to `""` for no bullet. |
 

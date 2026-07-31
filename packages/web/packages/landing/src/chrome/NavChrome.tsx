@@ -32,6 +32,13 @@ function fragmentId(href: string): string | null {
 /**
  * Fixed header, burger, drawer and scrim. Burger and drawer share one `open`
  * boolean, so they live in one client component.
+ *
+ * Two hosts now: the landing site this was extracted from, whose own wordmark
+ * sits in this bar, and a host that already has a site header of its own and
+ * wants only the burger and drawer under it. `brand` is what separates them,
+ * and `--lp-chrome-top` (chrome.css) is what moves the whole chrome — bar,
+ * scrim and drawer — down past that header. Nothing here reads a breakpoint or
+ * a pixel: the offsets are the host's tokens.
  */
 export function NavChrome({
   brand,
@@ -39,12 +46,12 @@ export function NavChrome({
   footer,
   openLabel = 'Open menu',
   closeLabel = 'Close menu',
-  dismissLabel = 'Dismiss menu',
   navLabel = 'Site',
 }: NavChromeProps): ReactElement {
   const [open, setOpen] = useState(false)
   const burgerRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
+  const navRef = useRef<HTMLElement>(null)
   const wasOpen = useRef(false)
 
   /**
@@ -56,7 +63,9 @@ export function NavChrome({
    *
    * Focus then has to follow the drawer by hand: into it on open, back to the
    * burger that summoned it on close. `wasOpen` gates the return so the first
-   * render doesn't steal focus on page load.
+   * render doesn't steal focus on page load — and `go()` clears it deliberately,
+   * because a close that came from picking a link has already sent focus
+   * somewhere better.
    */
   useEffect(() => {
     if (open) closeRef.current?.focus()
@@ -64,12 +73,59 @@ export function NavChrome({
     wasOpen.current = open
   }, [open])
 
-  // Escape is the expected way out of any overlay, and it's the only exit that
-  // works when the pointer never enters the picture.
+  /**
+   * The two keys the open drawer owns, on one listener because they are one
+   * contract: while it is up, the keyboard is inside it.
+   *
+   * **Escape** is the expected way out of any overlay, and the only exit that
+   * works when the pointer never enters the picture.
+   *
+   * **Tab** is held inside. The scrim covers everything under the drawer, so
+   * every control Tab would otherwise reach next is one the reader can neither
+   * see nor click — they would be tabbing through the page they just asked to
+   * leave, with no way of knowing where they are. The drawer is modal to the
+   * pointer already; this is the same statement to the keyboard. (`inert`
+   * covers the drawer while it is SHUT — the mirror image, and easy to mistake
+   * for this.)
+   *
+   * On `document` rather than as an `onKeyDown` on the `<nav>`: a handler there
+   * only sees Tab when focus is already inside, so focus landing anywhere else
+   * — a stray click on the scrim, a browser restoring it after an alt-tab —
+   * would step straight out into the covered page with nothing to catch it.
+   * From here, "not inside" is just another case, and it pulls focus back to
+   * the close button.
+   *
+   * The focusables are read from the DOM at the moment Tab is pressed rather
+   * than held in refs: they are the close button, the links and whatever the
+   * host put in the foot, all rendered right here, so a host adding a row costs
+   * nothing. Escape and the close button are still real exits, so the hold
+   * cannot strand anyone.
+   */
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') {
+        setOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const nav = navRef.current
+      if (!nav) return
+      const focusable = nav.querySelectorAll<HTMLElement>('button, a[href]')
+      if (focusable.length === 0) return
+      const first = focusable[0]!
+      const last = focusable[focusable.length - 1]!
+      const active = document.activeElement
+      if (!nav.contains(active)) {
+        event.preventDefault()
+        first.focus()
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -97,6 +153,14 @@ export function NavChrome({
     const target = id === null ? null : document.getElementById(id)
     if (!target) return // let the browser try; nothing to improve on
     event.preventDefault()
+    // Clear the focus-return BEFORE handing focus to the target. The effect
+    // above runs after this handler and returns focus to the burger on every
+    // open→closed transition, so left set it would take the focus placed two
+    // lines below and hand it straight back to the corner of the window,
+    // announcing the menu button instead of the screen the reader chose. The
+    // restore is for a dismissal; this is an arrival — and it stays set on the
+    // off-page path above, where there is no arrival to announce.
+    wasOpen.current = false
     target.setAttribute('tabindex', '-1')
     target.focus({ preventScroll: true })
     target.scrollIntoView()
@@ -117,24 +181,31 @@ export function NavChrome({
           <span />
           <span />
         </button>
-        <div className="lp-brand">{brand}</div>
+        {brand !== undefined && <div className="lp-brand">{brand}</div>}
       </header>
 
-      <button
-        type="button"
+      {/* A scrim, not a control: it dismisses on click for a pointer user, and
+          is neither focusable nor announced. It was a labelled <button> here
+          until the Tab trap above went in, and the trap is what settles it —
+          focus is held inside the drawer while it is open, so a button out here
+          can never be reached by keyboard however it is labelled, leaving only
+          the cost: a full-viewport control read out as covering the page, with
+          the same "close the menu" meaning as the button three lines below.
+          `@agentic-toolkit/ui`'s DocNav drawer answers this the same way, and
+          two drawers in one toolkit should not answer it differently. Escape
+          and the close button are the keyboard paths. */}
+      <div
+        aria-hidden="true"
         className={`lp-scrim${open ? ' lp-scrim--show' : ''}`}
-        // The original component gave this the same "Close menu" label as the
-        // dedicated close button below, which is fine for a sighted pointer
-        // user but leaves two controls with an identical accessible name for
-        // anyone finding them by label — a real, if minor, port fix rather
-        // than a behaviour change: this button still closes the drawer either
-        // way, it's just distinguishable now.
-        aria-label={dismissLabel}
-        tabIndex={open ? 0 : -1}
         onClick={() => setOpen(false)}
       />
 
-      <nav className={`lp-drawer${open ? ' lp-drawer--open' : ''}`} aria-label={navLabel} inert={!open}>
+      <nav
+        ref={navRef}
+        className={`lp-drawer${open ? ' lp-drawer--open' : ''}`}
+        aria-label={navLabel}
+        inert={!open}
+      >
         <button
           ref={closeRef}
           type="button"
