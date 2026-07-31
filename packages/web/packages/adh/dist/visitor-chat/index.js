@@ -318,7 +318,12 @@ var AdhChatBackend = class {
         yield { type: "error", message: restingMessage(this.personaName) };
         return;
       }
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
+        const detail = parseData(await res.text().catch(() => ""));
+        yield { type: "error", message: detail?.error?.message ?? startFailedMessage(this.personaName) };
+        return;
+      }
+      if (!res.body) {
         yield { type: "error", message: startFailedMessage(this.personaName) };
         return;
       }

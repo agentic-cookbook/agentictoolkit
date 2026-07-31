@@ -387,7 +387,18 @@ export class AdhChatBackend implements ChatBackend {
         yield { type: 'error', message: restingMessage(this.personaName) }
         return
       }
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
+        // The 422 (message too long / screening refusal) and 429 (rate window) refusals both carry
+        // a specific, actionable `{ error: { message } }` body — same envelope as the 409 branch
+        // above. Discarding it in favor of the generic startFailedMessage() told a visitor who was
+        // rate-limited or over the length cap nothing they could act on. Fall back to the generic
+        // copy only when the body is absent, unparseable, or carries no message — never let a
+        // malformed refusal body throw here.
+        const detail = parseData<{ error?: { message?: string } }>(await res.text().catch(() => ''))
+        yield { type: 'error', message: detail?.error?.message ?? startFailedMessage(this.personaName) }
+        return
+      }
+      if (!res.body) {
         yield { type: 'error', message: startFailedMessage(this.personaName) }
         return
       }
