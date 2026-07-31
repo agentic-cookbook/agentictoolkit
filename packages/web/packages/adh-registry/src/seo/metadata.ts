@@ -20,6 +20,7 @@
 import type { Metadata, MetadataRoute } from 'next'
 
 import { getSite, type SiteId } from '../sites/registry'
+import { DEV_BUILD } from '../deployment-env'
 
 /** The one size every unfurler accepts, and the size `assets/logo/generate.py`
  *  emits into each site's `app/opengraph-image.png`. */
@@ -74,10 +75,7 @@ export interface SiteSeo {
  *  direction; `siteRobots` below is host-based and cannot misfire, so the tiers
  *  are still covered if this var is unset.
  */
-const NOINDEX_BUILD =
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging' ||
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local'
+const NOINDEX_BUILD = DEV_BUILD
 
 /** The full metadata block for a site, given only its id and its own copy.
  *

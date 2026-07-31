@@ -2,14 +2,14 @@ import { type SiteEnv } from '@agentic-toolkit/adh-registry';
 import { type PopoverEntry, type RouteSection } from '@agentic-toolkit/adh/header';
 /**
  * Whether this BUILD carries the dev tooling for everyone: true in the three dev
- * envs, false in production. NEXT_PUBLIC_DEPLOYMENT_ENV is inlined per build, so
- * this is a literal boolean the bundler can fold. An explicit allowlist (not
- * `!== 'production'`) keeps an unset/unknown env fail-safe: hidden, never shown
- * in a misconfigured build. Evaluated once at module load.
+ * envs, false in production. See {@link DEV_BUILD} for the folding rules — this is
+ * that same flag under the name the site menu has always used for it.
  *
  * NOT the only door anymore: a signed-in adh admin unlocks the same rows at
  * runtime in ANY env, production included (see {@link SiteMenu}'s
- * `devToolsUnlocked` and DevToolsOptions.adminUnlocked).
+ * `devToolsUnlocked` and DevToolsOptions.adminUnlocked). That admin unlock is why
+ * a dev affordance that must NOT exist in production can't rely on this flag alone
+ * — the site-theme editor is gated on DEV_BUILD directly for exactly that reason.
  */
 export declare const DEV_TOOLS_BUILD_ENABLED: boolean;
 export declare function isDevEnv(env: SiteEnv | null): boolean;

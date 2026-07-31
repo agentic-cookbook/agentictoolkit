@@ -6,7 +6,21 @@ import { FooterChat } from './FooterChat'
 import { SitesPopover, SITES_OVERVIEW_POPOVER_ID } from './SitesOverview'
 import { openLegalModal, TermsModal, PrivacyModal, TERMS_DIALOG_ID, PRIVACY_DIALOG_ID } from './LegalModals'
 
-export type SiteFooterProps = { links?: FooterLink[] }
+export type SiteFooterProps = {
+  links?: FooterLink[]
+  /** Mount bitbag. Default true — he belongs on every real footer. `false` is for
+   *  the ONE case that isn't one: a footer rendered as a specimen inside the theme
+   *  editor's preview pane. He portals himself to `document.body` (see
+   *  FooterChatInner), so a preview cannot contain him with a scoped `display:none`
+   *  the way it hides the in-flow theme switcher — he escapes the pane and lands
+   *  full-size over the console that is previewing him. Not mounting him is the
+   *  only thing that actually works, and it says what it means.
+   *
+   *  On THIS component, not the {@link ToolkitFooter} primitive it wraps: the
+   *  primitive takes a generic `trailing` slot and has no idea bitbag exists, which
+   *  is the whole point of the split. */
+  chat?: boolean
+}
 
 const COPYRIGHT_PREFIX = '© 2026 '
 const BRAND_LABEL = 'FishLamp Design'
@@ -40,7 +54,13 @@ const LEGAL_LINKS: FooterLink[] = [
  *  Named `SiteFooter` rather than `AdhFooter`: this barrel already publishes an `AdhFooter`
  *  — the registry-free primitive this component wraps. The two are unrelated components
  *  that happened to share a name; this one is adh's REGISTRY-AWARE composition. */
-export function SiteFooter({ links = [] }: SiteFooterProps) {
+export function SiteFooter({ links = [], chat = true }: SiteFooterProps) {
+  // bitbag is rendered here but does NOT live here: FooterChatInner portals him to
+  // `document.body` and he fixes himself to the viewport's bottom edge, so the
+  // primitive's `trailing` slot is his mount point and nothing else. He therefore
+  // can't affect the bar's height — but the bar accommodates HIM below 64rem, where
+  // the links would otherwise sit under his composer (`.adh-footer__container`
+  // padding in adh-site.css). For where he actually is, read bitbag-dock.css.
   return (
     <>
       <ToolkitFooter
@@ -53,7 +73,7 @@ export function SiteFooter({ links = [] }: SiteFooterProps) {
             </a>
           </>
         }
-        trailing={<FooterChat />}
+        trailing={chat ? <FooterChat /> : null}
       />
       <SitesPopover />
       <TermsModal />

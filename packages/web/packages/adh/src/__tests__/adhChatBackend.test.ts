@@ -302,6 +302,51 @@ describe('AdhChatBackend — streaming + fail-closed gates', () => {
     expect(store.map.has(CONVO_KEY)).toBe(false)
   })
 
+  it('an `ended` event drops the stored conversation so the next message starts fresh', async () => {
+    const store = memStore()
+    const { fetchImpl } = fakeFetch((call) => {
+      if (call.url.endsWith('/visitor-tokens')) return json({ token: 't', expiresAt: FUTURE, personaId: 'p' }, 201)
+      if (call.url.endsWith('/persona/bootstrap')) return json({})
+      if (call.url.endsWith('/conversations')) return json({ id: 'over' }, 201)
+      // The persona said goodbye and ended the chat. No `done` follows it on the wire.
+      if (call.url.endsWith('/turns'))
+        return sse(OPEN, token('goodbye'), 'event: ended\ndata: {"reason":"persona_ended"}\n\n')
+      throw new Error('unexpected')
+    })
+    const backend = new AdhChatBackend({ personaSlug: SLUG, fetchImpl, store })
+    const events = await drain(backend, 'bye')
+
+    // The goodbye is ordinary transcript; `ended` becomes a clean close, not a visible event —
+    // and the turn still terminates with `done`, which the chat package requires even though the
+    // server sent none.
+    expect(events).toEqual([{ type: 'token', text: 'goodbye' }, { type: 'done' }])
+    // Same recovery as the length cap: the dead id goes, so the visitor's next message
+    // transparently opens a new conversation rather than 409ing against this one.
+    expect(store.map.has(CONVO_KEY)).toBe(false)
+  })
+
+  it('a 409 after termination also starts fresh, and says so rather than citing the length cap', async () => {
+    const store = memStore()
+    const { fetchImpl } = fakeFetch((call) => {
+      if (call.url.endsWith('/visitor-tokens')) return json({ token: 't', expiresAt: FUTURE, personaId: 'p' }, 201)
+      if (call.url.endsWith('/persona/bootstrap')) return json({ chat: { limits: { maxConversationLength: 200 } } })
+      if (call.url.endsWith('/conversations')) return json({ id: 'over' }, 201)
+      // Reached when this client still holds an id the server has since closed — a second tab, or
+      // a turn aborted after the persona ended it but before the `ended` block was read.
+      if (call.url.endsWith('/turns'))
+        return json({ error: { message: 'this conversation has ended; start a new one' } }, 409)
+      throw new Error('unexpected')
+    })
+    const backend = new AdhChatBackend({ personaSlug: SLUG, fetchImpl, store })
+    const events = await drain(backend)
+
+    // Telling this visitor they hit a 200-message limit would simply be false.
+    const message = (events[0] as { message: string }).message
+    expect(message).toContain('conversation has ended')
+    expect(message).not.toContain('limit')
+    expect(store.map.has(CONVO_KEY)).toBe(false)
+  })
+
   it('maps a 503 turn (kill switch / budget) to the "resting" error', async () => {
     const { fetchImpl } = fakeFetch((call) => {
       if (call.url.endsWith('/visitor-tokens')) return json({ token: 't', expiresAt: FUTURE, personaId: 'p' }, 201)

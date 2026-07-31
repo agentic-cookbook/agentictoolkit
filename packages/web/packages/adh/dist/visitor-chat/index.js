@@ -73,6 +73,7 @@ var restingMessage = (who) => `${who} is resting right now \u2014 please check b
 var startFailedMessage = (who) => `${who} couldn't start a chat right now. Please try again in a moment.`;
 var unavailableMessage = (who) => `${who} isn't available right now.`;
 var lengthCapMessage = (max) => max != null ? `This chat has reached its ${max}-message limit. Send another message to start a fresh conversation.` : "This chat has reached its length limit. Send another message to start a fresh conversation.";
+var ENDED_MESSAGE = "This conversation has ended. Send another message to start a fresh one.";
 var VisitorGateError = class extends Error {
   constructor(message, status) {
     super(message);
@@ -306,7 +307,11 @@ var AdhChatBackend = class {
       }
       if (res.status === 409) {
         this.store.remove(convoKey(this.slug));
-        yield { type: "error", message: lengthCapMessage(this.bootstrap?.maxConversationLength ?? null) };
+        const detail = parseData(await res.text().catch(() => ""));
+        yield {
+          type: "error",
+          message: detail?.error?.message?.includes("ended") ? ENDED_MESSAGE : lengthCapMessage(this.bootstrap?.maxConversationLength ?? null)
+        };
         return;
       }
       if (res.status === 503) {
@@ -319,6 +324,11 @@ var AdhChatBackend = class {
       }
       try {
         for await (const { event, data } of readSseBlocks(res.body)) {
+          if (event === "ended") {
+            this.store.remove(convoKey(this.slug));
+            yield { type: "done" };
+            return;
+          }
           const evt = toStreamEvent(event, data);
           if (evt) yield evt;
         }

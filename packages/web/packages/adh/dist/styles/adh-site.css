@@ -52,63 +52,101 @@
   color: var(--adh-footer-brand-color-hover, var(--color-accent-bright));
 }
 
-/* WHERE BITBAG PARKS — positioning only.
-   His SKIN is his own (the toolkit theme BitbagChat injects scoped to itself,
-   plus the bitbag package's chat + dock sheets), so that he is the same bitbag
-   here as on bitbag.ai and on fishlamp.com. Overriding it from the family's
-   `--pc-*` tokens is what USED to happen here, and it produced a third
-   appearance belonging to none of the three. This block therefore says only
-   where the dock sits and how wide it is.
+/* WHERE BITBAG PARKS — one line of it, because the rest is HIS.
+   The dock now positions itself: bottom-centred and fixed to the viewport, 560px
+   wide, riding up over a phone keyboard, dimming the page behind it when engaged
+   (bitbag-dock.css, ported from fishlamp.com's rig). This block used to hold a
+   whole competing geometry — absolute inside the footer bar, a width, a
+   breakpoint that lifted it above the bar on narrow screens — and that was the
+   drift: bitbag was parked one way here and another way on fishlamp, so "the same
+   fixture everywhere" was never true. His skin went the same way once; both are
+   now single-sourced in the bitbag package, and this file only says what is
+   genuinely local to adh.
 
-   FLOATS at the footer's bottom-center, absolutely positioned relative to the
-   (sticky, so positioned) .adh-footer. Being out of the bar's flex flow it NEVER
-   affects the footer bar's height, and it is bottom-anchored, so when the
-   transcript grows up (the chat package releasing `.pc-collapsed`) the column
-   climbs in Z-ORDER — a floating overlay ON TOP of the page — while the bar
-   stays put. The dock itself is pointer-transparent (see bitbag-dock.css), so
-   the empty width beside bitbag's face never eats a click meant for the page. */
-.adh-footer__chat {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  z-index: 20;
-  /* 560px, matching the studio site's dock — the same fixture at the same size. */
-  width: min(35rem, calc(100% - 2rem));
+   Which is the stack. `.adh-header` is at 50 here, above the dock's default 45,
+   so the chat would be painted under the header and the scrim would stop short of
+   it. 51 clears the header and stays under every overlay above it (a site's
+   drawers and modals live at 55+, and the footer's own dialogs use the native
+   Popover top layer, which nothing here can reach anyway).
+
+   This only works because FooterChatInner portals the dock to `document.body`:
+   inside `.adh-footer` — sticky WITH a z-index, hence a stacking context — no
+   z-index the dock asked for could have lifted it past the header.
+
+   BOTH CLASSES, and that is load-bearing. The host class rides on the dock's own
+   root, so `.adh-footer__chat` and bitbag-dock.css's `.bb-dock { z-index: 45 }`
+   are the same element at the same specificity — which leaves source order to
+   break the tie, and order is not ours to control: this file arrives in the site's
+   main bundle via globals.css, while bitbag-dock.css rides the `next/dynamic`
+   chunk FooterChat loads on the client, so it lands LATER and 45 would win.
+   Written as one compound selector it is (0,2,0) against (0,1,0) and the tie never
+   happens. A single class here type-checks, reads correctly, and silently reverts
+   the portal fix above — the dock would go back under the header. */
+.bb-dock.adh-footer__chat {
+  z-index: 51;
 }
 
-/* WHAT THE DOCK COSTS THE PAGE. The column is ~8.2rem tall: the collapsed
-   composer (~3.6rem) plus bitbag's own layout box riding above it (his 350×195
-   viewBox at 132px wide ≈ 4.6rem, and that box keeps its height while he's dozing
-   — the doze is a transform, which doesn't reflow). Being absolute it reserves
-   NOTHING, so whatever it overhangs is page content — and the overhang is not
-   click-through: only the empty width BESIDE bitbag is pointer-transparent, while
-   `.bb-dock__avatar` and `.bb-dock__chat` (the full 560px box) are both
-   pointer-events:auto. So the overhang has to be paid for here, once, or every
-   page's last row (buttons, list actions, form footers) silently loses its clicks.
+/* AND KEEPING THE BAR'S OWN LINKS OUT FROM UNDER HIM. Above 64rem the bar lays
+   out as copyright-left / nav-right, so the dock lands in its empty middle and
+   nothing collides. Below that the two fill (and wrap across) the whole width,
+   putting Sites/Terms/Privacy directly under a box that is NOT click-through —
+   `.bb-dock__chat` takes pointer events across the full min(560px, 100vw - 2rem).
 
-   Above 64rem the dock sits INSIDE the bar (bottom:0), so only the part clearing
-   the bar's ~2.5rem overhangs — ≈5.7rem, rounded up to 6. This must stay ABOVE the
-   media query below (same specificity, so a later rule would win in both modes). */
+   The old fix was to lift the DOCK above the bar at this breakpoint, which worked
+   because it was absolutely positioned inside it and so re-measured whatever the
+   links wrapped to. That is exactly the competing geometry removed above, and
+   re-adding it as a fixed offset would need the bar's height as a number — which
+   is content-driven, so there isn't one. Padding the bar instead keeps the answer
+   self-adjusting AND leaves every dock rule in the bitbag package: its content
+   rises by the height of the collapsed entry line, and the dock overlays the empty
+   strip left below it. Which also reads closer to fishlamp than the lift did — he
+   sits on the viewport's bottom edge at every width, rather than hopping up a
+   bar's height at 64rem.
+
+   Measured (chromium, the news footer: brand + Sites/Terms/Privacy), asking
+   `elementFromPoint` at each control's centre whether the control or the chat box
+   is on top: unpadded, all four are unreachable at 375, 430 and 600; three at 700;
+   'Sites' alone at 800; all clear by 860. Padded, none is blocked at any width
+   from 375 to 1440. The breakpoint stays at the footer's existing 64rem rather
+   than the ~830px the measurement alone would justify — the box is a fixed 560px
+   centred, so what it reaches is the BRAND link's right edge, and that link is the
+   site's own name. It is 'FishLamp Design' here and longer elsewhere, which moves
+   the collision width per site; 64rem covers the spread.
+
+   Probe `a, button`, not `a`. 'Sites' is a `<button popovertarget>` while the
+   other three are anchors, so an anchors-only sweep drops the ONE control that is
+   still covered at 800 and reports the collision gone a full breakpoint early —
+   which reads as "this rule is oversized" rather than "the probe missed it." */
+@media (max-width: 64rem) {
+  .adh-footer__container {
+    /* 3rem of composer plus 1.5rem of air. The entry line measures 48px and sits
+       flush on the viewport's bottom edge, and this REPLACES the bar's resting
+       0.75rem rather than adding to it (computed: 72px inside this query, 12px
+       outside). Walking the padding down, 52px is the first step at which every
+       control's centre is reachable — the extra 20px is deliberate, so the links
+       clear the composer's top edge instead of resting on it. */
+    padding-bottom: 4.5rem;
+  }
+}
+
+/* WHAT THE DOCK COSTS THE PAGE. Being fixed it reserves NOTHING, so it overhangs
+   page content — and the overhang is not click-through: only the empty width
+   BESIDE bitbag is pointer-transparent, while `.bb-dock__avatar` and
+   `.bb-dock__chat` (the 560px box) are both pointer-events:auto. So the overhang
+   is paid for here, once, or every page's last row (buttons, list actions, form
+   footers) silently loses its clicks.
+
+   6rem covers the collapsed rig: the entry line (~3.6rem) plus bitbag's own
+   layout box riding above it (his 350×195 viewBox at 132px wide ≈ 4.6rem, halved
+   in Z but not in layout — the doze is a transform, which doesn't reflow), less
+   the part that overlaps the footer bar's own ~2.5rem. Unconditional, unlike
+   before: fixed to the VIEWPORT rather than to the bar, the rig sits in the same
+   place at every width, so there is no longer a narrow-screen case where it lifts
+   clear of the bar and overhangs more. Below 64rem it overhangs LESS, not more —
+   the rule above makes the bar taller there, so it covers more of the rig — and
+   6rem simply stays the safe side of that. */
 .adh-app-shell__main {
   padding-bottom: 6rem;
-}
-
-/* Below ~64rem the footer bar's copyright + nav fill enough of the width that a
-   bottom-centered overlay would sit ON TOP of (and intercept clicks on) the
-   Sites/Terms/Privacy links. So until there's clear room in the center, lift the
-   dock ABOVE the bar (floating over page content) instead of overlapping it.
-   Above 64rem it centers in the bar's empty middle. */
-@media (max-width: 64rem) {
-  .adh-footer__chat {
-    bottom: 100%;
-    margin-bottom: 0.4rem;
-  }
-  /* Lifted clear of the bar, the WHOLE column overhangs page content — so reserve
-     its full height rather than the 6rem above. */
-  .adh-app-shell__main {
-    padding-bottom: 8rem;
-  }
 }
 
 /* The shared footer modal dialog (native HTML Popover API) — used by the Sites,

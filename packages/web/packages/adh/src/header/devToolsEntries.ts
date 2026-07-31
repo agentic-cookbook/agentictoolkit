@@ -1,3 +1,4 @@
+import { DEV_BUILD, isDevDeploymentEnv } from '@agentic-toolkit/adh-registry/deployment-env'
 import { type SiteEnv } from '@agentic-toolkit/adh-registry'
 import {
   buildRouteItems,
@@ -22,26 +23,19 @@ import { menuIcon } from './menu-icons'
 
 /**
  * Whether this BUILD carries the dev tooling for everyone: true in the three dev
- * envs, false in production. NEXT_PUBLIC_DEPLOYMENT_ENV is inlined per build, so
- * this is a literal boolean the bundler can fold. An explicit allowlist (not
- * `!== 'production'`) keeps an unset/unknown env fail-safe: hidden, never shown
- * in a misconfigured build. Evaluated once at module load.
+ * envs, false in production. See {@link DEV_BUILD} for the folding rules — this is
+ * that same flag under the name the site menu has always used for it.
  *
  * NOT the only door anymore: a signed-in adh admin unlocks the same rows at
  * runtime in ANY env, production included (see {@link SiteMenu}'s
- * `devToolsUnlocked` and DevToolsOptions.adminUnlocked).
+ * `devToolsUnlocked` and DevToolsOptions.adminUnlocked). That admin unlock is why
+ * a dev affordance that must NOT exist in production can't rely on this flag alone
+ * — the site-theme editor is gated on DEV_BUILD directly for exactly that reason.
  */
-export const DEV_TOOLS_BUILD_ENABLED =
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
-
-/** The envs that carry dev tooling. An explicit allowlist (not `!== 'production'`)
- *  so an unknown/absent env is fail-safe: hidden, never shown by accident. */
-const DEV_ENVS: readonly SiteEnv[] = ['local', 'testing', 'staging']
+export const DEV_TOOLS_BUILD_ENABLED = DEV_BUILD
 
 export function isDevEnv(env: SiteEnv | null): boolean {
-  return env !== null && DEV_ENVS.includes(env)
+  return isDevDeploymentEnv(env)
 }
 
 export type DevToolsOptions = {

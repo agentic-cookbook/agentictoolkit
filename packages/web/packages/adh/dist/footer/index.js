@@ -181,7 +181,7 @@ var LEGAL_LINKS = [
   { label: "Terms", href: "/terms", onSelect: openLegalModal(TERMS_DIALOG_ID), prefetch: false },
   { label: "Privacy", href: "/privacy", onSelect: openLegalModal(PRIVACY_DIALOG_ID), prefetch: false }
 ];
-function SiteFooter({ links = [] }) {
+function SiteFooter({ links = [], chat = true }) {
   return /* @__PURE__ */ jsxs5(Fragment, { children: [
     /* @__PURE__ */ jsx6(
       ToolkitFooter,
@@ -191,7 +191,7 @@ function SiteFooter({ links = [] }) {
           COPYRIGHT_PREFIX,
           /* @__PURE__ */ jsx6("a", { className: "adh-footer__brand-link", href: BRAND_HREF, children: BRAND_LABEL })
         ] }),
-        trailing: /* @__PURE__ */ jsx6(FooterChat, {})
+        trailing: chat ? /* @__PURE__ */ jsx6(FooterChat, {}) : null
       }
     ),
     /* @__PURE__ */ jsx6(SitesPopover, {}),
@@ -228,8 +228,11 @@ function createSeededBackend(opts) {
 // src/footer/chat-theme-store.ts
 import { useCallback, useSyncExternalStore } from "react";
 import { themeIds } from "@agentic-toolkit/bitbag";
+import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 var STORAGE_KEY = "adh-chat-theme";
+var THEME_SWITCH_ENABLED = DEV_BUILD;
 function readStored() {
+  if (!THEME_SWITCH_ENABLED) return null;
   if (typeof window === "undefined") return null;
   try {
     const v = window.localStorage.getItem(STORAGE_KEY);

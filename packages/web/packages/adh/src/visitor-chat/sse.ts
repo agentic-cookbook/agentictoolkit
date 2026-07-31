@@ -70,6 +70,11 @@ export function toStreamEvent(event: string, data: string): ChatStreamEvent | nu
         message: parseData<{ message: string }>(data)?.message ?? 'Chat failed.',
       }
     default:
+      // `ended` (the persona ending the conversation itself) belongs here on purpose. It is
+      // terminal control flow rather than transcript content, and AdhChatBackend acts on the raw
+      // block before this mapper runs — see the `run()` stream loop in ./index.ts. Mapping it
+      // would require a new variant in the TOOLKIT's ChatStreamEvent union, i.e. a submodule
+      // change, to express something the visitor sees once as a closed conversation.
       return null
   }
 }

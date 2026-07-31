@@ -77,6 +77,12 @@ describe('toStreamEvent', () => {
     expect(toStreamEvent('award', '{"badges":[]}')).toBeNull()
     expect(toStreamEvent('mystery', '{}')).toBeNull()
   })
+  it('leaves `ended` unmapped: it is handled by the backend, not the event mapper', () => {
+    // Terminal control flow, not transcript content — AdhChatBackend intercepts the raw block
+    // before this mapper runs. Mapping it would need a new variant in the TOOLKIT's
+    // ChatStreamEvent union (a submodule change) to express something the visitor sees once.
+    expect(toStreamEvent('ended', '{"reason":"persona_ended"}')).toBeNull()
+  })
 })
 
 describe('readSseBlocks', () => {

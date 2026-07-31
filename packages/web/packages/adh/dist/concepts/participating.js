@@ -9,6 +9,7 @@ var CONCEPT_SITE_IDS = /* @__PURE__ */ new Set([
   "customers",
   "dashboards",
   "devices",
+  "devteam",
   "domains",
   "ecosystems",
   "education",

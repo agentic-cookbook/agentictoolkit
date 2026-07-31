@@ -5096,6 +5096,8 @@ export interface paths {
                         redditSubreddits?: string[];
                         /** @description Keywords to match within watched subreddits (max 50). */
                         redditKeywords?: string[];
+                        /** @description Provider audience/list ids to sync contacts for (default none — roster only). */
+                        audienceIds?: string[];
                     };
                 };
             };
@@ -5556,6 +5558,96 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/ecosystems/{ecosystemId}/provider-configs/{configId}/rotate-webhook-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ecosystemId: string;
+                configId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate a postmark config's inbound deliverability webhook secret
+         * @description Mints a NEW per-config webhook secret and returns it on the config's `deliverabilityWebhook.secret`. The previous secret stops authenticating immediately, so any Postmark webhook still sending it starts failing until the operator pastes the new value — the same "this breaks what is already deployed" contract as POST /audience/lists/{listId}/rotate-key. Also the way a config created before the per-config secret existed gets its first one. 400 on a provider with no inbound webhook; 404 when the config is absent or not owned by the ecosystem.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ecosystemId: string;
+                    configId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Masked provider config carrying the NEW webhook secret */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IntegrationProviderConfig"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7707,6 +7799,1085 @@ export interface paths {
                 };
                 /** @description Error */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/signup-lists/{publicKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: string;
+            };
+            cookie?: never;
+        };
+        /** A signup list's public display config plus a fresh submit nonce */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    publicKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The list as the embedded form renders it */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SignupListPublic"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/signup-lists/{publicKey}/signups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Join a signup list (unauthenticated; nonce + honeypot + per-IP cap) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    publicKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        email: string;
+                        name?: string;
+                        nonce: string;
+                        sourceUrl?: string;
+                        /** @description Honeypot. The real form renders it hidden and never fills it — any value means a bot. Documented because a client that omits it entirely is fine, and one that FILLS it is silently accepted-and-discarded rather than rejected. */
+                        website?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/webhooks/postmark/{ecosystemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ecosystem whose webhook secret authenticates this call */
+                ecosystemId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deliverability events from Postmark (per-ecosystem secret header, not a JWT) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ecosystem whose webhook secret authenticates this call */
+                    ecosystemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PostmarkDeliverabilityEvent"];
+                };
+            };
+            responses: {
+                /** @description Acknowledged */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{listId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listId: string;
+            };
+            cookie?: never;
+        };
+        /** List members of a signup list, with delivery status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Members */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ListMember"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{listId}/members/{contactId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listId: string;
+                contactId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a contact from a list */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                    contactId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{listId}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listId: string;
+            };
+            cookie?: never;
+        };
+        /** Subscriber counts for a list */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stats */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListStats"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{listId}/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listId: string;
+            };
+            cookie?: never;
+        };
+        /** A list's campaigns */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Campaigns */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["Campaign"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a draft campaign for this list */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CampaignCreate"];
+                };
+            };
+            responses: {
+                /** @description Created campaign */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Campaign"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/campaigns/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a draft campaign */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Edit a draft campaign */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CampaignPatch"];
+                };
+            };
+            responses: {
+                /** @description Campaign */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Campaign"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/audience/campaigns/{campaignId}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        /** A campaign's per-recipient send status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deliveries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["Delivery"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/campaigns/{campaignId}/test-send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send one preview copy to an address of the caller's choosing
+         * @description The one endpoint in this feature that sends email synchronously, inside the request — an author-only, single-recipient preview that never touches the bulk queue. Never reachable by an acting (agent-on-behalf-of) principal. 409 when no email provider is connected, or when the address is a suppressed contact (bounced/complained/suppressed) — suppression applies to previews exactly as it does to a real send. 502 when the provider itself rejects the message.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["TestSendBody"];
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/campaigns/{campaignId}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a campaign's deliveries for the background drain to send
+         * @description Materializes one audience.deliveries row per mailable, subscribed member and leaves the actual send to the background drain (never sent inline). Never reachable by an acting (agent-on-behalf-of) principal.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Fan-out result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SendResult"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{listId}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Convert a list's subscribed, mailable members into pending signup invites */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invite result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InviteResult"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{listId}/rotate-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate a list's public embed key
+         * @description The old key stops accepting signups immediately; any embedded page using it must be updated.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description New key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RotateKeyResult"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -13298,6 +14469,97 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/corpus/embed-pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chunk and embed a knowledge bucket’s documents (backfill)
+         * @description Requires U (update) on the target bucket — read access must not authorize spending the owner’s embedding budget. The bucket type must be a `content.markdown` type with `ref_mode='rows'`; anything else is a 400. 503 when the caller has no Gemini service configured to embed with.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        bucketTypeId: string;
+                        limit?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Backfill batch result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CorpusEmbedResult"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -25540,6 +26802,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/access/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the feature areas this deployment enforces (key + display label)
+         * @description The server-side registry (src/lib/feature-areas.ts) grants are recorded against. The shared roles editor renders one row per entry rather than a hardcoded list, so an area can be granted AND withheld on a custom role. Members only; non-members get 404.
+         */
+        get: {
+            parameters: {
+                query: {
+                    workspace: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Feature areas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccessFeatureList"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/access/roles": {
         parameters: {
             query?: never;
@@ -27941,7 +29271,7 @@ export interface paths {
         };
         /**
          * Effective usage-enforcement switch + pricing knobs (admin)
-         * @description The global kill switch above every tier’s `quota_enforced`, with the input that decided it: `USAGE_ENFORCEMENT_ENABLED` wins when set, otherwise the `usage_enforcement` row in `system.feature_flags` (absent ⇒ off). Also reports the environment-only pricing and retention knobs, which govern what enforcement charges once it bites. Writes go to `/system/feature-flags` — POST when `flag` is null, PUT `/{flag.id}` otherwise.
+         * @description The global kill switch above every tier’s `quota_enforced`, with the input that decided it: `USAGE_ENFORCEMENT_ENABLED` wins when set, otherwise the `usage_enforcement` row in `system.feature_flags` (absent ⇒ off). Also reports the environment-only pricing and retention knobs, which govern what enforcement charges once it bites, plus the visitor floor’s two daily budgets — the only caps that refuse whatever `enabled` says. Writes go to `/system/feature-flags` — POST when `flag` is null, PUT `/{flag.id}` otherwise.
          */
         get: {
             parameters: {
@@ -28552,6 +29882,634 @@ export interface paths {
         };
         post?: never;
         /** Delete team_permissions */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lists */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            publicKey: string;
+                            status: string;
+                            welcomeTemplateId: string | null;
+                            welcomeBackTemplateId: string | null;
+                            fromName: string | null;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create lists */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        name: string;
+                        slug: string;
+                        description?: string | null;
+                        status?: string;
+                        welcomeTemplateId?: string | null;
+                        welcomeBackTemplateId?: string | null;
+                        fromName?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description lists */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            publicKey: string;
+                            status: string;
+                            welcomeTemplateId: string | null;
+                            welcomeBackTemplateId: string | null;
+                            fromName: string | null;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get lists by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description lists */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            publicKey: string;
+                            status: string;
+                            welcomeTemplateId: string | null;
+                            welcomeBackTemplateId: string | null;
+                            fromName: string | null;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update lists */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        name?: string;
+                        slug?: string;
+                        description?: string | null;
+                        status?: string;
+                        welcomeTemplateId?: string | null;
+                        welcomeBackTemplateId?: string | null;
+                        fromName?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description lists */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            publicKey: string;
+                            status: string;
+                            welcomeTemplateId: string | null;
+                            welcomeBackTemplateId: string | null;
+                            fromName: string | null;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete lists */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List templates */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            subject: string;
+                            htmlBody: string;
+                            textBody: string;
+                            kind: string;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create templates */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        name: string;
+                        subject: string;
+                        htmlBody: string;
+                        textBody: string;
+                        kind?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description templates */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            subject: string;
+                            htmlBody: string;
+                            textBody: string;
+                            kind: string;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audience/templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get templates by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description templates */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            subject: string;
+                            htmlBody: string;
+                            textBody: string;
+                            kind: string;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update templates */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        name?: string;
+                        subject?: string;
+                        htmlBody?: string;
+                        textBody?: string;
+                        kind?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description templates */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            createdBy: string | null;
+                            name: string;
+                            subject: string;
+                            htmlBody: string;
+                            textBody: string;
+                            kind: string;
+                            isDeleted: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete templates */
         delete: {
             parameters: {
                 query?: never;
@@ -39997,6 +41955,750 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integration/integration-audience-contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List integration_audience_contacts */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            email: string;
+                            status: string;
+                            firstName: string | null;
+                            lastName: string | null;
+                            tags: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            fields: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            subscribedAt: string | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create integration_audience_contacts */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        connectionId: string;
+                        provider: string;
+                        audienceId: string;
+                        externalId: string;
+                        email: string;
+                        status: string;
+                        firstName?: string | null;
+                        lastName?: string | null;
+                        tags?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        fields?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        subscribedAt?: string | null;
+                        raw?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description integration_audience_contacts */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            email: string;
+                            status: string;
+                            firstName: string | null;
+                            lastName: string | null;
+                            tags: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            fields: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            subscribedAt: string | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integration/integration-audience-contacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get integration_audience_contacts by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description integration_audience_contacts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            email: string;
+                            status: string;
+                            firstName: string | null;
+                            lastName: string | null;
+                            tags: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            fields: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            subscribedAt: string | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update integration_audience_contacts */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        connectionId?: string;
+                        provider?: string;
+                        audienceId?: string;
+                        externalId?: string;
+                        email?: string;
+                        status?: string;
+                        firstName?: string | null;
+                        lastName?: string | null;
+                        tags?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        fields?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        subscribedAt?: string | null;
+                        raw?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description integration_audience_contacts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            email: string;
+                            status: string;
+                            firstName: string | null;
+                            lastName: string | null;
+                            tags: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            fields: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            subscribedAt: string | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete integration_audience_contacts */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integration/integration-audiences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List integration_audiences */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            externalId: string;
+                            name: string;
+                            memberCount: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create integration_audiences */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        connectionId: string;
+                        provider: string;
+                        externalId: string;
+                        name: string;
+                        memberCount?: number | null;
+                        raw?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description integration_audiences */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            externalId: string;
+                            name: string;
+                            memberCount: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integration/integration-audiences/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get integration_audiences by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description integration_audiences */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            externalId: string;
+                            name: string;
+                            memberCount: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update integration_audiences */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        connectionId?: string;
+                        provider?: string;
+                        externalId?: string;
+                        name?: string;
+                        memberCount?: number | null;
+                        raw?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description integration_audiences */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            externalId: string;
+                            name: string;
+                            memberCount: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete integration_audiences */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/integration/integration-bookmarks": {
         parameters: {
             query?: never;
@@ -40718,6 +43420,408 @@ export interface paths {
         };
         post?: never;
         /** Delete integration_calendar_events */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integration/integration-campaign-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List integration_campaign_stats */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            name: string | null;
+                            subject: string | null;
+                            status: string | null;
+                            sentAt: string | null;
+                            recipients: number | null;
+                            opens: number | null;
+                            uniqueOpens: number | null;
+                            clicks: number | null;
+                            uniqueClicks: number | null;
+                            bounces: number | null;
+                            unsubscribes: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create integration_campaign_stats */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        connectionId: string;
+                        provider: string;
+                        audienceId: string;
+                        externalId: string;
+                        name?: string | null;
+                        subject?: string | null;
+                        status?: string | null;
+                        sentAt?: string | null;
+                        recipients?: number | null;
+                        opens?: number | null;
+                        uniqueOpens?: number | null;
+                        clicks?: number | null;
+                        uniqueClicks?: number | null;
+                        bounces?: number | null;
+                        unsubscribes?: number | null;
+                        raw?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description integration_campaign_stats */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            name: string | null;
+                            subject: string | null;
+                            status: string | null;
+                            sentAt: string | null;
+                            recipients: number | null;
+                            opens: number | null;
+                            uniqueOpens: number | null;
+                            clicks: number | null;
+                            uniqueClicks: number | null;
+                            bounces: number | null;
+                            unsubscribes: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integration/integration-campaign-stats/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get integration_campaign_stats by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description integration_campaign_stats */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            name: string | null;
+                            subject: string | null;
+                            status: string | null;
+                            sentAt: string | null;
+                            recipients: number | null;
+                            opens: number | null;
+                            uniqueOpens: number | null;
+                            clicks: number | null;
+                            uniqueClicks: number | null;
+                            bounces: number | null;
+                            unsubscribes: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update integration_campaign_stats */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        connectionId?: string;
+                        provider?: string;
+                        audienceId?: string;
+                        externalId?: string;
+                        name?: string | null;
+                        subject?: string | null;
+                        status?: string | null;
+                        sentAt?: string | null;
+                        recipients?: number | null;
+                        opens?: number | null;
+                        uniqueOpens?: number | null;
+                        clicks?: number | null;
+                        uniqueClicks?: number | null;
+                        bounces?: number | null;
+                        unsubscribes?: number | null;
+                        raw?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description integration_campaign_stats */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            customerId: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            connectionId: string;
+                            provider: string;
+                            audienceId: string;
+                            externalId: string;
+                            name: string | null;
+                            subject: string | null;
+                            status: string | null;
+                            sentAt: string | null;
+                            recipients: number | null;
+                            opens: number | null;
+                            uniqueOpens: number | null;
+                            clicks: number | null;
+                            uniqueClicks: number | null;
+                            bounces: number | null;
+                            unsubscribes: number | null;
+                            raw: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            isDeleted: boolean;
+                            deletedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete integration_campaign_stats */
         delete: {
             parameters: {
                 query?: never;
@@ -50065,6 +53169,17 @@ export interface components {
             updatedBy?: string | null;
             createdAt?: string;
             updatedAt?: string;
+            /** @description Postmark deliverability webhook registration details (postmark configs only) */
+            deliverabilityWebhook?: {
+                /** @description Absolute URL to paste into Postmark */
+                url: string;
+                /** @description Header Postmark must send this config's webhook secret in */
+                secretHeader: string;
+                /** @description This config's own inbound webhook secret. Never shared between ecosystems. Null when none has been minted yet (a config predating the feature) — POST .../rotate-webhook-secret mints one. */
+                secret: string | null;
+                /** @description One-line operator instruction */
+                instruction: string;
+            } | null;
         };
         IntegrationConnectRequest: {
             /** @enum {string} */
@@ -50151,6 +53266,35 @@ export interface components {
             }[];
             /** @description The t1_/t3_ fullname being replied to */
             replyTo?: string;
+        } | {
+            /** @description Provider list id */
+            audienceId: string;
+            /** Format: email */
+            email: string;
+            firstName?: string;
+            lastName?: string;
+            tags?: string[];
+            /** @description Provider merge/custom fields — flat string, number, or boolean values */
+            fields?: {
+                [key: string]: unknown;
+            };
+        } | {
+            /** @description Provider list id */
+            audienceId: string;
+            /** Format: email */
+            email: string;
+        } | {
+            /** @description Provider list id */
+            audienceId: string;
+            subject: string;
+            fromName?: string;
+            /** Format: email */
+            replyTo?: string;
+            bodyHtml: string;
+            bodyText?: string;
+        } | {
+            /** @description The externalId returned by the broadcast action */
+            broadcastId: string;
         };
         IntegrationActionResult: {
             /** @description true when status is ok */
@@ -50239,6 +53383,123 @@ export interface components {
         AuthMethodSetting: {
             method: string;
             enabled: boolean;
+        };
+        PostmarkDeliverabilityEvent: {
+            /** @description 'Bounce' | 'SpamComplaint' | 'SubscriptionChange' | anything else (ignored) */
+            RecordType: string;
+            /** @description e.g. 'HardBounce', 'SoftBounce', 'BadEmailAddress' */
+            Type?: string;
+            Email?: string;
+            Recipient?: string;
+            Description?: string;
+            /** @description Only meaningful on a 'SubscriptionChange' event: Postmark sends this both when an address ENTERS its suppression list (true) and when it LEAVES (false). Only true suppresses — acting on false would permanently silence a re-subscribe. */
+            SuppressSending?: boolean;
+        };
+        SignupListPublic: {
+            name: string;
+            description: string | null;
+            /** @enum {string} */
+            status: "open" | "closed";
+            /** @description How long after this response a submit carrying the nonce is accepted. A client MUST wait it out: submitting sooner is rejected as an opaque `400 invalid submission`, and because a retry needs a fresh nonce, retrying promptly restarts the same clock indefinitely. Measure the delay from RECEIVING this response, not from a clock comparison — the deadline is server-side and client clocks are not trusted. */
+            minAgeMs: number;
+            /** @description Round-trip anti-abuse token, bound to this publicKey. The submit must present it back; it is rejected if the signature does not verify, if it was minted for a different list, if it is older than its TTL, or if it is younger than the minimum form-fill age. NOT single-use: it is a signed timestamp with no server-side record, so the same nonce may be submitted repeatedly until its TTL expires. Clients must not rely on replay being refused; the per-IP cap, not the nonce, bounds volume. */
+            nonce: string;
+        };
+        ListMember: {
+            /** @description the list_members row id */
+            id: string;
+            contactId: string;
+            email: string | null;
+            name: string | null;
+            /** @enum {string} */
+            deliveryStatus: "ok" | "bounced" | "complained" | "suppressed";
+            bounceCount: number;
+            /** @enum {string} */
+            status: "subscribed" | "unsubscribed";
+            consentSourceUrl: string | null;
+            consentAt: string;
+            /** @description When they LAST unsubscribed. Durable — a later resubscribe never clears it, so a currently-subscribed member may carry one. */
+            unsubscribedAt: string | null;
+            /** @description When they last signed up again after unsubscribing. Null if they never did. */
+            resubscribedAt: string | null;
+            /** @description Opt-out transitions for this membership. A mailbox provider retrying the one-click unsubscribe does not increment it; a resubscribe does not reset it. */
+            unsubscribeCount: number;
+            emailsSentCount: number;
+            createdAt: string;
+        };
+        ListStats: {
+            /** @description subscribed AND currently mailable */
+            subscribed: number;
+            unsubscribed: number;
+            /** @description subscribed but NOT mailable (deliveryStatus != 'ok' — bounced/complained/suppressed) */
+            suppressed: number;
+            total: number;
+        };
+        Campaign: {
+            id: string;
+            ecosystemId: string;
+            listId: string;
+            createdBy?: string | null;
+            name: string;
+            subject: string;
+            htmlBody: string;
+            textBody: string;
+            fromName: string | null;
+            /** @enum {string} */
+            status: "draft" | "scheduled" | "sending" | "sent" | "failed" | "cancelled";
+            scheduledAt?: string | null;
+            startedAt?: string | null;
+            completedAt?: string | null;
+            recipientCount: number;
+            sentCount: number;
+            failedCount: number;
+            createdAt: string;
+            updatedAt: string;
+        };
+        CampaignCreate: {
+            name: string;
+            subject: string;
+            htmlBody: string;
+            textBody: string;
+            fromName?: string | null;
+        };
+        /** @description All fields optional; only present on a campaign still in draft. */
+        CampaignPatch: {
+            name?: string;
+            subject?: string;
+            htmlBody?: string;
+            textBody?: string;
+            fromName?: string | null;
+        };
+        Delivery: {
+            id: string;
+            email: string;
+            name: string | null;
+            /** @enum {string} */
+            status: "queued" | "sending" | "sent" | "failed" | "skipped";
+            attempts: number;
+            lastError: string | null;
+            sentAt: string | null;
+        };
+        TestSendBody: {
+            /** Format: email */
+            to: string;
+        };
+        SendResult: {
+            /** @description deliveries materialized and left for the drain to send */
+            queued: number;
+            /** @description members not queued (unsubscribed or undeliverable) */
+            skipped: number;
+        };
+        InviteResult: {
+            /** @description new auth.pending_users rows created from this list */
+            created: number;
+            /** @description members already pending/invited, or undeliverable, so left untouched */
+            skipped: number;
+        };
+        RotateKeyResult: {
+            /** @description the list's NEW embed key. The old key stops working immediately — any page still embedding it must be updated. */
+            publicKey: string;
         };
         /** @description A bucket-table row. Intentionally open — the column set is defined at runtime by the developer-managed table this bucket points at, so no fixed property schema applies. */
         BucketRow: {
@@ -50724,6 +53985,16 @@ export interface components {
             displayName?: string | null;
             slug: string;
             avatarUrl: string;
+        };
+        CorpusEmbedResult: {
+            /** @description Documents (re)split into passages this call */
+            chunked: number;
+            /** @description Passages embedded this call */
+            embedded: number;
+            /** @description Passages that failed to embed (retried by the next call) */
+            failed: number;
+            /** @description True if a batch filled `limit`, i.e. work was left UNATTEMPTED — call again. Never true merely because passages failed, so a "while more" loop cannot spin forever on one permanently unembeddable passage. */
+            more: boolean;
         };
         /**
          * StringList
@@ -51825,6 +55096,15 @@ export interface components {
                 count: number;
             }[];
         };
+        AccessFeature: {
+            /** @description the feature-area key grants are recorded against, e.g. 'audiences' */
+            key: string;
+            /** @description the display name for this area (the roles editor labels its row with it) */
+            label: string;
+        };
+        AccessFeatureList: {
+            features: components["schemas"]["AccessFeature"][];
+        };
         AccessGrant: {
             /** @description a feature-area key, e.g. 'projects' | 'personas' */
             feature: string;
@@ -52122,6 +55402,12 @@ export interface components {
             turnTokenReserve: number;
             /** @description Age past which a usage_events row is swept (counters are kept forever) */
             eventRetentionDays: number;
+            /** @description Anonymous LLM tokens per day per OWNING ECOSYSTEM (VISITOR_GLOBAL_DAILY_TOKEN_BUDGET); refuses regardless of `enabled`. null ⇒ lifted (`off`) */
+            visitorGlobalDailyTokenBudget: number | null;
+            /** @description The same daily budget in µUSD of provider spend (VISITOR_GLOBAL_DAILY_COST_MICROS); refuses regardless of `enabled`. null ⇒ lifted (`off`) */
+            visitorGlobalDailyCostMicros: number | null;
+            /** @description Tokens an anonymous turn claims up front (VISITOR_TURN_TOKEN_RESERVE); against the cost budget the same claim is priced at the output rate */
+            visitorTurnTokenReserve: number;
         };
         Workspace: {
             /** @description Routable workspace slug (caller-scoped) */

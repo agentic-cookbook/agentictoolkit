@@ -1,1 +1,1 @@
-{"version":3,"file":"participating.d.ts","sourceRoot":"","sources":["../../src/concepts/participating.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,+BAA+B,CAAA;AAM3D,eAAO,MAAM,gBAAgB,EAAE,WAAW,CAAC,MAAM,CAgC/C,CAAA;AAEF,wBAAgB,aAAa,CAAC,MAAM,EAAE,MAAM,GAAG,OAAO,CAErD"}
+{"version":3,"file":"participating.d.ts","sourceRoot":"","sources":["../../src/concepts/participating.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,+BAA+B,CAAA;AAW3D,eAAO,MAAM,gBAAgB,EAAE,WAAW,CAAC,MAAM,CAiC/C,CAAA;AAEF,wBAAgB,aAAa,CAAC,MAAM,EAAE,MAAM,GAAG,OAAO,CAErD"}

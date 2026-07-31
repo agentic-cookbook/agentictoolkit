@@ -91,6 +91,11 @@
       "development": "./src/auth/index.ts",
       "import": "./dist/auth/index.js"
     },
+    "./themes/theme-preview": {
+      "types": "./dist/themes/theme-preview.d.ts",
+      "development": "./src/themes/theme-preview.ts",
+      "import": "./dist/themes/theme-preview.js"
+    },
     "./debug": {
       "types": "./dist/debug/index.d.ts",
       "development": "./src/debug/index.ts",
@@ -100,6 +105,11 @@
       "types": "./dist/debug-env/index.d.ts",
       "development": "./src/debug-env/index.ts",
       "import": "./dist/debug-env/index.js"
+    },
+    "./debug-env/SiteThemeConsole": {
+      "types": "./dist/debug-env/SiteThemeConsole.d.ts",
+      "development": "./src/debug-env/SiteThemeConsole.tsx",
+      "import": "./dist/debug-env/SiteThemeConsole.js"
     },
     "./help": {
       "types": "./dist/help/index.d.ts",

@@ -13,6 +13,11 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
+    "./deployment-env": {
+      "types": "./dist/deployment-env.d.ts",
+      "development": "./src/deployment-env.ts",
+      "import": "./dist/deployment-env.js"
+    },
     "./seo": {
       "types": "./dist/seo/index.d.ts",
       "development": "./src/seo/index.ts",

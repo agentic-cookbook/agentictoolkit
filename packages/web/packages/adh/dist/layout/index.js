@@ -227,8 +227,9 @@ import { SiteTelemetryProvider as TelemetryProvider } from "@agentic-toolkit/adh
 import { FeatureFlagsProvider } from "@agentic-toolkit/adh/flags";
 import { HelpProvider } from "@agentic-toolkit/adh/help";
 import { AdhAppShell as AdhAppShell2 } from "@agentic-toolkit/adh/layout";
+import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 import { jsx as jsx9 } from "react/jsx-runtime";
-var DEV_TOOLS_BUILD_ENABLED = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging";
+var DEV_TOOLS_BUILD_ENABLED = DEV_BUILD;
 function AppShell({ header, children, footer }) {
   return (
     // FeatureFlagsProvider wraps the WHOLE shell, not just the page: the header/landing are

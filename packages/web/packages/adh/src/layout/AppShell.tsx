@@ -10,30 +10,50 @@ import { SiteTelemetryProvider as TelemetryProvider } from '@agentic-toolkit/adh
 import { FeatureFlagsProvider } from '@agentic-toolkit/adh/flags'
 import { HelpProvider } from '@agentic-toolkit/adh/help'
 import { AdhAppShell } from '@agentic-toolkit/adh/layout'
+// Same rule, different package: deployment-env lives in adh-registry (the leaf this package
+// depends on) so that the registry's own seo/metadata.ts can read the identical allowlist
+// without a cycle. `@agentic-toolkit/adh-registry/*` is in tsup's `external` too, so the
+// specifier stays bare in this dist — see the const below, and the chunk-gate contract at the
+// top of that module.
+import { DEV_BUILD } from '@agentic-toolkit/adh-registry/deployment-env'
 
-// Build-time gate for the dev-only switches (same allowlist as devToolsEntries'
+// Build-time gate for the dev-only switches (same gate as devToolsEntries'
 // DEV_TOOLS_BUILD_ENABLED): the env var is inlined per build, so a production build folds this
 // to `false` and AdhAppShell's `devTools` mounts nothing — which is what keeps the debug
 // switches out of "all environments other than prod". (Unlike the site menu's dev tail, this
-// has no signed-in-admin unlock — it stays build-gated.) Spelled out here rather than shared,
-// deliberately: a cross-module const would defeat that inlining. An explicit allowlist (not
-// `!== 'production'`) keeps an unset/unknown env fail-safe.
+// has no signed-in-admin unlock — it stays build-gated.)
 //
-// It stays on THIS side of the toolkit boundary: `NEXT_PUBLIC_DEPLOYMENT_ENV` is adh's env var,
-// so AdhAppShell takes the already-folded boolean as a prop instead of reading it.
+// This used to re-spell the allowlist locally, on the stated theory that "a cross-module const
+// would defeat that inlining". It doesn't, and that was worth measuring rather than assuming:
+// when deployment-env was bundled INTO this dist, the `process.env` comparisons landed in this
+// same module for Next to fold and scope hoisting propagated the result across the const — two
+// production builds of a consuming site, one with the old inline expression and one with this
+// import, came out byte-identical (307 chunks, 16,690,775 bytes, the same content-hashed
+// names). Read that as "a shared const does not defeat the fold", which is the claim being
+// made; the byte-for-byte figure was measured before deployment-env moved out to adh-registry
+// and one module boundary now sits between the comparisons and this const.
+//
+// The gate holds across that boundary regardless: `NEXT_PUBLIC_*` is substituted by Next in
+// every module it processes, node_modules included, so the comparisons still fold to a literal
+// wherever they live and a folded `false` still reaches DEV_TOOLS_BUILD_ENABLED.
+//
+// That measurement is about a MOUNT, not a chunk: it is why a shared const is fine here, and
+// NOT a licence to gate a dynamic import on one — see the chunk-gate contract in
+// `@agentic-toolkit/adh-registry/deployment-env` for the case where the identifier does defeat
+// the fold.
+//
+// The read stays on THIS side of the AdhAppShell boundary: `NEXT_PUBLIC_DEPLOYMENT_ENV` is adh's
+// env var, so AdhAppShell takes the already-folded boolean as a prop instead of reading it.
 //
 // KNOW WHAT THAT COSTS — the dead-code elimination is NOT identical any more. Pre-split, the env
 // read and the switch components lived in one module, so a production build dropped the
-// components outright. Now they sit behind a package boundary and the toolkit's `layout` entry
-// imports them unconditionally; no bundler can propagate this folded `false` back through that
-// import. So `DevAnimScale` and `HtdvLayoutLogSwitch` SHIP in the production client bundle and
-// this constant only stops them MOUNTING. Bytes, not behaviour — and the accepted price of
-// keeping adh's deployment vocabulary out of a generic package. See the `devTools` prop doc on
+// components outright. Now they sit behind AdhAppShell, whose `layout` entry imports them
+// unconditionally; no bundler can propagate this folded `false` back through that import. So
+// `DevAnimScale` and `HtdvLayoutLogSwitch` SHIP in the production client bundle and this
+// constant only stops them MOUNTING. Bytes, not behaviour — and the accepted price of keeping
+// adh's deployment vocabulary out of a generic shell. See the `devTools` prop doc on
 // AdhAppShell for the same note from the other side.
-const DEV_TOOLS_BUILD_ENABLED =
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
+const DEV_TOOLS_BUILD_ENABLED = DEV_BUILD
 
 export type AppShellProps = {
   /** The site header (e.g. <AdhHeader siteId=… />), supplied by the site so it

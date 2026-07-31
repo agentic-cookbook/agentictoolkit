@@ -24,6 +24,7 @@ export {
 export type {
   EnvOverrideSurface,
   ThemeAreasSurface,
+  ThemeAreasLoader,
   DebugThemeArea,
   DebugThemeItem,
 } from './seams'

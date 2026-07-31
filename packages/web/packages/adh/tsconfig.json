@@ -4,13 +4,19 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    // Self-referencing subpaths — the modules this package imports from ITSELF by package
+    // path so the boundary survives bundling (see the chunk-gate contract in
+    // adh-registry's src/deployment-env.ts). Mapped to source so typecheck never depends on a built dist.
     "paths": {
       "@/*": ["./src/*"],
       "@agentic-toolkit/adh": ["./src/index.ts"],
       "@agentic-toolkit/adh/*": ["./src/*"],
       "@agentic-toolkit/adh/header-auth": ["./src/header/header-auth.ts"],
       "@agentic-toolkit/adh/footer/FooterChatInner": ["./src/footer/FooterChatInner.tsx"],
-      "@agentic-toolkit/adh/marketing/LandingHeroGate": ["./src/marketing/LandingHeroGate.tsx"]
+      "@agentic-toolkit/adh/marketing/LandingHeroGate": ["./src/marketing/LandingHeroGate.tsx"],
+      "@agentic-toolkit/adh/debug-env/SiteThemeConsole": ["./src/debug-env/SiteThemeConsole.tsx"],
+      "@agentic-toolkit/adh/themes/DbThemeApplier": ["./src/themes/DbThemeApplier.tsx"],
+      "@agentic-toolkit/adh/themes/theme-preview": ["./src/themes/theme-preview.ts"]
     }
   },
   "include": ["src"]

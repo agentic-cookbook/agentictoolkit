@@ -148,8 +148,14 @@ function AuthButtons({
   signupLabel = "join",
   loginLabel = "login"
 }) {
-  const loginNode = onLogin ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel }) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
-  const signupNode = onSignup ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel }) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
+  const loginNode = onLogin ? (
+    // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agentic-toolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
+    /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel })
+  ) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
+  const signupNode = onSignup ? (
+    // adh-ui-allow: cs-no-bespoke — same as loginNode above: the handler variant of a nav link, not a button. Keep the two branches visually identical.
+    /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel })
+  ) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
   return /* @__PURE__ */ jsxs2(Fragment2, { children: [
     loginNode,
     signupNode

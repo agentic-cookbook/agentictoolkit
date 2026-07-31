@@ -92,10 +92,17 @@ function HeaderPreview() {
 function FooterPreview() {
   return (
     <div className="tep-preview">
-      {/* Preview-only: hide the floating chat + the (recursive) theme switcher. The
-          two-class selector outranks their single-class defaults — no !important. */}
-      <style>{`.tep-preview .adh-footer__chat, .tep-preview .adh-theme-switcher { display: none; }`}</style>
+      {/* Preview-only: hide the (recursive) theme switcher. The two-class selector
+          outranks its single-class default — no !important.
+
+          bitbag is NOT hidden this way and can't be: he portals himself to
+          `document.body`, so he is not a descendant of `.tep-preview` and a scoped
+          rule never matches him. Hiding him from here used to work and silently
+          stopped when the portal landed — a second, full-size, live dock over the
+          console previewing him. `chat={false}` doesn't mount him at all. */}
+      <style>{`.tep-preview .adh-theme-switcher { display: none; }`}</style>
       <SiteFooter
+        chat={false}
         links={[
           { label: 'GitHub', href: '#' },
           { label: 'Status', href: '#' },

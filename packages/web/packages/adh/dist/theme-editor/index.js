@@ -35,10 +35,11 @@ function HeaderPreview() {
 }
 function FooterPreview() {
   return /* @__PURE__ */ jsxs("div", { className: "tep-preview", children: [
-    /* @__PURE__ */ jsx("style", { children: `.tep-preview .adh-footer__chat, .tep-preview .adh-theme-switcher { display: none; }` }),
+    /* @__PURE__ */ jsx("style", { children: `.tep-preview .adh-theme-switcher { display: none; }` }),
     /* @__PURE__ */ jsx(
       SiteFooter,
       {
+        chat: false,
         links: [
           { label: "GitHub", href: "#" },
           { label: "Status", href: "#" }

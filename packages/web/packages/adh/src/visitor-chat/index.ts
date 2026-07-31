@@ -83,6 +83,11 @@ const lengthCapMessage = (max: number | null): string =>
   max != null
     ? `This chat has reached its ${max}-message limit. Send another message to start a fresh conversation.`
     : 'This chat has reached its length limit. Send another message to start a fresh conversation.'
+// The persona ended the conversation itself. Deliberately unattributed and unexplained: the
+// visitor gets a plain fact and an obvious way forward, not a verdict. The persona's own goodbye
+// is already in the transcript above it, and the server's `reason` is a machine token we never
+// render, so a jailbroken model cannot write copy into this state.
+const ENDED_MESSAGE = 'This conversation has ended. Send another message to start a fresh one.'
 
 /** A non-2xx from the mint / create-conversation gates, carrying the HTTP status
  *  so the caller can map 503 → resting, 404 → unavailable, etc. */
@@ -362,9 +367,20 @@ export class AdhChatBackend implements ChatBackend {
       // The server's fail-closed gates answer with a plain status, NOT an SSE body,
       // so branch on the status before reading the stream.
       if (res.status === 409) {
-        // Length cap: drop the maxed-out conversation so the next message starts fresh.
+        // Two different dead conversations answer 409: one that hit the length cap, and one the
+        // persona ended itself. The recovery is identical — drop the id so the next message opens a
+        // fresh conversation — but the copy is not, and telling a visitor whose chat was ended that
+        // they hit a 200-message limit would simply be false. The app's error envelope is
+        // `{ error: { message } }` (backend app.ts onError); an empty or unparseable body keeps
+        // today's length-cap wording, which is the far more common case.
         this.store.remove(convoKey(this.slug))
-        yield { type: 'error', message: lengthCapMessage(this.bootstrap?.maxConversationLength ?? null) }
+        const detail = parseData<{ error?: { message?: string } }>(await res.text().catch(() => ''))
+        yield {
+          type: 'error',
+          message: detail?.error?.message?.includes('ended')
+            ? ENDED_MESSAGE
+            : lengthCapMessage(this.bootstrap?.maxConversationLength ?? null),
+        }
         return
       }
       if (res.status === 503) {
@@ -378,6 +394,16 @@ export class AdhChatBackend implements ChatBackend {
 
       try {
         for await (const { event, data } of readSseBlocks(res.body)) {
+          if (event === 'ended') {
+            // The persona ended the conversation (llm/service.ts END_CHAT_TOOL); the server has
+            // already closed it, so this id is dead and any later turn against it would 409. Drop
+            // it here so the visitor's next message quietly starts a new conversation — the same
+            // recovery as the length cap, and the reason nothing needs to be said out loud.
+            // `ended` is TERMINAL: no `done` follows it on the wire, so close the turn with one.
+            this.store.remove(convoKey(this.slug))
+            yield { type: 'done' }
+            return
+          }
           // `open` heartbeat + out-of-band `status`/`award` map to null (dropped).
           const evt = toStreamEvent(event, data)
           if (evt) yield evt

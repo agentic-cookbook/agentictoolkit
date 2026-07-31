@@ -26,13 +26,23 @@ export default defineConfig({
     'layout/index': 'src/layout/index.ts',
     'legal/index': 'src/legal/index.ts',
     'themes/index': 'src/themes/index.ts',
+    // The two dev-only halves of theming, each its OWN entry so a production build can
+    // leave them out — see the chunk-gate contract in adh-registry's src/deployment-env.ts. DbThemeApplier
+    // is also the only 'use client' module in the themes graph, so hoisting it out is what
+    // keeps `themes/index` (AdhThemeStyle + the switcher payload builder) server-only.
     'themes/DbThemeApplier': 'src/themes/DbThemeApplier.tsx',
+    'themes/theme-preview': 'src/themes/theme-preview.ts',
     'debug/index': 'src/debug/index.ts',
     // The environment/debug CONSOLE — this package's own `debug/` (env-var inventory)
     // and `debug-console/` (the floating window) merged into one directory, because the
     // `./debug` subpath above was already taken. Its two host-owned surfaces (the env
     // override store, the theme taxonomy) arrive as props — see src/debug-env/seams.ts.
     'debug-env/index': 'src/debug-env/index.ts',
+    // The site-theme EDITOR (theme-editor state + the injected THEME_AREAS taxonomy + the
+    // Monaco CSS editor), reached only through the env-gated dynamic import in
+    // debug-env/DebugConsole.tsx. Its own entry is one of the four legs of that gate — see
+    // the chunk-gate contract in adh-registry's src/deployment-env.ts.
+    'debug-env/SiteThemeConsole': 'src/debug-env/SiteThemeConsole.tsx',
     // The Help modal. `help/index` is the always-loaded barrel (HelpProvider context + useHelp +
     // topic data); the heavy window (the ~87K pre-rendered markdown corpus + shiki + the API
     // browser) is its OWN entry so HelpProvider's `next/dynamic(() =>
@@ -299,6 +309,17 @@ export default defineConfig({
     // every page — exactly the cost the split was for.
     '@agentic-toolkit/adh/footer/FooterChatInner',
     '@agentic-toolkit/adh/debug-console',
+    // The dev-only theme trio, and these three are LOAD-BEARING in a way the rest of this
+    // list is not: they are what keeps the site-theme editor (Monaco included) out of every
+    // production bundle. With splitting:false a relative `import('./SiteThemeConsole')` is
+    // not code-split at all — esbuild inlines the module into the importing bundle behind a
+    // lazy-init wrapper, so the folded gate in debug-env/DebugConsole.tsx has nothing left to
+    // gate. theme-preview is here for the tree-shaking half of the same rule: as a preserved
+    // import, the header bundle can drop it once the folded gate leaves it unreferenced. See
+    // the chunk-gate contract in adh-registry's src/deployment-env.ts, and productionBundleGates.test.ts,
+    // which checks this line against the entry, the tsconfig path and the exports map.
+    '@agentic-toolkit/adh/debug-env/SiteThemeConsole',
+    '@agentic-toolkit/adh/themes/theme-preview',
     // BARRELS reached across entries. `header` is also reached from WITHIN its own entry
     // (SiteHeader/SiteMenu/useSiteMenu/devToolsEntries import their own barrel); that
     // emits a self-import in dist/header/index.js, which resolves back to the module
@@ -340,6 +361,11 @@ export default defineConfig({
     // The landing hero's animation (marketing/LandingHeroGate) and the theme editor's
     // Monaco. Both are heavy third-party libraries the consuming site already resolves;
     // bundling them into this dist would ship a second copy per entry that touches them.
+    //
+    // External is NOT a production gate. This comment used to claim the editor's Monaco was
+    // "tree-shaken out there", and it wasn't — Monaco shipped in a ~110 KB chunk on every
+    // site until the editor got its own entry above. What keeps it out is the four-leg gate
+    // in adh-registry's src/deployment-env.ts; external only decides who resolves the copy.
     'motion',
     'motion/react',
     '@monaco-editor/react',

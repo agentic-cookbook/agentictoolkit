@@ -18,11 +18,13 @@ import {
 import { getSite, type SiteId } from '@agentic-toolkit/adh-registry'
 import { helpSlugs } from '@agentic-toolkit/adh/help/surface'
 
-// The marketing sites that adopt the shared concept-graph landing. Keep in sync
-// with the rollout list; the tree must focus a node for each.
+// The sites the tree focuses a node for. Keep in sync with the rollout list; the
+// tree must focus a node for each. All but `devteam` adopt the shared
+// concept-graph landing — devteam is named by the tree but ships its own landing
+// and its own `/details` tree (see participating.ts).
 const TARGET_SITES: SiteId[] = [
   'academy', 'authentication', 'billing', 'communities', 'community', 'consulting',
-  'customers', 'dashboards', 'devices', 'domains', 'ecosystems', 'education',
+  'customers', 'dashboards', 'devices', 'devteam', 'domains', 'ecosystems', 'education',
   'knowledgebases', 'narratives', 'news', 'notifications', 'personas', 'products',
   'projects', 'recipes', 'registries', 'sites', 'storage', 'support', 'tools',
   'teamregistry', 'teambuilder', 'codereviews', 'personabuilder', 'research',

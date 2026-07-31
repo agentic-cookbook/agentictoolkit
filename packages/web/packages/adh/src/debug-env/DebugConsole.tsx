@@ -1,19 +1,20 @@
 'use client'
 
-import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react'
+import dynamic from 'next/dynamic'
 import { MessagesSquare, Palette, SlidersHorizontal, SquareTerminal } from 'lucide-react'
 import type { TopicLevel } from '@agentic-toolkit/ui/blocks'
 import { HierarchicalDetailView } from '@agentic-toolkit/ui/blocks'
 import { EmptyState } from '@agentic-toolkit/ui/components/empty-state'
-import { useThemeEditor } from '@agentic-toolkit/adh/themes'
+import { DEV_BUILD } from '@agentic-toolkit/adh-registry/deployment-env'
 import { FloatingWindow } from './FloatingWindow'
 import { useDebugConsoleConfig } from './DebugConsoleProvider'
 import { EnvironmentPanel } from './EnvironmentPanel'
 import { SettingsPanel } from './SettingsPanel'
 import { buildChatThemeLevel, ChatThemePreview } from './ChatThemePanel'
 import { usePersistedSelection } from './selection-store'
-import { useSiteThemeBranch } from './SiteThemeBranch'
-import type { EnvOverrideSurface, ThemeAreasSurface } from './seams'
+import type { LeaveGuardRef } from './SiteThemeConsole'
+import type { EnvOverrideSurface, ThemeAreasLoader } from './seams'
 
 type Top = 'environment' | 'settings' | 'site-theme' | 'chat-theme'
 
@@ -25,15 +26,69 @@ const TOP_ITEMS = [
 ] as const
 
 /**
+ * Which root topics this build offers. Pure, and takes both facts as arguments, so the
+ * production gate is directly assertable — the alternative (reading DEV_BUILD inline) can
+ * only be checked by rendering the whole console, and a gate that is awkward to test is a
+ * gate that silently stops holding.
+ *
+ * `devBuild` decides whether Site theme exists AT ALL: production has no site-theme editor,
+ * admin or not (see {@link SiteThemeConsole} for why the door can't be the gate).
+ * `hasChatTheme` follows the host's injected config.
+ */
+export function rootTopicsFor({
+  devBuild,
+  hasChatTheme,
+}: {
+  devBuild: boolean
+  hasChatTheme: boolean
+}): readonly (typeof TOP_ITEMS)[number][] {
+  return TOP_ITEMS.filter(
+    (t) => (t.id !== 'chat-theme' || hasChatTheme) && (t.id !== 'site-theme' || devBuild),
+  )
+}
+
+/**
+ * The site-theme editor, loaded on demand — and ONLY in a build that carries dev tooling.
+ *
+ * Production's bundle contains none of what hangs off it: the theme-editor state, the
+ * persistence client, the host's injected THEME_AREAS taxonomy, and Monaco. Both halves of
+ * the gate are load-bearing and both are spelled out in the chunk-gate contract in
+ * adh-registry's deployment-env — the comparisons are written out (rather than `DEV_BUILD`) so webpack
+ * folds them while parsing and never registers the import(), and the specifier is the
+ * package subpath (`external` + its own tsup entry) so the boundary survives the dist
+ * build. Written the obvious way — `DEV_BUILD ? dynamic(() => import('./SiteThemeConsole'))`
+ * — this shipped the editor and a ~110 KB Monaco chunk to production while looking exactly
+ * like a gate.
+ *
+ * This is a SECOND, independent gate, and it is the load-bearing one. The console's own
+ * door — the site menu's "Debug Options" row — also opens for a signed-in adh admin in
+ * production (`devToolsUnlocked`), which used to hand that admin a half-working site-theme
+ * editor: no alt-theme <style> nodes exist in production, so nothing could actually be
+ * switched, but the editor still opened and still applied live override CSS. Gating on the
+ * BUILD rather than on the viewer removes the feature from production outright.
+ */
+const SiteThemeConsole =
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
+    ? dynamic(() =>
+        import('@agentic-toolkit/adh/debug-env/SiteThemeConsole').then((m) => m.SiteThemeConsole),
+      )
+    : null
+
+/**
  * The unified Debug console window — a backdrop-less {@link FloatingWindow} whose
  * {@link HierarchicalDetailView} stack hosts every debug topic (Settings / Environment /
  * Site theme / Chat theme), cascading or covered as the platform's hierarchical-view flag
- * decides. Fully controlled: the caller (the shared
- * SiteMenu's "Debug Options" row) owns `open` state and the dev-only/env gating —
- * this component has no trigger of its own and no runtime env check, so it renders
- * whatever the caller decides to show. The caller also INJECTS the two host surfaces
- * this package deliberately does not own: the environment-override store and the theme
- * taxonomy (see `./seams`).
+ * decides. Fully controlled: the caller (the shared SiteMenu's "Debug Options" row) owns
+ * `open` state and decides WHO may open the console — this component has no trigger of its
+ * own and makes no runtime judgement about the viewer. The caller also INJECTS the two host
+ * surfaces this package deliberately does not own: the environment-override store and the
+ * theme taxonomy (see `./seams`).
+ *
+ * It does apply one gate of its own, and deliberately: which TOPICS this build contains.
+ * The caller's door opens for a production admin, so a topic that must not exist in
+ * production cannot be gated at the door — see {@link SiteThemeConsole}.
  *
  * The heavy work (theme editor + env fetch) lives in {@link DebugConsoleBody}, which
  * only mounts while the window is open (FloatingWindow returns `null` when closed).
@@ -43,8 +98,9 @@ export type DebugConsoleWindowProps = {
   onClose: () => void
   /** The host's environment-override store — see {@link EnvOverrideSurface}. */
   envOverride: EnvOverrideSurface
-  /** The host's theme taxonomy + CSS editor — see {@link ThemeAreasSurface}. */
-  themeAreas: ThemeAreasSurface
+  /** Loads the host's theme taxonomy + CSS editor — see {@link ThemeAreasLoader}. Passed
+   *  straight through to the (env-gated) site-theme topic; never called here. */
+  themeAreas: ThemeAreasLoader
 }
 
 export function DebugConsoleWindow({
@@ -82,12 +138,14 @@ function DebugConsoleBody({
   onClose: () => void
   closeRef: RefObject<() => void>
   envOverride: EnvOverrideSurface
-  themeAreas: ThemeAreasSurface
+  themeAreas: ThemeAreasLoader
 }) {
   const config = useDebugConsoleConfig()
 
-  // Available root topics: chat-theme only when the host injected a config.
-  const rootItems = TOP_ITEMS.filter((t) => t.id !== 'chat-theme' || config.chatTheme != null)
+  // Available root topics — see rootTopicsFor. This feeds the stored-selection validator
+  // below, so a persisted topic that this build doesn't offer falls back instead of selecting
+  // a row that isn't there.
+  const rootItems = rootTopicsFor({ devBuild: DEV_BUILD, hasChatTheme: config.chatTheme != null })
 
   // Nullable, and it MUST stay that way: the root topic is a real level of the stack, so it has to
   // be clearable like any other. In NARROW mode the visible pane is the deepest one the selection
@@ -101,21 +159,25 @@ function DebugConsoleBody({
     (id) => rootItems.some((t) => t.id === id),
     'environment',
   )
-  const ed = useThemeEditor()
-  const site = useSiteThemeBranch(ed, themeAreas)
+  // The unsaved-changes guard of whichever topic is mounted, lent upward by that topic
+  // (only Site theme has a draft to lose). Held in a ref rather than state because the
+  // topic that owns the draft is now a lazily-loaded child: the body has to be able to ask
+  // "may I unmount you?" without knowing what is mounted or re-rendering to find out.
+  const leaveRef: LeaveGuardRef = useRef<((run: () => void) => void) | null>(null)
+  const leave = useCallback((run: () => void) => {
+    const guard = leaveRef.current
+    if (guard) guard(run)
+    else run()
+  }, [])
 
-  // Leaving Site theme with a dirty draft prompts (via the branch's guard).
-  const setTopGuarded = (next: Top | null) => {
-    if (top === 'site-theme' && ed.dirty) site.guardLeave(() => setTop(next))
-    else setTop(next)
-  }
+  // Leaving the topic with a dirty draft prompts (via the topic's guard).
+  const setTopGuarded = (next: Top | null) => leave(() => setTop(next))
 
-  // Route the window's close (Escape / × / onClose) through the same theme guard: closing
-  // a dirty Site-theme draft prompts (save / discard / stay) before the window disappears.
+  // Route the window's close (Escape / × / onClose) through the same guard: closing a dirty
+  // Site-theme draft prompts (save / discard / stay) before the window disappears.
   useEffect(() => {
-    closeRef.current = () =>
-      top === 'site-theme' && ed.dirty ? site.guardLeave(() => onClose()) : onClose()
-  }, [top, ed.dirty, site, onClose, closeRef])
+    closeRef.current = () => leave(onClose)
+  }, [leave, onClose, closeRef])
 
   const rootLevel: TopicLevel = {
     id: 'root',
@@ -129,6 +191,18 @@ function DebugConsoleBody({
     // Deselect the topic — the same clear the breadcrumb root, a re-click, and (in narrow mode)
     // Back all route through. Guarded, so a dirty Site-theme draft still prompts first.
     onClear: () => setTopGuarded(null),
+  }
+
+  // Site theme renders its own HierarchicalDetailView (it is a separate, dev-build-only
+  // module — see SiteThemeConsole), so it short-circuits the level composition below. The
+  // host's theme taxonomy travels with it: the editor is the only topic that reads it, and
+  // it must not be reachable from this always-loaded module.
+  if (top === 'site-theme' && SiteThemeConsole) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <SiteThemeConsole rootLevel={rootLevel} leaveRef={leaveRef} themeAreas={themeAreas} />
+      </div>
+    )
   }
 
   let levels: TopicLevel[] = [rootLevel]
@@ -145,9 +219,6 @@ function DebugConsoleBody({
     leaf = <EnvironmentPanel />
   } else if (top === 'settings') {
     leaf = <SettingsPanel envOverride={envOverride} />
-  } else if (top === 'site-theme') {
-    levels = [rootLevel, ...site.levels]
-    leaf = site.leaf
   } else if (top === 'chat-theme' && config.chatTheme) {
     levels = [rootLevel, buildChatThemeLevel(config.chatTheme)]
     leaf = <ChatThemePreview chat={config.chatTheme} />
@@ -163,7 +234,6 @@ function DebugConsoleBody({
       >
         {leaf}
       </HierarchicalDetailView>
-      {site.prompt}
     </div>
   )
 }

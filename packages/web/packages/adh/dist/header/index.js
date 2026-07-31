@@ -148,8 +148,14 @@ function AuthButtons({
   signupLabel = "join",
   loginLabel = "login"
 }) {
-  const loginNode = onLogin ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel }) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
-  const signupNode = onSignup ? /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel }) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
+  const loginNode = onLogin ? (
+    // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agentic-toolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
+    /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel })
+  ) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
+  const signupNode = onSignup ? (
+    // adh-ui-allow: cs-no-bespoke — same as loginNode above: the handler variant of a nav link, not a button. Keep the two branches visually identical.
+    /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel })
+  ) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
   return /* @__PURE__ */ jsxs2(Fragment2, { children: [
     loginNode,
     signupNode
@@ -1091,7 +1097,7 @@ import {
   HUB_WORKSPACE_SEGMENTS,
   siteUrl
 } from "@agentic-toolkit/adh-registry";
-import { appendThemePreview, readPreviewTheme } from "@agentic-toolkit/adh/themes";
+import { appendThemePreview, readPreviewTheme } from "@agentic-toolkit/adh/themes/theme-preview";
 import {
   useClientHost as useClientHost2
 } from "@agentic-toolkit/adh/header";
@@ -1261,7 +1267,11 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
   const workspaceSlug = currentSiteId === "hub" && isHubWorkspacePath(pathname) ? hubWorkspaceSlug(pathname) ?? personalSlug ?? null : null;
   const hostname = useClientHost2();
   const currentEnv = useMemo2(() => hostname ? detectEnv(hostname) : null, [hostname]);
-  const previewTheme = readPreviewTheme();
+  const previewTheme = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging" ? readPreviewTheme() : null;
+  const carryTheme = useCallback2(
+    (href) => process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging" ? appendThemePreview(href, previewTheme) : href,
+    [previewTheme]
+  );
   const hrefFor = useCallback2(
     (site, external) => {
       if (workspaceSlug && !external) {
@@ -1272,7 +1282,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
       if (site.id === currentSiteId) return "/";
       if (!hostname) return "#";
       const carriedPath = external ? "/" : pathname;
-      const href = appendThemePreview(buildSiteHref(site, hostname, carriedPath), previewTheme);
+      const href = carryTheme(buildSiteHref(site, hostname, carriedPath));
       if (!resolveHref) return href;
       try {
         return detectEnv(new URL(href).hostname) === currentEnv ? resolveHref(href) : href;
@@ -1280,7 +1290,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
         return href;
       }
     },
-    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, previewTheme]
+    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, carryTheme]
   );
   const routeHref = useCallback2(
     (route) => {
@@ -1290,7 +1300,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
         return slug && seg != null && HUB_WORKSPACE_SEGMENTS.has(seg) ? `/${slug}${route}` : route;
       }
       if (!hostname) return "#";
-      const href = appendThemePreview(siteUrl("hub", route, hostname), previewTheme);
+      const href = carryTheme(siteUrl("hub", route, hostname));
       if (!resolveHref) return href;
       try {
         return detectEnv(new URL(href).hostname) === currentEnv ? resolveHref(href) : href;
@@ -1298,7 +1308,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
         return href;
       }
     },
-    [currentSiteId, workspaceSlug, personalSlug, hostname, resolveHref, currentEnv, previewTheme]
+    [currentSiteId, workspaceSlug, personalSlug, hostname, resolveHref, currentEnv, carryTheme]
   );
   const entries = useMemo2(() => {
     const path = pathname || "/";
@@ -1384,14 +1394,14 @@ function buildDebugSiteGroups() {
 }
 
 // src/header/devToolsEntries.ts
+import { DEV_BUILD, isDevDeploymentEnv } from "@agentic-toolkit/adh-registry/deployment-env";
 import "@agentic-toolkit/adh-registry";
 import {
   buildRouteItems as buildRouteItems2
 } from "@agentic-toolkit/adh/header";
-var DEV_TOOLS_BUILD_ENABLED = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging";
-var DEV_ENVS = ["local", "testing", "staging"];
+var DEV_TOOLS_BUILD_ENABLED = DEV_BUILD;
 function isDevEnv(env) {
-  return env !== null && DEV_ENVS.includes(env);
+  return isDevDeploymentEnv(env);
 }
 function buildDevToolsEntries({
   routes,

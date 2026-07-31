@@ -15,7 +15,12 @@ import {
   type SiteDef,
   type SiteId,
 } from '@agentic-toolkit/adh-registry'
-import { appendThemePreview, readPreviewTheme } from '@agentic-toolkit/adh/themes'
+// By the theme-preview SUBPATH, not the `@agentic-toolkit/adh/themes` barrel and not
+// '../themes/theme-preview': the subpath has its own entry and is listed `external`, so it
+// stays a preserved import in this dist instead of being inlined into the header bundle
+// every production page loads — which is what lets the folded gates below leave it
+// unreferenced and the bundler drop it. See the chunk-gate contract in adh-registry's deployment-env.
+import { appendThemePreview, readPreviewTheme } from '@agentic-toolkit/adh/themes/theme-preview'
 import {
   useClientHost,
   type PopoverEntry,
@@ -71,9 +76,36 @@ export function useSiteMenu(
   // user opens it the host has resolved.
   const hostname = useClientHost()
   const currentEnv = useMemo(() => (hostname ? detectEnv(hostname) : null), [hostname])
-  // The theme to carry across a cross-site hop, resolved ONCE per render — null in
-  // production / SSR.
-  const previewTheme = readPreviewTheme()
+  // The theme to carry across a cross-site hop, resolved ONCE per render (not per link —
+  // reading it costs a DOM query plus a cookie parse) — null in production / SSR.
+  //
+  // Carrying a previewed theme between sites is a dev-build affordance, and this hook runs on
+  // every page of every site, so both halves sit behind the build gate: folded to false, the
+  // resolution is `null`, `carryTheme` is the identity function, and neither theme-preview
+  // helper is referenced — so the switcher's client code stays out of the one bundle every
+  // production page loads. (Behaviour was already correct without the fold: with no alt-theme
+  // <style> nodes emitted, readPreviewTheme returns null in production and appendThemePreview
+  // passes the href through untouched. This is about the code, not the result.)
+  //
+  // Comparisons written out rather than `DEV_BUILD` because these are BUNDLE gates: webpack
+  // folds them while parsing and skips the branch, which is what leaves the import above
+  // unreferenced. `DEV_BUILD` here would be a runtime boolean and ship both helpers. See the
+  // chunk-gate contract in adh-registry's deployment-env.
+  const previewTheme =
+    process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
+    process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
+    process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
+      ? readPreviewTheme()
+      : null
+  const carryTheme = useCallback(
+    (href: string): string =>
+      process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
+      process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
+      process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
+        ? appendThemePreview(href, previewTheme)
+        : href,
+    [previewTheme],
+  )
 
   const hrefFor = useCallback(
     (site: SiteDef, external?: boolean): string => {
@@ -95,7 +127,7 @@ export function useSiteMenu(
       const carriedPath = external ? '/' : pathname
       // Tag the destination with the previewed theme BEFORE the SSO wrap below, so it
       // survives in resolveHref's encoded `return` param (a no-op in prod / non-http).
-      const href = appendThemePreview(buildSiteHref(site, hostname, carriedPath), previewTheme)
+      const href = carryTheme(buildSiteHref(site, hostname, carriedPath))
       if (!resolveHref) return href
       // Only route the switch through silent SSO when the destination is in the SAME
       // environment as the current site (see SiteMenu for the full rationale): each
@@ -109,7 +141,7 @@ export function useSiteMenu(
         return href
       }
     },
-    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, previewTheme],
+    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, carryTheme],
   )
 
   // Resolve a hub-workspace ROUTE link to its href: a same-origin path on the hub
@@ -136,7 +168,7 @@ export function useSiteMenu(
       if (!hostname) return '#'
       // Cross-site hub-route link: carry the theme before the SSO wrap, exactly as
       // hrefFor does.
-      const href = appendThemePreview(siteUrl('hub', route, hostname), previewTheme)
+      const href = carryTheme(siteUrl('hub', route, hostname))
       if (!resolveHref) return href
       try {
         return detectEnv(new URL(href).hostname) === currentEnv ? resolveHref(href) : href
@@ -144,7 +176,7 @@ export function useSiteMenu(
         return href
       }
     },
-    [currentSiteId, workspaceSlug, personalSlug, hostname, resolveHref, currentEnv, previewTheme],
+    [currentSiteId, workspaceSlug, personalSlug, hostname, resolveHref, currentEnv, carryTheme],
   )
 
   // Resolve the declarative config into the engine's rows: the href computed ONCE per

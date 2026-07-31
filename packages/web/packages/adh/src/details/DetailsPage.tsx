@@ -8,6 +8,11 @@ import {
   type ConceptNode,
   type DetailSection,
 } from '@agentic-toolkit/adh/concepts'
+// Relative on purpose, unlike the two package-path imports around it: this leaf holds no
+// module state and carries no directive, so inlining it into the `details` entry costs a
+// duplicate of two pure functions and nothing else. The route map it reads is external
+// (`@agentic-toolkit/adh-registry`), which is where the one-copy rule actually applies.
+import { conceptDetailsUrl } from '../concepts/details-links'
 import { siteProdUrl, type SiteId } from '@agentic-toolkit/adh-registry'
 // PRESERVED IMPORT — the package path, never './DetailsRail'. Same directive boundary
 // as graph/ConceptGraph → graph/ConceptGraphClient: this page is a server module and the
@@ -53,10 +58,10 @@ export function DetailsPage({ siteId, topic }: DetailsPageProps) {
     (node.keyPoints?.length ? [{ kind: 'points', heading: 'Key points', items: node.keyPoints }] : [])
   const related = relatedOf(node.id)
 
-  const relatedHref = (r: ConceptNode): string => {
-    const owner = ownerSiteOf(r.id)
-    return owner && owner !== siteId ? siteProdUrl(owner, `/details/${r.id}`) : `/details/${r.id}`
-  }
+  // Not `siteProdUrl(owner, `/details/${id}`)` unconditionally: a site that does
+  // not serve the shared concept-details route 404s that URL. See
+  // `conceptDetailsUrl`, which sends those to the owner's landing instead.
+  const relatedHref = (r: ConceptNode): string => conceptDetailsUrl(r.id, ownerSiteOf(r.id), siteId)
 
   return (
     <div className="adh-details">

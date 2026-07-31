@@ -117,8 +117,9 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/terms',
   ],
   cookbook: [
-    '/[[...slug]]',
+    '/',
     '/auth/callback',
+    '/details/[[...slug]]',
     '/home',
     '/privacy',
     '/terms',
@@ -153,6 +154,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   devteam: [
     '/',
     '/auth/callback',
+    '/details/[[...path]]',
     '/home',
     '/privacy',
     '/terms',
@@ -199,6 +201,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/[slug]/billing/[[...table]]',
     '/[slug]/communities/[[...table]]',
     '/[slug]/dashboards/[[...topic]]',
+    '/[slug]/email-signup',
     '/[slug]/feature-flags/[[...path]]',
     '/[slug]/gamification/[[...path]]',
     '/[slug]/home',

@@ -96,6 +96,27 @@ export const FULL_PALETTE_THEMES = [
   'cobalt2',
   'synthwave84',
   'vesper',
+  // Site themes carried over from agentic-web-toolkit. They were registered in the theme
+  // manifest but never listed here, so for a year they were authored, shipped and
+  // unpickable — the switcher only ever offered what this list names. They declared just
+  // the ~13-token legacy palette, which cannot reskin the M3 chrome (the base defines the
+  // legacy names as var() aliases OF the roles, so overriding an alias leaves the role
+  // underneath untouched); they now declare the full role set, converted by the toolkit's
+  // scripts/convert-legacy-theme.py. The last three were only ever in the OLD toolkit and
+  // were missed when its themes were merged in — see that script for the whole story.
+  'agenticcookbookweb',
+  'dev-team',
+  'mikefullerton',
+  'myprojects',
+  'myprojectsoverview',
+  'professional',
+  'techy',
+  'terminal',
+  'terminal-split',
+  'whimsical',
+  'green-matrix',
+  'green-matrix-glass',
+  'old-school-terminal',
 ] as const satisfies readonly ThemeKey[]
 
 export type FullPaletteThemeKey = (typeof FULL_PALETTE_THEMES)[number]

@@ -476,6 +476,9 @@ const HUB_EXTRA_FEATURE_SEGMENTS: string[] = [
   // switch into) — kept lockstep with FEATURE_META by the reverse-lockstep test (#9).
   'applications', 'invitations', 'signin-apps', 'gamification', 'auth', 'feature-flags',
   'server-bags', 'llm-providers',
+  // Email Signup: a bespoke rail route (audience.* lists/templates/campaigns), no
+  // distinct registry site of its own — same lockstep as the row above.
+  'email-signup',
 ]
 
 // The set of second-path segments that mark a hub workspace route. Object.values

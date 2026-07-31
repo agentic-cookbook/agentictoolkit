@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic'
 import { themes } from '@agentic-toolkit/themes/manifest'
 import { splitImports, parseRootProps } from '@agentic-toolkit/themes/tokens'
 import { APPEARANCE_PREPAINT_SCRIPT } from '@agentic-toolkit/themes/appearance'
@@ -9,23 +10,45 @@ import {
   type SwitcherThemeKey,
 } from './adh-themes'
 import { themePrePaintScript } from './theme-preview'
-// Package-path (not relative): keeps this 'use client' leaf a preserved import so
-// server.ts's bundle never inlines it — see the matching `external` entry/comment in
-// tsup.config.ts for why inlining it would break `getAdhTheme`'s next/headers import.
-import { DbThemeApplier } from '@agentic-toolkit/adh/themes/DbThemeApplier'
+import { isDevDeploymentEnv } from '@agentic-toolkit/adh-registry/deployment-env'
 
 // Theme switching is gated to non-production (local/testing/staging) so production
 // routes stay exactly as they are (one static theme, no extra payload, no client
-// switcher). `local` is what the `dev.local` suite sets for the local suite.
-// A plain array (not `new Set(...)`), deliberately: this module is inlined into
-// both dist/server.js and dist/themes/index.js (see AdhThemeStyle's two exports in
-// tsup.config.ts), and a top-level `const X = new Set(...)` is exactly the
-// module-state-fork shape frontend/tools/verify-bundle-boundaries.py's Check B
-// flags — even though this particular Set is read-only and would have been inert,
-// the toolkit's policy is to remove the shape rather than allowlist it.
-const SWITCHER_ENVS = ['local', 'staging', 'testing']
+// switcher). The env allowlist lives in adh-registry's deployment-env — one home shared with the
+// site menu's dev tail, so the two gates cannot drift apart. It is a plain array there,
+// never `new Set(...)`: this module is inlined into both dist/server.js and
+// dist/themes/index.js (see AdhThemeStyle's two exports in tsup.config.ts), and a
+// top-level `const X = new Set(...)` is exactly the module-state-fork shape
+// frontend/tools/verify-bundle-boundaries.py's Check B flags.
+const switcherEnv = () => isDevDeploymentEnv(process.env.DEPLOYMENT_ENV)
 
-const switcherEnv = () => SWITCHER_ENVS.includes(process.env.DEPLOYMENT_ENV ?? '')
+/**
+ * The persisted-DB-theme applier, loaded on demand and only in a build that carries dev
+ * tooling. Follows the chunk-gate contract in adh-registry's deployment-env: comparisons written out so
+ * webpack folds them while parsing, package subpath so the boundary survives tsup.
+ *
+ * Keeping it behind that boundary is what makes this file SERVER-ONLY, and that is the
+ * bigger prize. It is the only 'use client' module in this graph, and tsup bundles the
+ * whole `themes` entry into one file with one hoisted directive — so a plain
+ * `import { DbThemeApplier } from './DbThemeApplier'` marked AdhThemeStyle itself as client
+ * code, shipping the switcher-payload builder below (every switchable theme key, the
+ * pre-paint script source, the alt-block JSX) into the browser bundle of every page of
+ * every site, in every env, where none of it is ever used. Nothing about that was visible:
+ * the server render is identical either way.
+ *
+ * The static package-path import this replaces was already load-bearing for a second
+ * reason, and the dynamic one keeps it: server.ts's bundle must never inline this leaf, or
+ * `getAdhTheme`'s next/headers import comes with it. See the matching `external` entry in
+ * tsup.config.ts.
+ */
+const DbThemeApplier =
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'local' ||
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'testing' ||
+  process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === 'staging'
+    ? dynamic(() =>
+        import('@agentic-toolkit/adh/themes/DbThemeApplier').then((m) => m.DbThemeApplier),
+      )
+    : null
 
 /**
  * Builds the local/staging/testing-only theme-switcher payload: each switchable theme
@@ -83,8 +106,10 @@ function ThemeSwitcherAssets({ defaultImports }: { defaultImports: string[] }) {
       ))}
       {/* Trusted, static bootstrap (no user input). */}
       <script dangerouslySetInnerHTML={{ __html: prePaint }} />
-      {/* Applies a persisted DB theme on load (seeds ride the pre-paint above). */}
-      <DbThemeApplier />
+      {/* Applies a persisted DB theme on load (seeds ride the pre-paint above). Absent from
+          a production BUILD entirely — see the gate above; this branch only ever runs in a
+          dev env, where the gate is true. */}
+      {DbThemeApplier ? <DbThemeApplier /> : null}
     </>
   )
 }

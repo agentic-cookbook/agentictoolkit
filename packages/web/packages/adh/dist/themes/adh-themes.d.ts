@@ -40,7 +40,7 @@ export declare const DEFAULT_ADH_THEME: AdhThemeKey;
  *     too — dropping it silently reverts its light-mode colors toward the base palette.
  *     (The editor's live override is boosted past both, see theme-overrides.boostRootSpecificity.)
  *  Keep in sync with the `html:root` selectors the theme CSS is generated with. */
-export declare const FULL_PALETTE_THEMES: readonly ["signal", "nord", "solarized", "rose-pine", "gruvbox", "github", "tokyo-night", "catppuccin", "one-dark", "dracula", "monokai", "cobalt2", "synthwave84", "vesper"];
+export declare const FULL_PALETTE_THEMES: readonly ["signal", "nord", "solarized", "rose-pine", "gruvbox", "github", "tokyo-night", "catppuccin", "one-dark", "dracula", "monokai", "cobalt2", "synthwave84", "vesper", "agenticcookbookweb", "dev-team", "mikefullerton", "myprojects", "myprojectsoverview", "professional", "techy", "terminal", "terminal-split", "whimsical", "green-matrix", "green-matrix-glass", "old-school-terminal"];
 export type FullPaletteThemeKey = (typeof FULL_PALETTE_THEMES)[number];
 /** Any theme the footer switcher can select: adh font-variants + full-palette themes. */
 export type SwitcherThemeKey = AdhThemeKey | FullPaletteThemeKey;

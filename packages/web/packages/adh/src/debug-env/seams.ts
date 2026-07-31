@@ -65,3 +65,24 @@ export interface ThemeAreasSurface {
   /** The CSS editor to render for the selected item. */
   CssEditor: ComponentType<{ value: string; onChange: (value: string) => void }>
 }
+
+/**
+ * How the console ASKS for {@link ThemeAreasSurface} — a loader, never the value.
+ *
+ * The surface is the heaviest thing the console touches (the host's whole preview
+ * taxonomy, and a CSS editor that in adh's case is Monaco), and it is needed only by the
+ * site-theme topic, which is already behind a build gate. Taking the value as a prop
+ * meant the host had to BUILD it to render the console at all — and the console's own
+ * chunk is unconditional, because a signed-in admin can open it in production. So the
+ * taxonomy rode into every production build behind a gate that had already been passed.
+ *
+ * A loader moves the host's `import()` to a site the bundler can fold: the host writes the
+ * env comparisons out inline around it and production never registers the import. See the
+ * chunk-gate contract in adh-registry's deployment-env; `productionBundleGates.test.ts`
+ * checks it.
+ *
+ * Still REQUIRED, and still a prop rather than a context: a host that forgets it gets a
+ * type error. A host with no site-theme editor at all supplies a rejecting loader — the
+ * console never calls it, because `rootTopicsFor` drops the topic in the same builds.
+ */
+export type ThemeAreasLoader = () => Promise<ThemeAreasSurface>

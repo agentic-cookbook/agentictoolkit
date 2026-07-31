@@ -3,13 +3,17 @@
 "use client";
 
 // src/footer/FooterChatInner.tsx
+import { createPortal } from "react-dom";
 import { BitbagDock } from "@agentic-toolkit/bitbag";
 
 // src/footer/chat-theme-store.ts
 import { useCallback, useSyncExternalStore } from "react";
 import { themeIds } from "@agentic-toolkit/bitbag";
+import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 var STORAGE_KEY = "adh-chat-theme";
+var THEME_SWITCH_ENABLED = DEV_BUILD;
 function readStored() {
+  if (!THEME_SWITCH_ENABLED) return null;
   if (typeof window === "undefined") return null;
   try {
     const v = window.localStorage.getItem(STORAGE_KEY);
@@ -48,7 +52,11 @@ import "@agentic-toolkit/bitbag/css/bitbag-dock.css";
 import { jsx } from "react/jsx-runtime";
 function FooterChatInner() {
   const [chatTheme] = useChatTheme();
-  return /* @__PURE__ */ jsx(BitbagDock, { className: "adh-footer__chat", theme: chatTheme ?? void 0 });
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    /* @__PURE__ */ jsx(BitbagDock, { className: "adh-footer__chat", theme: chatTheme ?? void 0 }),
+    document.body
+  );
 }
 export {
   FooterChatInner as default

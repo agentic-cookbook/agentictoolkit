@@ -1,11 +1,12 @@
 'use client'
 
 // src/debug-env/DebugConsole.tsx
-import { useEffect as useEffect4, useRef as useRef3 } from "react";
+import { useCallback as useCallback3, useEffect as useEffect4, useRef as useRef2 } from "react";
+import dynamic from "next/dynamic";
 import { MessagesSquare, Palette, SlidersHorizontal, SquareTerminal } from "lucide-react";
 import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { useThemeEditor } from "@agentic-toolkit/adh/themes";
+import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 
 // src/debug-env/FloatingWindow.tsx
 import {
@@ -416,239 +417,34 @@ function usePersistedSelection(key, isValid, fallback) {
   return [value, set];
 }
 
-// src/debug-env/SiteThemeBranch.tsx
-import { useRef as useRef2, useState as useState5 } from "react";
-import { Braces, Brush, Globe, Layers, Megaphone, Paintbrush as Paintbrush2, SwatchBook as SwatchBook2, Type } from "lucide-react";
-import { Button as Button2 } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription
-} from "@agentic-toolkit/ui/components/dialog";
-import { useClipboard } from "@agentic-toolkit/ui/hooks/useClipboard";
-import { useIsomorphicLayoutEffect } from "@agentic-toolkit/ui/hooks/useIsomorphicLayoutEffect";
-import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
-var AREA_ICONS = {
-  global: /* @__PURE__ */ jsx7(Globe, {}),
-  type: /* @__PURE__ */ jsx7(Type, {}),
-  marketing: /* @__PURE__ */ jsx7(Megaphone, {}),
-  custom: /* @__PURE__ */ jsx7(Braces, {})
-};
-function useSiteThemeBranch(ed, themeAreas) {
-  const { areas: THEME_AREAS } = themeAreas;
-  const [areaId, setAreaId] = usePersistedSelection(
-    "site-theme.area",
-    (id) => THEME_AREAS.some((a) => a.id === id),
-    null
-  );
-  const [itemId, setItemId] = usePersistedSelection(
-    "site-theme.item",
-    (id) => (THEME_AREAS.find((a) => a.id === areaId)?.items ?? []).some((i) => i.id === id),
-    null
-  );
-  const [pending, setPending] = useState5(null);
-  const area = THEME_AREAS.find((a) => a.id === areaId) ?? null;
-  const item = area?.items.find((i) => i.id === itemId) ?? null;
-  const guardLeave = (run) => {
-    if (ed.dirty) setPending({ type: "action", run });
-    else run();
-  };
-  const requestFocus = (key) => {
-    if (ed.dirty && key !== ed.selectedKey) setPending({ type: "focus", key });
-    else {
-      ed.select(key);
-      setAreaId(null);
-      setItemId(null);
-    }
-  };
-  const themeItems = ed.themes.map((t) => ({
-    id: t.key,
-    label: t.label,
-    // Row icons carry the built-in/custom distinction now: a built-in (seed) theme is the shipped
-    // swatch book, a custom theme is a brush of its own (no placeholder circles).
-    icon: t.source === "seed" ? /* @__PURE__ */ jsx7(SwatchBook2, {}) : /* @__PURE__ */ jsx7(Paintbrush2, {}),
-    // Custom (db) themes keep their key as a dim second line to tell them apart; seed themes
-    // are single-line now — the old "built-in" subtitle padded every row for no real signal.
-    sublabel: t.source === "seed" ? void 0 : t.key
-  }));
-  const levels = [
-    {
-      id: "themes",
-      title: "Themes",
-      items: themeItems,
-      selectedId: ed.selectedKey,
-      onSelect: (key) => requestFocus(key),
-      onClear: () => requestFocus(null),
-      emptyLabel: "No themes.",
-      // "New theme" is the Themes list header's ＋ (guarded so a dirty draft prompts first),
-      // gold-tinted while a fresh unsaved theme is in progress (nothing selected in the list).
-      onNew: () => guardLeave(() => ed.newTheme()),
-      newLabel: "New theme",
-      newActive: ed.isNew
-    }
-  ];
-  if (ed.selectedKey != null) {
-    levels.push({
-      id: "areas",
-      title: "Areas",
-      items: THEME_AREAS.map((a) => ({ id: a.id, label: a.label, icon: AREA_ICONS[a.id] ?? /* @__PURE__ */ jsx7(Layers, {}) })),
-      selectedId: areaId,
-      onSelect: (id) => {
-        setAreaId(id);
-        const next = THEME_AREAS.find((a) => a.id === id);
-        setItemId(next?.items[0]?.id ?? null);
-      },
-      onClear: () => {
-        setAreaId(null);
-        setItemId(null);
-      }
-    });
-  }
-  if (area) {
-    levels.push({
-      id: "items",
-      title: area.label,
-      items: area.items.map((i) => ({ id: i.id, label: i.label, icon: /* @__PURE__ */ jsx7(Brush, {}) })),
-      selectedId: itemId,
-      onSelect: (id) => setItemId(id),
-      onClear: () => setItemId(null)
-    });
-  }
-  const leaf = ed.selectedKey != null ? /* @__PURE__ */ jsxs6("div", { className: "flex min-h-0 flex-1 flex-col", children: [
-    area && item ? /* @__PURE__ */ jsx7(ItemCssDetail, { ed, area, item, themeAreas }) : /* @__PURE__ */ jsx7(ThemeMetaDetail, { ed }),
-    /* @__PURE__ */ jsx7(ThemeActionFooter, { ed })
-  ] }) : /* @__PURE__ */ jsx7("div", { className: "flex flex-1 items-center justify-center p-6 text-center text-sm text-apt-text-muted", children: "Pick a theme to edit, or start a new one with \uFF0B above." });
-  const prompt = /* @__PURE__ */ jsx7(
-    UnsavedPrompt,
-    {
-      open: pending !== null,
-      saving: ed.saving,
-      error: ed.error,
-      onSave: async () => {
-        if (await ed.save()) {
-          applyPending(pending, ed, setAreaId, setItemId);
-          setPending(null);
-        }
-      },
-      onDiscard: () => {
-        ed.cancel();
-        applyPending(pending, ed, setAreaId, setItemId);
-        setPending(null);
-      },
-      onCancel: () => setPending(null)
-    }
-  );
-  return { levels, leaf, requestFocus, guardLeave, prompt };
-}
-function ThemeActionFooter({ ed }) {
-  return /* @__PURE__ */ jsxs6("div", { className: "shrink-0 border-t border-apt-border", children: [
-    ed.error && /* @__PURE__ */ jsx7("p", { className: "px-4 pt-1.5 font-mono text-xs text-apt-red", children: ed.error }),
-    /* @__PURE__ */ jsxs6("div", { className: "flex items-center justify-end gap-2 px-4 py-2", children: [
-      /* @__PURE__ */ jsx7(
-        Button2,
-        {
-          size: "sm",
-          variant: "destructive-ghost",
-          onClick: () => void ed.remove(),
-          disabled: !ed.canDelete,
-          children: "Delete"
-        }
-      ),
-      /* @__PURE__ */ jsx7(Button2, { size: "sm", variant: "ghost", onClick: ed.cancel, disabled: !(ed.dirty || ed.isNew), children: "Cancel" }),
-      /* @__PURE__ */ jsx7(Button2, { size: "sm", onClick: () => void ed.save(), disabled: !ed.canSave || ed.saving, children: ed.saving ? "Saving\u2026" : "Save" })
-    ] })
-  ] });
-}
-function applyPending(pending, ed, setAreaId, setItemId) {
-  if (!pending) return;
-  if (pending.type === "focus") {
-    ed.select(pending.key);
-    setAreaId(null);
-    setItemId(null);
-  } else {
-    pending.run();
-  }
-}
-function ThemeMetaDetail({ ed }) {
-  return /* @__PURE__ */ jsxs6("div", { className: "flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4", children: [
-    /* @__PURE__ */ jsxs6("label", { className: "flex flex-col gap-1", children: [
-      /* @__PURE__ */ jsx7("span", { className: "text-sm text-apt-text-muted", children: "Theme label" }),
-      /* @__PURE__ */ jsx7(Input, { value: ed.label, disabled: ed.isSeed, onChange: (e) => ed.setLabel(e.target.value) })
-    ] }),
-    ed.isNew && /* @__PURE__ */ jsxs6("label", { className: "flex flex-col gap-1", children: [
-      /* @__PURE__ */ jsx7("span", { className: "text-sm text-apt-text-muted", children: "Key" }),
-      /* @__PURE__ */ jsx7(Input, { value: ed.themeKey, onChange: (e) => ed.setThemeKey(e.target.value) })
-    ] }),
-    /* @__PURE__ */ jsx7("p", { className: "text-sm text-apt-text-dim", children: "Pick an area, then an item, to edit its CSS." })
-  ] });
-}
-function ItemCssDetail({
-  ed,
-  area,
-  item,
-  themeAreas
-}) {
-  const { readItemCss, CssEditor } = themeAreas;
-  const Preview = item.Preview ?? area.Preview;
-  const exampleRef = useRef2(null);
-  const [prefill, setPrefill] = useState5("");
-  const saved = ed.itemCss(item.id);
-  const value = saved || prefill;
-  const clip = useClipboard();
-  useIsomorphicLayoutEffect(() => {
-    if (saved) return;
-    const id = requestAnimationFrame(() => setPrefill(readItemCss(item.id, exampleRef.current)));
-    return () => cancelAnimationFrame(id);
-  }, [item, saved, readItemCss]);
-  return /* @__PURE__ */ jsxs6("div", { className: "flex min-h-0 flex-1 flex-col gap-3 overflow-auto p-4", children: [
-    /* @__PURE__ */ jsx7("div", { ref: exampleRef, className: "rounded-md border border-apt-border", children: /* @__PURE__ */ jsx7(Preview, {}) }),
-    /* @__PURE__ */ jsx7("div", { className: "flex items-center justify-end", children: /* @__PURE__ */ jsx7(Button2, { size: "sm", variant: "ghost", onClick: () => void clip.copy(ed.exportCss()), children: clip.copied ? "Copied" : "Copy all CSS" }) }),
-    /* @__PURE__ */ jsx7(CssEditor, { value, onChange: (v) => ed.setItemCss(item.id, v) })
-  ] });
-}
-function UnsavedPrompt({
-  open,
-  saving,
-  error,
-  onSave,
-  onDiscard,
-  onCancel
-}) {
-  return /* @__PURE__ */ jsx7(Dialog, { open, onOpenChange: (next) => !next && !saving && onCancel(), children: /* @__PURE__ */ jsxs6(DialogContent, { showClose: !saving, children: [
-    /* @__PURE__ */ jsxs6(DialogHeader, { children: [
-      /* @__PURE__ */ jsx7(DialogTitle, { children: "Unsaved theme changes" }),
-      /* @__PURE__ */ jsx7(DialogDescription, { children: "Save them, discard them, or stay to keep editing." })
-    ] }),
-    error && /* @__PURE__ */ jsx7("p", { className: "font-mono text-xs text-apt-red", children: error }),
-    /* @__PURE__ */ jsxs6(DialogFooter, { className: "flex-row justify-end gap-2", children: [
-      /* @__PURE__ */ jsx7(Button2, { size: "sm", variant: "ghost", onClick: onCancel, disabled: saving, children: "Cancel" }),
-      /* @__PURE__ */ jsx7(Button2, { size: "sm", variant: "destructive-ghost", onClick: onDiscard, disabled: saving, children: "Discard" }),
-      /* @__PURE__ */ jsx7(Button2, { size: "sm", onClick: onSave, disabled: saving, children: saving ? "Saving\u2026" : "Save" })
-    ] })
-  ] }) });
-}
-
 // src/debug-env/DebugConsole.tsx
-import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx7 } from "react/jsx-runtime";
 var TOP_ITEMS = [
-  { id: "settings", label: "Settings", icon: /* @__PURE__ */ jsx8(SlidersHorizontal, {}) },
-  { id: "environment", label: "Environment", icon: /* @__PURE__ */ jsx8(SquareTerminal, {}) },
-  { id: "site-theme", label: "Site theme", icon: /* @__PURE__ */ jsx8(Palette, {}) },
-  { id: "chat-theme", label: "Chat theme", icon: /* @__PURE__ */ jsx8(MessagesSquare, {}) }
+  { id: "settings", label: "Settings", icon: /* @__PURE__ */ jsx7(SlidersHorizontal, {}) },
+  { id: "environment", label: "Environment", icon: /* @__PURE__ */ jsx7(SquareTerminal, {}) },
+  { id: "site-theme", label: "Site theme", icon: /* @__PURE__ */ jsx7(Palette, {}) },
+  { id: "chat-theme", label: "Chat theme", icon: /* @__PURE__ */ jsx7(MessagesSquare, {}) }
 ];
+function rootTopicsFor({
+  devBuild,
+  hasChatTheme
+}) {
+  return TOP_ITEMS.filter(
+    (t) => (t.id !== "chat-theme" || hasChatTheme) && (t.id !== "site-theme" || devBuild)
+  );
+}
+var SiteThemeConsole = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging" ? dynamic(
+  () => import("@agentic-toolkit/adh/debug-env/SiteThemeConsole").then((m) => m.SiteThemeConsole)
+) : null;
 function DebugConsoleWindow({
   open,
   onClose,
   envOverride,
   themeAreas
 }) {
-  const closeRef = useRef3(onClose);
+  const closeRef = useRef2(onClose);
   closeRef.current = onClose;
-  return /* @__PURE__ */ jsx8(FloatingWindow, { open, onClose: () => closeRef.current(), title: "Debug Options", children: /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsx7(FloatingWindow, { open, onClose: () => closeRef.current(), title: "Debug Options", children: /* @__PURE__ */ jsx7(
     DebugConsoleBody,
     {
       onClose,
@@ -665,21 +461,22 @@ function DebugConsoleBody({
   themeAreas
 }) {
   const config = useDebugConsoleConfig();
-  const rootItems = TOP_ITEMS.filter((t) => t.id !== "chat-theme" || config.chatTheme != null);
+  const rootItems = rootTopicsFor({ devBuild: DEV_BUILD, hasChatTheme: config.chatTheme != null });
   const [top, setTop] = usePersistedSelection(
     "top",
     (id) => rootItems.some((t) => t.id === id),
     "environment"
   );
-  const ed = useThemeEditor();
-  const site = useSiteThemeBranch(ed, themeAreas);
-  const setTopGuarded = (next) => {
-    if (top === "site-theme" && ed.dirty) site.guardLeave(() => setTop(next));
-    else setTop(next);
-  };
+  const leaveRef = useRef2(null);
+  const leave = useCallback3((run) => {
+    const guard = leaveRef.current;
+    if (guard) guard(run);
+    else run();
+  }, []);
+  const setTopGuarded = (next) => leave(() => setTop(next));
   useEffect4(() => {
-    closeRef.current = () => top === "site-theme" && ed.dirty ? site.guardLeave(() => onClose()) : onClose();
-  }, [top, ed.dirty, site, onClose, closeRef]);
+    closeRef.current = () => leave(onClose);
+  }, [leave, onClose, closeRef]);
   const rootLevel = {
     id: "root",
     // A titled header — like every other level — so this first list reserves the same header
@@ -693,8 +490,11 @@ function DebugConsoleBody({
     // Back all route through. Guarded, so a dirty Site-theme draft still prompts first.
     onClear: () => setTopGuarded(null)
   };
+  if (top === "site-theme" && SiteThemeConsole) {
+    return /* @__PURE__ */ jsx7("div", { className: "flex min-h-0 min-w-0 flex-1 flex-col", children: /* @__PURE__ */ jsx7(SiteThemeConsole, { rootLevel, leaveRef, themeAreas }) });
+  }
   let levels = [rootLevel];
-  let leaf = /* @__PURE__ */ jsx8(
+  let leaf = /* @__PURE__ */ jsx7(
     EmptyState,
     {
       className: "m-4",
@@ -703,29 +503,23 @@ function DebugConsoleBody({
     }
   );
   if (top === "environment") {
-    leaf = /* @__PURE__ */ jsx8(EnvironmentPanel, {});
+    leaf = /* @__PURE__ */ jsx7(EnvironmentPanel, {});
   } else if (top === "settings") {
-    leaf = /* @__PURE__ */ jsx8(SettingsPanel, { envOverride });
-  } else if (top === "site-theme") {
-    levels = [rootLevel, ...site.levels];
-    leaf = site.leaf;
+    leaf = /* @__PURE__ */ jsx7(SettingsPanel, { envOverride });
   } else if (top === "chat-theme" && config.chatTheme) {
     levels = [rootLevel, buildChatThemeLevel(config.chatTheme)];
-    leaf = /* @__PURE__ */ jsx8(ChatThemePreview, { chat: config.chatTheme });
+    leaf = /* @__PURE__ */ jsx7(ChatThemePreview, { chat: config.chatTheme });
   }
-  return /* @__PURE__ */ jsxs7("div", { className: "flex min-h-0 min-w-0 flex-1 flex-col", children: [
-    /* @__PURE__ */ jsx8(
-      HierarchicalDetailView,
-      {
-        levels,
-        rootLabel: "Debug Options",
-        disclosureStyle: "cascading",
-        exitGuard: null,
-        children: leaf
-      }
-    ),
-    site.prompt
-  ] });
+  return /* @__PURE__ */ jsx7("div", { className: "flex min-h-0 min-w-0 flex-1 flex-col", children: /* @__PURE__ */ jsx7(
+    HierarchicalDetailView,
+    {
+      levels,
+      rootLabel: "Debug Options",
+      disclosureStyle: "cascading",
+      exitGuard: null,
+      children: leaf
+    }
+  ) });
 }
 export {
   DebugConsoleProvider,

@@ -1,6 +1,7 @@
 'use client'
 
 // src/themes/AdhThemeStyle.tsx
+import dynamic from "next/dynamic";
 import { themes as themes2 } from "@agentic-toolkit/themes/manifest";
 import { splitImports, parseRootProps } from "@agentic-toolkit/themes/tokens";
 import { APPEARANCE_PREPAINT_SCRIPT } from "@agentic-toolkit/themes/appearance";
@@ -34,7 +35,28 @@ var FULL_PALETTE_THEMES = [
   "monokai",
   "cobalt2",
   "synthwave84",
-  "vesper"
+  "vesper",
+  // Site themes carried over from agentic-web-toolkit. They were registered in the theme
+  // manifest but never listed here, so for a year they were authored, shipped and
+  // unpickable — the switcher only ever offered what this list names. They declared just
+  // the ~13-token legacy palette, which cannot reskin the M3 chrome (the base defines the
+  // legacy names as var() aliases OF the roles, so overriding an alias leaves the role
+  // underneath untouched); they now declare the full role set, converted by the toolkit's
+  // scripts/convert-legacy-theme.py. The last three were only ever in the OLD toolkit and
+  // were missed when its themes were merged in — see that script for the whole story.
+  "agenticcookbookweb",
+  "dev-team",
+  "mikefullerton",
+  "myprojects",
+  "myprojectsoverview",
+  "professional",
+  "techy",
+  "terminal",
+  "terminal-split",
+  "whimsical",
+  "green-matrix",
+  "green-matrix-glass",
+  "old-school-terminal"
 ];
 var DEFAULT_SITE_THEME = "adh";
 var isFullPaletteTheme = (key) => FULL_PALETTE_THEMES.includes(key);
@@ -97,10 +119,12 @@ function themePrePaintScript() {
 }
 
 // src/themes/AdhThemeStyle.tsx
-import { DbThemeApplier } from "@agentic-toolkit/adh/themes/DbThemeApplier";
+import { isDevDeploymentEnv } from "@agentic-toolkit/adh-registry/deployment-env";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
-var SWITCHER_ENVS = ["local", "staging", "testing"];
-var switcherEnv = () => SWITCHER_ENVS.includes(process.env.DEPLOYMENT_ENV ?? "");
+var switcherEnv = () => isDevDeploymentEnv(process.env.DEPLOYMENT_ENV);
+var DbThemeApplier = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging" ? dynamic(
+  () => import("@agentic-toolkit/adh/themes/DbThemeApplier").then((m) => m.DbThemeApplier)
+) : null;
 function ThemeSwitcherAssets({ defaultImports }) {
   if (!switcherEnv()) return null;
   const already = new Set(defaultImports);
@@ -131,7 +155,7 @@ function ThemeSwitcherAssets({ defaultImports }) {
       `alt:${key}`
     )),
     /* @__PURE__ */ jsx("script", { dangerouslySetInnerHTML: { __html: prePaint } }),
-    /* @__PURE__ */ jsx(DbThemeApplier, {})
+    DbThemeApplier ? /* @__PURE__ */ jsx(DbThemeApplier, {}) : null
   ] });
 }
 function SiteDefaultTheme({ baseImports }) {
