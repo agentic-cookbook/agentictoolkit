@@ -63,9 +63,10 @@
   },
   "font-family": {
     "$type": "fontFamily",
-    "iosevka-sans": { "$value": "'Iosevka', ui-monospace, monospace" },
-    "iosevka-serif": { "$value": "'Iosevka', ui-serif, Georgia, serif" },
-    "iosevka-mono": { "$value": "'Iosevka', ui-monospace, monospace" },
+    "iosevka": {
+      "$value": "'Iosevka', 'Iosevka Fallback Menlo', 'Iosevka Fallback Courier', ui-monospace, monospace",
+      "$description": "ONE stack for all three roles. Iosevka is a single face used for sans, serif AND mono, so the roles must share a fallback too — serif used to end in Georgia, a PROPORTIONAL face, which re-wrapped every display heading the moment the webfont swapped in. The two Iosevka Fallback families are metric-matched local faces (see scripts/subset-fonts.py); they lay out at Iosevka's own advance, so the swap moves nothing."
+    },
     "manrope": { "$value": "'Manrope', system-ui, sans-serif" },
     "instrument-serif": { "$value": "'Instrument Serif', Georgia, serif" },
     "dm-mono": { "$value": "'DM Mono', ui-monospace, monospace" },

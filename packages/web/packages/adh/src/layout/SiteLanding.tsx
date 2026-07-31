@@ -14,6 +14,13 @@ export type SiteLandingProps = {
 // Renders against the shared theme tokens, but every token carries a fallback so
 // the hero looks right even before/without <AdhThemeStyle/> (consumer sites keep
 // no local palette).
+//
+// The type below reads the shared LANDING scale (--type-landing-*), the same one
+// the .text-landing-* classes carry, so this hero and a site that hand-writes its
+// own landing render the identical tier. The scale is defined once in the toolkit
+// (packages/web/packages/themes/tokens/semantic/typography.json) — resize it THERE.
+// The literal after each var is this file's original value, kept as the fallback
+// for the no-theme case; it is a mirror, not a second source of truth.
 const SERIF = 'var(--font-serif, ui-serif, Georgia, serif)'
 const SANS = 'var(--font-sans, ui-sans-serif, system-ui, sans-serif)'
 const MONO = 'var(--font-mono, ui-monospace, monospace)'
@@ -55,9 +62,10 @@ export function SiteLanding({
       <div style={{ maxWidth: 720 }}>
         <div
           style={{
-            fontFamily: MONO,
-            fontSize: '0.7rem',
-            letterSpacing: '0.24em',
+            fontFamily: `var(--type-landing-eyebrow-font, ${MONO})`,
+            fontSize: 'var(--type-landing-eyebrow-size, 0.7rem)',
+            lineHeight: 'var(--type-landing-eyebrow-line-height, 1.4)',
+            letterSpacing: 'var(--type-landing-eyebrow-tracking, 0.24em)',
             textTransform: 'uppercase',
             color: MUTED,
             marginBottom: '1.75rem',
@@ -68,9 +76,10 @@ export function SiteLanding({
 
         <h1
           style={{
-            fontSize: 'clamp(2.6rem, 6vw, 4.5rem)',
-            lineHeight: 1.04,
-            letterSpacing: '-0.02em',
+            fontFamily: `var(--type-landing-title-font, ${SERIF})`,
+            fontSize: 'var(--type-landing-title-size, clamp(2.6rem, 6vw, 4.5rem))',
+            lineHeight: 'var(--type-landing-title-line-height, 1.04)',
+            letterSpacing: 'var(--type-landing-title-tracking, -0.02em)',
             fontWeight: 400,
             margin: '0 0 1.5rem',
           }}
@@ -83,9 +92,9 @@ export function SiteLanding({
 
         <p
           style={{
-            fontFamily: SANS,
-            fontSize: '1.1rem',
-            lineHeight: 1.7,
+            fontFamily: `var(--type-landing-lede-font, ${SANS})`,
+            fontSize: 'var(--type-landing-lede-size, 1.1rem)',
+            lineHeight: 'var(--type-landing-lede-line-height, 1.7)',
             color: MUTED,
             margin: '0 auto 2.75rem',
             maxWidth: 560,

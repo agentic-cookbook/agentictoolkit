@@ -1,7 +1,9 @@
 import dynamic from 'next/dynamic'
+import { preload } from 'react-dom'
 import { themes } from '@agentic-toolkit/themes/manifest'
 import { splitImports, parseRootProps } from '@agentic-toolkit/themes/tokens'
 import { APPEARANCE_PREPAINT_SCRIPT } from '@agentic-toolkit/themes/appearance'
+import { THEME_FONT_PRELOADS } from '@agentic-toolkit/themes/fonts'
 import {
   DEFAULT_ADH_THEME,
   DEFAULT_SITE_THEME,
@@ -86,8 +88,27 @@ function ThemeSwitcherAssets({ defaultImports }: { defaultImports: string[] }) {
 
   const prePaint = themePrePaintScript()
 
+  // Warm the connections these switcher stylesheets live on. Every family site's layout
+  // used to carry this pair of preconnects hand-written into its own <head>, back when the
+  // default theme @import'ed Iosevka from a CDN. The default self-hosts now, so in
+  // production those preconnects opened a TLS connection to an origin the page never
+  // contacted; here — the only place a Google-hosted font is still fetched — they are live.
+  // Derived from the URLs actually emitted, so a switcher theme on a new host is covered
+  // and a removed one stops being preconnected.
+  const origins = new Set<string>()
+  for (const href of fonts) {
+    const { origin } = new URL(href)
+    origins.add(origin)
+    // Google serves the css from fonts.googleapis.com and the woff2 from fonts.gstatic.com;
+    // only the first is discoverable from the markup, and the second is the slow one.
+    if (origin === 'https://fonts.googleapis.com') origins.add('https://fonts.gstatic.com')
+  }
+
   return (
     <>
+      {[...origins].map((origin) => (
+        <link key={`pc:${origin}`} rel="preconnect" href={origin} crossOrigin="anonymous" />
+      ))}
       {[...fonts].map((href) => (
         <link key={`sw:${href}`} rel="stylesheet" href={href} data-adh-theme-switch-font="" />
       ))}
@@ -169,6 +190,22 @@ function SiteDefaultTheme({ baseImports }: { baseImports: string[] }) {
 export function AdhThemeStyle() {
   const entry = themes[DEFAULT_ADH_THEME]
   if (!entry) return null
+  // Start the webfont download in the first pass over <head>, before any layout has
+  // happened. The faces are same-origin (materializeThemeFonts in
+  // frontend/src/next-config-base.mjs puts them in each site's public/), so this is a fetch
+  // on the connection that already delivered the html — not a DNS+TLS+fetch of a
+  // third-party stylesheet whose @font-face is only discoverable once it parses, which is
+  // what this theme used to do and why the page settled into Iosevka well after first paint.
+  //
+  // React's own preload API rather than a <link>: React hoists rel="preload" links itself
+  // and rendering one ALSO leaves the JSX copy behind, so each face was requested by two
+  // identical tags. This emits exactly one, hoisted above the stylesheet.
+  //
+  // crossOrigin is REQUIRED even same-origin — fonts are always fetched in CORS mode, so a
+  // preload without it does not match the css request and the face is fetched twice.
+  for (const href of THEME_FONT_PRELOADS) {
+    preload(href, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
+  }
   const { imports, rest } = splitImports(entry.css)
   return (
     <>

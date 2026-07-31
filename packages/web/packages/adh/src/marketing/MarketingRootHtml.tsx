@@ -84,8 +84,6 @@ export function MarketingRootHtml({
     // differs from the server's here. Same contract next-themes has.
     <html lang={htmlLang(loc)} dir={localeDir(loc)} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <AdhThemeStyle />
       </head>
       <body>

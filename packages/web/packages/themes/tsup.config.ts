@@ -10,6 +10,7 @@ export default defineConfig({
     ThemeStyle: 'src/ThemeStyle.tsx',
     manifest: 'src/manifest.ts',
     tokens: 'src/tokens.ts',
+    fonts: 'src/fonts.ts',
   },
   outDir: 'dist',
   format: ['esm'],

@@ -5,20 +5,74 @@
 // as var(), semantic->primitive refs inline their value (outputReferencesFilter).
 //
 // Output is AUTO-GENERATED — never hand-edit src/styles/adh*.css. Edit tokens/ instead.
+import { readFileSync } from 'node:fs'
 import StyleDictionary from 'style-dictionary'
 import { formattedVariables, outputReferencesFilter } from 'style-dictionary/utils'
 
-// Themes generated from DTCG (others remain hand-written until migrated). Font @import
-// URLs are not tokens, so they live here and are emitted as the file preamble.
+// The self-hosted Iosevka manifest — faces, measured metrics, and the metric-matched
+// fallback overrides — written by scripts/subset-fonts.py. See fontFaceBlock below.
+const FONTS = JSON.parse(readFileSync(new URL('../src/fonts/metrics.json', import.meta.url)))
+
+/**
+ * The `@font-face` preamble for a theme that uses the SELF-HOSTED Iosevka subset.
+ *
+ * This replaces what used to be three `@import url('https://cdn.jsdelivr.net/…')`
+ * lines, and it is the fix for "the font changes size after the initial load":
+ *
+ *  - **Self-hosted.** An `@import` in an inlined <style> becomes a second stylesheet
+ *    request to a THIRD-PARTY origin, and the woff2 inside it is only discoverable
+ *    once that stylesheet has arrived and parsed — a connect + two chained round
+ *    trips before the first font byte. These faces sit on the site's own origin, on
+ *    the connection that already delivered the HTML, and `AdhThemeStyle` preloads
+ *    the two that carry layout.
+ *  - **Metric-matched fallback.** `font-display: swap` guarantees the first paint is
+ *    in a fallback, so the fallback has to be the RIGHT SIZE or the swap re-flows the
+ *    page. Iosevka is monospace at a flat 0.5 em advance; `ui-monospace` resolves to
+ *    SF Mono at 0.618 em, so body text used to arrive 24% wider than it ends up.
+ *    Because BOTH faces are monospaced, one advance describes the whole face, so
+ *    `size-adjust` is an EXACT correction rather than the usual approximation — the
+ *    fallback lays out at Iosevka's own metrics and the swap moves nothing.
+ *
+ * The numbers all come from `metrics.json`, measured off the built subset by
+ * subset-fonts.py, so they cannot drift from the font they describe.
+ */
+function fontFaceBlock() {
+  const faces = FONTS.faces.map(
+    ({ file, weight, style }) => `@font-face {
+  font-family: '${FONTS.family}';
+  font-style: ${style};
+  font-weight: ${weight};
+  font-display: swap;
+  src: url('${FONTS.publicPath}/${file}') format('woff2');
+}`,
+  )
+  // One STACKED family per fallback (not two faces of one family): a family whose
+  // every `local()` misses is simply unavailable, so the stack falls through
+  // deterministically to the next entry in --font-*.
+  const fallbacks = FONTS.fallbacks.map(
+    ({ family, locals, sizeAdjust, ascentOverride, descentOverride, lineGapOverride }) => `@font-face {
+  font-family: '${family}';
+  src: ${locals.map((l) => `local('${l}')`).join(', ')};
+  size-adjust: ${sizeAdjust}%;
+  ascent-override: ${ascentOverride}%;
+  descent-override: ${descentOverride}%;
+  line-gap-override: ${lineGapOverride}%;
+}`,
+  )
+  return [...faces, ...fallbacks].join('\n\n')
+}
+
+// Themes generated from DTCG (others remain hand-written until migrated). Font sources
+// are not tokens, so they live here and are emitted as the file preamble: `fontFaces`
+// for the self-hosted subset (see fontFaceBlock), `fontImports` for the themes still on
+// a hosted stylesheet. Only the adh-family Iosevka themes are self-hosted — the rest are
+// dev-only switcher themes that no production site ships, so the extra ~236 KB of
+// committed woff2 per family would buy nothing.
 const THEMES = {
   adh: {
     header:
-      'Agentic Developer Hub — default theme. Charcoal surface, warm gold accent. Dark-only. Iosevka for all three roles (sans/serif/mono).',
-    fontImports: [
-      'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.2.5/400.css',
-      'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.2.5/400-italic.css',
-      'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.2.5/700.css',
-    ],
+      'Agentic Developer Hub — default theme. Charcoal surface, warm gold accent. Dark-only. Iosevka for all three roles (sans/serif/mono), self-hosted from src/fonts/.',
+    fontFaces: true,
   },
   'adh-manrope': {
     header: 'ADH · Manrope — ADH palette with the shipping Manrope / Instrument Serif / DM Mono triple.',
@@ -44,11 +98,7 @@ const THEMES = {
   },
   'adh-iosevka': {
     header: 'ADH · Iosevka — same palette as adh.css, explicit Iosevka triple.',
-    fontImports: [
-      'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.2.5/400.css',
-      'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.2.5/400-italic.css',
-      'https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.2.5/700.css',
-    ],
+    fontFaces: true,
   },
   'adh-jetbrains': {
     header: 'ADH · JetBrains — ADH palette with JetBrains Mono for sans/serif/mono.',
@@ -112,7 +162,7 @@ function buildTypeClasses(dictionary) {
 StyleDictionary.registerFormat({
   name: 'adh/theme-css',
   format: ({ dictionary, options }) => {
-    const { selector = ':root', fontImports = [], header = '' } = options
+    const { selector = ':root', fontImports = [], fontFaces = false, header = '' } = options
     const vars = formattedVariables({
       format: 'css',
       dictionary,
@@ -120,7 +170,9 @@ StyleDictionary.registerFormat({
       usesDtcg: true,
       formatting: { indentation: '  ' },
     })
-    const importBlock = fontImports.map((u) => `@import url('${u}');`).join('\n')
+    const importBlock = fontFaces
+      ? fontFaceBlock()
+      : fontImports.map((u) => `@import url('${u}');`).join('\n')
     const classes = buildTypeClasses(dictionary)
     return [
       `/* ${header} */`,
@@ -164,6 +216,7 @@ for (const [key, meta] of Object.entries(THEMES)) {
               outputReferences: outputReferencesFilter,
               selector: ':root',
               fontImports: meta.fontImports,
+              fontFaces: meta.fontFaces,
               header: meta.header,
             },
           },

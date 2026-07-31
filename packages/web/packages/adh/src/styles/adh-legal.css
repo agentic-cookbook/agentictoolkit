@@ -33,12 +33,16 @@
 }
 
 .adh-legal__title {
-  font-family: var(--font-serif, ui-serif, Georgia, serif);
-  font-size: 4rem;
+/* The hero title reads the shared landing scale (--type-landing-title-*, defined
+   in the toolkit's tokens/semantic/typography.json) so a site's Terms page is
+   headed at the same tier as its landing. It used to be a FIXED 4rem, which
+   overflows a phone — the token is a clamp(). Literals are the no-theme fallback. */
+  font-family: var(--type-landing-title-font, var(--font-serif, ui-serif, Georgia, serif));
+  font-size: var(--type-landing-title-size, clamp(2.6rem, 6vw, 4.5rem));
   font-weight: 400;
   text-align: center;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  letter-spacing: var(--type-landing-title-tracking, -0.02em);
+  line-height: var(--type-landing-title-line-height, 1.04);
   margin-bottom: 12px;
   color: var(--color-accent, #c4a35a);
   font-style: italic;
@@ -63,8 +67,9 @@
 }
 
 .adh-legal-doc__meta {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 1rem;
+  font-family: var(--type-landing-eyebrow-font, var(--font-mono, ui-monospace, monospace));
+  font-size: var(--type-landing-eyebrow-size, 0.7rem);
+  line-height: var(--type-landing-eyebrow-line-height, 1.4);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #8a8a9a);
@@ -75,7 +80,8 @@
 .adh-legal-doc h2 {
   font-family: var(--font-serif, ui-serif, Georgia, serif);
   font-style: italic;
-  font-size: 1.5rem;
+  font-size: var(--type-landing-heading-size, 1.6rem);
+  line-height: var(--type-landing-heading-line-height, 1.3);
   color: var(--color-accent, #c4a35a);
   margin: 2.25rem 0 0.75rem;
   letter-spacing: -0.01em;
