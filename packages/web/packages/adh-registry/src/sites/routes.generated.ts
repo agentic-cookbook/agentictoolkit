@@ -4,9 +4,9 @@
 // Every page route of every family site (main/ + marketing/), derived from each
 // site's App Router tree. Lazy-loaded by the site menu (as the package subpath
 // `@agentic-toolkit/adh-registry/routes`) to fill the dev "Routes" flyout for sites that
-// pass no curated `routes` prop. A drift-guard test (siteRoutes.test.ts)
-// re-derives this map from the filesystem, so a moved/added/removed page fails
-// CI until the script is re-run.
+// pass no curated `routes` prop. `gen-site-routes.py --check` re-derives this map in
+// adh's CI, so a page added, moved, or removed anywhere in the family fails there
+// until the script is re-run.
 import type { SiteId } from './registry'
 
 export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
