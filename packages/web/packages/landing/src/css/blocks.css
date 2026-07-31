@@ -334,7 +334,13 @@
   border-color: var(--lp-shot-hover-border, rgba(216, 216, 216, 0.45));
   box-shadow: 0 0 50px -18px var(--lp-shot-hover-glow, rgba(216, 216, 216, 0.5));
 }
-.lp-shot__bar {
+/* The four rules below keep their ancestor in the selector rather than
+ * flattening to the bare BEM class, for the same reason as `.lp-versus__them
+ * h3` further down: the source wrote `.shot .bar`, `.shot .dot`, `.shot .bar
+ * span.name` and `.shot .placeholder`, and a rename that drops (0,2,0) to
+ * (0,1,0) hands the cascade to any rule that used to lose to it. jsdom does not
+ * resolve the cascade, so no test in this package can see that happen. */
+.lp-shot .lp-shot__bar {
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -344,13 +350,18 @@
    * variable — tokenized the same way as the rest on this page. */
   background: linear-gradient(var(--lp-raise, #1c1c1c), var(--lp-shot-bar-shade, rgba(16, 16, 16, 0.6)));
 }
-.lp-shot__dot {
+.lp-shot .lp-shot__dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--lp-shot-dot, rgba(237, 237, 237, 0.22));
 }
-.lp-shot__name {
+/* The source's `.shot .bar span.name` was (0,3,1); this is (0,3,0). The
+ * trailing type selector is dropped on purpose — matching on the tag buys
+ * nothing here and would break silently if the title ever stopped being a
+ * <span> — but the two ancestor classes are kept, so the rule still outweighs
+ * every one-class rule it used to. */
+.lp-shot .lp-shot__bar .lp-shot__name {
   margin-left: 0.4rem;
   font-size: 0.7rem;
   letter-spacing: 0.08em;
@@ -367,7 +378,7 @@
   object-fit: contain;
   background: var(--lp-ground, #101010);
 }
-.lp-shot__placeholder {
+.lp-shot .lp-shot__placeholder {
   display: grid;
   place-items: center;
   min-height: clamp(11rem, 30svh, 17rem);
@@ -384,7 +395,7 @@
     var(--lp-shot-hatch, rgba(216, 216, 216, 0.05)) 10px 20px
   );
 }
-.lp-shot__placeholder b {
+.lp-shot .lp-shot__placeholder b {
   display: block;
   margin-top: 0.5rem;
   font-weight: 400;

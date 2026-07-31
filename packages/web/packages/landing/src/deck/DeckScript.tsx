@@ -1,8 +1,11 @@
 import type { ReactElement } from 'react'
 
-/* Three things that must run in <head>, before the first paint, and which no
- * React lifecycle is early enough to do. All three are ported verbatim from
- * the two sites that had their own copies of them; see each constant. */
+/* Three things that must run before the first paint, and which no React
+ * lifecycle is early enough to do — hence a literal inline <script> rather
+ * than an effect. Early does NOT mean <head>: the tag belongs first inside
+ * <body>, for the reason spelled out on `DeckScript` below. All three are
+ * ported verbatim from the two sites that had their own copies of them; see
+ * each constant. */
 
 /* Every load starts at the hero. Without this the browser restores the last
  * scroll offset, and on iOS every pull-to-refresh IS a reload — so a reader

@@ -51,4 +51,20 @@ describe('Shot', () => {
     expect(container.querySelector('.lp-shot__placeholder')).toBeNull()
     expect(container.querySelector('video')).toBeTruthy()
   })
+
+  // The package renders no word the host did not choose, so the placeholder's
+  // status line is a prop with no default. It used to be the literal string
+  // "Screenshot pending", which shipped the package's editorial voice to every
+  // host that never asked for it.
+  it('renders a host-supplied pending label, and none of its own', () => {
+    const { container } = render(<Shot title="T" caption="Events per day" />)
+    expect(container.querySelector('.lp-shot__placeholder')!.textContent).toBe('Events per day')
+
+    const { container: labelled } = render(
+      <Shot title="T" caption="Events per day" pendingLabel="Coming soon" />
+    )
+    expect(labelled.querySelector('.lp-shot__placeholder')!.textContent).toBe(
+      'Coming soonEvents per day'
+    )
+  })
 })

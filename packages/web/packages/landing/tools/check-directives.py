@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Assert that `'use client'` sits on the client entry and nowhere else.
 
-Why this exists as a check rather than a comment: the package's only client
-module is `chrome/NavChrome.tsx`, but esbuild-plugin-preserve-directives
-propagates a chunk's directive to every entry that imports it. When NavChrome
-was exported from `src/index.ts`, `dist/index.js` itself began with
+Why this exists as a check rather than a comment: the package's client modules
+live behind `src/client.ts`, but esbuild-plugin-preserve-directives propagates a
+chunk's directive to every entry that imports it. When NavChrome was exported
+from `src/index.ts`, `dist/index.js` itself began with
 `'use client'` — turning the deck, the screen and all nineteen blocks into
 Client Components. The page still rendered, `tsc` and ESLint were clean, the 37
 vitest tests passed, and `next build` succeeded, because a Client Component is
@@ -29,7 +29,7 @@ DIRECTIVE = "use client"
 # entry -> whether dist/<entry>.js must carry the directive on its first line.
 EXPECTED: dict[str, bool] = {
     "index": False,  # server-safe barrel: deck, screens, blocks
-    "chrome": True,  # the drawer, which owns open/closed state
+    "client": True,  # the drawer and the clip — everything that holds state
 }
 
 
@@ -65,7 +65,7 @@ def main() -> int:
                 f"dist/{entry}.js starts with '{DIRECTIVE}' and must not.\n"
                 f"      Something re-exported a client module from src/{entry}.ts, so the\n"
                 f"      directive was hoisted onto the whole bundle and every export in it\n"
-                f"      is now a Client Component. Move that export to src/chrome.ts."
+                f"      is now a Client Component. Move that export to src/client.ts."
             )
         elif must_have and not found:
             failures.append(
@@ -91,7 +91,14 @@ def main() -> int:
             print(f"  ✗ {f}", file=sys.stderr)
         return 1
 
-    print(f"directives: ok ({len(EXPECTED)} entries — index server-safe, chrome client)")
+    # Spelled from EXPECTED rather than written out, so renaming an entry cannot
+    # leave the success line naming one that no longer exists — which it did
+    # once, still reading "chrome" a build after src/chrome.ts became client.ts.
+    summary = ", ".join(
+        f"{entry}.js {'has' if must_have else 'has no'} '{DIRECTIVE}'"
+        for entry, must_have in EXPECTED.items()
+    )
+    print(f"directives: ok ({len(EXPECTED)} entries — {summary})")
     return 0
 
 

@@ -23,11 +23,11 @@ const shared = {
 
 // TWO independent builds — the server-safe barrel and the client barrel must NOT
 // share a chunk graph. esbuild-plugin-preserve-directives propagates a chunk's
-// `'use client'` to every entry that imports it, so while NavChrome (the only
-// module carrying the directive) was exported from src/index.ts, the directive
-// was hoisted onto dist/index.js itself and every export in the package became a
-// Client Component. Separate builds = separate chunk graphs, so index.js stays
-// free of the directive and only chrome.js carries it.
+// `'use client'` to every entry that imports it, so while NavChrome was exported
+// from src/index.ts, the directive was hoisted onto dist/index.js itself and
+// every export in the package became a Client Component. Separate builds =
+// separate chunk graphs, so index.js stays free of the directive and only
+// client.js carries it.
 //
 // This is the same trap, and the same fix, as packages/api-explorer — see the
 // comment in its tsup.config.ts. Note that `splitting: false` does NOT solve it:
@@ -48,7 +48,7 @@ export default defineConfig([
     // the two concurrently, so in principle the clean above could land after this
     // one's write; api-explorer has shipped the same shape without seeing it, and
     // check-directives.py fails on a missing entry, so the race is loud, not silent.
-    entry: { chrome: 'src/chrome.ts' },
+    entry: { client: 'src/client.ts' },
     clean: false,
   },
 ])

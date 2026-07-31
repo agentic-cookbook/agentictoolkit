@@ -8,35 +8,26 @@ export interface ShotProps {
    *  this same string onto it. */
   caption: string
   /**
+   * The status line above the caption in the placeholder — "Screenshot
+   * pending", or whatever this host calls it. No default: it is visible copy,
+   * and the package renders no word the host did not choose. Omitted, the
+   * placeholder is just its caption, still obviously unfinished from the
+   * hatching `.lp-shot__placeholder` draws.
+   */
+  pendingLabel?: ReactNode
+  /**
    * A `<video>`, an `<img>`, whatever the host has. Absent renders the
    * placeholder frame — deliberately, obviously unfinished, so one shipped by
    * accident is caught rather than mistaken for a screenshot of a product
    * that looks like that.
    *
-   * The package renders `media` exactly as given and does nothing else to
-   * it — no asset pipeline, no motion handling. In particular, **honouring
-   * `prefers-reduced-motion` on a `<video>` is the host's job now**, not this
-   * component's. That used to live here, and the reasoning that earned it is
-   * worth keeping even though the code moved:
-   *
-   * - The server has no OS setting to consult, so it always ships `autoplay`
-   *   on the raw HTML. On a slow-JS load the browser can begin playing
-   *   straight from that HTML before React ever re-renders — and turning
-   *   `autoPlay` off after playback has already started does not stop it.
-   *   So once the real preference is known, the fix has to force a pause
-   *   explicitly rather than trust the attribute alone.
-   * - The first read of that preference has to assume motion is fine on the
-   *   server (there is no OS to ask), and the client's first, pre-hydration
-   *   render has to start from that same assumption — otherwise server and
-   *   client disagree and React throws a hydration mismatch. A
-   *   `useSyncExternalStore` whose `getServerSnapshot` returns `false` is
-   *   what makes that assumption explicit, then corrects to the live value
-   *   the instant the client can call `matchMedia`.
-   *
-   * A host rendering a `<video>` into this prop needs both halves of that: an
-   * effect that force-pauses it when reduced motion is preferred, and a
-   * snapshot hook whose server value assumes motion is fine so hydration
-   * doesn't mismatch.
+   * The package renders `media` exactly as given and does nothing else to it:
+   * no asset pipeline, no motion handling. For a clip, pass this package's
+   * `Clip` (from `@agentic-toolkit/landing/client`) rather than a bare
+   * `<video>` — honouring `prefers-reduced-motion` on an autoplaying video
+   * takes two cooperating halves, and `Clip` is where both live and where the
+   * reasoning for them is written down. A host driving its own element can
+   * take just the hook, `usePrefersReducedMotion`, from the same entry.
    */
   media?: ReactNode
 }
@@ -47,7 +38,7 @@ export interface ShotProps {
  * is the primary state: until a real capture exists, every feature section
  * renders one. Nothing else in this package imitates a window.
  */
-export function Shot({ title, caption, media }: ShotProps): ReactElement {
+export function Shot({ title, caption, pendingLabel, media }: ShotProps): ReactElement {
   return (
     <div className="lp-shot">
       <div className="lp-shot__bar">
@@ -58,7 +49,7 @@ export function Shot({ title, caption, media }: ShotProps): ReactElement {
       </div>
       {media === undefined ? (
         <div className="lp-shot__placeholder">
-          Screenshot pending
+          {pendingLabel}
           <b>{caption}</b>
         </div>
       ) : (

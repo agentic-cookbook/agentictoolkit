@@ -5,6 +5,31 @@ import type { MouseEvent, ReactElement } from 'react'
 import type { NavChromeProps } from './types'
 
 /**
+ * The element id a same-page href names, or `null` if it names anything else.
+ *
+ * An href is a URL, not a CSS selector, and the two are not interchangeable:
+ * `document.querySelector('mailto:hi@example.com')` throws a `SyntaxError`
+ * rather than returning null, as does any `/path` with a dot in it. `go` below
+ * says a host may legitimately pass an off-page link — so parsing the href as a
+ * selector would blow up on exactly the links the code claims to tolerate.
+ *
+ * Resolving to an id and using `getElementById` is also what keeps an id like
+ * `2024-results` working: legal in HTML, and a selector parse error.
+ */
+function fragmentId(href: string): string | null {
+  // A bare '#' is the top of the page, which the browser already handles.
+  if (!href.startsWith('#') || href.length === 1) return null
+  const raw = href.slice(1)
+  try {
+    // Non-ASCII ids arrive percent-encoded; a hand-written href can also carry
+    // a stray '%', on which decodeURIComponent throws.
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
+}
+
+/**
  * Fixed header, burger, drawer and scrim. Burger and drawer share one `open`
  * boolean, so they live in one client component.
  */
@@ -68,7 +93,8 @@ export function NavChrome({
     // because the enhancement below has nothing to attach to. Only the jump
     // itself is conditional on finding a target.
     setOpen(false)
-    const target = document.querySelector<HTMLElement>(href)
+    const id = fragmentId(href)
+    const target = id === null ? null : document.getElementById(id)
     if (!target) return // let the browser try; nothing to improve on
     event.preventDefault()
     target.setAttribute('tabindex', '-1')

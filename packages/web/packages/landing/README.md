@@ -38,19 +38,21 @@ from palette, it styles no `--lp-*` token, and nothing here overrides it.
 
 ```tsx
 import { Deck, Screen /* … */ } from '@agentic-toolkit/landing'
-import { NavChrome } from '@agentic-toolkit/landing/chrome'
+import { NavChrome } from '@agentic-toolkit/landing/client'
 import '@agentic-toolkit/landing/css/base.css'   // deck + screen mechanics
 import '@agentic-toolkit/landing/css/chrome.css' // header, burger, drawer
 import '@agentic-toolkit/landing/css/blocks.css' // the block vocabulary
 ```
 
-**`NavChrome` comes from `/chrome`, and that split is load-bearing.** It is the
-only `'use client'` module in the package, and the bundler propagates a chunk's
-directive to every entry that imports it — so while `NavChrome` was re-exported
-from the main barrel, `dist/index.js` itself began with `'use client'` and every
-export in it became a Client Component. Two entries built from two chunk graphs
-is what keeps the main barrel server-safe; `tools/check-directives.py` asserts
-it on every build, because nothing else can see it.
+**Everything that carries `'use client'` comes from `/client`, and that split is
+load-bearing.** The bundler propagates a chunk's directive to every entry that
+imports it — so while `NavChrome` was re-exported from the main barrel,
+`dist/index.js` itself began with `'use client'` and every export in it became a
+Client Component: the whole page hydrated, on a page whose only interactivity is
+a drawer. Two entries built from two chunk graphs is what keeps the main barrel
+server-safe; `tools/check-directives.py` asserts it on every build, because
+nothing else can see it — a Client Component is legal, so types, tests and
+`next build` all stay green either way.
 
 All three CSS files are required (`base.css` alone won't paint a chip or a
 hero). Import order relative to the host's own stylesheet does not matter for
@@ -77,7 +79,7 @@ Composes the scroll mechanism (`DeckScript`, `Deck`, `Screen`), the chrome
 
 ```tsx
 import { DeckScript, Deck, Hero, Screen, Wrap, Head } from '@agentic-toolkit/landing'
-import { NavChrome } from '@agentic-toolkit/landing/chrome'
+import { NavChrome } from '@agentic-toolkit/landing/client'
 import '@agentic-toolkit/landing/css/base.css'
 import '@agentic-toolkit/landing/css/chrome.css'
 import '@agentic-toolkit/landing/css/blocks.css'
@@ -104,8 +106,9 @@ function component.
 
 ## What's in the package
 
-Everything below ships from `@agentic-toolkit/landing` except `NavChrome`, which
-ships from `@agentic-toolkit/landing/chrome` for the reason under **Install**.
+Everything below ships from `@agentic-toolkit/landing` except the three marked
+**client**, which ship from `@agentic-toolkit/landing/client` for the reason
+under **Install**.
 
 | Export | Layer | What it is |
 | --- | --- | --- |
@@ -115,11 +118,13 @@ ships from `@agentic-toolkit/landing/chrome` for the reason under **Install**.
 | `Wrap` | deck | The width-limited content column inside a `Screen`. |
 | `Split` | deck | Two panels side by side above a breakpoint, stacked below it. |
 | `Glow` | deck | The hero's decorative radial glow (`aria-hidden`). |
-| `NavChrome` | chrome | Fixed header + burger + drawer + scrim, as one client component. |
+| `NavChrome` | chrome · **client** | Fixed header + burger + drawer + scrim, as one client component. |
 | `Head` | blocks | A section's eyebrow + title + lede slot. |
 | `Lede` | blocks | The standalone paragraph under a `Head` (or after a card grid, a chip list…). |
 | `Cards` / `Card` | blocks | A tile grid and its tiles. `Cards pair` forces an explicit two-column track. |
-| `Shot` | blocks | A screenshot frame; renders an obviously-unfinished placeholder when `media` is absent. |
+| `Shot` | blocks | A screenshot frame; renders an obviously-unfinished placeholder when `media` is absent. `pendingLabel` is the host's word for "not captured yet" and has no default — omit it and the placeholder shows the caption alone. |
+| `Clip` | blocks · **client** | A `Shot`'s moving counterpart: an autoplaying, looping, muted `<video>` that stops being a moving image when the reader has asked for reduced motion — no autoplay, no loop, and `controls` so they can start it themselves. |
+| `usePrefersReducedMotion` | blocks · **client** | The hook behind `Clip`, exported for a host that has its own animated media. SSR-safe: it reports `false` on the server, so the first client render matches the HTML. |
 | `Versus` | blocks | The two-panel "what they do / what we do instead" comparison. |
 | `Rule` | blocks | An oversight rule set in type — a feature whose UI isn't captured yet, shown honestly rather than faked. |
 | `Stats` | blocks | A one-sweep strip of number + caption cells. |
@@ -137,7 +142,10 @@ ships from `@agentic-toolkit/landing/chrome` for the reason under **Install**.
 
 None of these render an `<img>` or a `next/link` — the package depends on
 nothing outside `packages/web/packages/*`. Anything image-shaped is a
-`ReactNode` prop the host fills with its own `<Image>` or `<img>`.
+`ReactNode` prop the host fills with its own `<Image>` or `<img>`. `Clip` is the
+one component that renders its own media element, and it is that way on purpose:
+what it owns is not the picture but the *behaviour* around it — the
+reduced-motion branch above — which a host cannot supply through a slot.
 
 ## Tokens
 
@@ -262,7 +270,18 @@ clothes.
 From `packages/web/`:
 
 ```bash
-pnpm --filter @agentic-toolkit/landing build   # tsup + tsc --emitDeclarationOnly + copy-css.mjs
+pnpm --filter @agentic-toolkit/landing build   # tsup + tsc + copy-css.mjs + check-directives.py
 pnpm --filter @agentic-toolkit/landing lint    # tsc --noEmit
-pnpm test landing                                      # vitest, this package's suites
+pnpm --filter @agentic-toolkit/landing test    # vitest, this package's suites
 ```
+
+Note the `--filter` on the test line. The root `test` script is `pnpm -r run
+test`, so a bare `pnpm test landing` passes `landing` to *every* package's
+vitest as a **filename** filter — which matches nothing anywhere and exits 1
+across the workspace. `--filter` selects the package; a trailing word selects
+files within it.
+
+`build` ends in `tools/check-directives.py`, which reads the built `dist/` and
+asserts that `index.js` does not start with `'use client'` and `client.js` does.
+It is the only thing that can see that boundary — see **Install** — so a build
+that skips it proves less than it looks like it does.

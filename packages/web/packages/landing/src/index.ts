@@ -6,17 +6,17 @@ export type { ScreenProps } from './deck/Screen'
 export { Wrap } from './deck/Wrap'
 export { Split } from './deck/Split'
 export { Glow } from './deck/Glow'
-// NavChrome is deliberately NOT re-exported here — it is the package's only
-// `'use client'` module, and importing it from this barrel would hoist that
-// directive onto the whole bundle. It ships from `@agentic-toolkit/landing/chrome`.
-// See src/chrome.ts.
+// The `'use client'` modules — NavChrome and Clip — are deliberately NOT
+// re-exported here. Importing one from this barrel hoists its directive onto
+// the whole bundle. They ship from `@agentic-toolkit/landing/client`; see
+// src/client.ts.
 //
-// Its `NavLink` type does stay here, and that is not an oversight: `export type`
+// The `NavLink` type does stay here, and that is not an oversight: `export type`
 // is erased before esbuild sees it, so it creates no runtime import and cannot
 // hoist anything. A host's link list is content — usually a plain module with no
-// rendering in it — and making that module import from `/chrome` would imply a
-// client boundary it does not have. `NavChromeProps` stays in `/chrome`, where
-// the component is.
+// rendering in it — and making that module import from `/client` would imply a
+// client boundary it does not have. `NavChromeProps` and `ClipProps` stay in
+// `/client`, with their components.
 export type { NavLink } from './chrome/types'
 export { Head } from './blocks/Head'
 export { Lede } from './blocks/Lede'

@@ -65,6 +65,41 @@ describe('NavChrome', () => {
     expect(getByText('Mail')).toBeTruthy()
   })
 
+  // An href is a URL, not a selector. Passing one straight to querySelector
+  // threw a SyntaxError on exactly the off-page links the component's own
+  // comment says a host may pass, so the click handler died mid-way.
+  it('closes on an off-page link without throwing', () => {
+    const offPage = [
+      { href: 'mailto:hi@example.com', label: 'Mail' },
+      { href: '/pricing.html', label: 'Pricing' },
+      { href: 'https://example.com/x', label: 'Docs' },
+      { href: '#', label: 'Top' },
+    ]
+    const { container, getByLabelText, getByText } = render(
+      <NavChrome brand="M" links={offPage} />
+    )
+    for (const { label } of offPage) {
+      fireEvent.click(getByLabelText('Open menu'))
+      expect(() => fireEvent.click(getByText(label))).not.toThrow()
+      expect(container.querySelector('.lp-drawer')!.className).not.toContain('lp-drawer--open')
+    }
+  })
+
+  it('focuses a same-page target whose id is not a valid selector', () => {
+    const target = document.createElement('section')
+    target.id = '2024-results'
+    // jsdom implements no scrolling at all, so scrollIntoView is simply absent.
+    // No prior test reached this branch, which is how the selector bug survived.
+    target.scrollIntoView = () => {}
+    document.body.append(target)
+    const { getByText } = render(
+      <NavChrome brand="M" links={[{ href: '#2024-results', label: 'Results' }]} />
+    )
+    fireEvent.click(getByText('Results'))
+    expect(document.activeElement).toBe(target)
+    target.remove()
+  })
+
   it('applies a host-supplied dismissLabel and navLabel', () => {
     const { getByLabelText, getByRole } = render(
       <NavChrome brand="M" links={LINKS} dismissLabel="Shut menu" navLabel="Primary" />

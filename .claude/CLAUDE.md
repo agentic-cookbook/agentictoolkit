@@ -121,13 +121,17 @@ rather than leaving to review.
   every entry that imports it, so re-exporting one client component from a
   package's main barrel puts the directive on the whole bundle and turns every
   other export into a Client Component. Nothing complains: a Client Component
-  is legal, so the types, the tests and `next build` all pass. `landing` and
-  `api-explorer` both ship a second entry (`src/chrome.ts`,
-  `@agentic-toolkit/landing/chrome`) built from a **separate `defineConfig`
-  block** — `splitting: false` does not help, because with a single entry the
-  client code is inlined into `index.js` either way. `landing/tools/check-directives.py`
-  asserts the built output, since the only visible difference is the first line
-  of a `dist` file.
+  is legal, so the types, the tests and `next build` all pass. The fix is a
+  second entry built from a **separate `defineConfig` block** — `splitting:
+  false` does not help, because with a single entry the client code is inlined
+  into `index.js` either way. `landing` puts the client modules behind
+  `src/client.ts` (`@agentic-toolkit/landing/client`) and keeps the main barrel
+  server-safe; `api-explorer` had the same collision the other way up — its main
+  barrel *is* the client one, so its second entry is `src/server.ts`, and its
+  config comment records the symptom (a server call throwing "called from the
+  server but is on the client"). Which barrel is the odd one out is a per-package
+  fact, not a convention. `landing/tools/check-directives.py` asserts the built
+  output, since the only visible difference is the first line of a `dist` file.
 
 - **Package CSS may name only the neutral scale.** Every visual value is a
   `--lp-*` token whose inline fallback is greyscale, so an unconfigured host
