@@ -6,10 +6,10 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '../components/ui/dropdown-menu'
+} from '@agentic-toolkit/ui/components/dropdown-menu'
 
 export type SiteLink = {
   /** OPTIONAL stable identity for the target, independent of its URL. `SiteSwitcher`
@@ -41,26 +41,27 @@ export function SiteOptionsMenu({
   if (sites.length === 0) return null
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label={triggerLabel}>
-          <Grid3x3 className="adh-button__icon" />
-          <span>{triggerLabel}</span>
-        </Button>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="sm" aria-label={triggerLabel} />}
+      >
+        <Grid3x3 className="adh-button__icon" />
+        <span>{triggerLabel}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{groupLabel}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {sites.map((site) => (
-          <DropdownMenuItem key={site.href} asChild>
-            <a href={site.href}>
-              <span>{site.label}</span>
-              {site.description && (
-                <span className="adh-dropdown-menu__shortcut">
-                  {site.description}
-                </span>
-              )}
-            </a>
-          </DropdownMenuItem>
+          // LinkItem, not Item-wrapping-an-anchor: these are cross-SITE hrefs, so the
+          // browser's own link semantics (middle-click, open-in-new-tab, status bar)
+          // are the point, and LinkItem is the engine's way of keeping them.
+          <DropdownMenuLinkItem key={site.href} render={<a href={site.href} />}>
+            <span>{site.label}</span>
+            {site.description && (
+              <span className="adh-dropdown-menu__shortcut">
+                {site.description}
+              </span>
+            )}
+          </DropdownMenuLinkItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

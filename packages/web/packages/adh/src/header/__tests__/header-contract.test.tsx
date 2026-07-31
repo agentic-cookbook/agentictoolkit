@@ -158,6 +158,30 @@ describe('AdhHeader (registry-free)', () => {
     expect(order(slotLink)).toBeLessThan(order(login))
   })
 
+  // The site title IS a link to `siteNameHref`, so a navLink pointing at the same place
+  // would put one destination in the bar twice. Every family site passes a nav list that
+  // starts with its own home entry, so this fires on essentially every signed-out page —
+  // which is also why nothing screamed when the filter was dropped: a duplicate link looks
+  // deliberate. Only the BAR de-dups; the avatar dropdown has no title to collide with.
+  it('drops a nav link that just points at the site title', () => {
+    render(
+      <AdhHeader
+        siteName="Hub"
+        siteNameHref="/home"
+        navLinks={[
+          { label: 'Home', href: '/home' },
+          { label: 'Docs', href: '/docs' },
+        ]}
+      />,
+    )
+    const links = screen.getByRole('banner').querySelector('.adh-header__links')!
+    expect(links.textContent).toContain('Docs')
+    expect(links.textContent).not.toContain('Home')
+    // Non-vacuous: the title itself still renders, so the assertion above is about the
+    // nav list and not about an empty header.
+    expect(screen.getByText('Hub')).toBeTruthy()
+  })
+
   it('shows a spinner instead of the auth buttons while auth is still resolving', () => {
     render(<AdhHeader siteName="Hub" authLoading onLogin={() => {}} onSignup={() => {}} />)
     expect(screen.getByRole('status', { name: 'Checking sign-in' })).toBeTruthy()

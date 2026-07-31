@@ -80,6 +80,7 @@ function AvatarMenu({
         className: "adh-avatar-menu-trigger",
         "aria-label": `Open ${user.name} menu`,
         children: [
+          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__name", children: user.name }),
           /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
           /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx2(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
         ]
@@ -698,157 +699,51 @@ var Button = React.forwardRef(
 );
 Button.displayName = "Button";
 
-// src/components/ui/dropdown-menu.tsx
-import * as React2 from "react";
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronRight, Circle } from "lucide-react";
-import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
-function joinClasses2(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-var DropdownMenu3 = DropdownMenuPrimitive.Root;
-var DropdownMenuTrigger3 = DropdownMenuPrimitive.Trigger;
-var DropdownMenuSubTrigger2 = React2.forwardRef(({ className, inset, children, ...props }, ref) => /* @__PURE__ */ jsxs4(
-  DropdownMenuPrimitive.SubTrigger,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__sub-trigger",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props,
-    children: [
-      children,
-      /* @__PURE__ */ jsx6(ChevronRight, { className: "adh-dropdown-menu__sub-trigger-chevron" })
-    ]
-  }
-));
-DropdownMenuSubTrigger2.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
-var DropdownMenuSubContent2 = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx6(
-  DropdownMenuPrimitive.SubContent,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-));
-DropdownMenuSubContent2.displayName = DropdownMenuPrimitive.SubContent.displayName;
-var DropdownMenuContent3 = React2.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsx6(DropdownMenuPrimitive.Portal, { children: /* @__PURE__ */ jsx6(
-  DropdownMenuPrimitive.Content,
-  {
-    ref,
-    sideOffset,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-) }));
-DropdownMenuContent3.displayName = DropdownMenuPrimitive.Content.displayName;
-var DropdownMenuItem2 = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx6(
-  DropdownMenuPrimitive.Item,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuItem2.displayName = DropdownMenuPrimitive.Item.displayName;
-var DropdownMenuCheckboxItem = React2.forwardRef(({ className, children, checked, ...props }, ref) => /* @__PURE__ */ jsxs4(
-  DropdownMenuPrimitive.CheckboxItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    checked,
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx6(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx6(Check, { className: "adh-dropdown-menu__indicator-check" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
-var DropdownMenuRadioItem = React2.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs4(
-  DropdownMenuPrimitive.RadioItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx6(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx6(Circle, { className: "adh-dropdown-menu__indicator-dot" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
-var DropdownMenuLabel = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx6(
-  DropdownMenuPrimitive.Label,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__label",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
-var DropdownMenuSeparator3 = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx6(
-  DropdownMenuPrimitive.Separator,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__separator", className),
-    ...props
-  }
-));
-DropdownMenuSeparator3.displayName = DropdownMenuPrimitive.Separator.displayName;
-var DropdownMenuShortcut = ({ className, ...props }) => {
-  return /* @__PURE__ */ jsx6(
-    "span",
-    {
-      className: joinClasses2("adh-dropdown-menu__shortcut", className),
-      ...props
-    }
-  );
-};
-DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
-
 // src/header/SiteOptionsMenu.tsx
-import { jsx as jsx7, jsxs as jsxs5 } from "react/jsx-runtime";
+import {
+  DropdownMenu as DropdownMenu3,
+  DropdownMenuTrigger as DropdownMenuTrigger3,
+  DropdownMenuContent as DropdownMenuContent3,
+  DropdownMenuLinkItem as DropdownMenuLinkItem2,
+  DropdownMenuLabel,
+  DropdownMenuSeparator as DropdownMenuSeparator3
+} from "@agentic-toolkit/ui/components/dropdown-menu";
+import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
 function SiteOptionsMenu({
   sites,
   triggerLabel = "Sites",
   groupLabel = "Sites"
 }) {
   if (sites.length === 0) return null;
-  return /* @__PURE__ */ jsxs5(DropdownMenu3, { children: [
-    /* @__PURE__ */ jsx7(DropdownMenuTrigger3, { asChild: true, children: /* @__PURE__ */ jsxs5(Button, { variant: "ghost", size: "sm", "aria-label": triggerLabel, children: [
-      /* @__PURE__ */ jsx7(Grid3x3, { className: "adh-button__icon" }),
-      /* @__PURE__ */ jsx7("span", { children: triggerLabel })
-    ] }) }),
-    /* @__PURE__ */ jsxs5(DropdownMenuContent3, { align: "end", children: [
-      /* @__PURE__ */ jsx7(DropdownMenuLabel, { children: groupLabel }),
-      /* @__PURE__ */ jsx7(DropdownMenuSeparator3, {}),
-      sites.map((site) => /* @__PURE__ */ jsx7(DropdownMenuItem2, { asChild: true, children: /* @__PURE__ */ jsxs5("a", { href: site.href, children: [
-        /* @__PURE__ */ jsx7("span", { children: site.label }),
-        site.description && /* @__PURE__ */ jsx7("span", { className: "adh-dropdown-menu__shortcut", children: site.description })
-      ] }) }, site.href))
+  return /* @__PURE__ */ jsxs4(DropdownMenu3, { children: [
+    /* @__PURE__ */ jsxs4(
+      DropdownMenuTrigger3,
+      {
+        render: /* @__PURE__ */ jsx6(Button, { variant: "ghost", size: "sm", "aria-label": triggerLabel }),
+        children: [
+          /* @__PURE__ */ jsx6(Grid3x3, { className: "adh-button__icon" }),
+          /* @__PURE__ */ jsx6("span", { children: triggerLabel })
+        ]
+      }
+    ),
+    /* @__PURE__ */ jsxs4(DropdownMenuContent3, { align: "end", children: [
+      /* @__PURE__ */ jsx6(DropdownMenuLabel, { children: groupLabel }),
+      /* @__PURE__ */ jsx6(DropdownMenuSeparator3, {}),
+      sites.map((site) => (
+        // LinkItem, not Item-wrapping-an-anchor: these are cross-SITE hrefs, so the
+        // browser's own link semantics (middle-click, open-in-new-tab, status bar)
+        // are the point, and LinkItem is the engine's way of keeping them.
+        /* @__PURE__ */ jsxs4(DropdownMenuLinkItem2, { render: /* @__PURE__ */ jsx6("a", { href: site.href }), children: [
+          /* @__PURE__ */ jsx6("span", { children: site.label }),
+          site.description && /* @__PURE__ */ jsx6("span", { className: "adh-dropdown-menu__shortcut", children: site.description })
+        ] }, site.href)
+      ))
     ] })
   ] });
 }
 
 // src/header/SiteSwitcher.tsx
-import { jsx as jsx8 } from "react/jsx-runtime";
+import { jsx as jsx7 } from "react/jsx-runtime";
 function SiteSwitcher({
   siteName,
   siteNameHref = "/",
@@ -856,7 +751,7 @@ function SiteSwitcher({
   onSwitchSite
 }) {
   if (sites.length === 0) {
-    return /* @__PURE__ */ jsx8(Link3, { href: siteNameHref, className: "adh-header__title", children: siteName });
+    return /* @__PURE__ */ jsx7(Link3, { href: siteNameHref, className: "adh-header__title", children: siteName });
   }
   const entries = sites.map((site) => ({
     kind: "leaf",
@@ -871,7 +766,7 @@ function SiteSwitcher({
       href: site.href
     }
   }));
-  return /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsx7(
     NavigationPopover,
     {
       entries,
@@ -888,7 +783,7 @@ function SiteSwitcher({
 
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
 var DEV_PREVIEW_BADGES = [{ label: "Preview Release", tone: "neutral" }];
 function AdhHeader({
   siteName,
@@ -913,10 +808,10 @@ function AdhHeader({
   settingsHref,
   onSettings
 }) {
-  const barLinks = user ? [] : navLinks;
-  return /* @__PURE__ */ jsx9("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
-    /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
-      siteSwitcher ?? /* @__PURE__ */ jsx9(
+  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref);
+  return /* @__PURE__ */ jsx8("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
+    /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
+      siteSwitcher ?? /* @__PURE__ */ jsx8(
         SiteSwitcher,
         {
           siteName,
@@ -925,10 +820,10 @@ function AdhHeader({
           onSwitchSite
         }
       ),
-      badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
+      badges.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
         // The ui Badge owns the skin; the adh-header__badge* classes stay
         // as stable hooks — they're a theme-editor surface.
-        /* @__PURE__ */ jsx9(
+        /* @__PURE__ */ jsx8(
           Badge,
           {
             variant: badge.tone ?? "neutral",
@@ -939,19 +834,19 @@ function AdhHeader({
         )
       )) })
     ] }),
-    center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
-    /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
-      leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
-      barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
+    center ? /* @__PURE__ */ jsx8("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
+    /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
+      leadingActions && /* @__PURE__ */ jsx8("span", { className: "adh-header__actions", children: leadingActions }),
+      barLinks.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)) }),
       preAuthLinks,
-      authLoading && !user ? /* @__PURE__ */ jsx9(
+      authLoading && !user ? /* @__PURE__ */ jsx8(
         "span",
         {
           className: "adh-header__auth-spinner",
           role: "status",
           "aria-label": "Checking sign-in"
         }
-      ) : user ? /* @__PURE__ */ jsx9(
+      ) : user ? /* @__PURE__ */ jsx8(
         AvatarMenu,
         {
           user,
@@ -960,7 +855,7 @@ function AdhHeader({
           settingsHref,
           onSettings
         }
-      ) : /* @__PURE__ */ jsx9(
+      ) : /* @__PURE__ */ jsx8(
         AuthButtons,
         {
           loginHref,
@@ -969,20 +864,20 @@ function AdhHeader({
           onSignup
         }
       ),
-      trailingNavLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label))
+      trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
     ] })
   ] }) });
 }
 
 // src/footer/AdhFooter.tsx
 import Link4 from "next/link";
-import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhFooter({ links = [], copyright, trailing }) {
-  return /* @__PURE__ */ jsxs7("footer", { className: "adh-footer", role: "contentinfo", children: [
-    /* @__PURE__ */ jsxs7("div", { className: "adh-footer__container", children: [
-      copyright && /* @__PURE__ */ jsx10("span", { className: "adh-footer__copyright", children: copyright }),
-      links.length > 0 && /* @__PURE__ */ jsx10("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map(
-        (link) => "popoverTarget" in link ? /* @__PURE__ */ jsx10(
+  return /* @__PURE__ */ jsxs6("footer", { className: "adh-footer", role: "contentinfo", children: [
+    /* @__PURE__ */ jsxs6("div", { className: "adh-footer__container", children: [
+      copyright && /* @__PURE__ */ jsx9("span", { className: "adh-footer__copyright", children: copyright }),
+      links.length > 0 && /* @__PURE__ */ jsx9("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map(
+        (link) => "popoverTarget" in link ? /* @__PURE__ */ jsx9(
           "button",
           {
             type: "button",
@@ -992,7 +887,7 @@ function AdhFooter({ links = [], copyright, trailing }) {
             children: link.label
           },
           `popover:${link.popoverTarget}`
-        ) : /* @__PURE__ */ jsx10(
+        ) : /* @__PURE__ */ jsx9(
           Link4,
           {
             href: link.href,

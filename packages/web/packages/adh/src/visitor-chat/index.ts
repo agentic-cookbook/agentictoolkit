@@ -394,7 +394,17 @@ export class AdhChatBackend implements ChatBackend {
         // rate-limited or over the length cap nothing they could act on. Fall back to the generic
         // copy only when the body is absent, unparseable, or carries no message — never let a
         // malformed refusal body throw here.
-        const detail = parseData<{ error?: { message?: string } }>(await res.text().catch(() => ''))
+        //
+        // Only those two statuses, deliberately. Every OTHER failure reaching here is an
+        // unexpected one, and the backend answers those with a valid, parseable
+        // `{ error: { message: 'Internal Server Error' } }` (app.ts onError) — so a blanket
+        // `!res.ok` would parse it successfully and print that literal string into the chat
+        // bubble. It is not copy, it tells a visitor nothing, and the `??` fallback can never
+        // rescue it precisely because the body IS well-formed.
+        const refusal = res.status === 422 || res.status === 429
+        const detail = refusal
+          ? parseData<{ error?: { message?: string } }>(await res.text().catch(() => ''))
+          : null
         yield { type: 'error', message: detail?.error?.message ?? startFailedMessage(this.personaName) }
         return
       }

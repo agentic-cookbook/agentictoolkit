@@ -8,7 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '../components/ui/dropdown-menu'
+} from '@agentic-toolkit/ui/components/dropdown-menu'
 import { ThemeSwitcher } from '../themes/ThemeSwitcher'
 import type { AdhThemeKey } from '../themes/adh-themes'
 import { ChatThemeSwitcher, type ChatThemeOption } from './ChatThemeSwitcher'
@@ -40,10 +40,10 @@ export function DebugMenu({ themeKey, chat }: DebugMenuProps) {
   return (
     <div className="adh-debug-menu">
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" aria-label="Debug menu">
-            <Bug className="adh-button__icon" />
-          </Button>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="sm" aria-label="Debug menu" />}
+        >
+          <Bug className="adh-button__icon" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="bottom">
           <DropdownMenuLabel>Debug</DropdownMenuLabel>

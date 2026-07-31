@@ -19,9 +19,14 @@ import manifest from './fonts/metrics.json'
  * rather than after a third-party stylesheet has been fetched and parsed. That is the
  * difference between the webfont arriving before first paint and arriving after it.
  *
- * Consumed by `AdhThemeStyle` (@adh-shared/adh), which is in the `<head>` of all ~45
- * family sites. The bytes are put at these paths by `materializeThemeFonts` in
- * frontend/src/next-config-base.mjs.
+ * Consumed by `AdhThemeStyle` (@agentic-toolkit/adh), which is in the `<head>` of all ~45
+ * family sites AND of the two self-enclosed backend web clients. The bytes are put at these
+ * paths by `materializeThemeFonts` — this package's own ./materialize-fonts.mjs, which is
+ * where it lives precisely so that all three next.configs can reach it: the sites' shared
+ * factory (frontend/src/next-config-base.mjs) plus backend/src/{builder,status}/web's own
+ * next.config.ts. Any FOURTH app that renders the theme has to call it too, or its inlined
+ * @font-face and <link rel=preload> both 404 while the page renders in the metric-matched
+ * fallback — see that module's header for why nothing downstream notices.
  */
 export const THEME_FONT_PRELOADS: readonly string[] = manifest.faces
   .filter((face) => face.preload)

@@ -121,22 +121,55 @@ describe('the landing scale is in every theme that carries type', () => {
 })
 
 /**
- * frontend/src, found by walking up to the directory that holds `next-config-base.mjs`
- * rather than by counting `..` segments. Every consumer of the scale is under it, but
- * this file is not at a fixed depth below it: the shared adh package it lives in is
- * being retired INTO the agentictoolkit submodule, which is itself under frontend/src.
- * A relative hop would keep resolving after that move and would quietly scan the one
- * package instead of the ~45 sites — a green suite over almost nothing.
+ * The pnpm workspace this package lives in (`packages/web`), found by its own marker
+ * rather than by counting `..` segments — the package has already moved once.
+ *
+ * Always present, in either checkout, and it can never resolve to something OUTSIDE this
+ * repository. That is the whole difference from adhFrontendSrc() below, and the reason the
+ * two are separate functions instead of one with a flag.
  */
-function frontendSrc(): string {
+function workspaceRoot(): string {
+  let dir = dirname(fileURLToPath(import.meta.url))
+  for (;;) {
+    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir
+    const up = dirname(dir)
+    if (up === dir) throw new Error('pnpm-workspace.yaml not found above this test')
+    dir = up
+  }
+}
+
+/**
+ * `frontend/src` of the adh checkout this submodule is sitting inside — or null when the
+ * toolkit is checked out on its own.
+ *
+ * This repository is a submodule with more than one host, and it is CI'd twice: adh's
+ * `ci.yml` runs these very suites from `frontend/src/external/agentictoolkit/packages/web`
+ * (the "Toolkit unit tests" step), where frontend/src is right there; the toolkit's own
+ * `web-tests.yml` checks this repo out ALONE, where it does not exist at any depth. So a
+ * walk-up that throws when the marker is missing — which is what this was — turns the
+ * toolkit's own gate red on a file it cannot possibly satisfy, and takes the whole suite
+ * down with it, since both scans below evaluate it in a describe body.
+ *
+ * Returning null instead is not a shrug. It is the same shape adh's CI already uses for the
+ * other toolkit test that needs its consumer's tree (`ADH_OPENAPI_SPEC`, and the help-corpus
+ * check, whose comment calls that "the toolkit's one documented dependency on its
+ * consumer"): the dependency is named out loud, and the checkout that cannot satisfy it
+ * says so rather than pretending. What keeps the null branch honest is the
+ * `no consumer of this scale has landed inside the toolkit itself` test — the skip is
+ * allowed only for as long as there is provably nothing here to skip.
+ */
+function adhFrontendSrc(): string | null {
   let dir = dirname(fileURLToPath(import.meta.url))
   for (;;) {
     if (existsSync(resolve(dir, 'next-config-base.mjs'))) return dir
     const up = dirname(dir)
-    if (up === dir) throw new Error('next-config-base.mjs not found above this test')
+    if (up === dir) return null
     dir = up
   }
 }
+
+/** Non-null in an adh checkout (including every worktree); null in the toolkit's own CI. */
+const ADH_SRC = adhFrontendSrc()
 
 /**
  * The themes package's `src/fonts`, found by walking up to the workspace `packages/` dir
@@ -159,17 +192,18 @@ function themeFontsDir(): string {
 }
 
 /**
- * Every source file under frontend/src that is neither build output nor a dependency.
+ * Every source file under `dir` that is neither build output nor a dependency. `dir` is
+ * frontend/src or the workspace, depending on the checkout — see adhFrontendSrc().
  *
  * Dot-directories are skipped wholesale, which is not cosmetic: `frontend/src/external`
  * holds pnpm's `.pnpm-deploy-link-*` trees — whole second copies of the toolkit packages
  * — so without the rule a single offender is reported twice and a BUILT copy gets policed
  * as if it were source.
  *
- * The agentictoolkit submodule is deliberately NOT skipped. It is another repository, but
- * it is where this scale and its consumers now live (`packages/web/packages/adh`, and the
- * themes package that defines the tokens), so excluding it would make both scans below
- * pass by having nothing left to look at.
+ * The agentictoolkit submodule is deliberately NOT skipped when scanning frontend/src. It
+ * is another repository, but it is where this scale and its consumers now live
+ * (`packages/web/packages/adh`, and the themes package that defines the tokens), so
+ * excluding it would make the fallback scan below pass on two thirds less than it thinks.
  */
 function* sourceFiles(dir: string, exts: readonly string[]): Generator<string> {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -207,8 +241,36 @@ function* jsxOpenTags(text: string): Generator<string> {
   }
 }
 
-describe('consumers replace their size utility, never layer over it', () => {
-  const srcDir = frontendSrc()
+describe('the layering scan is skipped only where there is nothing to scan', () => {
+  it('no consumer of this scale has landed inside the toolkit itself', () => {
+    // This runs in BOTH checkouts and is the counterweight to the skipIf below. Every
+    // `.text-landing-*` consumer lives in adh's sites — measured, 27 elements across 12
+    // files, and zero here — which is why the toolkit's own CI can honestly skip the scan.
+    // The moment that stops being true (a landing component moves INTO this package, which
+    // is exactly the direction things have been moving), the skip starts hiding real
+    // consumers and this fails, in the repo that owns them, naming the file to re-root.
+    //
+    // The unit is the TAG, not the file, for the same reason landingTags() uses it and not
+    // just because it mirrors it: SiteLanding.tsx names `.text-landing-*` in a comment while
+    // consuming the scale through inline `var()`s, so a file-level match reports the one
+    // file in this package that is explaining the rule as if it were breaking it.
+    const root = workspaceRoot()
+    const local: string[] = []
+    for (const file of sourceFiles(root, ['.tsx'])) {
+      const text = readFileSync(file, 'utf8')
+      if (!text.includes('text-landing-')) continue
+      for (const tag of jsxOpenTags(text)) {
+        if (tag.includes('text-landing-')) local.push(relative(root, file))
+      }
+    }
+    expect(local, 'root the layering scan here too — these are no longer adh-only').toEqual(
+      [],
+    )
+  })
+})
+
+describe.skipIf(ADH_SRC === null)('consumers replace their size utility, never layer over it', () => {
+  const srcDir = ADH_SRC as string
   // Tailwind's font-size utilities. Deliberately NOT `text-[...]`: an arbitrary value is
   // almost always a colour (`text-[var(--color-text-dim)]`), which never conflicts.
   const SIZE_UTILITY = /\btext-(xs|sm|base|lg|xl|[2-9]xl)\b/
@@ -277,7 +339,11 @@ function* landingVars(text: string): Generator<[string, string | null]> {
 }
 
 describe('every fallback literal is the value the default theme sets', () => {
-  const srcDir = frontendSrc()
+  // Unlike the layering scan above, this one has plenty to do in EITHER checkout: the var
+  // form is what CSS files and inline-style components use, and this repo has three of
+  // them (SiteLanding.tsx, adh-concepts.css, adh-legal.css). So it widens to frontend/src
+  // when that is there and falls back to the workspace when it is not — never skipping.
+  const srcDir = ADH_SRC ?? workspaceRoot()
   const tokens = new Map<string, string>()
   for (const m of themes[DEFAULT_ADH_THEME].css.matchAll(/(--type-landing-[a-z-]+):([^;]+);/g)) {
     tokens.set(m[1], m[2].trim().replace(/\s+/g, ' '))
@@ -312,8 +378,12 @@ describe('every fallback literal is the value the default theme sets', () => {
         }
       }
     }
-    // A scan that found nothing to check is the failure this whole describe exists for.
-    expect(checked).toBeGreaterThan(50)
+    // A scan that found nothing to check is the failure this whole describe exists for, so
+    // the floor moves with the root rather than being one number that has to hold for both:
+    // a single low floor would let the adh run silently lose two thirds of its coverage and
+    // still pass. Measured at the time of writing — 109 checked from frontend/src, 40 from
+    // packages/web alone — and set below each so a real consumer going missing trips it.
+    expect(checked).toBeGreaterThan(ADH_SRC ? 50 : 30)
     expect(offenders).toEqual([])
   })
 })

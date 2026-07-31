@@ -351,8 +351,9 @@ export default defineConfig({
     // Its CSS subpath rides with the lazy FooterChatInner chunk.
     '@agentic-toolkit/bitbag',
     '@agentic-toolkit/bitbag/css/bitbag-dock.css',
-    '@radix-ui/react-avatar',
-    '@radix-ui/react-dropdown-menu',
+    // Only `react-slot` is left of Radix: it backs components/ui/button's `asChild`.
+    // The avatar and dropdown-menu primitives went with the components that used
+    // them (both now come from @agentic-toolkit/ui, on Base UI).
     '@radix-ui/react-slot',
     'class-variance-authority',
     'clsx',

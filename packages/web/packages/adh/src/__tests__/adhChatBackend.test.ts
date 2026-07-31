@@ -375,6 +375,72 @@ describe('AdhChatBackend — streaming + fail-closed gates', () => {
   })
 })
 
+// The `!res.ok` catch-all on the TURN path decides whether the visitor reads the server's own
+// words or the generic copy. Nothing exercised it: `failingAt()` below fails at
+// conversation-CREATE, which throws VisitorGateError and is answered by gateErrorEvent() — a
+// different function that always returns the generic copy, whatever the status.
+describe('AdhChatBackend — a refused turn surfaces only actionable copy', () => {
+  /** Fail the TURN itself (not the create) with `status` and `body`. */
+  function turnFailing(status: number, body: unknown) {
+    return fakeFetch((call) => {
+      if (call.url.endsWith('/visitor-tokens')) return json({ token: 't', expiresAt: FUTURE, personaId: 'p' }, 201)
+      if (call.url.endsWith('/persona/bootstrap')) return json({})
+      if (call.url.endsWith('/conversations')) return json({ id: 'c' }, 201)
+      if (call.url.endsWith('/turns')) return json(body, status)
+      throw new Error('unexpected')
+    }).fetchImpl
+  }
+
+  const GENERIC = "This persona couldn't start a chat right now. Please try again in a moment."
+
+  it('shows the server’s message for a 422 (over the length cap / screened)', async () => {
+    const backend = new AdhChatBackend({
+      personaSlug: SLUG,
+      fetchImpl: turnFailing(422, { error: { message: 'That message is too long — try trimming it.' } }),
+      store: memStore(),
+    })
+    const [evt] = await drain(backend)
+    expect((evt as { message: string }).message).toBe('That message is too long — try trimming it.')
+  })
+
+  it('shows the server’s message for a 429 (rate window)', async () => {
+    const backend = new AdhChatBackend({
+      personaSlug: SLUG,
+      fetchImpl: turnFailing(429, { error: { message: 'You’re sending messages a bit fast — try again in a minute.' } }),
+      store: memStore(),
+    })
+    const [evt] = await drain(backend)
+    expect((evt as { message: string }).message).toBe(
+      'You’re sending messages a bit fast — try again in a minute.',
+    )
+  })
+
+  it('never prints a 500’s "Internal Server Error" body at the visitor', async () => {
+    // Exactly what the backend sends for an unexpected throw (app.ts onError). It is a valid,
+    // parseable envelope, so a blanket `!res.ok` read would render that literal string in the
+    // chat bubble and the `??` fallback would never fire.
+    const backend = new AdhChatBackend({
+      personaSlug: SLUG,
+      fetchImpl: turnFailing(500, { error: { message: 'Internal Server Error' } }),
+      store: memStore(),
+    })
+    const [evt] = await drain(backend)
+    const message = (evt as { message: string }).message
+    expect(message).not.toContain('Internal Server Error')
+    expect(message).toBe(GENERIC)
+  })
+
+  it('falls back to the generic copy when a refusal body carries no message', async () => {
+    const backend = new AdhChatBackend({
+      personaSlug: SLUG,
+      fetchImpl: turnFailing(429, { nothing: 'useful' }),
+      store: memStore(),
+    })
+    const [evt] = await drain(backend)
+    expect((evt as { message: string }).message).toBe(GENERIC)
+  })
+})
+
 describe('AdhChatBackend — SSR safety', () => {
   it('constructs without a store outside the browser and reads as empty', () => {
     // No window in the node test env; the default browserStore must no-op rather than throw.

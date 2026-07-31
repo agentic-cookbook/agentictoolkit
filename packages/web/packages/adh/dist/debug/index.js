@@ -31,137 +31,25 @@ var Button = React.forwardRef(
 );
 Button.displayName = "Button";
 
-// src/components/ui/dropdown-menu.tsx
-import * as React2 from "react";
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronRight, Circle } from "lucide-react";
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
-function joinClasses2(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-var DropdownMenu = DropdownMenuPrimitive.Root;
-var DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
-var DropdownMenuPortal = DropdownMenuPrimitive.Portal;
-var DropdownMenuSub = DropdownMenuPrimitive.Sub;
-var DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
-var DropdownMenuSubTrigger = React2.forwardRef(({ className, inset, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.SubTrigger,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__sub-trigger",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props,
-    children: [
-      children,
-      /* @__PURE__ */ jsx2(ChevronRight, { className: "adh-dropdown-menu__sub-trigger-chevron" })
-    ]
-  }
-));
-DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
-var DropdownMenuSubContent = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.SubContent,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-));
-DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
-var DropdownMenuContent = React2.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsx2(DropdownMenuPrimitive.Portal, { children: /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Content,
-  {
-    ref,
-    sideOffset,
-    className: joinClasses2("adh-dropdown-menu__content", className),
-    ...props
-  }
-) }));
-DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
-var DropdownMenuItem = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Item,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
-var DropdownMenuCheckboxItem = React2.forwardRef(({ className, children, checked, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.CheckboxItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    checked,
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx2(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx2(Check, { className: "adh-dropdown-menu__indicator-check" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
-var DropdownMenuRadioItem = React2.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ jsxs(
-  DropdownMenuPrimitive.RadioItem,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__item adh-dropdown-menu__item--indicator-left",
-      className
-    ),
-    ...props,
-    children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-dropdown-menu__indicator-slot", children: /* @__PURE__ */ jsx2(DropdownMenuPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx2(Circle, { className: "adh-dropdown-menu__indicator-dot" }) }) }),
-      children
-    ]
-  }
-));
-DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
-var DropdownMenuLabel = React2.forwardRef(({ className, inset, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Label,
-  {
-    ref,
-    className: joinClasses2(
-      "adh-dropdown-menu__label",
-      inset && "adh-dropdown-menu__item--inset",
-      className
-    ),
-    ...props
-  }
-));
-DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
-var DropdownMenuSeparator = React2.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ jsx2(
-  DropdownMenuPrimitive.Separator,
-  {
-    ref,
-    className: joinClasses2("adh-dropdown-menu__separator", className),
-    ...props
-  }
-));
-DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
-var DropdownMenuShortcut = ({ className, ...props }) => {
-  return /* @__PURE__ */ jsx2(
-    "span",
-    {
-      className: joinClasses2("adh-dropdown-menu__shortcut", className),
-      ...props
-    }
-  );
-};
-DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
+// src/debug/DebugMenu.tsx
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from "@agentic-toolkit/ui/components/dropdown-menu";
 
 // src/themes/ThemeSwitcher.tsx
 import { Palette } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem
+} from "@agentic-toolkit/ui/components/dropdown-menu";
 
 // src/themes/adh-themes.ts
 import { themes } from "@agentic-toolkit/themes/manifest";
@@ -180,7 +68,7 @@ var ADH_THEMES = [
 var DEFAULT_ADH_THEME = "adh";
 
 // src/themes/ThemeSwitcher.tsx
-import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx2, jsxs } from "react/jsx-runtime";
 function ThemeSwitcher({
   current,
   label = "Theme",
@@ -196,25 +84,32 @@ function ThemeSwitcher({
       router.refresh();
     }
   };
-  return /* @__PURE__ */ jsxs2(DropdownMenuSub, { children: [
-    /* @__PURE__ */ jsxs2(DropdownMenuSubTrigger, { children: [
-      /* @__PURE__ */ jsx3(Palette, { className: "adh-dropdown-menu__item-icon" }),
-      /* @__PURE__ */ jsx3("span", { children: label })
+  return /* @__PURE__ */ jsxs(DropdownMenuSub, { children: [
+    /* @__PURE__ */ jsxs(DropdownMenuSubTrigger, { children: [
+      /* @__PURE__ */ jsx2(Palette, { className: "adh-dropdown-menu__item-icon" }),
+      /* @__PURE__ */ jsx2("span", { children: label })
     ] }),
-    /* @__PURE__ */ jsx3(DropdownMenuPortal, { children: /* @__PURE__ */ jsx3(DropdownMenuSubContent, { children: /* @__PURE__ */ jsx3(
+    /* @__PURE__ */ jsx2(DropdownMenuSubContent, { children: /* @__PURE__ */ jsx2(
       DropdownMenuRadioGroup,
       {
         value: current ?? DEFAULT_ADH_THEME,
         onValueChange: (value) => selectTheme(value),
-        children: ADH_THEMES.map((theme) => /* @__PURE__ */ jsx3(DropdownMenuRadioItem, { value: theme.key, children: theme.label }, theme.key))
+        children: ADH_THEMES.map((theme) => /* @__PURE__ */ jsx2(DropdownMenuRadioItem, { value: theme.key, children: theme.label }, theme.key))
       }
-    ) }) })
+    ) })
   ] });
 }
 
 // src/debug/ChatThemeSwitcher.tsx
 import { MessageSquare } from "lucide-react";
-import { jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
+import {
+  DropdownMenuSub as DropdownMenuSub2,
+  DropdownMenuSubTrigger as DropdownMenuSubTrigger2,
+  DropdownMenuSubContent as DropdownMenuSubContent2,
+  DropdownMenuRadioGroup as DropdownMenuRadioGroup2,
+  DropdownMenuRadioItem as DropdownMenuRadioItem2
+} from "@agentic-toolkit/ui/components/dropdown-menu";
+import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var DEFAULT_VALUE = "__default";
 function ChatThemeSwitcher({
   themes: themes2,
@@ -222,35 +117,41 @@ function ChatThemeSwitcher({
   onChange,
   label = "Chat theme"
 }) {
-  return /* @__PURE__ */ jsxs3(DropdownMenuSub, { children: [
-    /* @__PURE__ */ jsxs3(DropdownMenuSubTrigger, { children: [
-      /* @__PURE__ */ jsx4(MessageSquare, { className: "adh-dropdown-menu__item-icon" }),
-      /* @__PURE__ */ jsx4("span", { children: label })
+  return /* @__PURE__ */ jsxs2(DropdownMenuSub2, { children: [
+    /* @__PURE__ */ jsxs2(DropdownMenuSubTrigger2, { children: [
+      /* @__PURE__ */ jsx3(MessageSquare, { className: "adh-dropdown-menu__item-icon" }),
+      /* @__PURE__ */ jsx3("span", { children: label })
     ] }),
-    /* @__PURE__ */ jsx4(DropdownMenuPortal, { children: /* @__PURE__ */ jsx4(DropdownMenuSubContent, { children: /* @__PURE__ */ jsxs3(
-      DropdownMenuRadioGroup,
+    /* @__PURE__ */ jsx3(DropdownMenuSubContent2, { children: /* @__PURE__ */ jsxs2(
+      DropdownMenuRadioGroup2,
       {
         value: current ?? DEFAULT_VALUE,
         onValueChange: (value) => onChange(value === DEFAULT_VALUE ? null : value),
         children: [
-          /* @__PURE__ */ jsx4(DropdownMenuRadioItem, { value: DEFAULT_VALUE, children: "App default" }),
-          themes2.map((theme) => /* @__PURE__ */ jsx4(DropdownMenuRadioItem, { value: theme.key, children: theme.label }, theme.key))
+          /* @__PURE__ */ jsx3(DropdownMenuRadioItem2, { value: DEFAULT_VALUE, children: "App default" }),
+          themes2.map((theme) => /* @__PURE__ */ jsx3(DropdownMenuRadioItem2, { value: theme.key, children: theme.label }, theme.key))
         ]
       }
-    ) }) })
+    ) })
   ] });
 }
 
 // src/debug/DebugMenu.tsx
-import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 function DebugMenu({ themeKey, chat }) {
-  return /* @__PURE__ */ jsx5("div", { className: "adh-debug-menu", children: /* @__PURE__ */ jsxs4(DropdownMenu, { children: [
-    /* @__PURE__ */ jsx5(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ jsx5(Button, { variant: "ghost", size: "sm", "aria-label": "Debug menu", children: /* @__PURE__ */ jsx5(Bug, { className: "adh-button__icon" }) }) }),
-    /* @__PURE__ */ jsxs4(DropdownMenuContent, { align: "start", side: "bottom", children: [
-      /* @__PURE__ */ jsx5(DropdownMenuLabel, { children: "Debug" }),
-      /* @__PURE__ */ jsx5(DropdownMenuSeparator, {}),
-      /* @__PURE__ */ jsx5(ThemeSwitcher, { current: themeKey }),
-      chat && /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx4("div", { className: "adh-debug-menu", children: /* @__PURE__ */ jsxs3(DropdownMenu, { children: [
+    /* @__PURE__ */ jsx4(
+      DropdownMenuTrigger,
+      {
+        render: /* @__PURE__ */ jsx4(Button, { variant: "ghost", size: "sm", "aria-label": "Debug menu" }),
+        children: /* @__PURE__ */ jsx4(Bug, { className: "adh-button__icon" })
+      }
+    ),
+    /* @__PURE__ */ jsxs3(DropdownMenuContent, { align: "start", side: "bottom", children: [
+      /* @__PURE__ */ jsx4(DropdownMenuLabel, { children: "Debug" }),
+      /* @__PURE__ */ jsx4(DropdownMenuSeparator, {}),
+      /* @__PURE__ */ jsx4(ThemeSwitcher, { current: themeKey }),
+      chat && /* @__PURE__ */ jsx4(
         ChatThemeSwitcher,
         {
           themes: chat.themes,

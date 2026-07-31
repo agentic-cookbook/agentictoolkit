@@ -125,8 +125,11 @@ export function AdhHeader({
   onSettings,
 }: AdhHeaderProps) {
   // When logged in, primary nav lives inside the avatar dropdown — the bar only
-  // carries the avatar trigger. When logged out, show the nav in the bar.
-  const barLinks = user ? [] : navLinks
+  // carries the avatar trigger. When logged out, show the nav in the bar but drop
+  // any link that just points at the site title: `SiteSwitcher` already renders
+  // that href as the title, so keeping it here puts the same destination in the bar
+  // twice. Only the BAR de-dups — the dropdown has no title link to collide with.
+  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref)
 
   return (
     <header className="adh-header" role="banner">

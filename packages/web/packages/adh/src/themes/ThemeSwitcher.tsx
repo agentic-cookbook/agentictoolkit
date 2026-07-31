@@ -5,11 +5,10 @@ import { useRouter } from 'next/navigation'
 import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
-  DropdownMenuPortal,
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-} from '../components/ui/dropdown-menu'
+} from '@agentic-toolkit/ui/components/dropdown-menu'
 import {
   ADH_THEME_COOKIE,
   ADH_THEMES,
@@ -51,20 +50,20 @@ export function ThemeSwitcher({
         <Palette className="adh-dropdown-menu__item-icon" />
         <span>{label}</span>
       </DropdownMenuSubTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent>
-          <DropdownMenuRadioGroup
-            value={current ?? DEFAULT_ADH_THEME}
-            onValueChange={(value) => selectTheme(value as AdhThemeKey)}
-          >
-            {ADH_THEMES.map((theme) => (
-              <DropdownMenuRadioItem key={theme.key} value={theme.key}>
-                {theme.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
+      {/* No <DropdownMenuPortal> wrapper: this engine's SubContent portals itself
+          (see NavigationPopover, which composes it the same way). */}
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup
+          value={current ?? DEFAULT_ADH_THEME}
+          onValueChange={(value) => selectTheme(value as AdhThemeKey)}
+        >
+          {ADH_THEMES.map((theme) => (
+            <DropdownMenuRadioItem key={theme.key} value={theme.key}>
+              {theme.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
     </DropdownMenuSub>
   )
 }

@@ -4,11 +4,10 @@ import { MessageSquare } from 'lucide-react'
 import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
-  DropdownMenuPortal,
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-} from '../components/ui/dropdown-menu'
+} from '@agentic-toolkit/ui/components/dropdown-menu'
 
 export type ChatThemeOption = { key: string; label: string }
 
@@ -41,25 +40,24 @@ export function ChatThemeSwitcher({
         <MessageSquare className="adh-dropdown-menu__item-icon" />
         <span>{label}</span>
       </DropdownMenuSubTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent>
-          <DropdownMenuRadioGroup
-            value={current ?? DEFAULT_VALUE}
-            onValueChange={(value) =>
-              onChange(value === DEFAULT_VALUE ? null : value)
-            }
-          >
-            <DropdownMenuRadioItem value={DEFAULT_VALUE}>
-              App default
+      {/* No <DropdownMenuPortal> wrapper — see ThemeSwitcher, which this mirrors. */}
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup
+          value={current ?? DEFAULT_VALUE}
+          onValueChange={(value) =>
+            onChange(value === DEFAULT_VALUE ? null : value)
+          }
+        >
+          <DropdownMenuRadioItem value={DEFAULT_VALUE}>
+            App default
+          </DropdownMenuRadioItem>
+          {themes.map((theme) => (
+            <DropdownMenuRadioItem key={theme.key} value={theme.key}>
+              {theme.label}
             </DropdownMenuRadioItem>
-            {themes.map((theme) => (
-              <DropdownMenuRadioItem key={theme.key} value={theme.key}>
-                {theme.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
     </DropdownMenuSub>
   )
 }

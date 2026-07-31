@@ -339,32 +339,66 @@ describe('LISTED_SITES (switcher list)', () => {
 describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // The Next app folders under frontend/src/ are the source of truth for the two
   // families; these arrays must mirror them so a newly-scaffolded site can't
-  // silently drop out of the dev site menu. This test file lives at
-  // frontend/src/app/registry/src/__tests__, so frontend/src/ is four levels up —
-  // the same depth it was at frontend/src/shared/adh/src/__tests__ before the
-  // @adh-shared retirement moved this package, which is why the `../../../..`
-  // below needed no change.
-  const frontendSrcDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
+  // silently drop out of the dev site menu.
+  //
+  // Finding frontend/src is not a counted hop, and the previous `../../../..` is why:
+  // this package moved into the agentictoolkit submodule, and four levels up from its
+  // new home is `<toolkit>/packages/web`, which has no `main/` or `marketing/` at all.
+  // It did not fail loudly at first glance either — the sibling siteRoutes.test.ts hit
+  // the identical anchor and passed VACUOUSLY over an empty scan (349d1db); these two
+  // only went red because readdirSync throws where that one's walk shrugged.
+  //
+  // Walking up to the marker, and skipping when it is absent, is the same shape
+  // landingTypeScale.test.ts uses in @agentic-toolkit/adh — deliberately re-stated here
+  // rather than shared, because a test-only helper is not worth adding to either
+  // package's public surface to reach across the boundary between them.
+  //
+  // Absent means one thing only: the toolkit checked out standalone, which is what its
+  // own web-tests.yml does. adh's ci.yml runs this suite from inside the adh checkout
+  // ("Toolkit unit tests"), where the families are present and both assertions run — so
+  // the guard still fires in the repository whose folders it is about.
+  const adhFrontendSrc = (): string | null => {
+    let dir = dirname(fileURLToPath(import.meta.url))
+    for (;;) {
+      if (existsSync(resolve(dir, 'next-config-base.mjs'))) return dir
+      const up = dirname(dir)
+      if (up === dir) return null
+      dir = up
+    }
+  }
+  const frontendSrcDir = adhFrontendSrc()
+  const STANDALONE = frontendSrcDir === null
   // Build/tooling directories that can sit beside the real site apps — excluded so
   // the guard tracks site folders, not filesystem noise (a stray `.next` or
   // `node_modules` must not false-fail a test about the site registry).
   const NON_SITE_DIRS = new Set(['node_modules', 'dist', 'build', '.next', '.turbo'])
-  const siteFolders = (family: 'main' | 'marketing'): string[] =>
-    readdirSync(resolve(frontendSrcDir, family))
-      .filter((name) => !name.startsWith('.') && !NON_SITE_DIRS.has(name))
-      .filter((name) => statSync(resolve(frontendSrcDir, family, name)).isDirectory())
-      // A real site folder is a Next app (has app/). Excludes data-only dirs like
-      // main/api (the committed openapi.json the api-types codegen + hub-help read),
-      // which gen-site-routes.py skips for the same reason.
-      .filter((name) => existsSync(resolve(frontendSrcDir, family, name, 'app')))
-      .sort()
+  const siteFolders = (family: 'main' | 'marketing'): string[] => {
+    const root = frontendSrcDir as string
+    return (
+      readdirSync(resolve(root, family))
+        .filter((name) => !name.startsWith('.') && !NON_SITE_DIRS.has(name))
+        .filter((name) => statSync(resolve(root, family, name)).isDirectory())
+        // A real site folder is a Next app (has app/). Excludes data-only dirs like
+        // main/api (the committed openapi.json the api-types codegen + hub-help read),
+        // which gen-site-routes.py skips for the same reason.
+        .filter((name) => existsSync(resolve(root, family, name, 'app')))
+        .sort()
+    )
+  }
 
-  it('MAIN_SITE_IDS mirrors the frontend/src/main/ folders exactly', () => {
+  it.skipIf(STANDALONE)('MAIN_SITE_IDS mirrors the frontend/src/main/ folders exactly', () => {
+    // Non-vacuity: an empty scan is what a wrong anchor looks like, and it is exactly how
+    // the sibling test passed while checking nothing.
+    expect(siteFolders('main').length).toBeGreaterThan(0)
     expect([...MAIN_SITE_IDS].sort()).toEqual(siteFolders('main'))
   })
-  it('MARKETING_SITE_IDS mirrors the frontend/src/marketing/ folders exactly', () => {
-    expect([...MARKETING_SITE_IDS].sort()).toEqual(siteFolders('marketing'))
-  })
+  it.skipIf(STANDALONE)(
+    'MARKETING_SITE_IDS mirrors the frontend/src/marketing/ folders exactly',
+    () => {
+      expect(siteFolders('marketing').length).toBeGreaterThan(0)
+      expect([...MARKETING_SITE_IDS].sort()).toEqual(siteFolders('marketing'))
+    },
+  )
   it('every family id is a real registry site, with no dupes or cross-family overlap', () => {
     const all = [...MAIN_SITE_IDS, ...MARKETING_SITE_IDS]
     expect(new Set(all).size).toBe(all.length) // no dupes within or across the two lists

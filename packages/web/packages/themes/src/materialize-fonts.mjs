@@ -69,14 +69,25 @@ export function materializeThemeFonts(appRoot = process.cwd()) {
       { cause: err },
     );
   }
-  const dest = path.join(appRoot, "public", manifest.publicPath.replace(/^\/+/, ""));
-  let file;
+  const rel = manifest.publicPath.replace(/^\/+/, "");
+  const dest = path.join(appRoot, "public", rel);
+  // Its OWN try, not the face loop's: creating the directory is the likeliest failure here
+  // (a read-only or full `public/`), and folding it into the loop's catch meant reporting it
+  // as a failure to copy a face that had not been named yet — `cannot materialize theme font
+  // undefined`, pointing every reader at the wrong half of the function.
   try {
     fs.mkdirSync(dest, { recursive: true });
-    for (const face of manifest.faces) {
-      file = face.file;
-      const bytes = fs.readFileSync(path.join(FONTS_DIR, file));
-      const to = path.join(dest, file);
+  } catch (err) {
+    throw new Error(
+      `[adh] cannot create ${dest}. The app's inlined @font-face block names this path, so ` +
+        "the build would ship a face that 404s.",
+      { cause: err },
+    );
+  }
+  for (const face of manifest.faces) {
+    try {
+      const bytes = fs.readFileSync(path.join(FONTS_DIR, face.file));
+      const to = path.join(dest, face.file);
       let existing = null;
       try {
         existing = fs.readFileSync(to);
@@ -94,12 +105,53 @@ export function materializeThemeFonts(appRoot = process.cwd()) {
         // `iosevka-400.woff2.4821.tmp`. Remove it on the way out either way.
         fs.rmSync(tmp, { force: true });
       }
+    } catch (err) {
+      throw new Error(
+        `[adh] cannot materialize theme font ${face.file} into ${dest}. The app's inlined ` +
+          "@font-face block names this path, so the build would ship a face that 404s.",
+        { cause: err },
+      );
     }
-  } catch (err) {
-    throw new Error(
-      `[adh] cannot materialize theme font ${file} into ${dest}. The app's inlined ` +
-        "@font-face block names this path, so the build would ship a face that 404s.",
-      { cause: err },
-    );
+  }
+  pruneOldRevisions(dest, rel, manifest);
+}
+
+/**
+ * Delete the directories a PREVIOUS revision of the faces was copied into.
+ *
+ * `publicPath` carries a content hash, so re-subsetting the faces changes the directory
+ * rather than the files in it — nothing ever overwrites the old copy. On the servers that
+ * is invisible (every build starts from a fresh checkout and `public/fonts/` is gitignored),
+ * but a working tree accumulates one ~460 KB directory per bump, across ~45 site trees and
+ * both backends, and Next collects all of them as static assets — so a dev server keeps
+ * serving revisions no page references, under the `immutable` header.
+ *
+ * The rule for "is this one of ours" is deliberately narrow: every entry in the directory
+ * must be a face filename from the CURRENT manifest. Face names are revision-independent
+ * (`iosevka-400.woff2`; only the parent hash moves), so a previous revision's directory is
+ * always a subset — while a hand-placed `public/fonts/inter/` is not, and is left alone. It
+ * fails CLOSED: an unrecognised entry, a stray `.tmp`, or a face we later rename all mean
+ * "leave it", which costs disk and never costs bytes somebody needed.
+ *
+ * Failure here is NOT fatal, unlike everything above it. A stale directory is clutter; the
+ * missing bytes this module exists to prevent are a broken page. Refusing to build because a
+ * cleanup could not run would trade the cheap problem for the expensive one.
+ */
+function pruneOldRevisions(dest, rel, manifest) {
+  // `/fonts/<rev>` — two segments. Without this a manifest that dropped the revision segment
+  // would make the parent `public/` itself and put every sibling asset directory in scope.
+  if (rel.split("/").filter(Boolean).length < 2) return;
+  const parent = path.dirname(dest);
+  const ours = new Set(manifest.faces.map((f) => f.file));
+  try {
+    for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
+      const dir = path.join(parent, entry.name);
+      if (!entry.isDirectory() || dir === dest) continue;
+      const held = fs.readdirSync(dir);
+      if (held.length === 0 || !held.every((name) => ours.has(name))) continue;
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  } catch {
+    // See the note above: clutter is not worth failing a build over.
   }
 }

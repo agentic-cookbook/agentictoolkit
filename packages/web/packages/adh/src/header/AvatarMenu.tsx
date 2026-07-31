@@ -74,6 +74,7 @@ export function AvatarMenu({
         className="adh-avatar-menu-trigger"
         aria-label={`Open ${user.name} menu`}
       >
+        <span className="adh-avatar-menu-trigger__name">{user.name}</span>
         <span className="adh-avatar-menu-trigger__avatar-wrap">{avatarInner}</span>
         <span className="adh-avatar-menu-trigger__chevron" aria-hidden="true">
           <ChevronDown className="adh-avatar-menu-trigger__chevron-icon" />

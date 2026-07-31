@@ -74,7 +74,8 @@ export function SiteLanding({
             fontSize: 'var(--type-landing-eyebrow-size, 0.7rem)',
             lineHeight: 'var(--type-landing-eyebrow-line-height, 1.4)',
             letterSpacing: 'var(--type-landing-eyebrow-tracking, 0.24em)',
-            textTransform: 'uppercase',
+            fontWeight: 'var(--type-landing-eyebrow-weight, 500)',
+            textTransform: 'var(--type-landing-eyebrow-transform, uppercase)',
             color: MUTED,
             marginBottom: '1.75rem',
           }}
@@ -88,7 +89,7 @@ export function SiteLanding({
             fontSize: 'var(--type-landing-title-size, clamp(2.6rem, 6vw, 4.5rem))',
             lineHeight: 'var(--type-landing-title-line-height, 1.04)',
             letterSpacing: 'var(--type-landing-title-tracking, -0.02em)',
-            fontWeight: 400,
+            fontWeight: 'var(--type-landing-title-weight, 400)',
             margin: '0 0 1.5rem',
           }}
         >
@@ -103,6 +104,8 @@ export function SiteLanding({
             fontFamily: `var(--type-landing-lede-font, ${SANS})`,
             fontSize: 'var(--type-landing-lede-size, 1.1rem)',
             lineHeight: 'var(--type-landing-lede-line-height, 1.7)',
+            fontWeight: 'var(--type-landing-lede-weight, 400)',
+            letterSpacing: 'var(--type-landing-lede-tracking, 0)',
             color: MUTED,
             margin: '0 auto 2.75rem',
             maxWidth: 560,

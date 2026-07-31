@@ -319,7 +319,8 @@ var AdhChatBackend = class {
         return;
       }
       if (!res.ok) {
-        const detail = parseData(await res.text().catch(() => ""));
+        const refusal = res.status === 422 || res.status === 429;
+        const detail = refusal ? parseData(await res.text().catch(() => "")) : null;
         yield { type: "error", message: detail?.error?.message ?? startFailedMessage(this.personaName) };
         return;
       }
