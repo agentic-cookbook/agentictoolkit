@@ -2,6 +2,30 @@
   "id": "hub",
   "children": [
     {
+      "id": "develop",
+      "accent": "oklch(0.80 0.18 109)",
+      "children": [
+        {
+          "id": "devteam",
+          "siteId": "devteam",
+          "related": [
+            "codereviews",
+            "teambuilder",
+            "teamregistry"
+          ]
+        },
+        {
+          "id": "codereviews",
+          "siteId": "codereviews",
+          "related": [
+            "devteam",
+            "projects",
+            "narratives"
+          ]
+        }
+      ]
+    },
+    {
       "id": "learn",
       "accent": "oklch(0.82 0.17 68)",
       "children": [
@@ -307,14 +331,6 @@
           "related": [
             "projects",
             "ecosystems"
-          ]
-        },
-        {
-          "id": "codereviews",
-          "siteId": "codereviews",
-          "related": [
-            "projects",
-            "narratives"
           ]
         }
       ]

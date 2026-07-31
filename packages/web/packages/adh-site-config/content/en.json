@@ -4,6 +4,46 @@
     "kicker": "Agentic Developer",
     "blurb": "Agentic Developer Hub is an ecosystem of composable tools — a family of small websites and services for building, shipping, and selling agentic connected software, fast.\n\nThe difficult and complex infrastructure parts are already built.\n\nYou ship the part only you can."
   },
+  "develop": {
+    "label": "Develop",
+    "kicker": "Ship the work",
+    "blurb": "An agentic development team that plans, writes, reviews, and tests real code — and publishes the record of every review it runs."
+  },
+  "devteam": {
+    "label": "Developer Team",
+    "kicker": "Your agentic dev team",
+    "blurb": "A standing team of specialists — reviewers, builders, testers, researchers — that works a repository the way a real team does: a review pipeline with scopes, a build loop that ships increments, a harness that tests the team itself, and a learning loop that feeds what it finds back in.",
+    "detail": [
+      {
+        "kind": "prose",
+        "heading": "What it does",
+        "body": "The Developer Team runs on your repository from the command line. Ask it for a review and a coalition of specialists reads the whole branch against the scopes you chose, argues its findings through an arbitrator, and hands back a report you can act on. Ask it to build and the same team plans, implements, and verifies an increment at a time."
+      },
+      {
+        "kind": "points",
+        "heading": "Key points",
+        "items": [
+          "23 review specialists covering 187 lenses, plus 18 build lanes for the build loop.",
+     "One of nine teams in the registry — 47 specialists between them.",
+          "19 review scopes — pick risk, completeness, or the whole set.",
+          "A build loop that plans, implements, and verifies one increment at a time.",
+          "A test harness that runs the team against fixtures and scores it.",
+          "A learning loop that turns each run's findings into the next run's instructions.",
+          "Memory that carries what the team learned between runs."
+        ]
+      },
+      {
+        "kind": "prose",
+        "heading": "How far along it is",
+        "body": "Developer preview. The review pipeline, the build loop, and the team registry are in daily use against this codebase; the test harness, the learning loop, and memory are real but still moving. The site marks each capability as live, in preview, or coming — nothing is claimed as finished that isn't."
+      }
+    ],
+    "keyPoints": [
+      "A standing team of specialists, not a single assistant",
+      "Reviews the whole branch, argues the findings, hands back a report",
+      "Builds, tests, and learns from its own runs"
+    ]
+  },
   "learn": {
     "label": "Learn",
     "kicker": "Get fluent",
