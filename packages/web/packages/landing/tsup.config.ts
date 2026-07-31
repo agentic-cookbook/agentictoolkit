@@ -1,16 +1,12 @@
 import { defineConfig } from 'tsup'
 import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
-export default defineConfig({
-  entry: {
-    index: 'src/index.ts',
-  },
+const shared = {
   outDir: 'dist',
-  format: ['esm'],
-  target: 'es2022',
-  platform: 'browser',
+  format: ['esm'] as const,
+  target: 'es2022' as const,
+  platform: 'browser' as const,
   sourcemap: true,
-  clean: true,
   dts: false,
   bundle: true,
   splitting: true,
@@ -23,4 +19,36 @@ export default defineConfig({
       exclude: /node_modules/,
     }),
   ],
-})
+}
+
+// TWO independent builds — the server-safe barrel and the client barrel must NOT
+// share a chunk graph. esbuild-plugin-preserve-directives propagates a chunk's
+// `'use client'` to every entry that imports it, so while NavChrome (the only
+// module carrying the directive) was exported from src/index.ts, the directive
+// was hoisted onto dist/index.js itself and every export in the package became a
+// Client Component. Separate builds = separate chunk graphs, so index.js stays
+// free of the directive and only chrome.js carries it.
+//
+// This is the same trap, and the same fix, as packages/api-explorer — see the
+// comment in its tsup.config.ts. Note that `splitting: false` does NOT solve it:
+// with a single entry NavChrome's code is inlined into index.js either way, and
+// the directive comes with it. The entry split is the mechanism, not the flag.
+//
+// tools/check-directives.py asserts the outcome, because nothing in tsc, ESLint
+// or vitest can see it and a successful `next build` does not imply it.
+export default defineConfig([
+  {
+    ...shared,
+    entry: { index: 'src/index.ts' },
+    clean: true,
+  },
+  {
+    ...shared,
+    // clean:false so it adds to — rather than wipes — the build above. tsup runs
+    // the two concurrently, so in principle the clean above could land after this
+    // one's write; api-explorer has shipped the same shape without seeing it, and
+    // check-directives.py fails on a missing entry, so the race is loud, not silent.
+    entry: { chrome: 'src/chrome.ts' },
+    clean: false,
+  },
+])

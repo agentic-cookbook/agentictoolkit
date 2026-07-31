@@ -38,10 +38,19 @@ from palette, it styles no `--lp-*` token, and nothing here overrides it.
 
 ```tsx
 import { Deck, Screen /* … */ } from '@agentic-toolkit/landing'
+import { NavChrome } from '@agentic-toolkit/landing/chrome'
 import '@agentic-toolkit/landing/css/base.css'   // deck + screen mechanics
 import '@agentic-toolkit/landing/css/chrome.css' // header, burger, drawer
 import '@agentic-toolkit/landing/css/blocks.css' // the block vocabulary
 ```
+
+**`NavChrome` comes from `/chrome`, and that split is load-bearing.** It is the
+only `'use client'` module in the package, and the bundler propagates a chunk's
+directive to every entry that imports it — so while `NavChrome` was re-exported
+from the main barrel, `dist/index.js` itself began with `'use client'` and every
+export in it became a Client Component. Two entries built from two chunk graphs
+is what keeps the main barrel server-safe; `tools/check-directives.py` asserts
+it on every build, because nothing else can see it.
 
 All three CSS files are required (`base.css` alone won't paint a chip or a
 hero). Import order relative to the host's own stylesheet does not matter for
@@ -67,7 +76,8 @@ Composes the scroll mechanism (`DeckScript`, `Deck`, `Screen`), the chrome
 (`NavChrome`), and two blocks (`Hero`, `Wrap` + `Head`):
 
 ```tsx
-import { DeckScript, NavChrome, Deck, Hero, Screen, Wrap, Head } from '@agentic-toolkit/landing'
+import { DeckScript, Deck, Hero, Screen, Wrap, Head } from '@agentic-toolkit/landing'
+import { NavChrome } from '@agentic-toolkit/landing/chrome'
 import '@agentic-toolkit/landing/css/base.css'
 import '@agentic-toolkit/landing/css/chrome.css'
 import '@agentic-toolkit/landing/css/blocks.css'
@@ -93,6 +103,9 @@ zoom-on-focus). `NavChrome` is `'use client'`; everything else here is a plain
 function component.
 
 ## What's in the package
+
+Everything below ships from `@agentic-toolkit/landing` except `NavChrome`, which
+ships from `@agentic-toolkit/landing/chrome` for the reason under **Install**.
 
 | Export | Layer | What it is |
 | --- | --- | --- |

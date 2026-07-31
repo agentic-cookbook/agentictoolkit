@@ -110,11 +110,24 @@ can never be loaded on the same element. A site may use both packages;
 composing them on one element is not a missing feature to add, it is a
 conflict to resolve first.
 
-#### Three rules the landing extraction actually broke
+#### Four rules the landing extraction actually broke
 
 Each shipped at least once during the port, and each is invisible to vitest,
 `tsc`, ESLint and a screenshot. That is what makes them worth writing down
 rather than leaving to review.
+
+- **A client barrel needs its own entry, not just its own file.**
+  `esbuild-plugin-preserve-directives` propagates a chunk's `'use client'` to
+  every entry that imports it, so re-exporting one client component from a
+  package's main barrel puts the directive on the whole bundle and turns every
+  other export into a Client Component. Nothing complains: a Client Component
+  is legal, so the types, the tests and `next build` all pass. `landing` and
+  `api-explorer` both ship a second entry (`src/chrome.ts`,
+  `@agentic-toolkit/landing/chrome`) built from a **separate `defineConfig`
+  block** — `splitting: false` does not help, because with a single entry the
+  client code is inlined into `index.js` either way. `landing/tools/check-directives.py`
+  asserts the built output, since the only visible difference is the first line
+  of a `dist` file.
 
 - **Package CSS may name only the neutral scale.** Every visual value is a
   `--lp-*` token whose inline fallback is greyscale, so an unconfigured host

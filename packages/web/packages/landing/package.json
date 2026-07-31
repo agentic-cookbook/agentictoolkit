@@ -17,14 +17,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./chrome": {
+      "types": "./dist/chrome.d.ts",
+      "import": "./dist/chrome.js"
+    },
     "./css/base.css": "./dist/css/base.css",
     "./css/chrome.css": "./dist/css/chrome.css",
     "./css/blocks.css": "./dist/css/blocks.css"
   },
   "scripts": {
-    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build": "tsup && pnpm run build:types && pnpm run build:css && pnpm run check:directives",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
     "build:css": "node ../../copy-css.mjs",
+    "check:directives": "python3 tools/check-directives.py",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo",
     "lint": "tsc --noEmit",
