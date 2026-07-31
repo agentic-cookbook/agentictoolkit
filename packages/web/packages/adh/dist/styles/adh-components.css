@@ -180,51 +180,14 @@
   flex-shrink: 0;
 }
 
-/* ── The colour-mode toggle (auto → dark → light) ──────────────────────────────────
- *
- * Both faces ship and CSS picks one, from the `dark` class the appearance pre-paint
- * script sets before anything paints — so the glyph is right in the FIRST frame. A JS
- * branch on the resolved mode cannot be: `auto` needs matchMedia, which does not exist
- * when this HTML is generated, so the server would commit to a sun and the client would
- * swap it a frame later on every dark-mode load.
- *
- * lucide marks its glyphs aria-hidden; the button's own aria-label carries the meaning. */
-.adh-color-mode-toggle__moon {
-  display: none;
-}
-
-html.dark .adh-color-mode-toggle__moon {
-  display: block;
-}
-
-html.dark .adh-color-mode-toggle__sun {
-  display: none;
-}
-
-/* The auto-mode corner badge, on the same principle and for the same reason: the
-   pre-paint script writes `data-color-mode` on <html> alongside the `dark` class, so
-   the badge can be decided in CSS too and is likewise right in the first frame. It
-   used to wait for a `mounted` effect, on the belief that the mode "is recorded
-   nowhere" — applyAppearance has written that attribute for as long as it has written
-   the class.
-
-   Written as a COMPOUND selector, and it has to be: `.adh-header__icon-button > svg`
-   above carries a type selector, so the bare class would lose the size battle to it
-   (0,1,1 beats 0,1,0) and the badge would be drawn at full glyph size. */
-.adh-header__icon-button > .adh-color-mode-toggle__badge {
-  display: none;
-  position: absolute;
-  right: 0.25rem;
-  bottom: 0.25rem;
-  width: 0.625rem;
-  height: 0.625rem;
-  pointer-events: none;
-  color: var(--color-accent);
-}
-
-html[data-color-mode="auto"] .adh-header__icon-button > .adh-color-mode-toggle__badge {
-  display: block;
-}
+/* The colour-mode toggle's own rules are NOT here. It is `ColorModeToggle` in
+   @agentic-toolkit/ui, a control that takes `mode` + `onChange` and nothing else, so its
+   CSS travels with it in ui's components.css — which this file @imports at the top, so
+   every site still receives it through the one import it already has. Wearing
+   `.adh-header__icon-button` in this row is the HOST's choice, made at the call site;
+   the control's own sheet claims only what its faces and corner badge need in order to
+   be placed, and claims the badge's size with a compound selector precisely because
+   `.adh-header__icon-button > svg` above would otherwise out-specify it. */
 
 /* Interactive centre slot (e.g. the status site's live indicator + refresh).
    Absolutely centred like the page title, but stays clickable and lets its

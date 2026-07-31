@@ -346,7 +346,9 @@ describe('every fallback literal is the value the default theme sets', () => {
   const srcDir = ADH_SRC ?? workspaceRoot()
   const tokens = new Map<string, string>()
   for (const m of themes[DEFAULT_ADH_THEME].css.matchAll(/(--type-landing-[a-z-]+):([^;]+);/g)) {
-    tokens.set(m[1], m[2].trim().replace(/\s+/g, ' '))
+    // Both groups are matched by the pattern that produced `m`, so they exist; TS types
+    // every capture as optional under noUncheckedIndexedAccess.
+    tokens.set(m[1]!, m[2]!.trim().replace(/\s+/g, ' '))
   }
 
   // `-font` is the one exemption, and it is structural rather than a grandfathered

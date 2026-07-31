@@ -158,3 +158,65 @@
   height: 1px;
   background: var(--color-border);
 }
+
+/* ── The colour-mode toggle (auto → dark → light) ──────────────────────────────────
+ *
+ * Both faces ship and CSS picks one, from the `dark` class the appearance pre-paint
+ * script sets before anything paints — so the glyph is right in the FIRST frame. A JS
+ * branch on the resolved mode cannot be: `auto` needs matchMedia, which does not exist
+ * when this HTML is generated, so the server would commit to a sun and the client would
+ * swap it a frame later on every dark-mode load.
+ *
+ * The button's identity (size, colour, hover) is the HOST's — adh chrome passes
+ * `.adh-header__icon-button`. Only what the faces and the badge need to be placed
+ * correctly is claimed here, so the control is not silently broken on a host that
+ * dresses it differently.
+ *
+ * lucide marks its glyphs aria-hidden; the button's own aria-label carries the meaning. */
+.adh-color-mode-toggle {
+  position: relative;
+}
+
+.adh-color-mode-toggle > svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.adh-color-mode-toggle__moon {
+  display: none;
+}
+
+html.dark .adh-color-mode-toggle__moon {
+  display: block;
+}
+
+html.dark .adh-color-mode-toggle__sun {
+  display: none;
+}
+
+/* The auto-mode corner badge, on the same principle and for the same reason: the
+   pre-paint script writes `data-color-mode` on <html> alongside the `dark` class, so
+   the badge can be decided in CSS too and is likewise right in the first frame. It
+   used to wait for a `mounted` effect, on the belief that the mode "is recorded
+   nowhere" — applyAppearance has written that attribute for as long as it has written
+   the class.
+
+   Written as a COMPOUND selector, and it has to be: a host's own glyph sizing carries
+   a type selector (adh's `.adh-header__icon-button > svg` does), so a bare class would
+   lose the size battle to it (0,1,1 beats 0,1,0) and the badge would be drawn at full
+   glyph size. (0,2,0) beats any such rule whichever sheet lands first. */
+.adh-color-mode-toggle > .adh-color-mode-toggle__badge {
+  display: none;
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  pointer-events: none;
+  color: var(--color-accent);
+}
+
+html[data-color-mode="auto"] .adh-color-mode-toggle > .adh-color-mode-toggle__badge {
+  display: block;
+}

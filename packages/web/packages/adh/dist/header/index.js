@@ -869,71 +869,10 @@ function AdhHeader({
   ] }) });
 }
 
-// src/header/ColorModeToggle.tsx
-import { useEffect as useEffect2, useState as useState2, useSyncExternalStore } from "react";
-import { Moon, RefreshCw, Sun } from "lucide-react";
-import { useAppearanceSettings } from "@agentic-toolkit/adh/auth";
-import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
-var CYCLE = ["auto", "dark", "light"];
-var SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
-function subscribeSystemDark(onStoreChange) {
-  const mq = typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia(SYSTEM_DARK_QUERY) : null;
-  if (typeof mq?.addEventListener !== "function") return () => {
-  };
-  mq.addEventListener("change", onStoreChange);
-  return () => mq.removeEventListener("change", onStoreChange);
-}
-function getSystemDark() {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
-  return window.matchMedia(SYSTEM_DARK_QUERY).matches;
-}
-function getServerSystemDark() {
-  return false;
-}
-function title(mode, resolved) {
-  if (mode === "auto") return `Following system (${resolved})`;
-  return mode === "dark" ? "Dark mode \u2014 click for light" : "Light mode \u2014 click for auto";
-}
-function ColorModeToggle() {
-  const { prefs, set } = useAppearanceSettings();
-  const systemDark = useSyncExternalStore(
-    subscribeSystemDark,
-    getSystemDark,
-    getServerSystemDark
-  );
-  const [mounted, setMounted] = useState2(false);
-  useEffect2(() => setMounted(true), []);
-  const mode = prefs.colorMode;
-  const resolved = mode === "auto" ? systemDark ? "dark" : "light" : mode;
-  const next = CYCLE[(CYCLE.indexOf(mode) + 1) % CYCLE.length];
-  return (
-    // adh-ui-allow: cs-no-bespoke — an icon control in the header's actions row, wearing
-    // the header's own `.adh-header__icon-button` identity. A ui <Button> brings a labelled
-    // button's identity (full text colour, hover fill), which is exactly what must NOT
-    // happen to a quiet glyph in this row — the same call AuthButtons.tsx makes for a nav
-    // link. The identity itself is shared CSS, not markup invented here.
-    /* @__PURE__ */ jsxs6(
-      "button",
-      {
-        type: "button",
-        onClick: () => set({ colorMode: next }),
-        className: "adh-header__icon-button adh-color-mode-toggle",
-        "aria-label": mounted ? `Theme: ${mode === "auto" ? `Auto (currently ${resolved})` : mode}. Click to switch to ${next}.` : "Theme",
-        title: mounted ? title(mode, resolved) : void 0,
-        children: [
-          /* @__PURE__ */ jsx9(Moon, { className: "adh-color-mode-toggle__moon", strokeWidth: 2 }),
-          /* @__PURE__ */ jsx9(Sun, { className: "adh-color-mode-toggle__sun", strokeWidth: 2 }),
-          /* @__PURE__ */ jsx9(RefreshCw, { className: "adh-color-mode-toggle__badge", strokeWidth: 3 })
-        ]
-      }
-    )
-  );
-}
-
 // src/header/HubMark.tsx
-import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function HubMark({ className }) {
-  return /* @__PURE__ */ jsxs7(
+  return /* @__PURE__ */ jsxs6(
     "svg",
     {
       viewBox: "0 0 1024 1024",
@@ -942,11 +881,11 @@ function HubMark({ className }) {
       "aria-hidden": true,
       focusable: "false",
       children: [
-        /* @__PURE__ */ jsx10("path", { d: "M816,58 Q816,208 966,208 Q816,208 816,358 Q816,208 666,208 Q816,208 816,58 Z" }),
-        /* @__PURE__ */ jsx10("path", { d: "M816,666 Q816,816 966,816 Q816,816 816,966 Q816,816 666,816 Q816,816 816,666 Z" }),
-        /* @__PURE__ */ jsx10("path", { d: "M208,666 Q208,816 358,816 Q208,816 208,966 Q208,816 58,816 Q208,816 208,666 Z" }),
-        /* @__PURE__ */ jsx10("path", { d: "M208,58 Q208,208 358,208 Q208,208 208,358 Q208,208 58,208 Q208,208 208,58 Z" }),
-        /* @__PURE__ */ jsx10("path", { d: "M512,72 Q512,512 952,512 Q512,512 512,952 Q512,512 72,512 Q512,512 512,72 Z" })
+        /* @__PURE__ */ jsx9("path", { d: "M816,58 Q816,208 966,208 Q816,208 816,358 Q816,208 666,208 Q816,208 816,58 Z" }),
+        /* @__PURE__ */ jsx9("path", { d: "M816,666 Q816,816 966,816 Q816,816 816,966 Q816,816 666,816 Q816,816 816,666 Z" }),
+        /* @__PURE__ */ jsx9("path", { d: "M208,666 Q208,816 358,816 Q208,816 208,966 Q208,816 58,816 Q208,816 208,666 Z" }),
+        /* @__PURE__ */ jsx9("path", { d: "M208,58 Q208,208 358,208 Q208,208 208,358 Q208,208 58,208 Q208,208 208,58 Z" }),
+        /* @__PURE__ */ jsx9("path", { d: "M512,72 Q512,512 952,512 Q512,512 512,952 Q512,512 72,512 Q512,512 512,72 Z" })
       ]
     }
   );
@@ -983,22 +922,22 @@ function buildRouteItems(sections, pathname) {
 }
 
 // src/header/useClientHost.ts
-import { useEffect as useEffect3, useState as useState3 } from "react";
+import { useEffect as useEffect2, useState as useState2 } from "react";
 function useClientHost() {
-  const [host, setHost] = useState3(null);
-  useEffect3(() => setHost(window.location.host), []);
+  const [host, setHost] = useState2(null);
+  useEffect2(() => setHost(window.location.host), []);
   return host;
 }
 
 // src/header/workspaces-menu.tsx
 import { createContext, useContext } from "react";
-import { jsx as jsx11 } from "react/jsx-runtime";
+import { jsx as jsx10 } from "react/jsx-runtime";
 var WorkspacesMenuContext = createContext(null);
 function WorkspacesMenuProvider({
   value,
   children
 }) {
-  return /* @__PURE__ */ jsx11(WorkspacesMenuContext.Provider, { value, children });
+  return /* @__PURE__ */ jsx10(WorkspacesMenuContext.Provider, { value, children });
 }
 function useWorkspacesMenu() {
   return useContext(WorkspacesMenuContext);
@@ -1019,14 +958,14 @@ import { Fragment as Fragment6 } from "react";
 import { usePathname as usePathname5 } from "next/navigation";
 
 // src/header/SiteMenu.tsx
-import { useEffect as useEffect4, useMemo as useMemo3, useState as useState4 } from "react";
+import { useEffect as useEffect3, useMemo as useMemo3, useState as useState3 } from "react";
 import { usePathname as usePathname4 } from "next/navigation";
 import dynamic from "next/dynamic";
 import { CircleHelp as CircleHelp2, Settings as Settings2 } from "lucide-react";
 
 // src/footer/SitesOverview.tsx
 import { FOOTER_SITES, groupSitesByCategory, siteProdUrl } from "@agentic-toolkit/adh-registry";
-import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
+import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
 var SITES_OVERVIEW_POPOVER_ID = "adh-sites-overview";
 
 // src/header/SiteMenu.tsx
@@ -1401,7 +1340,7 @@ function buildDevToolsEntries({
 }
 
 // src/header/envOverride.ts
-import { useSyncExternalStore as useSyncExternalStore2 } from "react";
+import { useSyncExternalStore } from "react";
 import { detectEnv as detectEnv2 } from "@agentic-toolkit/adh-registry";
 var STORAGE_KEY = "adh:debug:env-override";
 var ENV_VALUES = ["production", "staging", "testing", "local"];
@@ -1447,7 +1386,7 @@ function setEnvOverride(env) {
   emit();
 }
 function useEnvOverride() {
-  return useSyncExternalStore2(subscribe, readOverride, () => null);
+  return useSyncExternalStore(subscribe, readOverride, () => null);
 }
 function useEffectiveEnv(hostname) {
   const override = useEnvOverride();
@@ -1456,7 +1395,7 @@ function useEffectiveEnv(hostname) {
 
 // src/header/SiteMenu.tsx
 import { useHelp } from "@agentic-toolkit/adh/help";
-import { Fragment as Fragment5, jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
+import { Fragment as Fragment5, jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
 var DebugConsoleWindow = dynamic(
   () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
 );
@@ -1535,9 +1474,9 @@ function SiteMenu({
     }
     return out;
   }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, recents, pathname]);
-  const [generated, setGenerated] = useState4();
+  const [generated, setGenerated] = useState3();
   const wantGeneratedRoutes = devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0);
-  useEffect4(() => {
+  useEffect3(() => {
     if (!wantGeneratedRoutes) return;
     let cancelled = false;
     void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES }) => {
@@ -1558,7 +1497,7 @@ function SiteMenu({
   const effectiveEnv = useEffectiveEnv(host);
   const realEnv = host ? detectEnv3(host) : null;
   const override = useEnvOverride();
-  const [debugOpen, setDebugOpen] = useState4(false);
+  const [debugOpen, setDebugOpen] = useState3(false);
   const devToolsSection = useMemo3(
     () => devToolsUnlocked && !suppressDevTools ? buildDevToolsEntries({
       routes: effectiveRoutes,
@@ -1608,15 +1547,15 @@ function SiteMenu({
       el.addEventListener("toggle", onToggle);
     });
   }
-  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
-    /* @__PURE__ */ jsx13(
+  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
+    /* @__PURE__ */ jsx12(
       NavigationPopover2,
       {
         entries: allEntries,
         onChoose: navigate,
         triggerLabel: `${label} \u2014 switch site`,
         triggerText: label,
-        triggerIcon: /* @__PURE__ */ jsx13(HubMark2, { className: "adh-nav-popover__mark" }),
+        triggerIcon: /* @__PURE__ */ jsx12(HubMark2, { className: "adh-nav-popover__mark" }),
         triggerContent,
         triggerClassName,
         placeholder: "Search sites, or browse topics",
@@ -1627,7 +1566,7 @@ function SiteMenu({
           shortcut: "overview",
           onSelect: showOverview
         },
-        commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx13(
+        commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx12(
           "button",
           {
             type: "button",
@@ -1637,13 +1576,13 @@ function SiteMenu({
               close({ restoreFocus: false });
               requestAnimationFrame(() => onSettings());
             },
-            children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+            children: /* @__PURE__ */ jsx12(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
           }
         ) : authenticated && settingsHref ? (
           // A real link so middle-click / new-tab work; native nav tears down the
           // page, so no explicit close needed.
-          /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
-        ) : /* @__PURE__ */ jsx13(
+          /* @__PURE__ */ jsx12("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx12(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
+        ) : /* @__PURE__ */ jsx12(
           "button",
           {
             type: "button",
@@ -1653,12 +1592,12 @@ function SiteMenu({
               close({ restoreFocus: false });
               showOverview();
             },
-            children: /* @__PURE__ */ jsx13(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+            children: /* @__PURE__ */ jsx12(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
           }
         )
       }
     ),
-    debugOpen && !suppressDevTools && /* @__PURE__ */ jsx13(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
+    debugOpen && !suppressDevTools && /* @__PURE__ */ jsx12(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
   ] });
 }
 
@@ -1704,18 +1643,18 @@ function hubCoreGroups(authenticated) {
 }
 
 // src/header/MarketingSiteMenu.tsx
-import { jsx as jsx14 } from "react/jsx-runtime";
+import { jsx as jsx13 } from "react/jsx-runtime";
 function MarketingSiteMenu(props) {
   const groups = useMemo4(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
-  return /* @__PURE__ */ jsx14(SiteMenu, { groups, ...props });
+  return /* @__PURE__ */ jsx13(SiteMenu, { groups, ...props });
 }
 
 // src/header/WorkspaceSiteMenu.tsx
 import { useMemo as useMemo5 } from "react";
-import { jsx as jsx15 } from "react/jsx-runtime";
+import { jsx as jsx14 } from "react/jsx-runtime";
 function WorkspaceSiteMenu(props) {
   const groups = useMemo5(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
-  return /* @__PURE__ */ jsx15(SiteMenu, { groups, ...props });
+  return /* @__PURE__ */ jsx14(SiteMenu, { groups, ...props });
 }
 
 // src/header/activeMenuGroups.ts
@@ -1725,10 +1664,10 @@ function isWorkspaceMenuRoute(currentSiteId, pathname) {
 }
 
 // src/header/PrefetchSiblingSites.tsx
-import { useEffect as useEffect5 } from "react";
+import { useEffect as useEffect4 } from "react";
 import { detectEnv as detectEnv4 } from "@agentic-toolkit/adh-registry";
 function PrefetchSiblingSites() {
-  useEffect5(() => {
+  useEffect4(() => {
     if (typeof window === "undefined") return;
     if (detectEnv4(window.location.hostname) !== "local") return;
     const hostPattern = window.location.host.replace(/^[^.]+/, "*");
@@ -1752,18 +1691,18 @@ function PrefetchSiblingSites() {
 }
 
 // src/header/SiteMenuSwitcher.tsx
-import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
 function SiteMenuSwitcher(props) {
   const pathname = usePathname5() ?? "/";
   const onWorkspaceRoute = isWorkspaceMenuRoute(props.currentSiteId, pathname);
-  return /* @__PURE__ */ jsxs10(Fragment6, { children: [
-    /* @__PURE__ */ jsx16(PrefetchSiblingSites, {}),
-    onWorkspaceRoute ? /* @__PURE__ */ jsx16(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx16(MarketingSiteMenu, { ...props })
+  return /* @__PURE__ */ jsxs9(Fragment6, { children: [
+    /* @__PURE__ */ jsx15(PrefetchSiblingSites, {}),
+    onWorkspaceRoute ? /* @__PURE__ */ jsx15(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx15(MarketingSiteMenu, { ...props })
   ] });
 }
 
 // src/header/SiteHeader.tsx
-import { jsx as jsx17 } from "react/jsx-runtime";
+import { jsx as jsx16 } from "react/jsx-runtime";
 function SiteHeader({
   siteId,
   pageTitle,
@@ -1804,11 +1743,11 @@ function SiteHeader({
   const resolvedLoginHref = loginHref ?? (onLogin ? void 0 : hubAuthHref("/login"));
   const resolvedSignupHref = signupHref ?? (onSignup ? void 0 : hubAuthHref("/signup"));
   const switcherSettingsHref = onSettings ? void 0 : settingsHref ?? resolveHubHref("/home/settings");
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx16(
     AdhHeader2,
     {
       siteName,
-      siteSwitcher: /* @__PURE__ */ jsx17(
+      siteSwitcher: /* @__PURE__ */ jsx16(
         SiteMenuSwitcher,
         {
           currentSiteId: siteId,
@@ -1829,7 +1768,7 @@ function SiteHeader({
       leadingActions,
       navLinks: resolvedNavLinks,
       trailingNavLinks,
-      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx17("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx16("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
       user,
       authLoading,
       loginHref: resolvedLoginHref,
@@ -1855,7 +1794,6 @@ export {
   AdhHeader,
   AuthButtons,
   AvatarMenu,
-  ColorModeToggle,
   DEBUG_SECTION,
   DEV_PREVIEW_BADGES,
   DEV_TOOLS_BUILD_ENABLED,
