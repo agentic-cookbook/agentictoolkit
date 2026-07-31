@@ -10,8 +10,9 @@ import manifest from './fonts/metrics.json'
 
 /**
  * Absolute, same-origin hrefs of the faces worth preloading — the ones that carry a
- * page's layout (see the `preload` flags in subset-fonts.py: regular and bold, but not
- * italic, which only `<em>` and the odd pull quote select).
+ * page's layout (see the `preload` flags in subset-fonts.py: all three CORE cuts,
+ * italic included, because `SiteLanding`'s <h1> sets its accent word in italic above
+ * the fold; never the EXT cuts, which `unicode-range` already keeps unfetched).
  *
  * A preload is only worth emitting because these are same-origin: the browser starts the
  * fetch while it is still parsing `<head>`, on the connection that delivered the html,

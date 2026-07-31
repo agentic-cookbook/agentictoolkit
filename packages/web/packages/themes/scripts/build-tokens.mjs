@@ -37,13 +37,19 @@ const FONTS = JSON.parse(readFileSync(new URL('../src/fonts/metrics.json', impor
  * subset-fonts.py, so they cannot drift from the font they describe.
  */
 function fontFaceBlock() {
+  // `unicode-range` is what splits each weight into the preloaded CORE cut and the
+  // lazily-fetched EXT one (see SUBSETS in subset-fonts.py). The ranges are DISJOINT and
+  // spelled out on both, deliberately: a face with no `unicode-range` claims U+0-10FFFF,
+  // which would make the browser fetch the core face to paint a page of pure Cyrillic and
+  // leave the two cuts fighting over the cascade instead of dividing the alphabet.
   const faces = FONTS.faces.map(
-    ({ file, weight, style }) => `@font-face {
+    ({ file, weight, style, unicodeRange }) => `@font-face {
   font-family: '${FONTS.family}';
   font-style: ${style};
   font-weight: ${weight};
   font-display: swap;
   src: url('${FONTS.publicPath}/${file}') format('woff2');
+  unicode-range: ${unicodeRange};
 }`,
   )
   // One STACKED family per fallback (not two faces of one family): a family whose

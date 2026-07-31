@@ -21,17 +21,21 @@ arrives 24% wider than it ends up, and `--font-serif`'s `ui-serif`/Georgia fallb
 is PROPORTIONAL, so display headings re-wrap entirely.
 
 So the faces are subset here, committed, and served from the site's own origin: ~76 KB
-a face instead of ~1 MB, 236 KB for all three instead of 2.9 MB. That plus a
-same-origin `<link rel=preload>` is what makes the swap window short; the
+a face instead of ~1 MB, ~236 KB for the three preloaded cuts instead of 2.9 MB. That
+plus a same-origin `<link rel=preload>` is what makes the swap window short; the
 metric-matched fallback below (see FALLBACKS) is what makes the swap itself invisible.
+
+Each face is cut twice — a preloaded CORE and a lazily-fetched EXT, split by
+`unicode-range` (see SUBSETS). Only the CORE cuts count against first paint.
 
 This script owns TWO outputs, both committed:
 
   - `src/fonts/*.woff2` — the subset faces.
   - `src/fonts/metrics.json` — Iosevka's measured metrics, the derived fallback
-    overrides, and which faces are worth preloading. `scripts/build-tokens.mjs` reads
-    it to emit the theme's `@font-face` block, and `AdhThemeStyle` reads it to emit the
-    preloads, so no number here is retyped anywhere downstream.
+    overrides, each face's `unicode-range`, and which faces are worth preloading.
+    `scripts/build-tokens.mjs` reads it to emit the theme's `@font-face` block, and
+    `AdhThemeStyle` reads it to emit the preloads, so no number here is retyped
+    anywhere downstream.
 
 Run after bumping IOSEVKA_VERSION, then `pnpm build:tokens` to fold the result into
 `src/styles/adh.css`. Nothing runs this automatically: the outputs are committed, and a
@@ -44,6 +48,7 @@ Requires `fonttools` and `brotli`; the script provisions its own venv under
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -65,7 +70,23 @@ FACES = {
     "iosevka-latin-700-normal": "iosevka-700",
 }
 
-# WHOLE Unicode blocks, chosen by whether the family sets type in that block at all.
+# Each face is cut TWICE, into a CORE and an EXT subset that share a family/weight/style
+# and are told apart by `unicode-range`. The browser fetches a face only when it has to
+# paint a codepoint inside that face's range, so the split costs a page nothing unless it
+# actually uses the range — which is what lets the two subsets answer two different
+# questions without either paying for the other:
+#
+#   CORE — the text THIS FAMILY WRITES. Preloaded, so it must stay small.
+#   EXT  — the text OUR USERS write. Never preloaded; it exists so a Cyrillic display
+#          name or a Vietnamese post is not the one string on the page in a different
+#          typeface.
+#
+# The alternative (one face covering both) was measured at +35 KB a face, and there are
+# three preloaded faces — 105 KB added to every first paint on this family's ~45 sites to
+# serve a codepoint almost none of them will ever paint. That is the exact cost this
+# branch exists to remove, so the ranges are split rather than merged.
+#
+# CORE: WHOLE Unicode blocks, chosen by whether the family sets type in that block at all.
 #
 # The rule is deliberately coarse. Cherry-picking individual codepoints would save
 # another ~40 KB a face, but it makes the coverage a hand-maintained list that silently
@@ -80,7 +101,11 @@ FACES = {
 # than here because the corpus is the hub family's, not this package's. Re-run it if the
 # family starts setting type in something new; the usage counts below are from that scan
 # (3,691 files, 250 distinct non-ASCII codepoints).
-UNICODES = ",".join(
+#
+# Note what that corpus is NOT: it is the repo. Every site here also renders text out of
+# the database — persona names, bitbag chat, registry entries, community posts — which no
+# scan of `frontend/src/` can see and no reviewer can bound. That text is what EXT covers.
+CORE_UNICODES = ",".join(
     [
         "U+0000-00FF",  # Basic Latin + Latin-1 Sup — ·, ×, «», §, µ, °, é    924 uses
         "U+0100-017F",  # Latin Extended-A — accented names                    18 uses
@@ -104,14 +129,44 @@ UNICODES = ",".join(
     ]
 )
 
-# Blocks the scan found NO real use of, and what each would cost the regular face:
-# Latin Ext-B +8.5 KB (0 uses), combining diacritics +8.2 KB (0), IPA +7.5 KB (0),
-# spacing modifiers +5.4 KB (2), Greek +5.2 KB (3), Cyrillic +13.1 KB (54, all in one
-# test fixture), super/subscripts +2.3 KB (0 — ² lives in Latin-1), number forms
-# +2.4 KB (0), control pictures +2.5 KB (0), misc symbols & arrows +2.2 KB (12, and
-# those are emoji-presentation characters that render from the system emoji font
-# regardless). Emoji are absent for that last reason: no monospace text font carries
-# colour emoji, so the 53 in the corpus have always come from the platform.
+# EXT: the blocks the repo census found NO real use of — which is exactly why they are
+# the ones DB-backed text is likely to reach for. Each was measured against the regular
+# face at the cost it would have added to CORE: Latin Ext-B +8.5 KB (0 uses in the repo),
+# combining diacritics +8.2 KB (0), IPA +7.5 KB (0), spacing modifiers +5.4 KB (2),
+# Greek +5.2 KB (3), Cyrillic +13.1 KB (54, all in one test fixture), super/subscripts
+# +2.3 KB (0 — ² lives in Latin-1), number forms +2.4 KB (0), control pictures +2.5 KB (0).
+#
+# Latin Extended Additional is the one with no repo uses AND the widest reach: it is where
+# Vietnamese lives, so a single missing block would put every Vietnamese display name in
+# the fallback face.
+#
+# Absent from BOTH: misc symbols & arrows (U+2B00-2BFF, 12 uses — emoji-presentation
+# characters the platform renders from its colour emoji font whatever we ship) and emoji
+# proper, for the same reason. No monospace text font carries colour emoji, so the 53 in
+# the corpus have always come from the platform and always will.
+EXT_UNICODES = ",".join(
+    [
+        "U+0180-024F",  # Latin Extended-B
+        "U+0250-02AF",  # IPA extensions
+        "U+02B0-02FF",  # spacing modifier letters
+        "U+0300-036F",  # combining diacritical marks
+        "U+0370-03FF",  # Greek and Coptic
+        "U+0400-04FF",  # Cyrillic
+        "U+0500-052F",  # Cyrillic Supplement
+        "U+1E00-1EFF",  # Latin Extended Additional — Vietnamese
+        "U+2070-209F",  # superscripts and subscripts
+        "U+2150-218F",  # number forms
+        "U+2400-243F",  # control pictures
+    ]
+)
+
+# Every cut this script makes: (suffix, unicode ranges, preload?). CORE carries the
+# family's own text and is what `<link rel=preload>` fetches; EXT is fetched by the
+# browser only when a page paints a codepoint in its range.
+SUBSETS = (
+    ("", CORE_UNICODES, True),
+    ("-ext", EXT_UNICODES, False),
+)
 
 # `calt` is what draws Iosevka's programming ligatures (=>, !=, ->), which is most of
 # the reason to pick Iosevka for a site about code. `liga`/`ccmp`/`locl`/`kern`/
@@ -240,17 +295,38 @@ json.dump({
             }
         )
 
+    # Every face the theme ships. All THREE core cuts preload: regular and bold carry
+    # body and headings, and italic is not the decorative afterthought it looks like —
+    # `SiteLanding`'s <h1> renders its accent word in italic on every family landing, so
+    # the italic face is above the fold on the first screen of ~45 sites. A face that
+    # paints in the hero and arrives late is the re-flow this whole change removes.
+    # The EXT cuts never preload: they exist for text we cannot see at build time (see
+    # EXT_UNICODES), and `unicode-range` already keeps them unfetched until one appears.
     faces = [
-        {"file": f"{served}.woff2", "weight": weight, "style": style, "preload": preload}
-        for served, weight, style, preload in (
+        {
+            "file": f"{served}{suffix}.woff2",
+            "weight": weight,
+            "style": style,
+            "preload": preload and core_preload,
+            "unicodeRange": unicodes,
+        }
+        for served, weight, style, core_preload in (
             ("iosevka-400", 400, "normal", True),
             ("iosevka-700", 700, "normal", True),
-            # Italic is set only by `<em>` and the odd pull quote. It carries no page's
-            # layout, so it is fetched on demand rather than competing with the two
-            # faces that do.
-            ("iosevka-400-italic", 400, "italic", False),
+            ("iosevka-400-italic", 400, "italic", True),
         )
+        for suffix, unicodes, preload in SUBSETS
     ]
+    # A content revision over the bytes themselves, carried in the served path so the
+    # faces can be cached `immutable` (see mergedHeaders in the hub's
+    # next-config-base.mjs). A re-subset that changes any byte changes this string, so
+    # every URL changes with it and no cache can serve the old bytes under the new
+    # manifest. Derived, never typed: a hand-bumped revision is one someone forgets.
+    digest = hashlib.sha256()
+    for face in faces:
+        digest.update(face["file"].encode())
+        digest.update((OUT_DIR / face["file"]).read_bytes())
+    revision = digest.hexdigest()[:8]
     return {
         "_comment": (
             "AUTO-GENERATED by scripts/subset-fonts.py — do not edit. This file is the "
@@ -267,7 +343,11 @@ json.dump({
         # URL has to be absolute, which makes this prefix shared knowledge between the
         # CSS that references it, the preload that fetches it, and the build step that
         # puts the bytes there. It lives here so those three cannot disagree.
-        "publicPath": "/fonts",
+        #
+        # The trailing revision is what makes a one-year `immutable` cache honest: the
+        # bytes at any given URL can never change, because changing them changes the URL.
+        "publicPath": f"/fonts/{revision}",
+        "revision": revision,
         "iosevka": iosevka,
         "faces": faces,
         "fallbacks": fallbacks,
@@ -284,33 +364,34 @@ def main() -> int:
         source = work / f"{upstream}.woff2"
         if not source.exists():
             fetch(upstream, source)
-        target = OUT_DIR / f"{served}.woff2"
-        subprocess.run(
-            [
-                str(python),
-                "-m",
-                "fontTools.subset",
-                str(source),
-                f"--output-file={target}",
-                "--flavor=woff2",
-                f"--unicodes={UNICODES}",
-                f"--layout-features={LAYOUT_FEATURES}",
-                # The name table is what `local()` in the metric-matched fallback would
-                # match against, and what shows up in devtools; keep it legible.
-                "--name-IDs=1,2,3,4,6",
-                # Preserve the OS/2 + hhea metrics the fallback overrides in
-                # `build-tokens.mjs` are computed from — a subsetter that recalculated
-                # them would silently invalidate those numbers.
-                "--no-prune-unicode-ranges",
-            ],
-            check=True,
-        )
-        before = source.stat().st_size
-        after = target.stat().st_size
-        print(
-            f"subset-fonts: {served}.woff2  {before:,} -> {after:,} bytes "
-            f"({before / after:.1f}x smaller)"
-        )
+        for suffix, unicodes, _preload in SUBSETS:
+            target = OUT_DIR / f"{served}{suffix}.woff2"
+            subprocess.run(
+                [
+                    str(python),
+                    "-m",
+                    "fontTools.subset",
+                    str(source),
+                    f"--output-file={target}",
+                    "--flavor=woff2",
+                    f"--unicodes={unicodes}",
+                    f"--layout-features={LAYOUT_FEATURES}",
+                    # The name table is what `local()` in the metric-matched fallback
+                    # would match against, and what shows up in devtools; keep it legible.
+                    "--name-IDs=1,2,3,4,6",
+                    # Preserve the OS/2 + hhea metrics the fallback overrides in
+                    # `build-tokens.mjs` are computed from — a subsetter that recalculated
+                    # them would silently invalidate those numbers.
+                    "--no-prune-unicode-ranges",
+                ],
+                check=True,
+            )
+            before = source.stat().st_size
+            after = target.stat().st_size
+            print(
+                f"subset-fonts: {served}{suffix}.woff2  {before:,} -> {after:,} bytes "
+                f"({before / after:.1f}x smaller)"
+            )
     metrics = report_metrics(python)
     (OUT_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
     for fallback in metrics["fallbacks"]:
@@ -320,9 +401,12 @@ def main() -> int:
             f"asc/desc/gap {fallback['ascentOverride']}%/"
             f"{fallback['descentOverride']}%/{fallback['lineGapOverride']}%"
         )
+    preloaded = sum((OUT_DIR / f["file"]).stat().st_size for f in metrics["faces"] if f["preload"])
     print(
-        f"subset-fonts: wrote {len(FACES)} faces + metrics.json -> "
-        f"{OUT_DIR.relative_to(PKG)}/  (run `pnpm build:tokens` to fold them into adh.css)"
+        f"subset-fonts: wrote {len(metrics['faces'])} faces + metrics.json -> "
+        f"{OUT_DIR.relative_to(PKG)}/ at revision {metrics['revision']} "
+        f"({preloaded:,} bytes preloaded)  "
+        f"(run `pnpm build:tokens` to fold them into adh.css)"
     )
     return 0
 

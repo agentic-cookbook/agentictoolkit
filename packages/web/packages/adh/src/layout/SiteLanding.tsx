@@ -19,8 +19,16 @@ export type SiteLandingProps = {
 // the .text-landing-* classes carry, so this hero and a site that hand-writes its
 // own landing render the identical tier. The scale is defined once in the toolkit
 // (packages/web/packages/themes/tokens/semantic/typography.json) — resize it THERE.
-// The literal after each var is this file's original value, kept as the fallback
-// for the no-theme case; it is a mirror, not a second source of truth.
+//
+// THE FALLBACK CONVENTION, for every consumer of this scale in the repo: the literal
+// after a --type-landing-* var is THE VALUE THE DEFAULT THEME SETS FOR THAT TOKEN, so
+// the unthemed render is the themed one. It is NOT "whatever this file used to
+// hard-code" — that reading is unverifiable (nothing can check a value against a
+// deleted one) and it re-creates, in the no-theme case, exactly the per-site drift
+// this scale replaced. `landingTypeScale.test.ts` pins the equality repo-wide.
+// The one exemption is `-font`: the token's own value is a nested var(--font-serif),
+// while a consumer's fallback has to be a real family stack for the case where no
+// theme is present at all, so the two cannot be equal by construction.
 const SERIF = 'var(--font-serif, ui-serif, Georgia, serif)'
 const SANS = 'var(--font-sans, ui-sans-serif, system-ui, sans-serif)'
 const MONO = 'var(--font-mono, ui-monospace, monospace)'

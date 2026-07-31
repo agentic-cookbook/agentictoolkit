@@ -294,9 +294,10 @@ function SiteLanding({
       "div",
       {
         style: {
-          fontFamily: MONO,
-          fontSize: "0.7rem",
-          letterSpacing: "0.24em",
+          fontFamily: `var(--type-landing-eyebrow-font, ${MONO})`,
+          fontSize: "var(--type-landing-eyebrow-size, 0.7rem)",
+          lineHeight: "var(--type-landing-eyebrow-line-height, 1.4)",
+          letterSpacing: "var(--type-landing-eyebrow-tracking, 0.24em)",
           textTransform: "uppercase",
           color: MUTED,
           marginBottom: "1.75rem"
@@ -308,9 +309,10 @@ function SiteLanding({
       "h1",
       {
         style: {
-          fontSize: "clamp(2.6rem, 6vw, 4.5rem)",
-          lineHeight: 1.04,
-          letterSpacing: "-0.02em",
+          fontFamily: `var(--type-landing-title-font, ${SERIF})`,
+          fontSize: "var(--type-landing-title-size, clamp(2.6rem, 6vw, 4.5rem))",
+          lineHeight: "var(--type-landing-title-line-height, 1.04)",
+          letterSpacing: "var(--type-landing-title-tracking, -0.02em)",
           fontWeight: 400,
           margin: "0 0 1.5rem"
         },
@@ -325,9 +327,9 @@ function SiteLanding({
       "p",
       {
         style: {
-          fontFamily: SANS,
-          fontSize: "1.1rem",
-          lineHeight: 1.7,
+          fontFamily: `var(--type-landing-lede-font, ${SANS})`,
+          fontSize: "var(--type-landing-lede-size, 1.1rem)",
+          lineHeight: "var(--type-landing-lede-line-height, 1.7)",
           color: MUTED,
           margin: "0 auto 2.75rem",
           maxWidth: 560

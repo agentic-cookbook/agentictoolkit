@@ -74,9 +74,11 @@ async function getAdhTheme() {
 
 // src/themes/AdhThemeStyle.tsx
 import dynamic from "next/dynamic";
+import { preload } from "react-dom";
 import { themes as themes2 } from "@agentic-toolkit/themes/manifest";
 import { splitImports, parseRootProps } from "@agentic-toolkit/themes/tokens";
 import { APPEARANCE_PREPAINT_SCRIPT } from "@agentic-toolkit/themes/appearance";
+import { THEME_FONT_PRELOADS } from "@agentic-toolkit/themes/fonts";
 
 // src/themes/theme-preview.ts
 var THEME_STORAGE_KEY = "adh-theme";
@@ -110,7 +112,28 @@ function ThemeSwitcherAssets({ defaultImports }) {
     }
   }
   const prePaint = themePrePaintScript();
+  const origins = /* @__PURE__ */ new Map();
+  for (const href of fonts) {
+    let origin;
+    try {
+      ;
+      ({ origin } = new URL(href));
+    } catch {
+      continue;
+    }
+    origins.set(origin, origins.get(origin) ?? false);
+    if (origin === "https://fonts.googleapis.com") origins.set("https://fonts.gstatic.com", true);
+  }
   return /* @__PURE__ */ jsxs(Fragment, { children: [
+    [...origins].map(([origin, cors]) => /* @__PURE__ */ jsx(
+      "link",
+      {
+        rel: "preconnect",
+        href: origin,
+        ...cors ? { crossOrigin: "anonymous" } : {}
+      },
+      `pc:${origin}`
+    )),
     [...fonts].map((href) => /* @__PURE__ */ jsx("link", { rel: "stylesheet", href, "data-adh-theme-switch-font": "" }, `sw:${href}`)),
     blocks.map(({ key, css }) => /* @__PURE__ */ jsx(
       "style",
@@ -154,6 +177,11 @@ function SiteDefaultTheme({ baseImports }) {
 function AdhThemeStyle() {
   const entry = themes2[DEFAULT_ADH_THEME];
   if (!entry) return null;
+  if (DEFAULT_SITE_THEME === DEFAULT_ADH_THEME) {
+    for (const href of THEME_FONT_PRELOADS) {
+      preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+    }
+  }
   const { imports, rest } = splitImports(entry.css);
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     imports.map((href) => /* @__PURE__ */ jsx(

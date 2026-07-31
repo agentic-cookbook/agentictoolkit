@@ -33,9 +33,10 @@ function SiteLanding({
       "div",
       {
         style: {
-          fontFamily: MONO,
-          fontSize: "0.7rem",
-          letterSpacing: "0.24em",
+          fontFamily: `var(--type-landing-eyebrow-font, ${MONO})`,
+          fontSize: "var(--type-landing-eyebrow-size, 0.7rem)",
+          lineHeight: "var(--type-landing-eyebrow-line-height, 1.4)",
+          letterSpacing: "var(--type-landing-eyebrow-tracking, 0.24em)",
           textTransform: "uppercase",
           color: MUTED,
           marginBottom: "1.75rem"
@@ -47,9 +48,10 @@ function SiteLanding({
       "h1",
       {
         style: {
-          fontSize: "clamp(2.6rem, 6vw, 4.5rem)",
-          lineHeight: 1.04,
-          letterSpacing: "-0.02em",
+          fontFamily: `var(--type-landing-title-font, ${SERIF})`,
+          fontSize: "var(--type-landing-title-size, clamp(2.6rem, 6vw, 4.5rem))",
+          lineHeight: "var(--type-landing-title-line-height, 1.04)",
+          letterSpacing: "var(--type-landing-title-tracking, -0.02em)",
           fontWeight: 400,
           margin: "0 0 1.5rem"
         },
@@ -64,9 +66,9 @@ function SiteLanding({
       "p",
       {
         style: {
-          fontFamily: SANS,
-          fontSize: "1.1rem",
-          lineHeight: 1.7,
+          fontFamily: `var(--type-landing-lede-font, ${SANS})`,
+          fontSize: "var(--type-landing-lede-size, 1.1rem)",
+          lineHeight: "var(--type-landing-lede-line-height, 1.7)",
           color: MUTED,
           margin: "0 auto 2.75rem",
           maxWidth: 560
@@ -218,11 +220,7 @@ function MarketingRootHtml({
     // on <html> before hydration (the user's colour mode), so the client tree legitimately
     // differs from the server's here. Same contract next-themes has.
     /* @__PURE__ */ jsxs4("html", { lang: htmlLang(loc), dir: localeDir(loc), suppressHydrationWarning: true, children: [
-      /* @__PURE__ */ jsxs4("head", { children: [
-        /* @__PURE__ */ jsx4("link", { rel: "preconnect", href: "https://fonts.googleapis.com" }),
-        /* @__PURE__ */ jsx4("link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" }),
-        /* @__PURE__ */ jsx4(AdhThemeStyle, {})
-      ] }),
+      /* @__PURE__ */ jsx4("head", { children: /* @__PURE__ */ jsx4(AdhThemeStyle, {}) }),
       /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(AppShell, { header: /* @__PURE__ */ jsx4(MarketingSiteHeader, { siteId, navLinks }), footer: { links: [] }, children }) }) })
     ] })
   );

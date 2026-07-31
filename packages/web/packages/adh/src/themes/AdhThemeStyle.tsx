@@ -95,19 +95,39 @@ function ThemeSwitcherAssets({ defaultImports }: { defaultImports: string[] }) {
   // contacted; here — the only place a Google-hosted font is still fetched — they are live.
   // Derived from the URLs actually emitted, so a switcher theme on a new host is covered
   // and a removed one stops being preconnected.
-  const origins = new Set<string>()
+  //
+  // `cors` per origin, because a preconnect only warms the connection the real request
+  // then uses: an anonymous (CORS) preconnect and a plain one land in DIFFERENT connection
+  // pool entries, so getting it backwards costs an extra handshake rather than saving one.
+  // A stylesheet is fetched no-CORS; a webfont is ALWAYS fetched in CORS mode. Google
+  // splits those across two hosts, which is what makes the distinction visible here: the
+  // css comes from fonts.googleapis.com and the woff2 from fonts.gstatic.com, and only the
+  // first is discoverable from the markup while the second is the slow one.
+  const origins = new Map<string, boolean>()
   for (const href of fonts) {
-    const { origin } = new URL(href)
-    origins.add(origin)
-    // Google serves the css from fonts.googleapis.com and the woff2 from fonts.gstatic.com;
-    // only the first is discoverable from the markup, and the second is the slow one.
-    if (origin === 'https://fonts.googleapis.com') origins.add('https://fonts.gstatic.com')
+    let origin: string
+    try {
+      ;({ origin } = new URL(href))
+    } catch {
+      // `href` is whatever a theme's `@import url(...)` names — the token source is ours,
+      // but nothing between there and here parses it, so a relative or malformed url must
+      // not take out the render of every <head> in the family. It stays in `fonts` and is
+      // still emitted as a stylesheet link; it just gets no preconnect.
+      continue
+    }
+    origins.set(origin, origins.get(origin) ?? false)
+    if (origin === 'https://fonts.googleapis.com') origins.set('https://fonts.gstatic.com', true)
   }
 
   return (
     <>
-      {[...origins].map((origin) => (
-        <link key={`pc:${origin}`} rel="preconnect" href={origin} crossOrigin="anonymous" />
+      {[...origins].map(([origin, cors]) => (
+        <link
+          key={`pc:${origin}`}
+          rel="preconnect"
+          href={origin}
+          {...(cors ? { crossOrigin: 'anonymous' as const } : {})}
+        />
       ))}
       {[...fonts].map((href) => (
         <link key={`sw:${href}`} rel="stylesheet" href={href} data-adh-theme-switch-font="" />
@@ -203,8 +223,19 @@ export function AdhThemeStyle() {
   //
   // crossOrigin is REQUIRED even same-origin — fonts are always fetched in CORS mode, so a
   // preload without it does not match the css request and the face is fetched twice.
-  for (const href of THEME_FONT_PRELOADS) {
-    preload(href, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
+  //
+  // Gated on the SAME condition SiteDefaultTheme is, and for the mirror-image reason. These
+  // faces belong to the base theme; a site whose DEFAULT_SITE_THEME is something else has
+  // that theme's `--font-*` layered on top and paints in ITS family, so the preload would
+  // fetch ~236 KB the page never draws a glyph from, on every page of that site. The gate
+  // is deliberately the cruder of the two available tests (theme identity, not "does the
+  // winning theme's font stack resolve to Iosevka") because the two errors are not
+  // symmetric: a preload skipped when it would have helped costs one latency, once; a
+  // preload emitted when it cannot help costs a quarter-megabyte, always.
+  if (DEFAULT_SITE_THEME === DEFAULT_ADH_THEME) {
+    for (const href of THEME_FONT_PRELOADS) {
+      preload(href, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
+    }
   }
   const { imports, rest } = splitImports(entry.css)
   return (
