@@ -55,6 +55,12 @@ export type { GroupTopicItem } from "./group-topic-detail";
 // the hub's useFeatureRoute with the base made a parameter).
 export { useBasePathRoute } from "./use-base-path-route";
 
+// The "?" help affordance the button bars below use. Exported because a HOST
+// renders the same affordance in its own chrome (the hub's workspace header,
+// its settings panes) and must get the identical popover, not a second copy of
+// it — a byte-identical fork of this file lived in the hub until it did.
+export { HelpPopover } from "./HelpPopover";
+
 // The master/detail substrate: the two-pane layout + its parts, the leaf editor, the
 // list-as-rail-level bridge, and the editing state machine.
 export {

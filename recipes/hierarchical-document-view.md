@@ -146,7 +146,7 @@ Three seams keep site vocabulary out of the toolkit:
 
 The centre column is a `max-w-3xl` prose measure. Every colour is a flat
 `--color-*` token from the shared ADH theme — the same contract
-`@adh-shared/adh/styles.css` provides to every site in the family — so HDV inherits
+`@agentic-toolkit/adh/styles.css` provides to every site in the family — so HDV inherits
 the host's palette without a per-site restyle.
 
 ```

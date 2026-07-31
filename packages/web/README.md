@@ -156,8 +156,11 @@ npm run dev
 - **Workspace**: pnpm 9 with the workspace root at `packages/web/`. Strict
   cross-package boundaries enforced by pnpm's resolver — undeclared
   workspace imports fail to build — plus `scripts/check_boundaries.py`,
-  which bans consumer aliases (`@/…`) and monorepo-internal imports
-  (`@adh-shared/…`) from every package source.
+  which bans consumer aliases (`@/…`) from every package source and stops the
+  generic tier importing the adh vocabulary tier. It derives that tier from the
+  packages' own `package.json` names rather than a hardcoded scope string, so a
+  rename cannot silently blind it (which is exactly what retired the earlier
+  literal `@adh-shared/…` ban).
 - **Site**: Next.js 15 App Router, static `generateStaticParams` per
   example route.
 

@@ -45,7 +45,7 @@ export interface MarkdownEditorProps {
 
 /** Read a chosen `.md` file and hand its text + name back to the caller — the
  *  built-in upload control. Keeps the hidden native-input pattern (the only way
- *  to open a file picker; there is no @adh-shared file-upload primitive). */
+ *  to open a file picker; there is no shared file-upload primitive). */
 function UploadMarkdownControl({
   onUpload,
   disabled,
@@ -76,7 +76,7 @@ function UploadMarkdownControl({
         <Upload data-icon="inline-start" />
         Upload .md
       </Button>
-      {/* adh-ui-allow: cs-no-bespoke — a file picker requires a native <input type="file">; there is no @adh-shared file-upload primitive, and the editor's upload control mandates it. The input is sr-only/aria-hidden; the visible control is the shared Button above. approved by mike 2026-06-26 */}
+      {/* adh-ui-allow: cs-no-bespoke — a file picker requires a native <input type="file">; there is no shared file-upload primitive, and the editor's upload control mandates it. The input is sr-only/aria-hidden; the visible control is the shared Button above. approved by mike 2026-06-26 */}
       <input
         ref={inputRef}
         type="file"
