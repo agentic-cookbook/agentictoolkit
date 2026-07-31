@@ -527,6 +527,17 @@ export function HierarchicalTopicDetail({
    * It is opt-in rather than the default because the seed's one visible consequence — content in
    * the pre-hydration paint — is an improvement for a topic browser and a regression for a pane
    * that would rather show nothing until it is live.
+   *
+   * THE CONTRACT IT PUTS ON `children`: the handoff is a real unmount and remount, not a move. React
+   * has no way to relocate a subtree between parents while preserving it, so on the commit after
+   * mount the detail runs cleanup and then setup AGAIN — effects re-fire, `useState` initialisers
+   * re-run, refs are re-attached, a `<video>` restarts, an uncontrolled `<input>` loses what was
+   * typed. That is harmless for content read out of props, which is what a topic browser's detail
+   * is; it is not harmless for a detail that initialises anything in a mount effect (opening a
+   * socket, starting a timer, POSTing an analytics event — which fires twice) or that keeps state
+   * only in itself. Such a detail should either lift that state to the owner, so the remount is a
+   * re-read rather than a reset, or leave `ssrDetail` off. This is invisible in development,
+   * where StrictMode double-invokes mount effects anyway and so hides the extra pass.
    */
   ssrDetail?: boolean
   /** Innermost detail content for the current selection (lands in the rightmost
@@ -1750,6 +1761,25 @@ function CoveredStack({
     hoverIndex >= 0 && lastIdx >= 0 ? revealLeft[lastIdx]! + railWidth(rendered[lastIdx]!) - offshift : -1
   const detailLeft = Math.max(restingDetailLeft, revealRight)
 
+  // THE SEED'S LEFT EDGE. `restingDetailLeft` is the fit pass's answer, and the fit pass does not
+  // run without a measurement: both loops above are inside `if (containerW > 0)`, so before the
+  // ResizeObserver's first callback `pressure`, `hidden` and `offshift` are all 0 and this resolves
+  // to the sum of every rail's FULL width — a number that assumes room the container may not have.
+  //
+  // With JavaScript that state lasts less than a frame. Without it, it is the finished page: the
+  // seed is the only detail there will ever be, and it was being placed several hundred pixels
+  // inside a container that is `relative overflow-hidden`, so on a phone its resolved width was 0
+  // and the prose was clipped out of sight entirely. In the bytes, invisible on screen — which
+  // satisfies a crawler and fails the reader `ssrDetail` exists for.
+  //
+  // So while the seed is what is showing, the detail owns the whole box. That is also the only
+  // honest layout for it: the rails beside it are driven by `onSelect` handlers, so with no
+  // JavaScript they are decoration, and giving the page's content the width instead of the dead
+  // navigation is what the pane would do anyway if it had been measured. The handoff to the portal
+  // does not slide, because `useInPlaceOnStructureChange` seeds its hold window at MOUNT precisely
+  // so measurement-driven `left` changes in the first commits are not animated.
+  const paneLeft = detailSeed ? 0 : detailLeft
+
   // LAYOUT LOG — the fit pass's discrete outcome (who is covered, how many slid off), on change
   // only, with the width and detail geometry it resolved at (htdv-log.ts).
   const fitSig = `${rendered.map((_l, i) => (isCovered(i) ? "c" : "o")).join("")}|${hidden}|${offshift}`
@@ -2058,13 +2088,18 @@ function CoveredStack({
           is a measurement from the previous commit, so while the window is being dragged the pane
           is always one frame behind the edge it is supposed to sit on — the width visibly wanders.
           Anchoring both edges makes the browser solve `width` from the live container on every
-          frame, for free and exactly. `left` is still the only animated edge; width follows it. */}
+          frame, for free and exactly. `left` is still the only animated edge; width follows it.
+
+          `paneLeft`, not `detailLeft`, precisely because of that pinned right edge: an unmeasured
+          `left` past the container's own width solves to a width of ZERO, and this box is inside an
+          `overflow-hidden` — so the pre-measurement render doesn't merely sit wrong, it disappears.
+          See the `paneLeft` definition for why that window is the whole page without JavaScript. */}
       <section
         key="__detail__"
         // Not `data-htd-col`: that attribute means "this box IS list N" to the pointer→index lookup
         // (`colFromTarget`), and the detail is not a list.
         data-htd-detail
-        style={{ left: detailLeft, right: 0, zIndex: rendered.length + 1 }}
+        style={{ left: paneLeft, right: 0, zIndex: rendered.length + 1 }}
         className={cn(
           "absolute top-0 bottom-0 flex flex-col overflow-auto bg-apt-surface",
           animate && "transition-[left] duration-[calc(300ms*var(--apt-anim-scale,1))] ease-in-out",
