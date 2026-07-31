@@ -143,8 +143,11 @@
  * brighten on hover, no ground. That is the identity, written once here.
  *
  * The box is the same 2.25rem square as .adh-button--size-icon, so a header carrying
- * both lines up, and the same as the `p-2` around a 1.25rem glyph these replaced. */
+ * both lines up, and the same as the `p-2` around a 1.25rem glyph these replaced.
+ * `position: relative` is the anchor for a corner badge (see the colour-mode toggle);
+ * it costs nothing to a control without one. */
 .adh-header__icon-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -177,42 +180,49 @@
   flex-shrink: 0;
 }
 
-/* ── The colour-mode toggle (System → Light → Dark) ────────────────────────────────
+/* ── The colour-mode toggle (auto → dark → light) ──────────────────────────────────
  *
- * All three faces ship and CSS picks one, from the `data-color-mode` attribute the
- * appearance pre-paint script writes on <html> before anything paints — so the glyph is
- * right in the FIRST frame. A JS branch cannot be: the saved preference lives in
- * localStorage, which does not exist when this HTML is generated, so the server would
- * commit to one face and the client would swap it a frame later on most loads.
- *
- * The attribute, NOT `html.dark`. `data-color-mode` holds the PREFERENCE — the very
- * option the Appearance panel shows selected — while the class holds the mode it
- * resolved to; under `auto` on a dark OS both are set, so keying off the class would
- * draw two glyphs at once. Keying off the preference also means this button and that
- * panel can never disagree about what is chosen.
+ * Both faces ship and CSS picks one, from the `dark` class the appearance pre-paint
+ * script sets before anything paints — so the glyph is right in the FIRST frame. A JS
+ * branch on the resolved mode cannot be: `auto` needs matchMedia, which does not exist
+ * when this HTML is generated, so the server would commit to a sun and the client would
+ * swap it a frame later on every dark-mode load.
  *
  * lucide marks its glyphs aria-hidden; the button's own aria-label carries the meaning. */
-.adh-color-mode-toggle__face {
+.adh-color-mode-toggle__moon {
   display: none;
 }
 
-/* `auto` doubles as the fallback face, for a host that renders the header without the
-   pre-paint script: no attribute, no match, and an empty 2.25rem square where a control
-   should be. A monitor is the honest guess there — nothing has been chosen. */
-.adh-color-mode-toggle__auto {
+html.dark .adh-color-mode-toggle__moon {
   display: block;
 }
 
-html[data-color-mode="light"] .adh-color-mode-toggle__auto,
-html[data-color-mode="dark"] .adh-color-mode-toggle__auto {
+html.dark .adh-color-mode-toggle__sun {
   display: none;
 }
 
-html[data-color-mode="light"] .adh-color-mode-toggle__light {
-  display: block;
+/* The auto-mode corner badge, on the same principle and for the same reason: the
+   pre-paint script writes `data-color-mode` on <html> alongside the `dark` class, so
+   the badge can be decided in CSS too and is likewise right in the first frame. It
+   used to wait for a `mounted` effect, on the belief that the mode "is recorded
+   nowhere" — applyAppearance has written that attribute for as long as it has written
+   the class.
+
+   Written as a COMPOUND selector, and it has to be: `.adh-header__icon-button > svg`
+   above carries a type selector, so the bare class would lose the size battle to it
+   (0,1,1 beats 0,1,0) and the badge would be drawn at full glyph size. */
+.adh-header__icon-button > .adh-color-mode-toggle__badge {
+  display: none;
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  pointer-events: none;
+  color: var(--color-accent);
 }
 
-html[data-color-mode="dark"] .adh-color-mode-toggle__dark {
+html[data-color-mode="auto"] .adh-header__icon-button > .adh-color-mode-toggle__badge {
   display: block;
 }
 
