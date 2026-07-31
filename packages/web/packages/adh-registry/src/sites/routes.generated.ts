@@ -118,8 +118,8 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   ],
   cookbook: [
     '/',
+    '/[...slug]',
     '/auth/callback',
-    '/details/[[...slug]]',
     '/home',
     '/privacy',
     '/terms',

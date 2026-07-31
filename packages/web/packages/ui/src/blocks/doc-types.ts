@@ -61,9 +61,13 @@ export interface HdvNavNode {
 }
 
 /**
- * A fixed row above the tree — the pages that are not documents ("Overview",
- * "Projects"). They are data rather than a slot so the divider beneath them can
- * disappear along with them.
+ * A fixed row outside the tree — a page that is not a document, drawn with a
+ * section's own type but with no contents to open ("Projects", "Changelog").
+ *
+ * They are data rather than a slot so the divider that separates them from the
+ * tree can appear and disappear along with them. `DocNav` takes two lists,
+ * `topLinks` and `bottomLinks`, which differ only in which side of the tree they
+ * sit on and therefore which side of them the divider goes.
  */
 export interface DocNavTopLink {
   label: ReactNode

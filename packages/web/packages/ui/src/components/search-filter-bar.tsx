@@ -41,11 +41,34 @@ export interface FilterSelectConfig {
   onChange: (value: string) => void;
 }
 
+/**
+ * How the search field and the filter row are arranged.
+ *
+ * - `"stacked"` (the default) — filters sit in a row UNDER the search field. This
+ *   is the shape for a sidebar or a narrow column beside a result list.
+ * - `"inline"` — one wrapping row, the search field taking the slack. This is the
+ *   shape for a bar spanning the page under a header, where a second line of
+ *   controls would push the content it filters below the fold.
+ */
+export type SearchFilterBarOrientation = "stacked" | "inline";
+
 export interface SearchFilterBarProps {
   /** The (required) search field configuration. */
   search: SearchFieldConfig;
-  /** Zero or more filter dropdowns, rendered in a row under the search field. */
+  /** Zero or more filter dropdowns, rendered in a row with the search field. */
   filters?: FilterSelectConfig[];
+  /** Row layout — see {@link SearchFilterBarOrientation}. Defaults to `"stacked"`. */
+  orientation?: SearchFilterBarOrientation;
+  /**
+   * Extra filter controls, rendered in the filter row after any `filters`.
+   *
+   * `filters` covers the single-select axis, which is most of them. An axis that
+   * is genuinely a different control — a multi-select, a date range, a toggle
+   * group — arrives here instead of growing a config union that has to describe
+   * every control the platform will ever filter with. The caller composes; the
+   * bar supplies the landmark, the field and the row.
+   */
+  children?: React.ReactNode;
   /** Extra classes on the `role="search"` root. */
   className?: string;
   /**
@@ -56,22 +79,39 @@ export interface SearchFilterBarProps {
 }
 
 /**
- * A search field plus a configurable row of filter `<select>`s, wrapped in a
- * `role="search"` region. Every axis is fully controlled by the caller (value +
- * onChange); the option sets are supplied by the caller so a narrowed result
- * list can never empty its own dropdowns. Composes the shared {@link Input} and
- * {@link Select} primitives — the single home for the "search + filters above a
- * list" pattern across the platform.
+ * A search field plus a configurable row of filters, wrapped in a `role="search"`
+ * region. Every axis is fully controlled by the caller (value + onChange); the
+ * option sets are supplied by the caller so a narrowed result list can never empty
+ * its own dropdowns. Composes the shared {@link Input} and {@link Select}
+ * primitives — the single home for the "search + filters over a list" pattern
+ * across the platform.
  */
 export function SearchFilterBar({
   search,
   filters = [],
+  orientation = "stacked",
+  children,
   className,
   "aria-label": ariaLabel,
 }: SearchFilterBarProps): React.ReactElement {
+  const inline = orientation === "inline";
+  // `children` may legitimately be `false`/`null` from a host's own conditional, so
+  // the row is drawn for what React would actually render, not for whether the prop
+  // was passed.
+  const hasControls = filters.length > 0 || Boolean(children);
   return (
-    <div role="search" aria-label={ariaLabel} className={cn("flex flex-col gap-2", className)}>
-      <div className="relative">
+    <div
+      role="search"
+      aria-label={ariaLabel}
+      className={cn(
+        inline ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2",
+        className,
+      )}
+    >
+      {/* `min-w-48` rather than a bare `flex-1`: a flex item's floor is its content
+          width, and an empty search field has none, so on a narrow bar the field
+          would collapse to the icon and hand every spare pixel to the controls. */}
+      <div className={cn("relative", inline && "min-w-48 flex-1")}>
         <Search
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
@@ -86,7 +126,7 @@ export function SearchFilterBar({
           onKeyDown={search.onKeyDown}
         />
       </div>
-      {filters.length > 0 && (
+      {hasControls && (
         <div className="flex gap-2">
           {filters.map((f) => (
             <Select
@@ -103,6 +143,7 @@ export function SearchFilterBar({
               ))}
             </Select>
           ))}
+          {children}
         </div>
       )}
     </div>

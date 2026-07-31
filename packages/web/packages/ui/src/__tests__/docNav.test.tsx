@@ -9,6 +9,7 @@ import {
   DocNavTree,
   DOC_NAV_ASIDE_CLASS,
   DOC_NAV_BRANCH_LIST_CLASS,
+  DOC_NAV_DESKTOP_NAV_CLASS,
   DOC_NAV_DRAWER_CLASS,
   DOC_NAV_NAV_CLASS,
   DOC_NAV_OVERLAY_CLASS,
@@ -277,7 +278,9 @@ describe('DocNav', () => {
     const asides = container.querySelectorAll('aside')
     expect(asides).toHaveLength(1)
     expect(asides[0]!.className).toBe(DOC_NAV_ASIDE_CLASS)
-    expect(container.querySelector('nav')!.className).toBe(DOC_NAV_NAV_CLASS)
+    expect(container.querySelector('nav')!.className).toBe(
+      `${DOC_NAV_NAV_CLASS} ${DOC_NAV_DESKTOP_NAV_CLASS}`,
+    )
   })
 
   it('adds the drawer when open, with the same nav inside', () => {
@@ -288,6 +291,47 @@ describe('DocNav', () => {
       DOC_NAV_DRAWER_CLASS,
     ])
     expect(container.querySelectorAll('nav')).toHaveLength(2)
+  })
+
+  it('stops rows wrapping in the column, and lets them wrap in the drawer', () => {
+    // A wrapped row in a tree reads as two entries. The column is wide and can
+    // scroll sideways, so nothing there wraps; the drawer is a phone's whole
+    // width, where a second line beats dragging a row sideways to finish it.
+    // `white-space` inherits, so the ONE declaration on the nav does every depth.
+    const { container } = render(<DocNav nodes={NODES} activePath="/" open />)
+    const [column, drawer] = Array.from(container.querySelectorAll('nav'))
+
+    expect(column!.className).toContain('whitespace-nowrap')
+    expect(column!.className).toContain('overflow-x-auto')
+    expect(drawer!.className).toBe(DOC_NAV_NAV_CLASS)
+    expect(drawer!.className).not.toContain('whitespace-nowrap')
+  })
+
+  it('renders the fixed rows below the tree, with the rule above them', () => {
+    // The mirror of `topLinks`: same row, other end, and the rule moves with it —
+    // above the rows rather than below, because down there it OPENS them.
+    const { container } = render(
+      <DocNav nodes={NODES} activePath="/" bottomLinks={[{ label: 'Cookbook Project', href: '/projects' }]} />,
+    )
+    const children = Array.from(container.querySelector('nav')!.children)
+    const rule = children.findIndex((el) => el.className.includes('border-t'))
+    const row = children.findIndex((el) => el.querySelector('h3'))
+
+    expect(rule).toBeGreaterThan(-1)
+    expect(row).toBe(rule + 1)
+    expect(screen.getByRole('link', { name: 'Cookbook Project' })).toBeTruthy()
+  })
+
+  it('draws a rule at each end when both ends carry rows', () => {
+    const { container } = render(
+      <DocNav
+        nodes={NODES}
+        activePath="/"
+        topLinks={TOP}
+        bottomLinks={[{ label: 'Cookbook Project', href: '/projects' }]}
+      />,
+    )
+    expect(container.querySelectorAll('nav > div.border-t')).toHaveLength(2)
   })
 
   it('opens the drawer BELOW the header, never over or under it', () => {

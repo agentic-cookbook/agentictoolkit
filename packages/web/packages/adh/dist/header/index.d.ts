@@ -8,6 +8,7 @@ export { SiteOptionsMenu } from './SiteOptionsMenu';
 export type { SiteOptionsMenuProps, SiteLink } from './SiteOptionsMenu';
 export { AuthButtons } from './AuthButtons';
 export type { AuthButtonsProps } from './AuthButtons';
+export { ColorModeToggle } from './ColorModeToggle';
 export { NavLinkItem, pathMatches } from './NavLink';
 export type { NavLink, NavLinkIcon, NavLinkItemProps } from './NavLink';
 export { NavigationPopover } from './NavigationPopover';

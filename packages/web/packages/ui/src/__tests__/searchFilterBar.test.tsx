@@ -108,4 +108,63 @@ describe('SearchFilterBar', () => {
     fireEvent.change(category, { target: { value: '' } })
     expect(onChange).toHaveBeenCalledWith('')
   })
+
+  it('renders extra controls in the filter row, beside the selects', () => {
+    render(
+      <SearchFilterBar
+        search={baseSearch()}
+        filters={[
+          {
+            name: 'category',
+            label: 'Filter by category',
+            value: '',
+            options: ['Agents'],
+            allLabel: 'All categories',
+            onChange: vi.fn(),
+          },
+        ]}
+      >
+        <button type="button">Platforms</button>
+      </SearchFilterBar>,
+    )
+    // Same row as the select — the slot is an extra AXIS, not a second bar.
+    // Anchored on the child, whose parent IS the row: `Select` wraps its own
+    // `<select>` in a relative div for the chevron, so walking up from the
+    // combobox lands one level short.
+    const row = screen.getByRole('button', { name: 'Platforms' }).parentElement!
+    expect(within(row).getByRole('combobox', { name: 'Filter by category' })).toBeInTheDocument()
+  })
+
+  it('draws the filter row for children alone, with no selects configured', () => {
+    render(
+      <SearchFilterBar search={baseSearch()}>
+        <button type="button">Platforms</button>
+      </SearchFilterBar>,
+    )
+    expect(screen.getByRole('button', { name: 'Platforms' })).toBeInTheDocument()
+  })
+
+  it('draws no filter row for a child a host conditioned away', () => {
+    // `{cond && <X/>}` passes `false`, not nothing. Testing the PROP for presence
+    // would draw an empty row that still takes its gap.
+    const { container } = render(
+      <SearchFilterBar search={baseSearch()}>{false}</SearchFilterBar>,
+    )
+    expect(container.querySelectorAll('[role="search"] > div')).toHaveLength(1)
+  })
+
+  it('stacks by default and lays out in one row when asked to', () => {
+    const { container, rerender } = render(<SearchFilterBar search={baseSearch()} />)
+    const root = () => container.querySelector('[role="search"]')!
+    expect(root().className).toContain('flex-col')
+
+    rerender(<SearchFilterBar search={baseSearch()} orientation="inline" />)
+    expect(root().className).not.toContain('flex-col')
+    expect(root().className).toContain('flex-wrap')
+    // The field takes the slack, with a floor — an empty search box has no content
+    // width of its own to hold a `flex-1` open.
+    const field = screen.getByRole('searchbox').parentElement!
+    expect(field.className).toContain('flex-1')
+    expect(field.className).toContain('min-w-48')
+  })
 })

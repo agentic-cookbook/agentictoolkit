@@ -29,13 +29,38 @@ import { cn } from "../lib/utils"
 import { DefaultDocLink } from "./doc-link"
 import type { DocLinkComponent, DocNavTopLink, HdvNavNode } from "./doc-types"
 
-/** The desktop column: sticky under a 3.5rem header, scrolling on its own. */
+/** The desktop column: sticky under a 3.5rem header, scrolling on its own.
+ *
+ *  It was `w-80` (20rem), and at that width a document tree wraps: on the cookbook's
+ *  492 rows — 24px of nav padding a side, 14px of indent per level, ~7px a character
+ *  at `text-sm` — 80 of them ran past the column and took a second line, which in a
+ *  tree reads as two entries rather than one. `w-96` clears all but 28 of them, and
+ *  `xl:w-[32rem]` clears all but ONE (an 84-character appendix title; the next longest
+ *  is 60). Two steps rather than one because the wide value is only affordable once
+ *  there is a viewport to spend: 32rem is 40% of an `xl` screen but half of an `lg`
+ *  one, and a nav that takes half the window has stopped being a sidebar.
+ *
+ *  The guarantee itself is `DOC_NAV_DESKTOP_NAV_CLASS` below, not these widths — no
+ *  width can be correct for every theme, because `--font-sans` is a theme token and
+ *  the family swaps under it. */
 export const DOC_NAV_ASIDE_CLASS =
-  "hidden lg:block w-80 shrink-0 border-r border-[var(--color-border-subtle)] overflow-y-auto sticky top-14 h-[calc(100vh-3.5rem)]"
+  "hidden lg:block w-96 xl:w-[32rem] shrink-0 border-r border-[var(--color-border-subtle)] overflow-y-auto sticky top-14 h-[calc(100vh-3.5rem)]"
 
 /** The nav element itself, shared verbatim by the aside and the drawer. */
 export const DOC_NAV_NAV_CLASS =
   "flex flex-col gap-6 px-6 py-6 overflow-y-auto h-full"
+
+/** What the DESKTOP column adds, and the drawer deliberately does not.
+ *
+ *  `white-space` is inherited, so one declaration on the `nav` covers every row at
+ *  every depth — that is what makes "no entry wraps" a property of the column rather
+ *  than a class each of the five row styles has to remember. Anything still too long
+ *  for the width scrolls instead, which is why `overflow-x` comes with it.
+ *
+ *  The drawer is left wrapping on purpose. It is the phone's navigation, where there
+ *  is no width to widen to, and a row that wraps onto a second line is a better
+ *  answer there than a row you have to drag sideways to finish reading. */
+export const DOC_NAV_DESKTOP_NAV_CLASS = "whitespace-nowrap overflow-x-auto"
 
 /** The slide-over's viewport: everything below the 3.5rem header, and nothing
  *  above it. It used to be `fixed inset-0 z-50`, which is the same z-index the
@@ -330,6 +355,41 @@ function NavSection({
   )
 }
 
+/**
+ * A fixed row: a section's type and accent, with no contents and no control.
+ *
+ * The same component draws `topLinks` and `bottomLinks`, so a host cannot end up
+ * with two kinds of fixed row that read differently depending on which end of the
+ * nav they were passed to.
+ */
+function NavFixedLink({
+  link,
+  activePath,
+  LinkComponent,
+}: {
+  link: DocNavTopLink
+  activePath: string
+  LinkComponent: DocLinkComponent
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <h3 className={DOC_NAV_TOP_LINK_CLASS}>
+        {activePath === link.href && (
+          <span className="absolute -left-6 top-0 bottom-0 w-0.5 bg-[var(--color-accent)]" />
+        )}
+        <LinkComponent to={link.href} className="hover:text-[var(--color-accent)]">
+          {link.label}
+        </LinkComponent>
+      </h3>
+    </div>
+  )
+}
+
+/** The rule that separates the fixed rows from the tree. */
+function NavDivider() {
+  return <div className="border-t border-[var(--color-border-subtle)]" />
+}
+
 export interface DocNavTreeProps {
   /** Top-level sections, in the order they should appear. */
   nodes: HdvNavNode[]
@@ -393,6 +453,16 @@ export interface DocNavProps
   activePath: string
   /** Fixed rows above the tree. Omit them and their divider goes too. */
   topLinks?: DocNavTopLink[]
+  /**
+   * Fixed rows BELOW the tree, behind a divider of their own.
+   *
+   * The mirror of `topLinks`, and separate from it rather than a position flag on
+   * one list, because the divider is not the same rule: above the tree it closes
+   * the fixed rows, below it opens them. A host that wants a row at each end
+   * passes both and gets both rules; a host that wants neither passes neither and
+   * gets an undivided tree.
+   */
+  bottomLinks?: DocNavTopLink[]
   /** The host's router link. Defaults to a plain `<a href>`. */
   LinkComponent?: DocLinkComponent
   /** Whether the mobile drawer is showing. Controlled — the opener lives in the header. */
@@ -409,6 +479,7 @@ export function DocNav({
   nodes,
   activePath,
   topLinks = [],
+  bottomLinks = [],
   LinkComponent = DefaultDocLink,
   open = false,
   onClose,
@@ -425,29 +496,24 @@ export function DocNav({
   // every time the reader closed it, so mobile expansions would never survive.
   const { expanded, toggle } = useExpandedSections(nodes, activePath)
 
-  const nav = (
-    <nav className={DOC_NAV_NAV_CLASS}>
+  // A function rather than one element, because the two shells no longer render
+  // the same nav: the desktop column adds `DOC_NAV_DESKTOP_NAV_CLASS` and the
+  // drawer does not. Everything inside is still one description, so the two can
+  // only differ in what is passed here.
+  const navFor = (extra?: string) => (
+    <nav className={cn(DOC_NAV_NAV_CLASS, extra)}>
       {topLinks.map((link) => (
-        <div key={link.href} className="flex flex-col gap-3">
-          <h3 className={DOC_NAV_TOP_LINK_CLASS}>
-            {activePath === link.href && (
-              <span className="absolute -left-6 top-0 bottom-0 w-0.5 bg-[var(--color-accent)]" />
-            )}
-            <LinkComponent
-              to={link.href}
-              className="hover:text-[var(--color-accent)]"
-            >
-              {link.label}
-            </LinkComponent>
-          </h3>
-        </div>
+        <NavFixedLink
+          key={link.href}
+          link={link}
+          activePath={activePath}
+          LinkComponent={LinkComponent}
+        />
       ))}
       {/* The rule separates the fixed rows from the tree. With no fixed rows
           there is nothing to separate, and it would read as an empty first
           section. */}
-      {topLinks.length > 0 && (
-        <div className="border-t border-[var(--color-border-subtle)]" />
-      )}
+      {topLinks.length > 0 && <NavDivider />}
       <DocNavTree
         nodes={nodes}
         activePath={activePath}
@@ -455,13 +521,24 @@ export function DocNav({
         expandedSections={expanded}
         onToggleSection={toggle}
       />
+      {/* And the same rule on the other side, for the same reason: with no rows
+          below it, it would draw a line under the last section and close nothing. */}
+      {bottomLinks.length > 0 && <NavDivider />}
+      {bottomLinks.map((link) => (
+        <NavFixedLink
+          key={link.href}
+          link={link}
+          activePath={activePath}
+          LinkComponent={LinkComponent}
+        />
+      ))}
     </nav>
   )
 
   return (
     <>
       <aside className={cn(DOC_NAV_ASIDE_CLASS, className)} {...rest}>
-        {nav}
+        {navFor(DOC_NAV_DESKTOP_NAV_CLASS)}
       </aside>
 
       {open && (
@@ -490,7 +567,7 @@ export function DocNav({
                 <X className="h-5 w-5" strokeWidth={2} />
               </button>
             </div>
-            {nav}
+            {navFor()}
           </aside>
         </div>
       )}
