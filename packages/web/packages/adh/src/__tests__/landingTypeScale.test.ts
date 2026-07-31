@@ -139,6 +139,26 @@ function frontendSrc(): string {
 }
 
 /**
+ * The themes package's `src/fonts`, found by walking up to the workspace `packages/` dir
+ * that holds it — same reason frontendSrc() walks. A counted hop is what broke here: the
+ * `../../../../external/agentictoolkit/...` written when this file lived in adh's old app
+ * tier still RESOLVED after the package moved into the submodule, to a doubled path that
+ * exists nowhere, so the assertion below failed on a bookkeeping error rather than on the
+ * thing it guards. The manifest is the marker because it is the file materializeThemeFonts
+ * itself reads.
+ */
+function themeFontsDir(): string {
+  let dir = dirname(fileURLToPath(import.meta.url))
+  for (;;) {
+    const candidate = resolve(dir, 'themes/src/fonts')
+    if (existsSync(resolve(candidate, 'metrics.json'))) return candidate
+    const up = dirname(dir)
+    if (up === dir) throw new Error('the @agentic-toolkit/themes package was not found above this test')
+    dir = up
+  }
+}
+
+/**
  * Every source file under frontend/src that is neither build output nor a dependency.
  *
  * Dot-directories are skipped wholesale, which is not cosmetic: `frontend/src/external`
@@ -328,12 +348,14 @@ describe('the first-load font contract', () => {
   })
 
   it('ships the preloaded bytes at the path it preloads', () => {
-    // materializeThemeFonts (frontend/src/next-config-base.mjs) copies these into each
-    // site's public/ at build time; the source of truth is the themes package.
-    const fontsDir = resolve(
-      dirname(fileURLToPath(import.meta.url)),
-      '../../../../external/agentictoolkit/packages/web/packages/themes/src/fonts',
-    )
+    // `materializeThemeFonts` (the themes package's own src/materialize-fonts.mjs, called
+    // from every next.config) copies these into each app's public/ at build time; the
+    // source of truth is the themes package, found by walking up rather than by counting
+    // `..` segments — for the same reason frontendSrc() does, and this assertion is the
+    // proof it matters: the hop written here when this file lived in adh's old app tier
+    // pointed OUT of the tier and into the submodule, and after the move it still
+    // resolved, to a doubled path that exists nowhere.
+    const fontsDir = themeFontsDir()
     for (const href of THEME_FONT_PRELOADS) {
       const file = resolve(fontsDir, href.split('/').pop() as string)
       expect(() => statSync(file), `${href} has no bytes at ${file}`).not.toThrow()
