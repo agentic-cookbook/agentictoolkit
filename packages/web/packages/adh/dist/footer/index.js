@@ -279,6 +279,7 @@ export {
   BITBAG_PERSONA,
   SITES_OVERVIEW_POPOVER_ID,
   SiteFooter,
+  buildVersionLabel,
   createSeededBackend,
   useChatTheme
 };

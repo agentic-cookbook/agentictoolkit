@@ -9,6 +9,9 @@ export type { AdhFooterProps, FooterLink } from './AdhFooter'
 // happened to share a name.
 export { SiteFooter } from './SiteFooter'
 export type { SiteFooterProps } from './SiteFooter'
+// Exported for personaregistry, which renders no footer and so has nowhere to mount
+// `SiteFooter` — it composes this label into its own fixed corner badge instead.
+export { buildVersionLabel } from './SiteFooter'
 export { SITES_OVERVIEW_POPOVER_ID } from './SitesOverview'
 // The seeded-backend primitives are exported because the Help sites reuse them
 // (see main/help/src/components/helpMockBackend.ts); the footer itself no longer
