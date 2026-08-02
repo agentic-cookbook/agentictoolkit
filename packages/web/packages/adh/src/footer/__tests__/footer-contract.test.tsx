@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AdhFooter } from '../AdhFooter'
 import { buildVersionLabel } from '../SiteFooter'
 
@@ -115,6 +115,15 @@ describe('AdhFooter (identity-free)', () => {
 })
 
 describe('SiteFooter (build constants → version)', () => {
+  // In `afterEach`, not at the end of each body: a failing assertion aborts the body,
+  // so an in-body unstub never runs on the one occasion it matters and leaves both
+  // constants set for every test after it. That turns one real failure into a cascade
+  // of misattributed ones — and the last case here ("neither constant is set") would
+  // only pass because its own stubs happened to overwrite the leak.
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('joins the version and the short SHA with a middot, and titles it with the full SHA', () => {
     // Next inlines NEXT_PUBLIC_* at build time; in vitest they are ordinary env
     // reads, which is exactly what makes this composition testable here.
@@ -125,7 +134,6 @@ describe('SiteFooter (build constants → version)', () => {
     render(<div>{el}</div>)
     expect(screen.getByText('v1.0.155 · a73e79b7')).toBeTruthy()
     expect(screen.getByTitle('a73e79b7c0ffee00deadbeef1234567890abcdef')).toBeTruthy()
-    vi.unstubAllEnvs()
   })
 
   it('shows the SHA alone when the site has no VERSION file', () => {
@@ -133,7 +141,6 @@ describe('SiteFooter (build constants → version)', () => {
     vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', 'a73e79b7c0ffee00deadbeef1234567890abcdef')
     render(<div>{buildVersionLabel()}</div>)
     expect(screen.getByText('a73e79b7')).toBeTruthy()
-    vi.unstubAllEnvs()
   })
 
   it('shows the version alone, with no trailing middot, when every SHA source failed', () => {
@@ -143,13 +150,11 @@ describe('SiteFooter (build constants → version)', () => {
     vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '')
     render(<div>{buildVersionLabel()}</div>)
     expect(screen.getByText('v1.0.155')).toBeTruthy()
-    vi.unstubAllEnvs()
   })
 
   it('renders nothing at all when neither constant is set', () => {
     vi.stubEnv('NEXT_PUBLIC_ADH_SITE_VERSION', '')
     vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '')
     expect(buildVersionLabel()).toBeNull()
-    vi.unstubAllEnvs()
   })
 })
