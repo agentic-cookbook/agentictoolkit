@@ -136,6 +136,16 @@ describe('SiteFooter (build constants → version)', () => {
     vi.unstubAllEnvs()
   })
 
+  it('shows the version alone, with no trailing middot, when every SHA source failed', () => {
+    // Reachable outside Vercel/Railway when the build also isn't a git checkout:
+    // VERCEL_GIT_COMMIT_SHA -> RAILWAY_GIT_COMMIT_SHA -> git rev-parse HEAD -> "" all miss.
+    vi.stubEnv('NEXT_PUBLIC_ADH_SITE_VERSION', '1.0.155')
+    vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '')
+    render(<div>{buildVersionLabel()}</div>)
+    expect(screen.getByText('v1.0.155')).toBeTruthy()
+    vi.unstubAllEnvs()
+  })
+
   it('renders nothing at all when neither constant is set', () => {
     vi.stubEnv('NEXT_PUBLIC_ADH_SITE_VERSION', '')
     vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '')
