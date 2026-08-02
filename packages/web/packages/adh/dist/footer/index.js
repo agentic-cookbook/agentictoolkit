@@ -5,7 +5,7 @@
 // src/footer/AdhFooter.tsx
 import Link from "next/link";
 import { jsx, jsxs } from "react/jsx-runtime";
-function AdhFooter({ links = [], copyright, trailing }) {
+function AdhFooter({ links = [], copyright, version, trailing }) {
   return /* @__PURE__ */ jsxs("footer", { className: "adh-footer", role: "contentinfo", children: [
     /* @__PURE__ */ jsxs("div", { className: "adh-footer__container", children: [
       copyright && /* @__PURE__ */ jsx("span", { className: "adh-footer__copyright", children: copyright }),
@@ -31,7 +31,8 @@ function AdhFooter({ links = [], copyright, trailing }) {
           },
           `href:${link.href}:${link.label}`
         )
-      ) })
+      ) }),
+      version && /* @__PURE__ */ jsx("span", { className: "adh-footer__version", children: version })
     ] }),
     trailing
   ] });
@@ -181,6 +182,13 @@ var LEGAL_LINKS = [
   { label: "Terms", href: "/terms", onSelect: openLegalModal(TERMS_DIALOG_ID), prefetch: false },
   { label: "Privacy", href: "/privacy", onSelect: openLegalModal(PRIVACY_DIALOG_ID), prefetch: false }
 ];
+function buildVersionLabel() {
+  const version = process.env.NEXT_PUBLIC_ADH_SITE_VERSION ?? "";
+  const sha = process.env.NEXT_PUBLIC_ADH_RELEASE ?? "";
+  const label = [version && `v${version}`, sha && sha.slice(0, 8)].filter(Boolean).join(" \xB7 ");
+  if (!label) return null;
+  return /* @__PURE__ */ jsx6("span", { title: sha || void 0, children: label });
+}
 function SiteFooter({ links = [], chat = true }) {
   return /* @__PURE__ */ jsxs5(Fragment, { children: [
     /* @__PURE__ */ jsx6(
@@ -191,6 +199,7 @@ function SiteFooter({ links = [], chat = true }) {
           COPYRIGHT_PREFIX,
           /* @__PURE__ */ jsx6("a", { className: "adh-footer__brand-link", href: BRAND_HREF, children: BRAND_LABEL })
         ] }),
+        version: buildVersionLabel(),
         trailing: chat ? /* @__PURE__ */ jsx6(FooterChat, {}) : null
       }
     ),

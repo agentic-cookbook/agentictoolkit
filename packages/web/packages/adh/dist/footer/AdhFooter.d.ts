@@ -22,7 +22,11 @@ export type FooterLink =
 export type AdhFooterProps = {
     links?: FooterLink[];
     copyright?: ReactNode;
+    /** Build identity, rendered last INSIDE the container. Deliberately a prop and
+     *  not an env read: this is the registry-free primitive and stays free of adh
+     *  knowledge — the host decides what a version even is. */
+    version?: ReactNode;
     trailing?: ReactNode;
 };
-export declare function AdhFooter({ links, copyright, trailing }: AdhFooterProps): import("react").JSX.Element;
+export declare function AdhFooter({ links, copyright, version, trailing }: AdhFooterProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhFooter.d.ts.map

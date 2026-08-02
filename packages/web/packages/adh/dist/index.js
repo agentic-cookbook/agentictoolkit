@@ -872,7 +872,7 @@ function AdhHeader({
 // src/footer/AdhFooter.tsx
 import Link4 from "next/link";
 import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
-function AdhFooter({ links = [], copyright, trailing }) {
+function AdhFooter({ links = [], copyright, version, trailing }) {
   return /* @__PURE__ */ jsxs6("footer", { className: "adh-footer", role: "contentinfo", children: [
     /* @__PURE__ */ jsxs6("div", { className: "adh-footer__container", children: [
       copyright && /* @__PURE__ */ jsx9("span", { className: "adh-footer__copyright", children: copyright }),
@@ -898,7 +898,8 @@ function AdhFooter({ links = [], copyright, trailing }) {
           },
           `href:${link.href}:${link.label}`
         )
-      ) })
+      ) }),
+      version && /* @__PURE__ */ jsx9("span", { className: "adh-footer__version", children: version })
     ] }),
     trailing
   ] });

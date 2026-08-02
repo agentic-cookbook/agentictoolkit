@@ -312,6 +312,10 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  /* The container is space-between; with a third child (the version) that would
+     strand the links in the middle. `auto` keeps the copyright left and the links
+     + version together at the right. */
+  margin-left: auto;
 }
 
 .adh-footer__link {
@@ -321,6 +325,14 @@
 
 .adh-footer__link:hover {
   color: var(--adh-footer-link-color-hover, var(--color-accent));
+}
+
+/* No new colour work: .adh-footer already resolves to 0.7rem / font-mono /
+   letter-spacing 0.04em / --color-text-dim, so anything in the bar is small grey
+   text by inheritance. This exists as a hook, and dims one step past the links
+   (which use --color-text-secondary) so build identity reads as metadata. */
+.adh-footer__version {
+  color: var(--adh-footer-version-color, var(--color-text-dim));
 }
 
 /* Avatar menu — trigger sitting inside the header bar. The whole chip is
