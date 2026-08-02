@@ -2,7 +2,6 @@ export { AdhFooter } from './AdhFooter';
 export type { AdhFooterProps, FooterLink } from './AdhFooter';
 export { SiteFooter } from './SiteFooter';
 export type { SiteFooterProps } from './SiteFooter';
-export { buildVersionLabel } from './SiteFooter';
 export { SITES_OVERVIEW_POPOVER_ID } from './SitesOverview';
 export { BITBAG_PERSONA, createSeededBackend } from './seededBackend';
 export type { SeededReply, SeededBackendOptions } from './seededBackend';
