@@ -335,10 +335,13 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
     () => ({ isDirty: () => guardState.current.dirty, save: () => guardState.current.save() }),
     [],
   )
+  // Published only while DIRTY, so the channel's presence is a render-value dirty signal for the
+  // enclosing shell (see useExitGuardChannel). `guard` itself is identity-stable, so before this
+  // the effect fired on mount/unmount only and a draft going dirty was invisible upstream.
   useEffect(() => {
-    onGuardChange?.(guard)
+    onGuardChange?.(dirty ? guard : null)
     return () => onGuardChange?.(null)
-  }, [onGuardChange, guard])
+  }, [onGuardChange, guard, dirty])
 
   // This table's generic-CRUD endpoint (/<schema>/<table>), seeded with the same list
   // filter + ecosystem scope the view itself uses, so "try it" mirrors what's on screen.

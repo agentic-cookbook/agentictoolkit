@@ -373,9 +373,9 @@ export function ResearchPane({
     ),
   };
   useStackLevel(documentsLevel);
-  // The open editor's unsaved-work guard, so Back / breadcrumb-up / a sibling click prompts
-  // Save/Discard/Cancel. Live only while an editor is open; `save()` returns success.
-  useWorkspaceExitGuard(editing ? { isDirty: () => dirty, save: () => onSave() } : null);
+  // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a
+  // render-value dirty signal. `editing` is implied: a draft cannot be dirty with no editor open.
+  useWorkspaceExitGuard(dirty ? { isDirty: () => dirty, save: () => onSave() } : null);
 
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.

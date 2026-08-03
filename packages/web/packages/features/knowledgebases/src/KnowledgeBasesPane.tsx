@@ -72,8 +72,9 @@ export function KnowledgeBasesPane({
     emptyLabel: viewerReady ? "No tables." : "Loading…",
   };
   useStackLevel(level);
-  // Guard is live only while a table editor is open.
-  useRailExitGuard(active ? exitGuard : null);
+  // Null unless the open table's editor is dirty — the CrudDataView publishes only while dirty,
+  // and unmounting withdraws. No `active` gate needed.
+  useRailExitGuard(exitGuard);
 
   return active ? (
     <CrudDataView
