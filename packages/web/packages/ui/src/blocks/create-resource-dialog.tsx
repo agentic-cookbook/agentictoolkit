@@ -6,6 +6,7 @@ import type { ReactNode } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "../components/button"
+import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
 
 export interface CreateResourceDialogProps<TInput, TResult> {
   ariaLabel: string
@@ -38,7 +39,8 @@ export interface CreateResourceDialogProps<TInput, TResult> {
  * The dialog only dismisses through Save, Cancel, or × — clicking the backdrop
  * is inert and Esc routes through the same guarded close — so a stray click
  * can't discard a half-filled form. When the draft has unsaved edits, closing
- * first prompts the user to Save, Discard, or keep editing.
+ * first raises the platform's shared Discard/Stay alert; the alert never saves —
+ * Stay returns to the form with the draft intact, Discard closes without saving.
  * `renderForm` supplies the entity-specific fields; `validate`/`create` close over
  * any context they need (e.g. the taken-identifiers list).
  */
@@ -69,7 +71,7 @@ export function CreateResourceDialog<TInput, TResult>({
   const canSave = dirty && (saveEnabled == null || saveEnabled(draft))
 
   // Cancel / × / Esc route here: a pristine form closes immediately; a dirty one
-  // raises the Save / Discard prompt instead of dismissing.
+  // raises the platform's Discard/Stay alert instead of dismissing.
   function requestClose() {
     if (dirty) setConfirming(true)
     else onClose()
@@ -78,8 +80,13 @@ export function CreateResourceDialog<TInput, TResult>({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return
-      if (confirming) setConfirming(false)
-      else if (dirty) setConfirming(true)
+      if (confirming) {
+        // UnsavedChangesAlert is `destructive`, which forces AlertModal's keyboard
+        // to "none" and blocks Escape entirely — this listener is the only thing
+        // that makes Escape do anything while the alert is open, and it only ever
+        // cancels the exit (maps to Stay), never discards, so it's safe to keep.
+        setConfirming(false)
+      } else if (dirty) setConfirming(true)
       else onClose()
     }
     window.addEventListener("keydown", onKey)
@@ -143,46 +150,27 @@ export function CreateResourceDialog<TInput, TResult>({
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
-
-        {confirming && (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/50 p-6"
-            role="alertdialog"
-            aria-modal="true"
-            aria-label="Unsaved changes"
-          >
-            <div className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-apt-border bg-apt-surface p-5 shadow-xl">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold text-apt-text">Unsaved changes</h3>
-                <p className="text-sm text-apt-text-muted">
-                  You have unsaved changes. Save them before closing?
-                </p>
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setConfirming(false)}
-                  disabled={saving}
-                >
-                  Keep editing
-                </Button>
-                <Button
-                  variant="destructive-ghost"
-                  onClick={onClose}
-                  disabled={saving}
-                >
-                  Discard
-                </Button>
-                <Button onClick={save} disabled={saving || !canSave}>
-                  {saving ? "Saving…" : "Save"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
 
-  return typeof document === "undefined" ? null : createPortal(overlay, document.body)
+  if (typeof document === "undefined") return null
+
+  // UnsavedChangesAlert renders as a SIBLING of the overlay, not nested inside its `fixed
+  // inset-0` div — nesting it under an ancestor that owns a stacking context and
+  // `overflow-y-auto` is the same trap the overlay comment above documents for the dialog
+  // itself. AlertModal portals itself regardless, so this only affects where its own
+  // Portal target sits in the React tree, not the DOM — but staying flat here keeps that
+  // trap from ever mattering.
+  return createPortal(
+    <>
+      {overlay}
+      <UnsavedChangesAlert
+        open={confirming}
+        onDiscard={onClose}
+        onStay={() => setConfirming(false)}
+      />
+    </>,
+    document.body,
+  )
 }

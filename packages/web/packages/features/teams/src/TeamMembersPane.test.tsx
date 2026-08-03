@@ -302,11 +302,10 @@ describe("TeamMembersPane", () => {
     await waitFor(() => expect(screen.queryByText("no user with that email")).toBeNull());
   });
 
-  it("a dirty modal guards its close, and the guard's Save routes to the add-persona action", async () => {
+  it("a dirty modal guards its close with the platform's Discard/Stay alert", async () => {
     // The create modal owns its unsaved-work protection (no pane-level exit guard): a picked
     // persona with no email typed is still a dirty draft, so closing prompts instead of
-    // silently discarding it — and saving from the prompt routes to add-persona, not the
-    // empty email path.
+    // silently discarding it. The alert never saves — Stay is the only way back to the form.
     list.mockResolvedValue([]);
     render(<TestHarness />);
 
@@ -315,10 +314,34 @@ describe("TeamMembersPane", () => {
     fireEvent.change(await dialog.findByRole("combobox"), { target: { value: "p1" } });
 
     fireEvent.click(dialog.getByRole("button", { name: "Cancel" }));
-    const confirm = within(await screen.findByRole("alertdialog", { name: "Unsaved changes" }));
+    const discard = await screen.findByRole("button", { name: "Discard" });
+    const confirm = within(discard.closest('[role="dialog"]') as HTMLElement);
+    expect(confirm.getByRole("button", { name: "Discard" })).not.toBeNull();
+    expect(confirm.getByRole("button", { name: "Stay" })).not.toBeNull();
 
+    expect(addPersona).not.toHaveBeenCalled();
+  });
+
+  it("Stay on the guard returns to the dialog, whose own Save routes a picked persona to add-persona", async () => {
+    // This is the other half of the retired test above: a picked persona with no email is the
+    // only coverage that such a draft routes to add-persona (not the empty email path) — it now
+    // exercises that through the dialog's own footer Save button, which is where saving lives
+    // now that the guard alert never saves.
+    list.mockResolvedValue([]);
+    render(<TestHarness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "New member" }));
+    const dialog = within(screen.getByRole("dialog", { name: "New member" }));
+    fireEvent.change(await dialog.findByRole("combobox"), { target: { value: "p1" } });
+
+    fireEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    const discard = await screen.findByRole("button", { name: "Discard" });
+    const confirm = within(discard.closest('[role="dialog"]') as HTMLElement);
+    fireEvent.click(confirm.getByRole("button", { name: "Stay" }));
+
+    // Back at the dialog with the draft intact; its own Save persists the picked persona.
     await act(async () => {
-      fireEvent.click(confirm.getByRole("button", { name: "Save" }));
+      fireEvent.click(dialog.getByRole("button", { name: "Save" }));
     });
     expect(addPersona).toHaveBeenCalledWith("t1", "p1");
   });
