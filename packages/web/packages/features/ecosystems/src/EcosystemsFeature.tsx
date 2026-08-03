@@ -19,7 +19,11 @@ import {
   type GroupTopicItem,
 } from "@agentic-toolkit/resource";
 import { useResourceList, makeEntityDeleteHandler, writeLastId } from "@agentic-toolkit/data";
-import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
+import {
+  ecosystemsApi,
+  useWorkspaceDefaultEcosystemId,
+  type Ecosystem,
+} from "@agentic-toolkit/data/ecosystems";
 import { EcosystemSettingsPane } from "./EcosystemSettingsPane";
 import { EcosystemDetail, ecoBlank, ecoValidate, ecoNormalize } from "./EcosystemDetail";
 import {
@@ -28,6 +32,7 @@ import {
   ecoCreateReady,
   ecoCreateToInput,
   ecoCreateValidate,
+  type EcosystemParentRdid,
 } from "./EcosystemForm";
 import { EcoRequestsPane, EcoPendingUsersPane, EcoInvitesPane } from "./EcosystemInvitationPanes";
 import { an } from "./lib/an";
@@ -272,6 +277,19 @@ export function EcosystemsFeature({
   );
   const { items: ecosystems, reload, error } = useResourceList(basePath, load);
 
+  // The workspace's HOME (account-infrastructure) ecosystem — the parent a new product hangs
+  // under, so its identifier is `<home rdid>.<slug>`. Resolved from the server rather than
+  // assembled from the workspace slug: an org's home ecosystem is a root (`ecosystem.fishlamp`)
+  // but a PERSONAL workspace's is itself a child (`ecosystem.<realm>.<user>`), so there is no
+  // string the client can build that is right for both. Same resolver the backend's create uses
+  // (`?workspace=&infrastructure=true` ⇒ findOwnInfrastructureEcosystemId), which is what makes
+  // the previewed and probed identifier the one actually minted. Shared react-query cache entry
+  // — this costs no extra fetch on a page that already resolves it.
+  const home = useWorkspaceDefaultEcosystemId(slug);
+  // undefined WHILE PENDING, never "no parent": previewing a root address for an unresolved
+  // home ecosystem would show — and probe — an identifier the create is not going to use.
+  const createParentRdid: EcosystemParentRdid = home.isPending ? undefined : (home.ecosystemId ?? null);
+
   // Ecosystems opens on the workspace's DEFAULT (primary) ecosystem when the URL names none —
   // its topics, not a list. Resolve that id from the workspace slug (the same resolver the
   // standalone /messaging route uses); react-query dedupes concurrent readers. listFirst
@@ -490,9 +508,11 @@ export function EcosystemsFeature({
     <CreateResourceDialog
       {...dialogCommon}
       // Parent = the scoped ecosystem, so "New Ecosystem" from Child Ecosystems creates a CHILD of
-      // it (owner = it) by default. The "top-level" toggle (below) opts out → a parentless ecosystem
-      // owned by the caller. On first-run (no scoped ecosystem) `scopedId` is undefined → always a
-      // top-level create, and the toggle is hidden (there is no parent to opt out of).
+      // it (owner = it) by default. The toggle (below) opts out → an ecosystem owned by the CALLER,
+      // which the server then hangs under the caller's own ecosystem (not the global root — no
+      // create has landed there since address derivation moved to the parent chain). On first-run
+      // (no scoped ecosystem) `scopedId` is undefined → always the caller-owned shape, and the
+      // toggle is hidden (there is no parent to opt out of).
       create={(d) =>
         ecosystemsApi.create(
           ecoNormalize(d),
@@ -519,7 +539,7 @@ export function EcosystemsFeature({
                 htmlFor="new-eco-toplevel"
                 className="min-w-0 flex-1 text-sm text-apt-text-muted"
               >
-                Create as a top-level {lowerSingular} (owned by you), not a child of the current one
+                Create this {lowerSingular} under your own account, not as a child of the current one
               </label>
             </div>
           )}
@@ -640,19 +660,21 @@ export function EcosystemsFeature({
           }}
           renderDialog={(onClose, onCreated) => (
             // The workspace New Product form: Display Name + Slug are typed; the
-            // identifier is READ-ONLY, derived as ecosystem.<workspace-slug>.<slug>
-            // (the workspace slug IS the owner principal's slug — customer or org),
-            // live-probed for system-wide availability. Save stays disabled until
-            // name + slug are filled AND the probe reports available.
+            // identifier is READ-ONLY, derived as <the workspace's home ecosystem>.<slug>
+            // and live-probed for system-wide availability. Save stays disabled until
+            // name + slug are filled AND the probe reports available. The slug is ONE
+            // segment: the server derives the address from (this workspace's parent chain,
+            // slug), so the identifier below is an assertion about that derivation, not a
+            // choice — see ecosystemsApi.create.
             <CreateResourceDialog
               ariaLabel={`New ${lowerSingular}`}
               heading={`New ${singular}`}
               blank={ecoCreateBlank}
-              validate={(d) => ecoCreateValidate(d, slug ?? "")}
+              validate={(d) => ecoCreateValidate(d, createParentRdid)}
               saveEnabled={ecoCreateReady}
               create={(d) =>
                 ecosystemsApi.create(
-                  ecoCreateToInput(d, slug ?? ""),
+                  ecoCreateToInput(d, createParentRdid),
                   slug != null ? { workspace: slug } : undefined,
                 )
               }
@@ -668,7 +690,7 @@ export function EcosystemsFeature({
                   draft={draft}
                   onChange={onChange}
                   error={error}
-                  ownerScope={slug ?? ""}
+                  parentRdid={createParentRdid}
                   noun={lowerSingular}
                 />
               )}

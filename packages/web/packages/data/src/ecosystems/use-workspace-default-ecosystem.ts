@@ -20,7 +20,8 @@ import { ecosystemsApi } from "./ecosystems";
  * `ecosystemId` stays undefined while loading AND when the workspace has no
  * infrastructure ecosystem; `isError` distinguishes a failed resolution
  * (`retry: false` — one shot) so callers can show a retry surface instead of a
- * dead pane.
+ * dead pane, and `isPending` separates the two undefined cases for the callers
+ * that must not act on "no infrastructure ecosystem" until it is actually the answer.
  */
 export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined): {
   ecosystemId?: string;
@@ -29,6 +30,12 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
    *  host only gates when the resolution definitively says the caller can't manage. */
   canManage: boolean;
   isError: boolean;
+  /** No answer yet — the query is loading (or disabled, with no `workspaceSlug` to resolve).
+   *  Distinct from a resolved `ecosystemId: undefined`, which is the definitive "this workspace
+   *  has no infrastructure ecosystem". A caller that PREVIEWS something derived from the id
+   *  (an address prefix) must show nothing while this is true rather than the no-parent shape,
+   *  which is a different, wrong answer. */
+  isPending: boolean;
 } {
   const query = useQuery({
     queryKey: ["workspace-default-ecosystem", workspaceSlug ?? null],
@@ -41,5 +48,9 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
     ecosystemId: query.data?.id ?? undefined,
     canManage: query.data?.canManage ?? true,
     isError: query.isError,
+    // `isPending` (not `isLoading`) so a DISABLED query — no workspaceSlug — also reads as
+    // "no answer", which is exactly what it is: react-query leaves a disabled query in the
+    // pending status forever, and it has resolved nothing.
+    isPending: query.isPending,
   };
 }

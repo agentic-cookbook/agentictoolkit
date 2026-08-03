@@ -84,13 +84,23 @@ export function EcosystemDetail({
   const card = (
       <Card>
         <CardContent className="flex flex-col gap-5">
+          {/* On CREATE this field is the slug, not the finished address: the server derives the
+              address from the new ecosystem's parent chain, so the identifier it is given ends up
+              as `ecosystem.<owner path>.<slug>` and only the last segment — what is typed here —
+              comes from the client. The hint says so rather than letting the `ecosystem.` prefix
+              read as the whole thing. Editing a SAVED row is the other case: there the identifier
+              IS the full rdid and it is locked. */}
           <RdidEditor
             id={`${uid}-identifier`}
             label="Identifier"
             prefix="ecosystem."
             value={draft.identifier.startsWith("ecosystem.") ? draft.identifier.slice("ecosystem.".length) : draft.identifier}
             placeholder="my-ecosystem"
-            hint={identifierLocked ? "Fixed once created." : "Only the name is editable — the ecosystem. type is fixed."}
+            hint={
+              identifierLocked
+                ? "Fixed once created."
+                : "The name is the last segment of the identifier — the rest is the owner's path, filled in when it's created."
+            }
             disabled={identifierLocked}
             onChange={(leaf) => set("identifier", "ecosystem." + leaf)}
           />

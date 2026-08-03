@@ -17,12 +17,21 @@
 //   UI region           <->  backend `region`
 //   UI domain           <->  backend `primaryDomain`
 //
-// The backend also requires a `slug` (NOT NULL, unique). The UI doesn't model
-// one, so create sends slug = identifier; that keeps the slug unique in lockstep
-// with the rdid. The `identifier` (rdid) IS mutable: update() renames it via the
+// CREATE DOES NOT SET THE ADDRESS. The server DERIVES it from (the owner's parent
+// chain, `slug`) and mints it — so `slug` is the address's LAST SEGMENT, one rdid
+// segment, and the `id` we send is only an ASSERTION that the caller and the server
+// agree on what that address will be (the backend 400s when `id`'s leaf and `slug`
+// disagree). This client used to send `slug = identifier` — the whole dotted rdid,
+// clamped to the column's 64 chars — which was correct only under the pre-Task-5
+// contract where the client's `id` was stored verbatim and `slug` was a cosmetic
+// mirror of it. Under the current contract that shape fails EVERY create, because a
+// dotted rdid can never equal its own leaf.
+//
+// The `identifier` (rdid) IS mutable: update() renames it via the
 // registry.identifiers route when it changes, then PUTs the other fields under the
 // (possibly new) id — the entity's own `id` column is server-managed.
 
+import { tryParseRdid } from "@agentic-toolkit/ui/lib/rdid";
 import { authedJson, authedRequest, isNotFound, rethrowConflict } from "../http";
 import { compact, enc, sortByText } from "../client-helpers";
 import { identifiersApi } from "./identifiers";
@@ -159,9 +168,12 @@ export const ecosystemsApi = {
     try {
       const body: EcosystemCreateBody = {
         id: input.identifier,
-        // `slug` is varchar(64) NOT NULL unique; keep it in lockstep with the
-        // rdid but clamp to the column width (an rdid can exceed 64 chars).
-        slug: input.identifier.slice(0, 64),
+        // The address's LAST SEGMENT — see the contract note at the top of this file.
+        // Never a slice of the dotted rdid: the server asserts `id`'s leaf === `slug`,
+        // so anything but the leaf is a guaranteed 400. A non-rdid `identifier` falls
+        // through unchanged so the SERVER names what is wrong with it, rather than this
+        // client throwing a parse error that says nothing about the request.
+        slug: tryParseRdid(input.identifier)?.name ?? input.identifier,
         name: input.name,
         description: input.description,
         region: input.region,

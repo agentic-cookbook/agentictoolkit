@@ -59,7 +59,7 @@ export function useRdidAvailability(
 }
 
 /** The New-Product draft: the user edits name/slug/description; the identifier is
- *  DERIVED (`ecosystem.<ownerScope>.<slug>`), never typed. */
+ *  DERIVED (the parent ecosystem's own rdid + `.<slug>`), never typed. */
 export interface EcosystemCreateDraft {
   name: string;
   slug: string;
@@ -71,18 +71,53 @@ export function ecoCreateBlank(): EcosystemCreateDraft {
   return { name: "", slug: "", description: "", rdidStatus: "idle" };
 }
 
-/** The full owner-scoped rdid the create will mint: `ecosystem.<ownerScope>.<slug>`
- *  (`ecosystem.<slug>` when the host mounts without a workspace scope). */
-export function ecoCreateRdid(ownerScope: string, slug: string): string {
-  return prefixFor("ecosystem", ownerScope) + slug;
+/** The backend's `ecosystem.ecosystems.slug` column width. The slug is ONE rdid segment,
+ *  so this bounds the leaf, not the whole address. */
+export const ECOSYSTEM_SLUG_MAX_LENGTH = 64;
+
+/**
+ * The parent ecosystem this create hangs under, as the caller knows it:
+ *   - a string — the PARENT's own rdid (the workspace's home/infrastructure ecosystem),
+ *   - `null`   — no parent; the create lands at the root,
+ *   - `undefined` — not resolved YET, so no address can be previewed honestly.
+ *
+ * The distinction between the last two is why this is not just `string | null`: `null` is a
+ * verdict (`ecosystem.<slug>` is what the server will mint), `undefined` is the absence of one,
+ * and rendering a root address for an unresolved parent would show the user an address the
+ * create is not going to use.
+ */
+export type EcosystemParentRdid = string | null | undefined;
+
+/** The fixed identifier prefix (up to and including the final dot) a create derives from: the
+ *  PARENT's own rdid plus a dot, since the parent is itself an `ecosystem.`-typed address and
+ *  the type token is shared — `ecosystem.fishlamp` + `adh` ⇒ `ecosystem.fishlamp.adh`, exactly
+ *  what the server derives by walking the new row's parent chain. Bare `ecosystem.` for a root
+ *  create; `""` while the parent is unresolved, so nothing is asserted. */
+export function ecoCreatePrefix(parentRdid: EcosystemParentRdid): string {
+  if (parentRdid === undefined) return "";
+  return parentRdid ? `${parentRdid}.` : prefixFor("ecosystem");
 }
 
-/** Whether every segment of the assembled rdid (owner scope + leaf) is well-formed —
- *  the same grammar bar the backend's assertRdid applies to the whole identifier. */
+/** The full rdid the create will mint. */
+export function ecoCreateRdid(parentRdid: EcosystemParentRdid, slug: string): string {
+  return ecoCreatePrefix(parentRdid) + slug;
+}
+
+/** Whether the typed leaf is a well-formed slug: one rdid segment, within the slug column's
+ *  width. On the create path this is the WHOLE grammar question — every other segment comes
+ *  from the parent's own (server-minted) rdid, so the leaf is the only part a create can get
+ *  wrong. */
+export function ecoCreateSlugValid(slug: string): boolean {
+  return validateLeaf(slug) === null && slug.length <= ECOSYSTEM_SLUG_MAX_LENGTH;
+}
+
+/** Whether every segment of an assembled rdid (owner scope + leaf) is well-formed — the same
+ *  grammar bar the backend's assertRdid applies to the whole identifier. The RENAME path's
+ *  check: there the scope comes from the saved row's rdid, so both halves are in play. */
 export function ecoCreateRdidValid(ownerScope: string, slug: string): boolean {
   const scope = ownerScope.trim();
   const scopeOk = scope === "" || scope.split(".").every((seg) => SEGMENT_RE.test(seg));
-  return scopeOk && validateLeaf(slug) === null;
+  return scopeOk && ecoCreateSlugValid(slug);
 }
 
 /** Save-button gate: Name and Slug filled in AND the derived rdid probed available. */
@@ -94,27 +129,32 @@ export function ecoCreateReady(d: EcosystemCreateDraft): boolean {
  *  Save stays disabled until ready, so these only surface if that gate is bypassed. */
 export function ecoCreateValidate(
   d: EcosystemCreateDraft,
-  ownerScope: string,
+  parentRdid: EcosystemParentRdid,
 ): string | null {
   if (!d.name.trim()) return "Display name is required.";
   const slug = d.slug.trim();
   if (!slug) return "Slug is required.";
-  if (!ecoCreateRdidValid(ownerScope, slug))
-    return `"${ecoCreateRdid(ownerScope, slug)}" is not a valid identifier — lowercase letters, digits, and interior hyphens only.`;
+  if (slug.length > ECOSYSTEM_SLUG_MAX_LENGTH)
+    return `Slug must be ${ECOSYSTEM_SLUG_MAX_LENGTH} characters or fewer.`;
+  if (!ecoCreateSlugValid(slug))
+    return `"${ecoCreateRdid(parentRdid, slug)}" is not a valid identifier — lowercase letters, digits, and interior hyphens only.`;
+  if (parentRdid === undefined) return "Waiting for the workspace's identifier prefix.";
   if (d.rdidStatus === "unavailable")
-    return `Identifier "${ecoCreateRdid(ownerScope, slug)}" is already in use.`;
+    return `Identifier "${ecoCreateRdid(parentRdid, slug)}" is already in use.`;
   if (d.rdidStatus !== "available") return "Waiting for the identifier availability check.";
   return null;
 }
 
-/** Map the draft to the API input. The identifier is the derived owner-scoped rdid;
- *  region/domain are not collected by this form (region is coming soon, domain dropped). */
+/** Map the draft to the API input. The identifier is the derived, parent-scoped rdid — an
+ *  ASSERTION about the address the server will derive from (this workspace's chain, `slug`),
+ *  not an address the client gets to choose. region/domain are not collected by this form
+ *  (region is coming soon, domain dropped). */
 export function ecoCreateToInput(
   d: EcosystemCreateDraft,
-  ownerScope: string,
+  parentRdid: EcosystemParentRdid,
 ): EcosystemInput {
   return {
-    identifier: ecoCreateRdid(ownerScope, d.slug.trim()),
+    identifier: ecoCreateRdid(parentRdid, d.slug.trim()),
     name: d.name.trim(),
     description: d.description.trim(),
     region: "",
@@ -219,31 +259,43 @@ export function EcosystemFields({
 
 /**
  * The "New Product" (workspace-scoped ecosystem create) form: Display Name + Slug are
- * typed; the Identifier derives live as `ecosystem.<ownerScope>.<slug>` and is probed
- * for availability. The probe verdict is written back INTO the dialog-owned draft so
+ * typed; the Identifier derives live as `<parent rdid>.<slug>` and is probed for
+ * availability. The probe verdict is written back INTO the dialog-owned draft so
  * the dialog's sync `saveEnabled` gate (ecoCreateReady) sees exactly what is shown.
+ *
+ * The prefix is the PARENT's rdid rather than anything assembled from the workspace slug,
+ * because a workspace's home ecosystem is not always a root: a personal workspace's is itself
+ * a child (`ecosystem.<realm>.<user>`), so `ecosystem.<workspace-slug>.` named an address that
+ * does not exist. Taking the parent's own address as the prefix makes this preview agree with
+ * the server's derivation by construction, whatever the chain above it turns out to be.
  */
 export function EcosystemCreateForm({
   draft,
   onChange,
   error,
-  ownerScope,
+  parentRdid,
   noun = "ecosystem",
 }: {
   draft: EcosystemCreateDraft;
   onChange: (next: EcosystemCreateDraft) => void;
   error?: string | null;
-  /** The workspace owner's slug — the fixed rdid scope. "" renders `ecosystem.<slug>`. */
-  ownerScope: string;
+  /** The parent ecosystem's own rdid — see {@link EcosystemParentRdid}. */
+  parentRdid: EcosystemParentRdid;
   /** Lowercase entity noun for placeholder copy (the hub passes "product"). */
   noun?: string;
 }) {
   const slug = draft.slug.trim();
-  const prefix = prefixFor("ecosystem", ownerScope.trim());
-  const grammarOk = slug !== "" && ecoCreateRdidValid(ownerScope, slug);
+  const prefix = ecoCreatePrefix(parentRdid);
+  // An unresolved parent is NOT probeable: the identifier it would probe is not the one the
+  // create would mint, so an "Available!" there is a verdict about the wrong address. Hold at
+  // "checking" instead — which also keeps Save disabled, since ecoCreateReady demands
+  // "available".
+  const resolving = parentRdid === undefined;
+  const grammarOk = !resolving && slug !== "" && ecoCreateSlugValid(slug);
 
   const probe = useRdidAvailability(grammarOk ? prefix + slug : null);
-  const status: RdidAvailability = slug === "" ? "idle" : !grammarOk ? "invalid" : probe;
+  const status: RdidAvailability =
+    slug === "" ? "idle" : resolving ? "checking" : !grammarOk ? "invalid" : probe;
 
   // The dialog owns the draft — write the probe verdict back into it so the sync
   // saveEnabled gate (ecoCreateReady) sees exactly the state this form displays.
