@@ -26,7 +26,7 @@ import { cn } from "../lib/utils"
 import { getSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
 import { hlog } from "./htdv-log"
 import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
-import { useExitGate, type PaneExitGuard } from "../lib/use-exit-gate"
+import { useExitGate, type PaneExitGuard } from "../hooks/useExitGate"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
 import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
@@ -35,7 +35,7 @@ import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
  *  sibling swap at the deepest level) and, if dirty, raises the platform's discard alert.
  *
- *  Declared in `lib/use-exit-gate` (one owner for the gate and the type it gates on) and
+ *  Declared in `hooks/useExitGate` (one owner for the gate and the type it gates on) and
  *  re-exported here under its original name — every consumer imports it from this block via the
  *  `blocks` barrel. */
 export type { PaneExitGuard }
