@@ -61,7 +61,7 @@ export function EcosystemSettingsPane({
 
   // The fixed identifier prefix: the saved rdid's own type+scope (so an owner-scoped
   // product keeps `ecosystem.<owner>.` and a legacy top-level row keeps `ecosystem.`).
-  // A rdid-less row (uuid-addressed) and the pane's create mode fall back to top-level.
+  // A rdid-less row (uuid-addressed) falls back to top-level.
   const prefix = active && isRdid(active.id) ? prefixFor("ecosystem", parseRdid(active.id).scope) : prefixFor("ecosystem");
   const scope = prefix.slice("ecosystem.".length).replace(/\.$/, "");
   const leafOf = (identifier: string) =>
@@ -95,7 +95,10 @@ export function EcosystemSettingsPane({
     },
     differs: ecoDiffers,
     normalize: ecoNormalize,
-    create: (input) => ecosystemsApi.create(input),
+    // No `create`: RecordSettingsPane passes `showCreate={false}` and nothing calls `startCreate`,
+    // so this pane edits ONE existing record and its create was unreachable — a top-level
+    // (unscoped) create at that, which since address derivation moved to the parent chain is not
+    // even the shape this pane's own prefix describes. Creates live in EcosystemsFeature's dialogs.
     update: async (id, input) => {
       const updated = await ecosystemsApi.update(id, input);
       if (updated.id !== id) await onRenamed?.(updated.id);
@@ -103,14 +106,13 @@ export function EcosystemSettingsPane({
     },
     // Delete is owned by the Danger-zone DeleteEntitySection (onDelete), not the hook.
     refresh,
-    createLabel: `New ${noun.toLowerCase()}`,
   });
 
   // Availability probe over the DERIVED identifier — skipped (null → "idle") while it
   // matches the saved rdid, so opening Settings shows no status until the slug changes.
   const draft = form.draft;
   const draftSlug = draft ? leafOf(draft.identifier.trim()) : "";
-  const changed = draft != null && (form.creating || active == null || draft.identifier.trim() !== active.id);
+  const changed = draft != null && (active == null || draft.identifier.trim() !== active.id);
   const grammarOk = draftSlug !== "" && ecoCreateRdidValid(scope, draftSlug);
   const probe = useRdidAvailability(changed && grammarOk ? prefix + draftSlug : null);
   const derivedStatus: RdidAvailability = !draft || !changed ? "idle" : !grammarOk ? "invalid" : probe;
@@ -152,7 +154,7 @@ export function EcosystemSettingsPane({
             onSlug={(v) => form.onChange({ ...d, identifier: prefix + v })}
             onDescription={(v) => form.onChange({ ...d, description: v })}
           />
-          {!form.creating && active && onDelete && (
+          {active && onDelete && (
             <DeleteEntitySection
               entityNoun={noun}
               confirmValue={active.identifier}

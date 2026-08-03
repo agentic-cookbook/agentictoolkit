@@ -33,7 +33,12 @@ export interface MasterDetailFormConfig<TItem, TInput> {
   differs: (a: TInput, b: TInput) => boolean;
   /** Trim/clean the draft just before persisting. Defaults to identity. */
   normalize?: (draft: TInput) => TInput;
-  create: (input: TInput) => Promise<TItem>;
+  /** Create a row. Optional, exactly like {@link MasterDetailFormConfig.remove}: a pane that edits
+   *  ONE existing record (RecordSettingsPane, which passes `showCreate={false}`) has no create to
+   *  give, and requiring one made every such pane hand over an operation nothing can reach —
+   *  unreachable code that still reads as a supported path. Omitted ⇒ `actions.onCreate` is a
+   *  no-op, which is never surfaced because those panes hide the button. */
+  create?: (input: TInput) => Promise<TItem>;
   update: (id: string, input: TInput) => Promise<TItem>;
   /** Delete the row. Optional: panes that own delete elsewhere (e.g. an entity
    *  pane's Danger-zone DeleteEntitySection) omit it, and the hook's delete action
@@ -43,7 +48,9 @@ export interface MasterDetailFormConfig<TItem, TInput> {
   confirmDelete?: (item: TItem) => string;
   /** Re-read the list after a mutation (own fetch or a parent callback). */
   refresh: () => void | Promise<void>;
-  createLabel: string;
+  /** Label for the create button; only meaningful alongside `create`. MasterDetailLayout
+   *  defaults it to "New". */
+  createLabel?: string;
   /** Opt-in URL-driven selection (the leaf level of a deep-linkable hierarchy). When
    *  provided, the selected id lives in the URL instead of internal state: the hook
    *  reads `selectedId` from here and routes every selection change (select / cancel /
@@ -154,6 +161,9 @@ export function useMasterDetailForm<TItem, TInput>(
   }
 
   function create() {
+    // No create configured (a single-record pane) — never enter creating mode, so `save` can't
+    // reach a create that isn't there. Same shape as `requestDelete`'s `config.remove` guard.
+    if (!config.create) return;
     // URL-driven mode: do NOT route on create. A new record has no id yet, and pushing
     // a leaf-less URL would remount the pane (Next re-renders the catch-all route),
     // discarding the just-set `creating`/`draft`. Instead keep the URL put and rely on
@@ -208,8 +218,11 @@ export function useMasterDetailForm<TItem, TInput>(
     savingRef.current = true;
     setSaving(true);
     try {
-      if (creating) {
-        const created = await config.create(input);
+      // Bound before the branch so the optional `create` narrows once: `create()` refuses to set
+      // `creating` without it, so the pairing is an invariant, not a second policy here.
+      const createFn = config.create;
+      if (creating && createFn) {
+        const created = await createFn(input);
         await config.refresh();
         setCreating(false);
         loadedIdRef.current = config.getId(created);

@@ -246,3 +246,31 @@ describe("useMasterDetailForm — save() latches its own re-entrancy", () => {
     expect(create).toHaveBeenCalledTimes(2);
   });
 });
+
+// `create` is optional for the same reason `remove` is: a pane that edits ONE existing record
+// (RecordSettingsPane — `showCreate={false}`, nothing calls onCreate) has no create to give, and
+// demanding one made every such pane hand over an operation nothing could reach. Unreachable code
+// that still reads as a supported path is worse than an absent one: EcosystemSettingsPane's was a
+// top-level create, a shape its own prefix no longer describes.
+describe("useMasterDetailForm — a pane may omit create entirely", () => {
+  it("never enters creating mode when there is no `create`", () => {
+    const { result } = renderHook(() => useMasterDetailForm(makeConfig({ create: undefined })));
+    act(() => result.current.actions.onCreate());
+    expect(result.current.creating).toBe(false);
+    expect(result.current.editing).toBe(false);
+    expect(result.current.draft).toBeNull();
+  });
+
+  it("still edits and saves an existing row", async () => {
+    const update = vi.fn(async (id: string, input: Draft) => ({ id, name: input.name }));
+    const { result } = renderHook(() =>
+      useMasterDetailForm(makeConfig({ create: undefined, createLabel: undefined, update })),
+    );
+    act(() => result.current.select("r1"));
+    act(() => result.current.onChange({ name: "Edited" }));
+    await act(async () => {
+      expect(await result.current.actions.onSave()).toBe(true);
+    });
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+});

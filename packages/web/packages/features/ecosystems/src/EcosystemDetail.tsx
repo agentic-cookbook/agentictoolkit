@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
@@ -72,6 +72,27 @@ export function ecoValidate(
 }
 
 /**
+ * Re-hang a draft identifier off a different parent: strip `fromPrefix`, reattach `toPrefix`.
+ *
+ * The draft holds a finished ADDRESS, never a bare leaf, so anything that moves the parent — the
+ * create dialog's top-level toggle, or the home ecosystem's lookup simply landing after the user
+ * started typing — has to move what is already typed along with it. An identifier that does not
+ * start with `fromPrefix` is treated as all leaf, which is exactly the shape typed while the prefix
+ * was still `""` (parent unresolved).
+ */
+export function rehangIdentifier(
+  identifier: string,
+  fromPrefix: string,
+  toPrefix: string,
+): string {
+  const leaf =
+    fromPrefix && identifier.startsWith(fromPrefix)
+      ? identifier.slice(fromPrefix.length)
+      : identifier;
+  return toPrefix + leaf;
+}
+
+/**
  * Controlled ecosystem form — fields only. Save/Cancel/Delete live in the
  * MasterDetailLayout button bar; the pane owns the draft + dirty/validity state.
  */
@@ -101,6 +122,25 @@ export function EcosystemDetail({
   // Unique per instance: the create dialog mounts a second EcosystemDetail over
   // the Settings pane's, so fixed ids would collide and break the <label for> links.
   const uid = useId();
+
+  // The prefix can MOVE after the user has typed: the home-ecosystem lookup lands, or the create
+  // dialog's toggle picks a different parent. The draft holds a finished address, so left alone the
+  // identifier stays hung off the OLD parent — while the field below still displays it as though it
+  // were the leaf (the `startsWith` fallback), so the row reads exactly right and {@link ecoValidate}
+  // refuses it anyway with "Identifier must be <prefix><name>", an error naming what is already on
+  // screen. Re-hang it instead. Skipped when the identifier already starts with the current prefix,
+  // so a caller that re-hung synchronously (the toggle, which has no frame of stale display) is not
+  // applied a second time on top of its own result.
+  const hungOff = useRef(identifierPrefix);
+  useEffect(() => {
+    const from = hungOff.current;
+    hungOff.current = identifierPrefix;
+    // An empty identifier is nothing typed yet: prepending the prefix would fill the field with a
+    // bare parent address and turn "Identifier is required." into a grammar complaint.
+    if (identifierLocked || !draft.identifier || draft.identifier.startsWith(identifierPrefix))
+      return;
+    onChange({ ...draft, identifier: rehangIdentifier(draft.identifier, from, identifierPrefix) });
+  }, [identifierPrefix, identifierLocked, draft, onChange]);
 
   function set<K extends keyof EcosystemInput>(key: K, value: string) {
     onChange({ ...draft, [key]: value });

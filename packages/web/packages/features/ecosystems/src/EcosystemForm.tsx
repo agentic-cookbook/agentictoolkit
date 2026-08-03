@@ -136,9 +136,13 @@ export function ecoCreateValidate(
   if (!slug) return "Slug is required.";
   if (slug.length > ECOSYSTEM_SLUG_MAX_LENGTH)
     return `Slug must be ${ECOSYSTEM_SLUG_MAX_LENGTH} characters or fewer.`;
+  // Before anything that NAMES the address: with the parent unresolved `ecoCreateRdid` yields the
+  // bare slug, so the grammar complaint below would quote a leaf as though it were an identifier —
+  // the same category error this whole form exists to stop. It is also what the form is already
+  // showing: an unresolved parent holds the status line at "Checking…", never "Invalid".
+  if (parentRdid === undefined) return "Waiting for the workspace's identifier prefix.";
   if (!ecoCreateSlugValid(slug))
     return `"${ecoCreateRdid(parentRdid, slug)}" is not a valid identifier — lowercase letters, digits, and interior hyphens only.`;
-  if (parentRdid === undefined) return "Waiting for the workspace's identifier prefix.";
   if (d.rdidStatus === "unavailable")
     return `Identifier "${ecoCreateRdid(parentRdid, slug)}" is already in use.`;
   if (d.rdidStatus !== "available") return "Waiting for the identifier availability check.";

@@ -26,7 +26,13 @@ import {
   type Ecosystem,
 } from "@agentic-toolkit/data/ecosystems";
 import { EcosystemSettingsPane } from "./EcosystemSettingsPane";
-import { EcosystemDetail, ecoBlank, ecoValidate, ecoNormalize } from "./EcosystemDetail";
+import {
+  EcosystemDetail,
+  ecoBlank,
+  ecoValidate,
+  ecoNormalize,
+  rehangIdentifier,
+} from "./EcosystemDetail";
 import {
   EcosystemCreateForm,
   ecoCreateBlank,
@@ -230,6 +236,20 @@ function groupMembers(
 }
 
 /**
+ * An ecosystem id, as a create's PARENT — i.e. as the thing a derived address hangs off.
+ *
+ * Only an rdid can play that part: an address is `<parent address>.<slug>`, so a parent known
+ * only by its uuid supplies no prefix, and gluing the uuid on would preview an identifier that
+ * exists nowhere. That case is UNRESOLVED (`undefined`), not a root — the three-state distinction
+ * {@link EcosystemParentRdid} exists for. `null` passes through untouched: it is the genuine
+ * verdict "no parent", which is a different answer from "not known yet".
+ */
+function parentRdidOf(id: string | null | undefined): EcosystemParentRdid {
+  if (id == null) return id;
+  return isRdid(id) ? id : undefined;
+}
+
+/**
  * The Ecosystems feature. It opens on the workspace's DEFAULT (primary) ecosystem and shows
  * ITS topics as the first rail (Settings / Storage / AI / … / Child Ecosystems) — the ecosystem
  * list is not a top-level rail; it lives inside the Child Ecosystems topic, which drills into
@@ -279,18 +299,23 @@ export function EcosystemsFeature({
   );
   const { items: ecosystems, reload, error } = useResourceList(basePath, load);
 
-  // The workspace's HOME (account-infrastructure) ecosystem — the parent a new product hangs
-  // under, so its identifier is `<home rdid>.<slug>`. Resolved from the server rather than
-  // assembled from the workspace slug: an org's home ecosystem is a root (`ecosystem.fishlamp`)
-  // but a PERSONAL workspace's is itself a child (`ecosystem.<realm>.<user>`), so there is no
-  // string the client can build that is right for both. Same resolver the backend's create uses
-  // (`?workspace=&infrastructure=true` ⇒ findOwnInfrastructureEcosystemId), which is what makes
-  // the previewed and probed identifier the one actually minted. Shared react-query cache entry
-  // — this costs no extra fetch on a page that already resolves it.
+  // The HOME (account-infrastructure) ecosystem a new product hangs under, so its identifier is
+  // `<home rdid>.<slug>`. Resolved from the server rather than assembled from the workspace slug:
+  // an org's home ecosystem is a root (`ecosystem.fishlamp`) but a PERSONAL workspace's is itself
+  // a child (`ecosystem.<realm>.<user>`), so there is no string the client can build that is right
+  // for both. Same resolver the backend's create uses (`infrastructure=true` ⇒
+  // findOwnInfrastructureEcosystemId), which is what makes the previewed and probed identifier the
+  // one actually minted — the WORKSPACE principal's row when this mount has a slug, the CALLER's
+  // own when it does not, exactly matching which create scope each mount uses. Shared react-query
+  // cache entry — this costs no extra fetch on a page that already resolves it.
   const home = useWorkspaceDefaultEcosystemId(slug);
-  // undefined WHILE PENDING, never "no parent": previewing a root address for an unresolved
-  // home ecosystem would show — and probe — an identifier the create is not going to use.
-  const createParentRdid: EcosystemParentRdid = home.isPending ? undefined : (home.ecosystemId ?? null);
+  const createParentRdid: EcosystemParentRdid = home.isPending || home.isError
+    ? // Unresolved, not "no parent": previewing a root address for a home ecosystem that has not
+      // answered (or whose one-shot lookup FAILED) would show — and probe — an identifier the
+      // create is not going to use. A failed resolution is the sharper case, because collapsing it
+      // to `null` reads as a confident verdict about the root.
+      undefined
+    : parentRdidOf(home.ecosystemId ?? null);
 
   // Ecosystems opens on the workspace's DEFAULT (primary) ecosystem when the URL names none —
   // its topics, not a list. Resolve that id from the workspace slug (the same resolver the
@@ -504,22 +529,28 @@ export function EcosystemsFeature({
   // parent is UNRESOLVED (undefined) — the same three-state gate the workspace form uses, because
   // previewing a root address for a child create is a different, wrong answer, not a placeholder.
   const scopedParentRdid: EcosystemParentRdid =
-    scopedId == null || isRdid(scopedId)
-      ? scopedId
-      : scopedEco && isRdid(scopedEco.identifier)
-        ? scopedEco.identifier
-        : undefined;
+    scopedId == null || isRdid(scopedId) ? scopedId : parentRdidOf(scopedEco?.identifier);
   const prefixForMode = (topLevel: boolean): string =>
     ecoCreatePrefix(topLevel || scopedId == null ? createParentRdid : scopedParentRdid);
   // ONE value feeds the field's static prefix and the validator: they answer about the same
   // address, and a create whose preview and taken-check disagreed is the defect this replaced.
   const childCreatePrefix = prefixForMode(createTopLevel);
+  // The addresses this create can actually COLLIDE with: the siblings under the parent it hangs
+  // off — which the toggle moves along with the prefix, so the taken set has to move with it too.
+  // In child mode that is `children` (server-scoped to owner_id = scopedId). The caller's whole
+  // manageable set is a DIFFERENT namespace: since 0160 a slug is unique only within its parent,
+  // so checking a child address against it matches nothing by construction — every duplicate slid
+  // past the local check and came back as a server 409. Top-level mode keeps the manageable list,
+  // the nearest thing loaded here to the home ecosystem's children.
+  const takenIdentifiers = ((createTopLevel || scopedId == null ? ecosystems : children) ?? []).map(
+    (e) => e.identifier,
+  );
   const dialogCommon = {
     ariaLabel: `New ${lowerSingular}`,
     heading: `New ${lowerSingular}`,
     blank: ecoBlank,
     validate: (d: Parameters<typeof ecoValidate>[0]) =>
-      ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier), childCreatePrefix),
+      ecoValidate(d, takenIdentifiers, childCreatePrefix),
   };
 
   // The create dialog is owned here (not by ResourceExplorer's promoted level) and shared by both
@@ -528,15 +559,25 @@ export function EcosystemsFeature({
     <CreateResourceDialog
       {...dialogCommon}
       // Parent = the scoped ecosystem, so "New Ecosystem" from Child Ecosystems creates a CHILD of
-      // it (owner = it) by default. The toggle (below) opts out → an ecosystem owned by the CALLER,
-      // which the server then hangs under the caller's own ecosystem (not the global root — no
-      // create has landed there since address derivation moved to the parent chain). On first-run
-      // (no scoped ecosystem) `scopedId` is undefined → always the caller-owned shape, and the
-      // toggle is hidden (there is no parent to opt out of).
+      // it (owner = it) by default. The toggle (below) opts out → the ecosystem is owned by the
+      // WORKSPACE principal on a slugged mount and by the caller on a slug-less one, and the server
+      // hangs it under that principal's own ecosystem (not the global root — no create has landed
+      // there since address derivation moved to the parent chain). On first-run (no scoped
+      // ecosystem) `scopedId` is undefined → always that shape, and the toggle is hidden (there is
+      // no parent to opt out of).
+      //
+      // `{ workspace: slug }` is what makes the top-level path land where the dialog PREVIEWED it:
+      // the prefix comes from useWorkspaceDefaultEcosystemId(slug), i.e. the workspace principal's
+      // home ecosystem, so omitting the scope sent the create to the CALLER's own instead — on an
+      // org workspace a member's personal ecosystem, a different parent from the address on screen.
       create={(d) =>
         ecosystemsApi.create(
           ecoNormalize(d),
-          createTopLevel || scopedId == null ? undefined : { parent: scopedId },
+          createTopLevel || scopedId == null
+            ? slug != null
+              ? { workspace: slug }
+              : undefined
+            : { parent: scopedId },
         )
       }
       onClose={() => setNewOpen(false)}
@@ -562,13 +603,19 @@ export function EcosystemsFeature({
                   // The toggle moves the PARENT, so it moves the prefix — and the draft holds a
                   // finished identifier, not a leaf. Re-hang what the user typed off the new
                   // prefix; leaving the old one there would show (and validate) an address under
-                  // a parent this create no longer uses.
+                  // a parent this create no longer uses. Done HERE, synchronously, so the field
+                  // never paints a stale leaf; EcosystemDetail's own re-hang then sees an
+                  // identifier already under the new prefix and stands down.
                   const topLevel = v === true;
-                  const leaf = draft.identifier.startsWith(childCreatePrefix)
-                    ? draft.identifier.slice(childCreatePrefix.length)
-                    : draft.identifier;
                   setCreateTopLevel(topLevel);
-                  onChange({ ...draft, identifier: prefixForMode(topLevel) + leaf });
+                  onChange({
+                    ...draft,
+                    identifier: rehangIdentifier(
+                      draft.identifier,
+                      childCreatePrefix,
+                      prefixForMode(topLevel),
+                    ),
+                  });
                 }}
               />
               <label

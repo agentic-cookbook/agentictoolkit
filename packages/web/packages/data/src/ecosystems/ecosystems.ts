@@ -27,14 +27,32 @@
 // mirror of it. Under the current contract that shape fails EVERY create, because a
 // dotted rdid can never equal its own leaf.
 //
-// The `identifier` (rdid) IS mutable: update() renames it via the
-// registry.identifiers route when it changes, then PUTs the other fields under the
-// (possibly new) id — the entity's own `id` column is server-managed.
+// The `identifier` (rdid) IS mutable, and moving it is the SAME `slug` field: update()
+// sends the new last segment in the ordinary PUT, and the route re-derives the address and
+// cascades it onto the handle and every descendant. There is no second call — see update()'s
+// own doc for why the registry.identifiers PATCH this client used to chase the PUT with was
+// the wrong (non-structural) rename.
 
-import { tryParseRdid } from "@agentic-toolkit/ui/lib/rdid";
 import { authedJson, authedRequest, isNotFound, rethrowConflict } from "../http";
 import { compact, enc, sortByText } from "../client-helpers";
 import type { EcosystemRow, EcosystemCreateBody, EcosystemPutBody } from "./wire";
+
+/**
+ * An address's LAST SEGMENT — the one part of an rdid a create or a rename supplies.
+ *
+ * Deliberately a pure `lastIndexOf('.')` slice, mirroring the backend's own `rdidLeaf`
+ * character for character, rather than `tryParseRdid(id)?.name`. The two agree on every
+ * WELL-FORMED rdid and disagree on exactly the malformed ones — an unknown type prefix, an
+ * over-length address, a bad segment — where the parser returns undefined and a `?? identifier`
+ * fallback would put the whole dotted string in `slug`. That is the original bug in miniature:
+ * the server compares its own leaf of `id` against `slug`, so a dotted `slug` can never match
+ * and the request 400s with "id X does not match slug X" — a message about an agreement that
+ * was never the problem, hiding whatever is actually wrong with the address. Sending the true
+ * leaf keeps the assertion satisfied so the server rejects (or accepts) on the address itself.
+ */
+function addressLeaf(identifier: string): string {
+  return identifier.slice(identifier.lastIndexOf(".") + 1);
+}
 
 export interface Ecosystem {
   id: string;
@@ -109,18 +127,25 @@ export const ecosystemsApi = {
     return sortByText(rows.map(toEcosystem), (e) => e.name);
   },
 
-  /** The WORKSPACE's default (account-infrastructure) ecosystem id — the auto-provisioned
-   *  own ecosystem the workspace-level Storage/Integrations panes scope to. Resolved
-   *  server-side by OWNERSHIP (`?workspace=` + `infrastructure=true`), membership-gated —
-   *  never the caller's own default, which is a different principal's ecosystem on an
-   *  org workspace. `null` when the workspace has no infrastructure row (never
-   *  `undefined`, which react-query rejects as query data). */
+  /** The default (account-infrastructure) ecosystem id — the auto-provisioned own ecosystem the
+   *  workspace-level Storage/Integrations panes scope to, and the parent a new ecosystem hangs
+   *  under. Resolved server-side by OWNERSHIP (`infrastructure=true`), never client-side:
+   *  an org's own ecosystem is a ROOT while a person's is itself a child of their home realm,
+   *  so no string built from a slug is right for both.
+   *
+   *  With a `workspaceSlug` it is the WORKSPACE PRINCIPAL's row (`?workspace=`, membership-gated)
+   *  — never the caller's own, which is a different principal's ecosystem on an org workspace.
+   *  WITHOUT one it is the CALLER's own row, which is what a slug-less host (a feature-site mount)
+   *  needs and what that host's unscoped create actually parents under; the two calls mirror the
+   *  two create scopes exactly, which is what keeps a previewed address equal to the minted one.
+   *
+   *  `null` when there is no infrastructure row (never `undefined`, which react-query rejects as
+   *  query data). */
   async workspaceDefaultEcosystemId(
-    workspaceSlug: string,
+    workspaceSlug?: string,
   ): Promise<{ id: string; canManage: boolean } | null> {
-    const rows = await authedJson<EcosystemRow[]>(
-      `${BASE}?workspace=${enc(workspaceSlug)}&infrastructure=true`,
-    );
+    const scope = workspaceSlug != null ? `workspace=${enc(workspaceSlug)}&` : "";
+    const rows = await authedJson<EcosystemRow[]>(`${BASE}?${scope}infrastructure=true`);
     const row = rows[0];
     // `canManage` is annotated by the workspace-mode list: a member can READ the org's infra
     // ecosystem (membership-gated) but only an org admin can MANAGE its contents — the host uses
@@ -167,12 +192,11 @@ export const ecosystemsApi = {
     try {
       const body: EcosystemCreateBody = {
         id: input.identifier,
-        // The address's LAST SEGMENT — see the contract note at the top of this file.
-        // Never a slice of the dotted rdid: the server asserts `id`'s leaf === `slug`,
-        // so anything but the leaf is a guaranteed 400. A non-rdid `identifier` falls
-        // through unchanged so the SERVER names what is wrong with it, rather than this
-        // client throwing a parse error that says nothing about the request.
-        slug: tryParseRdid(input.identifier)?.name ?? input.identifier,
+        // The address's LAST SEGMENT — see the contract note at the top of this file and
+        // {@link addressLeaf}. The server asserts `id`'s leaf === `slug`, so anything but the
+        // leaf is a guaranteed 400; a malformed identifier still sends its true leaf, so the
+        // SERVER names what is wrong with the ADDRESS instead of reporting a mismatch.
+        slug: addressLeaf(input.identifier),
         name: input.name,
         description: input.description,
         region: input.region,
@@ -215,11 +239,12 @@ export const ecosystemsApi = {
    */
   async update(id: string, input: Partial<EcosystemInput>): Promise<Ecosystem> {
     // The rename's new LEAF, or undefined. The identifier's prefix is the parent's own address and
-    // is not the caller's to change (the form fixes it), so what differs is the last segment; a
-    // non-rdid identifier falls through unchanged so the SERVER names what is wrong with it.
+    // is not the caller's to change (the form fixes it), so what differs is the last segment —
+    // taken with {@link addressLeaf}, which is the server's own slice, so a malformed identifier
+    // still lets the route reject the ADDRESS rather than a manufactured leaf/slug mismatch.
     const renamed = input.identifier != null && input.identifier !== id ? input.identifier : null;
     const body = compact({
-      slug: renamed ? (tryParseRdid(renamed)?.name ?? renamed) : undefined,
+      slug: renamed ? addressLeaf(renamed) : undefined,
       name: input.name,
       description: input.description,
       region: input.region,
@@ -240,14 +265,32 @@ export const ecosystemsApi = {
     return authedRequest(`${BASE}/${enc(id)}`, { method: "DELETE" });
   },
 
-  /** Resolve the ecosystem id (rdid) for a WORKSPACE slug — the ecosystem whose own
-   *  `slug` matches, else the owner's default ecosystem (the workspace's primary),
-   *  else the first returned. Reads the RAW rows (unlike {@link list}, which hides
-   *  default ecosystems + sorts alphabetically) so surfaces that carry no ecosystem
-   *  in their URL — the standalone `/[slug]/messaging` route — gate on the RIGHT
-   *  ecosystem instead of an arbitrary alphabetical pick. `null` (never `undefined`, which
-   *  react-query rejects as query data) when the tenant has no ecosystems. */
+  /** Resolve the ecosystem id (rdid) for a WORKSPACE slug — the workspace principal's OWN
+   *  ecosystem, else (for a slug that names no workspace) the caller's default ecosystem, else
+   *  the first row. Surfaces that carry no ecosystem in their URL — the standalone
+   *  `/[slug]/messaging` route — gate on this, so an arbitrary pick is a wrong tenant.
+   *
+   *  Ownership first, via {@link workspaceDefaultEcosystemId}, because a client-side
+   *  `slug ===` scan is no longer unambiguous: slugs are unique only WITHIN a parent
+   *  (`uq_ecosystems_parent_slug`), so once products hang under their owner rather than at the
+   *  root, any product named `<slug>` under any OTHER workspace matches the workspace's own row
+   *  just as well — and whichever the list happened to return first would win. The scan survives
+   *  only as the fallback for a slug the server does not resolve as a workspace at all (a 404
+   *  there is "not a workspace", not a failure), reading the RAW rows — unlike {@link list},
+   *  which hides default ecosystems and sorts alphabetically.
+   *
+   *  `null` (never `undefined`, which react-query rejects as query data) when nothing resolves. */
   async ecosystemIdForSlug(slug: string): Promise<string | null> {
+    try {
+      // By name, not `this`: callers pass these as bare function references
+      // (`queryFn: ecosystemsApi.x`), where `this` would be undefined.
+      const own = await ecosystemsApi.workspaceDefaultEcosystemId(slug);
+      if (own) return own.id;
+    } catch (err) {
+      // Only a 404 means "this slug names no workspace" and licenses the fallback below.
+      // Anything else is a real failure and must not be papered over with an arbitrary row.
+      if (!isNotFound(err)) throw err;
+    }
     const rows = await authedJson<EcosystemRow[]>(BASE);
     return (
       (rows.find((r) => r.slug === slug) ??

@@ -84,6 +84,22 @@ describe("ecoCreateValidate", () => {
     const taken = { ...ready, rdidStatus: "unavailable" as const };
     expect(ecoCreateValidate(taken, "ecosystem.fishlamp")).toContain("ecosystem.fishlamp.adh");
   });
+
+  // An unresolved parent derives to the BARE slug, so a grammar complaint reached before the
+  // unresolved check quotes a leaf as though it were an identifier — the exact category error
+  // this form exists to prevent, and not what the status line is saying either (an unresolved
+  // parent holds it at "Checking…", never "Invalid").
+  it("says the prefix is missing, not that the slug is a bad identifier", () => {
+    const bad = { ...ready, slug: "Not_A_Slug" };
+    const message = ecoCreateValidate(bad, undefined);
+    expect(message).toMatch(/prefix/i);
+    expect(message).not.toContain("Not_A_Slug");
+  });
+
+  it("still names the malformed slug once the parent HAS resolved", () => {
+    const bad = { ...ready, slug: "Not_A_Slug" };
+    expect(ecoCreateValidate(bad, "ecosystem.fishlamp")).toContain("ecosystem.fishlamp.Not_A_Slug");
+  });
 });
 
 describe("ecoCreateToInput", () => {

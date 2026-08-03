@@ -178,3 +178,83 @@ describe("ecosystemsApi.update", () => {
     expect(saved.identifier).toBe("ecosystem.fishlamp.adh2");
   });
 });
+
+describe("ecosystemsApi.workspaceDefaultEcosystemId", () => {
+  // WHOSE infrastructure row gets resolved is the whole question: with a slug it is the
+  // WORKSPACE principal's, without one the CALLER's. The two calls mirror the two create
+  // scopes exactly, which is what keeps a previewed address equal to the minted one.
+  it("scopes to the workspace principal when given a slug", async () => {
+    mockedJson.mockResolvedValueOnce([row("ecosystem.fishlamp", "fishlamp")]);
+    const own = await ecosystemsApi.workspaceDefaultEcosystemId("fishlamp");
+    expect(sentUrl()).toBe("/api/ecosystem/ecosystems?workspace=fishlamp&infrastructure=true");
+    expect(own).toEqual({ id: "ecosystem.fishlamp", canManage: true });
+  });
+
+  // The bare `infrastructure=true` form. It used to be silently INERT server-side — the flag
+  // was read only inside the workspace branch — so a slug-less mount got back every manageable
+  // ecosystem and could never resolve the parent its create hangs under.
+  it("resolves the CALLER's own row when there is no slug", async () => {
+    mockedJson.mockResolvedValueOnce([row("ecosystem.realm.mike", "mike")]);
+    const own = await ecosystemsApi.workspaceDefaultEcosystemId();
+    expect(sentUrl()).toBe("/api/ecosystem/ecosystems?infrastructure=true");
+    expect(own?.id).toBe("ecosystem.realm.mike");
+  });
+
+  // null, never undefined: react-query rejects undefined as query data.
+  it("returns null when the principal has no infrastructure row", async () => {
+    mockedJson.mockResolvedValueOnce([]);
+    expect(await ecosystemsApi.workspaceDefaultEcosystemId("fishlamp")).toBeNull();
+  });
+
+  it("carries the server's canManage=false through", async () => {
+    mockedJson.mockResolvedValueOnce([{ ...row("ecosystem.fishlamp", "fishlamp"), canManage: false }]);
+    expect(await ecosystemsApi.workspaceDefaultEcosystemId("fishlamp")).toEqual({
+      id: "ecosystem.fishlamp",
+      canManage: false,
+    });
+  });
+});
+
+describe("ecosystemsApi.ecosystemIdForSlug", () => {
+  /** A status-carrying HTTP error, the shape `isNotFound` duck-types on. */
+  const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status });
+
+  // Ownership first. A client-side `slug ===` scan is no longer unambiguous: slugs are unique
+  // only WITHIN a parent, so once products hang under their owner, any product named <slug>
+  // under any OTHER workspace matches just as well and list order decides the tenant.
+  it("asks the server for the workspace's own row before scanning anything", async () => {
+    mockedJson.mockResolvedValueOnce([row("ecosystem.fishlamp", "fishlamp")]);
+    expect(await ecosystemsApi.ecosystemIdForSlug("fishlamp")).toBe("ecosystem.fishlamp");
+    expect(mockedJson).toHaveBeenCalledTimes(1);
+    expect(sentUrl()).toBe("/api/ecosystem/ecosystems?workspace=fishlamp&infrastructure=true");
+  });
+
+  // A 404 is "this slug names no workspace" — the one verdict that licenses the scan.
+  it("falls back to the raw list when the slug names no workspace", async () => {
+    mockedJson.mockRejectedValueOnce(httpError(404));
+    mockedJson.mockResolvedValueOnce([row("ecosystem.other", "other"), row("ecosystem.zed", "zed")]);
+    expect(await ecosystemsApi.ecosystemIdForSlug("zed")).toBe("ecosystem.zed");
+  });
+
+  // The resolver's own empty answer (a workspace with no infrastructure row) is not an error,
+  // so it reaches the same fallback without a throw.
+  it("falls back when the workspace resolves to no infrastructure row", async () => {
+    mockedJson.mockResolvedValueOnce([]);
+    mockedJson.mockResolvedValueOnce([{ ...row("ecosystem.d", "d"), isDefault: true }]);
+    expect(await ecosystemsApi.ecosystemIdForSlug("fishlamp")).toBe("ecosystem.d");
+  });
+
+  // Anything OTHER than a 404 is a real failure. Papering over a 403/500 with an arbitrary row
+  // is how a member of one org silently lands on another tenant's ecosystem.
+  it("rethrows a non-404 instead of picking a row", async () => {
+    mockedJson.mockRejectedValueOnce(httpError(403));
+    await expect(ecosystemsApi.ecosystemIdForSlug("fishlamp")).rejects.toThrow("HTTP 403");
+    expect(mockedJson).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null when nothing resolves at all", async () => {
+    mockedJson.mockRejectedValueOnce(httpError(404));
+    mockedJson.mockResolvedValueOnce([]);
+    expect(await ecosystemsApi.ecosystemIdForSlug("nope")).toBeNull();
+  });
+});
