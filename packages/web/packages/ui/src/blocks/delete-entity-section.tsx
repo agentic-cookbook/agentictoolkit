@@ -31,13 +31,19 @@ export interface DeleteEntitySectionProps {
   /** Optional override for the danger-section description line. */
   description?: React.ReactNode;
   /**
-   * The destructive verb, in the two grammatical forms this section's copy needs. Defaults to
-   * Delete. Pass `{ imperative: "Archive", gerund: "Archiving" }` for a REVERSIBLE action — the
-   * two-phase confirm and the type-to-confirm gate are the same ceremony either way; only the
-   * wording changes. A caller whose action is reversible must also pass its own `description`,
-   * because the default one says "cannot be undone".
+   * The verb this section's copy is built from, in the two grammatical forms it needs, plus
+   * whether that verb is reversible. Defaults to `{ imperative: "Delete", gerund: "Deleting" }`
+   * (not reversible) — so passing no `actionVerb` at all renders today's exact wording, including
+   * every "Permanently" / "cannot be undone" / "deletion" phrase, unchanged.
+   *
+   * Pass `reversible: true` (e.g. `{ imperative: "Archive", gerund: "Archiving", reversible:
+   * true }`) for an action the user can undo later — this swaps out every phrase in the section
+   * that otherwise asserts permanence, irreversibility, or data destruction, not just the verb.
+   * A caller whose action is reversible should still pass its own `description`: the built-in
+   * fallback is generic ("can be undone later") where a specific caller usually has a sharper
+   * one to give (e.g. what un-archiving restores).
    */
-  actionVerb?: { imperative: string; gerund: string };
+  actionVerb?: { imperative: string; gerund: string; reversible?: boolean };
 }
 
 const article = (noun: string): string =>
@@ -49,11 +55,13 @@ const article = (noun: string): string =>
  * button only once opened — the `apt-red` accent appears solely in the disclosed
  * state, so a closed Danger zone doesn't shout (least-astonishment). The action
  * button is gated behind a two-phase confirm dialog — first an acknowledgement
- * ("Do you wish to proceed?"), then a type-to-confirm step whose button only
- * enables once the entity's exact identifier is typed (case-sensitive, no extra
- * whitespace). Defaults to "Delete" wording; pass `actionVerb` for a reversible
- * action like "Archive". Shared across every FTD route (see
- * recipes/focused-topic-detail.md).
+ * ("Do you wish to proceed?"), then a type-to-confirm step whose button (default:
+ * "Permanently Delete") only enables once the entity's exact identifier is typed
+ * (case-sensitive, no extra whitespace). Defaults to today's "Delete"/"Permanently
+ * Delete"/"cannot be undone" wording unchanged; pass `actionVerb` with
+ * `reversible: true` (e.g. "Archive") to swap in non-destructive copy throughout —
+ * every "Permanently"/"cannot be undone"/"deletion" phrase, not just the verb.
+ * Shared across every FTD route (see recipes/focused-topic-detail.md).
  */
 export function DeleteEntitySection({
   entityNoun,
@@ -77,6 +85,7 @@ export function DeleteEntitySection({
   const noun = entityNoun.toLowerCase();
   const verb = actionVerb.imperative;
   const verbLower = verb.toLowerCase();
+  const reversible = actionVerb.reversible ?? false;
   // Exact match: case-sensitive, no normalization/trim — typed must equal the rdid.
   // Guard the empty case: an empty `confirmValue` would match the initial empty
   // input and arm the destructive button with no typing at all.
@@ -137,12 +146,16 @@ export function DeleteEntitySection({
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-apt-text-muted">
-            {description ?? (
+            {description ?? (reversible ? (
+              <>
+                {verb} this {noun}. This can be undone later.
+              </>
+            ) : (
               <>
                 Permanently {verbLower} this {noun} and all of its data. This cannot be
                 undone.
               </>
-            )}
+            ))}
           </p>
           <div>
             <Button
@@ -167,8 +180,18 @@ export function DeleteEntitySection({
               <DialogHeader>
                 <DialogTitle>{verb} {entityNoun}?</DialogTitle>
                 <DialogDescription>
-                  {actionVerb.gerund} {article(entityNoun)} {noun} affects{" "}
-                  {childEntities}. Do you wish to proceed?
+                  {reversible ? (
+                    <>
+                      {actionVerb.gerund} {article(entityNoun)} {noun} affects{" "}
+                      {childEntities}. Do you wish to proceed?
+                    </>
+                  ) : (
+                    <>
+                      {actionVerb.gerund} {article(entityNoun)} {noun} deletes all the data
+                      associated with the {noun}, including {childEntities}. Do you
+                      wish to proceed?
+                    </>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -187,9 +210,19 @@ export function DeleteEntitySection({
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>{verb} this {entityNoun}</DialogTitle>
+                <DialogTitle>
+                  {reversible ? (
+                    <>{verb} this {entityNoun}</>
+                  ) : (
+                    <>Permanently {verbLower} this {entityNoun}</>
+                  )}
+                </DialogTitle>
                 <DialogDescription>
-                  You are about to {verbLower} this {entityNoun}. Enter{" "}
+                  {reversible ? (
+                    <>You are about to {verbLower} this {entityNoun}. Enter{" "}</>
+                  ) : (
+                    <>You are about to permanently {verbLower} this {entityNoun}. Enter{" "}</>
+                  )}
                   <span className="font-mono text-apt-text">
                     &ldquo;{confirmValue}&rdquo;
                   </span>{" "}
@@ -198,7 +231,11 @@ export function DeleteEntitySection({
               </DialogHeader>
               <div className="flex flex-col gap-2">
                 <Label htmlFor={inputId} className="sr-only">
-                  Type {confirmValue} to confirm
+                  {reversible ? (
+                    <>Type {confirmValue} to confirm</>
+                  ) : (
+                    <>Type {confirmValue} to confirm deletion</>
+                  )}
                 </Label>
                 <Input
                   id={inputId}
@@ -227,7 +264,11 @@ export function DeleteEntitySection({
                   onClick={handleConfirm}
                   disabled={!confirmEnabled}
                 >
-                  {busy ? `${actionVerb.gerund}…` : `${verb} ${entityNoun}`}
+                  {busy
+                    ? `${actionVerb.gerund}…`
+                    : reversible
+                      ? `${verb} ${entityNoun}`
+                      : `Permanently ${verb}`}
                 </Button>
               </DialogFooter>
             </>

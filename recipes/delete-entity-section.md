@@ -192,7 +192,12 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
   `Footer`), `Input`, and `Label`, with the `Trash2`/`TriangleAlert` glyphs.
 - Props: `entityNoun` (singular noun), `confirmValue` (the exact rdid to type),
   `childEntities` (cascade copy), `onConfirm: () => Promise<void>`, optional
-  `description`.
+  `description`, and optional `actionVerb: { imperative, gerund, reversible? }` —
+  defaults to `{ imperative: "Delete", gerund: "Deleting" }` (all copy above is that
+  default). Passing `reversible: true` (e.g. an "Archive" verb) swaps every phrase
+  that otherwise asserts permanence or data destruction — "Permanently", "cannot be
+  undone", "deletion" — for non-destructive wording, without changing the two-phase
+  ceremony itself.
 - Demo: `ui-showcase` Topic `delete-entity-section` (regenerate
   `sources.generated.ts` via `gen-sources.py` after source changes).
 - Shared across every focused-topic-detail settings route
