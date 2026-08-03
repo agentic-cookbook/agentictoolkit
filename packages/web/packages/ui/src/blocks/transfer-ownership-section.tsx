@@ -80,7 +80,25 @@ export function TransferOwnershipSection({
 
   const noun = entityNoun.toLowerCase();
 
+  /**
+   * The dialog is sealed only while the TRANSFER is running — never while the preflight is.
+   * `onPreview` mutates nothing (the server runs the real transfer and rolls it back), so a slow
+   * or hung preflight has no correctness claim on the user's ability to back out; sealing it too
+   * would trap them behind "Checking…" with no exit. `confirm()` is the only path that sets `busy`
+   * with a preview already in hand, which is what makes this derived rather than a fourth flag.
+   */
+  const confirming = busy && preview !== null;
+
+  /**
+   * Identifies the in-flight preflight. Because the preview IS cancellable, its promise can now
+   * resolve after the user cancelled or picked a different workspace — and a late resolution
+   * landing on the wrong target would show them the wrong losses for the transfer they are about
+   * to authorize. Every settled preflight checks it still owns this ref before touching state.
+   */
+  const previewSeq = React.useRef(0);
+
   function reset(): void {
+    previewSeq.current += 1; // orphan any preflight still in flight
     setChosen(null);
     setPreview(null);
     setBusy(false);
@@ -88,17 +106,21 @@ export function TransferOwnershipSection({
   }
 
   async function choose(target: TransferTarget): Promise<void> {
+    const seq = (previewSeq.current += 1);
     setMenuOpen(false);
     setChosen(target);
     setPreview(null);
     setError(null);
     setBusy(true);
     try {
-      setPreview(await onPreview(target));
+      const result = await onPreview(target);
+      if (seq !== previewSeq.current) return;
+      setPreview(result);
     } catch (e) {
+      if (seq !== previewSeq.current) return;
       setError(e instanceof Error ? e.message : `Could not check this transfer.`);
     } finally {
-      setBusy(false);
+      if (seq === previewSeq.current) setBusy(false);
     }
   }
 
@@ -173,8 +195,8 @@ export function TransferOwnershipSection({
         </div>
       </Disclosure>
 
-      <Dialog open={chosen !== null} onOpenChange={(next) => { if (!next && !busy) reset(); }}>
-        <DialogContent showClose={!busy}>
+      <Dialog open={chosen !== null} onOpenChange={(next) => { if (!next && !confirming) reset(); }}>
+        <DialogContent showClose={!confirming}>
           <DialogHeader>
             <DialogTitle>
               Transfer this {entityNoun} to {chosen?.name}?
@@ -225,11 +247,11 @@ export function TransferOwnershipSection({
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={reset} disabled={busy}>
+            <Button variant="ghost" size="sm" onClick={reset} disabled={confirming}>
               Cancel
             </Button>
             <Button variant="destructive" size="sm" onClick={confirm} disabled={busy || !preview}>
-              {busy && preview ? "Transferring…" : "Transfer"}
+              {confirming ? "Transferring…" : "Transfer"}
             </Button>
           </DialogFooter>
         </DialogContent>

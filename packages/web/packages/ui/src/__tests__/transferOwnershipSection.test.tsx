@@ -97,4 +97,32 @@ describe('TransferOwnershipSection', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
     expect(onPreview).not.toHaveBeenCalled()
   })
+
+  it('can be cancelled while the preflight is still running, and ignores its late answer', async () => {
+    // The preflight is read-only, so it must never seal the dialog. Hold it open by hand.
+    let settle!: (r: unknown) => void
+    const onPreview = vi.fn().mockReturnValue(new Promise((res) => { settle = res }))
+
+    render(
+      <TransferOwnershipSection
+        entityNoun="Persona"
+        entityLabel="persona.alice.charlie"
+        targets={targets}
+        currentTargetSlug="alice"
+        onPreview={onPreview}
+        onConfirm={vi.fn()}
+      />,
+    )
+    await openMenu('Transfer Persona')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
+    expect(await screen.findByText('Checking…')).toBeInTheDocument()
+
+    // Cancel is live during the preflight — the whole point of the fix.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByText('Checking…')).toBeNull())
+
+    // The orphaned preflight answers afterwards; it must not repopulate a dismissed dialog.
+    settle({ newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
+    await waitFor(() => expect(screen.queryByText(/persona\.bob\.charlie/)).toBeNull())
+  })
 })
