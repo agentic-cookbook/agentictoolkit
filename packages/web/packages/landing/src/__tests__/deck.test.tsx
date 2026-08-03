@@ -16,15 +16,33 @@ describe('deckScript', () => {
     expect(deckScript()).toContain('history.scrollRestoration="manual"')
   })
 
+  // The two halves of the easing gate, and the second is the whole point of it:
+  // `scroll-behavior: smooth` also governs the browser's scroll RESTORATION, so a
+  // deck that only ever SET `data-smooth` would still animate its way back to where
+  // the reader already was when they hit Back.
+  it('arms easing on first input and disarms it on a history traversal', () => {
+    const s = deckScript()
+    expect(s).toContain('data-smooth')
+    expect(s).toContain('popstate')
+  })
+
   it('drops each half when asked', () => {
     expect(deckScript({ openAtTop: false })).not.toContain('scrollRestoration')
     expect(deckScript({ armSnapping: false })).not.toContain('data-snap')
+    expect(deckScript({ armSmooth: false })).not.toContain('data-smooth')
+    expect(deckScript({ armSmooth: false })).not.toContain('popstate')
     expect(deckScript({ restoreZoomOffIos: false })).not.toContain('maximum-scale')
   })
 
   it('emits one statement per enabled part and nothing else', () => {
-    expect(deckScript({ openAtTop: false, armSnapping: false, restoreZoomOffIos: false }))
-      .toBe('')
+    expect(
+      deckScript({
+        openAtTop: false,
+        armSnapping: false,
+        armSmooth: false,
+        restoreZoomOffIos: false,
+      }),
+    ).toBe('')
   })
 })
 

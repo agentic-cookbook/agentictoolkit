@@ -120,14 +120,36 @@ html:where(:has(.lp-deck)) {
  *
  * `scroll-behavior: smooth` is what eases an in-page jump, so following a
  * drawer link needs no script of its own — the browser does it, and honours
- * `prefers-reduced-motion` through the override at the foot of this file. */
+ * `prefers-reduced-motion` through the override at the foot of this file. It is
+ * armed rather than declared here; see the rule below. */
 html:where(:has(.lp-deck)) {
   scroll-snap-type: none;
-  scroll-behavior: smooth;
   scrollbar-gutter: stable;
 }
 html[data-snap]:where(:has(.lp-deck)) {
   scroll-snap-type: y mandatory;
+}
+/* Easing is ARMED, the way snapping above it is, and disarmed by a history
+ * traversal. `scroll-behavior` governs every programmatic scroll of this
+ * element, and the browser's own scroll RESTORATION is one of them — so a
+ * reader coming back to a deck watched the page glide down to the offset they
+ * had already been at. That is a restoration, not a journey: they never left
+ * the spot, and animating the return to it says they did.
+ *
+ * No CSS can tell the two apart, so `data-smooth` does: `DeckScript` sets it on
+ * the reader's first input and clears it on every `popstate`. Every traversal
+ * is therefore instant and every in-page jump is still eased, because an
+ * in-page jump is always downstream of an input — a drawer has to be opened
+ * before a row in it can be picked — and the next input arms it again.
+ *
+ * A host that renders no `DeckScript` gets no easing at all rather than the
+ * bug: `scroll-behavior` then stays at its initial `auto`, which is the correct
+ * unconfigured behaviour for a stylesheet whose script half is missing.
+ *
+ * Deck-gated like every rule around it, so the sheet still governs nothing on a
+ * host route that draws no deck. */
+html[data-smooth]:where(:has(.lp-deck)) {
+  scroll-behavior: smooth;
 }
 
 html:where(:has(.lp-deck)),
@@ -377,8 +399,13 @@ html:where(:has(.lp-deck)),
    * change the reader asked for by scrolling, and turning it off would leave
    * this reader on a different page from everyone else. `auto` makes the
    * adjustment instant instead of a glide, which is the movement that actually
-   * bothers a vestibular reader — and it takes the drawer jumps with it. */
-  html:where(:has(.lp-deck)) {
+   * bothers a vestibular reader — and it takes the drawer jumps with it.
+   *
+   * It carries the same `[data-smooth]` the rule it overrides does, and must:
+   * without it this sits at (0,0,1) against that rule's (0,1,1) and loses, and
+   * a reduced-motion override that loses is worse than none. Matched exactly,
+   * it wins on order — this is the foot of the sheet. */
+  html[data-smooth]:where(:has(.lp-deck)) {
     scroll-behavior: auto;
   }
   /* Gated for the same reason as everything above, and this one is the reason
