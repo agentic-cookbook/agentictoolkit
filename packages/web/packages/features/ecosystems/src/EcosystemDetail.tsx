@@ -41,12 +41,31 @@ export function ecoNormalize(d: EcosystemInput): EcosystemInput {
   };
 }
 
-/** Returns an error message, or null when the draft is valid. */
-export function ecoValidate(draft: EcosystemInput, takenIdentifiers: string[]): string | null {
+/**
+ * Returns an error message, or null when the draft is valid.
+ *
+ * `prefix` is the address the create will hang the typed leaf off — the PARENT's own rdid plus a
+ * dot, since the server derives `<parent path>.<slug>` by walking the new row's parent chain. It
+ * is a parameter, with no default, rather than the hardcoded `ecosystem.` this form assumed for
+ * its whole life, because the taken-check depends on it: comparing a root-shaped `ecosystem.<leaf>`
+ * against a sibling list of real (owner-scoped) rdids both MISSES every genuine collision and,
+ * worse, FALSELY blocks a legal child create whenever the caller happens to own an unrelated ROOT
+ * of the same leaf — and every product minted before address derivation moved to the parent chain
+ * is exactly such a root.
+ *
+ * `""` means the parent is still resolving, which is not a valid draft: the address is unknown, so
+ * neither the grammar nor the taken-check has anything to answer about.
+ */
+export function ecoValidate(
+  draft: EcosystemInput,
+  takenIdentifiers: string[],
+  prefix: string,
+): string | null {
+  if (!prefix) return "Still working out where this will live — one moment.";
   const id = draft.identifier.trim();
   if (!id) return "Identifier is required.";
-  if (!id.startsWith("ecosystem.") || validateLeaf(id.slice("ecosystem.".length)) !== null)
-    return "Identifier must be ecosystem.<name>, e.g. ecosystem.my-ecosystem";
+  if (!id.startsWith(prefix) || validateLeaf(id.slice(prefix.length)) !== null)
+    return `Identifier must be ${prefix}<name>, e.g. ${prefix}my-ecosystem`;
   if (takenIdentifiers.includes(id)) return `Identifier "${id}" is already in use.`;
   if (!draft.name.trim()) return "Name is required.";
   return null;
@@ -62,6 +81,7 @@ export function EcosystemDetail({
   onChange,
   error,
   identifierLocked = false,
+  identifierPrefix,
 }: {
   /** When omitted, the form renders without the section heading (e.g. the
    * single-ecosystem Settings editor, which has no "ECOSYSTEM" header). */
@@ -72,6 +92,11 @@ export function EcosystemDetail({
   /** Lock the identifier when editing a saved ecosystem — it's the immutable
    * rdid and update() ignores it, so an editable field would mislead. */
   identifierLocked?: boolean;
+  /** The static address the typed leaf hangs off — the parent's own rdid plus a dot. Required and
+   * defaultless: pass what the server will actually derive, which is the same value given to
+   * {@link ecoValidate}, so the preview and the taken-check can never answer about different
+   * addresses. `""` (parent unresolved) renders a bare field the validator refuses. */
+  identifierPrefix: string;
 }) {
   // Unique per instance: the create dialog mounts a second EcosystemDetail over
   // the Settings pane's, so fixed ids would collide and break the <label for> links.
@@ -85,24 +110,28 @@ export function EcosystemDetail({
       <Card>
         <CardContent className="flex flex-col gap-5">
           {/* On CREATE this field is the slug, not the finished address: the server derives the
-              address from the new ecosystem's parent chain, so the identifier it is given ends up
-              as `ecosystem.<owner path>.<slug>` and only the last segment — what is typed here —
-              comes from the client. The hint says so rather than letting the `ecosystem.` prefix
-              read as the whole thing. Editing a SAVED row is the other case: there the identifier
-              IS the full rdid and it is locked. */}
+              address from the new ecosystem's parent chain, so only the last segment — what is
+              typed here — comes from the client. `identifierPrefix` carries the rest, so the
+              preview is the address that will actually be minted rather than a root-shaped guess.
+              Editing a SAVED row is the other case: there the identifier IS the full rdid, the
+              prefix is its own scope, and the field is locked. */}
           <RdidEditor
             id={`${uid}-identifier`}
             label="Identifier"
-            prefix="ecosystem."
-            value={draft.identifier.startsWith("ecosystem.") ? draft.identifier.slice("ecosystem.".length) : draft.identifier}
+            prefix={identifierPrefix}
+            value={
+              identifierPrefix && draft.identifier.startsWith(identifierPrefix)
+                ? draft.identifier.slice(identifierPrefix.length)
+                : draft.identifier
+            }
             placeholder="my-ecosystem"
             hint={
               identifierLocked
                 ? "Fixed once created."
-                : "The name is the last segment of the identifier — the rest is the owner's path, filled in when it's created."
+                : "The name is the last segment of the identifier — the rest is the parent's own address."
             }
             disabled={identifierLocked}
-            onChange={(leaf) => set("identifier", "ecosystem." + leaf)}
+            onChange={(leaf) => set("identifier", identifierPrefix + leaf)}
           />
           <Field
             id={`${uid}-name`}

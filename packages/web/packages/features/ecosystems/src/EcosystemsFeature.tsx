@@ -8,6 +8,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { isRdid } from "@agentic-toolkit/ui/lib/rdid";
 import {
   ResourceExplorer,
   ResourceLanding,
@@ -29,6 +30,7 @@ import { EcosystemDetail, ecoBlank, ecoValidate, ecoNormalize } from "./Ecosyste
 import {
   EcosystemCreateForm,
   ecoCreateBlank,
+  ecoCreatePrefix,
   ecoCreateReady,
   ecoCreateToInput,
   ecoCreateValidate,
@@ -494,12 +496,30 @@ export function EcosystemsFeature({
   // The CHILD-ecosystem create-dialog identity (label/heading/blank/validate). The listFirst
   // header-"+" dialog no longer shares it: that flow is the workspace New Product form
   // (derived owner-scoped identifier + availability probe), a different draft shape.
+  // The parent this dialog's create will actually hang the new row off — the scoped ecosystem by
+  // default, the caller's own home ecosystem when the top-level toggle opts out of it (or when
+  // there is no scoped ecosystem to opt out of). `scopedId` is normally the parent's rdid (a row's
+  // public id IS its address), but the route also accepts the bare uuid, which is no basis for a
+  // preview: the fetch that case already triggers carries the real rdid, and until it lands the
+  // parent is UNRESOLVED (undefined) — the same three-state gate the workspace form uses, because
+  // previewing a root address for a child create is a different, wrong answer, not a placeholder.
+  const scopedParentRdid: EcosystemParentRdid =
+    scopedId == null || isRdid(scopedId)
+      ? scopedId
+      : scopedEco && isRdid(scopedEco.identifier)
+        ? scopedEco.identifier
+        : undefined;
+  const prefixForMode = (topLevel: boolean): string =>
+    ecoCreatePrefix(topLevel || scopedId == null ? createParentRdid : scopedParentRdid);
+  // ONE value feeds the field's static prefix and the validator: they answer about the same
+  // address, and a create whose preview and taken-check disagreed is the defect this replaced.
+  const childCreatePrefix = prefixForMode(createTopLevel);
   const dialogCommon = {
     ariaLabel: `New ${lowerSingular}`,
     heading: `New ${lowerSingular}`,
     blank: ecoBlank,
     validate: (d: Parameters<typeof ecoValidate>[0]) =>
-      ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier)),
+      ecoValidate(d, (ecosystems ?? []).map((e) => e.identifier), childCreatePrefix),
   };
 
   // The create dialog is owned here (not by ResourceExplorer's promoted level) and shared by both
@@ -527,13 +547,29 @@ export function EcosystemsFeature({
       }}
       renderForm={(draft, onChange, error) => (
         <>
-          <EcosystemDetail draft={draft} onChange={onChange} error={error} />
+          <EcosystemDetail
+            draft={draft}
+            onChange={onChange}
+            error={error}
+            identifierPrefix={childCreatePrefix}
+          />
           {scopedId != null && (
             <div className="flex items-center gap-2">
               <Checkbox
                 id="new-eco-toplevel"
                 checked={createTopLevel}
-                onCheckedChange={(v) => setCreateTopLevel(v === true)}
+                onCheckedChange={(v) => {
+                  // The toggle moves the PARENT, so it moves the prefix — and the draft holds a
+                  // finished identifier, not a leaf. Re-hang what the user typed off the new
+                  // prefix; leaving the old one there would show (and validate) an address under
+                  // a parent this create no longer uses.
+                  const topLevel = v === true;
+                  const leaf = draft.identifier.startsWith(childCreatePrefix)
+                    ? draft.identifier.slice(childCreatePrefix.length)
+                    : draft.identifier;
+                  setCreateTopLevel(topLevel);
+                  onChange({ ...draft, identifier: prefixForMode(topLevel) + leaf });
+                }}
               />
               <label
                 htmlFor="new-eco-toplevel"
