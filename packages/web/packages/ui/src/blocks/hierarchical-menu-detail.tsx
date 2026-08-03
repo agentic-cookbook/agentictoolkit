@@ -5,8 +5,9 @@
 // shape. HMDV is a self-contained copy of the whole HTDV frame (all four stacks); consumers pick
 // the cascade via `disclosureStyle="cascading"`. It carries its OWN module `surfaceStates` map, so
 // every HMDV surface coordinates disclosure independently of any HTDV surface. The shared public
-// row/level types (`TopicLevel`, `PaneExitGuard`) are owned by HTDV and consumed from the barrel;
-// this file re-declares them privately only so the copy compiles standalone. Delete this whole file
+// row type (`TopicLevel`) is owned by HTDV and consumed from the barrel; this file re-declares it
+// privately only so the copy compiles standalone. `PaneExitGuard` is the shared exit-gate type
+// from `../hooks/useExitGate`, imported directly rather than re-declared. Delete this whole file
 // (and its barrel line) to retire the experiment.
 
 import {
@@ -32,19 +33,9 @@ import {
   ChevronsRight,
   PanelLeftClose,
   PanelLeftOpen,
-  TriangleAlert,
 } from "lucide-react"
 
 import { cn } from "../lib/utils"
-import { Button } from "../components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-} from "../components/dialog"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
 import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
@@ -80,15 +71,8 @@ import { clog } from "./cascade-log"
 // `{ replace: true }` to a level's `onSelect` when the default-select path fires, and a consumer's
 // implementation must satisfy whichever block the host has switched on.
 import type { TopicSelectOptions } from "./hierarchical-topic-detail"
-
-/** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
- *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
- *  sibling swap at the deepest level) and, if dirty, raises a Save/Discard/Cancel prompt; `save()`
- *  resolves true once the draft is persisted so the package may then proceed. */
-interface PaneExitGuard {
-  isDirty(): boolean
-  save(): Promise<boolean>
-}
+import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
+import { useExitGate, type PaneExitGuard } from "../hooks/useExitGate"
 
 // The enclosing frame for a hierarchy of topic/detail rails — the generalisation
 // of the adh.com/home nesting (`[workspaces] | [features] | [content]`). Instead
@@ -384,8 +368,8 @@ export function HierarchicalMenuDetail({
    *  headers — names what the pane is showing (covered style). */
   detailTitle?: ReactNode
   /** The leaf editor's unsaved-work guard. When dirty, Back / breadcrumb-up / re-click /
-   *  selecting a shallower row / swapping to a sibling at the deepest level first prompt
-   *  Save/Discard/Cancel. Omit for no guard. */
+   *  selecting a shallower row / swapping to a sibling at the deepest level first raises a
+   *  Discard/Stay alert. Omit for no guard. */
   exitGuard?: PaneExitGuard | null
   /** Keep the per-rail manual disclosure toggle (the `«` icon strip). Default true. A
    *  manually-collapsed list counts as its icon width in the fit math, then slides
@@ -450,18 +434,7 @@ export function HierarchicalMenuDetail({
   // else one above it; -1 when nothing is selected. Back clears exactly this level.
   const deepestSelected = firstUnselected === -1 ? frontier : frontier - 1
 
-  // The unsaved-work gate: every action that would clear a level (Back, re-click-deselect,
-  // breadcrumb up-nav, selecting a shallower row) runs through here. Dirty → open the 3-action
-  // modal and remember the pending action; clean → act now.
-  const [pendingExit, setPendingExit] = useState<(() => void) | null>(null)
-  const [savingExit, setSavingExit] = useState(false)
-  const attemptExit = useCallback(
-    (action: () => void) => {
-      if (exitGuard?.isDirty()) setPendingExit(() => action)
-      else action()
-    },
-    [exitGuard],
-  )
+  const { attemptExit, exitAlertProps } = useExitGate(exitGuard)
 
   // Each selected level contributes a crumb; clicking it deselects EVERYTHING DEEPER — i.e. it
   // clears the next level down (`levels[i+1].onClear()`), leaving this level's selection in place.
@@ -1003,31 +976,7 @@ export function HierarchicalMenuDetail({
         )}
       </div>
 
-      {/* Unsaved-work guard: a 3-action Save / Discard / Cancel modal. Save → persist then act;
-          Discard → act; Cancel → keep the dirty editor. */}
-      <UnsavedChangesModal
-        open={pendingExit !== null}
-        busy={savingExit}
-        onSave={async () => {
-          if (!exitGuard) return
-          setSavingExit(true)
-          try {
-            const ok = await exitGuard.save()
-            if (ok) {
-              pendingExit?.()
-              setPendingExit(null)
-            }
-          } finally {
-            // Always clear busy — a rejected save() must not leave the modal stuck/undismissable.
-            setSavingExit(false)
-          }
-        }}
-        onDiscard={() => {
-          pendingExit?.()
-          setPendingExit(null)
-        }}
-        onCancel={() => setPendingExit(null)}
-      />
+      <UnsavedChangesAlert {...exitAlertProps} />
     </div>
   )
 }
@@ -3743,53 +3692,5 @@ function NarrowStack({
         <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
       </section>
     </div>
-  )
-}
-
-/** The 3-action unsaved-work prompt the package raises before discarding a dirty leaf editor on
- *  Back / breadcrumb-up / re-click. Built on the shared Dialog so it dims + blurs like every modal. */
-function UnsavedChangesModal({
-  open,
-  busy,
-  onSave,
-  onDiscard,
-  onCancel,
-}: {
-  open: boolean
-  busy: boolean
-  onSave: () => void
-  onDiscard: () => void
-  onCancel: () => void
-}) {
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && !busy && onCancel()}>
-      <DialogContent showClose={!busy}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-apt-gold">
-            <TriangleAlert className="size-5 shrink-0 text-apt-red" aria-hidden />
-            Unsaved changes
-          </DialogTitle>
-          <DialogDescription>
-            You have unsaved changes. Save them, discard them, or stay to keep editing.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex-row justify-end gap-2">
-          <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive-ghost"
-            onClick={onDiscard}
-            disabled={busy}
-          >
-            Discard
-          </Button>
-          <Button size="sm" onClick={onSave} disabled={busy}>
-            {busy ? "Saving…" : "Save"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
