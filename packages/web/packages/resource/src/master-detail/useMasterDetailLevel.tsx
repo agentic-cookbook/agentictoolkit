@@ -110,6 +110,11 @@ export function useMasterDetailLevel<TItem, TInput>({
   };
 
   useStackLevel(level);
-  // The guard is live only while an editor is open (selection or create).
-  useRailExitGuard(form.editing ? form.guard : null);
+  // Registered only while the draft is actually DIRTY, not merely while an editor is open.
+  // Two things ride on this. HTDV is unaffected — it treats "no guard" and "clean guard"
+  // identically, both exiting immediately. But the rail host re-renders on register/withdraw,
+  // so `guards.size > 0` becomes a RENDER VALUE meaning "something is dirty" — which is what
+  // the shell's UnsavedChangesGuard needs, since its `when` prop cannot call `isDirty()`.
+  // Costs one re-render per clean↔dirty transition, not per keystroke.
+  useRailExitGuard(form.dirty ? form.guard : null);
 }
