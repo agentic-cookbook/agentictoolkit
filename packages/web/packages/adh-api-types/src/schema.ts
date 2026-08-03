@@ -24297,7 +24297,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Soft-delete an organization + free its rdid (site-admin) */
+        /** Archive an organization — hides it and releases its rdid (org creator, org-team admin, or site-admin) */
         delete: {
             parameters: {
                 query?: never;
@@ -24309,7 +24309,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description deleted */
+                /** @description archived */
                 204: {
                     headers: {
                         [name: string]: unknown;
@@ -24423,6 +24423,84 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/organization/organizations/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an archived organization to its own rdid (org creator, org-team admin, or site-admin) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description organization */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            organization: components["schemas"]["RegistryOrganization"];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/ecosystem/namespaces": {
@@ -29570,6 +29648,51 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["Workspace"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/archived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's archived organizations */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The caller archived workspaces */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ArchivedWorkspace"][];
                     };
                 };
                 /** @description Error */
@@ -55424,6 +55547,16 @@ export interface components {
             isAdmin: boolean;
             /** @description Earliest membership across the org's teams */
             addedAt: string;
+        };
+        ArchivedWorkspace: {
+            slug: string;
+            name: string;
+            /** @enum {string} */
+            type: "organization";
+            /** @description When the organization was archived (DB timestamp text, not RFC3339) */
+            archivedAt: string;
+            /** @description False once org.<slug> has been claimed by someone else — a restore would 409 */
+            handleAvailable: boolean;
         };
     };
     responses: never;
