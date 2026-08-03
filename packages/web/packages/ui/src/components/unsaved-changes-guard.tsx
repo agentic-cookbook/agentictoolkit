@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { AlertModal } from "./alert-modal"
+import { UnsavedChangesAlert } from "./unsaved-changes-alert"
 import { GUARDED_NAV_ATTR, registerNavigationGuard } from "../lib/navigation-guard"
 
 export interface UnsavedChangesGuardProps {
@@ -159,15 +159,10 @@ export function UnsavedChangesGuard({
   }
 
   return (
-    <AlertModal
+    <UnsavedChangesAlert
       open={confirm != null}
-      destructive
-      title="Discard unsaved changes?"
-      description="You have unsaved changes. If you leave this page they will be lost."
-      confirmLabel="Discard"
-      cancelLabel="Stay"
-      onConfirm={() => settle(true)}
-      onCancel={() => settle(false)}
+      onDiscard={() => settle(true)}
+      onStay={() => settle(false)}
     />
   )
 }
