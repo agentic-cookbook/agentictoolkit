@@ -26,8 +26,10 @@ describe('UnsavedChangesAlert', () => {
 
   it('is destructive, so Escape cannot discard', () => {
     const onDiscard = vi.fn()
-    render(<UnsavedChangesAlert open onDiscard={onDiscard} onStay={vi.fn()} />)
-    fireEvent.keyDown(document, { key: 'Escape' })
+    const onStay = vi.fn()
+    render(<UnsavedChangesAlert open onDiscard={onDiscard} onStay={onStay} />)
+    fireEvent.keyDown(document.body, { key: 'Escape' })
     expect(onDiscard).not.toHaveBeenCalled()
+    expect(onStay).not.toHaveBeenCalled()
   })
 })
