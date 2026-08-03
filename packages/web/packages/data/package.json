@@ -42,6 +42,11 @@
       "development": "./src/monitored-sites/index.ts",
       "import": "./dist/monitored-sites/index.js"
     },
+    "./ownership": {
+      "types": "./dist/ownership/index.d.ts",
+      "development": "./src/ownership/index.ts",
+      "import": "./dist/ownership/index.js"
+    },
     "./markdown": {
       "types": "./dist/markdown/index.d.ts",
       "development": "./src/markdown/index.ts",

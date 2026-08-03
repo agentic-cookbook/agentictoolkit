@@ -15,6 +15,7 @@ export default defineConfig({
     'src/integrations/index.ts',
     'src/invitations/index.ts',
     'src/access/index.ts',
+    'src/ownership/index.ts',
   ],
   outDir: 'dist',
   format: ['esm'],
