@@ -228,6 +228,7 @@ export function PersonaEditor({
   profileUrlFor,
   renderKnowledgeBases,
   renderProject,
+  renderTransferOwnership,
 }: {
   /** The persona to edit, or null to create a new one. */
   persona: Persona | null;
@@ -273,6 +274,9 @@ export function PersonaEditor({
    *  @agentic-toolkit/projects' SubjectProjectPane). Omit to show a "not available in this
    *  view" notice instead. */
   renderProject?: (personaId: string) => ReactNode;
+  /** Host-rendered "Transfer Ownership" section for the Identity topic. The workspace list and the
+   *  transfer mutation live in the host; this package stays host-agnostic. Omitted ⇒ no section. */
+  renderTransferOwnership?: (persona: Persona) => ReactNode;
 }) {
   // Derive the initial draft from the persona prop; keyed remount (per id) in the
   // parent gives each persona a fresh editor, so seeding state here is safe.
@@ -440,6 +444,7 @@ export function PersonaEditor({
               </div>
             )}
           </FieldGroup>
+          {persisted && renderTransferOwnership && renderTransferOwnership(persisted)}
         </TopicPane>
       ),
     },

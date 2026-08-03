@@ -207,6 +207,45 @@ describe("PersonaEditor facet framing", () => {
     expect(screen.getByText("Service")).not.toBeNull();
     expect(screen.getByTestId("chat")).not.toBeNull();
   });
+
+  it("Identity hosts the injected renderTransferOwnership, handing it the SAVED persona", () => {
+    const renderTransferOwnership = (p: Persona) => (
+      <div data-testid="transfer" data-persona-id={p.id} />
+    );
+    render(
+      <PersonaEditor
+        persona={PERSONA}
+        services={[]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        activeSubtab="identity"
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+        renderTransferOwnership={renderTransferOwnership}
+      />,
+    );
+    expect(screen.getByTestId("transfer").getAttribute("data-persona-id")).toBe("persona-1");
+  });
+
+  it("offers no transfer until the persona has been saved — there is nothing to move yet", () => {
+    render(
+      <PersonaEditor
+        persona={null}
+        services={[]}
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+        activeSubtab="identity"
+        onSubtabChange={vi.fn()}
+        renderKnowledgeBases={renderKnowledgeBases}
+        renderChatPane={renderChatPane}
+        renderTransferOwnership={() => <div data-testid="transfer" />}
+      />,
+    );
+    // Identity renders for a brand-new persona (it is how one is created); the seam must not.
+    expect(screen.getByPlaceholderText("Bob")).not.toBeNull();
+    expect(screen.queryByTestId("transfer")).toBeNull();
+  });
 });
 
 // The rail-host contract. PersonaEditor publishes its facet topics through StackGroupDetail and

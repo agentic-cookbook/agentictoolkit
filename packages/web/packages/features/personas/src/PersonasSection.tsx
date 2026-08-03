@@ -44,6 +44,7 @@ export function PersonasSection({
   profileUrlFor,
   renderKnowledgeBases,
   renderProject,
+  renderTransferOwnership,
 }: {
   /** The workspace whose personas this section shows. Resolved server-side to the workspace's
    *  OWNING principal (`?workspace=`): the list holds only personas that principal owns, and a
@@ -73,6 +74,8 @@ export function PersonasSection({
   /** Renders a persona's auto-provisioned project (the Project facet). See
    *  {@link PersonaEditor}. */
   renderProject?: (personaId: string) => ReactNode;
+  /** Host-rendered "Transfer Ownership" section. See {@link PersonaEditor}. */
+  renderTransferOwnership?: (persona: Persona) => ReactNode;
 }) {
   // Data rides the toolkit's shared react-query cache, NOT local state: Next remounts the page
   // subtree on every param navigation, so local state would restart from null on each persona/topic
@@ -182,6 +185,7 @@ export function PersonasSection({
         profileUrlFor={profileUrlFor}
         renderKnowledgeBases={renderKnowledgeBases}
         renderProject={renderProject}
+        renderTransferOwnership={renderTransferOwnership}
       />
     ) : (
       <>
