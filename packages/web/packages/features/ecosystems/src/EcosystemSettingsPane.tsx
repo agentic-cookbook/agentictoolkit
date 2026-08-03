@@ -21,8 +21,10 @@ import { an } from "./lib/an";
  * (EcosystemFields: Display Name / Slug / derived read-only Identifier + availability
  * status / Description / disabled Geographic Region) plus the Danger Zone. The
  * identifier's type+scope are fixed (parsed from the saved rdid); editing the SLUG
- * re-derives it, live-probes availability, and saving renames the rdid through
- * registry.identifiers (ecosystemsApi.update's rename flow).
+ * re-derives it, live-probes availability, and saving sends that slug in the ordinary
+ * PUT — which IS the rename, since the address is derived from the stored slug and the
+ * route cascades the new one onto the handle and every descendant. The id this pane then
+ * re-keys to is the server's derived answer (`updated.id`), not the typed identifier.
  */
 export function EcosystemSettingsPane({
   noun = "Ecosystem",

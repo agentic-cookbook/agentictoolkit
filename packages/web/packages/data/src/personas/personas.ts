@@ -10,9 +10,8 @@
 //         (patch/delete/connect/models/models/refresh),
 //         /api/persona/personas (list/create), /api/persona/personas/{id}
 //         (update/delete).
-import { authedJson, authedRequest, isNotFound } from "../http";
+import { authedJson, authedRequest } from "../http";
 import { workspaceQuery } from "../client-helpers";
-import { identifiersApi } from "../ecosystems/identifiers";
 import type {
   MeRow,
   MePatchBody,
@@ -46,21 +45,6 @@ function slugAvailable(slug: string): Promise<SlugAvailability> {
   return authedJson<SlugAvailability>(
     `/api/auth/slug-available/${encodeURIComponent(slug)}`,
   );
-}
-
-/** True if a persona currently resolves at `id` (rdid or uuid) — used only to disambiguate a 404
- *  during `personas.update`'s rename-recovery check below (mirrors ecosystemsApi.get's role in
- *  ecosystems.ts's update()). Takes the same workspace scope as the update: without it, an
- *  org-owned persona another member created 404s here too (creator pin) and the recovery
- *  misdiagnoses. */
-async function personaExistsAt(id: string, opts?: { workspace?: string }): Promise<boolean> {
-  try {
-    await authedJson<Persona>(`/api/persona/personas/${id}${workspaceQuery(opts)}`);
-    return true;
-  } catch (err) {
-    if (isNotFound(err)) return false;
-    throw err;
-  }
 }
 
 export const api = {
@@ -121,50 +105,23 @@ export const api = {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    // Persona rdids are DERIVED — `persona.<owner-slug>.<slug>` — and the slug is the only
-    // user-editable segment (the leaf), so editing it is a LEAF-SWAP of the rdid. Mirrors
-    // ecosystemsApi.update(): PUT the fields under the current id first, THEN rename the rdid if
-    // the slug changed. Renaming LAST keeps the entity consistent on a failure: a failed PUT
-    // changes nothing; a failed rename leaves the already-updated fields under the original id,
-    // so a retry is safe.
-    update: async (
-      id: string,
-      body: PersonaBody,
-      opts?: { workspace?: string },
-    ): Promise<Persona> => {
-      const newRdid = `${id.split(".").slice(0, -1).join(".")}.${body.slug}`;
-      let row: Persona;
-      try {
-        row = await authedJson<Persona>(`/api/persona/personas/${id}${workspaceQuery(opts)}`, {
-          method: "PUT",
-          body: JSON.stringify(body),
-        });
-      } catch (err) {
-        // A 404 on the PUT under the old id during a rename has two causes (see
-        // ecosystems.ts's update()): the rename already applied server-side but its response was
-        // lost (the old id no longer resolves) — recover by re-PUTting under the new id; or the
-        // persona was genuinely deleted — nothing to recover. Disambiguate by checking whether
-        // the new id now resolves to a real persona.
-        if (newRdid !== id && isNotFound(err) && (await personaExistsAt(newRdid, opts))) {
-          row = await authedJson<Persona>(
-            `/api/persona/personas/${newRdid}${workspaceQuery(opts)}`,
-            {
-              method: "PUT",
-              body: JSON.stringify(body),
-            },
-          );
-          return { ...row, id: newRdid };
-        }
-        throw err;
-      }
-      if (newRdid !== id) {
-        await identifiersApi.rename(id, newRdid);
-        // Reflect the new rdid in the returned entity, independent of what the PUT response
-        // echoed for `id` — callers (PersonasSection) detect the rename via this id change.
-        return { ...row, id: newRdid };
-      }
-      return row;
-    },
+    // Persona rdids are DERIVED — `persona.<owner-slug>.<slug>` — from the stored slug, and this
+    // body always carries `slug`, so the PUT IS the rename: generic CRUD sees the address columns
+    // move and cascades the new address onto the handle and every descendant. Mirrors
+    // ecosystemsApi.update(), including what was removed from it — the follow-up
+    // `identifiersApi.rename` was a SECOND rename of a handle the cascade had already moved, from
+    // an old rdid that is now a superseded alias onto a new one the row itself already holds, and
+    // that target is taken (23505 -> 409). It reported a rename that had in fact succeeded as a
+    // failure. The 404-recovery branch went with it: it existed because two calls could half-land,
+    // and one call has no such window.
+    update: (id: string, body: PersonaBody, opts?: { workspace?: string }): Promise<Persona> =>
+      // The echoed row carries the address the server DERIVED, which is the authority — callers
+      // (PersonasSection) still detect the rename via the id change, now from the server's answer
+      // rather than a client-side guess at what it would be.
+      authedJson<Persona>(`/api/persona/personas/${id}${workspaceQuery(opts)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
     delete: (id: string, opts?: { workspace?: string }) =>
       authedRequest(`/api/persona/personas/${id}${workspaceQuery(opts)}`, { method: "DELETE" }),
     // Owner-scoped slug lookup. Generic CRUD's list is already confined to the

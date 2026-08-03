@@ -128,3 +128,53 @@ describe("ecosystemsApi.create", () => {
     expect(sentUrl()).toBe("/api/ecosystem/ecosystems?workspace=fishlamp");
   });
 });
+
+describe("ecosystemsApi.update", () => {
+  // A rename is a SLUG change: the address derives from (parent chain, slug), so the stored slug
+  // is the only thing that moves it, and this route cascades the new address onto the handle and
+  // every descendant. Renaming the HANDLE instead (a registry.identifiers PATCH, what this client
+  // used to do) is the non-structural rename — the slug column stays behind, the row goes on
+  // deriving its old address, and the next ancestor cascade re-leafs the handle back.
+  it("sends the new LEAF as `slug`, in the one PUT", async () => {
+    mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh2", "adh2"));
+    await ecosystemsApi.update("ecosystem.fishlamp.adh", {
+      identifier: "ecosystem.fishlamp.adh2",
+      name: "N",
+    });
+    expect(mockedJson).toHaveBeenCalledTimes(1);
+    expect(sentUrl()).toBe("/api/ecosystem/ecosystems/ecosystem.fishlamp.adh");
+    expect(sentBody().slug).toBe("adh2");
+    expect(sentBody().name).toBe("N");
+  });
+
+  it("omits `slug` entirely when the identifier did not change", async () => {
+    mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh", "adh"));
+    await ecosystemsApi.update("ecosystem.fishlamp.adh", {
+      identifier: "ecosystem.fishlamp.adh",
+      name: "N",
+    });
+    expect(sentBody()).not.toHaveProperty("slug");
+  });
+
+  it("omits `slug` when the caller edits fields without touching the identifier", async () => {
+    mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh", "adh"));
+    await ecosystemsApi.update("ecosystem.fishlamp.adh", { name: "Renamed" });
+    expect(sentBody()).not.toHaveProperty("slug");
+    expect(sentBody().name).toBe("Renamed");
+  });
+
+  it("passes a non-rdid identifier through as the slug, so the SERVER names the problem", async () => {
+    mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh", "adh"));
+    await ecosystemsApi.update("ecosystem.fishlamp.adh", { identifier: "not an rdid" });
+    expect(sentBody().slug).toBe("not an rdid");
+  });
+
+  it("returns the address the SERVER derived, never the identifier the caller typed", async () => {
+    mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh2", "adh2"));
+    const saved = await ecosystemsApi.update("ecosystem.fishlamp.adh", {
+      identifier: "ecosystem.WRONG.adh2",
+    });
+    expect(saved.id).toBe("ecosystem.fishlamp.adh2");
+    expect(saved.identifier).toBe("ecosystem.fishlamp.adh2");
+  });
+});

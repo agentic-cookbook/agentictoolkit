@@ -36,8 +36,11 @@ export interface EcosystemCreateBody {
 }
 
 /** `PUT /ecosystem/ecosystems/{id}` body — generic CRUD PUT accepts a partial body
- *  (createInsertSchema().partial()). */
+ *  (createInsertSchema().partial()). `slug` is the RENAME: the address is derived from the
+ *  stored slug, so changing it is the move, and the route cascades the new address onto the
+ *  handle and every descendant. */
 export interface EcosystemPutBody {
+  slug?: string;
   name?: string;
   description?: string;
   region?: string;

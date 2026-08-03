@@ -34,7 +34,6 @@
 import { tryParseRdid } from "@agentic-toolkit/ui/lib/rdid";
 import { authedJson, authedRequest, isNotFound, rethrowConflict } from "../http";
 import { compact, enc, sortByText } from "../client-helpers";
-import { identifiersApi } from "./identifiers";
 import type { EcosystemRow, EcosystemCreateBody, EcosystemPutBody } from "./wire";
 
 export interface Ecosystem {
@@ -197,57 +196,44 @@ export const ecosystemsApi = {
     }
   },
 
+  /**
+   * Update the mutable fields, and RENAME when `identifier` changes.
+   *
+   * A rename is a `slug` change in this one PUT, not a second call: the address is DERIVED from
+   * (parent chain, slug), so the stored slug is the only thing that moves it, and this route
+   * cascades the new address onto the handle and every descendant — child ecosystems, apps,
+   * buckets, integrations, the customers scoped under it. This client used to PUT the fields and
+   * then PATCH `registry.identifiers`, which is the OTHER, non-structural rename: it retitles the
+   * handle and leaves the slug column behind, so the row went on deriving its OLD address, its
+   * descendants kept deriving off the old segment, and the next ancestor cascade re-leafed the
+   * handle back — silently undoing the rename. That shape was correct only under the pre-Task-5
+   * contract, where the handle WAS the stored address.
+   *
+   * The old two-call sequence needed a 404-recovery branch (the first call could land, the second
+   * fail, and the old id stop resolving). One call has no such window — a failed PUT changes
+   * nothing — so there is nothing left to recover.
+   */
   async update(id: string, input: Partial<EcosystemInput>): Promise<Ecosystem> {
-    // Update the mutable fields first (under the current id), THEN rename the rdid
-    // if it changed. Renaming LAST keeps the entity consistent if either call
-    // fails: a failed PUT changes nothing; a failed rename leaves the
-    // already-updated fields under the original id, so a retry is safe. (The
-    // entity `id` is server-managed and can't be re-keyed via the PUT — the rdid
-    // is renamed through the registry.identifiers route.)
+    // The rename's new LEAF, or undefined. The identifier's prefix is the parent's own address and
+    // is not the caller's to change (the form fixes it), so what differs is the last segment; a
+    // non-rdid identifier falls through unchanged so the SERVER names what is wrong with it.
+    const renamed = input.identifier != null && input.identifier !== id ? input.identifier : null;
     const body = compact({
+      slug: renamed ? (tryParseRdid(renamed)?.name ?? renamed) : undefined,
       name: input.name,
       description: input.description,
       region: input.region,
       primaryDomain: input.domain,
     } satisfies EcosystemPutBody);
-    // The new rdid when this update renames, else null (narrows the branches below
-    // to a plain string without non-null assertions).
-    const newIdentifier =
-      input.identifier && input.identifier !== id ? input.identifier : null;
-    let row: EcosystemRow;
-    try {
-      row = await authedJson<EcosystemRow>(`${BASE}/${enc(id)}`, {
+    // The echoed row carries the address the server DERIVED, which is the authority — never the
+    // identifier the caller typed. They agree for a legal leaf; where they don't, the derived one
+    // is what exists, and returning the typed one would hand callers an id that resolves to nothing.
+    return toEcosystem(
+      await authedJson<EcosystemRow>(`${BASE}/${enc(id)}`, {
         method: "PUT",
         body: JSON.stringify(body),
-      });
-    } catch (err) {
-      // A 404 on the PUT under the old id has two causes during a rename:
-      //   (a) the rename already applied server-side but its response was lost, so
-      //       the old id no longer resolves — recover by re-applying the fields
-      //       under the new id (the rename is done); or
-      //   (b) the entity was genuinely deleted / never existed — there is nothing
-      //       to recover, and silently re-PUTting under the typed new id would mask
-      //       the real failure (and could land on a *different* entity that owns
-      //       that rdid).
-      // Disambiguate by checking whether the new id now resolves to a real,
-      // tenant-visible entity: only then is it the post-rename state we can recover.
-      if (newIdentifier && isNotFound(err) && (await ecosystemsApi.get(newIdentifier))) {
-        row = await authedJson<EcosystemRow>(`${BASE}/${enc(newIdentifier)}`, {
-          method: "PUT",
-          body: JSON.stringify(body),
-        });
-        return { ...toEcosystem(row), id: newIdentifier, identifier: newIdentifier };
-      }
-      throw err;
-    }
-    const updated = toEcosystem(row);
-    if (newIdentifier) {
-      await identifiersApi.rename(id, newIdentifier);
-      // Reflect the new rdid in the returned entity, independent of what the PUT
-      // response echoed for `id` — callers detect the rename via this id change.
-      return { ...updated, id: newIdentifier, identifier: newIdentifier };
-    }
-    return updated;
+      }),
+    );
   },
 
   delete(id: string): Promise<void> {
