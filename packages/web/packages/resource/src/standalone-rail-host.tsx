@@ -15,7 +15,7 @@ import {
  * this provides its OWN {@link RailHostContext} so the topic panes' publishers work exactly as
  * they do inside the hub shell — the master/detail lists register as deeper rail levels, and the
  * leaf editor's unsaved-work guard flows into the one HTD's exit gate (so Back / breadcrumb-up /
- * re-click prompts Save/Discard/Cancel instead of silently discarding). Mirrors the hub's
+ * re-click prompts Discard/Stay instead of silently discarding). Mirrors the hub's
  * WorkspaceChromeProvider semantics (local registry + composite guard + depth-merged stack),
  * trimmed to the standalone case: no toolbar slot, no shell workspace/feature levels, no
  * breadcrumb. Extracted from ResourceExplorer (which always self-hosted this way) so the

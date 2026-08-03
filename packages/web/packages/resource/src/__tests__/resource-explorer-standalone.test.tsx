@@ -107,6 +107,21 @@ describe("ResourceExplorer standalone exit guard", () => {
     expect(screen.queryByText("editor pane")).not.toBeInTheDocument();
   });
 
+  it("clears immediately with no alert when the topic pane is clean", async () => {
+    const save = vi.fn().mockResolvedValue(true);
+    render(<Harness dirty={false} save={save} />);
+
+    expect(await screen.findByText("editor pane")).toBeInTheDocument();
+
+    // The same re-click as above, but a clean pane registers no guard at all, so the level clears
+    // with no prompt. This is the control for the test above: same gesture, same query, no dialog.
+    fireEvent.click(screen.getByText("Edit Topic"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("editor pane")).not.toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("host mode is unchanged: it publishes into the external host and renders no HTD of its own", () => {
     const registerLevels = vi.fn();
     const host: RailHostRegistry = {

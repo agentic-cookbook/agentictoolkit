@@ -147,7 +147,7 @@ export function useStackLevel(level: TopicLevel | null): void {
 
 /**
  * A feature's leaf editor calls this to publish (or clear) its unsaved-work guard so the host can
- * prompt Save/Discard/Cancel before a Back / breadcrumb-up / re-click clears the level. Co-mountable:
+ * prompt Discard/Stay before a Back / breadcrumb-up / re-click clears the level. Co-mountable:
  * each caller registers under its own stable id and only ever withdraws ITSELF, so a pane's form
  * guard and a topic's data-editor guard coexist (the host consults the composite). Cleared on
  * unmount. No-op outside a host.
@@ -166,7 +166,15 @@ export function useRailExitGuard(guard: PaneExitGuard | null): void {
     if (!registerExitGuard) return;
     registerExitGuard(
       id,
-      present ? { isDirty: () => !!ref.current?.isDirty(), save: () => ref.current!.save() } : null,
+      present
+        ? {
+            // Both methods read the ref null-safely: `present` is a snapshot from the render that
+            // scheduled this effect, so a guard withdrawn between render and invocation must not
+            // throw. Nothing to save is a successful save, matching isDirty()'s absent → false.
+            isDirty: () => !!ref.current?.isDirty(),
+            save: () => ref.current?.save() ?? Promise.resolve(true),
+          }
+        : null,
     );
     return () => registerExitGuard(id, null);
   }, [registerExitGuard, id, present]);

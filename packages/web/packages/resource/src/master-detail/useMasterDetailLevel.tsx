@@ -11,7 +11,7 @@ import type { MasterDetailForm } from "./useMasterDetailForm";
  * The shared bridge that DISMANTLES an in-pane master/detail into the one-stack model: it
  * PUBLISHES the pane's list as a deeper {@link TopicLevel} (so the rows are a stack level, not a
  * nested list inside the leaf) and REGISTERS the editor's unsaved-work guard so the package's
- * Back / breadcrumb-up / re-click prompts Save/Discard/Cancel before discarding.
+ * Back / breadcrumb-up / re-click prompts Discard/Stay before discarding.
  *
  *  - the list level's `selectedId` is the URL-driven `form.selectedId`,
  *  - `onSelect` routes to that row (via `form.select` → the leaf URL),
