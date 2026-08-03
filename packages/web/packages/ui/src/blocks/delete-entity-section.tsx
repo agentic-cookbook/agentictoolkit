@@ -30,6 +30,14 @@ export interface DeleteEntitySectionProps {
   onConfirm: () => Promise<void>;
   /** Optional override for the danger-section description line. */
   description?: React.ReactNode;
+  /**
+   * The destructive verb, in the two grammatical forms this section's copy needs. Defaults to
+   * Delete. Pass `{ imperative: "Archive", gerund: "Archiving" }` for a REVERSIBLE action — the
+   * two-phase confirm and the type-to-confirm gate are the same ceremony either way; only the
+   * wording changes. A caller whose action is reversible must also pass its own `description`,
+   * because the default one says "cannot be undone".
+   */
+  actionVerb?: { imperative: string; gerund: string };
 }
 
 const article = (noun: string): string =>
@@ -37,13 +45,14 @@ const article = (noun: string): string =>
 
 /**
  * The "Danger" section for an entity's own settings pane: a **disclosure**
- * (collapsed by default, neutral styling) that reveals a destructive Delete
+ * (collapsed by default, neutral styling) that reveals a destructive action
  * button only once opened — the `apt-red` accent appears solely in the disclosed
- * state, so a closed Danger zone doesn't shout (least-astonishment). The Delete
+ * state, so a closed Danger zone doesn't shout (least-astonishment). The action
  * button is gated behind a two-phase confirm dialog — first an acknowledgement
- * ("Do you wish to proceed?"), then a type-to-confirm step whose "Permanently
- * Delete" button only enables once the entity's exact identifier is typed
- * (case-sensitive, no extra whitespace). Shared across every FTD route (see
+ * ("Do you wish to proceed?"), then a type-to-confirm step whose button only
+ * enables once the entity's exact identifier is typed (case-sensitive, no extra
+ * whitespace). Defaults to "Delete" wording; pass `actionVerb` for a reversible
+ * action like "Archive". Shared across every FTD route (see
  * recipes/focused-topic-detail.md).
  */
 export function DeleteEntitySection({
@@ -52,6 +61,7 @@ export function DeleteEntitySection({
   childEntities,
   onConfirm,
   description,
+  actionVerb = { imperative: "Delete", gerund: "Deleting" },
 }: DeleteEntitySectionProps): React.ReactElement {
   const inputId = React.useId();
   // The section is a disclosure, collapsed by default (so the destructive
@@ -65,6 +75,8 @@ export function DeleteEntitySection({
   const [error, setError] = React.useState<string | null>(null);
 
   const noun = entityNoun.toLowerCase();
+  const verb = actionVerb.imperative;
+  const verbLower = verb.toLowerCase();
   // Exact match: case-sensitive, no normalization/trim — typed must equal the rdid.
   // Guard the empty case: an empty `confirmValue` would match the initial empty
   // input and arm the destructive button with no typing at all.
@@ -95,7 +107,7 @@ export function DeleteEntitySection({
       await onConfirm();
       reset(); // parent navigates away on success; close defensively
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to delete ${noun}.`);
+      setError(e instanceof Error ? e.message : `Failed to ${verbLower} ${noun}.`);
       setBusy(false);
     }
   }
@@ -127,7 +139,7 @@ export function DeleteEntitySection({
           <p className="text-sm text-apt-text-muted">
             {description ?? (
               <>
-                Permanently delete this {noun} and all of its data. This cannot be
+                Permanently {verbLower} this {noun} and all of its data. This cannot be
                 undone.
               </>
             )}
@@ -142,7 +154,7 @@ export function DeleteEntitySection({
               }}
             >
               <Trash2 data-icon="inline-start" />
-              Delete {entityNoun}
+              {verb} {entityNoun}
             </Button>
           </div>
         </div>
@@ -153,11 +165,10 @@ export function DeleteEntitySection({
           {phase === "warn" ? (
             <>
               <DialogHeader>
-                <DialogTitle>Delete {entityNoun}?</DialogTitle>
+                <DialogTitle>{verb} {entityNoun}?</DialogTitle>
                 <DialogDescription>
-                  Deleting {article(entityNoun)} {noun} deletes all the data
-                  associated with the {noun}, including {childEntities}. Do you
-                  wish to proceed?
+                  {actionVerb.gerund} {article(entityNoun)} {noun} affects{" "}
+                  {childEntities}. Do you wish to proceed?
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -176,9 +187,9 @@ export function DeleteEntitySection({
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>Permanently delete this {entityNoun}</DialogTitle>
+                <DialogTitle>{verb} this {entityNoun}</DialogTitle>
                 <DialogDescription>
-                  You are about to permanently delete this {entityNoun}. Enter{" "}
+                  You are about to {verbLower} this {entityNoun}. Enter{" "}
                   <span className="font-mono text-apt-text">
                     &ldquo;{confirmValue}&rdquo;
                   </span>{" "}
@@ -187,7 +198,7 @@ export function DeleteEntitySection({
               </DialogHeader>
               <div className="flex flex-col gap-2">
                 <Label htmlFor={inputId} className="sr-only">
-                  Type {confirmValue} to confirm deletion
+                  Type {confirmValue} to confirm
                 </Label>
                 <Input
                   id={inputId}
@@ -216,7 +227,7 @@ export function DeleteEntitySection({
                   onClick={handleConfirm}
                   disabled={!confirmEnabled}
                 >
-                  {busy ? "Deleting…" : "Permanently Delete"}
+                  {busy ? `${actionVerb.gerund}…` : `${verb} ${entityNoun}`}
                 </Button>
               </DialogFooter>
             </>
