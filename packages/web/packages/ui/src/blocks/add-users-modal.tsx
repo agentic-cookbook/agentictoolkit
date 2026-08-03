@@ -5,7 +5,7 @@ import * as React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/dialog"
 import { DataTable, type DataTableColumn } from "../components/data-table"
 import { Input } from "../components/input"
-import { AlertModal } from "../components/alert-modal"
+import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
 import { Button } from "../components/button"
 import { Field } from "./field"
 
@@ -140,14 +140,10 @@ export function AddUsersModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertModal
+      <UnsavedChangesAlert
         open={confirming}
-        destructive
-        title="Discard added users?"
-        cancelLabel="Keep editing"
-        onCancel={() => setConfirming(false)}
-        confirmLabel="Discard"
-        onConfirm={close}
+        onDiscard={close}
+        onStay={() => setConfirming(false)}
       />
     </>
   )

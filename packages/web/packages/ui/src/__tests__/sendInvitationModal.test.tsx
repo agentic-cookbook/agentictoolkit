@@ -30,6 +30,18 @@ describe('SendInvitationModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
     expect(onClose).toHaveBeenCalled()
   })
+  it('the discard confirm is the platform alert: Stay aborts the cancel and keeps the note', () => {
+    const onClose = vi.fn()
+    render(<SendInvitationModal open emails={['a@x.io']} onSend={vi.fn()} onClose={onClose} />)
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'welcome!' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    // "Stay", not the bespoke "Keep editing" this modal used to render — the wording now comes
+    // from UnsavedChangesAlert, so this pins the shared prompt rather than a local literal.
+    fireEvent.click(screen.getByRole('button', { name: 'Stay' }))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('textbox')).toHaveValue('welcome!')
+  })
   it('closes directly on Cancel when only recipients are seeded (no note)', () => {
     const onClose = vi.fn()
     render(<SendInvitationModal open emails={['a@x.io']} onSend={vi.fn()} onClose={onClose} />)

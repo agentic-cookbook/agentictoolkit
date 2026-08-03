@@ -47,4 +47,17 @@ describe('AddUsersModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('the discard confirm is the platform alert: Stay aborts the cancel and keeps the rows', () => {
+    const onClose = vi.fn()
+    render(<AddUsersModal open onAdd={vi.fn()} onClose={onClose} />)
+    fill('Ada', 'ada@x.io'); fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    // "Stay", not the bespoke "Keep editing" this modal used to render — the wording now comes
+    // from UnsavedChangesAlert, so this pins the shared prompt rather than a local literal.
+    fireEvent.click(screen.getByRole('button', { name: 'Stay' }))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByText('ada@x.io')).toBeInTheDocument()
+  })
 })

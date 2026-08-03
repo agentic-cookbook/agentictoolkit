@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/dialog"
 import { RecipientInput } from "../components/recipient-input"
 import { Textarea } from "../components/textarea"
-import { AlertModal } from "../components/alert-modal"
+import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
 import { Button } from "../components/button"
 import { FieldGroup } from "../blocks/field-group"
 import { Field } from "../blocks/field"
@@ -155,14 +155,10 @@ export function SendInvitationModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertModal
+      <UnsavedChangesAlert
         open={confirming}
-        destructive
-        title="Discard this invitation?"
-        cancelLabel="Keep editing"
-        onCancel={() => setConfirming(false)}
-        confirmLabel="Discard"
-        onConfirm={close}
+        onDiscard={close}
+        onStay={() => setConfirming(false)}
       />
     </>
   )
