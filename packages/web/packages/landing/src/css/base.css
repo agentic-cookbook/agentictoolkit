@@ -213,34 +213,33 @@ body {
   color: var(--lp-accent-bright, #d8d8d8);
 }
 
-/* ---- glow: the hero's ----
- * Absolute inside .hero rather than fixed to the viewport. Pinned, it would hang
- * at the top of the screen over every section you scrolled to; owned by the
- * hero, it lights the mark and then scrolls away. Negative z-index puts it
- * behind the hero's own content; .hero's `z-index: 1` makes the hero a stacking
- * context, so it can't fall behind the page.
+/* ---- glow: a screen's light ----
+ * Absolute inside the screen rather than fixed to the viewport. Pinned, it
+ * would hang at the top of the window over every section you scrolled to;
+ * owned by the screen, it lights that screen's content and then scrolls away.
+ * Negative z-index puts it behind the content; `.lp-screen`'s own `z-index: 1`
+ * makes every screen a stacking context, so a glow can't fall behind the page.
  *
- * Centred on the hero's CONTENT, both axes, so the light lands behind the mark
- * and the headline instead of behind the empty space above them. It used to be
- * pinned `-26rem` from the top, which put its centre 5rem into the hero: fine at
- * 800px tall, a bright blob floating alone in the top third at 1500px. Anything
- * anchored to one edge drifts off the content as the viewport grows; a
- * percentage cannot. */
+ * Both rules below centre the light on the screen's CONTENT rather than on its
+ * box, and the two arrive at opposite shapes because the two alignments put
+ * the content in opposite places. That is the whole subtlety here: a formula
+ * copied from one to the other is wrong by exactly the free space in the box. */
 .lp-glow {
   position: absolute;
-  /* `50%` alone is the BOX centre, and the content only sits there while the
-   * screen's two paddings match. On a hero they don't — the foot reserves the
-   * dock — so half their difference corrects for it: with a heavier bottom
-   * padding the content rides high, and so must the light. Written from the
-   * padding variables rather than as a measured constant so the two cannot
-   * drift apart the next time either is touched.
+  /* A top-parked screen anchors its content to the top edge — `flex-start`
+   * plus the top padding — so the light anchors there too. This inverts the
+   * hero's reasoning below, and for the reason that makes that reasoning
+   * right: a percentage tracks the box, and on this alignment the box grows
+   * downward while the content stays put, so a percentage is what would drift
+   * off the content as the viewport gets taller.
    *
-   * The alternative was to make them equal at `--lp-dock-clear` and keep the
-   * glow on the box centre. That grows a hero screen past one viewport at
-   * 1180x820 and 1024x768 — two of the commonest laptops — to reserve at the
-   * top a strip nothing needs. Better to let the light follow the
-   * composition. */
-  top: calc(50% + (var(--lp-hero-pad-top, 6.5rem) - var(--lp-hero-pad-bottom, var(--lp-dock-clear, 0px))) / 2);
+   * The drop past the content's top edge is small and deliberate. A screen's
+   * first two elements are its heading and its lede, and they are what the
+   * light is for; dropping roughly half that block's height puts the bright
+   * centre on them and lets the fade carry down over whatever follows. Zero
+   * would spend the upper half of the light above the section, behind the
+   * fixed header. */
+  top: calc(var(--lp-screen-pad-top, clamp(5.5rem, 14svh, 9rem)) + 9rem);
   left: 50%;
   transform: translate(-50%, -50%);
   width: 62rem;
@@ -249,6 +248,26 @@ body {
   background: var(--lp-glow, radial-gradient(circle, rgba(216, 216, 216, 0.1), transparent 65%));
   pointer-events: none;
   z-index: -1;
+}
+
+/* The hero centres its content, so its light is centred too — behind the mark
+ * and the headline instead of behind the empty space above them. It used to be
+ * pinned `-26rem` from the top, which put its centre 5rem into the hero: fine
+ * at 800px tall, a bright blob floating alone in the top third at 1500px.
+ *
+ * `50%` alone is the BOX centre, and the content only sits there while the
+ * screen's two paddings match. On a hero they don't — the foot reserves the
+ * dock — so half their difference corrects for it: with a heavier bottom
+ * padding the content rides high, and so must the light. Written from the
+ * padding variables rather than as a measured constant so the two cannot drift
+ * apart the next time either is touched.
+ *
+ * The alternative was to make them equal at `--lp-dock-clear` and keep the glow
+ * on the box centre. That grows a hero screen past one viewport at 1180x820 and
+ * 1024x768 — two of the commonest laptops — to reserve at the top a strip
+ * nothing needs. Better to let the light follow the composition. */
+.lp-screen--center > .lp-glow {
+  top: calc(50% + (var(--lp-hero-pad-top, 6.5rem) - var(--lp-hero-pad-bottom, var(--lp-dock-clear, 0px))) / 2);
 }
 
 /* ---- two panels side by side: prose column beside its shot ----

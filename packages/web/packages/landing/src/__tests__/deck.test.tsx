@@ -50,6 +50,21 @@ describe('Screen', () => {
     expect(container.firstElementChild!.className).toContain('lp-screen')
     expect(container.firstElementChild!.className).toContain('lp-hero')
   })
+
+  it('has no glow unless asked', () => {
+    const { container } = render(<Screen>x</Screen>)
+    expect(container.querySelector('.lp-glow')).toBeNull()
+  })
+
+  // The glow must PRECEDE the content: it is what the content sits in front of,
+  // and `z-index: -1` only settles the paint order within the screen's stacking
+  // context, not which siblings the host wrote first.
+  it('lights the screen from behind its content when asked', () => {
+    const { container } = render(<Screen glow><p>x</p></Screen>)
+    const el = container.firstElementChild!
+    expect(el.firstElementChild!.className).toBe('lp-glow')
+    expect(el.firstElementChild!.getAttribute('aria-hidden')).toBe('true')
+  })
 })
 
 describe('Deck', () => {

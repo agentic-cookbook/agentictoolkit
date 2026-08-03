@@ -1,6 +1,5 @@
 import type { ReactElement, ReactNode } from 'react'
 import { Screen } from '../deck/Screen'
-import { Glow } from '../deck/Glow'
 
 export interface HeroProps {
   id?: string
@@ -28,8 +27,7 @@ export interface HeroProps {
  */
 export function Hero({ id, mark, headline, tagline, children, glow = true }: HeroProps): ReactElement {
   return (
-    <Screen as="div" id={id} align="center" className="lp-hero">
-      {glow && <Glow />}
+    <Screen as="div" id={id} align="center" className="lp-hero" glow={glow}>
       {mark}
       <h1>{headline}</h1>
       <p className="lp-tag">{tagline}</p>

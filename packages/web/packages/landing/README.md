@@ -114,10 +114,10 @@ under **Install**.
 | --- | --- | --- |
 | `DeckScript` / `deckScript()` | deck | The three pre-hydration behaviours above, as a component or a raw string. |
 | `Deck` | deck | The non-scrolling flow parent of the screens — the document is the scroller. |
-| `Screen` | deck | One full-viewport, snap-point screen. `align="top"` (default) parks content high; `align="center"` is the hero's case. |
+| `Screen` | deck | One full-viewport, snap-point screen. `align="top"` (default) parks content high; `align="center"` is the hero's case. `glow` (default false) lights it from behind — see `Glow`. |
 | `Wrap` | deck | The width-limited content column inside a `Screen`. |
 | `Split` | deck | Two panels side by side above a breakpoint, stacked below it. |
-| `Glow` | deck | The hero's decorative radial glow (`aria-hidden`). |
+| `Glow` | deck | A screen's decorative radial light (`aria-hidden`). Reach it through `Screen`'s `glow` prop rather than rendering it yourself — it has to come before the content it sits behind. Its offset follows the screen's alignment: centred on a `align="center"` screen, anchored below the top padding on the default one, because that is where each puts its content. |
 | `NavChrome` | chrome · **client** | Fixed header + burger + drawer + scrim, as one client component. `brand` is optional: omit it and the bar carries the burger alone, for a host that already has a site header — set `--lp-chrome-top` to that header's height and the whole chrome opens below it. Focus is trapped inside the open drawer; Escape and the close button are the exits, and the scrim is a pointer-only dismiss (`aria-hidden`, unfocusable), matching `@agentic-toolkit/ui`'s DocNav drawer. |
 | `Head` | blocks | A section's eyebrow + title + lede slot. |
 | `Lede` | blocks | The standalone paragraph under a `Head` (or after a card grid, a chip list…). |
@@ -197,8 +197,8 @@ site header of its own and wanted only the burger and drawer under it:
 | Token | Fallback | What it does |
 | --- | --- | --- |
 | `--lp-snap-stop` | `normal` | `scroll-snap-stop` on a screen. fishlamp sets `always` (five screens, one flick each); Stenographer leaves it `normal` (thirteen screens). This is the *only* measured difference between the two sites' snap CSS. |
-| `--lp-screen-pad-top` | `clamp(5.5rem, 14svh, 9rem)` | Where content parks. Must clear the fixed header. |
-| `--lp-hero-pad-top` | `6.5rem` | Hero head padding; the glow's offset is derived from it. |
+| `--lp-screen-pad-top` | `clamp(5.5rem, 14svh, 9rem)` | Where content parks. Must clear the fixed header. A top-parked screen's glow offset is derived from it. |
+| `--lp-hero-pad-top` | `6.5rem` | Hero head padding; a centred screen's glow offset is derived from it. |
 | `--lp-hero-pad-bottom` | `var(--lp-dock-clear, 0px)` | Hero foot padding; reserves whatever fixed chrome the site docks at the bottom. |
 | `--lp-root-size` | `87.5%` | The root type dial. |
 | `--lp-chrome-top` | `0` | Where `NavChrome` starts — the bar, the scrim and the drawer together. A host with a fixed site header of its own sets this to that header's height, so the chrome opens *below* it instead of over it. One token for all three, so a scrim can never start on a different line from the drawer it dims. |
