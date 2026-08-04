@@ -146,6 +146,15 @@ html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-cont
   --color-surface-tint: var(--color-primary);
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
+  /* The highlighted state is ember-BRIGHT, not ember. fishlamp.com splits its two
+     golds by state and never mixes them: ember #e8a33d is what a thing is at REST
+     (`section h2`, `.card-link`, `.member .site`, `.card .status`) and ember-bright
+     #f5c877 is what it BECOMES when highlighted (`::selection`, `.drawer a.nav:hover`,
+     `.prose em`, `.hero h1 b`). The decisive evidence is one element in both states —
+     `.member span.face` is ember at globals.css:869 and ember-bright at :873 on hover —
+     which makes bright the reference's highlight colour by construction rather than by
+     preference. --color-primary stays ember so everything at rest still matches. */
+  --color-highlight: var(--color-primary-bright);
   --focus-ring-color: var(--color-primary);
   /* The settings topic rail. A literal in the @theme map rather than a role ref, and
      tailwind.css:33 calls it the "darker nav column" — darker than the shell beside it,

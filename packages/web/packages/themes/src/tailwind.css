@@ -40,6 +40,14 @@
   --color-apt-text-dim: var(--color-text-dim);
   --color-apt-gold: var(--color-primary);
   --color-apt-gold-bright: var(--color-primary-bright);
+  /* The HIGHLIGHTED state: the fill and text that mark the item under the cursor or
+     the keyboard (`data-[highlighted]`), the selected table row, the active nav rail.
+     Its own role rather than more `apt-gold` so a theme can say that "the colour that
+     marks the current item" is not the same as "the brand gold" — a distinction the
+     brand gold alone cannot express. The fallback is what keeps that optional: a theme
+     that never sets --color-highlight highlights in its primary exactly as it always
+     did, so adding this role changed no existing theme's rendering. */
+  --color-apt-highlight: var(--color-highlight, var(--color-primary));
   --color-apt-blue: var(--color-info);
   --color-apt-green: var(--color-success);
   --color-apt-red: var(--color-error);

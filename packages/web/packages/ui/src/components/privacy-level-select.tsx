@@ -202,7 +202,7 @@ export function PrivacyLevelSelect({
                 data-highlighted={highlighted || undefined}
                 onMouseEnter={() => setCursor(opt.value)}
                 onClick={() => commit(opt.value)}
-                className="flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-left text-sm text-apt-text data-[highlighted]:bg-apt-gold/15"
+                className="flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-left text-sm text-apt-text data-[highlighted]:bg-apt-highlight/15"
               >
                 <Check
                   size={14}

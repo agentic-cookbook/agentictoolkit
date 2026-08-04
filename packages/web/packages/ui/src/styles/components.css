@@ -81,17 +81,20 @@
   background: var(--color-surface-hover);
 }
 
-/* Accent (brand-gold) highlight — opt-in via the DropdownMenu* `accent` prop,
-   for accent selectors like the focused-item rail picker. Single home for the
-   gold-focus treatment that call sites used to hand-roll. --color-accent-dim is
-   the brand gold at 15% (the old `bg-apt-gold/15`). */
+/* Accent highlight — opt-in via the DropdownMenu* `accent` prop, for accent
+   selectors like the focused-item rail picker. Single home for the gold-focus
+   treatment that call sites used to hand-roll. The color-mix below is exactly what
+   Tailwind emits for `bg-apt-highlight/15`, so this rule stays the TWIN of the
+   `data-[highlighted]` fill the .tsx call sites carry instead of drifting from it.
+   That is why it no longer reads --color-accent-dim: that alias is the brand gold at
+   15%, and a theme may now highlight in something other than its brand gold. */
 .adh-dropdown-menu__item--accent {
   cursor: pointer;
 }
 
 .adh-dropdown-menu__item--accent[data-highlighted],
 .adh-dropdown-menu__item--accent:focus {
-  background: var(--color-accent-dim);
+  background: color-mix(in oklab, var(--color-apt-highlight) 15%, transparent);
   color: var(--color-text-primary);
 }
 

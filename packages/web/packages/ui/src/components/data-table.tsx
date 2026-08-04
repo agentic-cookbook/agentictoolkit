@@ -323,7 +323,7 @@ export function DataTable<T>({
             onClick={selectable ? (e) => onRowClick(e, id) : undefined}
             className={cn(inlineCommitHoverScopeClass, "grid border-t border-apt-border text-sm text-apt-text",
               selectable && "cursor-pointer",
-              selected ? "bg-apt-gold/15" : "hover:bg-apt-surface-2")}
+              selected ? "bg-apt-highlight/15" : "hover:bg-apt-surface-2")}
             style={{ gridTemplateColumns: template }}>
             {columns.map((col) => (
               // `truncate` (with min-w-0) matters even when a column sizes to its content: the moment

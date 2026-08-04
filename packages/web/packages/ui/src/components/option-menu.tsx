@@ -192,7 +192,7 @@ export function OptionMenu({
                 inputRef.current?.blur()
               }}
               onClick={() => commit(item.value)}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-apt-text data-[highlighted]:bg-apt-gold/15"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-apt-text data-[highlighted]:bg-apt-highlight/15"
             >
               <Check size={14} aria-hidden className={cn("shrink-0", checked ? "text-apt-gold" : "opacity-0")} />
               <span className="truncate">{item.label}</span>
@@ -205,7 +205,7 @@ export function OptionMenu({
             role="option"
             aria-selected={otherActive}
             data-highlighted={selection === OTHER || undefined}
-            className="rounded-md px-2 py-1.5 data-[highlighted]:bg-apt-gold/15"
+            className="rounded-md px-2 py-1.5 data-[highlighted]:bg-apt-highlight/15"
           >
             <div className="flex items-center gap-2 text-sm text-apt-text">
               <Check size={14} aria-hidden className={cn("shrink-0", otherActive ? "text-apt-gold" : "opacity-0")} />

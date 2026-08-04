@@ -81,7 +81,7 @@ export function Combobox({
                   value={item}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-apt-text outline-none",
-                    "data-[highlighted]:bg-apt-gold/15",
+                    "data-[highlighted]:bg-apt-highlight/15",
                   )}
                 >
                   <Check
