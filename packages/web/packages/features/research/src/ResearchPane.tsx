@@ -375,7 +375,7 @@ export function ResearchPane({
   useStackLevel(documentsLevel);
   // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a
   // render-value dirty signal. `editing` is implied: a draft cannot be dirty with no editor open.
-  useWorkspaceExitGuard(dirty ? { isDirty: () => dirty, save: () => onSave() } : null);
+  useWorkspaceExitGuard(dirty ? { isDirty: () => dirty } : null);
 
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.

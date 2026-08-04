@@ -20,7 +20,7 @@ import { CRUD_TABLES, CrudDataView, useExitGuardChannel } from "@agentic-toolkit
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
 import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
-import { useExitGate } from "@agentic-toolkit/ui/hooks/useExitGate";
+import { useExitGate, type PaneExitGuard } from "@agentic-toolkit/ui/hooks/useExitGate";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import {
   StackGroupDetail,
@@ -307,9 +307,10 @@ export function PersonaEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.serviceId]);
 
-  // Returns whether the persona is now persisted — `false` on a blocked or failed save, so the
-  // composite guards that call it (workspace chrome / the standalone rail host, via the
-  // PaneExitGuard below) hold the navigation instead of proceeding past a write that never landed.
+  // Returns whether the persona is now persisted — `false` on a blocked or failed save, read by
+  // the Save/Cancel bar's onSave below (the button stays disabled while a request is in flight;
+  // `error` carries why a save didn't land). Not part of the exit-guard contract: PaneExitGuard
+  // has no `save()`, so nothing outside this editor reads the return value.
   async function save(): Promise<boolean> {
     if (!valid) return false;
     setSaving(true);
@@ -345,7 +346,15 @@ export function PersonaEditor({
   // switch and breadcrumb (through the host's HTD exit gate) and reload / tab close / link click /
   // Back (through the host's `<UnsavedChangesGuard when={guards.size > 0} />`, which stays false
   // until something registers). Same shape as ResearchPane's.
-  const exitGuard = dirty ? { isDirty: () => dirty, save: () => save() } : null;
+  //
+  // Memoized on `dirty` alone (its only dependency once `save` dropped off the interface): this is
+  // `useExitGate`'s sole argument below, and its `attemptExit` `useCallback` depends on THIS
+  // object's identity, not its contents — an unmemoized literal would give `attemptExit` a fresh
+  // identity every render despite nothing observable changing.
+  const exitGuard = useMemo<PaneExitGuard | null>(
+    () => (dirty ? { isDirty: () => dirty } : null),
+    [dirty],
+  );
   useRailExitGuard(exitGuard);
   // ...and the one exit the editor DOES own: its Save/Cancel bar is rendered in the leaf, so Cancel
   // never passes through the host's gate. The shared hook rather than a local copy of the

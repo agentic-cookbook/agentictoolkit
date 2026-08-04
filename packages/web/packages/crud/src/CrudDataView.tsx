@@ -316,25 +316,11 @@ export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: 
   }
 
   // Expose the unsaved-work guard to the enclosing browser via a STABLE object whose
-  // methods read the latest state/save through a ref (registered once; never churns
-  // the parent's exit-guard). `save()` resolves true only when the batch persisted.
-  const guardState = useRef<{ dirty: boolean; save: () => Promise<boolean> }>({
-    dirty,
-    save: async () => true,
-  })
-  guardState.current.dirty = dirty
-  guardState.current.save = async () => {
-    let ok = false
-    await save.run(async () => {
-      await performSave()
-      ok = true
-    })
-    return ok
-  }
-  const guard = useMemo<PaneExitGuard>(
-    () => ({ isDirty: () => guardState.current.dirty, save: () => guardState.current.save() }),
-    [],
-  )
+  // `isDirty` reads the latest state through a ref (registered once; never churns
+  // the parent's exit-guard).
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const guard = useMemo<PaneExitGuard>(() => ({ isDirty: () => dirtyRef.current }), [])
   // Published only while DIRTY, so the channel's presence is a render-value dirty signal for the
   // enclosing shell (see useExitGuardChannel). `guard` itself is identity-stable, so before this
   // the effect fired on mount/unmount only and a draft going dirty was invisible upstream.

@@ -38,9 +38,9 @@ const ITEMS: Row[] = [{ id: "p1", name: "Project One" }];
 
 /** A leaf-editor pane that registers an unsaved-work guard the way a real master/detail editor
  *  does. `dirty` is a prop so a test can flip it clean and prove the alert only guards a dirty
- *  pane. `save` is spied so a test can prove the alert's Discard never routes through it. */
-function DirtyEditorPane({ dirty, save }: { dirty: boolean; save: () => Promise<boolean> }) {
-  useRailExitGuard(dirty ? { isDirty: () => true, save } : null);
+ *  pane. */
+function DirtyEditorPane({ dirty }: { dirty: boolean }) {
+  useRailExitGuard(dirty ? { isDirty: () => true } : null);
   return <div>editor pane</div>;
 }
 
@@ -49,7 +49,7 @@ function DirtyEditorPane({ dirty, save }: { dirty: boolean; save: () => Promise<
  *  harness reflects back as `activeTopic={undefined}` — so "editor pane" disappearing from the DOM
  *  is proof the level genuinely cleared, not an assumption about what a swallowed router.push
  *  "would have" done. */
-function Harness({ dirty, save }: { dirty: boolean; save: () => Promise<boolean> }) {
+function Harness({ dirty }: { dirty: boolean }) {
   const [activeTopic, setActiveTopic] = useState<string | undefined>("edit");
   routeTo = (href: string) => setActiveTopic(href.split("/")[3]); // "/home/p1" → undefined, "/home/p1/edit" → "edit"
 
@@ -58,7 +58,7 @@ function Harness({ dirty, save }: { dirty: boolean; save: () => Promise<boolean>
       id: "edit",
       label: "Edit Topic",
       icon: null,
-      render: () => <DirtyEditorPane dirty={dirty} save={save} />,
+      render: () => <DirtyEditorPane dirty={dirty} />,
     },
   ];
   return (
@@ -85,8 +85,7 @@ function Harness({ dirty, save }: { dirty: boolean; save: () => Promise<boolean>
 
 describe("ResourceExplorer standalone exit guard", () => {
   it("raises Discard/Stay (never saves) when a dirty topic-pane guard is registered and the level is cleared", async () => {
-    const save = vi.fn().mockResolvedValue(true);
-    render(<Harness dirty save={save} />);
+    render(<Harness dirty />);
 
     // The editor pane mounted (and its guard registered) inside ResourceExplorer's own rail host.
     expect(await screen.findByText("editor pane")).toBeInTheDocument();
@@ -101,15 +100,13 @@ describe("ResourceExplorer standalone exit guard", () => {
 
     // The alert never saves — Discard just lets the held clear proceed.
     fireEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
-    expect(save).not.toHaveBeenCalled();
 
     // And the clear genuinely ran: the topic pane (and its guard) is gone.
     expect(screen.queryByText("editor pane")).not.toBeInTheDocument();
   });
 
   it("clears immediately with no alert when the topic pane is clean", async () => {
-    const save = vi.fn().mockResolvedValue(true);
-    render(<Harness dirty={false} save={save} />);
+    render(<Harness dirty={false} />);
 
     expect(await screen.findByText("editor pane")).toBeInTheDocument();
 
@@ -119,7 +116,6 @@ describe("ResourceExplorer standalone exit guard", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("editor pane")).not.toBeInTheDocument();
-    expect(save).not.toHaveBeenCalled();
   });
 
   it("host mode is unchanged: it publishes into the external host and renders no HTD of its own", () => {

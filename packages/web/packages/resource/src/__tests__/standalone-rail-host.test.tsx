@@ -14,10 +14,10 @@ import { RailHostBoundary, StandaloneRailHost } from "../standalone-rail-host";
 afterEach(cleanup);
 
 /** A minimal publisher: registers (or withdraws) an exit guard via the real hook, driven by the
- *  `dirty` prop — mirrors how PersonaEditor's `dirty ? { isDirty, save } : null` toggles its own
- *  guard. Renders nothing; the host is what this file exercises. */
+ *  `dirty` prop — mirrors how PersonaEditor's `dirty ? { isDirty } : null` toggles its own guard.
+ *  Renders nothing; the host is what this file exercises. */
 function Publisher({ dirty }: { dirty: boolean }) {
-  useRailExitGuard(dirty ? { isDirty: () => true, save: () => Promise.resolve(true) } : null);
+  useRailExitGuard(dirty ? { isDirty: () => true } : null);
   return null;
 }
 

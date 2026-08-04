@@ -6,13 +6,9 @@ import type { UnsavedChangesAlertProps } from "../components/unsaved-changes-ale
 
 /** A leaf editor's unsaved-work guard: what a pane tells the enclosing block about its unsaved
  *  work. The block consults `isDirty()` before any action that clears or replaces the open detail
- *  (Back / breadcrumb-up / re-click / shallower select / a sibling swap at the deepest level).
- *
- *  `save()` is NOT part of the exit path — the alert never saves — but stays on the interface for
- *  the composite guards that still compose it (workspace chrome, the standalone rail host). */
+ *  (Back / breadcrumb-up / re-click / shallower select / a sibling swap at the deepest level). */
 export interface PaneExitGuard {
   isDirty(): boolean
-  save(): Promise<boolean>
 }
 
 /**

@@ -80,7 +80,7 @@ export interface MasterDetailForm<TItem, TInput> {
   select: (id: string) => void;
   actions: MasterDetailActions;
   /** The package-level unsaved-work guard for the published-level / drill-down flow:
-   *  `isDirty()` reads the current dirty state; `save()` persists and resolves true on success. */
+   *  `isDirty()` reads the current dirty state. */
   guard: PaneExitGuard;
 }
 
@@ -298,8 +298,8 @@ export function useMasterDetailForm<TItem, TInput>(
     onChange,
     select,
     // The package-level guard: read dirty fresh on each call (the hook re-creates this object every
-    // render, so the closed-over `dirty`/`save` are always current).
-    guard: { isDirty: () => dirty, save },
+    // render, so the closed-over `dirty` is always current).
+    guard: { isDirty: () => dirty },
     actions: {
       onCreate: create,
       createLabel: config.createLabel,

@@ -72,8 +72,8 @@ const PERSONA_MEMBER: TeamMember = {
 };
 const PERSONAS = [{ id: "p1", slug: "bit", name: "Bitbag" }] as unknown as Persona[];
 
-// Captures the harness-composed exit guard so a test can assert it fires (and where its
-// save routes) without driving the shell's Back/breadcrumb exit flow.
+// Captures the harness-composed exit guard so a test can assert it fires without driving the
+// shell's Back/breadcrumb exit flow.
 const guardRef: { current: PaneExitGuard | null } = { current: null };
 
 beforeEach(() => {
@@ -117,9 +117,8 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
 
 /** A minimal rail HOST: it registers ResourceExplorer/pane-published levels AND composes
  *  every registered exit guard, the way the hub's WorkspaceChromeProvider does — dirty
- *  when any publisher is dirty, its `save` persisting every dirty publisher. Stands in
- *  for the host so both the published "New member" rail affordance and the pane's exit
- *  guard are drivable/observable in the test. */
+ *  when any publisher is dirty. Stands in for the host so both the published "New member"
+ *  rail affordance and the pane's exit guard are drivable/observable in the test. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
   const [guards, setGuards] = useState<Map<string, PaneExitGuard>>(new Map());
@@ -158,10 +157,6 @@ function Harness({ children }: { children: ReactNode }) {
       ? null
       : {
           isDirty: () => [...guards.values()].some((g) => g.isDirty()),
-          save: async () => {
-            for (const g of guards.values()) if (!(await g.save())) return false;
-            return true;
-          },
         };
   return (
     <RailHostContext.Provider value={registry}>

@@ -23,7 +23,7 @@ afterEach(cleanup);
 /** A leaf editor that publishes its unsaved-work guard the way a real pane does (dirty-gated), and
  *  renders the in-app link whose click the guard must intercept. */
 function DirtyPane({ dirty }: { dirty: boolean }) {
-  useRailExitGuard(dirty ? { isDirty: () => dirty, save: async () => true } : null);
+  useRailExitGuard(dirty ? { isDirty: () => dirty } : null);
   return <a href="/elsewhere">Elsewhere</a>;
 }
 

@@ -21,7 +21,7 @@ function makeHost() {
 }
 
 function Pane({ dirty }: { dirty: boolean }) {
-  useRailExitGuard(dirty ? { isDirty: () => dirty, save: async () => true } : null);
+  useRailExitGuard(dirty ? { isDirty: () => dirty } : null);
   return null;
 }
 

@@ -7,8 +7,7 @@
  * `attemptExit(() => levels[0].onClear())` — a real exit whose completion is observable as a
  * call to that level's `onClear`.
  *
- * Two buttons, never three: the alert does not save. `guard.save()` stays on the interface for
- * the composite guards that still call it, but no exit path here may reach it.
+ * Two buttons, never three: the alert does not save — `PaneExitGuard` carries no `save()` at all.
  */
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
@@ -21,7 +20,7 @@ let surfaceSeq = 0
 /** One level, one selected row, so the root crumb is rendered and clicking it is a real exit. */
 function renderWithGuard(isDirty: boolean) {
   const onClear = vi.fn()
-  const guard = { isDirty: () => isDirty, save: vi.fn(async () => true) }
+  const guard = { isDirty: () => isDirty }
   render(
     <HierarchicalMenuDetail
       rootLabel="Things"
@@ -76,13 +75,6 @@ describe('HierarchicalMenuDetail — exit guard', () => {
     clickRootCrumb()
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
     expect(onClear).toHaveBeenCalledTimes(1)
-  })
-
-  it('never calls guard.save() — the alert does not save', () => {
-    const { guard } = renderWithGuard(true)
-    clickRootCrumb()
-    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
-    expect(guard.save).not.toHaveBeenCalled()
   })
 
   it('Stay aborts the exit and keeps the editor', () => {

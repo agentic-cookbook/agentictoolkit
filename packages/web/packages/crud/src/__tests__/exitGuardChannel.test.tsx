@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { useExitGuardChannel } from '../useExitGuardChannel'
 import type { PaneExitGuard } from '@agentic-toolkit/ui/blocks'
 
-const DIRTY: PaneExitGuard = { isDirty: () => true, save: async () => true }
+const DIRTY: PaneExitGuard = { isDirty: () => true }
 
 let published: PaneExitGuard | null = null
 let register: (g: PaneExitGuard | null) => void = () => {}
@@ -35,7 +35,7 @@ describe('useExitGuardChannel', () => {
     render(<Host />)
     act(() => register(DIRTY))
     const first = published
-    act(() => register({ isDirty: () => true, save: async () => true }))
+    act(() => register({ isDirty: () => true }))
     expect(published).toBe(first)
   })
 })

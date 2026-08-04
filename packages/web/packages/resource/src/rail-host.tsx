@@ -168,11 +168,9 @@ export function useRailExitGuard(guard: PaneExitGuard | null): void {
       id,
       present
         ? {
-            // Both methods read the ref null-safely: `present` is a snapshot from the render that
-            // scheduled this effect, so a guard withdrawn between render and invocation must not
-            // throw. Nothing to save is a successful save, matching isDirty()'s absent → false.
+            // Reads the ref null-safely: `present` is a snapshot from the render that scheduled
+            // this effect, so a guard withdrawn between render and invocation must not throw.
             isDirty: () => !!ref.current?.isDirty(),
-            save: () => ref.current?.save() ?? Promise.resolve(true),
           }
         : null,
     );

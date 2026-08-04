@@ -73,19 +73,12 @@ export function StandaloneRailHost({
     });
   }, []);
 
-  // The one guard the HTD consults: dirty when ANY publisher is dirty; save() persists every dirty
-  // publisher (all must succeed before the gated navigation proceeds).
+  // The one guard the HTD consults: dirty when ANY publisher is dirty.
   const exitGuard = useMemo<PaneExitGuard | null>(() => {
     if (guards.size === 0) return null;
     const all = [...guards.values()];
     return {
       isDirty: () => all.some((g) => g.isDirty()),
-      save: async () => {
-        for (const g of all) {
-          if (g.isDirty() && !(await g.save())) return false;
-        }
-        return true;
-      },
     };
   }, [guards]);
 
