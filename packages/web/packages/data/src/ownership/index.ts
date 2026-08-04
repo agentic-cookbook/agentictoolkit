@@ -1,11 +1,16 @@
 import { authedJson } from "../http";
 
-/** A principal who loses reach over the object when it moves. */
+/** A principal who loses reach over the object when it moves.
+ *
+ *  `via` is the provenance of the access being taken away: an explicit grant in the roles layer
+ *  (`role`), reach inherited through a team roster (`team`), a direct persona grant (`direct`), or
+ *  a seat on the subject project's participant list (`participant`). They are separate because the
+ *  admin confirming the dialog manages them on different surfaces. */
 export interface RevokedSubject {
   kind: 'user' | 'team' | 'persona';
   id: string;
   name: string;
-  via: "role" | "team" | "direct";
+  via: "role" | "team" | "direct" | "participant";
 }
 
 export interface TransferPreview {

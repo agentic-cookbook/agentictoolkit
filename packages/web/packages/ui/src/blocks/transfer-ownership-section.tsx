@@ -76,7 +76,15 @@ function isCurrentTarget(target: TransferTarget, current?: TransferTargetRef): b
 export interface TransferPreviewResult {
   newId: string | null;
   tokens: number;
-  revoking: { kind: "user" | "team" | "persona"; id: string; name: string; via: "role" | "team" | "direct" }[];
+  // `via` mirrors the server's `RevokedSubject['via']` (@agentic-toolkit/data ownership) — a
+  // participant seat is its own provenance, not a flavour of "direct". Rendered as a bare string
+  // below, so a new member needs no rendering change, only this union.
+  revoking: {
+    kind: "user" | "team" | "persona";
+    id: string;
+    name: string;
+    via: "role" | "team" | "direct" | "participant";
+  }[];
 }
 
 export interface TransferOwnershipSectionProps {
