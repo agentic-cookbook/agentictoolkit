@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
+import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
 import {
   RailHostContext,
   useRailHost,
@@ -81,6 +82,18 @@ export function StandaloneRailHost({ children }: { children: ReactNode }): React
 
   return (
     <RailHostContext.Provider value={host}>
+      {/* Browser-level exits (reload, tab close, in-app link click, Back/Forward, and any chrome
+          that awaits confirmNavigation) for every pane this host carries, from ONE mount — the same
+          line the hub's WorkspaceChromeProvider carries, so a feature site's /home is guarded
+          exactly as the same pane is inside the hub shell. `guards` is non-empty exactly when some
+          pane is dirty (publishers register on dirty, not on "editor open"), which is what makes
+          this a render value. IN-PANE exits (row switch, breadcrumb, re-click) are guarded
+          separately by the HTD below via `exitGuard`.
+          No `onNavigate`: this package owns no router instance, and reading one here
+          (next/navigation's useRouter) would make every standalone mount require an app-router
+          context — a dependency the host, not the toolkit, is the right place to supply. Discard on
+          an intercepted link therefore falls back to a full document load. */}
+      <UnsavedChangesGuard when={guards.size > 0} />
       <HierarchicalDetailView levels={mergedLevels} showBreadcrumb={false} exitGuard={exitGuard}>
         {children}
       </HierarchicalDetailView>
