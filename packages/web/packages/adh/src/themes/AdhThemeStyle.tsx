@@ -9,6 +9,7 @@ import {
   DEFAULT_SITE_THEME,
   switcherThemeKeys,
   isFullPaletteTheme,
+  usesBaseThemeFonts,
   type SwitcherThemeKey,
 } from './adh-themes'
 import { themePrePaintScript } from './theme-preview'
@@ -70,19 +71,20 @@ function ThemeSwitcherAssets({ defaultImports }: { defaultImports: string[] }) {
   const already = new Set(defaultImports)
   const fonts = new Set<string>()
   const baseProps = parseRootProps(themes[DEFAULT_ADH_THEME].css)
-  const blocks: { key: SwitcherThemeKey; css: string }[] = []
+  const blocks: { key: SwitcherThemeKey; label: string; css: string }[] = []
   for (const key of switcherThemeKeys()) {
     const { imports, rest } = splitImports(themes[key].css)
     imports.forEach((u) => !already.has(u) && fonts.add(u))
+    const label = themes[key].label
     if (isFullPaletteTheme(key)) {
       // Full-palette themes carry their WHOLE stylesheet (own M3 roles + legacy tokens
       // + structural CSS), self-scoped via html:root / html:root[data-color-mode] so an
       // active one outranks the base theme AND color-mode-light. No delta over the base.
-      blocks.push({ key, css: rest })
+      blocks.push({ key, label, css: rest })
     } else {
       // adh family shares the base palette, so ship only the props that differ (fonts).
       const delta = [...parseRootProps(rest)].filter(([k, v]) => baseProps.get(k) !== v)
-      blocks.push({ key, css: `:root{${delta.map(([k, v]) => `${k}:${v}`).join(';')}}` })
+      blocks.push({ key, label, css: `:root{${delta.map(([k, v]) => `${k}:${v}`).join(';')}}` })
     }
   }
 
@@ -135,11 +137,20 @@ function ThemeSwitcherAssets({ defaultImports }: { defaultImports: string[] }) {
       {/* Every switchable theme as an INACTIVE block (adh-family: a `:root` delta;
           full-palette: its whole `html:root` stylesheet); the pre-paint (and the
           ThemeSwitcher) activate exactly one via `media`. suppressHydrationWarning
-          because that flip happens before hydration on these very nodes. */}
-      {blocks.map(({ key, css }) => (
+          because that flip happens before hydration on these very nodes.
+
+          The human-readable label rides along on the node. A client picker needs
+          {key, label} pairs, and the only other source is the theme MANIFEST — whose
+          entries each carry a whole stylesheet as a string, so importing it from a
+          client component would ship every theme's CSS text into the JS bundle a
+          second time. Reading the labels back off these nodes costs nothing, and
+          keeps the picker's menu derived from the blocks it actually switches
+          rather than from a parallel list that can drift. */}
+      {blocks.map(({ key, label, css }) => (
         <style
           key={`alt:${key}`}
           data-adh-theme-alt={key}
+          data-adh-theme-label={label}
           media="not all"
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: css }}
@@ -224,15 +235,17 @@ export function AdhThemeStyle() {
   // crossOrigin is REQUIRED even same-origin — fonts are always fetched in CORS mode, so a
   // preload without it does not match the css request and the face is fetched twice.
   //
-  // Gated on the SAME condition SiteDefaultTheme is, and for the mirror-image reason. These
-  // faces belong to the base theme; a site whose DEFAULT_SITE_THEME is something else has
-  // that theme's `--font-*` layered on top and paints in ITS family, so the preload would
-  // fetch ~236 KB the page never draws a glyph from, on every page of that site. The gate
-  // is deliberately the cruder of the two available tests (theme identity, not "does the
-  // winning theme's font stack resolve to Iosevka") because the two errors are not
-  // symmetric: a preload skipped when it would have helped costs one latency, once; a
-  // preload emitted when it cannot help costs a quarter-megabyte, always.
-  if (DEFAULT_SITE_THEME === DEFAULT_ADH_THEME) {
+  // These faces belong to the BASE theme, so the gate asks whether the theme the page
+  // actually paints in draws glyphs from them: a site whose DEFAULT_SITE_THEME brings its
+  // own typeface has that theme's `--font-*` layered on top, and the preload would fetch
+  // ~236 KB the page never uses, on every page of that site.
+  //
+  // The test was `DEFAULT_SITE_THEME === DEFAULT_ADH_THEME` while those two were the same
+  // key. They no longer are, and identity was the wrong question: `fishlamp` is a different
+  // theme that sets the SAME Iosevka stack, so identity would have dropped the preloads
+  // family-wide while the pages still painted in Iosevka — the exact latency this preload
+  // exists to remove, reintroduced invisibly. usesBaseThemeFonts names the real condition.
+  if (usesBaseThemeFonts(DEFAULT_SITE_THEME)) {
     for (const href of THEME_FONT_PRELOADS) {
       preload(href, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
     }

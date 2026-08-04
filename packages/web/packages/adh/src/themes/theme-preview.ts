@@ -1,9 +1,11 @@
-// Single source of truth for the dev-only adh theme-preview storage: the cookie
-// name, the cross-subdomain cookie-domain rule, the cookie/localStorage read+write,
-// the cross-site carry, and the pre-paint bootstrap. Consumed by the theme switcher,
-// the header SiteSwitcher (cross-site carry), and AdhThemeStyle (the pre-paint
-// <script>). Keeping it in one file stops the read/write/domain logic from drifting
-// between those three call sites.
+// Single source of truth for the dev-only adh theme preview: the cookie name, the
+// cross-subdomain cookie-domain rule, the cookie/localStorage read+write, the
+// cross-site carry, the alt-block activation, and the pre-paint bootstrap. Consumed
+// by the settings Appearance panel's theme picker, the theme editor, the header
+// SiteSwitcher (cross-site carry), DbThemeApplier, and AdhThemeStyle (the pre-paint
+// <script>). Keeping it in one file stops the read/write/domain/activation logic from
+// drifting between those call sites — the pre-paint below re-implements all of it as a
+// string, and a mirror is only maintainable next to the thing it mirrors.
 
 import { DEFAULT_SITE_THEME } from './adh-themes'
 
@@ -14,6 +16,23 @@ export const THEME_STORAGE_KEY = 'adh-theme'
 // switcher (the env check lives server-side, so DEPLOYMENT_ENV never ships to the
 // client). Switching = flipping the chosen block's `media` to "all".
 export const ALT_STYLE_SELECTOR = 'style[data-adh-theme-alt]'
+
+/** Activate a baked theme by flipping its alt-block to `media="all"` and every other
+ *  block back to `media="not all"` — the whole of what "switching theme" means at
+ *  runtime. No-op on the server / in production, where no alt-blocks are emitted.
+ *
+ *  Lives beside {@link themePrePaintScript}, which does this same flip in string form
+ *  before hydration, and beside ALT_STYLE_SELECTOR, which names the nodes both touch:
+ *  the pre-paint's mirror of this logic is only safe while the thing being mirrored is
+ *  in the same file. Callers that also want the choice REMEMBERED pair it with
+ *  {@link persistTheme}; the theme editor deliberately does not (its live override is
+ *  in-session), which is why the two stay separate functions. */
+export function applyBaseTheme(seedKey: string): void {
+  if (typeof document === 'undefined') return
+  document.querySelectorAll<HTMLStyleElement>(ALT_STYLE_SELECTOR).forEach((el) => {
+    el.media = el.getAttribute('data-adh-theme-alt') === seedKey ? 'all' : 'not all'
+  })
+}
 
 // The choice lives in a cookie scoped to the registrable domain so it carries
 // across the family's subdomains (e.g. picking on the hub also themes status.*).

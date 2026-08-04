@@ -8,7 +8,9 @@ import {
   adhJetbrainsCss,
   adhManropeCss,
   agenticcookbookwebCss,
+  charcoalCss,
   devTeamCss,
+  fishlampCss,
   greenMatrixCss,
   greenMatrixGlassCss,
   mikefullertonCss,
@@ -46,7 +48,9 @@ export type ThemeKey =
   | 'adh-jetbrains'
   | 'adh-manrope'
   | 'agenticcookbookweb'
+  | 'charcoal'
   | 'dev-team'
+  | 'fishlamp'
   | 'green-matrix'
   | 'green-matrix-glass'
   | 'mikefullerton'
@@ -89,7 +93,9 @@ export const themes: Record<ThemeKey, ThemeEntry> = {
   'adh-jetbrains': { id: 'adh-jetbrains', label: 'ADH · JetBrains', css: adhJetbrainsCss },
   'adh-manrope': { id: 'adh-manrope', label: 'ADH · Manrope', css: adhManropeCss },
   agenticcookbookweb: { id: 'agenticcookbookweb', label: 'Agentic Cookbook', css: agenticcookbookwebCss },
+  charcoal: { id: 'charcoal', label: 'Charcoal', css: charcoalCss },
   'dev-team': { id: 'dev-team', label: 'Dev Team', css: devTeamCss },
+  fishlamp: { id: 'fishlamp', label: 'Fishlamp', css: fishlampCss },
   'green-matrix': { id: 'green-matrix', label: 'Green Matrix', css: greenMatrixCss },
   'green-matrix-glass': {
     id: 'green-matrix-glass',

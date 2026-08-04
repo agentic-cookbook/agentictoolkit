@@ -898,6 +898,12 @@ var ADH_THEMES = [
   { key: "adh-fira", label: "Fira" }
 ].filter((t) => !isBaseCutAlias(t.key));
 var DEFAULT_ADH_THEME = "adh";
+var BASE_FACE_THEMES = [
+  DEFAULT_ADH_THEME,
+  ...BASE_CUT_ALIASES,
+  "charcoal",
+  "fishlamp"
+];
 export {
   ADH_THEMES,
   ADH_THEME_COOKIE,

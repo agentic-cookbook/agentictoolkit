@@ -54,7 +54,18 @@ var FULL_PALETTE_THEMES = [
   "whimsical",
   "green-matrix",
   "green-matrix-glass",
-  "old-school-terminal"
+  "old-school-terminal",
+  // The ADH family's own two. `charcoal` is the palette the family wore by default until
+  // `fishlamp` replaced it below — saved as a theme in its own right so the old look stays
+  // pickable and recoverable rather than living only in the base theme it is layered over.
+  "charcoal",
+  "fishlamp"
+];
+var BASE_FACE_THEMES = [
+  DEFAULT_ADH_THEME,
+  ...BASE_CUT_ALIASES,
+  "charcoal",
+  "fishlamp"
 ];
 var adhThemeKeys = () => Object.keys(themes).filter(
   (k) => k.startsWith("adh") && !isBaseCutAlias(k)
@@ -67,6 +78,12 @@ var switcherThemeKeys = () => [
 // src/themes/theme-preview.ts
 var THEME_STORAGE_KEY = "adh-theme";
 var ALT_STYLE_SELECTOR = "style[data-adh-theme-alt]";
+function applyBaseTheme(seedKey) {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll(ALT_STYLE_SELECTOR).forEach((el) => {
+    el.media = el.getAttribute("data-adh-theme-alt") === seedKey ? "all" : "not all";
+  });
+}
 function readStoredTheme() {
   const m = document.cookie.match(/(?:^|; )adh-theme=([^;]+)/);
   if (m?.[1]) return decodeURIComponent(m[1]);
@@ -91,12 +108,6 @@ var ROOT_SELECTOR_RE = /(^|})(\s*):root(\s*\{)/g;
 var BOOSTED_ROOT = "html:root:root:root:root";
 function boostRootSpecificity(css) {
   return css.replace(ROOT_SELECTOR_RE, (_m, pre, ws, brace) => `${pre}${ws}${BOOSTED_ROOT}${brace}`);
-}
-function applyBaseTheme(seedKey) {
-  if (typeof document === "undefined") return;
-  document.querySelectorAll(ALT_STYLE_SELECTOR).forEach((el) => {
-    el.media = el.getAttribute("data-adh-theme-alt") === seedKey ? "all" : "not all";
-  });
 }
 function applyThemeCss(css) {
   if (typeof document === "undefined") return;

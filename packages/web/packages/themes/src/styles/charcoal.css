@@ -1,0 +1,244 @@
+/* Charcoal — the ADH family's own palette: near-black charcoal surfaces, brand gold,
+ * warm off-white text. This is the look every family site wore by default until the
+ * `fishlamp` theme took over as DEFAULT_SITE_THEME, preserved here as a theme in its
+ * own right so it stays pickable and, more importantly, RECOVERABLE.
+ *
+ * It is a RECORD, not a redesign. Every value below is copied verbatim from the two
+ * files that produced that look:
+ *   - dark  ← adh.css's `:root` colour roles (the generated base theme)
+ *   - light ← color-mode-light.css's `:root[data-color-mode]:not(.dark)` block
+ * so selecting `charcoal` renders exactly what the family rendered before, in both
+ * modes. Do not "improve" a value here: the base theme is still the live one, and a
+ * divergence would make this file a lie about the thing it exists to remember.
+ *
+ * Two deliberate consequences of copying faithfully, both of which look like
+ * omissions and are not:
+ *   - the values the base leaves dark-tuned in light mode (the --pc-* chat literals,
+ *     the white footer colours) are left dark-tuned here too, in the dark block only,
+ *     exactly as the base has them;
+ *   - this file is TOKENS ONLY. Most full-palette themes also ship `body`,
+ *     `::selection`, `.prose` and `.persona-chat` rules; the base already supplies the
+ *     first two (adh.css:374,383) reading these very roles through var(), and the
+ *     family has never had theme-level `.prose` or `.persona-chat` blocks. Adding any
+ *     of them here would change the look this file exists to preserve.
+ *
+ * NO @import: this palette is set in Iosevka, which the adh base theme self-hosts
+ * (its own @font-face block). The stack is restated so the theme reads whole; it adds
+ * no webfont request. */
+
+/* === Tokens ===
+ * Dark is the default (html:root); light overrides under
+ * html:root[data-color-mode]:not(.dark) — the shape every full-palette theme uses.
+ * The leading `html` type selector adds an element-column point so both blocks
+ * outrank the always-on adh base (`:root`, 0-1-0) and color-mode-light
+ * (`:root[data-color-mode]:not(.dark)`, 0-3-0) on specificity alone, independent of
+ * stylesheet source order. */
+
+html:root {
+  color-scheme: dark;
+
+  /* M3 surfaces + text + outline */
+  --color-surface: #0c0c0f;
+  --color-surface-dim: #0a0a0d;
+  --color-surface-bright: #2a2a33;
+  --color-surface-container-lowest: #08080a;
+  --color-surface-container-low: #101014;
+  --color-surface-container: #14141a;
+  --color-surface-container-high: #1c1c24;
+  --color-surface-container-highest: #24242e;
+  --color-on-surface: #e8e6e3;
+  --color-on-surface-variant: #8a8a9a;
+  --color-text-dim: #5a5a6a;
+  --color-outline: #2a2a35;
+  --color-outline-variant: #1e1e28;
+  --color-outline-strong: #3d3d50;
+  --color-inverse-surface: #e8e6e3;
+  --color-inverse-on-surface: #14141a;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+
+  /* M3 primary / secondary / tertiary */
+  --color-primary: #c4a35a; /* brand gold */
+  --color-on-primary: #0c0c0f;
+  --color-primary-container: #4a3d1f;
+  --color-on-primary-container: #e7d3a3;
+  --color-inverse-primary: #6b5a30;
+  --color-primary-bright: #d9bb74;
+  --color-primary-dim: rgba(196, 163, 90, 0.15);
+  --color-secondary: #a89a82; /* muted bronze */
+  --color-on-secondary: #0c0c0f;
+  --color-secondary-container: #2e2a22;
+  --color-on-secondary-container: #e0d6c4;
+  --color-tertiary: #6b8afd;
+  --color-on-tertiary: #0c0c0f;
+  --color-tertiary-container: #232b45;
+  --color-on-tertiary-container: #c5d2ff;
+
+  /* M3 status (error / success / warning / info) */
+  --color-error: #d45454;
+  --color-on-error: #0c0c0f;
+  --color-error-container: #3d1f1f;
+  --color-on-error-container: #f3c0c0;
+  --color-success: #5cb270;
+  --color-on-success: #0c0c0f;
+  --color-success-container: #1e3a26;
+  --color-on-success-container: #bfe6c9;
+  --color-warning: #e08a3c;
+  --color-on-warning: #0c0c0f;
+  --color-warning-container: #3d2a14;
+  --color-on-warning-container: #f3d4ad;
+  --color-info: #6b8afd;
+  --color-on-info: #0c0c0f;
+  --color-info-container: #232b45;
+  --color-on-info-container: #c5d2ff;
+
+  /* M3 extras + apt literals. --color-apt-nav is a literal in the @theme map rather
+     than a role ref, so a theme that does not restate it keeps tailwind.css's value —
+     which happens to be this one (tailwind.css:34). */
+  --color-surface-tint: var(--color-primary);
+  --color-link: var(--color-primary);
+  --color-link-hover: var(--color-primary-bright);
+  --focus-ring-color: var(--color-primary);
+  --color-apt-nav: rgba(12, 12, 15, 0.96);
+
+  /* COMPAT aliases (legacy names → M3 roles) */
+  --color-surface-raised: var(--color-surface-container);
+  --color-surface-hover: var(--color-surface-container-high);
+  --color-border: var(--color-outline);
+  --color-border-subtle: var(--color-outline-variant);
+  --color-border-strong: var(--color-outline-strong);
+  --color-text-primary: var(--color-on-surface);
+  --color-text-secondary: var(--color-on-surface-variant);
+  --color-accent: var(--color-primary);
+  --color-accent-bright: var(--color-primary-bright);
+  --color-accent-dim: var(--color-primary-dim);
+
+  /* Footer — literals in the base, white in BOTH modes. Copied as-is. */
+  --adh-footer-color: #ffffff;
+  --adh-footer-link-color: #ffffff;
+
+  /* chat (persona-chat component) */
+  --pc-surface: rgba(20, 20, 26, 0.94);
+  --pc-persona-bg: rgba(196, 163, 90, 0.12);
+  --pc-persona-border: rgba(196, 163, 90, 0.25);
+  --pc-persona-text: var(--color-on-surface);
+  --pc-persona-name: var(--color-primary);
+  --pc-user-bg: rgba(255, 255, 255, 0.06);
+  --pc-user-border: #2a2a36;
+  --pc-user-text: var(--color-on-surface);
+  --pc-user-name: var(--color-on-surface-variant);
+  --pc-input-bg: var(--color-surface);
+  --pc-input-border: #2a2a36;
+  --pc-input-focus: var(--color-primary);
+  --pc-send-bg: var(--color-primary);
+  --pc-send-bg-hover: var(--color-primary-bright);
+  --pc-send-text: var(--color-on-primary);
+  --pc-time-color: var(--color-text-dim);
+  --pc-radius: 6px;
+
+  /* code highlighting (Shiki) */
+  --scp-shiki-theme: 'github-dark';
+
+  /* fonts (mode-invariant) — the adh base already self-hosts this exact face */
+  --font-sans: 'Iosevka', 'Iosevka Fallback Menlo', 'Iosevka Fallback Courier', ui-monospace, monospace;
+  --font-serif: 'Iosevka', 'Iosevka Fallback Menlo', 'Iosevka Fallback Courier', ui-monospace, monospace;
+  --font-mono: 'Iosevka', 'Iosevka Fallback Menlo', 'Iosevka Fallback Courier', ui-monospace, monospace;
+  --font-display: var(--font-serif);
+  --pc-font: var(--font-sans);
+}
+
+html:root[data-color-mode]:not(.dark) {
+  color-scheme: light;
+
+  /* Primary — brand gold, deepened so it carries contrast on light surfaces. */
+  --color-primary: #8a6a14;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #f3e6c2;
+  --color-on-primary-container: #4a3a0e;
+  --color-inverse-primary: #d9bb74;
+  --color-primary-bright: #a3812a;
+  --color-primary-dim: rgba(138, 106, 20, 0.14);
+
+  /* Secondary — muted bronze. */
+  --color-secondary: #6f6450;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e8e1d2;
+  --color-on-secondary-container: #322d22;
+
+  /* Tertiary / blue. */
+  --color-tertiary: #3a5bd9;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #dbe2ff;
+  --color-on-tertiary-container: #16224f;
+
+  /* Error. */
+  --color-error: #c0392b;
+  --color-on-error: #ffffff;
+  --color-error-container: #fadbd6;
+  --color-on-error-container: #5c1812;
+
+  /* Surfaces — warm off-whites, ascending containers get slightly lighter. */
+  --color-surface: #faf8f4;
+  --color-surface-dim: #ece8e0;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f5f2ea;
+  --color-surface-container: #f0ebe1;
+  --color-surface-container-high: #e9e3d7;
+  --color-surface-container-highest: #e1dacc;
+
+  /* Text + borders. */
+  --color-on-surface: #1f1d17;
+  --color-on-surface-variant: #5b5648;
+  --color-text-dim: #8a8472;
+  --color-outline: #d3ccba;
+  --color-outline-variant: #e7e1d3;
+  --color-outline-strong: #b4ab95;
+  --color-inverse-surface: #2c2c23;
+  --color-inverse-on-surface: #f2efe8;
+
+  /* Mode-INVARIANT in the base: adh.css:274 sets both and color-mode-light never
+     revisits them, so light mode gets black there too. Restated rather than left to
+     the dark block above because a full-palette theme owes every role in both blocks
+     (fullPaletteThemes.test.ts) — inheriting it happens to work here and stops working
+     the day the dark block's value changes. Same values, no behaviour change. */
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+
+  /* Status colors — deepened for contrast on light. */
+  --color-success: #2e7d44;
+  --color-on-success: #ffffff;
+  --color-success-container: #d6ecd9;
+  --color-on-success-container: #11331c;
+  /* The one value here that is NOT what the family rendered before: the base had
+   * #b9701f, which is 3.89:1 under white — an AA failure the contrast gate could
+   * not see, because it discovers themes by `html:root` and color-mode-light.css
+   * anchors at a bare `:root`. Copying that block into a real theme file is what
+   * surfaced it. Corrected in BOTH files in the same commit rather than only here,
+   * so the no-divergence rule above still holds; this file remains a faithful copy
+   * of color-mode-light.css, which is now itself correct. */
+  --color-warning: #a5631a;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #f6e4cc;
+  --color-on-warning-container: #4a3412;
+  --color-info: #3a5bd9;
+  --color-on-info: #ffffff;
+  --color-info-container: #dbe2ff;
+  --color-on-info-container: #16224f;
+
+  /* The settings topic rail (bg-apt-nav) is a literal in the @theme map, not a role
+     ref, so it has to be overridden explicitly or it stays dark on light. */
+  --color-apt-nav: #efe9df;
+
+  /* Categorical hues (apt-cat-*) keep their HUE in light mode — a tag's identity must
+     not change between themes — but the dark-mode values are tuned for a dark surface
+     and wash out on the cream light surface. Same hue families, darkened to clear AA
+     contrast on light. */
+  --color-apt-cat-blue: #1d63d8;
+  --color-apt-cat-violet: #7c3aed;
+  --color-apt-cat-pink: #db2777;
+  --color-apt-cat-teal: #0e7490;
+  --color-apt-cat-indigo: #4f46e5;
+  --color-apt-cat-orange: #c2410c;
+  --color-apt-cat-purple: #a21caf;
+}

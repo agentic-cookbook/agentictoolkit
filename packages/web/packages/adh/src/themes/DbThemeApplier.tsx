@@ -3,9 +3,9 @@
 import { useEffect } from 'react'
 
 import { DEFAULT_ADH_THEME } from './adh-themes'
-import { ALT_STYLE_SELECTOR, readStoredTheme } from './theme-preview'
+import { ALT_STYLE_SELECTOR, applyBaseTheme, readStoredTheme } from './theme-preview'
 import { isSwitcherSeed, concatItemCss } from './resolve'
-import { applyBaseTheme, applyThemeCss } from './theme-overrides'
+import { applyThemeCss } from './theme-overrides'
 import { listThemes } from './themes-client'
 
 // Applies a persisted DB theme on load. Seeds are handled by the pre-paint media-flip

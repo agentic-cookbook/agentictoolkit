@@ -80,7 +80,14 @@ export const DEFAULT_ADH_THEME: AdhThemeKey = 'adh'
  *     NOT outrank color-mode-light (0-3-0), so a full-palette theme MUST ship the light block
  *     too — dropping it silently reverts its light-mode colors toward the base palette.
  *     (The editor's live override is boosted past both, see theme-overrides.boostRootSpecificity.)
- *  Keep in sync with the `html:root` selectors the theme CSS is generated with. */
+ *  Keep in sync with the `html:root` selectors the theme CSS is generated with.
+ *
+ *  A theme may also be DARK-ALWAYS, which is the same contract taken one step further:
+ *  instead of a light block with light values, it lists the light-mode selectors
+ *  alongside the dark one and gives them the dark palette, adding the two
+ *  `[data-contrast]` forms and the `:not([data-contrast])` form so it also outranks
+ *  color-mode-light's contrast rules (0-4-0 / 0-5-0) rather than only its base block.
+ *  `fishlamp` is the one that does this; its header comment carries the arithmetic. */
 export const FULL_PALETTE_THEMES = [
   'signal',
   'nord',
@@ -117,6 +124,11 @@ export const FULL_PALETTE_THEMES = [
   'green-matrix',
   'green-matrix-glass',
   'old-school-terminal',
+  // The ADH family's own two. `charcoal` is the palette the family wore by default until
+  // `fishlamp` replaced it below — saved as a theme in its own right so the old look stays
+  // pickable and recoverable rather than living only in the base theme it is layered over.
+  'charcoal',
+  'fishlamp',
 ] as const satisfies readonly ThemeKey[]
 
 export type FullPaletteThemeKey = (typeof FULL_PALETTE_THEMES)[number]
@@ -131,13 +143,40 @@ export type SwitcherThemeKey = AdhThemeKey | FullPaletteThemeKey
  *  while the base keeps supplying the `.text-*` utilities it never defines.
  *  Naming an adh font-variant here works too — its `:root` delta wins on source order.
  *
- *  It is the SAME key as DEFAULT_ADH_THEME: every site in the family presents adh in
- *  Iosevka, so there is no second layer to emit over the base. SiteDefaultTheme sees
- *  the two match and renders nothing (the base block already IS the site's theme), and
- *  in the switcher envs the pre-paint flips adh's own — empty — alt-block. Point this
- *  at a different key to dress the family in something else without disturbing the
- *  typography layer above. */
-export const DEFAULT_SITE_THEME: SwitcherThemeKey = 'adh'
+ *  This ONE constant dresses all ~45 family sites: no site passes a theme, they all render
+ *  `<AdhThemeStyle />` with no props, so changing it here is the whole change.
+ *
+ *  It is `fishlamp` — the dark-always palette drawn from fishlamp.com. The previous value
+ *  was DEFAULT_ADH_THEME itself, which is why SiteDefaultTheme has a branch for the two
+ *  matching (it renders nothing then, the base block already being the site's theme); that
+ *  branch is now the un-taken one, and the base stays emitted underneath for the `.text-*`
+ *  typography utilities no full-palette theme defines. `charcoal` is that former default
+ *  saved as a theme, so pointing this back at the old look is a one-word edit. */
+export const DEFAULT_SITE_THEME: SwitcherThemeKey = 'fishlamp'
+
+/** Themes whose `--font-*` stack IS the base theme's — the Iosevka cut adh self-hosts and
+ *  ships `@font-face` rules for. AdhThemeStyle preloads those faces only when the theme the
+ *  page actually paints in is one of these: a preload for a face the winning theme never
+ *  draws a glyph from is a quarter-megabyte fetched on every page, forever.
+ *
+ *  The test used to be `DEFAULT_SITE_THEME === DEFAULT_ADH_THEME`, which was exact while the
+ *  two were the same key and became wrong the moment they weren't — `fishlamp` sets sans,
+ *  serif and mono to that same Iosevka stack, so it wants the preloads as much as the base
+ *  does, and identity alone would have silently dropped them family-wide.
+ *
+ *  A frozen tuple + `.includes` rather than a `Set`, for the reason BASE_CUT_ALIASES
+ *  spells out at the top of this file. */
+const BASE_FACE_THEMES = [
+  DEFAULT_ADH_THEME,
+  ...BASE_CUT_ALIASES,
+  'charcoal',
+  'fishlamp',
+] as const satisfies readonly ThemeKey[]
+
+/** Whether `key` paints in the base theme's self-hosted faces — i.e. whether the base's
+ *  font preloads are worth emitting for a page whose winning theme is `key`. */
+export const usesBaseThemeFonts = (key: string): boolean =>
+  (BASE_FACE_THEMES as readonly string[]).includes(key)
 
 export const isFullPaletteTheme = (key: string): key is FullPaletteThemeKey =>
   (FULL_PALETTE_THEMES as readonly string[]).includes(key)

@@ -6,8 +6,8 @@ export type { AdhThemeKey, AdhThemeOption, SwitcherThemeKey, FullPaletteThemeKey
 export { useThemeEditor } from './useThemeEditor';
 export type { ThemeEditorApi, ThemeSource, EditorTheme, CssMap } from './useThemeEditor';
 export { DbThemeApplier } from '@agentic-toolkit/adh/themes/DbThemeApplier';
-export { THEME_STORAGE_KEY, ALT_STYLE_SELECTOR, cookieDomain, readStoredTheme, persistTheme, readPreviewTheme, appendThemePreview, themePrePaintScript, } from './theme-preview';
-export { applyBaseTheme, applyThemeCss, clearThemeOverride } from './theme-overrides';
+export { THEME_STORAGE_KEY, ALT_STYLE_SELECTOR, cookieDomain, readStoredTheme, persistTheme, applyBaseTheme, readPreviewTheme, appendThemePreview, themePrePaintScript, } from './theme-preview';
+export { applyThemeCss, clearThemeOverride } from './theme-overrides';
 export { isSwitcherSeed, concatItemCss } from './resolve';
 export { listThemes, createTheme, updateTheme, deleteTheme } from './themes-client';
 export type { StoredTheme, ThemeWrite } from './themes-client';

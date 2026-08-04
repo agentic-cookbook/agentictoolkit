@@ -5,8 +5,8 @@ import { themes } from '@agentic-toolkit/themes/manifest'
 
 import { DEFAULT_ADH_THEME, DEFAULT_SITE_THEME, switcherThemeKeys } from './adh-themes'
 import { isSwitcherSeed, concatItemCss } from './resolve'
-import { applyBaseTheme, applyThemeCss, clearThemeOverride } from './theme-overrides'
-import { persistTheme, readStoredTheme } from './theme-preview'
+import { applyThemeCss, clearThemeOverride } from './theme-overrides'
+import { applyBaseTheme, persistTheme, readStoredTheme } from './theme-preview'
 import { reportUnexpectedError } from '@agentic-toolkit/adh/telemetry/report-error'
 import {
   listThemes,

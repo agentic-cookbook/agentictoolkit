@@ -17,6 +17,11 @@
  *     the dark block looks perfect in dark mode and silently reverts to the base palette in
  *     light mode — the exact failure adh-themes.ts warns about in prose.
  *
+ *     A theme may satisfy this two ways, and both are tested here rather than one being
+ *     privileged: MODE-SPLIT (two blocks, light values in the light one) or DARK-ALWAYS
+ *     (one block whose selector LIST carries both anchors, so light mode gets the dark
+ *     palette on purpose). A dark-always theme owes three more selectors — see rule 5.
+ *
  *  3. It must declare all 49 literal M3 colour roles, in both blocks. This is the trap the
  *     legacy site themes fell into for a year: the base defines the legacy token names as
  *     `var()` aliases OF the roles (`--color-text-primary: var(--color-on-surface)`), so a
@@ -27,6 +32,13 @@
  *
  *  4. No leftover bare `:root` token block. That is the legacy shape, and it loses the
  *     cascade to the base in both modes.
+ *
+ *  5. A DARK-ALWAYS theme must also out-specify color-mode-light's CONTRAST rules, not
+ *     just its base block. Those set light-mode text to near-black on an explicit
+ *     high/extra-high choice and on the OS "increase contrast" setting; a dark-always
+ *     theme that beats only the base block hands a user on Light + High contrast
+ *     near-black text on a near-black ground. That reader sees an unreadable page, and
+ *     nobody testing the default configuration ever sees it at all.
  */
 import { describe, it, expect } from 'vitest'
 import { themes } from '@agentic-toolkit/themes/manifest'
@@ -34,8 +46,16 @@ import { FULL_PALETTE_THEMES } from '../themes/adh-themes'
 
 const DARK = 'html:root'
 const LIGHT = 'html:root[data-color-mode]:not(.dark)'
+/** The other three states color-mode-light.css can put a LIGHT document in: an explicit
+ *  contrast choice (its :105 / :113 rules) and the OS-level one (:123, inside
+ *  `@media (prefers-contrast: more)`). Only a dark-always theme has to name them. */
+const LIGHT_CONTRAST = [
+  `${LIGHT}[data-contrast='high']`,
+  `${LIGHT}[data-contrast='extra-high']`,
+  `${LIGHT}:not([data-contrast='high']):not([data-contrast='extra-high'])`,
+]
 
-/** A theme in the correct shape, and the three ways of breaking it these tests must catch.
+/** A theme in each correct shape, and the four ways of breaking them these tests must catch.
  *  Without these the suite could pass while detecting nothing — every real theme is already
  *  correct, so the assertions below never exercise their own failure path. */
 const FIXTURES = {
@@ -43,13 +63,44 @@ const FIXTURES = {
   darkOnly: `html:root {\n  --color-primary: #fff;\n}\n`,
   legacy: `:root {\n  --color-primary: #000;\n}\n\n:root.dark {\n  --color-primary: #fff;\n}\n`,
   missingRole: `html:root {\n  --color-text-primary: #fff;\n}\n\nhtml:root[data-color-mode]:not(.dark) {\n  --color-text-primary: #000;\n}\n`,
+  darkAlways: `html:root,\nhtml:root[data-color-mode]:not(.dark),\n${LIGHT_CONTRAST.join(',\n')} {\n  --color-primary: #fff;\n}\n`,
+  // Dark-always, but only out-specifying color-mode-light's BASE block: the near-black-on-
+  // near-black failure rule 5 describes, which the two-selector check above cannot see.
+  darkAlwaysNoContrast: `html:root,\nhtml:root[data-color-mode]:not(.dark) {\n  --color-primary: #fff;\n}\n`,
 }
 
-/** The declarations inside a top-level `<selector> { … }` block, or null if there is none. */
+type Rule = { selectors: string[]; body: string }
+
+/** The theme's top-level rules: a selector list starting at column 0, closed by a `}` at
+ *  column 0. That anchoring is the same one ThemeStyle's buildScopedCss rewriter relies on
+ *  (it rewrites a root anchor only at a line start or after a comma), so a rule this parser
+ *  can't see is one the rewriter can't see either — nested `@media` bodies included. */
+function rules(css: string): Rule[] {
+  const flat = css.replace(/\/\*[\s\S]*?\*\//g, '')
+  return Array.from(flat.matchAll(/^([^\s@{}][^{}]*?)\s*\{([\s\S]*?)^\}/gm), (m) => ({
+    selectors: m[1]!.split(',').map((s) => s.trim().replace(/\s+/g, ' ')),
+    body: m[2]!,
+  }))
+}
+
+/** The rule whose selector LIST names `selector`, or null. A list, not an exact selector
+ *  match: a dark-always theme reaches light mode by adding anchors to the dark block's
+ *  list rather than by shipping a second block, and a test that only recognised
+ *  `html:root {` would read that as "no dark block" — and, worse, would then skip the
+ *  role check for it and pass. */
+function rule(css: string, selector: string): Rule | null {
+  return rules(css).find((r) => r.selectors.includes(selector)) ?? null
+}
+
+/** The declarations inside the block that `selector` anchors, or null if there is none. */
 function block(css: string, selector: string): string | null {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const m = new RegExp(`^${escaped}\\s*\\{([\\s\\S]*?)^\\}`, 'm').exec(css)
-  return m?.[1] ?? null
+  return rule(css, selector)?.body ?? null
+}
+
+/** Whether the theme reaches light mode by giving it the DARK palette — one rule carrying
+ *  both anchors — rather than by shipping a second block with light values. */
+function isDarkAlways(css: string): boolean {
+  return rule(css, DARK)?.selectors.includes(LIGHT) ?? false
 }
 
 function declaredProps(body: string): Set<string> {
@@ -84,8 +135,22 @@ describe('FULL_PALETTE_THEMES', () => {
       expect(/^:root[\s{.]/m.test(FIXTURES.good)).toBe(false)
     })
 
+    it('finds both anchors in a DARK-ALWAYS theme, in the one block', () => {
+      // The shape the parser exists for: one rule, five selectors. One rule carrying both
+      // anchors is what marks a theme dark-always below.
+      expect(isDarkAlways(FIXTURES.darkAlways)).toBe(true)
+      expect(isDarkAlways(FIXTURES.good)).toBe(false)
+      expect(block(FIXTURES.darkAlways, LIGHT)).toContain('--color-primary: #fff')
+    })
+
     it('catches a theme that ships only the dark block', () => {
       expect(block(FIXTURES.darkOnly, LIGHT)).toBeNull()
+    })
+
+    it('catches a DARK-ALWAYS theme that skips the light CONTRAST selectors', () => {
+      const r = rule(FIXTURES.darkAlwaysNoContrast, DARK)!
+      expect(r.selectors).toContain(LIGHT) // passes the both-modes check above…
+      for (const sel of LIGHT_CONTRAST) expect(r.selectors).not.toContain(sel) // …and still breaks
     })
 
     it('catches a legacy bare-`:root` theme', () => {
@@ -114,6 +179,18 @@ describe('FULL_PALETTE_THEMES', () => {
       block(css, LIGHT),
       `${key} has no \`${LIGHT}\` block — it would revert to the base palette in light mode`,
     ).not.toBeNull()
+  })
+
+  it.each(FULL_PALETTE_THEMES)('%s out-specifies light CONTRAST if it is DARK-ALWAYS', (key) => {
+    const css = themes[key].css
+    if (!isDarkAlways(css)) return // mode-split: its light block carries light values
+    const { selectors } = rule(css, DARK)!
+    for (const sel of LIGHT_CONTRAST)
+      expect(
+        selectors,
+        `${key} is dark-always but does not name \`${sel}\` — color-mode-light's contrast ` +
+          `rules would paint near-black text on its dark ground`,
+      ).toContain(sel)
   })
 
   it.each(FULL_PALETTE_THEMES)('%s declares every M3 role in both modes', (key) => {

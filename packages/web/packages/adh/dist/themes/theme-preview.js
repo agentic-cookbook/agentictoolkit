@@ -11,11 +11,24 @@ var ADH_THEMES = [
   { key: "adh-jetbrains", label: "JetBrains" },
   { key: "adh-fira", label: "Fira" }
 ].filter((t) => !isBaseCutAlias(t.key));
-var DEFAULT_SITE_THEME = "adh";
+var DEFAULT_ADH_THEME = "adh";
+var DEFAULT_SITE_THEME = "fishlamp";
+var BASE_FACE_THEMES = [
+  DEFAULT_ADH_THEME,
+  ...BASE_CUT_ALIASES,
+  "charcoal",
+  "fishlamp"
+];
 
 // src/themes/theme-preview.ts
 var THEME_STORAGE_KEY = "adh-theme";
 var ALT_STYLE_SELECTOR = "style[data-adh-theme-alt]";
+function applyBaseTheme(seedKey) {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll(ALT_STYLE_SELECTOR).forEach((el) => {
+    el.media = el.getAttribute("data-adh-theme-alt") === seedKey ? "all" : "not all";
+  });
+}
 function cookieDomain() {
   const h = location.hostname;
   if (h === "localhost" || h.endsWith(".localhost")) return "localhost";
@@ -66,6 +79,7 @@ export {
   ALT_STYLE_SELECTOR,
   THEME_STORAGE_KEY,
   appendThemePreview,
+  applyBaseTheme,
   cookieDomain,
   persistTheme,
   readPreviewTheme,

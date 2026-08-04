@@ -71,7 +71,13 @@
   --color-on-success: #ffffff;
   --color-success-container: #d6ecd9;
   --color-on-success-container: #11331c;
-  --color-warning: #b9701f;
+  /* #b9701f until 2026-08-04: white on it is 3.89:1, under AA's 4.5:1 for normal
+   * text. It shipped that way because contrast-check.mjs discovers themes by their
+   * `html:root` blocks and this file anchors at a bare `:root`, so the gate has
+   * never read it — the failure only became visible when charcoal.css copied these
+   * values into a real theme file. Darkened to the nearest same-hue value that
+   * clears (4.77:1); charcoal.css must move with it, see the note there. */
+  --color-warning: #a5631a;
   --color-on-warning: #ffffff;
   --color-warning-container: #f6e4cc;
   --color-on-warning-container: #4a3412;

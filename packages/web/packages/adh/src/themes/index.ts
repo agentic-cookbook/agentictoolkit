@@ -33,11 +33,12 @@ export {
   cookieDomain,
   readStoredTheme,
   persistTheme,
+  applyBaseTheme,
   readPreviewTheme,
   appendThemePreview,
   themePrePaintScript,
 } from './theme-preview'
-export { applyBaseTheme, applyThemeCss, clearThemeOverride } from './theme-overrides'
+export { applyThemeCss, clearThemeOverride } from './theme-overrides'
 export { isSwitcherSeed, concatItemCss } from './resolve'
 export { listThemes, createTheme, updateTheme, deleteTheme } from './themes-client'
 export type { StoredTheme, ThemeWrite } from './themes-client'

@@ -6,8 +6,6 @@
 // `adh-theme` cookie + AdhThemeStyle's alt-blocks across reloads (see theme-preview.ts),
 // and DbThemeApplier re-applies a saved DB theme's CSS on load.
 
-import { ALT_STYLE_SELECTOR } from './theme-preview'
-
 const OVERRIDE_ID = 'adh-theme-edit'
 
 // The editor's variable items target `:root` (specificity 0,1,0). Over an adh-family
@@ -23,16 +21,6 @@ const ROOT_SELECTOR_RE = /(^|})(\s*):root(\s*\{)/g
 const BOOSTED_ROOT = 'html:root:root:root:root'
 function boostRootSpecificity(css: string): string {
   return css.replace(ROOT_SELECTOR_RE, (_m, pre, ws, brace) => `${pre}${ws}${BOOSTED_ROOT}${brace}`)
-}
-
-/** Apply a baked seed theme as the BASE by flipping its alt-block to `media="all"`
- *  (the same mechanism the old switcher used). The editor's free-form CSS then layers
- *  on top via {@link applyThemeCss}. No-op on the server / when no alt-blocks exist. */
-export function applyBaseTheme(seedKey: string): void {
-  if (typeof document === 'undefined') return
-  document.querySelectorAll<HTMLStyleElement>(ALT_STYLE_SELECTOR).forEach((el) => {
-    el.media = el.getAttribute('data-adh-theme-alt') === seedKey ? 'all' : 'not all'
-  })
 }
 
 /** Apply (or replace) the live override with raw CSS. No-op on the server. */

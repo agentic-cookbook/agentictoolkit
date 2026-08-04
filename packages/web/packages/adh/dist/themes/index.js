@@ -58,9 +58,21 @@ var FULL_PALETTE_THEMES = [
   "whimsical",
   "green-matrix",
   "green-matrix-glass",
-  "old-school-terminal"
+  "old-school-terminal",
+  // The ADH family's own two. `charcoal` is the palette the family wore by default until
+  // `fishlamp` replaced it below — saved as a theme in its own right so the old look stays
+  // pickable and recoverable rather than living only in the base theme it is layered over.
+  "charcoal",
+  "fishlamp"
 ];
-var DEFAULT_SITE_THEME = "adh";
+var DEFAULT_SITE_THEME = "fishlamp";
+var BASE_FACE_THEMES = [
+  DEFAULT_ADH_THEME,
+  ...BASE_CUT_ALIASES,
+  "charcoal",
+  "fishlamp"
+];
+var usesBaseThemeFonts = (key) => BASE_FACE_THEMES.includes(key);
 var isFullPaletteTheme = (key) => FULL_PALETTE_THEMES.includes(key);
 var adhThemeKeys = () => Object.keys(themes).filter(
   (k) => k.startsWith("adh") && !isBaseCutAlias(k)
@@ -73,6 +85,12 @@ var switcherThemeKeys = () => [
 // src/themes/theme-preview.ts
 var THEME_STORAGE_KEY = "adh-theme";
 var ALT_STYLE_SELECTOR = "style[data-adh-theme-alt]";
+function applyBaseTheme(seedKey) {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll(ALT_STYLE_SELECTOR).forEach((el) => {
+    el.media = el.getAttribute("data-adh-theme-alt") === seedKey ? "all" : "not all";
+  });
+}
 function cookieDomain() {
   const h = location.hostname;
   if (h === "localhost" || h.endsWith(".localhost")) return "localhost";
@@ -136,11 +154,12 @@ function ThemeSwitcherAssets({ defaultImports }) {
   for (const key of switcherThemeKeys()) {
     const { imports, rest } = splitImports(themes2[key].css);
     imports.forEach((u) => !already.has(u) && fonts.add(u));
+    const label = themes2[key].label;
     if (isFullPaletteTheme(key)) {
-      blocks.push({ key, css: rest });
+      blocks.push({ key, label, css: rest });
     } else {
       const delta = [...parseRootProps(rest)].filter(([k, v]) => baseProps.get(k) !== v);
-      blocks.push({ key, css: `:root{${delta.map(([k, v]) => `${k}:${v}`).join(";")}}` });
+      blocks.push({ key, label, css: `:root{${delta.map(([k, v]) => `${k}:${v}`).join(";")}}` });
     }
   }
   const prePaint = themePrePaintScript();
@@ -167,10 +186,11 @@ function ThemeSwitcherAssets({ defaultImports }) {
       `pc:${origin}`
     )),
     [...fonts].map((href) => /* @__PURE__ */ jsx("link", { rel: "stylesheet", href, "data-adh-theme-switch-font": "" }, `sw:${href}`)),
-    blocks.map(({ key, css }) => /* @__PURE__ */ jsx(
+    blocks.map(({ key, label, css }) => /* @__PURE__ */ jsx(
       "style",
       {
         "data-adh-theme-alt": key,
+        "data-adh-theme-label": label,
         media: "not all",
         suppressHydrationWarning: true,
         dangerouslySetInnerHTML: { __html: css }
@@ -209,7 +229,7 @@ function SiteDefaultTheme({ baseImports }) {
 function AdhThemeStyle() {
   const entry = themes2[DEFAULT_ADH_THEME];
   if (!entry) return null;
-  if (DEFAULT_SITE_THEME === DEFAULT_ADH_THEME) {
+  if (usesBaseThemeFonts(DEFAULT_SITE_THEME)) {
     for (const href of THEME_FONT_PRELOADS) {
       preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
     }
@@ -298,12 +318,6 @@ var ROOT_SELECTOR_RE = /(^|})(\s*):root(\s*\{)/g;
 var BOOSTED_ROOT = "html:root:root:root:root";
 function boostRootSpecificity(css) {
   return css.replace(ROOT_SELECTOR_RE, (_m, pre, ws, brace) => `${pre}${ws}${BOOSTED_ROOT}${brace}`);
-}
-function applyBaseTheme(seedKey) {
-  if (typeof document === "undefined") return;
-  document.querySelectorAll(ALT_STYLE_SELECTOR).forEach((el) => {
-    el.media = el.getAttribute("data-adh-theme-alt") === seedKey ? "all" : "not all";
-  });
 }
 function applyThemeCss(css) {
   if (typeof document === "undefined") return;

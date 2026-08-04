@@ -66,6 +66,12 @@ var ADH_THEMES = [
   { key: "adh-fira", label: "Fira" }
 ].filter((t) => !isBaseCutAlias(t.key));
 var DEFAULT_ADH_THEME = "adh";
+var BASE_FACE_THEMES = [
+  DEFAULT_ADH_THEME,
+  ...BASE_CUT_ALIASES,
+  "charcoal",
+  "fishlamp"
+];
 
 // src/themes/ThemeSwitcher.tsx
 import { jsx as jsx2, jsxs } from "react/jsx-runtime";
