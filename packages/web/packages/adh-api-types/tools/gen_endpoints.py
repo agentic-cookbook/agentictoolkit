@@ -52,6 +52,11 @@ def resolve_spec(argv: list[str] | None = None) -> Path:
     explicit input either resolves or says why it didn't.
     """
     args = sys.argv[1:] if argv is None else argv
+    # pnpm forwards the `--` separator through to the script, so the invocation this
+    # file's own generated header documents arrives here as ['--', '<spec>'] and the
+    # separator gets read as the path ("spec not found: .../--"). Drop one leading `--`.
+    if args and args[0] == "--":
+        args = args[1:]
     raw = args[0] if args else os.environ.get("ADH_OPENAPI_SPEC")
     if not raw:
         raise SystemExit(
