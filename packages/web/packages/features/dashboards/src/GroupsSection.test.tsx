@@ -93,8 +93,12 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// This package's vitest config has no global afterEach, so RTL's auto-cleanup never registers —
-// tear down each render explicitly to keep renders from bleeding across tests.
+// Explicit and redundant, deliberately: this package's vitest runs with `globals: true`
+// (packages/web/packages/features/vitest.preset.ts:16), so RTL 16.3.2's own shipped
+// `afterEach(cleanup)` DOES register (@testing-library/react/dist/index.js:23-30), and cleanup
+// is idempotent. An earlier version of this comment asserted the opposite — no global afterEach,
+// auto-cleanup never registers — and both halves were false. Keep the call if you like it as a
+// local statement of intent; do not "fix" the config to match the claim that was here.
 afterEach(cleanup);
 
 describe("GroupsSection transfer seam", () => {

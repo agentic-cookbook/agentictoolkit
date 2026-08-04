@@ -1422,6 +1422,250 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ownership/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer an object to another workspace (admin of both sides) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description a transferable entity type, from the server’s TRANSFER_PLANS registry
+                         * @enum {string}
+                         */
+                        entityType: "persona" | "ecosystem" | "application" | "bucket" | "project" | "site-group";
+                        /** @description the object’s rdid or uuid */
+                        entityId: string;
+                        /** @description destination workspace slug (or ecosystem rdid, per the entity) */
+                        target: string;
+                        /**
+                         * @description the namespace `target` names, when the client knows it
+                         * @enum {string}
+                         */
+                        targetKind?: "customer" | "organization";
+                    };
+                };
+            };
+            responses: {
+                /** @description The object’s new address, plus what the transfer revoked */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description the rdid the object now has */
+                            id?: string | null;
+                            previousId?: string | null;
+                            /** @description addresses re-derived by the cascade */
+                            rewritten?: number;
+                            revoked?: {
+                                /** @description API tokens revoked */
+                                tokens?: number;
+                                /** @description principals that lose reach over the object once it moves */
+                                subjects?: {
+                                    /** @enum {string} */
+                                    kind?: "user" | "team" | "persona" | "organization" | "app" | "token";
+                                    id?: string;
+                                    name?: string;
+                                    /**
+                                     * @description where the access came from
+                                     * @enum {string}
+                                     */
+                                    via?: "role" | "team" | "direct" | "participant" | "group";
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ownership/transfer/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What a transfer would do, without doing it */
+        get: {
+            parameters: {
+                query: {
+                    entityType: "persona" | "ecosystem" | "application" | "bucket" | "project" | "site-group";
+                    entityId: string;
+                    target: string;
+                    targetKind?: "customer" | "organization";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The address the object would take, and who would lose access */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description the rdid the object would take */
+                            newId?: string | null;
+                            previousId?: string | null;
+                            /** @description API tokens the transfer would revoke */
+                            tokens?: number;
+                            /** @description principals that lose reach over the object once it moves */
+                            revoking?: {
+                                /** @enum {string} */
+                                kind?: "user" | "team" | "persona" | "organization" | "app" | "token";
+                                id?: string;
+                                name?: string;
+                                /**
+                                 * @description where the access came from
+                                 * @enum {string}
+                                 */
+                                via?: "role" | "team" | "direct" | "participant" | "group";
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/capabilities": {
         parameters: {
             query?: never;
