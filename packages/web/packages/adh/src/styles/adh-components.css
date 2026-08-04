@@ -308,9 +308,11 @@
      than `space-between` + an auto margin on the links. The two are identical while
      everything fits on one line — one auto margin absorbs the free space either way —
      but they differ once the row wraps, and `space-between` gets the wrapped case
-     wrong: it re-runs per line, so a version that wraps onto a line of its own lands
+     wrong: it re-runs per line, so whichever child wraps onto a line of its own lands
      hard LEFT, opposite the edge it sits on at every wider width. `flex-end` keeps
-     every line right-aligned, so the version does not change sides at a breakpoint. */
+     every line right-aligned, so nothing changes sides at a breakpoint. (Which child
+     wraps depends on the order — today the links nav is last and wraps first — so this
+     is written to hold for any of them rather than for one named element.) */
   justify-content: flex-end;
   gap: 0.75rem;
 }
@@ -318,9 +320,9 @@
 .adh-footer__copyright {
   /* The one item that is not right-aligned. An auto margin here, rather than
      `justify-content: space-between` on the container, is what survives wrapping —
-     see the note above. It must stay on the copyright and not move to the links: a
-     second auto margin on the same line splits the free space between the two and
-     strands the links in the middle. */
+     see the note above. It must stay on the copyright and be the ONLY auto margin in
+     the bar: a second one on the same line splits the free space between the two and
+     strands everything after it in the middle. */
   margin-right: auto;
 }
 

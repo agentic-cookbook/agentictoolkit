@@ -76,18 +76,23 @@ describe('AdhFooter (identity-free)', () => {
     expect(screen.getByRole('link', { name: 'GitHub' }).getAttribute('data-prefetch')).toBe('undefined')
   })
 
-  it('renders the version as the last child INSIDE the container, not as a sibling of it', () => {
+  it('renders the version INSIDE the container, not as a sibling of it', () => {
     render(<AdhFooter copyright={<span>© 2026</span>} version="v1.0.155 · a73e79b7" />)
     const footer = screen.getByRole('contentinfo')
     const container = footer.firstElementChild!
-    // Node identity, not textContent: `trailing` renders OUTSIDE the container
+    // Containment, not textContent: `trailing` renders OUTSIDE the container
     // and is bitbag's portal mount, so a version routed there would be text-present
     // but visually absent from the footer bar. This is the assertion that catches it.
-    expect(container.lastElementChild!.textContent).toBe('v1.0.155 · a73e79b7')
-    expect(container.lastElementChild!.className).toBe('adh-footer__version')
+    // Asserted by containment rather than by position, so it survives a reorder
+    // within the bar — where the version sits among its siblings is the next test's
+    // contract, and only that one should fail when the order changes.
+    const version = container.querySelector('.adh-footer__version')!
+    expect(version).not.toBeNull()
+    expect(version.textContent).toBe('v1.0.155 · a73e79b7')
+    expect(version.parentElement).toBe(container)
   })
 
-  it('renders the version after the links nav, not before it', () => {
+  it('renders the version BEFORE the links nav, so Sites/Terms/Privacy sit at the trailing edge', () => {
     render(
       <AdhFooter
         links={[{ label: 'Terms', href: '/terms' }]}
@@ -96,7 +101,10 @@ describe('AdhFooter (identity-free)', () => {
     )
     const container = screen.getByRole('contentinfo').firstElementChild!
     const kids = Array.from(container.children).map((el) => el.className)
-    expect(kids.indexOf('adh-footer__version')).toBeGreaterThan(kids.indexOf('adh-footer__links'))
+    expect(kids.indexOf('adh-footer__version')).toBeLessThan(kids.indexOf('adh-footer__links'))
+    // The links nav is the container's last child — the bar's trailing edge, since
+    // `trailing` (bitbag) renders outside the container entirely.
+    expect(container.lastElementChild!.className).toBe('adh-footer__links')
   })
 
   it('renders no version element at all when none is passed', () => {

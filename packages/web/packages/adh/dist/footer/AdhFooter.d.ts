@@ -22,8 +22,10 @@ export type FooterLink =
 export type AdhFooterProps = {
     links?: FooterLink[];
     copyright?: ReactNode;
-    /** Build identity, rendered last INSIDE the container. Deliberately a prop and
-     *  not an env read: this is the registry-free primitive and stays free of adh
+    /** Build identity, rendered INSIDE the container and BEFORE the links nav, so
+     *  the navigable items (Sites / Terms / Privacy) sit at the bar's trailing edge
+     *  and the version reads as metadata trailing the copyright. Deliberately a prop
+     *  and not an env read: this is the registry-free primitive and stays free of adh
      *  knowledge — the host decides what a version even is. */
     version?: ReactNode;
     trailing?: ReactNode;

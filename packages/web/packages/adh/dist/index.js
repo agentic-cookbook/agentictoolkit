@@ -876,6 +876,7 @@ function AdhFooter({ links = [], copyright, version, trailing }) {
   return /* @__PURE__ */ jsxs6("footer", { className: "adh-footer", role: "contentinfo", children: [
     /* @__PURE__ */ jsxs6("div", { className: "adh-footer__container", children: [
       copyright && /* @__PURE__ */ jsx9("span", { className: "adh-footer__copyright", children: copyright }),
+      version && /* @__PURE__ */ jsx9("span", { className: "adh-footer__version", children: version }),
       links.length > 0 && /* @__PURE__ */ jsx9("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map(
         (link) => "popoverTarget" in link ? /* @__PURE__ */ jsx9(
           "button",
@@ -898,8 +899,7 @@ function AdhFooter({ links = [], copyright, version, trailing }) {
           },
           `href:${link.href}:${link.label}`
         )
-      ) }),
-      version && /* @__PURE__ */ jsx9("span", { className: "adh-footer__version", children: version })
+      ) })
     ] }),
     trailing
   ] });
