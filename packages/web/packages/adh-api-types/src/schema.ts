@@ -55559,7 +55559,7 @@ export interface components {
             archivedAt: string;
             /** @description False once org.<slug> has been claimed by someone else — a restore would 409 */
             handleAvailable: boolean;
-            /** @description False when the caller can see the org (they are a member) but may not restore it. True for the org's creator, an admin of one of its org-owned teams, or a site admin. */
+            /** @description False when the caller can see the org (they are a member) but may not restore it. True for the org's creator, an admin of one of its live org-owned teams, or a site admin. */
             canRestore: boolean;
         };
     };
