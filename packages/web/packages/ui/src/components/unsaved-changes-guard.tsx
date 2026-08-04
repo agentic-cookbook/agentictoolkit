@@ -3,7 +3,12 @@
 import * as React from "react"
 
 import { UnsavedChangesAlert } from "./unsaved-changes-alert"
-import { GUARDED_NAV_ATTR, registerNavigationGuard } from "../lib/navigation-guard"
+import {
+  GUARDED_NAV_ATTR,
+  isPrimaryNavigationGuard,
+  registerNavigationGuard,
+  subscribeNavigationGuards,
+} from "../lib/navigation-guard"
 
 export interface UnsavedChangesGuardProps {
   /** Guard is active — there are unsaved changes on the page. */
@@ -31,7 +36,7 @@ export interface UnsavedChangesGuardProps {
  *   with the navigation-guard registry, so chrome that calls
  *   `router.push` (menus, choosers, logout) awaits `confirmNavigation()`
  *   and raises the same confirm.
- * - Browser Back/Forward: while dirty, a same-URL sentinel history entry is
+ * - Browser Back/Forward: while armed and PRIMARY, a same-URL sentinel entry is
  *   pushed so the first Back lands on it (no route change); the confirm is
  *   raised, and discarding re-issues the Back for real. The sentinel is
  *   remembered by the URL it was pushed for, not by a bare "already pushed"
@@ -42,6 +47,17 @@ export interface UnsavedChangesGuardProps {
  *   technique: after the page goes clean again the consumed-or-not sentinel
  *   may leave one extra same-URL entry — the only reliable way to interpose
  *   on popstate without desyncing the app router.
+ *
+ * Several of these can be armed at once (hub's root layout mounts the settings
+ * overlay's guard as a sibling of the workspace chrome's), and one navigation
+ * still gets one confirm. The registry's first-registered guard is the primary;
+ * it alone answers `confirmNavigation()`, arms the sentinel and responds to
+ * popstate — see lib/navigation-guard for why one generic "discard everything"
+ * prompt is the whole answer. The others stay useful without prompting: their
+ * `beforeunload` listeners coalesce into the browser's one native prompt, and
+ * their click listeners bail on `defaultPrevented` once the primary has
+ * intercepted the anchor. Primary status is live, so if the primary disarms
+ * while this one is still dirty, this one takes over and arms a sentinel.
  */
 export function UnsavedChangesGuard({
   when,
@@ -125,6 +141,10 @@ export function UnsavedChangesGuard({
 
     function onPopState(): void {
       if (approvedRef.current) return
+      // Only the primary interposes on Back — it is the only guard that armed a
+      // sentinel, so it is the only one whose popstate is the sentinel's. Read
+      // live rather than closing over it: the primary can change under us.
+      if (!isPrimaryNavigationGuard(requestConfirm)) return
       // Back consumed the same-URL sentinel, so the app router saw no route
       // change. Ask; discard re-issues the Back for real, stay re-arms.
       sentinelRef.current = null
@@ -139,15 +159,27 @@ export function UnsavedChangesGuard({
       })
     }
 
-    if (sentinelRef.current !== window.location.href) {
+    /** Arm the Back interposer, but only while this guard is the primary — one
+     *  sentinel per navigation, so Back costs one press and prompts once. */
+    function armSentinel(): void {
+      if (!isPrimaryNavigationGuard(requestConfirm)) return
+      if (sentinelRef.current === window.location.href) return
       window.history.pushState(window.history.state, "", window.location.href)
       sentinelRef.current = window.location.href
     }
+
     const unregister = registerNavigationGuard(requestConfirm)
+    // Re-arm on every membership change: when the primary disarms mid-edit this
+    // guard may inherit the role with no sentinel of its own, and Back must not
+    // be left unguarded in the gap.
+    const unsubscribe = subscribeNavigationGuards(armSentinel)
+    armSentinel()
     window.addEventListener("beforeunload", onBeforeUnload)
     window.addEventListener("popstate", onPopState)
     document.addEventListener("click", onClick, true)
     return () => {
+      // Unsubscribe first: our own unregister must not call back into armSentinel.
+      unsubscribe()
       unregister()
       window.removeEventListener("beforeunload", onBeforeUnload)
       window.removeEventListener("popstate", onPopState)

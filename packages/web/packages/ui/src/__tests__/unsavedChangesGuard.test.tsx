@@ -172,3 +172,85 @@ describe('UnsavedChangesGuard — the Back sentinel tracks the URL it was pushed
     push.mockRestore()
   })
 })
+
+// Several guards can be armed at once — hub's root layout mounts the settings
+// overlay's guard as a SIBLING of the workspace chrome's. One navigation is one
+// decision, so it gets one confirm: the registry's first-registered guard owns
+// the prompt, the sentinel and the popstate response.
+describe('UnsavedChangesGuard — one prompt per navigation, however many are armed', () => {
+  function TwoGuards({ first = true }: { first?: boolean }): React.ReactElement {
+    return (
+      <>
+        <UnsavedChangesGuard when={first} />
+        <UnsavedChangesGuard when />
+      </>
+    )
+  }
+
+  it('confirmNavigation asks only the primary guard and returns its answer', async () => {
+    render(<TwoGuards />)
+    let resolved: boolean | undefined
+    void confirmNavigation().then((ok) => {
+      resolved = ok
+    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Discard' }))
+    await waitFor(() => expect(resolved).toBe(true))
+    // The second guard must NOT get its turn — Discard already meant
+    // "leave, discard everything".
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('Stay from the primary blocks the navigation without a second prompt', async () => {
+    render(<TwoGuards />)
+    let resolved: boolean | undefined
+    void confirmNavigation().then((ok) => {
+      resolved = ok
+    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Stay' }))
+    await waitFor(() => expect(resolved).toBe(false))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('with no guard registered confirmNavigation still resolves true', async () => {
+    await expect(confirmNavigation()).resolves.toBe(true)
+  })
+
+  it('only the primary arms a sentinel, and only it answers Back', async () => {
+    const push = vi.spyOn(window.history, 'pushState')
+    render(<TwoGuards />)
+    expect(push).toHaveBeenCalledTimes(1) // one entry => one Back press
+    fireEvent.popState(window)
+    expect(await screen.findAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('the survivor takes over the sentinel and Back when the primary disarms', async () => {
+    const push = vi.spyOn(window.history, 'pushState')
+    const { rerender } = render(<TwoGuards />)
+    expect(push).toHaveBeenCalledTimes(1)
+    rerender(<TwoGuards first={false} />) // the primary saves and unregisters
+    // Back must not be left unguarded: the survivor is primary now and has no
+    // sentinel of its own yet.
+    expect(push).toHaveBeenCalledTimes(2)
+    fireEvent.popState(window)
+    expect(await screen.findAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('an intercepted link click prompts once — the rest see defaultPrevented', () => {
+    render(
+      <div>
+        <a href="/elsewhere">Elsewhere</a>
+        <TwoGuards />
+      </div>,
+    )
+    const ev = fireEvent.click(screen.getByText('Elsewhere'))
+    expect(ev).toBe(false) // defaultPrevented
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('every armed guard keeps its beforeunload — the browser coalesces them', () => {
+    const add = vi.spyOn(window, 'addEventListener')
+    render(<TwoGuards />)
+    const unloads = add.mock.calls.filter(([type]) => type === 'beforeunload')
+    expect(unloads).toHaveLength(2)
+  })
+})
