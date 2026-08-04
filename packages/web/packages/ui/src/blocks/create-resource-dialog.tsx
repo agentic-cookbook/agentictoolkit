@@ -97,7 +97,6 @@ export function CreateResourceDialog<TInput, TResult>({
     const problem = validate(draft)
     if (problem) {
       setError(problem)
-      setConfirming(false) // surface the validation error on the form
       return
     }
     setSaving(true)
@@ -108,7 +107,6 @@ export function CreateResourceDialog<TInput, TResult>({
       onSaveError?.(err)
       setError(err instanceof Error ? err.message : "Failed to create.")
       setSaving(false)
-      setConfirming(false)
     }
   }
 
