@@ -64,10 +64,33 @@ html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-cont
   --color-surface-dim: #060605; /* DERIVED — one step under ink */
   --color-surface-bright: #2a231a; /* DERIVED — one step over ink-raise */
   --color-surface-container-lowest: #050403; /* fishlamp's scrim ground, rgba(5,4,3) */
-  --color-surface-container-low: #110e0b; /* DERIVED — between ink and ink-soft */
-  --color-surface-container: #17130f; /* ink-soft */
-  --color-surface-container-high: #1f1a14; /* ink-raise */
-  --color-surface-container-highest: #2a231a; /* DERIVED — one step over ink-raise */
+  /* The ramp sits ONE STEP LOWER than the obvious ink → ink-soft → ink-raise reading,
+   * and the step is the whole point. `--color-surface-container` is not a "slightly
+   * raised" role in this family — it is what paints the LARGE grounds: tailwind.css:31
+   * maps `bg-apt-surface` to it (the hub's sidebar and main pane) and shadcn's `--card`
+   * (:78) reads it too. Putting ink-soft there made those grounds a warm brown panel
+   * covering most of the viewport, while fishlamp.com's page is uniform ink #0b0a09 with
+   * nothing but the glow over it — the reference has no large mid-tone area at all.
+   *
+   * Charcoal's step is the same MAGNITUDE (#0c0c0f → #14141a) and reads as "the same
+   * near-black, slightly lifted" because both values are cool. Warm #17130f against warm
+   * #0b0a09 reads as a different COLOUR, not a different elevation, so the identical
+   * delta that is invisible on charcoal is the thing you see first here.
+   *
+   * So: the two roles that paint big areas land on ink — EQUAL to `--color-surface`, not
+   * merely near it — and ink-soft/ink-raise move up to the genuinely-raised roles
+   * (popover, input, secondary, muted, accent — all `-high` at tailwind.css:35,80-92).
+   *
+   * Equal rather than a hair above because a sliver of difference is the worst of the
+   * three options: it reads as a seam between adjacent shell regions instead of as either
+   * one ground or two elevations. Nothing loses an edge from it — `Card` is
+   * `bg-apt-bg` + `border-apt-border` (ui/src/components/card.tsx:12), so it is separated
+   * by the gold hairline, which is exactly how fishlamp.com separates regions. The
+   * elevation the ramp still offers starts at `-high`. */
+  --color-surface-container-low: #0b0a09; /* ink — a large-ground role, see above */
+  --color-surface-container: #0b0a09; /* ink — the shell ground; EQUAL to surface on purpose */
+  --color-surface-container-high: #17130f; /* ink-soft */
+  --color-surface-container-highest: #1f1a14; /* ink-raise */
   --color-on-surface: #f0e4d0; /* parchment */
   --color-on-surface-variant: #a8968a; /* parchment-dim */
   --color-text-dim: #7a6a5c; /* DERIVED — parchment-dim dropped toward the ground */
@@ -124,11 +147,21 @@ html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-cont
   --color-link: var(--color-primary);
   --color-link-hover: var(--color-primary-bright);
   --focus-ring-color: var(--color-primary);
-  --color-apt-nav: #17130f; /* ink-soft — the settings topic rail */
+  /* The settings topic rail. A literal in the @theme map rather than a role ref, and
+     tailwind.css:33 calls it the "darker nav column" — darker than the shell beside it,
+     which is `bg-apt-surface`. Now that the shell is ink, the rail is the page's own ink
+     (the base does the same: rgba(12,12,15,.96) against its #0c0c0f surface). */
+  --color-apt-nav: #0b0a09; /* ink */
 
-  /* COMPAT aliases (legacy names → M3 roles) */
-  --color-surface-raised: var(--color-surface-container);
-  --color-surface-hover: var(--color-surface-container-high);
+  /* COMPAT aliases (legacy names → M3 roles). The two elevation aliases are pinned one
+     ramp step HIGHER than the base pins them, which keeps their MEANING rather than their
+     role name: the base's `raised` is `container` because there `container` is the raised
+     step, but this theme's ramp puts `container` on the large grounds (see the block
+     above), so a legacy consumer asking for "the raised surface" has to be handed
+     ink-soft or it gets something indistinguishable from the page. `hover` stays one step
+     above `raised`, exactly as the base orders them. */
+  --color-surface-raised: var(--color-surface-container-high);
+  --color-surface-hover: var(--color-surface-container-highest);
   --color-border: var(--color-outline);
   --color-border-subtle: var(--color-outline-variant);
   --color-border-strong: var(--color-outline-strong);
