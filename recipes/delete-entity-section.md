@@ -3,11 +3,11 @@ id: 96bc198e-c726-476a-bc4a-ddc1d5c0c2f8
 title: DeleteEntitySection
 domain: agenticdeveloperhub://recipes/delete-entity-section
 type: recipe
-version: 1.0.0
+version: 1.1.0
 status: draft
 language: en
 created: '2026-07-03'
-modified: '2026-07-03'
+modified: '2026-08-04'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -100,6 +100,19 @@ type-to-confirm field, `autoFocus`, `autoComplete="off"`, `spellCheck={false}`),
   the user can retry.
 - **must-reset-on-cancel-or-success**: Cancelling, or a successful delete, MUST reset
   the dialog back to a closed, empty, warn-phase state.
+- **must-avoid-permanence-claims-when-reversible**: When `actionVerb.reversible` is
+  `true`, the blurb, the warn phase, and the confirm phase MUST NOT render
+  "Permanently", "cannot be undone", or "deletion" anywhere — every phrase that
+  otherwise asserts permanence or data destruction swaps to non-destructive wording
+  built from `actionVerb.imperative`/`gerund` instead (e.g. "Archive this
+  organization. This can be undone later."). This holds even when the caller passes
+  no `description` override — the built-in fallback blurb must itself be
+  reversible-safe, not merely the caller-supplied copy.
+- **must-swap-trigger-glyph-when-reversible**: When `actionVerb.reversible` is
+  `true`, the disclosed trigger button MUST render the `Archive` glyph instead of
+  `Trash2`. The Danger Zone's red palette (border, tint, title accent) does NOT
+  change with reversibility — only the glyph and the copy do (see must-accent-red-
+  only-when-disclosed, which is unconditional).
 
 ## Layout
 
@@ -126,6 +139,33 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
                                           Permanently Delete: disabled until
                                           typed === confirmValue (exact); shows
                                           "Deleting…" while busy.
+```
+
+The two blocks above are the **default** copy (no `actionVerb`, or `reversible: false`).
+Passing `actionVerb={{ imperative: "Archive", gerund: "Archiving", reversible: true }}`
+keeps the same red palette and the same two-phase ceremony — only the trigger glyph and
+every permanence-asserting phrase change:
+
+```
+┌ Disclosure — open (apt-red border + tint) ─────────────────────────┐
+│ ▾  ⚠ Danger Zone            ← still turns apt-red when open          │
+│                                                                     │
+│  Archive this {noun}. This can be undone later.
+│  [ 📦 Archive {Entity} ]     ← destructive-ghost; Archive glyph, not 🗑│
+└─────────────────────────────────────────────────────────────────────┘
+
+Dialog · phase "warn"                    Dialog · phase "confirm"
+┌───────────────────────────┐            ┌────────────────────────────────┐
+│ Archive {Entity}?         │            │ Archive this {Entity}          │
+│ …affects {childEntities}. │    Yes →   │ Enter "{confirmValue}" below.  │
+│ Do you wish to proceed?   │            │ [ type the exact rdid…       ] │
+│        [Cancel] [Yes]     │            │   [Cancel] [Archive {Entity}]  │
+└───────────────────────────┘            └────────────────────────────────┘
+                                          Archive {Entity}: disabled until
+                                          typed === confirmValue (exact); shows
+                                          "Archiving…" while busy. No "Permanently" /
+                                          "cannot be undone" / "deletion" anywhere,
+                                          including the collapsed-section blurb above.
 ```
 
 - Section root: `section` with `aria-label="Danger Zone"`.
@@ -162,6 +202,12 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
 | T8 | must-lock-dialog-while-busy | While `onConfirm` pending, try Escape / close / outside | Dialog stays open; no close affordance is shown |
 | T9 | must-surface-error-inline | `onConfirm` rejects | Error message shows inside the dialog; busy clears; dialog stays open for retry |
 | T10 | must-reset-on-cancel-or-success | Cancel, or resolve `onConfirm` | Dialog closes and resets to empty, warn-phase state |
+| T11 | must-avoid-permanence-claims-when-reversible | `actionVerb={{ imperative: "Archive", gerund: "Archiving", reversible: true }}` with a caller `description`; open, click Yes | Blurb, warn body, and confirm-phase copy all read "Archive"/"Archiving"; no "delete", "permanently", or "cannot be undone" anywhere in the flow |
+| T12 | must-avoid-permanence-claims-when-reversible | Same reversible `actionVerb`, no `description` override | The built-in fallback blurb itself reads "Archive this organization. This can be undone later." — no "permanently" or "cannot be undone"; confirm phase shows "Type {confirmValue} to confirm" (no "deletion") |
+| T13 | must-swap-trigger-glyph-when-reversible | Reversible `actionVerb`; open the disclosure | Trigger button renders the `Archive` glyph (`svg.lucide-archive`); no `Trash2` glyph present |
+| T14 | must-swap-trigger-glyph-when-reversible | Default (no `actionVerb`); open the disclosure | Trigger button renders the `Trash2` glyph (`svg.lucide-trash-2`); no `Archive` glyph present |
+| T15 | must-call-onconfirm-once-enabled | Reversible `actionVerb`; reach confirm phase, type the exact `confirmValue`, click the CTA while `onConfirm` is pending | Busy label reads "Archiving…" (from `actionVerb.gerund`), never "Deleting…" |
+| T16 | must-surface-error-inline | Reversible `actionVerb`; `onConfirm` rejects a non-`Error` value | Inline error falls back to "Failed to archive organization." (lowercase `actionVerb.imperative`), since `e.message` never runs for a non-`Error` rejection |
 
 ## Edge Cases
 
@@ -186,7 +232,7 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
 
 ## Platform Notes
 
-- **React / Web (TypeScript):** `websites/shared/ui/src/blocks/delete-entity-section.tsx`
+- **React / Web (TypeScript):** `packages/web/packages/ui/src/blocks/delete-entity-section.tsx`
   (`"use client"`), exported via `@agentic-toolkit/ui/blocks/delete-entity-section`.
   Composes `Disclosure`, `Button`, `Dialog` (+ `DialogHeader`/`Title`/`Description`/
   `Footer`), `Input`, and `Label`, with the `Trash2`/`TriangleAlert` glyphs.
@@ -242,4 +288,5 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 1.1.0 | 2026-08-04 | Mike Fullerton | Documented the `actionVerb.reversible` copy variant (Archive-style, non-destructive wording) across Integration Requirements, Layout, and Test Vectors T11-T16; fixed the stale `websites/shared/ui/...` source path in Platform Notes to `packages/web/packages/ui/...`. |
 | 1.0.0 | 2026-07-03 | Mike Fullerton | Initial recipe for the Danger-zone DeleteEntitySection with two-phase confirm. |
