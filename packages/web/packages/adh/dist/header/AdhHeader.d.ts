@@ -8,10 +8,6 @@ export type HeaderBadge = {
     label: string;
     tone?: 'neutral' | 'accent' | 'orange' | 'blue';
 };
-/** The whole family is a pre-launch preview, so every header shows this one badge
- *  by default. Pass `badges={[]}` to suppress, or override per site. Defined once
- *  here so launch is a one-line change. */
-export declare const DEV_PREVIEW_BADGES: HeaderBadge[];
 /** The auth-related slice of the header's props. An auth-aware wrapper in the
  *  consuming app supplies these from its auth source while the non-auth props are
  *  passed straight through. Kept as a named type so the source contract and the
@@ -70,7 +66,8 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
      *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
     center?: ReactNode;
-    /** Badges shown under the site name. Defaults to the single preview badge. */
+    /** Badges shown under the site name. Empty by default — the family-wide preview
+     *  notice is the strip above the bar, not a badge. */
     badges?: HeaderBadge[];
     /** Site-specific controls injected at the start (left) of the right-hand
      *  cluster, before the nav links + auth. Used for functional controls a site
@@ -88,8 +85,12 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  the link says, is the consumer's own vocabulary and stays with the caller;
      *  the header only knows there is a slot here. */
     preAuthLinks?: ReactNode;
+    /** Where the avatar menu's "Home" points — the site's own post-login landing.
+     *  This header resolves no site ids, so whoever knows the registry hands it in;
+     *  defaults to the site root. */
+    homeHref?: string;
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

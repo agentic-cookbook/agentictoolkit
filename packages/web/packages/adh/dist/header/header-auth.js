@@ -8,7 +8,6 @@ import { siteHomePath } from "@agentic-toolkit/adh-registry";
 function toAvatarUser(u, fallback = "User") {
   return {
     name: u.name || u.email?.split("@")[0] || fallback,
-    email: u.email,
     imageUrl: u.avatarUrl || void 0
   };
 }

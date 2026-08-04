@@ -155,6 +155,14 @@ function DropdownMenuLinkItem({
   className,
   inset,
   accent,
+  // Base UI defaults a LINK item to `false` (MenuLinkItem.js) on the premise that
+  // following the link unmounts the page anyway — which is false for every consumer
+  // here: `render={<Link/>}` navigates client-side, the header stays mounted, and the
+  // menu was left hanging open over the new route. Flipped to true for the same reason
+  // the checkbox/radio wrappers below flip it, and because the sentence above this
+  // function is only true once it is. The engine's close handler does not
+  // preventDefault, so ⌘/middle-click still opens a new tab.
+  closeOnClick = true,
   ...props
 }: MenuPrimitive.LinkItem.Props & {
   inset?: boolean
@@ -168,6 +176,7 @@ function DropdownMenuLinkItem({
         accent && 'adh-dropdown-menu__item--accent',
         className,
       )}
+      closeOnClick={closeOnClick}
       {...props}
     />
   )

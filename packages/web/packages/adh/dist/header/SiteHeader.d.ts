@@ -21,8 +21,8 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
      *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
     center?: ReactNode;
-    /** Badges shown under the site name. Defaults (in the toolkit header) to the
-     *  single preview badge. */
+    /** Badges shown under the site name. None by default — the family's preview
+     *  notice is the strip the toolkit header draws above the bar, not a badge. */
     badges?: HeaderBadge[];
     /** Site-specific controls injected at the start (left) of the right-hand cluster,
      *  before the nav links + auth. Used for functional controls a site needs in the

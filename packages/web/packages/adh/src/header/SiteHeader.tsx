@@ -45,8 +45,8 @@ export type SiteHeaderProps = Omit<
    *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
    *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
   center?: ReactNode
-  /** Badges shown under the site name. Defaults (in the toolkit header) to the
-   *  single preview badge. */
+  /** Badges shown under the site name. None by default — the family's preview
+   *  notice is the strip the toolkit header draws above the bar, not a badge. */
   badges?: HeaderBadge[]
   /** Site-specific controls injected at the start (left) of the right-hand cluster,
    *  before the nav links + auth. Used for functional controls a site needs in the
@@ -226,6 +226,12 @@ export function SiteHeader({
       leadingActions={leadingActions}
       navLinks={resolvedNavLinks}
       trailingNavLinks={trailingNavLinks}
+      // The avatar menu's "Home" — THIS site's post-login landing (its /home, or root
+      // when it has none), the same destination the default Login/Join links already
+      // return to. A relative path, not `selfReturn`'s absolute URL: Home never leaves
+      // the site, so it should navigate client-side rather than reload through the
+      // env-resolved origin.
+      homeHref={siteHomePath(siteId)}
       // Concept-graph affordances, before the auth cluster. A plain anchor so it
       // works pre-hydration and resolves the real route. The `/details` path and the
       // "Details" copy are adh vocabulary and stay on this side of the boundary.

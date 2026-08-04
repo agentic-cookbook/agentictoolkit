@@ -15,10 +15,16 @@ export type HeaderBadge = {
   tone?: 'neutral' | 'accent' | 'orange' | 'blue'
 }
 
-/** The whole family is a pre-launch preview, so every header shows this one badge
- *  by default. Pass `badges={[]}` to suppress, or override per site. Defined once
- *  here so launch is a one-line change. */
-export const DEV_PREVIEW_BADGES: HeaderBadge[] = [{ label: 'Preview Release', tone: 'neutral' }]
+/** The whole family is a pre-launch preview, and every header says so in the strip
+ *  above the bar. Defined once here so launch is a one-line change: delete the
+ *  constant's use below and the `.adh-header__preview` rules go quiet with it.
+ *
+ *  This replaced a `Preview Release` BADGE under the site name. A badge sat inside
+ *  the bar's lead slot, so it competed with the brand for the one part of the header
+ *  that has to survive a 390px phone; a full-width strip above the bar costs the bar
+ *  no horizontal room at all, and reads as a property of the site rather than of its
+ *  name. */
+const PREVIEW_NOTICE = 'Developer Preview Release'
 
 /** The auth-related slice of the header's props. An auth-aware wrapper in the
  *  consuming app supplies these from its auth source while the non-auth props are
@@ -79,7 +85,8 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
    *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
    *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
   center?: ReactNode
-  /** Badges shown under the site name. Defaults to the single preview badge. */
+  /** Badges shown under the site name. Empty by default — the family-wide preview
+   *  notice is the strip above the bar, not a badge. */
   badges?: HeaderBadge[]
   /** Site-specific controls injected at the start (left) of the right-hand
    *  cluster, before the nav links + auth. Used for functional controls a site
@@ -97,6 +104,10 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
    *  the link says, is the consumer's own vocabulary and stays with the caller;
    *  the header only knows there is a slot here. */
   preAuthLinks?: ReactNode
+  /** Where the avatar menu's "Home" points — the site's own post-login landing.
+   *  This header resolves no site ids, so whoever knows the registry hands it in;
+   *  defaults to the site root. */
+  homeHref?: string
   /** The active theme key. Presentational hosts may key styling off it. */
   themeKey?: AdhThemeKey
 }
@@ -109,11 +120,12 @@ export function AdhHeader({
   siteSwitcher,
   pageTitle,
   center,
-  badges = DEV_PREVIEW_BADGES,
+  badges = [],
   leadingActions,
   navLinks = [],
   trailingNavLinks = [],
   preAuthLinks,
+  homeHref,
   user,
   authLoading = false,
   loginHref,
@@ -124,15 +136,25 @@ export function AdhHeader({
   settingsHref,
   onSettings,
 }: AdhHeaderProps) {
-  // When logged in, primary nav lives inside the avatar dropdown — the bar only
-  // carries the avatar trigger. When logged out, show the nav in the bar but drop
-  // any link that just points at the site title: `SiteSwitcher` already renders
-  // that href as the title, so keeping it here puts the same destination in the bar
-  // twice. Only the BAR de-dups — the dropdown has no title link to collide with.
-  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref)
+  // The bar carries the primary nav in BOTH auth states. It used to be emptied when
+  // signed in, because the avatar dropdown absorbed these links — that dropdown is an
+  // account menu now (name / Home / Settings / Log out), so emptying the bar would
+  // leave a signed-in visitor no nav at all. A site whose signed-in nav is long enough
+  // to crowd the bar owns that: it should not hand the header a list it can't show.
+  //
+  // Either way, drop any link that just points at the site title: `SiteSwitcher`
+  // already renders that href as the title, so keeping it here puts the same
+  // destination in the bar twice.
+  const barLinks = navLinks.filter((l) => l.href !== siteNameHref)
 
   return (
     <header className="adh-header" role="banner">
+      {/* Family-wide preview notice, INSIDE the banner so it inherits the header's
+          sticky/z-index and can never scroll away from the bar it qualifies. It is a
+          full-width strip, so it takes no horizontal room from the bar below. */}
+      <div className="adh-header__preview">
+        <span className="adh-header__preview-text">{PREVIEW_NOTICE}</span>
+      </div>
       <div className="adh-header__container">
         <div className="adh-header__lead">
           {/* Exactly one switcher: the caller's if it supplied one, else the
@@ -177,8 +199,7 @@ export function AdhHeader({
           {/* The primary links, grouped so they can collapse together on a phone
               (see .adh-header__links). They're `display: contents` otherwise, so on
               a wide bar they still sit directly in the nav's flex row — same gaps,
-              same layout as when they were bare children. Signed in this is empty:
-              the primary nav lives in the avatar dropdown. */}
+              same layout as when they were bare children. */}
           {barLinks.length > 0 && (
             <span className="adh-header__links">
               {barLinks.map((link) => (
@@ -197,7 +218,7 @@ export function AdhHeader({
           ) : user ? (
             <AvatarMenu
               user={user}
-              navLinks={navLinks}
+              homeHref={homeHref}
               onLogout={onLogout}
               settingsHref={settingsHref}
               onSettings={onSettings}

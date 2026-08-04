@@ -6,9 +6,8 @@
 import "react";
 
 // src/header/AvatarMenu.tsx
-import Link2 from "next/link";
-import { usePathname as usePathname2 } from "next/navigation";
-import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, Home, LogOut, Settings, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@agentic-toolkit/ui/components/avatar";
 import {
   DropdownMenu,
@@ -18,61 +17,27 @@ import {
   DropdownMenuLinkItem,
   DropdownMenuSeparator
 } from "@agentic-toolkit/ui/components/dropdown-menu";
-
-// src/header/NavLink.tsx
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { jsx } from "react/jsx-runtime";
-function pathMatches(pathname, pattern) {
-  if (pattern === pathname) return true;
-  if (pattern.endsWith("/*")) {
-    const prefix = pattern.slice(0, -2);
-    return pathname === prefix || pathname.startsWith(`${prefix}/`);
-  }
-  return false;
-}
-function NavLinkItem({ link }) {
-  const pathname = usePathname() ?? "";
-  const matchers = link.matchPaths ?? [link.href];
-  const active = matchers.some((m) => pathMatches(pathname, m));
-  return /* @__PURE__ */ jsx(
-    Link,
-    {
-      href: link.href,
-      "aria-current": active ? "page" : void 0,
-      className: "adh-header__nav-link",
-      "data-active": active ? "" : void 0,
-      children: link.label
-    }
-  );
-}
-
-// src/header/AvatarMenu.tsx
-import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 function initialsOf(name) {
   if (!name) return "";
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 function AvatarMenu({
   user,
-  navLinks = [],
+  homeHref = "/",
   onLogout,
   settingsHref,
-  onSettings,
-  children
+  onSettings
 }) {
-  const pathname = usePathname2() ?? "";
   const avatarInner = /* @__PURE__ */ jsxs(Avatar, { className: "adh-avatar-menu-trigger__avatar", children: [
-    user.imageUrl && /* @__PURE__ */ jsx2(AvatarImage, { src: user.imageUrl, alt: user.name }),
-    /* @__PURE__ */ jsx2(AvatarFallback, { children: initialsOf(user.name) || /* @__PURE__ */ jsx2(UserIcon, { className: "adh-avatar-menu-trigger__fallback-icon" }) })
+    user.imageUrl && /* @__PURE__ */ jsx(AvatarImage, { src: user.imageUrl, alt: user.name }),
+    /* @__PURE__ */ jsx(AvatarFallback, { children: initialsOf(user.name) || /* @__PURE__ */ jsx(UserIcon, { className: "adh-avatar-menu-trigger__fallback-icon" }) })
   ] });
-  const settingsItem = settingsHref ? /* @__PURE__ */ jsxs(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx2(Link2, { href: settingsHref }), className: "adh-avatar-menu__item", children: [
-    /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
-    /* @__PURE__ */ jsx2(Settings, { className: "adh-avatar-menu__item-icon" })
-  ] }) : onSettings ? /* @__PURE__ */ jsxs(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: [
-    /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Settings" }),
-    /* @__PURE__ */ jsx2(Settings, { className: "adh-avatar-menu__item-icon" })
-  ] }) : null;
+  const settingsBody = /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx(Settings, { className: "adh-avatar-menu__item-icon" }),
+    /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Settings" })
+  ] });
+  const settingsItem = settingsHref ? /* @__PURE__ */ jsx(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: settingsHref }), className: "adh-avatar-menu__item", children: settingsBody }) : onSettings ? /* @__PURE__ */ jsx(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: settingsBody }) : null;
   return /* @__PURE__ */ jsxs(DropdownMenu, { children: [
     /* @__PURE__ */ jsxs(
       DropdownMenuTrigger,
@@ -80,57 +45,32 @@ function AvatarMenu({
         className: "adh-avatar-menu-trigger",
         "aria-label": `Open ${user.name} menu`,
         children: [
-          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__name", children: user.name }),
-          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
-          /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx2(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
+          /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu-trigger__avatar-wrap", children: avatarInner }),
+          /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu-trigger__chevron", "aria-hidden": "true", children: /* @__PURE__ */ jsx(ChevronDown, { className: "adh-avatar-menu-trigger__chevron-icon" }) })
         ]
       }
     ),
     /* @__PURE__ */ jsxs(DropdownMenuContent, { className: "adh-avatar-menu", align: "end", sideOffset: 8, children: [
-      /* @__PURE__ */ jsx2("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsxs("div", { className: "adh-avatar-menu__identity", children: [
-        /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__name", children: user.name }),
-        user.email && /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__email", children: user.email })
-      ] }) }),
-      navLinks.length > 0 && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
-        navLinks.map((link) => {
-          const Icon = link.icon;
-          const matchers = link.matchPaths ?? [link.href];
-          const active = matchers.some((m) => pathMatches(pathname, m));
-          return /* @__PURE__ */ jsxs(
-            DropdownMenuLinkItem,
-            {
-              render: /* @__PURE__ */ jsx2(Link2, { href: link.href }),
-              className: "adh-avatar-menu__item",
-              "aria-current": active ? "page" : void 0,
-              "data-active": active ? "" : void 0,
-              children: [
-                /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: link.label }),
-                Icon ? /* @__PURE__ */ jsx2(Icon, { className: "adh-avatar-menu__item-icon" }) : null
-              ]
-            },
-            link.href + link.label
-          );
-        })
+      /* @__PURE__ */ jsx("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsx("div", { className: "adh-avatar-menu__identity", children: /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__name", children: user.name }) }) }),
+      /* @__PURE__ */ jsx(DropdownMenuSeparator, {}),
+      /* @__PURE__ */ jsxs(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: homeHref }), className: "adh-avatar-menu__item", children: [
+        /* @__PURE__ */ jsx(Home, { className: "adh-avatar-menu__item-icon" }),
+        /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Home" })
       ] }),
       settingsItem && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
+        /* @__PURE__ */ jsx(DropdownMenuSeparator, {}),
         settingsItem
       ] }),
-      children && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
-        children
-      ] }),
       onLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx2(DropdownMenuSeparator, {}),
+        /* @__PURE__ */ jsx(DropdownMenuSeparator, {}),
         /* @__PURE__ */ jsxs(
           DropdownMenuItem,
           {
             onClick: onLogout,
             className: "adh-avatar-menu__item",
             children: [
-              /* @__PURE__ */ jsx2("span", { className: "adh-avatar-menu__item-label", children: "Log out" }),
-              /* @__PURE__ */ jsx2(LogOut, { className: "adh-avatar-menu__item-icon" })
+              /* @__PURE__ */ jsx(LogOut, { className: "adh-avatar-menu__item-icon" }),
+              /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Log out" })
             ]
           }
         )
@@ -140,7 +80,7 @@ function AvatarMenu({
 }
 
 // src/header/AuthButtons.tsx
-import { Fragment as Fragment2, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
 function AuthButtons({
   onSignup,
   onLogin,
@@ -151,12 +91,12 @@ function AuthButtons({
 }) {
   const loginNode = onLogin ? (
     // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agentic-toolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
-    /* @__PURE__ */ jsx3("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel })
-  ) : loginHref ? /* @__PURE__ */ jsx3("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
+    /* @__PURE__ */ jsx2("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel })
+  ) : loginHref ? /* @__PURE__ */ jsx2("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
   const signupNode = onSignup ? (
     // adh-ui-allow: cs-no-bespoke — same as loginNode above: the handler variant of a nav link, not a button. Keep the two branches visually identical.
-    /* @__PURE__ */ jsx3("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel })
-  ) : signupHref ? /* @__PURE__ */ jsx3("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
+    /* @__PURE__ */ jsx2("button", { type: "button", onClick: onSignup, className: "adh-header__nav-link adh-header__nav-link--button", children: signupLabel })
+  ) : signupHref ? /* @__PURE__ */ jsx2("a", { href: signupHref, className: "adh-header__nav-link", children: signupLabel }) : null;
   return /* @__PURE__ */ jsxs2(Fragment2, { children: [
     loginNode,
     signupNode
@@ -178,6 +118,36 @@ import {
   useState
 } from "react";
 import { ChevronDown as ChevronDown2 } from "lucide-react";
+
+// src/header/NavLink.tsx
+import Link2 from "next/link";
+import { usePathname } from "next/navigation";
+import { jsx as jsx3 } from "react/jsx-runtime";
+function pathMatches(pathname, pattern) {
+  if (pattern === pathname) return true;
+  if (pattern.endsWith("/*")) {
+    const prefix = pattern.slice(0, -2);
+    return pathname === prefix || pathname.startsWith(`${prefix}/`);
+  }
+  return false;
+}
+function NavLinkItem({ link }) {
+  const pathname = usePathname() ?? "";
+  const matchers = link.matchPaths ?? [link.href];
+  const active = matchers.some((m) => pathMatches(pathname, m));
+  return /* @__PURE__ */ jsx3(
+    Link2,
+    {
+      href: link.href,
+      "aria-current": active ? "page" : void 0,
+      className: "adh-header__nav-link",
+      "data-active": active ? "" : void 0,
+      children: link.label
+    }
+  );
+}
+
+// src/header/NavigationPopover.tsx
 import { cn } from "@agentic-toolkit/ui";
 import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
 import {
@@ -784,7 +754,7 @@ function SiteSwitcher({
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
-var DEV_PREVIEW_BADGES = [{ label: "Preview Release", tone: "neutral" }];
+var PREVIEW_NOTICE = "Developer Preview Release";
 function AdhHeader({
   siteName,
   siteNameHref = "/",
@@ -793,11 +763,12 @@ function AdhHeader({
   siteSwitcher,
   pageTitle,
   center,
-  badges = DEV_PREVIEW_BADGES,
+  badges = [],
   leadingActions,
   navLinks = [],
   trailingNavLinks = [],
   preAuthLinks,
+  homeHref,
   user,
   authLoading = false,
   loginHref,
@@ -808,65 +779,68 @@ function AdhHeader({
   settingsHref,
   onSettings
 }) {
-  const barLinks = user ? [] : navLinks.filter((l) => l.href !== siteNameHref);
-  return /* @__PURE__ */ jsx8("header", { className: "adh-header", role: "banner", children: /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
-    /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
-      siteSwitcher ?? /* @__PURE__ */ jsx8(
-        SiteSwitcher,
-        {
-          siteName,
-          siteNameHref,
-          sites,
-          onSwitchSite
-        }
-      ),
-      badges.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
-        // The ui Badge owns the skin; the adh-header__badge* classes stay
-        // as stable hooks — they're a theme-editor surface.
-        /* @__PURE__ */ jsx8(
-          Badge,
+  const barLinks = navLinks.filter((l) => l.href !== siteNameHref);
+  return /* @__PURE__ */ jsxs5("header", { className: "adh-header", role: "banner", children: [
+    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: PREVIEW_NOTICE }) }),
+    /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
+      /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
+        siteSwitcher ?? /* @__PURE__ */ jsx8(
+          SiteSwitcher,
           {
-            variant: badge.tone ?? "neutral",
-            className: badge.tone ? `adh-header__badge adh-header__badge--${badge.tone}` : "adh-header__badge",
-            children: badge.label
-          },
-          badge.label
-        )
-      )) })
-    ] }),
-    center ? /* @__PURE__ */ jsx8("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
-    /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
-      leadingActions && /* @__PURE__ */ jsx8("span", { className: "adh-header__actions", children: leadingActions }),
-      barLinks.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)) }),
-      preAuthLinks,
-      authLoading && !user ? /* @__PURE__ */ jsx8(
-        "span",
-        {
-          className: "adh-header__auth-spinner",
-          role: "status",
-          "aria-label": "Checking sign-in"
-        }
-      ) : user ? /* @__PURE__ */ jsx8(
-        AvatarMenu,
-        {
-          user,
-          navLinks,
-          onLogout,
-          settingsHref,
-          onSettings
-        }
-      ) : /* @__PURE__ */ jsx8(
-        AuthButtons,
-        {
-          loginHref,
-          signupHref,
-          onLogin,
-          onSignup
-        }
-      ),
-      trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
+            siteName,
+            siteNameHref,
+            sites,
+            onSwitchSite
+          }
+        ),
+        badges.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
+          // The ui Badge owns the skin; the adh-header__badge* classes stay
+          // as stable hooks — they're a theme-editor surface.
+          /* @__PURE__ */ jsx8(
+            Badge,
+            {
+              variant: badge.tone ?? "neutral",
+              className: badge.tone ? `adh-header__badge adh-header__badge--${badge.tone}` : "adh-header__badge",
+              children: badge.label
+            },
+            badge.label
+          )
+        )) })
+      ] }),
+      center ? /* @__PURE__ */ jsx8("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
+      /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
+        leadingActions && /* @__PURE__ */ jsx8("span", { className: "adh-header__actions", children: leadingActions }),
+        barLinks.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)) }),
+        preAuthLinks,
+        authLoading && !user ? /* @__PURE__ */ jsx8(
+          "span",
+          {
+            className: "adh-header__auth-spinner",
+            role: "status",
+            "aria-label": "Checking sign-in"
+          }
+        ) : user ? /* @__PURE__ */ jsx8(
+          AvatarMenu,
+          {
+            user,
+            homeHref,
+            onLogout,
+            settingsHref,
+            onSettings
+          }
+        ) : /* @__PURE__ */ jsx8(
+          AuthButtons,
+          {
+            loginHref,
+            signupHref,
+            onLogin,
+            onSignup
+          }
+        ),
+        trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
+      ] })
     ] })
-  ] }) });
+  ] });
 }
 
 // src/footer/AdhFooter.tsx

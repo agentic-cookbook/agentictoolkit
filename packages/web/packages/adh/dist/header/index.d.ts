@@ -1,4 +1,4 @@
-export { AdhHeader, DEV_PREVIEW_BADGES } from './AdhHeader';
+export { AdhHeader } from './AdhHeader';
 export type { AdhHeaderProps, AdhHeaderAuthProps, HeaderBadge } from './AdhHeader';
 export { AvatarMenu } from './AvatarMenu';
 export type { AvatarMenuProps, AvatarMenuUser } from './AvatarMenu';

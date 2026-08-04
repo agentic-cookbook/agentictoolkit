@@ -86,6 +86,39 @@ describe('DropdownMenu — open/close contract', () => {
     expect(link).toHaveAttribute('href', '/settings')
     expect(link).toHaveClass('adh-dropdown-menu__item')
   })
+
+  // Base UI's LinkItem keeps the menu OPEN on click (it assumes following the link
+  // unmounts the page). Every consumer here navigates client-side through a router,
+  // so the page survives and the menu was left hanging open over the new route.
+  it('closes the menu when a link item is chosen', async () => {
+    render(
+      <DropdownMenu>
+        <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLinkItem render={<a href="/settings" />}>Settings</DropdownMenuLinkItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    )
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+  })
+
+  it('lets a caller keep the menu open on a link item', async () => {
+    render(
+      <DropdownMenu>
+        <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLinkItem render={<a href="/settings" />} closeOnClick={false}>
+            Settings
+          </DropdownMenuLinkItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    )
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+  })
 })
 
 describe('DropdownMenu — selection closes the menu (wrapper default)', () => {

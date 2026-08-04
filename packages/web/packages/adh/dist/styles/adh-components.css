@@ -54,11 +54,46 @@
   color: var(--color-text-primary);
 }
 
+/* The family-wide "Developer Preview Release" strip, spanning the full width above
+   the bar. Accent-tinted with a rule under it so it reads as a system notice rather
+   than as page content, and pinned to a fixed height (see the :root block) because
+   --adh-header-height is computed from it. Every value is a themeable token; the
+   fallbacks are the shipped look. */
+.adh-header__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--adh-header-preview-height, 1.125rem);
+  padding: 0 0.75rem;
+  background: var(
+    --adh-header-preview-bg,
+    color-mix(in srgb, var(--color-accent) 16%, var(--color-surface))
+  );
+  border-bottom: 1px solid
+    var(
+      --adh-header-preview-border-color,
+      color-mix(in srgb, var(--color-accent) 45%, transparent)
+    );
+  color: var(--adh-header-preview-color, var(--color-accent));
+}
+
+.adh-header__preview-text {
+  /* line-height 1 so the glyphs, not their leading, decide what fits the strip. */
+  font-family: var(--adh-header-preview-font, var(--font-mono));
+  font-size: var(--adh-header-preview-size, 0.625rem);
+  line-height: 1;
+  letter-spacing: var(--adh-header-preview-letter-spacing, 0.14em);
+  text-transform: var(--adh-header-preview-transform, uppercase);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .adh-header__container {
   position: relative;
   width: 100%;
   padding: 0 1.5rem;
-  height: var(--adh-header-height, 3.5rem);
+  height: var(--adh-header-bar-height, 3.5rem);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -377,14 +412,6 @@
   outline-offset: 2px;
 }
 
-.adh-avatar-menu-trigger__name {
-  font-family: var(--adh-header-nav-font, var(--font-mono));
-  font-size: var(--adh-header-nav-size, 0.875rem);
-  letter-spacing: var(--adh-header-nav-letter-spacing, 0.04em);
-  color: inherit;
-  white-space: nowrap;
-}
-
 .adh-avatar-menu-trigger__avatar-wrap {
   display: inline-flex;
   align-items: center;
@@ -443,13 +470,6 @@
   line-height: 1.25;
 }
 
-.adh-avatar-menu__email {
-  color: var(--color-text-secondary);
-  font-size: 0.78rem;
-  line-height: 1.25;
-  margin-top: 0.15rem;
-}
-
 .adh-avatar-menu__settings {
   display: inline-flex;
   align-items: center;
@@ -501,9 +521,12 @@
   color: var(--color-accent);
 }
 
+/* No text-transform: the menu authors its own labels now, so the casing in the JSX is
+   the casing on screen. `capitalize` was here to tidy the lowercase nav labels a site
+   used to hand in (hub's "home"/"contact"); applied to these it would title-case
+   "Log out" into "Log Out". */
 .adh-avatar-menu__item-label {
   flex: 1;
-  text-transform: capitalize;
 }
 
 .adh-avatar-menu__item-icon {
@@ -644,11 +667,29 @@
   min-width: 0;
 }
 
-/* --adh-header-height is consumed by .adh-header__container (above). It was
-   declared alongside the slide-out nav drawer's own vars; the drawer was
-   removed, so only this still-live var is kept here. */
+/* The sticky-chrome geometry, in one place. Two readers, and they want DIFFERENT
+   numbers, which is why this is three vars rather than one:
+
+   - `--adh-header-height` is the TOTAL height of the sticky banner — the preview
+     strip plus the bar. It is what a page offsets its OWN sticky elements by
+     (adh-docs' + api-explorer's sidebars, devteam's whole layout), and those live in
+     other packages, so its meaning must not quietly change under them. Adding the
+     strip made the banner taller; the total had to grow with it or every one of those
+     sidebars would sit a strip's height too high, tucked under the bar.
+   - `--adh-header-bar-height` is the BAR row alone, consumed only by
+     `.adh-header__container`. Splitting it out is what let the total grow without the
+     bar shrinking.
+
+   Keep the strip's height a fixed token rather than letting its content size it: the
+   total above is computed from it, so a content-derived height would make
+   `--adh-header-height` a number nothing actually measures. `.adh-header__preview`
+   centres its text in exactly this height. */
 :root {
-  --adh-header-height: 3.5rem;
+  --adh-header-bar-height: 3.5rem;
+  --adh-header-preview-height: 1.125rem;
+  --adh-header-height: calc(
+    var(--adh-header-bar-height) + var(--adh-header-preview-height)
+  );
 }
 
 /* Shared not-found body. */

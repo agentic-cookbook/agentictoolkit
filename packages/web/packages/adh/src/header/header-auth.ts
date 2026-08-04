@@ -67,7 +67,9 @@ export type HeaderAuthSource = (opts: HeaderAuthSourceOptions) => HeaderAuthStat
  * `name` is taken as-is when truthy (callers that need a different precedence, e.g.
  * hub's `displayName || slug`, pass the resolved name in); `fallback` lets admin
  * show 'Admin' rather than 'User'. The email local-part avoids leaking the full
- * address in the always-visible header trigger + aria-label.
+ * address, which the menu no longer prints at all: the address itself is not
+ * carried onto the avatar shape, so no header surface can grow a display of it
+ * without coming back through here.
  */
 export function toAvatarUser(
   u: Pick<AuthUser, 'email' | 'avatarUrl'> & { name?: string | null },
@@ -75,7 +77,6 @@ export function toAvatarUser(
 ): AvatarMenuUser {
   return {
     name: u.name || u.email?.split('@')[0] || fallback,
-    email: u.email,
     imageUrl: u.avatarUrl || undefined,
   }
 }

@@ -136,7 +136,9 @@ describe('SiteHeader auth source injection', () => {
     const onAfterLogout = vi.fn()
     const useFakeSource = vi.fn(
       (_opts: HeaderAuthSourceOptions): HeaderAuthState => ({
-        user: { name: 'Ada', email: 'ada@example.test' },
+        // Name only — AvatarMenuUser carries no email, so a source cannot hand one
+        // across and no header surface can print one.
+        user: { name: 'Ada' },
         userIsAdmin: true,
         onLogin: () => {},
         onLogout: () => {},
@@ -163,9 +165,12 @@ describe('SiteHeader auth source injection', () => {
       expect(opts).toEqual({ clientId: 'demo', siteId: 'hub', onAfterLogout })
     }
     // ...and everything it returned crossed into the bar: `user` to the toolkit header,
-    // `userIsAdmin` and the derived signed-in flag on to adh's own switcher.
-    expect(screen.getByText('Ada')).toBeTruthy()
-    expect(headerProps.current?.user).toEqual({ name: 'Ada', email: 'ada@example.test' })
+    // `userIsAdmin` and the derived signed-in flag on to adh's own switcher. The menu
+    // is stubbed above, so what is observable here is the value it was handed — the
+    // stub prints the name — not the bar's printed copy, which is now the avatar
+    // alone (pinned in the toolkit's own header-contract.test.tsx).
+    expect(screen.getByTestId('adh-avatar-menu').textContent).toBe('Ada')
+    expect(headerProps.current?.user).toEqual({ name: 'Ada' })
     expect(switcherProps.current?.authenticated).toBe(true)
     expect(switcherProps.current?.userIsAdmin).toBe(true)
   })

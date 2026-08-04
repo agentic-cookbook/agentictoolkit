@@ -56,8 +56,8 @@ const wrap: CSSProperties = {
  * landings — see websites/scripts/scaffold-sites.py.
  *
  * The hero carries no "placeholder / coming soon" marker: the family's pre-launch
- * status is stated once, by the shared header's "Preview Release" badge
- * (DEV_PREVIEW_BADGES), so repeating it per landing is noise.
+ * status is stated once, by the "Developer Preview Release" strip the shared header
+ * draws above the bar, so repeating it per landing is noise.
  */
 export function SiteLanding({
   eyebrow,

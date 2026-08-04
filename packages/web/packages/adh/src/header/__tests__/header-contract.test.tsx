@@ -1,7 +1,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { AdhHeader, DEV_PREVIEW_BADGES } from '../AdhHeader'
+import { AdhHeader } from '../AdhHeader'
 
 // The dropdown behind the switcher is base-ui backed: its portal returns null while
 // closed (keepMounted defaults false), so a closed menu's rows are absent from the DOM
@@ -79,13 +79,29 @@ describe('AdhHeader (registry-free)', () => {
     }
   })
 
-  // Dropping the default would silently remove a visible badge from every adh site, so
-  // the default is part of the contract, not an implementation detail.
-  it('defaults badges to the shipped preview badge, and honours an explicit empty list', () => {
-    const { rerender } = render(<AdhHeader siteName="Hub" />)
-    expect(screen.getByText(DEV_PREVIEW_BADGES[0]!.label)).toBeTruthy()
-    rerender(<AdhHeader siteName="Hub" badges={[]} />)
-    expect(screen.queryByText(DEV_PREVIEW_BADGES[0]!.label)).toBeNull()
+  // `badges` used to default to a "Preview Release" badge under the site name. The
+  // preview notice is the strip above the bar now, so the slot defaults to EMPTY —
+  // a site that passes nothing must get nothing, or the retired badge comes back
+  // fleet-wide by default.
+  it('renders no badges by default', () => {
+    const { container } = render(<AdhHeader siteName="Hub" />)
+    expect(container.querySelector('.adh-header__badges')).toBeNull()
+    expect(screen.queryByText('Preview Release')).toBeNull()
+  })
+
+  // The strip is unconditional: it is a statement about the whole family, not a
+  // per-site prop, so every header must carry it with no opt-in. Asserting the text
+  // (not just the class) keeps a silently-emptied strip from passing.
+  it('renders the family preview strip above the bar on every header', () => {
+    const { container } = render(<AdhHeader siteName="Hub" />)
+    const strip = container.querySelector('.adh-header__preview')
+    expect(strip).not.toBeNull()
+    expect(strip).toHaveTextContent('Developer Preview Release')
+    // Above the bar, and inside the banner — so it shares the header's sticky box
+    // rather than scrolling away from the bar it qualifies.
+    const banner = screen.getByRole('banner')
+    expect(strip!.parentElement).toBe(banner)
+    expect(banner.firstElementChild).toBe(strip)
   })
 
   // ── brief test 4, rewritten. There is no `routes`/`adminOnly` prop here and there
@@ -160,9 +176,9 @@ describe('AdhHeader (registry-free)', () => {
 
   // The site title IS a link to `siteNameHref`, so a navLink pointing at the same place
   // would put one destination in the bar twice. Every family site passes a nav list that
-  // starts with its own home entry, so this fires on essentially every signed-out page —
-  // which is also why nothing screamed when the filter was dropped: a duplicate link looks
-  // deliberate. Only the BAR de-dups; the avatar dropdown has no title to collide with.
+  // starts with its own home entry, so this fires on essentially every page — which is
+  // also why nothing screamed when the filter was dropped: a duplicate link looks
+  // deliberate.
   it('drops a nav link that just points at the site title', () => {
     render(
       <AdhHeader
@@ -186,5 +202,45 @@ describe('AdhHeader (registry-free)', () => {
     render(<AdhHeader siteName="Hub" authLoading onLogin={() => {}} onSignup={() => {}} />)
     expect(screen.getByRole('status', { name: 'Checking sign-in' })).toBeTruthy()
     expect(screen.queryByText('join')).toBeNull()
+  })
+
+  // Signing in used to EMPTY the bar, because the avatar dropdown absorbed the whole
+  // nav list. The dropdown is an account menu now, so if the bar still emptied a
+  // signed-in visitor would have no nav anywhere. Both halves are asserted together:
+  // the links are in the bar, and the dropdown is not where they went.
+  it('keeps the nav links in the bar when signed in, and out of the account menu', async () => {
+    render(
+      <AdhHeader
+        siteName="Hub"
+        navLinks={[{ label: 'Docs', href: '/docs' }]}
+        user={{ name: 'Mike Fullerton' }}
+        settingsHref="/settings"
+        onLogout={() => {}}
+      />,
+    )
+    const links = screen.getByRole('banner').querySelector('.adh-header__links')!
+    expect(links.textContent).toContain('Docs')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Mike Fullerton menu' }))
+    await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument())
+    const menu = screen.getByRole('menu')
+    expect(menu.textContent).toContain('Mike Fullerton')
+    expect(
+      Array.from(menu.querySelectorAll('[role="menuitem"]')).map((el) => el.textContent),
+    ).toEqual(['Home', 'Settings', 'Log out'])
+  })
+
+  // The trigger is the avatar ALONE. The name is still its accessible name (asserted by
+  // the getByRole above), so this is about the printed copy, not about a11y.
+  //
+  // Asserted as an EQUALITY on the trigger's whole text, not as "does it contain the
+  // name": the only characters the trigger may print are the avatar's own initials
+  // fallback, so any re-introduced name/slug/email span fails this line whatever it
+  // is called. (`toContain('Mike Fullerton')` would pass a trigger that printed the
+  // slug instead.)
+  it('prints only the avatar beside the trigger — no name, slug or email', () => {
+    render(<AdhHeader siteName="Hub" user={{ name: 'Mike Fullerton' }} />)
+    const trigger = screen.getByRole('button', { name: 'Open Mike Fullerton menu' })
+    expect(trigger.textContent).toBe('MF')
   })
 })
