@@ -151,13 +151,16 @@ describe('SiteHeader auth source injection', () => {
       />,
     )
     // Invoked AS a hook — unconditionally, on EVERY render, with the per-site options
-    // forwarded (the two props exist only to reach a source). Deliberately not pinned
-    // to a single call: `useClientHost` resolves the hostname in a mount effect, so the
-    // header renders twice here, and a source that ran only on the first render would
-    // be the bug rather than the contract.
+    // forwarded. `siteId` rides along with the two auth props: a session-aware source
+    // resolves THIS site's post-login landing from it (see makeSmartHeaderAuth's
+    // defaultReturnTo), and one source instance is shared across a whole site family,
+    // so it cannot be closed over at construction. Deliberately not pinned to a single
+    // call: `useClientHost` resolves the hostname in a mount effect, so the header
+    // renders twice here, and a source that ran only on the first render would be the
+    // bug rather than the contract.
     expect(useFakeSource).toHaveBeenCalled()
     for (const [opts] of useFakeSource.mock.calls) {
-      expect(opts).toEqual({ clientId: 'demo', onAfterLogout })
+      expect(opts).toEqual({ clientId: 'demo', siteId: 'hub', onAfterLogout })
     }
     // ...and everything it returned crossed into the bar: `user` to the toolkit header,
     // `userIsAdmin` and the derived signed-in flag on to adh's own switcher.

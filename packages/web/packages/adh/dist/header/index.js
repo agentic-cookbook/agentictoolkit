@@ -1718,7 +1718,7 @@ function SiteHeader({
   useAuthSource = useAnonymousHeaderAuth,
   ...authOverrides
 }) {
-  const source = useAuthSource({ clientId, onAfterLogout });
+  const source = useAuthSource({ clientId, siteId, onAfterLogout });
   const {
     resolveSwitchHref,
     user,

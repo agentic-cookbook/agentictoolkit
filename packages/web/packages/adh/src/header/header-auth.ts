@@ -17,6 +17,10 @@ import type { AvatarMenuUser } from './AvatarMenu'
 // builds only (dev/vitest/tsc all resolve the `development` condition to src). The other
 // half of the remedy is the matching `@agentic-toolkit/auth` entry in tsup's `external`.
 import { useAuth, beginLogin, isAdmin, ssoSwitchUrl, type AuthUser } from '@agentic-toolkit/auth'
+// The site table, for the post-login landing rule below. Same package specifier
+// SiteHeader (this entry's sibling) already uses — `siteHomePath` is a pure lookup
+// over a static table, so it carries no module state to fork.
+import { siteHomePath, type SiteId } from '@agentic-toolkit/adh-registry'
 
 /**
  * The resolved auth values the shared header needs — its only view of "who is
@@ -38,6 +42,13 @@ export type HeaderAuthState = Omit<AdhHeaderAuthProps, 'user'> & {
 export interface HeaderAuthSourceOptions {
   /** OAuth client id for the login redirect (default 'adh'). */
   clientId?: string
+  /**
+   * The site the header is rendered for — SiteHeader forwards its own `siteId`. A
+   * session-aware source needs it to resolve the site's post-login landing
+   * (`siteHomePath`), which is the Login/Sign-up return target the contract
+   * prescribes from a site's root (docs/platform/login-and-return.md §2).
+   */
+  siteId?: SiteId
   /** Called after a successful logout — e.g. to navigate away from a gated page. */
   onAfterLogout?: () => void
 }
@@ -121,18 +132,41 @@ export interface SmartHeaderAuthConfig {
   /**
    * Where login / sign up return to after the SSO round-trip. A FUNCTION, read at
    * click time so it reflects the page the user is actually on — not wherever the
-   * source was built. Defaults to the current path + query, which is what a
-   * profile-driven funnel wants ("sign in, come back to *this* persona").
+   * source was built. An explicit return always wins
+   * (docs/platform/login-and-return.md §2); omit it to get {@link defaultReturnTo}.
    */
   returnTo?: () => string
   /** Avatar-name fallback when the user has neither a name nor email (default 'User'). */
   avatarFallback?: string
 }
 
-/** Current in-site path + query — the default SSO `returnTo`. '/' on the server. */
+/** Current in-site path + query. '/' on the server. */
 function currentPath(): string {
   if (typeof window === 'undefined') return '/'
   return `${window.location.pathname}${window.location.search}`
+}
+
+/**
+ * The default post-login destination for a satellite's header Login / Sign up —
+ * the SHARED rule, so no site has to patch it locally.
+ *
+ * From the site's ROOT it is that site's own post-login landing (`/home` when the
+ * site declares one, else `/`): the home-or-root return target of
+ * docs/platform/login-and-return.md §2, and the fix for the classic "signed in from
+ * the landing, stranded back on the anonymous landing" walk. From ANY OTHER page it
+ * is the page the visitor is standing on, so a profile-driven funnel keeps its place
+ * ("sign in, come back to *this* persona") — the bespoke case the same section
+ * carves out.
+ *
+ * Read at CLICK time (inside the handler), so `/home` hangs off the click and
+ * nothing else: an already-signed-in visitor who arrives at `/` on their own is
+ * never redirected. SSR-guarded via {@link currentPath}; with no `siteId` (a source
+ * built outside SiteHeader) it degrades to the current path rather than guessing a
+ * landing.
+ */
+export function defaultReturnTo(siteId?: SiteId): string {
+  if (typeof window === 'undefined' || !siteId) return currentPath()
+  return window.location.pathname === '/' ? siteHomePath(siteId) : currentPath()
 }
 
 /**
@@ -157,11 +191,14 @@ function currentPath(): string {
  */
 export function makeSmartHeaderAuth(cfg: SmartHeaderAuthConfig = {}): HeaderAuthSource {
   const { clientId = 'adh', returnTo, avatarFallback = 'User' } = cfg
-  return function useSmartHeaderAuth(_opts: HeaderAuthSourceOptions): HeaderAuthState {
+  return function useSmartHeaderAuth(opts: HeaderAuthSourceOptions): HeaderAuthState {
     const { user, logout, isLoading } = useAuth()
     // Login AND Sign up start the same SSO round-trip, returning to the resolved
     // destination — the central login UI is where an account is created or entered.
-    const login = (): void => beginLogin({ clientId, returnTo: returnTo?.() ?? currentPath() })
+    // A config `returnTo` wins; otherwise the shared home-or-root rule, which needs
+    // the siteId SiteHeader forwards.
+    const login = (): void =>
+      beginLogin({ clientId, returnTo: returnTo?.() ?? defaultReturnTo(opts.siteId) })
     return {
       user: user ? toAvatarUser(user, avatarFallback) : null,
       // Unlocks the site menu's dev tail (Routes, site families, Debug Options)

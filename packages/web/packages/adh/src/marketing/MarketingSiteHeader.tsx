@@ -18,8 +18,11 @@ import type { NavLink } from '@agentic-toolkit/adh/header'
 
 // Built ONCE at module scope: the source is a hook (it calls useAuth) and
 // SiteHeader invokes it unconditionally each render, so it must be a stable
-// reference — never rebuilt inline. `returnTo` is omitted so login/sign-up
-// return to the page the visitor is actually on (current path + query).
+// reference — never rebuilt inline. ONE source for the whole family, which is why
+// `returnTo` is omitted rather than bound per site: the shared default reads the
+// `siteId` SiteHeader forwards at click time, so login/sign-up started on a site's
+// landing goes on to that site's own /home and anywhere else comes back to the page
+// the visitor is on (defaultReturnTo, docs/platform/login-and-return.md §2).
 const useMarketingHeaderAuth = makeSmartHeaderAuth({ clientId: 'adh' })
 
 export type MarketingSiteHeaderProps = {
@@ -34,7 +37,7 @@ export type MarketingSiteHeaderProps = {
  * The session-aware header for the marketing/feature-site family — SiteHeader
  * bound to the shared smart source (`makeSmartHeaderAuth`, the personaregistry
  * pattern): the avatar shows when signed in, Login/Sign up run the central SSO
- * flow with a returnTo back to the current page, and site switches ride the
+ * flow with the shared home-or-root returnTo, and site switches ride the
  * silent-SSO bounce. See docs/platform/feature-sites-redesign.md.
  *
  * Exists as its own client component because {@link MarketingRootHtml} is a

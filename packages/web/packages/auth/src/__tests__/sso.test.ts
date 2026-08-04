@@ -135,6 +135,19 @@ describe('providerSigninUrl', () => {
     expect(url.pathname).toBe('/api/oauth/signin/start')
   })
 
+  // The rule an OMITTED base follows, and the reason LoginCard's prop is not
+  // prop-only: with the env var inlined, no argument still means the AS host, so
+  // /start and /callback share it (the OAuth state cookie is host-only). Only a
+  // build with NEITHER falls through to the same-origin proxy above.
+  it('falls back to the env AS base — not the proxy — when no base is passed', () => {
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://env.example.com'
+    const url = new URL(
+      providerSigninUrl({ clientId: 'adh', providerId: 'github', returnUrl: 'https://s.example.com/auth/callback' }),
+    )
+    expect(url.origin).toBe('https://env.example.com')
+    expect(url.pathname).toBe('/oauth/signin/start')
+  })
+
   it('prefers an explicit authApiBase over the env var and trims trailing slashes', () => {
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://env.example.com'
     const url = new URL(

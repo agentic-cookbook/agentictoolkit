@@ -30,8 +30,16 @@ export interface LoginCardProps {
    * `https://api.agenticdeveloperhub.com`). The GitHub redirect flow's
    * `/start` and `/callback` must share a host (the OAuth state cookie is
    * host-only), so the browser is sent directly here rather than through the
-   * same-origin `/api` data proxy. When omitted, falls back to a same-origin
-   * relative path (local dev). Typically wired from `NEXT_PUBLIC_AUTH_API_URL`.
+   * same-origin `/api` data proxy. Typically wired from `NEXT_PUBLIC_AUTH_API_URL`.
+   *
+   * When omitted the resolution is the package-wide one (`asEndpoint`): that same
+   * env var, then a same-origin relative path (local dev). It is NOT prop-only —
+   * an omitted prop in a build that inlined `NEXT_PUBLIC_AUTH_API_URL` sends the
+   * browser to the AS host, not to `/api`. That is deliberate: every other AS call
+   * in this package (`beginLogin`, `ssoSwitchUrl`, `centralEmailLogin`) already
+   * resolves that way, and a card that disagreed would split `/start` from
+   * `/callback` across two hosts — which the host-only OAuth state cookie cannot
+   * survive. Pass the prop explicitly to be unambiguous.
    */
   authApiBase?: string
   /** Called with the entered identifier (email, user id/slug, or phone) + password on

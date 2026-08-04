@@ -4,6 +4,7 @@
 
 // src/header/header-auth.ts
 import { useAuth, beginLogin, isAdmin, ssoSwitchUrl } from "@agentic-toolkit/auth";
+import { siteHomePath } from "@agentic-toolkit/adh-registry";
 function toAvatarUser(u, fallback = "User") {
   return {
     name: u.name || u.email?.split("@")[0] || fallback,
@@ -21,11 +22,15 @@ function currentPath() {
   if (typeof window === "undefined") return "/";
   return `${window.location.pathname}${window.location.search}`;
 }
+function defaultReturnTo(siteId) {
+  if (typeof window === "undefined" || !siteId) return currentPath();
+  return window.location.pathname === "/" ? siteHomePath(siteId) : currentPath();
+}
 function makeSmartHeaderAuth(cfg = {}) {
   const { clientId = "adh", returnTo, avatarFallback = "User" } = cfg;
-  return function useSmartHeaderAuth(_opts) {
+  return function useSmartHeaderAuth(opts) {
     const { user, logout, isLoading } = useAuth();
-    const login = () => beginLogin({ clientId, returnTo: returnTo?.() ?? currentPath() });
+    const login = () => beginLogin({ clientId, returnTo: returnTo?.() ?? defaultReturnTo(opts.siteId) });
     return {
       user: user ? toAvatarUser(user, avatarFallback) : null,
       // Unlocks the site menu's dev tail (Routes, site families, Debug Options)
@@ -44,6 +49,7 @@ function makeSmartHeaderAuth(cfg = {}) {
   };
 }
 export {
+  defaultReturnTo,
   makeSmartHeaderAuth,
   ssoSwitchResolver,
   toAvatarUser,

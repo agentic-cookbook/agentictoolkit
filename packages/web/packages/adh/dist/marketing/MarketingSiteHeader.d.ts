@@ -12,7 +12,7 @@ export type MarketingSiteHeaderProps = {
  * The session-aware header for the marketing/feature-site family — SiteHeader
  * bound to the shared smart source (`makeSmartHeaderAuth`, the personaregistry
  * pattern): the avatar shows when signed in, Login/Sign up run the central SSO
- * flow with a returnTo back to the current page, and site switches ride the
+ * flow with the shared home-or-root returnTo, and site switches ride the
  * silent-SSO bounce. See docs/platform/feature-sites-redesign.md.
  *
  * Exists as its own client component because {@link MarketingRootHtml} is a

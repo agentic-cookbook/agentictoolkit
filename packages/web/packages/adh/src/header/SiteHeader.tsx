@@ -124,7 +124,10 @@ export function SiteHeader({
   // hooks run in a stable order ahead of this component's — and a site with no adh
   // AuthProvider (status) never reaches a `useAuth()` at all, because the default
   // source has none.
-  const source = useAuthSource({ clientId, onAfterLogout })
+  // `siteId` rides along so a session-aware source can resolve THIS site's post-login
+  // landing without being rebuilt per site (MarketingSiteHeader builds one source at
+  // module scope for the whole family).
+  const source = useAuthSource({ clientId, siteId, onAfterLogout })
   // Source first, caller's explicit props last: the source owns the five fields
   // SiteHeaderProps Omits (so `authOverrides` structurally cannot carry them), while a
   // site's static header config (loginHref, settingsHref, …) still wins over a

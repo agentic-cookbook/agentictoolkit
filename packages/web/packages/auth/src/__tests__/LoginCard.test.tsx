@@ -6,6 +6,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 const push = vi.fn()
 const beginLinkProvider = vi.fn((..._args: unknown[]) => true)
 const centralEmailLogin = vi.fn()
+const providerSigninUrl = vi.fn((..._args: unknown[]) => 'https://as.example/oauth/signin/start')
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, replace: vi.fn() }) }))
 vi.mock('next/link', () => ({ default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a> }))
@@ -14,6 +15,7 @@ vi.mock('../sso', () => ({
   readCentralParams: () => null,
   centralEmailLogin: (...a: unknown[]) => centralEmailLogin(...a),
   beginLinkProvider: (...a: unknown[]) => beginLinkProvider(...a),
+  providerSigninUrl: (...a: unknown[]) => providerSigninUrl(...a),
   PENDING_LINK_KEY: 'adh_pending_link',
 }))
 // Render the modal's actionable buttons so the test can drive Continue / Not now.
@@ -46,7 +48,47 @@ beforeEach(() => {
   push.mockReset()
   beginLinkProvider.mockReset().mockReturnValue(true)
   centralEmailLogin.mockReset()
+  providerSigninUrl.mockReset().mockReturnValue('https://as.example/oauth/signin/start')
   window.sessionStorage.clear()
+})
+
+describe('LoginCard provider buttons', () => {
+  // The card builds no URL of its own: it hands the /start contract to the shared
+  // builder, which is the same one the hub's signup page calls — that is what keeps
+  // the two pages from drifting on the query.
+  it('starts the provider leg through the shared builder, forwarding the AS base', () => {
+    render(
+      <LoginCard
+        clientId="adh"
+        authApiBase="https://as.example"
+        onEmailLogin={vi.fn()}
+        postLoginRedirect="/home"
+        showGithub={false}
+        oauthProviders={[{ id: 'google', label: 'Continue with Google' }]}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }))
+    expect(providerSigninUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ clientId: 'adh', providerId: 'google', authApiBase: 'https://as.example' }),
+    )
+  })
+
+  // With the prop omitted the card passes `undefined` STRAIGHT THROUGH rather than
+  // pinning the same-origin proxy itself — so the builder's own rule applies (the env
+  // var, then the proxy). See the prop's doc comment and sso.test.ts.
+  it('forwards an omitted base as undefined, leaving the fallback to the builder', () => {
+    render(
+      <LoginCard
+        clientId="adh"
+        onEmailLogin={vi.fn()}
+        postLoginRedirect="/home"
+        showGithub={false}
+        oauthProviders={[{ id: 'google', label: 'Continue with Google' }]}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }))
+    expect(providerSigninUrl).toHaveBeenCalledWith(expect.objectContaining({ authApiBase: undefined }))
+  })
 })
 
 describe('LoginCard reactive account-link', () => {
