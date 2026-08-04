@@ -33,10 +33,15 @@ export interface UnsavedChangesGuardProps {
  *   and raises the same confirm.
  * - Browser Back/Forward: while dirty, a same-URL sentinel history entry is
  *   pushed so the first Back lands on it (no route change); the confirm is
- *   raised, and discarding re-issues the Back for real. Cost of the
+ *   raised, and discarding re-issues the Back for real. The sentinel is
+ *   remembered by the URL it was pushed for, not by a bare "already pushed"
+ *   flag: a long-lived mount (the hub's workspace chrome, StandaloneRailHost)
+ *   outlives many routes, so re-arming somewhere it has not armed yet has to
+ *   push a fresh sentinel, while re-arming at the SAME url must not stack a
+ *   second one (that would cost the user two Back presses). Cost of the
  *   technique: after the page goes clean again the consumed-or-not sentinel
- *   may leave one extra same-URL entry (a second Back press) — the only
- *   reliable way to interpose on popstate without desyncing the app router.
+ *   may leave one extra same-URL entry — the only reliable way to interpose
+ *   on popstate without desyncing the app router.
  */
 export function UnsavedChangesGuard({
   when,
@@ -52,8 +57,11 @@ export function UnsavedChangesGuard({
   // beforeunload guard doesn't re-prompt on the unload it just allowed.
   const approvedRef = React.useRef(false)
   const approvalTimerRef = React.useRef<number | undefined>(undefined)
-  // A same-URL sentinel history entry exists (Back-button interposer).
-  const sentinelRef = React.useRef(false)
+  // The URL a live sentinel history entry was pushed for, or null for none.
+  // Keyed by URL rather than a boolean because this component's `when` cycles
+  // many times per mount and the page moves underneath it: a stale sentinel
+  // from a route we have since left must not be mistaken for a live one.
+  const sentinelRef = React.useRef<string | null>(null)
 
   /** Approve the imminent navigation, self-expiring: long enough for the
    *  unload/back it covers to fire, short enough that a client-side push
@@ -119,21 +127,21 @@ export function UnsavedChangesGuard({
       if (approvedRef.current) return
       // Back consumed the same-URL sentinel, so the app router saw no route
       // change. Ask; discard re-issues the Back for real, stay re-arms.
-      sentinelRef.current = false
+      sentinelRef.current = null
       void requestConfirm().then((ok) => {
         if (ok) {
           approveBriefly()
           window.history.back()
         } else {
           window.history.pushState(window.history.state, "", window.location.href)
-          sentinelRef.current = true
+          sentinelRef.current = window.location.href
         }
       })
     }
 
-    if (!sentinelRef.current) {
+    if (sentinelRef.current !== window.location.href) {
       window.history.pushState(window.history.state, "", window.location.href)
-      sentinelRef.current = true
+      sentinelRef.current = window.location.href
     }
     const unregister = registerNavigationGuard(requestConfirm)
     window.addEventListener("beforeunload", onBeforeUnload)

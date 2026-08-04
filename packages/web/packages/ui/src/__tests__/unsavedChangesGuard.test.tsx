@@ -1,7 +1,18 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { UnsavedChangesGuard } from '../components/unsaved-changes-guard'
 import { confirmNavigation, GUARDED_NAV_ATTR } from '../lib/navigation-guard'
+
+afterEach(() => {
+  cleanup() // no globals-driven auto-cleanup is guaranteed here; unmount so the
+  // guards' effects tear down (they hold document/window listeners) before the
+  // next test, and put the URL back so sentinel assertions start from one place.
+  // restoreAllMocks matters more than usual here: vi.spyOn on an ALREADY-spied
+  // method hands back the same spy, so a history spy a failing test never
+  // restored would carry its call count into the next test's assertions.
+  vi.restoreAllMocks()
+  window.history.replaceState(null, '', '/')
+})
 
 function renderWithLink(when: boolean, onNavigate = vi.fn()) {
   const utils = render(
@@ -120,5 +131,44 @@ describe('UnsavedChangesGuard — history and unload', () => {
     expect(remove).toHaveBeenCalledWith('beforeunload', expect.any(Function))
     add.mockRestore()
     remove.mockRestore()
+  })
+})
+
+// A long-lived guard mount (hub workspace chrome, StandaloneRailHost) outlives many
+// routes, so `when` cycles clean->dirty repeatedly against a MOVING url. The sentinel
+// therefore has to be identified by the url it was pushed for, not by "have I ever
+// pushed one".
+describe('UnsavedChangesGuard — the Back sentinel tracks the URL it was pushed for', () => {
+  it('re-arming at the same URL does not stack a second sentinel', () => {
+    const push = vi.spyOn(window.history, 'pushState')
+    const { rerender } = render(<UnsavedChangesGuard when />)
+    expect(push).toHaveBeenCalledTimes(1)
+    rerender(<UnsavedChangesGuard when={false} />) // saved
+    rerender(<UnsavedChangesGuard when />) // dirtied again, same page
+    // Still one entry: a second would cost the user two Back presses.
+    expect(push).toHaveBeenCalledTimes(1)
+    push.mockRestore()
+  })
+
+  it('re-arming after the page navigated pushes a fresh sentinel', () => {
+    const push = vi.spyOn(window.history, 'pushState')
+    const { rerender } = render(<UnsavedChangesGuard when />)
+    expect(push).toHaveBeenCalledTimes(1) // sentinel for the first route
+    rerender(<UnsavedChangesGuard when={false} />) // saved; that sentinel is now stale
+    window.history.pushState(null, '', '/second-pane') // the app routes elsewhere (call 2)
+    rerender(<UnsavedChangesGuard when />) // a pane on the NEW route goes dirty
+    // Without a fresh sentinel here the next Back is a real route change and the
+    // edits are gone before the confirm can mean anything.
+    expect(push).toHaveBeenCalledTimes(3)
+    push.mockRestore()
+  })
+
+  it('Stay after a Back press re-pushes the sentinel for the current URL', async () => {
+    render(<UnsavedChangesGuard when />)
+    const push = vi.spyOn(window.history, 'pushState')
+    fireEvent.popState(window) // consumes the sentinel
+    fireEvent.click(await screen.findByRole('button', { name: 'Stay' }))
+    await waitFor(() => expect(push).toHaveBeenCalledTimes(1))
+    push.mockRestore()
   })
 })
