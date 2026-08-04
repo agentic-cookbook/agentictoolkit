@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 // Where the two drift gates get adh's OpenAPI spec — the one input neither of
 // them can derive.
 //
-// The spec belongs to adh (`frontend/src/main/api/openapi.json`) and this
+// The spec belongs to adh (`frontend/src/sites/api/openapi.json`) and this
 // package now lives inside agentictoolkit, which is consumed standalone by
 // repos that have no openapi.json at all. Both gates used to read
 // `resolve(process.cwd(), '../../main/api/openapi.json')`, a path that was only
@@ -26,7 +26,7 @@ export function skipNotice(gate: string): void {
   console.warn(
     `SKIPPED ${gate}: ADH_OPENAPI_SPEC is unset, so the committed generated ` +
       `module was cross-checked against nothing. Set it to an adh checkout's ` +
-      `frontend/src/main/api/openapi.json to run this gate.`,
+      `frontend/src/sites/api/openapi.json to run this gate.`,
   )
 }
 

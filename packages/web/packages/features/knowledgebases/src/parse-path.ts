@@ -1,6 +1,6 @@
 // The Knowledge Bases route's URL grammar — the ONE authoritative parse of a knowledgebases
 // route's catch-all path segments, ported faithfully from the hub route
-// (main/hub/app/[slug]/(workspace)/knowledgebases/[[...table]]/page.tsx). Table selection there is
+// (sites/hub/app/[slug]/(workspace)/knowledgebases/[[...table]]/page.tsx). Table selection there is
 // LOCAL state inside the pane, not a URL segment — the catch-all is accepted (so the route shape
 // exists for a future deep-link) but never read. Kept as a named parse (rather than each host
 // re-deciding "ignore the segments" independently) so a future revision that promotes selection to

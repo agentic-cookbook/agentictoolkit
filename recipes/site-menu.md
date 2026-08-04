@@ -214,7 +214,7 @@ LOGGED OUT (marketing)               LOGGED IN (/home + workspace)
   `hub-workspaces-menu-provider.tsx`); recorder
   `websites/main/hub/src/components/workspace/recents-recorder.tsx`.
 - The recorder observes `WorkspaceChromeProvider.mergedLevels`
-  (`frontend/src/main/hub/src/components/workspace/workspace-chrome.tsx`) — the one
+  (`frontend/src/sites/hub/src/components/workspace/workspace-chrome.tsx`) — the one
   place holding the full current selection path (with labels) for both nav models.
 - Demo: `frontend/src/local/ui-showcase/app/page.tsx` — a `site-menu` topic rendering
   both auth states with seeded workspaces + recents.

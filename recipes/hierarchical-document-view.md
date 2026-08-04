@@ -584,7 +584,7 @@ render tracing would not already show.
 - Tailwind classes in these files are self-registered by the package's
   `src/styles/components.css` (`@source "../blocks/**/*.{ts,tsx}"`), so a consuming
   site needs no extra `@source` entry.
-- First consumer: `frontend/src/main/cookbook` — `src/components/content/EntryView.tsx`
+- First consumer: `frontend/src/sites/cookbook` — `src/components/content/EntryView.tsx`
   and `src/components/layout/LayoutChrome.tsx`, with its adapters in
   `src/components/content/HdvLink.tsx`, `src/lib/hdv-meta.tsx`, `src/lib/hdv-nav.ts`
   (`toHdvNodes()`, narrowing away the four `NavNode` fields the tree never draws —

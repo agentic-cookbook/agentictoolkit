@@ -338,13 +338,20 @@ describe('LISTED_SITES (switcher list)', () => {
 })
 
 describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
-  // The Next app folders under frontend/src/ are the source of truth for the two
-  // families; these arrays must mirror them so a newly-scaffolded site can't
-  // silently drop out of the dev site menu.
+  // The Next app folders under frontend/src/sites/ are the source of truth for the two
+  // families TAKEN TOGETHER; the arrays must cover them exactly so a newly-scaffolded
+  // site can't silently drop out of the dev site menu.
+  //
+  // Until 2026-08-04 the families were two DIRECTORIES (frontend/src/main/ and
+  // frontend/src/marketing/), so each array could be held against its own folder. The
+  // sites now share one directory, and which family a site belongs to is a fact about
+  // the registry alone — nothing on disk can confirm it, so the scan is checked against
+  // the union. Neither array can drop a site or invent one; which of the two holds it
+  // is pinned by the no-dupes/no-overlap test below.
   //
   // Finding frontend/src is not a counted hop, and the previous `../../../..` is why:
   // this package moved into the agentictoolkit submodule, and four levels up from its
-  // new home is `<toolkit>/packages/web`, which has no `main/` or `marketing/` at all.
+  // new home is `<toolkit>/packages/web`, which holds none of adh's site folders.
   // It did not fail loudly at first glance either — the sibling siteRoutes.test.ts hit
   // the identical anchor and passed VACUOUSLY over an empty scan (349d1db); these two
   // only went red because readdirSync throws where that one's walk shrugged.
@@ -373,31 +380,27 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // the guard tracks site folders, not filesystem noise (a stray `.next` or
   // `node_modules` must not false-fail a test about the site registry).
   const NON_SITE_DIRS = new Set(['node_modules', 'dist', 'build', '.next', '.turbo'])
-  const siteFolders = (family: 'main' | 'marketing'): string[] => {
-    const root = frontendSrcDir as string
+  const siteFolders = (): string[] => {
+    const root = resolve(frontendSrcDir as string, 'sites')
     return (
-      readdirSync(resolve(root, family))
+      readdirSync(root)
         .filter((name) => !name.startsWith('.') && !NON_SITE_DIRS.has(name))
-        .filter((name) => statSync(resolve(root, family, name)).isDirectory())
+        .filter((name) => statSync(resolve(root, name)).isDirectory())
         // A real site folder is a Next app (has app/). Excludes data-only dirs like
-        // main/api (the committed openapi.json the api-types codegen + hub-help read),
+        // sites/api (the committed openapi.json the api-types codegen + hub-help read),
         // which gen-site-routes.py skips for the same reason.
-        .filter((name) => existsSync(resolve(root, family, name, 'app')))
+        .filter((name) => existsSync(resolve(root, name, 'app')))
         .sort()
     )
   }
 
-  it.skipIf(STANDALONE)('MAIN_SITE_IDS mirrors the frontend/src/main/ folders exactly', () => {
-    // Non-vacuity: an empty scan is what a wrong anchor looks like, and it is exactly how
-    // the sibling test passed while checking nothing.
-    expect(siteFolders('main').length).toBeGreaterThan(0)
-    expect([...MAIN_SITE_IDS].sort()).toEqual(siteFolders('main'))
-  })
   it.skipIf(STANDALONE)(
-    'MARKETING_SITE_IDS mirrors the frontend/src/marketing/ folders exactly',
+    'MAIN_SITE_IDS + MARKETING_SITE_IDS cover the frontend/src/sites/ folders exactly',
     () => {
-      expect(siteFolders('marketing').length).toBeGreaterThan(0)
-      expect([...MARKETING_SITE_IDS].sort()).toEqual(siteFolders('marketing'))
+      // Non-vacuity: an empty scan is what a wrong anchor looks like, and it is exactly
+      // how the sibling test passed while checking nothing.
+      expect(siteFolders().length).toBeGreaterThan(0)
+      expect([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS].sort()).toEqual(siteFolders())
     },
   )
   it('every family id is a real registry site, with no dupes or cross-family overlap', () => {

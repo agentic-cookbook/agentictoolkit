@@ -166,7 +166,7 @@ export const SITES: SiteDef[] = [
   // ([adh.sites.help]), which is what scaffold-sites.py generates this row from.
   { id: 'help', label: 'Help', fullLabel: 'Agentic Developer Help', description: 'Help topics', prodHost: 'agenticdeveloperhelp.com', hasStaging: true, hasTesting: true, hasHome: false, listed: false },
   // help.adh.com — the consolidated SSR help surface (chat, quickstart, reference, rest-api, mcp,
-  // hub), duplicated from the agenticdeveloperhelp.com app (id 'help') into frontend/src/main/hub-help.
+  // hub), duplicated from the agenticdeveloperhelp.com app (id 'help') into frontend/src/sites/hub-help.
   // LISTED: this is the family's Help destination (the landing above is delisted). HAND-MANAGED
   // inside the gen block: adh's `.shipr` marks it `core`, not `generated`, so scaffold-sites.py
   // does not emit this row — and re-running that generator DELETES it. Restore it by hand.

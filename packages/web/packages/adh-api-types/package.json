@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/adh-api-types",
   "version": "0.1.0",
-  "description": "Everything adh derives from the backend's OpenAPI spec (frontend/src/main/api/openapi.json): the generated TypeScript response types, the two generators that project the spec into the toolkit's crud + api-explorer packages, and the drift gates that keep those committed artifacts honest.",
+  "description": "Everything adh derives from the backend's OpenAPI spec (frontend/src/sites/api/openapi.json): the generated TypeScript response types, the two generators that project the spec into the toolkit's crud + api-explorer packages, and the drift gates that keep those committed artifacts honest.",
   "license": "UNLICENSED",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
   },
   "comment:generators": "All three generators READ adh's OpenAPI spec, which does NOT live in this repo — it is an explicit INPUT, passed as the first argument or via ADH_OPENAPI_SPEC, never a path derived by counting directories upward. They WRITE INTO sibling packages (crud + api-explorer own the runtime halves). The committed outputs are what ships, so a consumer without an adh checkout builds fine; only regeneration needs the spec. tools/codegen/targets.py drives all three as the `ts`, `crud` and `api-explorer` targets.",
   "scripts": {
-    "gen": "openapi-typescript \"${ADH_OPENAPI_SPEC:?set ADH_OPENAPI_SPEC to <adh>/frontend/src/main/api/openapi.json — adh’s spec is not in this repo}\" -o src/schema.ts",
+    "gen": "openapi-typescript \"${ADH_OPENAPI_SPEC:?set ADH_OPENAPI_SPEC to <adh>/frontend/src/sites/api/openapi.json — adh’s spec is not in this repo}\" -o src/schema.ts",
     "gen:crud-metadata": "python3 tools/gen_table_metadata.py",
     "gen:api-endpoints": "python3 tools/gen_endpoints.py",
     "lint": "tsc --noEmit",

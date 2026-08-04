@@ -11,7 +11,7 @@ export { SiteFooter } from './SiteFooter'
 export type { SiteFooterProps } from './SiteFooter'
 export { SITES_OVERVIEW_POPOVER_ID } from './SitesOverview'
 // The seeded-backend primitives are exported because the Help sites reuse them
-// (see main/help/src/components/helpMockBackend.ts); the footer itself no longer
+// (see sites/help/src/components/helpMockBackend.ts); the footer itself no longer
 // does — bitbag speaks his own scripted voice through BitbagDock.
 export { BITBAG_PERSONA, createSeededBackend } from './seededBackend'
 export type { SeededReply, SeededBackendOptions } from './seededBackend'
