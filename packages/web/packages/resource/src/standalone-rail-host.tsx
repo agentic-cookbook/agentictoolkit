@@ -34,6 +34,7 @@ import {
 export function StandaloneRailHost({
   children,
   onDirtyChange,
+  onNavigate,
 }: {
   children: ReactNode;
   /** Reports this host's dirtiness — `guards.size > 0` — to a caller that has no other way to
@@ -42,6 +43,14 @@ export function StandaloneRailHost({
    *  more with `false` on unmount, so an unmounting host never leaves the caller believing it is
    *  still dirty. Optional: omit it and the host behaves exactly as before. */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Forwarded to the {@link UnsavedChangesGuard} this host mounts, so a Discard that follows an
+   *  intercepted in-app link click routes through the caller's own router instead of the guard's
+   *  default `window.location.assign` fallback — see its doc. This package still owns no router
+   *  instance and still never calls `next/navigation`'s `useRouter` itself: the prop lets a caller
+   *  that has one (the hub shell, or a feature site's own layout) supply it, the same way
+   *  `onDirtyChange` is supplied rather than read from context. Optional: omit it and Discard
+   *  falls back to a full document load, exactly as before this prop existed. */
+  onNavigate?: (href: string) => void;
 }): ReactElement {
   const [registry, setRegistry] = useState<ReadonlyMap<string, RegisteredLevels>>(new Map());
   const [guards, setGuards] = useState<ReadonlyMap<string, PaneExitGuard>>(new Map());
@@ -118,11 +127,9 @@ export function StandaloneRailHost({
           pane is dirty (publishers register on dirty, not on "editor open"), which is what makes
           this a render value. IN-PANE exits (row switch, breadcrumb, re-click) are guarded
           separately by the HTD below via `exitGuard`.
-          No `onNavigate`: this package owns no router instance, and reading one here
-          (next/navigation's useRouter) would make every standalone mount require an app-router
-          context — a dependency the host, not the toolkit, is the right place to supply. Discard on
-          an intercepted link therefore falls back to a full document load. */}
-      <UnsavedChangesGuard when={guards.size > 0} />
+          `onNavigate` is forwarded straight through, unmodified, to whatever this host's caller
+          supplied — see the prop's doc above. */}
+      <UnsavedChangesGuard when={guards.size > 0} onNavigate={onNavigate} />
       <HierarchicalDetailView levels={mergedLevels} showBreadcrumb={false} exitGuard={exitGuard}>
         {children}
       </HierarchicalDetailView>
@@ -141,6 +148,7 @@ export function StandaloneRailHost({
 export function RailHostBoundary({
   children,
   onDirtyChange,
+  onNavigate,
 }: {
   children: ReactNode;
   /** Forwarded to the {@link StandaloneRailHost} this creates when there is no host above —
@@ -148,11 +156,17 @@ export function RailHostBoundary({
    *  own dirty-gating, so nothing here would be safe to report to a caller-supplied callback
    *  without double-prompting whatever already gates the ancestor host's exits. */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Forwarded to the {@link StandaloneRailHost} this creates when there is no host above — see
+   *  its doc. Inert in the pass-through case (a host already exists): that host's own guard mount
+   *  already owns whichever `onNavigate` it was given, so there is nothing here to forward it to. */
+  onNavigate?: (href: string) => void;
 }): ReactElement {
   const host = useRailHost();
   return host ? (
     <>{children}</>
   ) : (
-    <StandaloneRailHost onDirtyChange={onDirtyChange}>{children}</StandaloneRailHost>
+    <StandaloneRailHost onDirtyChange={onDirtyChange} onNavigate={onNavigate}>
+      {children}
+    </StandaloneRailHost>
   );
 }

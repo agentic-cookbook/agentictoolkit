@@ -96,70 +96,68 @@ export function SendInvitationModal({
   }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) requestCancel() }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-apt-gold">{title}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            {hasSms && (
-              <FieldGroup title="SMS">
-                <Field label="Recipients">
-                  <RecipientInput
-                    kind="phone"
-                    ariaLabel="SMS recipients"
-                    value={smsRecipients}
-                    onChange={setSmsRecipients}
-                    separateInput
-                    readOnly
-                  />
-                </Field>
-                <Field label="Note (optional)">
-                  <Textarea
-                    value={smsNote}
-                    onChange={(e) => setSmsNote(e.target.value)}
-                  />
-                </Field>
-              </FieldGroup>
-            )}
-            {hasEmail && (
-              <FieldGroup title="Email">
-                <Field label="Recipients">
-                  <RecipientInput
-                    kind="email"
-                    ariaLabel="Email recipients"
-                    value={emailRecipients}
-                    onChange={setEmailRecipients}
-                    separateInput
-                    readOnly
-                  />
-                </Field>
-                <Field label="Note (optional)">
-                  <Textarea
-                    value={emailNote}
-                    onChange={(e) => setEmailNote(e.target.value)}
-                  />
-                </Field>
-              </FieldGroup>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={requestCancel}>
-              Cancel
-            </Button>
-            <Button size="sm" disabled={!canSend || busy} onClick={send}>
-              {busy && <Loader2 className="size-3.5 animate-spin" />}
-              Send
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <UnsavedChangesAlert
-        open={confirming}
-        onDiscard={close}
-        onStay={() => setConfirming(false)}
-      />
-    </>
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) requestCancel() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-apt-gold">{title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          {hasSms && (
+            <FieldGroup title="SMS">
+              <Field label="Recipients">
+                <RecipientInput
+                  kind="phone"
+                  ariaLabel="SMS recipients"
+                  value={smsRecipients}
+                  onChange={setSmsRecipients}
+                  separateInput
+                  readOnly
+                />
+              </Field>
+              <Field label="Note (optional)">
+                <Textarea
+                  value={smsNote}
+                  onChange={(e) => setSmsNote(e.target.value)}
+                />
+              </Field>
+            </FieldGroup>
+          )}
+          {hasEmail && (
+            <FieldGroup title="Email">
+              <Field label="Recipients">
+                <RecipientInput
+                  kind="email"
+                  ariaLabel="Email recipients"
+                  value={emailRecipients}
+                  onChange={setEmailRecipients}
+                  separateInput
+                  readOnly
+                />
+              </Field>
+              <Field label="Note (optional)">
+                <Textarea
+                  value={emailNote}
+                  onChange={(e) => setEmailNote(e.target.value)}
+                />
+              </Field>
+            </FieldGroup>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={requestCancel}>
+            Cancel
+          </Button>
+          <Button size="sm" disabled={!canSend || busy} onClick={send}>
+            {busy && <Loader2 className="size-3.5 animate-spin" />}
+            Send
+          </Button>
+        </DialogFooter>
+        <UnsavedChangesAlert
+          open={confirming}
+          onDiscard={close}
+          onStay={() => setConfirming(false)}
+        />
+      </DialogContent>
+    </Dialog>
   )
 }

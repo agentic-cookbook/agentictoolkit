@@ -88,63 +88,61 @@ export function AddUsersModal({
   }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={(o) => { if (!o) requestCancel() }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-apt-gold">{title}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <DataTable
-              columns={COLS}
-              rows={rows}
-              getRowId={(r) => r.id}
-              selectedIds={selected}
-              onSelectionChange={setSelected}
-              emptyLabel="No users added yet."
-              ariaLabel="Staged users"
-              className="max-h-56"
-            />
-            <div className="flex items-end gap-2"
-              onKeyDown={(e) => { if ((e.target as HTMLElement).tagName === 'INPUT') onEntryKey(e) }}>
-              <Field label="Name">
-                <Input ref={nameRef} aria-label="Name" value={draft.name} onChange={setField("name")} />
-              </Field>
-              <Field label="Email">
-                <Input aria-label="Email" type="email" value={draft.email} onChange={setField("email")} />
-              </Field>
-              <Field label="Phone">
-                <Input aria-label="Phone" type="tel" value={draft.phone} onChange={setField("phone")} />
-              </Field>
-              <Field label="Admin note">
-                <Input aria-label="Admin note" value={draft.note} onChange={setField("note")} />
-              </Field>
-              <div className="flex-1" />
-              <Button size="sm" variant="outline" onClick={addRow} aria-label="Add user to list">
-                Add
-              </Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={requestCancel}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={rows.length === 0 || busy}
-              onClick={commit}
-              aria-label="Add all users"
-            >
+    <Dialog open={open} onOpenChange={(o) => { if (!o) requestCancel() }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-apt-gold">{title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <DataTable
+            columns={COLS}
+            rows={rows}
+            getRowId={(r) => r.id}
+            selectedIds={selected}
+            onSelectionChange={setSelected}
+            emptyLabel="No users added yet."
+            ariaLabel="Staged users"
+            className="max-h-56"
+          />
+          <div className="flex items-end gap-2"
+            onKeyDown={(e) => { if ((e.target as HTMLElement).tagName === 'INPUT') onEntryKey(e) }}>
+            <Field label="Name">
+              <Input ref={nameRef} aria-label="Name" value={draft.name} onChange={setField("name")} />
+            </Field>
+            <Field label="Email">
+              <Input aria-label="Email" type="email" value={draft.email} onChange={setField("email")} />
+            </Field>
+            <Field label="Phone">
+              <Input aria-label="Phone" type="tel" value={draft.phone} onChange={setField("phone")} />
+            </Field>
+            <Field label="Admin note">
+              <Input aria-label="Admin note" value={draft.note} onChange={setField("note")} />
+            </Field>
+            <div className="flex-1" />
+            <Button size="sm" variant="outline" onClick={addRow} aria-label="Add user to list">
               Add
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <UnsavedChangesAlert
-        open={confirming}
-        onDiscard={close}
-        onStay={() => setConfirming(false)}
-      />
-    </>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={requestCancel}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={rows.length === 0 || busy}
+            onClick={commit}
+            aria-label="Add all users"
+          >
+            Add
+          </Button>
+        </DialogFooter>
+        <UnsavedChangesAlert
+          open={confirming}
+          onDiscard={close}
+          onStay={() => setConfirming(false)}
+        />
+      </DialogContent>
+    </Dialog>
   )
 }

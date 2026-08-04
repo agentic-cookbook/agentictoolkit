@@ -125,4 +125,35 @@ describe('SendInvitationModal', () => {
     expect(onSend).toHaveBeenCalledWith({ email: { recipients: ['a@x.io'], note: '' } })
     expect(onSend).not.toHaveBeenCalledWith(expect.objectContaining({ sms: expect.anything() }))
   })
+
+  // The alert must be mounted INSIDE <DialogContent>, not as a sibling of the outer <Dialog>,
+  // because the outer dialog is still open while the alert asks whether to close it — two
+  // stacked base-ui modal Dialogs, one of which must be registered as the other's NESTED dialog
+  // or base-ui's inerting can trap the user in a dialog they can neither dismiss nor confirm.
+  //
+  // In jsdom, `discard.closest('[aria-hidden="true"]')`/`closest('[inert]')` are NOT
+  // discriminating: base-ui always keeps the most-recently-opened Dialog.Root interactive and
+  // inerts the other regardless of React-tree placement (verified by rendering both the sibling
+  // and the nested shape and diffing the DOM) — so they pass here even against the pre-fix
+  // sibling placement, and are asserted only as a sanity floor, not proof.
+  //
+  // The actual proof is `data-nested-dialog-open`: base-ui's DialogPopup sets it on the OUTER
+  // popup only when a descendant Dialog.Root registers itself as nested through the
+  // DialogRootContext React (not DOM) tree — see @base-ui/react's
+  // dialog/popup/DialogPopupDataAttributes.js and dialog/root/useDialogRoot.js. A
+  // sibling-mounted alert is an unrelated, independent Dialog.Root that never reaches that
+  // context, so the attribute stays absent even though the alert renders on top and looks fine.
+  it('is registered as a NESTED dialog of the modal it gates, not an independent sibling', () => {
+    const onClose = vi.fn()
+    render(<SendInvitationModal open emails={['a@x.io']} onSend={vi.fn()} onClose={onClose} />)
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'welcome!' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    const discard = screen.getByRole('button', { name: 'Discard' })
+    expect(discard.closest('[aria-hidden="true"]')).toBeNull()
+    expect(discard.closest('[inert]')).toBeNull()
+
+    const outerDialog = screen.getByText('Send invitation').closest('[role="dialog"]')
+    expect(outerDialog).toHaveAttribute('data-nested-dialog-open')
+  })
 })
