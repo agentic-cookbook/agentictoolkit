@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactElement,
+  type ReactNode,
 } from "react";
 import { Trash2 } from "lucide-react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -69,9 +70,21 @@ const KINDS: ProjectParticipant["participantKind"][] = ["customer", "persona", "
 export function ProjectOverviewPane({
   projectId,
   title,
+  renderTransferOwnership,
 }: {
   projectId: string;
   title: string;
+  /**
+   * Host-injected Transfer Ownership section, rendered last in the pane. Absent on a standalone
+   * feature site (`frontend/src/marketing/projects` mounts `ProjectsFeature` without it) — the
+   * host owns the workspace list and the mutation.
+   *
+   * Handed the LOADED project rather than the editable draft above: `name` is a separate piece of
+   * state that only re-syncs from a project row on load and after a save adopts the returned one,
+   * so a typed-but-unsaved rename would otherwise reach the confirmation dialog as the object's
+   * name while the server still knows it by the old one.
+   */
+  renderTransferOwnership?: (project: { id: string; name: string }) => ReactNode;
 }): ReactElement {
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.
@@ -409,6 +422,9 @@ export function ProjectOverviewPane({
                 </List>
               )}
             </div>
+
+            {/* ── Transfer ─────────────────────────────────────────────── */}
+            {renderTransferOwnership && renderTransferOwnership(project)}
           </>
         )}
       </section>

@@ -42,18 +42,28 @@ export interface TransferResult {
 /**
  * The entity types the server's `TRANSFER_PLANS` registry actually implements.
  *
- * FOUR, not six. `project` and `site-group` are planned but unregistered, and the server 400s them.
- * Documenting a capability the API refuses is worse than documenting none — it reads as a working
- * call site. The union GROWS as plans are registered (server: `TransferableEntityType`, derived
- * from the registry itself), and this list moves in the same commit.
+ * SIX. The registry decides, not this file: the server derives its own `TransferableEntityType` as
+ * `keyof typeof TRANSFER_PLANS` (backend `src/lib/transfer-plans.ts`), so a type listed here that
+ * the registry does not hold is a call site the API answers 400 — this list moves in the same
+ * commit as a new plan.
  *
- * `target` means something DIFFERENT for the last two. A persona or an ecosystem is transferred to
- * a WORKSPACE, so `target` is a workspace slug and `targetKind` disambiguates its namespace. An
- * application or a bucket hangs off an ecosystem, not off a workspace, so its `target` is a
- * PRODUCT rdid (`ecosystem.…`) and `targetKind` is meaningless — the authorized destination
- * workspace is whichever one owns that Product, which the server resolves.
+ * `target` means something DIFFERENT for `application` and `bucket`. The other four are
+ * transferred to a WORKSPACE, so `target` is a workspace slug and `targetKind` disambiguates its
+ * namespace. An application or a bucket hangs off an ecosystem, not off a workspace, so its
+ * `target` is a PRODUCT rdid (`ecosystem.…`) and `targetKind` is meaningless — the authorized
+ * destination workspace is whichever one owns that Product, which the server resolves.
+ *
+ * `project` and `site-group` are not rdid-addressed — their plans carry `entityType: null`, so the
+ * transfer repoints an owner and re-addresses nothing. {@link TransferPreview.newId} and
+ * `previousId` therefore come back null for both, and the dialog simply omits the new-address line.
  */
-export type TransferEntityType = "persona" | "ecosystem" | "application" | "bucket";
+export type TransferEntityType =
+  | "persona"
+  | "ecosystem"
+  | "application"
+  | "bucket"
+  | "project"
+  | "site-group";
 
 /** Which NAMESPACE a workspace slug is drawn from — see {@link TransferRequest.targetKind}. */
 export type TransferTargetKind = "customer" | "organization";

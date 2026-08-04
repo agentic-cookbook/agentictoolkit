@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Layers } from "lucide-react";
 import type { SiteGroupView } from "@agentic-toolkit/data/monitored-sites";
 import { createGroup, deleteGroup, updateGroup } from "@agentic-toolkit/data/monitored-sites";
@@ -41,6 +41,7 @@ export function GroupsSection({
   leaf,
   reservedSlugs,
   workspaceSlug,
+  renderTransferOwnership,
 }: {
   groups: SiteGroupView[] | null;
   onChanged: () => Promise<void>;
@@ -50,6 +51,17 @@ export function GroupsSection({
   reservedSlugs?: ReadonlySet<string>;
   /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`). */
   workspaceSlug?: string;
+  /**
+   * Host-injected Transfer Ownership section for the open group, rendered under the INLINE editor
+   * below. Absent on a standalone feature site (`frontend/src/marketing/dashboards` mounts
+   * `DashboardsFeature` without it) — the host owns the workspace list and the mutation.
+   *
+   * A group, not a site: `SitesSection` has no equivalent seam, because `SiteView.groupId`
+   * (@agentic-toolkit/data/monitored-sites) is a required field — "the single group this site
+   * belongs to" — so a site moved on its own would still be a member of a group in the workspace
+   * it just left.
+   */
+  renderTransferOwnership?: (group: { id: string; name: string }) => ReactNode;
 }) {
   const ws = { workspace: workspaceSlug };
   const renderRecordAffordance = useRecordAffordance();
@@ -118,14 +130,23 @@ export function GroupsSection({
           title: "Site group API",
         })}
         emptyTitle={groups === null ? "Loading…" : "Select a group to edit, or create a new one."}
+        // The transfer section belongs to the INLINE editor and only to it. `renderDetail` is
+        // called by MasterDetailLeaf alone; the "New group" popup below builds its own GroupDetail
+        // through CreateResourceDialog's `renderForm`, so a section placed inside GroupDetail
+        // itself would appear in the creation popup and offer to move a group that does not exist
+        // yet. `form.selected` (the SAVED row, resolved from `groups` by the selected id) is what
+        // it is handed for the same reason the id alone would not do: the name in the fields above
+        // is a draft until Save, and the dialog must name the group the server knows.
         renderDetail={(draft) => (
-          <GroupDetail
-            key={form.detailKey}
-            title="Group"
-            draft={draft}
-            onChange={form.onChange}
-            error={form.error}
-          />
+          <div key={form.detailKey} className="flex flex-col gap-6">
+            <GroupDetail
+              title="Group"
+              draft={draft}
+              onChange={form.onChange}
+              error={form.error}
+            />
+            {form.selected && renderTransferOwnership && renderTransferOwnership(form.selected)}
+          </div>
         )}
       />
       {newOpen && (

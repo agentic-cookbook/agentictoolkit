@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Layers, Globe } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 
@@ -37,6 +37,7 @@ export function DashboardsFeature({
   rowId,
   reservedSlugs,
   workspaceSlug,
+  renderTransferOwnership,
 }: {
   /** The feature's URL base (drives the routes): the hub route passes `/<slug>/dashboards`.
    *  Supplied by the host rather than derived here, so the same feature mounts under either
@@ -46,14 +47,19 @@ export function DashboardsFeature({
   section?: string;
   /** The selected group/site row id (second path segment), or undefined for none. */
   rowId?: string;
-  /** The HOST's reserved slug words, as an ARRAY (this prop crosses the RSC boundary from
-   *  server route pages, so it must be serializable — a Set is not). The pre-extraction
-   *  hub bound its list implicitly via its validateSlug wrapper. */
+  /** The HOST's reserved slug words, as an ARRAY rather than a Set: a Set cannot cross the RSC
+   *  boundary, and a host may render this feature straight from a server route page (the
+   *  dashboards site's `/home` does). The Set the validators consume is built below, from this.
+   *  The pre-extraction hub bound its list implicitly via its validateSlug wrapper. */
   reservedSlugs?: readonly string[];
   /** Pins every op to the WORKSPACE'S owning principal (backend `?workspace=`), so an org
    *  workspace shows the ORG'S monitored sites and creates org-owned ones. Omitted: the
    *  caller's own. */
   workspaceSlug?: string;
+  /** Host-injected Transfer Ownership section for the open GROUP, forwarded to
+   *  {@link GroupsSection} (see its own prop for why the group and not a site). Omit it and no
+   *  section renders — the host, not this feature, owns the workspace list and the mutation. */
+  renderTransferOwnership?: (group: { id: string; name: string }) => ReactNode;
 }) {
   // The hook stays unconditional (rules of hooks); its pushes are only reachable when
   // basePath is set — the embedded mode below never builds URL-driven selections.
@@ -131,6 +137,7 @@ export function DashboardsFeature({
                 leaf={leaf}
                 reservedSlugs={reserved}
                 workspaceSlug={workspaceSlug}
+                renderTransferOwnership={renderTransferOwnership}
                 onChanged={async () => {
                   await refreshGroups();
                   // A deleted group is stripped from site membership, so refresh sites too to keep

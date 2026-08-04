@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, type ReactElement } from "react";
+import { useCallback, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FolderKanban, ListTodo, Activity, Building2, KeyRound, User } from "lucide-react";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
@@ -118,6 +118,7 @@ export function ProjectsFeature({
   activeLeafId,
   workspaceSlug,
   showWorkspaces = false,
+  renderTransferOwnership,
 }: {
   /** The feature's URL base (drives the routes + the list cache key): the hub passes
    *  `/<slug>/projects`, the projects site passes `/home`. Supplied by the host route
@@ -137,6 +138,11 @@ export function ProjectsFeature({
    *  rail, so the hub leaves this false and passes `workspaceSlug` straight from the URL. With it
    *  on, the workspace is the FIRST segment under `basePath` (`/home/<slug>/<project>/<topic>`). */
   showWorkspaces?: boolean;
+  /** Host-injected Transfer Ownership section for the OPEN project, forwarded to the Overview
+   *  topic's pane (see {@link ProjectOverviewPane}'s own prop for what it is handed). Omit it and
+   *  the pane renders no section — the host, not this feature, owns the workspace list and the
+   *  mutation. */
+  renderTransferOwnership?: (project: { id: string; name: string }) => ReactNode;
 }): ReactElement {
   const router = useRouter();
 
@@ -203,7 +209,11 @@ export function ProjectsFeature({
       // `projectId` is defined here; guard keeps the type honest.
       render: (projectId, titleFor) =>
         projectId ? (
-          <ProjectOverviewPane projectId={projectId} title={titleFor("Overview")} />
+          <ProjectOverviewPane
+            projectId={projectId}
+            title={titleFor("Overview")}
+            renderTransferOwnership={renderTransferOwnership}
+          />
         ) : null,
     },
     {
