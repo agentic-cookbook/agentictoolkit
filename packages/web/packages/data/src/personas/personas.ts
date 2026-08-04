@@ -105,8 +105,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    // Persona rdids are DERIVED — `persona.<owner-slug>.<slug>` — from the stored slug, and this
-    // body always carries `slug`, so the PUT IS the rename: generic CRUD sees the address columns
+    // Persona rdids are DERIVED — `persona.<owner-address>.<slug>`, where the owner segment is
+    // itself an rdid (`org.<slug>` or `user.<eco-path>.<slug>`) and NOT a bare workspace slug; the
+    // slug is the only user-editable segment (the leaf). The address is derived from the stored
+    // slug, and this body always carries `slug`, so the PUT IS the rename: CRUD sees the address
     // move and cascades the new address onto the handle and every descendant. Mirrors
     // ecosystemsApi.update(), including what was removed from it — the follow-up
     // `identifiersApi.rename` was a SECOND rename of a handle the cascade had already moved, from

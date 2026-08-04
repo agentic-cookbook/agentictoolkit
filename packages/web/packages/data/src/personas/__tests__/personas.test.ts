@@ -1,9 +1,10 @@
-// Persona rdids are DERIVED (`persona.<owner-slug>.<slug>`) from the stored slug, and the update
-// body always carries `slug` — so the PUT IS the rename: the server moves the address columns and
-// cascades the new address onto the handle. `api.personas.update()` is therefore ONE call, and the
-// id it returns is the server's derived answer, never a client-side leaf swap. Only the transport
-// (`authedJson`, re-exported by `../personas` via `../http` from `@agentic-toolkit/auth/client`) is
-// stubbed.
+// Persona rdids are DERIVED (`persona.<owner-address>.<slug>`, where the owner segment is itself an
+// rdid — `org.<slug>` or `user.<eco-path>.<slug>` — NOT a bare workspace slug) from the stored slug,
+// and the update body always carries `slug` — so the PUT IS the rename: the server moves the address
+// columns and cascades the new address onto the handle. `api.personas.update()` is therefore ONE
+// call, and the id it returns is the server's derived answer, never a client-side leaf swap. Only
+// the transport (`authedJson`, re-exported by `../personas` via `../http` from
+// `@agentic-toolkit/auth/client`) is stubbed.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@agentic-toolkit/auth/client", async (importOriginal) => ({
