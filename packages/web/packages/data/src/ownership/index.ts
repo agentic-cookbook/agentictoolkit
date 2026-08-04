@@ -3,14 +3,23 @@ import { authedJson } from "../http";
 /** A principal who loses reach over the object when it moves.
  *
  *  `via` is the provenance of the access being taken away: an explicit grant in the roles layer
- *  (`role`), reach inherited through a team roster (`team`), a direct persona grant (`direct`), or
- *  a seat on the subject project's participant list (`participant`). They are separate because the
- *  admin confirming the dialog manages them on different surfaces. */
+ *  (`role`), reach inherited through a team roster (`team`), a direct persona grant (`direct`), a
+ *  seat on the subject project's participant list (`participant`), or a seat in a storage bucket's
+ *  access group (`group`). They are separate because the admin confirming the dialog manages them
+ *  on different surfaces — a `group` loss is managed on the bucket's Access Groups panel and
+ *  nowhere else, and it is the WHOLE authorization story for a bucket, which carries no row-level
+ *  security behind it.
+ *
+ *  `kind` spans both layers. `user`, `team` and `persona` are what the roles layer produces;
+ *  `organization`, `app` and `token` appear only through a bucket access group, whose member list
+ *  admits all five non-team principal types. Rendered as bare strings, so a new member here needs
+ *  no rendering change. Mirrors the server's `RevokedSubject` (backend `src/lib/transfer-plans.ts`)
+ *  and its OpenAPI enums, and moves in the same commit as those. */
 export interface RevokedSubject {
-  kind: 'user' | 'team' | 'persona';
+  kind: 'user' | 'team' | 'persona' | 'organization' | 'app' | 'token';
   id: string;
   name: string;
-  via: "role" | "team" | "direct" | "participant";
+  via: "role" | "team" | "direct" | "participant" | "group";
 }
 
 export interface TransferPreview {
@@ -33,13 +42,18 @@ export interface TransferResult {
 /**
  * The entity types the server's `TRANSFER_PLANS` registry actually implements.
  *
- * TWO, not six. The previous doc comment listed `application`, `bucket`, `project` and
- * `site-group` alongside these; all four are planned but unregistered, and the server 400s them.
+ * FOUR, not six. `project` and `site-group` are planned but unregistered, and the server 400s them.
  * Documenting a capability the API refuses is worse than documenting none — it reads as a working
  * call site. The union GROWS as plans are registered (server: `TransferableEntityType`, derived
  * from the registry itself), and this list moves in the same commit.
+ *
+ * `target` means something DIFFERENT for the last two. A persona or an ecosystem is transferred to
+ * a WORKSPACE, so `target` is a workspace slug and `targetKind` disambiguates its namespace. An
+ * application or a bucket hangs off an ecosystem, not off a workspace, so its `target` is a
+ * PRODUCT rdid (`ecosystem.…`) and `targetKind` is meaningless — the authorized destination
+ * workspace is whichever one owns that Product, which the server resolves.
  */
-export type TransferEntityType = "persona" | "ecosystem";
+export type TransferEntityType = "persona" | "ecosystem" | "application" | "bucket";
 
 /** Which NAMESPACE a workspace slug is drawn from — see {@link TransferRequest.targetKind}. */
 export type TransferTargetKind = "customer" | "organization";
@@ -48,7 +62,7 @@ export interface TransferRequest {
   entityType: TransferEntityType;
   /** rdid or UUID. */
   entityId: string;
-  /** Target workspace slug. */
+  /** Target workspace slug — or, for `application` and `bucket`, a Product rdid. */
   target: string;
   /**
    * Which namespace `target` names. OPTIONAL on the wire, but send it whenever you know: customer

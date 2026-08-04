@@ -71,6 +71,48 @@ describe('TransferOwnershipSection', () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(targets[1]))
   })
 
+  it('names a bucket access-group loss, including principals only that layer can produce', async () => {
+    /**
+     * A storage bucket's authorization is its `access.groups` seats and nothing else — the bucket
+     * tables carry no row-level security behind them — so a group seat is its own `via` ("group"),
+     * and the member list admits principals the roles layer never yields (an organization, an app,
+     * an API token). The preview is the only place an admin sees them before the move.
+     *
+     * The literal below is annotated `TransferPreviewResult` on purpose: it is a COMPILE-time
+     * assertion as much as a runtime one. Narrow `revoking`'s unions back to the roles-layer
+     * spellings and `pnpm run lint` (tsc --noEmit) fails on this object, before any test runs.
+     */
+    const preview: TransferPreviewResult = {
+      newId: 'storage.bob.shop.assets',
+      tokens: 0,
+      revoking: [
+        { kind: 'organization', id: 'o1', name: 'Northwind', via: 'group' },
+        { kind: 'token', id: 't1', name: 'ci-deploy', via: 'group' },
+        { kind: 'app', id: 'a1', name: 'Reporter', via: 'group' },
+      ],
+    }
+    const onPreview = vi.fn().mockResolvedValue(preview)
+
+    render(
+      <TransferOwnershipSection
+        entityNoun="Storage Bucket"
+        entityLabel="storage.alice.shop.assets"
+        targets={targets}
+        onPreview={onPreview}
+        onConfirm={vi.fn()}
+      />,
+    )
+    openSection()
+    await openMenu('Transfer Storage Bucket')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
+
+    // Every one of the three is rendered: a subject the dialog cannot name is a loss the admin
+    // authorizes blind.
+    expect(await screen.findByText(/Northwind/)).toBeTruthy()
+    expect(screen.getByText(/ci-deploy/)).toBeTruthy()
+    expect(screen.getByText(/Reporter/)).toBeTruthy()
+  })
+
   it('disables the workspace that already owns the object', async () => {
     render(
       <TransferOwnershipSection

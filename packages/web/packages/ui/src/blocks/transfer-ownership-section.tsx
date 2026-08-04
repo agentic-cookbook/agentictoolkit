@@ -77,13 +77,16 @@ export interface TransferPreviewResult {
   newId: string | null;
   tokens: number;
   // `via` mirrors the server's `RevokedSubject['via']` (@agentic-toolkit/data ownership) — a
-  // participant seat is its own provenance, not a flavour of "direct". Rendered as a bare string
-  // below, so a new member needs no rendering change, only this union.
+  // participant seat is its own provenance, not a flavour of "direct", and neither is a bucket
+  // access-group seat ("group"). `kind` likewise spans both layers: "organization", "app" and
+  // "token" reach this list only through a bucket access group, whose member list admits them.
+  // Both are rendered as bare strings below, so a new member needs no rendering change, only the
+  // union — but dropping one would silently narrow what the dialog can be handed.
   revoking: {
-    kind: "user" | "team" | "persona";
+    kind: "user" | "team" | "persona" | "organization" | "app" | "token";
     id: string;
     name: string;
-    via: "role" | "team" | "direct" | "participant";
+    via: "role" | "team" | "direct" | "participant" | "group";
   }[];
 }
 
