@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Trash2, TriangleAlert } from "lucide-react";
+import { Archive, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "../components/button";
 import { Input } from "../components/input";
 import { Label } from "../components/label";
@@ -24,7 +24,15 @@ export interface DeleteEntitySectionProps {
   entityNoun: string;
   /** The exact value the user must type to confirm (the entity's rdid). */
   confirmValue: string;
-  /** Child data the delete cascades through, e.g. "applications, buckets, and users". */
+  /**
+   * Child data the action affects, composed into a different carrier sentence depending on
+   * `actionVerb.reversible` — the two shapes are not interchangeable:
+   *  - Default (not reversible): "…deletes all the data associated with the {noun}, including
+   *    {childEntities}." — a plain noun phrase, e.g. "applications, buckets, and users".
+   *  - Reversible (`actionVerb.reversible: true`): "…affects {childEntities}." — this carrier
+   *    reads naturally with a full relative clause instead, e.g. "its handle, which is released
+   *    for anyone to claim" (see the organization Archive caller).
+   */
   childEntities: string;
   /** Performs the delete (and any post-delete navigation). Throwing shows an inline error. */
   onConfirm: () => Promise<void>;
@@ -32,18 +40,23 @@ export interface DeleteEntitySectionProps {
   description?: React.ReactNode;
   /**
    * The verb this section's copy is built from, in the two grammatical forms it needs, plus
-   * whether that verb is reversible. Defaults to `{ imperative: "Delete", gerund: "Deleting" }`
-   * (not reversible) — so passing no `actionVerb` at all renders today's exact wording, including
-   * every "Permanently" / "cannot be undone" / "deletion" phrase, unchanged.
+   * whether that verb is reversible. `reversible` is required on the object — verb and
+   * permanence are never independently settable, so a caller cannot write an object that type-
+   * checks yet is self-contradicting (e.g. `{ imperative: "Archive", gerund: "Archiving" }`
+   * rendering "Permanently archive this organization … This cannot be undone."). Defaults to
+   * `{ imperative: "Delete", gerund: "Deleting", reversible: false }` — so passing no
+   * `actionVerb` at all renders today's exact wording, including every "Permanently" / "cannot
+   * be undone" / "deletion" phrase, unchanged.
    *
    * Pass `reversible: true` (e.g. `{ imperative: "Archive", gerund: "Archiving", reversible:
    * true }`) for an action the user can undo later — this swaps out every phrase in the section
-   * that otherwise asserts permanence, irreversibility, or data destruction, not just the verb.
+   * that otherwise asserts permanence, irreversibility, or data destruction, not just the verb,
+   * and swaps the trigger button's glyph from the trash-can to an archive box.
    * A caller whose action is reversible should still pass its own `description`: the built-in
    * fallback is generic ("can be undone later") where a specific caller usually has a sharper
    * one to give (e.g. what un-archiving restores).
    */
-  actionVerb?: { imperative: string; gerund: string; reversible?: boolean };
+  actionVerb?: { imperative: string; gerund: string; reversible: boolean };
 }
 
 const article = (noun: string): string =>
@@ -69,7 +82,7 @@ export function DeleteEntitySection({
   childEntities,
   onConfirm,
   description,
-  actionVerb = { imperative: "Delete", gerund: "Deleting" },
+  actionVerb = { imperative: "Delete", gerund: "Deleting", reversible: false },
 }: DeleteEntitySectionProps): React.ReactElement {
   const inputId = React.useId();
   // The section is a disclosure, collapsed by default (so the destructive
@@ -85,11 +98,66 @@ export function DeleteEntitySection({
   const noun = entityNoun.toLowerCase();
   const verb = actionVerb.imperative;
   const verbLower = verb.toLowerCase();
-  const reversible = actionVerb.reversible ?? false;
+  const reversible = actionVerb.reversible;
   // Exact match: case-sensitive, no normalization/trim — typed must equal the rdid.
   // Guard the empty case: an empty `confirmValue` would match the initial empty
   // input and arm the destructive button with no typing at all.
   const confirmEnabled = confirmValue.length > 0 && typed === confirmValue && !busy;
+
+  // The whole copy contract in one block: every phrase that varies with reversibility, plus the
+  // trigger glyph. Two goals — the contract reads in one place instead of six scattered
+  // ternaries, and "no reversible branch leaks a permanence claim" becomes checkable by eye.
+  // The non-reversible branch must stay byte-identical to the pre-`actionVerb` hardcoded
+  // strings — a previous commit (5e8632e) exists specifically to guarantee that; do not reword it.
+  const copy = reversible
+    ? {
+        blurb: (
+          <>
+            {verb} this {noun}. This can be undone later.
+          </>
+        ),
+        warnBody: (
+          <>
+            {actionVerb.gerund} {article(entityNoun)} {noun} affects{" "}
+            {childEntities}. Do you wish to proceed?
+          </>
+        ),
+        confirmTitle: (
+          <>
+            {verb} this {entityNoun}
+          </>
+        ),
+        confirmLead: (
+          <>You are about to {verbLower} this {entityNoun}. Enter{" "}</>
+        ),
+        inputLabel: <>Type {confirmValue} to confirm</>,
+        cta: `${verb} ${entityNoun}`,
+        Icon: Archive,
+      }
+    : {
+        blurb: (
+          <>
+            Permanently {verbLower} this {noun} and all of its data. This cannot be
+            undone.
+          </>
+        ),
+        warnBody: (
+          <>
+            {actionVerb.gerund} {article(entityNoun)} {noun} deletes all the data
+            associated with the {noun}, including {childEntities}. Do you
+            wish to proceed?
+          </>
+        ),
+        confirmTitle: (
+          <>Permanently {verbLower} this {entityNoun}</>
+        ),
+        confirmLead: (
+          <>You are about to permanently {verbLower} this {entityNoun}. Enter{" "}</>
+        ),
+        inputLabel: <>Type {confirmValue} to confirm deletion</>,
+        cta: `Permanently ${verb}`,
+        Icon: Trash2,
+      };
 
   function reset(): void {
     setOpen(false);
@@ -146,16 +214,7 @@ export function DeleteEntitySection({
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-apt-text-muted">
-            {description ?? (reversible ? (
-              <>
-                {verb} this {noun}. This can be undone later.
-              </>
-            ) : (
-              <>
-                Permanently {verbLower} this {noun} and all of its data. This cannot be
-                undone.
-              </>
-            ))}
+            {description ?? copy.blurb}
           </p>
           <div>
             <Button
@@ -166,7 +225,7 @@ export function DeleteEntitySection({
                 setOpen(true);
               }}
             >
-              <Trash2 data-icon="inline-start" />
+              <copy.Icon data-icon="inline-start" />
               {verb} {entityNoun}
             </Button>
           </div>
@@ -179,20 +238,7 @@ export function DeleteEntitySection({
             <>
               <DialogHeader>
                 <DialogTitle>{verb} {entityNoun}?</DialogTitle>
-                <DialogDescription>
-                  {reversible ? (
-                    <>
-                      {actionVerb.gerund} {article(entityNoun)} {noun} affects{" "}
-                      {childEntities}. Do you wish to proceed?
-                    </>
-                  ) : (
-                    <>
-                      {actionVerb.gerund} {article(entityNoun)} {noun} deletes all the data
-                      associated with the {noun}, including {childEntities}. Do you
-                      wish to proceed?
-                    </>
-                  )}
-                </DialogDescription>
+                <DialogDescription>{copy.warnBody}</DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="ghost" size="sm" onClick={reset}>
@@ -210,19 +256,9 @@ export function DeleteEntitySection({
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>
-                  {reversible ? (
-                    <>{verb} this {entityNoun}</>
-                  ) : (
-                    <>Permanently {verbLower} this {entityNoun}</>
-                  )}
-                </DialogTitle>
+                <DialogTitle>{copy.confirmTitle}</DialogTitle>
                 <DialogDescription>
-                  {reversible ? (
-                    <>You are about to {verbLower} this {entityNoun}. Enter{" "}</>
-                  ) : (
-                    <>You are about to permanently {verbLower} this {entityNoun}. Enter{" "}</>
-                  )}
+                  {copy.confirmLead}
                   <span className="font-mono text-apt-text">
                     &ldquo;{confirmValue}&rdquo;
                   </span>{" "}
@@ -231,11 +267,7 @@ export function DeleteEntitySection({
               </DialogHeader>
               <div className="flex flex-col gap-2">
                 <Label htmlFor={inputId} className="sr-only">
-                  {reversible ? (
-                    <>Type {confirmValue} to confirm</>
-                  ) : (
-                    <>Type {confirmValue} to confirm deletion</>
-                  )}
+                  {copy.inputLabel}
                 </Label>
                 <Input
                   id={inputId}
@@ -264,11 +296,7 @@ export function DeleteEntitySection({
                   onClick={handleConfirm}
                   disabled={!confirmEnabled}
                 >
-                  {busy
-                    ? `${actionVerb.gerund}…`
-                    : reversible
-                      ? `${verb} ${entityNoun}`
-                      : `Permanently ${verb}`}
+                  {busy ? `${actionVerb.gerund}…` : copy.cta}
                 </Button>
               </DialogFooter>
             </>
