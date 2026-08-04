@@ -70,6 +70,35 @@ function buildAuthorizeUrl(opts: {
 }
 
 /**
+ * Build an AS `/oauth/signin/start` URL — the single place the START contract
+ * (path, params, base-vs-proxy fallback) is assembled, the sibling of
+ * {@link buildAuthorizeUrl} above. `/start` is the *provider* leg: it 302s to
+ * GitHub/Google/…, and the AS sends the browser to `returnUrl` with the exchange
+ * code once the provider comes back. Sign-in and sign-up are the same request —
+ * the backend JIT-creates the account and enforces the `new_user_signups` gate
+ * there — so a signup page and a login page name the identical endpoint.
+ *
+ * Used by {@link LoginCard}'s provider buttons and by the hub's own signup page;
+ * exported rather than inlined so those two can't drift apart on the query
+ * contract (`clientId` / `providerId` / `return`).
+ */
+export function providerSigninUrl(opts: {
+  clientId: string
+  providerId: string
+  /** Absolute URL the AS returns the browser to (this site's callback route). */
+  returnUrl: string
+  authApiBase?: string
+}): string {
+  const start = asEndpoint('/oauth/signin/start', opts.authApiBase)
+  const params = new URLSearchParams({
+    clientId: opts.clientId,
+    providerId: opts.providerId,
+    return: opts.returnUrl,
+  })
+  return `${start}?${params.toString()}`
+}
+
+/**
  * Start the SSO flow: navigate the browser top-level to the AS /authorize for
  * this site's callback. The AS decides what happens next — silent code bounce if
  * a central session exists, else a redirect to the central login page.

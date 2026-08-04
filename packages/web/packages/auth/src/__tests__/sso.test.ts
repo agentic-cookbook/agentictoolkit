@@ -8,6 +8,7 @@ import {
   centralEmailLogin,
   readCentralParams,
   beginLinkProvider,
+  providerSigninUrl,
 } from '../sso'
 
 // Mirror of the private key in sso.ts — the stash beginLogin/takeReturnTo share.
@@ -102,6 +103,50 @@ describe('beginLogin', () => {
     beginLogin()
 
     expect(window.sessionStorage.getItem(RETURN_TO_KEY)).toBeNull()
+  })
+})
+
+describe('providerSigninUrl', () => {
+  // The `/start` contract has two consumers that must not drift: LoginCard's provider
+  // buttons and the hub's own signup page. Sign-in and sign-up are the SAME request —
+  // the backend JIT-creates the account and enforces `new_user_signups` there — so
+  // there is one builder, and these are its terms.
+  it('names the AS /oauth/signin/start with clientId, providerId and return', () => {
+    const url = new URL(
+      providerSigninUrl({
+        clientId: 'adh',
+        providerId: 'github',
+        returnUrl: 'https://hub.example.com/auth/callback',
+        authApiBase: 'https://api.hub.example.com',
+      }),
+    )
+    expect(url.origin).toBe('https://api.hub.example.com')
+    expect(url.pathname).toBe('/oauth/signin/start')
+    expect(url.searchParams.get('clientId')).toBe('adh')
+    expect(url.searchParams.get('providerId')).toBe('github')
+    expect(url.searchParams.get('return')).toBe('https://hub.example.com/auth/callback')
+  })
+
+  it('falls back to the same-origin BFF proxy when no AS base is configured (local dev)', () => {
+    const url = new URL(
+      providerSigninUrl({ clientId: 'adh', providerId: 'google', returnUrl: 'https://s.example.com/auth/callback' }),
+      'https://s.example.com',
+    )
+    expect(url.pathname).toBe('/api/oauth/signin/start')
+  })
+
+  it('prefers an explicit authApiBase over the env var and trims trailing slashes', () => {
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://env.example.com'
+    const url = new URL(
+      providerSigninUrl({
+        clientId: 'adh',
+        providerId: 'gitlab',
+        returnUrl: 'https://s.example.com/auth/callback',
+        authApiBase: 'https://explicit.example.com///',
+      }),
+    )
+    expect(url.origin).toBe('https://explicit.example.com')
+    expect(url.pathname).toBe('/oauth/signin/start')
   })
 })
 

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
 import { reportAuthError, reportUnexpectedAuthError } from '../report'
-import { beginLinkProvider, centralEmailLogin, readCentralParams, PENDING_LINK_KEY } from '../sso'
+import { beginLinkProvider, centralEmailLogin, providerSigninUrl, readCentralParams, PENDING_LINK_KEY } from '../sso'
 import type { MfaChallenge } from '../mfa'
 import { MfaStep } from './MfaStep'
 import {
@@ -184,15 +184,15 @@ export function LoginCard({
     const central = readCentralParams()
     const ret = central ? central.returnUrl : `${window.location.origin}${callbackPath}`
     const cid = central ? central.clientId : clientId
-    // Go straight to the login/OAuth API so /start and /callback share a host
-    // (the OAuth state cookie is host-only). The backend serves the flow at
-    // `/oauth/signin/*` (no `/api` prefix). Without authApiBase, fall back to the
-    // same-origin BFF proxy, whose reserved `/api/*` namespace forwards there
-    // (local dev / proxied).
-    const start = authApiBase
-      ? `${authApiBase.replace(/\/+$/, '')}/oauth/signin/start`
-      : '/api/oauth/signin/start'
-    window.location.href = `${start}?clientId=${encodeURIComponent(cid)}&providerId=${encodeURIComponent(providerId)}&return=${encodeURIComponent(ret)}`
+    // providerSigninUrl goes straight to the login/OAuth API so /start and
+    // /callback share a host (the OAuth state cookie is host-only), falling back
+    // to the same-origin BFF proxy when no base is configured (local dev).
+    window.location.href = providerSigninUrl({
+      clientId: cid,
+      providerId,
+      returnUrl: ret,
+      authApiBase,
+    })
   }
 
   async function handlePasskey() {

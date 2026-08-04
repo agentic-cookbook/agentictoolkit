@@ -12,6 +12,13 @@
       "apple": "Continue with Apple"
     },
     "emailButton": "Continue with Email →",
+    "nameLabel": "Name",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "passwordHint": "At least 8 characters.",
+    "submitButton": "Create account",
+    "loadingLabel": "Creating your account…",
+    "submitError": "Sign-up failed — please try again.",
     "legalPrefix": "By joining, you agree to our ",
     "legalTerms": "Terms of Service",
     "legalConjunction": " and ",
