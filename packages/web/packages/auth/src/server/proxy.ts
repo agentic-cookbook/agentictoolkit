@@ -32,6 +32,15 @@ export async function proxyToBackend(
   const headers = new Headers(req.headers)
   headers.delete('host')
   headers.delete('content-length')
+  // Ask the backend for an UNENCODED body. We hand the upstream Response back
+  // verbatim, and Node's undici transparently decodes a gzip/deflate body while
+  // leaving the upstream `content-encoding: gzip` header on it — so forwarding
+  // the browser's own `Accept-Encoding` makes this proxy declare an encoding the
+  // body no longer carries. The browser then fails to decode the response and
+  // `fetch` REJECTS (a TypeError, not an HTTP error), which surfaced as
+  // AuthCallback's "Could not reach the sign-in service" on every sign-in.
+  // `identity` leaves nothing to lie about; the CDN compresses on the way out.
+  headers.set('accept-encoding', 'identity')
   const init: RequestInit = { method: req.method, headers, redirect: 'manual' }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     init.body = await req.arrayBuffer()
