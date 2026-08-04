@@ -154,6 +154,7 @@ export function SendInvitationModal({
         </DialogFooter>
         <UnsavedChangesAlert
           open={confirming}
+          description="The invitation you have written will be lost."
           onDiscard={close}
           onStay={() => setConfirming(false)}
         />

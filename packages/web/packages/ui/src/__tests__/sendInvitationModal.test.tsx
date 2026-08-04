@@ -42,6 +42,21 @@ describe('SendInvitationModal', () => {
     expect(onClose).not.toHaveBeenCalled()
     expect(screen.getByRole('textbox')).toHaveValue('welcome!')
   })
+  // The shared prompt asks about "unsaved changes", which names nothing the user wrote here.
+  // This modal knows what is at risk — the invitation — so it overrides the description only.
+  it('names the composed invitation rather than generic unsaved changes', () => {
+    render(<SendInvitationModal open emails={['a@x.io']} onSend={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'welcome!' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('The invitation you have written will be lost.')).toBeInTheDocument()
+    expect(screen.queryByText('Your unsaved changes will be lost.')).toBeNull()
+    // Title and buttons stay the platform's, not this modal's.
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Discard' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stay' })).toBeInTheDocument()
+  })
+
   it('closes directly on Cancel when only recipients are seeded (no note)', () => {
     const onClose = vi.fn()
     render(<SendInvitationModal open emails={['a@x.io']} onSend={vi.fn()} onClose={onClose} />)

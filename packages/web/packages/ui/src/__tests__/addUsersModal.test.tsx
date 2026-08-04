@@ -61,6 +61,21 @@ describe('AddUsersModal', () => {
     expect(screen.getByText('ada@x.io')).toBeInTheDocument()
   })
 
+  // The shared prompt asks about "unsaved changes", which names nothing a user staged here.
+  // This modal knows what is at risk — the list — so it overrides the description sentence only.
+  it('names the staged user list rather than generic unsaved changes', () => {
+    render(<AddUsersModal open onAdd={vi.fn()} onClose={vi.fn()} />)
+    fill('Ada', 'ada@x.io'); fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('The users you have added will be lost.')).toBeInTheDocument()
+    expect(screen.queryByText('Your unsaved changes will be lost.')).toBeNull()
+    // Title and buttons stay the platform's, not this modal's.
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Discard' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stay' })).toBeInTheDocument()
+  })
+
   // The alert must be mounted INSIDE <DialogContent>, not as a sibling of the outer <Dialog>,
   // because the outer dialog is still open while the alert asks whether to close it — two
   // stacked base-ui modal Dialogs, one of which must be registered as the other's NESTED dialog

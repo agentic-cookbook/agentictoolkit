@@ -139,6 +139,7 @@ export function AddUsersModal({
         </DialogFooter>
         <UnsavedChangesAlert
           open={confirming}
+          description="The users you have added will be lost."
           onDiscard={close}
           onStay={() => setConfirming(false)}
         />
