@@ -137,6 +137,9 @@ export interface EcosystemsFeatureProps {
    *    list tucked into a Child Ecosystems topic. Creation is TOP-LEVEL (owner = the
    *    caller) from the list header's "+". */
   listFirst?: boolean;
+  /** Host-injected Transfer Ownership section for the settings topic. Threaded straight through
+   *  to EcosystemSettingsPane — this feature neither owns the workspace list nor the mutation. */
+  renderTransferOwnership?: (ecosystem: { id: string; identifier: string }) => ReactNode;
 }
 
 /** The topic groups whose detail pane is a nested topic→detail sub-rail — the single source for
@@ -277,6 +280,7 @@ export function EcosystemsFeature({
   activeMemberEntityId,
   labels,
   listFirst = false,
+  renderTransferOwnership,
 }: EcosystemsFeatureProps): ReactElement {
   const router = useRouter();
   // The presented noun (see the `labels` prop doc) — every user-facing string below
@@ -448,6 +452,7 @@ export function EcosystemsFeature({
             loadError={error}
             title={titleFor(t.label)}
             help={helpFor?.(`ecosystems/${t.id}`)}
+            renderTransferOwnership={renderTransferOwnership}
             onDelete={
               ecoId
                 ? makeEntityDeleteHandler({

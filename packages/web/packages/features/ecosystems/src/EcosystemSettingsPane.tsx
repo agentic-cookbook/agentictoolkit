@@ -36,6 +36,7 @@ export function EcosystemSettingsPane({
   help,
   onDelete,
   onRenamed,
+  renderTransferOwnership,
 }: {
   /** The presented entity noun (capitalized) — see EcosystemsFeature's `labels` prop. */
   noun?: string;
@@ -52,6 +53,9 @@ export function EcosystemSettingsPane({
   /** Called after a successful identifier rename with the new rdid, so the parent
    *  can refresh the selector list and navigate to the new id. */
   onRenamed?: (newId: string) => void | Promise<void>;
+  /** Host-injected Transfer Ownership section, rendered above the Danger Zone. Absent on a
+   *  standalone feature site — the hub owns the workspace list and the mutation. */
+  renderTransferOwnership?: (ecosystem: { id: string; identifier: string }) => ReactNode;
 }): ReactElement {
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.
@@ -154,6 +158,7 @@ export function EcosystemSettingsPane({
             onSlug={(v) => form.onChange({ ...d, identifier: prefix + v })}
             onDescription={(v) => form.onChange({ ...d, description: v })}
           />
+          {active && renderTransferOwnership && renderTransferOwnership(active)}
           {active && onDelete && (
             <DeleteEntitySection
               entityNoun={noun}
