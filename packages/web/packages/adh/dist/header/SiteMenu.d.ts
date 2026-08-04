@@ -1,6 +1,7 @@
 import { type ReactElement, type ReactNode } from 'react';
 import { type SiteId } from '@agentic-toolkit/adh-registry';
 import { type RouteSection } from '@agentic-toolkit/adh/header';
+import { type NavLink } from './NavLink';
 export type MenuLink = {
     site: SiteId;
     label?: string;
@@ -75,6 +76,19 @@ export type SiteMenuChromeProps = {
      *  it reveals (site lists, route paths, the debug console) ships in the client
      *  bundle for anyone to read; the backend enforces real authorization. */
     userIsAdmin?: boolean;
+    /** The host site's OWN primary nav — the same `NavLink[]` the header bar draws.
+     *  Surfaced here as rows ONLY while the bar has dropped them, which it does below
+     *  768px (`.adh-header__links { display: none }`): the bar cannot hold the brand,
+     *  three-plus destinations and the auth cluster inside a 390px phone.
+     *
+     *  Without this the phone has no primary nav at all. It used to be reachable in the
+     *  avatar dropdown, which carried the signed-in nav; that dropdown is an account menu
+     *  now, so the destinations have nowhere else to be. Signed OUT was never covered
+     *  even then — the media query hides the links at every auth state.
+     *
+     *  Above the breakpoint these rows are ABSENT, not hidden: see
+     *  {@link useHeaderLinksCollapsed}. */
+    navLinks?: NavLink[];
     /** Drop the dev-only Routes / Debug Options rows (and the Debug window they own).
      *  Set by the theme editor's SiteMenuPreview, which renders a LIVE SiteMenu inside
      *  the Debug console itself — without this, its "Debug Options" row would open a
@@ -104,5 +118,5 @@ export type SiteMenuProps = SiteMenuChromeProps & {
  * The config-only subclasses (MarketingSiteMenu, WorkspaceSiteMenu) supply nothing
  * but their `groups`; the dispatcher (SiteMenuSwitcher) picks which to render by route.
  */
-export declare function SiteMenu({ groups, currentSiteId, authenticated, triggerContent, triggerClassName, resolveHref, personalSlug, settingsHref, onSettings, loginHref, signupHref, routes, userIsAdmin, suppressDevTools, }: SiteMenuProps): ReactElement;
+export declare function SiteMenu({ groups, currentSiteId, authenticated, triggerContent, triggerClassName, resolveHref, personalSlug, settingsHref, onSettings, loginHref, signupHref, navLinks, routes, userIsAdmin, suppressDevTools, }: SiteMenuProps): ReactElement;
 //# sourceMappingURL=SiteMenu.d.ts.map

@@ -87,6 +87,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Without this the ellipsis above is DEAD CODE. This is a flex item of
+     `.adh-header__preview`, so its `min-width` resolves to `auto`, which for a
+     `nowrap` box is its full content width — it can never be squeezed narrower than
+     its own text, so the overflow it would clip cannot occur and the strip simply
+     overflows the viewport instead. `min-width: 0` lets it shrink, which is what
+     arms both the clip and the ellipsis. Reachable now that `previewNotice` lets a
+     host supply words longer than the default's. */
+  min-width: 0;
 }
 
 .adh-header__container {
@@ -298,7 +306,7 @@
   gap: 0.75rem;
 }
 
-/* The primary nav links (signed out). A pure grouping box — `display: contents`
+/* The primary nav links. A pure grouping box — `display: contents`
    means it creates NO box of its own, so the links stay direct participants in
    the nav's flex row and the bar looks exactly as it did before they were
    wrapped. The wrapper exists solely so they can collapse as a unit below. */
@@ -307,10 +315,22 @@
 }
 
 /* On a phone the bar holds the brand (+ its badge) and the auth cluster — the
-   primary links would push the nav clean off the right edge. They're not lost:
-   the site menu (the brand dropdown, now the nav hub) carries the destinations,
-   and signed in they already live in the avatar dropdown. Login / join stay in
-   the bar, since signing in is the one thing a signed-out visitor came to do. */
+   primary links would push the nav clean off the right edge. Measured, not guessed:
+   hub signed in at 390px wants ~494px for brand trigger + three links + bell, avatar
+   and chevron + the container's gutters.
+
+   They're not lost — the site menu (the brand dropdown) carries them, at exactly this
+   breakpoint and only at it: `useHeaderLinksCollapsed` matches this same query, and
+   `SiteMenu`'s `navSection` builds a row per link while it does. That is a JS gate on
+   purpose; rows merely hidden here would still be tab-reachable and would still answer
+   the popover's search box on a desktop that shows none of them.
+
+   Keep the two in step. The claim "the menu carries the destinations" was written here
+   before anything did, and stayed for as long as it took a review to notice a phone
+   with no primary nav on any adh site.
+
+   Login / join stay in the bar, since signing in is the one thing a signed-out visitor
+   came to do. */
 @media (max-width: 768px) {
   .adh-header__links {
     display: none;

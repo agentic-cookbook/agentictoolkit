@@ -15,8 +15,12 @@ import { useScrollSpy } from "../hooks/useScrollSpy"
 import { cn } from "../lib/utils"
 import type { HeadingEntry } from "./doc-types"
 
+/** The sticky column, offset by one header. `var(--adh-header-height, 3.5rem)` rather
+ *  than a literal: the adh header is a bar plus the preview strip above it, and the
+ *  variable is where that sum lives. The fallback is the bar alone, for consumers of
+ *  this package that mount no adh header. Same pair as `DOC_NAV_ASIDE_CLASS`. */
 export const DOC_TABLE_OF_CONTENTS_CLASS =
-  "hidden xl:block w-56 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto py-8 pr-4"
+  "hidden xl:block w-56 shrink-0 sticky top-[var(--adh-header-height,3.5rem)] h-[calc(100vh-var(--adh-header-height,3.5rem))] overflow-y-auto py-8 pr-4"
 
 export interface DocTableOfContentsProps
   extends Omit<HTMLAttributes<HTMLElement>, "children" | "title"> {

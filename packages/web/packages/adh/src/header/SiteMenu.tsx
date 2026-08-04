@@ -24,6 +24,9 @@ import {
 // the matching `external` entries in both tsup configs.
 import { useRecents } from '@agentic-toolkit/adh/header/recents'
 import { useSiteMenu } from './useSiteMenu'
+import { useHeaderLinksCollapsed } from './useHeaderLinksCollapsed'
+import { buildSiteNavEntries } from './siteNavEntries'
+import { type NavLink } from './NavLink'
 import { buildDebugSiteGroups } from './debugSiteGroups'
 import { buildDevToolsEntries, DEV_TOOLS_BUILD_ENABLED } from './devToolsEntries'
 import { useEffectiveEnv, useEnvOverride } from './envOverride'
@@ -128,6 +131,19 @@ export type SiteMenuChromeProps = {
    *  it reveals (site lists, route paths, the debug console) ships in the client
    *  bundle for anyone to read; the backend enforces real authorization. */
   userIsAdmin?: boolean
+  /** The host site's OWN primary nav — the same `NavLink[]` the header bar draws.
+   *  Surfaced here as rows ONLY while the bar has dropped them, which it does below
+   *  768px (`.adh-header__links { display: none }`): the bar cannot hold the brand,
+   *  three-plus destinations and the auth cluster inside a 390px phone.
+   *
+   *  Without this the phone has no primary nav at all. It used to be reachable in the
+   *  avatar dropdown, which carried the signed-in nav; that dropdown is an account menu
+   *  now, so the destinations have nowhere else to be. Signed OUT was never covered
+   *  even then — the media query hides the links at every auth state.
+   *
+   *  Above the breakpoint these rows are ABSENT, not hidden: see
+   *  {@link useHeaderLinksCollapsed}. */
+  navLinks?: NavLink[]
   /** Drop the dev-only Routes / Debug Options rows (and the Debug window they own).
    *  Set by the theme editor's SiteMenuPreview, which renders a LIVE SiteMenu inside
    *  the Debug console itself — without this, its "Debug Options" row would open a
@@ -171,6 +187,7 @@ export function SiteMenu({
   onSettings,
   loginHref,
   signupHref,
+  navLinks,
   routes,
   userIsAdmin,
   suppressDevTools,
@@ -262,6 +279,26 @@ export function SiteMenu({
     return out
   }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, recents, pathname])
 
+  // The host site's own primary nav, surfaced HERE exactly while the bar has dropped
+  // it (below 768px). The rows are {@link buildSiteNavEntries}' — a pure builder with
+  // its own test, like the dev-tools and site-family sections — and the gate is
+  // {@link useHeaderLinksCollapsed}, which reads the very media query the bar hides on.
+  const linksCollapsed = useHeaderLinksCollapsed()
+  const navSection = useMemo<PopoverEntry[]>(
+    () =>
+      linksCollapsed
+        ? buildSiteNavEntries(navLinks, {
+            // Only signed in does `topSection` above render a Home row for these to
+            // duplicate; signed out it is Login / Sign up. Passing `homeHref`
+            // regardless would delete community's "Forum" (`/home`) from the menu of
+            // an anonymous phone visitor and leave the board unreachable.
+            homeHref: authenticated ? homeHref : undefined,
+            pathname,
+          })
+        : [],
+    [linksCollapsed, navLinks, authenticated, homeHref, pathname],
+  )
+
   // The Routes flyout's data: the site's curated `routes` prop when it passed one,
   // else the generated per-site route map — its own lazy chunk (package subpath,
   // like the debug console) fetched only once the dev tools actually unlock, so an
@@ -327,10 +364,16 @@ export function SiteMenu({
   // auth. Sits at the foot of the top section (section 0), just above the first divider.
   const openHelp = useHelp().open
 
-  // The full ordered list: the auth top section, the shared Hub core (which
-  // already ends with the dev site-family submenus), then Routes/Debug Options.
+  // The full ordered list: the site's own nav (phone only — see navSection), the auth
+  // top section, the shared Hub core (which already ends with the dev site-family
+  // submenus), then Routes/Debug Options.
+  //
+  // The site's nav goes FIRST because on a phone this menu IS the site's navigation —
+  // that is the whole of what the bar handed over. Reaching a page on the site you are
+  // already on should not mean scrolling past the family launcher to get to it.
   const allEntries = useMemo<PopoverEntry[]>(
     () => [
+      ...navSection,
       ...topSection,
       {
         kind: 'leaf',
@@ -340,7 +383,7 @@ export function SiteMenu({
       ...entries,
       ...devToolsSection,
     ],
-    [topSection, entries, devToolsSection, openHelp],
+    [navSection, topSection, entries, devToolsSection, openHelp],
   )
 
   // Open the single shared sites-overview popover (rendered by the always-present

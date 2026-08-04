@@ -8,6 +8,22 @@ export type HeaderBadge = {
     label: string;
     tone?: 'neutral' | 'accent' | 'orange' | 'blue';
 };
+/** The whole family is a pre-launch preview, and every header says so in the strip
+ *  above the bar. A DEFAULT, not a fixture — `previewNotice` overrides it, so the words
+ *  are reachable from the host rather than sealed into this package.
+ *
+ *  The default earns its place under the same carve-out the package's default
+ *  accessible names get: 46 sites all saying the same sentence should not each restate
+ *  it, and a header that rendered nothing until every host was updated would ship 46
+ *  sites with no notice at all. What must not happen is the words being UNREACHABLE
+ *  from the host — the package owns the UI, the host owns the words.
+ *
+ *  This replaced a `Preview Release` BADGE under the site name. A badge sat inside
+ *  the bar's lead slot, so it competed with the brand for the one part of the header
+ *  that has to survive a 390px phone; a full-width strip above the bar costs the bar
+ *  no horizontal room at all, and reads as a property of the site rather than of its
+ *  name. */
+export declare const DEFAULT_PREVIEW_NOTICE = "Developer Preview Release";
 /** The auth-related slice of the header's props. An auth-aware wrapper in the
  *  consuming app supplies these from its auth source while the non-auth props are
  *  passed straight through. Kept as a named type so the source contract and the
@@ -78,7 +94,8 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     /** Prominent links rendered AFTER the primary nav links and BEFORE the auth
      *  cluster — a distinct slot from `navLinks`, because the position is behavior:
      *  it is the last thing a signed-out visitor reads before "login / join", and it
-     *  survives the signed-in collapse that empties `navLinks` from the bar.
+     *  sits outside `.adh-header__links`, so it survives the phone breakpoint that
+     *  collapses the primary nav into the site menu.
      *
      *  A consumer whose site family gives some of its sites one extra prominent
      *  link fills this. The predicate that decides WHICH sites get one, and what
@@ -89,8 +106,20 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  This header resolves no site ids, so whoever knows the registry hands it in;
      *  defaults to the site root. */
     homeHref?: string;
+    /** The words in the full-width strip above the bar. Defaults to
+     *  {@link DEFAULT_PREVIEW_NOTICE}. The package draws the strip; the host supplies
+     *  what it says.
+     *
+     *  The words only — there is deliberately no value that REMOVES the strip. Its
+     *  height is `--adh-header-preview-height`, and `--adh-header-height` (which every
+     *  sticky sidebar in the family offsets by) is `calc()`ed from it on `:root`. A prop
+     *  that emptied the markup would leave that sum untouched, so every one of those
+     *  sidebars would sit 1.125rem too low with nothing to say why. Retiring the strip is
+     *  that token going to `0` and this default going away together — one coordinated
+     *  change, not a per-host switch. */
+    previewNotice?: string;
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, previewNotice, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

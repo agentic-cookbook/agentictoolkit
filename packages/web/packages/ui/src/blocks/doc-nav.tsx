@@ -29,7 +29,12 @@ import { cn } from "../lib/utils"
 import { DefaultDocLink } from "./doc-link"
 import type { DocLinkComponent, DocNavTopLink, HdvNavNode } from "./doc-types"
 
-/** The desktop column: sticky under a 3.5rem header, scrolling on its own.
+/** The desktop column: sticky under the header, scrolling on its own.
+ *
+ *  The offset is `var(--adh-header-height, 3.5rem)` rather than a literal, because the
+ *  adh header is no longer one bar: it is a bar plus a full-width preview strip above
+ *  it, and the variable is where that sum lives. The 3.5rem fallback is the bar alone,
+ *  for the consumers of this package that mount no adh header at all.
  *
  *  It was `w-80` (20rem), and at that width a document tree wraps: on the cookbook's
  *  492 rows — 24px of nav padding a side, 14px of indent per level, ~7px a character
@@ -44,7 +49,7 @@ import type { DocLinkComponent, DocNavTopLink, HdvNavNode } from "./doc-types"
  *  width can be correct for every theme, because `--font-sans` is a theme token and
  *  the family swaps under it. */
 export const DOC_NAV_ASIDE_CLASS =
-  "hidden lg:block w-96 xl:w-[32rem] shrink-0 border-r border-[var(--color-border-subtle)] overflow-y-auto sticky top-14 h-[calc(100vh-3.5rem)]"
+  "hidden lg:block w-96 xl:w-[32rem] shrink-0 border-r border-[var(--color-border-subtle)] overflow-y-auto sticky top-[var(--adh-header-height,3.5rem)] h-[calc(100vh-var(--adh-header-height,3.5rem))]"
 
 /** The nav element itself, shared verbatim by the aside and the drawer. */
 export const DOC_NAV_NAV_CLASS =
@@ -62,17 +67,18 @@ export const DOC_NAV_NAV_CLASS =
  *  answer there than a row you have to drag sideways to finish reading. */
 export const DOC_NAV_DESKTOP_NAV_CLASS = "whitespace-nowrap overflow-x-auto"
 
-/** The slide-over's viewport: everything below the 3.5rem header, and nothing
- *  above it. It used to be `fixed inset-0 z-50`, which is the same z-index the
- *  shared header carries — so with equal specificity the header's own stacking
- *  lost to DOM order and the drawer painted straight over it, burying the very
- *  control you had just pressed. Starting at `top-14` instead of restacking is
- *  what makes that unrepresentable rather than merely fixed: the two boxes no
- *  longer overlap, so no future z-index change can put them back in contention.
- *  `z-40` then keeps the header above the scrim by declaration, not by luck.
- *  The 3.5rem matches DOC_NAV_ASIDE_CLASS's `top-14` — one header height. */
+/** The slide-over's viewport: everything below the header, and nothing above it.
+ *  It used to be `fixed inset-0 z-50`, which is the same z-index the shared header
+ *  carries — so with equal specificity the header's own stacking lost to DOM order
+ *  and the drawer painted straight over it, burying the very control you had just
+ *  pressed. Starting below the header instead of restacking is what makes that
+ *  unrepresentable rather than merely fixed: the two boxes no longer overlap, so no
+ *  future z-index change can put them back in contention. `z-40` then keeps the
+ *  header above the scrim by declaration, not by luck. The offset is the same
+ *  `var(--adh-header-height, 3.5rem)` DOC_NAV_ASIDE_CLASS uses — one header height,
+ *  read from the header rather than copied from it. */
 export const DOC_NAV_OVERLAY_CLASS =
-  "fixed top-14 right-0 bottom-0 left-0 z-40"
+  "fixed top-[var(--adh-header-height,3.5rem)] right-0 bottom-0 left-0 z-40"
 
 /** The scrim. `absolute`, so it fills the overlay above rather than the
  *  viewport — a `fixed inset-0` here would reach back up over the header. */

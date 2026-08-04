@@ -198,6 +198,30 @@ describe('AdhHeader (registry-free)', () => {
     expect(screen.getByText('Hub')).toBeTruthy()
   })
 
+  // …and KEEPS it when the title is not a link at all. A caller-supplied `siteSwitcher`
+  // is a menu trigger, which is what every adh site passes — so there is nothing in the
+  // bar the link would duplicate, and filtering it deleted hub's signed-out `home → /`
+  // outright.
+  it('keeps that same link when a caller-supplied switcher replaced the title link', () => {
+    render(
+      <AdhHeader
+        siteName="Hub"
+        siteNameHref="/"
+        siteSwitcher={<button type="button">Hub menu</button>}
+        navLinks={[
+          { label: 'home', href: '/' },
+          { label: 'Docs', href: '/docs' },
+        ]}
+      />,
+    )
+    const links = screen.getByRole('banner').querySelector('.adh-header__links')!
+    expect(links.textContent).toContain('home')
+    expect(links.textContent).toContain('Docs')
+    // Non-vacuous the other way: the default switcher's anchor really is absent, which
+    // is the whole reason the link has to stay.
+    expect(screen.queryByRole('link', { name: 'Hub' })).toBeNull()
+  })
+
   it('shows a spinner instead of the auth buttons while auth is still resolving', () => {
     render(<AdhHeader siteName="Hub" authLoading onLogin={() => {}} onSignup={() => {}} />)
     expect(screen.getByRole('status', { name: 'Checking sign-in' })).toBeTruthy()

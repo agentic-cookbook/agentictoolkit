@@ -57,6 +57,11 @@ export type SiteHeaderProps = Omit<
    *  (which keeps the page's own header component hook-free). */
   navLinks?: NavLink[] | ((signedIn: boolean) => NavLink[])
   trailingNavLinks?: NavLink[]
+  /** The words in the full-width strip above the bar, forwarded verbatim to
+   *  {@link AdhHeader} (which defaults them to `DEFAULT_PREVIEW_NOTICE`). Every adh
+   *  site takes the default today; the prop exists so the strip's copy is reachable
+   *  from this side of the boundary rather than sealed into the toolkit package. */
+  previewNotice?: string
   /** Curated route map, forwarded straight through to the site-menu's "Routes"
    *  flyout (see SiteMenu's devToolsSection) for quick in-app jumping. The flyout
    *  shows only in local/testing/staging or to a signed-in adh admin (any env); when
@@ -113,6 +118,7 @@ export function SiteHeader({
   leadingActions,
   navLinks,
   trailingNavLinks = [],
+  previewNotice,
   routes,
   personalSlug,
   clientId,
@@ -214,6 +220,13 @@ export function SiteHeader({
           // uses onLogin/onSignup callbacks instead of hrefs).
           loginHref={resolvedLoginHref}
           signupHref={resolvedSignupHref}
+          // This site's own primary nav, so the menu can carry it on a phone — where
+          // the bar hides `.adh-header__links` and would otherwise leave the site with
+          // no primary navigation at all. `resolvedNavLinks`, not the raw prop: the
+          // menu must offer the same destinations the bar would, for the same auth
+          // state. `trailingNavLinks` is deliberately not included — it renders outside
+          // the collapsing group and survives the phone bar already.
+          navLinks={resolvedNavLinks}
           // Dev Routes flyout data — the flyout itself decides (env gate or the
           // admin unlock) whether it's actually shown; see SiteMenu's devToolsSection.
           routes={routes}
@@ -226,6 +239,11 @@ export function SiteHeader({
       leadingActions={leadingActions}
       navLinks={resolvedNavLinks}
       trailingNavLinks={trailingNavLinks}
+      // Undefined on every adh site today, which is exactly what makes AdhHeader's
+      // default apply — a default parameter, so forwarding `undefined` is the same as
+      // not forwarding at all. The point of the passthrough is that the words are
+      // REACHABLE from here.
+      previewNotice={previewNotice}
       // The avatar menu's "Home" — THIS site's post-login landing (its /home, or root
       // when it has none), the same destination the default Login/Join links already
       // return to. A relative path, not `selfReturn`'s absolute URL: Home never leaves

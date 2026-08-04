@@ -30,6 +30,17 @@ export type AvatarMenuProps = {
  * It is an ACCOUNT menu, not a nav menu. A site's own destinations live in the bar
  * and in the site-name menu (the brand dropdown); routing them through here as well
  * grew this popup to the length of the site's whole feature list.
+ *
+ * **This menu is CLOSED. Add nothing to it** — no fifth row, no slot, no prop that
+ * lets a host inject one. Not a workspace picker, not a theme toggle, not a docs
+ * link, not a site-specific action. Everything proposed for here already has a home:
+ * `AdhHeader`'s bar slots (`navLinks`, `trailingNavLinks`, `preAuthLinks`,
+ * `leadingActions`) or `SiteMenu`, which is also where the bar's links go below
+ * 768px. The four rows are what was LEFT after this popup had absorbed the hub's
+ * whole feature list and had to be emptied again; there is no threshold at which one
+ * more is harmless, which is why the rule is a count and not a taste. A genuine fifth
+ * destination is a question for the repo owner, not a judgment call.
+ * (Repo rule: `.claude/skills/project-guidelines/topics/ui-development.md`.)
  */
 export declare function AvatarMenu({ user, homeHref, onLogout, settingsHref, onSettings, }: AvatarMenuProps): import("react").JSX.Element;
 //# sourceMappingURL=AvatarMenu.d.ts.map

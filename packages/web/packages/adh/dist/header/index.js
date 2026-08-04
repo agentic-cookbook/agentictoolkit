@@ -757,7 +757,7 @@ function SiteSwitcher({
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
-var PREVIEW_NOTICE = "Developer Preview Release";
+var DEFAULT_PREVIEW_NOTICE = "Developer Preview Release";
 function AdhHeader({
   siteName,
   siteNameHref = "/",
@@ -772,6 +772,7 @@ function AdhHeader({
   trailingNavLinks = [],
   preAuthLinks,
   homeHref,
+  previewNotice = DEFAULT_PREVIEW_NOTICE,
   user,
   authLoading = false,
   loginHref,
@@ -782,9 +783,9 @@ function AdhHeader({
   settingsHref,
   onSettings
 }) {
-  const barLinks = navLinks.filter((l) => l.href !== siteNameHref);
+  const barLinks = siteSwitcher ? navLinks : navLinks.filter((l) => l.href !== siteNameHref);
   return /* @__PURE__ */ jsxs5("header", { className: "adh-header", role: "banner", children: [
-    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: PREVIEW_NOTICE }) }),
+    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: previewNotice }) }),
     /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
       /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
         siteSwitcher ?? /* @__PURE__ */ jsx8(
@@ -1245,6 +1246,41 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
   return { entries, navigate, homeHref };
 }
 
+// src/header/useHeaderLinksCollapsed.ts
+import { useCallback as useCallback3, useSyncExternalStore } from "react";
+var HEADER_LINKS_COLLAPSE_QUERY = "(max-width: 768px)";
+function useHeaderLinksCollapsed() {
+  const subscribe2 = useCallback3((onChange) => {
+    if (typeof window === "undefined" || !window.matchMedia) return () => {
+    };
+    const mq = window.matchMedia(HEADER_LINKS_COLLAPSE_QUERY);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return useSyncExternalStore(
+    subscribe2,
+    () => typeof window !== "undefined" && !!window.matchMedia ? window.matchMedia(HEADER_LINKS_COLLAPSE_QUERY).matches : false,
+    () => false
+  );
+}
+
+// src/header/siteNavEntries.ts
+var SITE_NAV_SECTION = 3;
+function buildSiteNavEntries(navLinks, { homeHref, pathname }) {
+  if (!navLinks?.length) return [];
+  return navLinks.filter((link) => homeHref === void 0 || link.href !== homeHref).map((link) => ({
+    kind: "leaf",
+    section: SITE_NAV_SECTION,
+    item: {
+      key: `nav:${link.href}`,
+      label: link.label,
+      href: link.href,
+      icon: link.icon,
+      current: (link.matchPaths ?? [link.href]).some((m) => pathMatches(pathname, m))
+    }
+  }));
+}
+
 // src/header/debugSiteGroups.ts
 import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from "@agentic-toolkit/adh-registry";
 var DEBUG_SECTION = 2;
@@ -1317,7 +1353,7 @@ function buildDevToolsEntries({
 }
 
 // src/header/envOverride.ts
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore as useSyncExternalStore2 } from "react";
 import { detectEnv as detectEnv2 } from "@agentic-toolkit/adh-registry";
 var STORAGE_KEY = "adh:debug:env-override";
 var ENV_VALUES = ["production", "staging", "testing", "local"];
@@ -1363,7 +1399,7 @@ function setEnvOverride(env) {
   emit();
 }
 function useEnvOverride() {
-  return useSyncExternalStore(subscribe, readOverride, () => null);
+  return useSyncExternalStore2(subscribe, readOverride, () => null);
 }
 function useEffectiveEnv(hostname) {
   const override = useEnvOverride();
@@ -1388,6 +1424,7 @@ function SiteMenu({
   onSettings,
   loginHref,
   signupHref,
+  navLinks,
   routes,
   userIsAdmin,
   suppressDevTools
@@ -1451,6 +1488,18 @@ function SiteMenu({
     }
     return out;
   }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, recents, pathname]);
+  const linksCollapsed = useHeaderLinksCollapsed();
+  const navSection = useMemo3(
+    () => linksCollapsed ? buildSiteNavEntries(navLinks, {
+      // Only signed in does `topSection` above render a Home row for these to
+      // duplicate; signed out it is Login / Sign up. Passing `homeHref`
+      // regardless would delete community's "Forum" (`/home`) from the menu of
+      // an anonymous phone visitor and leave the board unreachable.
+      homeHref: authenticated ? homeHref : void 0,
+      pathname
+    }) : [],
+    [linksCollapsed, navLinks, authenticated, homeHref, pathname]
+  );
   const [generated, setGenerated] = useState3();
   const wantGeneratedRoutes = devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0);
   useEffect3(() => {
@@ -1490,6 +1539,7 @@ function SiteMenu({
   const openHelp = useHelp().open;
   const allEntries = useMemo3(
     () => [
+      ...navSection,
       ...topSection,
       {
         kind: "leaf",
@@ -1499,7 +1549,7 @@ function SiteMenu({
       ...entries,
       ...devToolsSection
     ],
-    [topSection, entries, devToolsSection, openHelp]
+    [navSection, topSection, entries, devToolsSection, openHelp]
   );
   function showOverview() {
     requestAnimationFrame(() => {
@@ -1688,6 +1738,7 @@ function SiteHeader({
   leadingActions,
   navLinks,
   trailingNavLinks = [],
+  previewNotice,
   routes,
   personalSlug,
   clientId,
@@ -1735,6 +1786,7 @@ function SiteHeader({
           settingsHref: switcherSettingsHref,
           loginHref: resolvedLoginHref,
           signupHref: resolvedSignupHref,
+          navLinks: resolvedNavLinks,
           routes,
           userIsAdmin
         }
@@ -1745,6 +1797,7 @@ function SiteHeader({
       leadingActions,
       navLinks: resolvedNavLinks,
       trailingNavLinks,
+      previewNotice,
       homeHref: siteHomePath(siteId),
       preAuthLinks: conceptSite ? /* @__PURE__ */ jsx16("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
       user,

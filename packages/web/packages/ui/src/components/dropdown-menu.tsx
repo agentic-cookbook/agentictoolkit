@@ -162,6 +162,12 @@ function DropdownMenuLinkItem({
   // the checkbox/radio wrappers below flip it, and because the sentence above this
   // function is only true once it is. The engine's close handler does not
   // preventDefault, so ⌘/middle-click still opens a new tab.
+  //
+  // Not a new package-wide default so much as the implementation catching up: that
+  // docstring shipped long before this line, so "still closing the menu" was already
+  // the published contract of `@agentic-toolkit/ui` while the primitive quietly did the
+  // opposite. Setting it per call site instead would leave the contradiction in place
+  // for every call site that didn't think to pass it.
   closeOnClick = true,
   ...props
 }: MenuPrimitive.LinkItem.Props & {

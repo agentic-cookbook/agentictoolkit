@@ -342,11 +342,15 @@ describe('DocNav', () => {
     // two boxes cannot overlap however their z-indexes drift. Asserting all three
     // legs, because losing any one silently restores the collision.
     const { container } = render(<DocNav nodes={NODES} activePath="/" open />)
-    const overlay = container.querySelector(`div.${CSS.escape('top-14')}`)!
+    const overlay = container.querySelector('div.z-40')!
 
     expect(overlay.className).toBe(DOC_NAV_OVERLAY_CLASS)
-    // Below the header, and never reaching back up over it.
-    expect(overlay.className).toContain('top-14')
+    // Below the header, and never reaching back up over it. The offset READS the
+    // header's own height rather than restating it: the adh header is a bar plus a
+    // preview strip, so any literal here is a copy that goes stale the next time the
+    // header grows — which is exactly how this drawer came to be off by 1.125rem.
+    expect(overlay.className).toContain('top-[var(--adh-header-height,3.5rem)]')
+    expect(overlay.className).not.toMatch(/\btop-\d/)
     expect(overlay.className).not.toContain('inset-0')
     // Under the header in the stack too, so the header stays clickable.
     expect(overlay.className).toContain('z-40')
@@ -362,7 +366,7 @@ describe('DocNav', () => {
     // width (cookbook now does) got a control that did nothing above 1024px, with
     // no failing test anywhere to say so. `open` is the only gate there is.
     const { container } = render(<DocNav nodes={NODES} activePath="/" open />)
-    const overlay = container.querySelector(`div.${CSS.escape('top-14')}`)!
+    const overlay = container.querySelector('div.z-40')!
 
     for (const cls of overlay.className.split(' ')) {
       expect(cls).not.toMatch(/^(sm|md|lg|xl|2xl):/)

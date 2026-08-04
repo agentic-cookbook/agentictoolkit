@@ -166,9 +166,14 @@ the host's palette without a per-site restyle.
 
 - The frame is two nested flex rows and nothing else. The outer one (`HIERARCHICAL_DOCUMENT_VIEW_CLASS`) is `flex flex-1`, its content region (`HIERARCHICAL_DOCUMENT_VIEW_CONTENT_CLASS`) `flex-1 min-w-0`; the inner one (`DOC_PAGE_CLASS`) is `flex`, its document column (`DOC_PAGE_ARTICLE_CLASS`) `flex-1 min-w-0 px-6 py-8 lg:px-10 max-w-3xl`. The `max-w-3xl` is the whole reason the frame is shared: prose set to the full width of a 1440px window is unreadable, and `min-w-0` is what stops a wide table from shoving the rail off the edge.
 - Nav column: `aside.hidden.lg:block w-80 shrink-0 border-r
-  border-[var(--color-border-subtle)] overflow-y-auto sticky top-14
-  h-[calc(100vh-3.5rem)]` — sticky under the family's `3.5rem` header and scrolling
-  on its own, so a 466-page tree never pushes the document down. The `nav` inside is
+  border-[var(--color-border-subtle)] overflow-y-auto sticky
+  top-[var(--adh-header-height,3.5rem)]
+  h-[calc(100vh-var(--adh-header-height,3.5rem))]` — sticky under the family's header
+  and scrolling on its own, so a 466-page tree never pushes the document down. The
+  offset **reads** `--adh-header-height` rather than restating it: that header is a
+  bar plus a full-width preview strip above it, so any literal is a copy that goes
+  stale the next time it grows. The `3.5rem` fallback is the bar alone, for the
+  consumers of this package that mount no adh header at all. The `nav` inside is
   `flex flex-col gap-6 px-6 py-6 overflow-y-auto h-full`, and the same element is
   rendered into the drawer.
 - Fixed rows: `h3.relative font-mono text-xs font-medium uppercase tracking-widest
@@ -212,8 +217,9 @@ the host's palette without a per-site restyle.
 - Metadata: `dl.flex.flex-col.items-end.gap-0.5 font-mono text-[11px] mb-6`; rows
   `flex gap-2`; `dt` dim, `dd` secondary; a list value wraps in
   `flex flex-wrap justify-end gap-x-3`.
-- Table of contents: `aside.hidden.xl:block w-56 shrink-0 sticky top-14
-  h-[calc(100vh-3.5rem)] overflow-y-auto py-8 pr-4`; header
+- Table of contents: `aside.hidden.xl:block w-56 shrink-0 sticky
+  top-[var(--adh-header-height,3.5rem)]
+  h-[calc(100vh-var(--adh-header-height,3.5rem))] overflow-y-auto py-8 pr-4`; header
   `font-mono text-[10px] font-medium uppercase tracking-widest
   text-[var(--color-text-dim)] mb-3`; list
   `flex flex-col gap-1 border-l border-[var(--color-border-subtle)]` with each
@@ -783,7 +789,7 @@ render tracing would not already show.
   a way for a consumer to disagree with the measure that is the block's reason to
   exist (`yagni`, `simplicity`).
 - **Decision**: a slotted column is rendered unwrapped. **Rationale**: `DocNav` and
-  `DocTableOfContents` are `sticky` with their own `top-14` offsets, which resolve
+  `DocTableOfContents` are `sticky` with their own header-height offsets, which resolve
   against the nearest scrolling ancestor. Any wrapper the frame added — even a bare
   `div` — would silently be that ancestor, and both columns would stop holding
   position with no error to explain it (`explicit-over-implicit`).

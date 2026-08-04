@@ -757,7 +757,7 @@ function SiteSwitcher({
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
-var PREVIEW_NOTICE = "Developer Preview Release";
+var DEFAULT_PREVIEW_NOTICE = "Developer Preview Release";
 function AdhHeader({
   siteName,
   siteNameHref = "/",
@@ -772,6 +772,7 @@ function AdhHeader({
   trailingNavLinks = [],
   preAuthLinks,
   homeHref,
+  previewNotice = DEFAULT_PREVIEW_NOTICE,
   user,
   authLoading = false,
   loginHref,
@@ -782,9 +783,9 @@ function AdhHeader({
   settingsHref,
   onSettings
 }) {
-  const barLinks = navLinks.filter((l) => l.href !== siteNameHref);
+  const barLinks = siteSwitcher ? navLinks : navLinks.filter((l) => l.href !== siteNameHref);
   return /* @__PURE__ */ jsxs5("header", { className: "adh-header", role: "banner", children: [
-    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: PREVIEW_NOTICE }) }),
+    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: previewNotice }) }),
     /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
       /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
         siteSwitcher ?? /* @__PURE__ */ jsx8(

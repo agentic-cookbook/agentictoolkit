@@ -33,6 +33,11 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
      *  (which keeps the page's own header component hook-free). */
     navLinks?: NavLink[] | ((signedIn: boolean) => NavLink[]);
     trailingNavLinks?: NavLink[];
+    /** The words in the full-width strip above the bar, forwarded verbatim to
+     *  {@link AdhHeader} (which defaults them to `DEFAULT_PREVIEW_NOTICE`). Every adh
+     *  site takes the default today; the prop exists so the strip's copy is reachable
+     *  from this side of the boundary rather than sealed into the toolkit package. */
+    previewNotice?: string;
     /** Curated route map, forwarded straight through to the site-menu's "Routes"
      *  flyout (see SiteMenu's devToolsSection) for quick in-app jumping. The flyout
      *  shows only in local/testing/staging or to a signed-in adh admin (any env); when
@@ -80,5 +85,5 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
  * @adh-shared auth-shim wrapper that used to supply it into this component, so there is
  * one SiteHeader again — a site cannot get the registry half without the auth half.
  */
-export declare function SiteHeader({ siteId, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, routes, personalSlug, clientId, onAfterLogout, useAuthSource, ...authOverrides }: SiteHeaderProps): ReactElement;
+export declare function SiteHeader({ siteId, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, previewNotice, routes, personalSlug, clientId, onAfterLogout, useAuthSource, ...authOverrides }: SiteHeaderProps): ReactElement;
 //# sourceMappingURL=SiteHeader.d.ts.map
