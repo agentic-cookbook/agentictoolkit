@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
 import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
 import {
@@ -23,7 +31,18 @@ import {
  * publisher-only feature entries — research/dashboards/knowledgebases/personas — get the same
  * standalone behavior through {@link RailHostBoundary}.
  */
-export function StandaloneRailHost({ children }: { children: ReactNode }): ReactElement {
+export function StandaloneRailHost({
+  children,
+  onDirtyChange,
+}: {
+  children: ReactNode;
+  /** Reports this host's dirtiness — `guards.size > 0` — to a caller that has no other way to
+   *  see into its private `guards` map, e.g. an app-level left-rail section switch (this host
+   *  owns the only guard that switch cannot otherwise observe). Called on every flip, and once
+   *  more with `false` on unmount, so an unmounting host never leaves the caller believing it is
+   *  still dirty. Optional: omit it and the host behaves exactly as before. */
+  onDirtyChange?: (dirty: boolean) => void;
+}): ReactElement {
   const [registry, setRegistry] = useState<ReadonlyMap<string, RegisteredLevels>>(new Map());
   const [guards, setGuards] = useState<ReadonlyMap<string, PaneExitGuard>>(new Map());
 
@@ -70,6 +89,23 @@ export function StandaloneRailHost({ children }: { children: ReactNode }): React
     };
   }, [guards]);
 
+  // Report dirtiness upward, on every flip of `guards.size > 0`. `onDirtyChange` is read through a
+  // ref (not a dep) — same idiom useRailExitGuard uses for its guard — so a caller passing a fresh
+  // closure each render (the common case: `onDirtyChange={setPaneDirty}` is stable, but an inline
+  // arrow wouldn't be) never re-fires this on an unrelated render.
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  onDirtyChangeRef.current = onDirtyChange;
+  const dirty = guards.size > 0;
+  useEffect(() => {
+    onDirtyChangeRef.current?.(dirty);
+  }, [dirty]);
+  // Cleanup only, on unmount: a host that unmounts while still dirty (e.g. its enclosing pane was
+  // itself swapped out from further up) must not leave the caller believing it still is — the
+  // effect above cannot cover this, since it never re-runs once `dirty` stops changing.
+  useEffect(() => {
+    return () => onDirtyChangeRef.current?.(false);
+  }, []);
+
   const mergedLevels = useMemo(
     () => [...registry.values()].sort((a, b) => a.depth - b.depth).flatMap((e) => e.levels),
     [registry],
@@ -109,7 +145,21 @@ export function StandaloneRailHost({ children }: { children: ReactNode }): React
  * a bare feature site — an UNCONDITIONAL StandaloneRailHost would shadow the hub's registry and
  * render a second nested rail inside the frontier pane, which is why the conditional exists.
  */
-export function RailHostBoundary({ children }: { children: ReactNode }): ReactElement {
+export function RailHostBoundary({
+  children,
+  onDirtyChange,
+}: {
+  children: ReactNode;
+  /** Forwarded to the {@link StandaloneRailHost} this creates when there is no host above —
+   *  see its doc. Inert in the pass-through case (a host already exists): that host owns its
+   *  own dirty-gating, so nothing here would be safe to report to a caller-supplied callback
+   *  without double-prompting whatever already gates the ancestor host's exits. */
+  onDirtyChange?: (dirty: boolean) => void;
+}): ReactElement {
   const host = useRailHost();
-  return host ? <>{children}</> : <StandaloneRailHost>{children}</StandaloneRailHost>;
+  return host ? (
+    <>{children}</>
+  ) : (
+    <StandaloneRailHost onDirtyChange={onDirtyChange}>{children}</StandaloneRailHost>
+  );
 }
