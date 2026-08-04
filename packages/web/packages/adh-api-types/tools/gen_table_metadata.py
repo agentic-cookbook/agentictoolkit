@@ -20,11 +20,11 @@ metadata drift test cross-checks the committed module against the spec.
 from __future__ import annotations
 
 import json
-import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
+
+from _spec_input import resolve_spec
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 #  This package now lives INSIDE agentictoolkit, so the package it writes into
@@ -32,38 +32,6 @@ PACKAGE_DIR = Path(__file__).resolve().parents[1]
 #  repo-crossing walk any more.
 TOOLKIT_PACKAGES = PACKAGE_DIR.parent
 OUT_PATH = TOOLKIT_PACKAGES / "crud" / "src" / "generated" / "table-metadata.ts"
-
-
-def resolve_spec(argv: list[str] | None = None) -> Path:
-    """Locate adh's OpenAPI spec, which is an INPUT — never a computed path.
-
-    The spec belongs to adh. This repo is consumed standalone by repos that have
-    no openapi.json at all, so there is no relative location this file could
-    honestly derive. It used to derive one (`parents[1].parent.parent` back when
-    the package sat at `frontend/src/app/api-types`), and when the package moved
-    into the toolkit that walk silently retargeted to a directory that does not
-    exist — the same stale-path break this move exposed in four other tools. An
-    explicit input either resolves or says why it didn't.
-    """
-    args = sys.argv[1:] if argv is None else argv
-    # pnpm forwards the `--` separator through to the script, so a documented
-    # `pnpm --filter … <script> -- <spec>` invocation arrives here as ['--', '<spec>']
-    # and the separator gets read as the path. Drop one leading `--`.
-    if args and args[0] == "--":
-        args = args[1:]
-    raw = args[0] if args else os.environ.get("ADH_OPENAPI_SPEC")
-    if not raw:
-        raise SystemExit(
-            "no OpenAPI spec given. This generator reads adh's committed spec, "
-            "which does not live in this repo. Pass it as the first argument or "
-            "set ADH_OPENAPI_SPEC:\n"
-            "  ADH_OPENAPI_SPEC=<adh>/frontend/src/sites/api/openapi.json "
-            "python3 tools/gen_table_metadata.py"
-        )
-    spec = Path(raw).expanduser().resolve()
-    if not spec.is_file():
-        raise SystemExit(f"spec not found: {spec}")
-    return spec
 
 # Only the schemas the hub's feature routes edit — keeps the module (which
 # ships to the browser) bounded. Extend deliberately, not automatically.

@@ -24,11 +24,11 @@ method+path only — which is exactly the map key.
 from __future__ import annotations
 
 import json
-import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
+
+from _spec_input import resolve_spec
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 #  This package now lives INSIDE agentictoolkit, so the package it writes into
@@ -39,44 +39,66 @@ OUT_PATH = (
     TOOLKIT_PACKAGES / "api-explorer" / "src" / "generated" / "endpoints.generated.ts"
 )
 
-
-def resolve_spec(argv: list[str] | None = None) -> Path:
-    """Locate adh's OpenAPI spec, which is an INPUT — never a computed path.
-
-    The spec belongs to adh. This repo is consumed standalone by repos that have
-    no openapi.json at all, so there is no relative location this file could
-    honestly derive. It used to derive one (`parents[1].parent.parent` back when
-    the package sat at `frontend/src/app/api-types`), and when the package moved
-    into the toolkit that walk silently retargeted to a directory that does not
-    exist — the same stale-path break this move exposed in four other tools. An
-    explicit input either resolves or says why it didn't.
-    """
-    args = sys.argv[1:] if argv is None else argv
-    # pnpm forwards the `--` separator through to the script, so the invocation this
-    # file's own generated header documents arrives here as ['--', '<spec>'] and the
-    # separator gets read as the path ("spec not found: .../--"). Drop one leading `--`.
-    if args and args[0] == "--":
-        args = args[1:]
-    raw = args[0] if args else os.environ.get("ADH_OPENAPI_SPEC")
-    if not raw:
-        raise SystemExit(
-            "no OpenAPI spec given. This generator reads adh's committed spec, "
-            "which does not live in this repo. Pass it as the first argument or "
-            "set ADH_OPENAPI_SPEC:\n"
-            "  ADH_OPENAPI_SPEC=<adh>/frontend/src/sites/api/openapi.json "
-            "python3 tools/gen_endpoints.py"
-        )
-    spec = Path(raw).expanduser().resolve()
-    if not spec.is_file():
-        raise SystemExit(f"spec not found: {spec}")
-    return spec
-
 # Verbs we project. HEAD/OPTIONS/TRACE carry no try-it value.
 METHODS = ("get", "post", "put", "patch", "delete")
 
 # Strip exactly one trailing `/{param}` segment to collapse an item path onto its
 # collection base, so `/x/y` and `/x/y/{id}` group together as one CRUD family.
 ITEM_TAIL_RE = re.compile(r"/\{[^}]+\}$")
+
+
+def _segments(path: str) -> list[str]:
+    return [s for s in path.split("/") if s]
+
+
+def _is_param(segment: str) -> bool:
+    return segment.startswith("{") and segment.endswith("}")
+
+
+def has_item_child(path: str, all_paths: dict[str, Any]) -> bool:
+    """True when some other spec path extends `path` with a further `/{param}`
+    — i.e. an individual item under it can be addressed by id. A genuine nested
+    collection (`/x/{id}/tokens`, paired with `/x/{id}/tokens/{tokenId}`) has
+    one; a one-shot action verb (`/x/{id}/restore`) never does. This is the
+    load-bearing check in `is_action_subroute` below: without it, that
+    predicate would also catch real sub-collections whose URL shape happens to
+    match (final literal segment right after a `{param}`)."""
+    prefix = path + "/{"
+    return any(p.startswith(prefix) for p in all_paths if p != path)
+
+
+def is_action_subroute(path: str, all_paths: dict[str, Any]) -> bool:
+    """An ACTION SUB-ROUTE is a verb performed on an already-identified resource,
+    not a table/collection of its own — e.g. `/organizations/{id}/restore` or
+    `/access/items/restore`. `synth_description` and `resource_base` both need
+    to recognise one: the former because none of its templates ("Create a
+    record in X") makes sense when X is a verb, not a noun; the latter because
+    such a path should family with the resource it acts on, not stand alone.
+
+    Structural, not a hardcoded verb list — a path qualifies when its final
+    segment is a literal (not a `{param}`), it has no item-child of its own
+    (see `has_item_child` — nothing can be addressed *within* it by id, which
+    is what would make it a real collection instead), and its prefix already
+    names a real resource: either one specific item (the segment right before
+    it is a `{param}`, e.g. `.../{id}/restore`) or a whole collection
+    addressed by exactly `/{schema}/{table}` with no id at all (e.g.
+    `/access/items/restore` — there is no per-item `/access/items/{id}` to
+    act on instead). Checked by hand against the current spec: every path
+    this matches — restore, rotate-token, publish, accept, connect, verify,
+    and so on — really is a verb, never a table name a CRUD sentence could
+    honestly describe.
+    """
+    segments = _segments(path)
+    if not segments or _is_param(segments[-1]):
+        return False
+    if has_item_child(path, all_paths):
+        return False
+    prefix = segments[:-1]
+    if not prefix:
+        return False
+    if _is_param(prefix[-1]):
+        return True  # acts on one identified item: .../{id}/verb
+    return len(prefix) == 2 and not any(_is_param(s) for s in prefix)  # /{schema}/{table}/verb
 
 HEADER = """\
 // GENERATED by @agentic-toolkit/adh-api-types tools/gen_endpoints.py — do not edit
@@ -197,15 +219,49 @@ def build_responses(spec: dict[str, Any], op: dict[str, Any]) -> list[dict[str, 
     return responses
 
 
-def resource_base(path: str) -> str:
+def resource_base(path: str, all_paths: dict[str, Any]) -> str:
+    """Collapse a path onto the family it belongs to.
+
+    An item path collapses onto its collection by stripping the trailing
+    `/{param}` (`/x/y/{id}` -> `/x/y`), so a table's list/create and
+    get/put/delete operations share one family — unchanged from before.
+
+    An action sub-route (see `is_action_subroute`) collapses onto the SAME
+    base as the resource it acts on, not onto itself: `/x/y/{id}/restore`
+    strips both the trailing literal ("restore") and the `{param}` before it,
+    landing on `/x/y` — exactly what `/x/y/{id}` resolves to. Without this,
+    an action sub-route's family was itself alone (a singleton), so e.g. the
+    explorer's "related calls" never linked an archive endpoint to its own
+    restore. A collection-scoped action (no `{param}` to act on, e.g.
+    `/access/items/restore`) has no item route to rejoin, so it only drops
+    its own trailing literal segment.
+    """
     base = ITEM_TAIL_RE.sub("", path)
+    if base != path:
+        return base or path
+    if is_action_subroute(path, all_paths):
+        segments = _segments(path)[:-1]
+        if segments and _is_param(segments[-1]):
+            segments = segments[:-1]
+        base = "/" + "/".join(segments) if segments else path
     return base or path
 
 
-def synth_description(method: str, path: str, params: list[dict[str, Any]]) -> str:
+def synth_description(
+    method: str, path: str, params: list[dict[str, Any]], *, omit: bool
+) -> str | None:
     """A one-line description for the ~94% of ops that carry only a summary. Done
     HERE (the deterministic projector), not in the UI, and phrased to read with the
-    raw (often plural) table noun."""
+    raw (often plural) table noun.
+
+    `omit=True` means the caller has already decided this op's own summary
+    should stand alone instead — see `collect_operations` for the two cases:
+    an action sub-route (none of the templates below name a real table to
+    describe) and a DELETE with a sibling `/restore` (the generic "Delete a
+    record from X" phrasing is actively wrong, not just redundant, for a
+    resource that is recoverable)."""
+    if omit:
+        return None
     segments = [s for s in path.split("/") if s and not s.startswith("{")]
     noun = segments[-1] if segments else "resource"
     path_names = [p["name"] for p in params if p.get("in") == "path"]
@@ -227,10 +283,47 @@ def collect_operations(spec: dict[str, Any]) -> list[dict[str, Any]]:
     paths: dict[str, Any] = spec.get("paths", {})
     top_security = spec.get("security")
 
+    # Family grouping only needs the path set (methods don't affect it), so
+    # it's computed once, up front — both for each meta's own "family" field
+    # and to decide, below, whether a DELETE has a sibling action sub-route
+    # that makes the generic "Delete a record..." wording actively wrong
+    # rather than merely synthesizable.
+    bases: dict[str, str] = {
+        path: resource_base(path, paths)
+        for path, item in paths.items()
+        if isinstance(item, dict)
+    }
+    groups: dict[str, list[str]] = {}
+    for path, item in paths.items():
+        if not isinstance(item, dict):
+            continue
+        for method in METHODS:
+            if isinstance(item.get(method), dict):
+                groups.setdefault(bases[path], []).append(f"{method.upper()} {path}")
+    for keys in groups.values():
+        keys.sort()
+
+    # A DELETE on an item whose family also contains a `/restore` action isn't
+    # really deleting the record — it's recoverable — so the generic "Delete a
+    # record from X" template is actively false, not just redundant, whenever
+    # the spec's own summary already says so (e.g. "Archive an organization").
+    # Detected structurally, by the family (fixed above) having a sibling
+    # action sub-route whose own final path segment is literally "restore" —
+    # deliberately narrower than "any action sibling": most DELETE routes
+    # have one (rotate-token, sync-status, ...) with no such contradiction,
+    # and only a `restore` sibling specifically implies the delete doesn't
+    # actually destroy anything.
+    delete_families_with_restore = {
+        base
+        for base, keys in groups.items()
+        if any(key.rsplit("/", 1)[-1] == "restore" for key in keys)
+    }
+
     metas: list[dict[str, Any]] = []
     for path, path_item in paths.items():
         if not isinstance(path_item, dict):
             continue
+        action_subroute = is_action_subroute(path, paths)
         for method in METHODS:
             op = path_item.get(method)
             if not isinstance(op, dict):
@@ -243,15 +336,21 @@ def collect_operations(spec: dict[str, Any]) -> list[dict[str, Any]]:
             tags = op.get("tags")
             if isinstance(tags, list) and tags:
                 meta["tag"] = tags[0]
+            has_summary = isinstance(op.get("summary"), str) and bool(op["summary"].strip())
             if isinstance(op.get("summary"), str):
                 meta["summary"] = op["summary"]
             meta["params"] = build_params(spec, path_item, op)
             op_desc = op.get("description")
-            meta["description"] = (
-                op_desc.strip()
-                if isinstance(op_desc, str) and op_desc.strip()
-                else synth_description(method.upper(), path, meta["params"])
+            omit = has_summary and (
+                action_subroute
+                or (method == "delete" and bases[path] in delete_families_with_restore)
             )
+            if isinstance(op_desc, str) and op_desc.strip():
+                meta["description"] = op_desc.strip()
+            else:
+                synthesized = synth_description(method.upper(), path, meta["params"], omit=omit)
+                if synthesized is not None:
+                    meta["description"] = synthesized
             request_body = build_request_body(spec, op)
             if request_body is not None:
                 meta["requestBody"] = request_body
@@ -261,16 +360,8 @@ def collect_operations(spec: dict[str, Any]) -> list[dict[str, Any]]:
             )
             if security:
                 meta["security"] = security
+            meta["family"] = groups[bases[path]]
             metas.append(meta)
-
-    # Family: group by collapsed resource base, then attach each group's sorted keys.
-    groups: dict[str, list[str]] = {}
-    for meta in metas:
-        groups.setdefault(resource_base(meta["path"]), []).append(meta["key"])
-    for keys in groups.values():
-        keys.sort()
-    for meta in metas:
-        meta["family"] = groups[resource_base(meta["path"])]
 
     metas.sort(key=lambda m: m["key"])
     return metas
