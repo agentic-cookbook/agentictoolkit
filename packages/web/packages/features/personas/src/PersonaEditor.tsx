@@ -20,6 +20,8 @@ import { CRUD_TABLES, CrudDataView, useExitGuardChannel } from "@agentic-toolkit
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
 import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
+import { useExitGate } from "@agentic-toolkit/ui/hooks/useExitGate";
+import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import {
   StackGroupDetail,
   useRailExitGuard,
@@ -305,8 +307,11 @@ export function PersonaEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.serviceId]);
 
-  async function save() {
-    if (!valid) return;
+  // Returns whether the persona is now persisted — `false` on a blocked or failed save, so the
+  // composite guards that call it (workspace chrome / the standalone rail host, via the
+  // PaneExitGuard below) hold the navigation instead of proceeding past a write that never landed.
+  async function save(): Promise<boolean> {
+    if (!valid) return false;
     setSaving(true);
     setError(null);
     try {
@@ -325,13 +330,27 @@ export function PersonaEditor({
       commit(toPersonaDraft(saved));
       if (!persisted) setCreated(saved);
       onSaved(saved);
+      return true;
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "personas", step: "save" });
       setError(err instanceof Error ? err.message : "Failed to save persona.");
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  // The persona FORM's unsaved-work guard — the one PersonaMemoryPane's (above) does NOT cover.
+  // Publishing it dirty-gated is what reaches every exit the editor does not own: the rail's row
+  // switch and breadcrumb (through the host's HTD exit gate) and reload / tab close / link click /
+  // Back (through the host's `<UnsavedChangesGuard when={guards.size > 0} />`, which stays false
+  // until something registers). Same shape as ResearchPane's.
+  const exitGuard = dirty ? { isDirty: () => dirty, save: () => save() } : null;
+  useRailExitGuard(exitGuard);
+  // ...and the one exit the editor DOES own: its Save/Cancel bar is rendered in the leaf, so Cancel
+  // never passes through the host's gate. The shared hook rather than a local copy of the
+  // hold-the-action dance, so this prompt cannot drift from every other block's.
+  const { attemptExit, exitAlertProps } = useExitGate(exitGuard);
 
   // The editor is a topic/detail published into the one merged stack, framing the persona as its
   // five facets — Personality (character + voice + examples), Purpose (its prompt), Knowledge, Memory,
@@ -698,7 +717,7 @@ export function PersonaEditor({
       <ButtonBar
         actions={{
           onCreate: () => {},
-          onCancel,
+          onCancel: () => attemptExit(onCancel),
           canCancel: true,
           onSave: () => void save(),
           canSave: dirty && valid,
@@ -735,6 +754,7 @@ export function PersonaEditor({
   );
 
   return (
+    <>
     <StackGroupDetail
       levelId="persona-topics"
       title={isNew ? "New persona" : draft.name || "Persona"}
@@ -749,5 +769,9 @@ export function PersonaEditor({
           : undefined
       }
     />
+      {/* The platform's one prompt, for the Cancel gate above. StackGroupDetail publishes a level
+          rather than wrapping a subtree, so this is a sibling, not a child. */}
+      <UnsavedChangesAlert {...exitAlertProps} />
+    </>
   );
 }

@@ -116,6 +116,11 @@
       "development": "./src/hooks/useScrollSpy.ts",
       "import": "./dist/hooks/useScrollSpy.js"
     },
+    "./hooks/useExitGate": {
+      "types": "./dist/hooks/useExitGate.d.ts",
+      "development": "./src/hooks/useExitGate.ts",
+      "import": "./dist/hooks/useExitGate.js"
+    },
     "./styles/globals.css": "./src/styles/globals.css",
     "./styles/components.css": "./src/styles/components.css",
     "./components/*": {

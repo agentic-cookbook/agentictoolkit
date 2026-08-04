@@ -75,7 +75,12 @@ vi.mock("@agentic-toolkit/data/personas", async () => {
 });
 
 import { PersonaEditor, saveBlockedReason } from "./PersonaEditor";
-import { RailHostBoundary } from "@agentic-toolkit/resource";
+import {
+  RailHostBoundary,
+  RailHostContext,
+  type PaneExitGuard,
+  type RailHostRegistry,
+} from "@agentic-toolkit/resource";
 import {
   api,
   type Persona,
@@ -687,5 +692,104 @@ describe("PersonaEditor save (create mode)", () => {
       { workspace: undefined },
     );
     expect(createPersona).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The persona FORM's own unsaved-work guard. The file's other `useRailExitGuard` belongs to
+// PersonaMemoryPane (the Memory facet's CrudDataView), so before this the persona form — name,
+// slug, prompt, character, voice — published NOTHING: switching personas in the rail, clicking
+// Cancel, reloading or following a link all discarded the draft with no prompt, while the hub's
+// `<UnsavedChangesGuard when={guards.size > 0} />` stayed false because nothing had registered.
+//
+// Two halves, both needed. Registration is what reaches the ENCLOSING exits (rail row switch,
+// breadcrumb, Back/reload/link via the host's browser guard); the Cancel gate is the one exit the
+// editor owns itself, since its Save/Cancel bar is rendered in the leaf and never routes through
+// the host's HTD.
+describe("PersonaEditor unsaved-work guard", () => {
+  /** A minimal rail host recording which ids currently hold a guard — the same stand-in
+   *  resource's railExitGuardDirtyRegistration.test.tsx uses, so "registered" means what it
+   *  means to the real hub/standalone hosts (a live entry in their `guards` map). */
+  function makeHost() {
+    const live = new Map<string, PaneExitGuard>();
+    const registry: RailHostRegistry = {
+      registerLevels: vi.fn(),
+      unregisterLevels: vi.fn(),
+      registerExitGuard: vi.fn((id: string, g: PaneExitGuard | null) => {
+        if (g === null) live.delete(id);
+        else live.set(id, g);
+      }),
+      toolbarSlot: null,
+    };
+    return { live, registry };
+  }
+
+  /** The editor on its Identity pane (so the Name field and the Save/Cancel bar are on screen),
+   *  under a recording host. The Memory facet — the file's OTHER guard publisher — is not
+   *  selected here, so any registration seen below is the FORM's. */
+  function renderUnderHost(host: ReturnType<typeof makeHost>, onCancel = vi.fn()) {
+    render(
+      <RailHostContext.Provider value={host.registry}>
+        <PersonaEditor
+          persona={PERSONA}
+          services={[]}
+          onSaved={vi.fn()}
+          onCancel={onCancel}
+          activeSubtab="identity"
+          onSubtabChange={vi.fn()}
+          renderKnowledgeBases={renderKnowledgeBases}
+          renderChatPane={renderChatPane}
+        />
+      </RailHostContext.Provider>,
+    );
+    return onCancel;
+  }
+
+  it("registers nothing while the form is clean", () => {
+    const host = makeHost();
+    renderUnderHost(host);
+    // The control for the test below: presence IS the dirty signal the host's browser guard reads
+    // (`guards.size > 0`), so an always-registering editor would nag on every untouched persona.
+    expect(host.live.size).toBe(0);
+  });
+
+  it("publishes the form's guard, reporting dirty, once the draft is edited", async () => {
+    const host = makeHost();
+    renderUnderHost(host);
+    await userEvent.type(screen.getByLabelText(/name/i), "!");
+    expect(host.live.size).toBe(1);
+    expect([...host.live.values()][0]!.isDirty()).toBe(true);
+  });
+
+  it("withdraws the guard when the edit is reverted", async () => {
+    const host = makeHost();
+    renderUnderHost(host);
+    const name = screen.getByLabelText(/name/i);
+    await userEvent.type(name, "!");
+    expect(host.live.size).toBe(1);
+    await userEvent.type(name, "{backspace}");
+    expect(host.live.size).toBe(0);
+  });
+
+  it("Cancel on a dirty form raises Discard/Stay instead of discarding", async () => {
+    const host = makeHost();
+    const onCancel = renderUnderHost(host);
+    await userEvent.type(screen.getByLabelText(/name/i), "!");
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    // Held, not run — the whole point: the edits are still on screen behind the alert.
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Stay" })).toBeTruthy();
+
+    // The shared alert's own labels (it never saves): Discard lets the held exit proceed.
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Cancel on a clean form exits immediately, with no alert", () => {
+    const host = makeHost();
+    const onCancel = renderUnderHost(host);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Stay" })).toBeNull();
   });
 });
