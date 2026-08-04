@@ -2,11 +2,15 @@
 import * as React from 'react'
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { TransferOwnershipSection } from '../blocks/transfer-ownership-section'
+import {
+  TransferOwnershipSection,
+  type TransferPreviewResult,
+  type TransferTarget,
+} from '../blocks/transfer-ownership-section'
 
 const targets = [
-  { slug: 'alice', name: 'Alice' },
-  { slug: 'bob', name: 'Bob' },
+  { slug: 'alice', kind: 'customer' as const, name: 'Alice' },
+  { slug: 'bob', kind: 'customer' as const, name: 'Bob' },
 ]
 
 /**
@@ -47,7 +51,7 @@ describe('TransferOwnershipSection', () => {
         entityNoun="Persona"
         entityLabel="persona.alice.charlie"
         targets={targets}
-        currentTargetSlug="alice"
+        currentTarget={{ slug: 'alice', kind: 'customer' }}
         onPreview={onPreview}
         onConfirm={onConfirm}
       />,
@@ -73,7 +77,7 @@ describe('TransferOwnershipSection', () => {
         entityNoun="Persona"
         entityLabel="persona.alice.charlie"
         targets={targets}
-        currentTargetSlug="alice"
+        currentTarget={{ slug: 'alice', kind: 'customer' }}
         onPreview={vi.fn()}
         onConfirm={vi.fn()}
       />,
@@ -83,6 +87,42 @@ describe('TransferOwnershipSection', () => {
     // `data-disabled` is Base UI's own hook — this package's CSS keys on it
     // (`styles/components.css:98`), so asserting it pins the same contract the theme relies on.
     expect(screen.getByRole('menuitem', { name: 'Alice (current)' })).toHaveAttribute('data-disabled')
+  })
+
+  it('keeps two same-slug workspaces apart by kind, and greys out only the matching one', async () => {
+    /**
+     * `customer.customers.slug` and `organization.organizations.slug` are separate namespaces with
+     * separate uniques, so a user whose own slug is `acme` can also belong to an org called `acme`.
+     * Keyed by slug alone these were two React children with the same key, and BOTH read as the
+     * current workspace — so the one destination the user actually wanted was the disabled one.
+     */
+    const onPreview = vi.fn().mockResolvedValue({ newId: null, tokens: 0, revoking: [] })
+    const collision = [
+      { slug: 'acme', kind: 'customer' as const, name: 'Acme (personal)' },
+      { slug: 'acme', kind: 'organization' as const, name: 'Acme Inc' },
+    ]
+
+    render(
+      <TransferOwnershipSection
+        entityNoun="Persona"
+        entityLabel="persona.acme.charlie"
+        targets={collision}
+        currentTarget={{ slug: 'acme', kind: 'customer' }}
+        onPreview={onPreview}
+        onConfirm={vi.fn()}
+      />,
+    )
+    openSection()
+    await openMenu('Transfer Persona')
+
+    expect(screen.getByRole('menuitem', { name: 'Acme (personal) (current)' })).toHaveAttribute('data-disabled')
+    const org = screen.getByRole('menuitem', { name: 'Acme Inc' })
+    expect(org).not.toHaveAttribute('data-disabled')
+
+    // ...and picking it previews the ORG, kind included, so the server resolves the namespace the
+    // user pointed at rather than the one its own precedence order checks first.
+    fireEvent.click(org)
+    await waitFor(() => expect(onPreview).toHaveBeenCalledWith(collision[1]))
   })
 
   it('nests a target that carries children, and never treats it as a destination', async () => {
@@ -117,7 +157,7 @@ describe('TransferOwnershipSection', () => {
         entityNoun="Persona"
         entityLabel="persona.alice.charlie"
         targets={targets}
-        currentTargetSlug="alice"
+        currentTarget={{ slug: 'alice', kind: 'customer' }}
         onPreview={onPreview}
         onConfirm={vi.fn()}
       />,
@@ -146,10 +186,18 @@ describe('TransferOwnershipSection', () => {
      * move having been shown the consequences of another. Delete either `seq` check in `choose()`
      * and this test fails; the cancel test above passes either way.
      */
-    const settlers: Record<string, (r: unknown) => void> = {}
+    const settlers = new Map<string, (r: TransferPreviewResult) => void>()
     const onPreview = vi.fn(
-      (t: { slug: string }) => new Promise((res) => { settlers[t.slug] = res as (r: unknown) => void }),
+      (t: TransferTarget) =>
+        new Promise<TransferPreviewResult>((res) => { settlers.set(t.slug, res) }),
     )
+    /** Answers one in-flight preflight — and fails the test, rather than TypeErroring, if the
+     *  preflight it names was never started. */
+    function settle(slug: string, result: TransferPreviewResult): void {
+      const res = settlers.get(slug)
+      if (!res) throw new Error(`no preflight in flight for ${slug}`)
+      res(result)
+    }
 
     render(
       <TransferOwnershipSection
@@ -176,7 +224,7 @@ describe('TransferOwnershipSection', () => {
 
     // Alice's preflight answers now, into Bob's open dialog.
     await act(async () => {
-      settlers.alice({ newId: 'persona.alice.charlie', tokens: 9, revoking: [] })
+      settle('alice', { newId: 'persona.alice.charlie', tokens: 9, revoking: [] })
     })
 
     expect(screen.queryByText(/persona\.alice\.charlie/)).toBeNull()
@@ -185,7 +233,7 @@ describe('TransferOwnershipSection', () => {
 
     // Bob's own answer still lands — the guard orphans the stale preflight, not the live one.
     await act(async () => {
-      settlers.bob({ newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
+      settle('bob', { newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
     })
     expect(screen.getByText(/persona\.bob\.charlie/)).toBeInTheDocument()
   })

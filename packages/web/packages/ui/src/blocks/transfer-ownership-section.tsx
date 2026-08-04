@@ -23,11 +23,53 @@ import {
 } from "../components/dialog";
 import { cn } from "../lib/utils";
 
+/**
+ * Which NAMESPACE a workspace slug is drawn from.
+ *
+ * Load-bearing, not decoration: a personal workspace's slug and an organization's slug are unique
+ * only within their own table, so one string can name two different workspaces. Without the kind a
+ * menu of `["acme" (mine), "acme" (the org I'm in)]` is two entries the caller cannot tell apart —
+ * React sees duplicate keys, and the server, handed the slug alone, resolves whichever namespace it
+ * checks first.
+ */
+export type TransferTargetKind = "customer" | "organization";
+
 /** A destination. `children` turns the entry into a submenu (workspace → its Products). */
 export interface TransferTarget {
   slug: string;
+  /**
+   * Omitted only for a target that is NOT a workspace — a nested Product, whose `slug` is an
+   * ecosystem rdid and therefore already globally unique. Every workspace-level target should
+   * carry one.
+   */
+  kind?: TransferTargetKind;
   name: string;
   children?: TransferTarget[];
+}
+
+/** Enough of a {@link TransferTarget} to point at one. */
+export type TransferTargetRef = Pick<TransferTarget, "slug" | "kind">;
+
+/**
+ * The identity of a menu entry: `kind` and `slug` TOGETHER, never the slug alone. Used for the
+ * React key and for the "(current)" match, so both answer the same question the same way.
+ */
+function targetKey(target: TransferTargetRef): string {
+  return `${target.kind ?? ""}:${target.slug}`;
+}
+
+/**
+ * Is this entry the destination the object already lives in?
+ *
+ * A missing kind on either side falls back to the slug alone — the pre-`kind` behaviour, kept for
+ * targets that legitimately have none (a nested Product) and for a caller that cannot determine
+ * its own. It only ever affects which entry is greyed out and labelled "(current)"; being wrong
+ * here disables the wrong menu item, it never sends a transfer anywhere.
+ */
+function isCurrentTarget(target: TransferTarget, current?: TransferTargetRef): boolean {
+  if (!current || target.slug !== current.slug) return false;
+  if (target.kind === undefined || current.kind === undefined) return true;
+  return target.kind === current.kind;
 }
 
 /** What the server says the transfer will do. Never reconstructed on the client. */
@@ -45,7 +87,7 @@ export interface TransferOwnershipSectionProps {
   /** Candidate destinations. Team workspaces must already be filtered out by the caller. */
   targets: TransferTarget[];
   /** The destination the object already lives in — shown disabled, so the menu reads as a location. */
-  currentTargetSlug?: string;
+  currentTarget?: TransferTargetRef;
   /** Server preflight. Its result populates the dialog; a throw shows an inline error. */
   onPreview: (target: TransferTarget) => Promise<TransferPreviewResult>;
   /** Performs the transfer. A throw shows an inline error and keeps the dialog open. */
@@ -67,7 +109,7 @@ export function TransferOwnershipSection({
   entityNoun,
   entityLabel,
   targets,
-  currentTargetSlug,
+  currentTarget,
   onPreview,
   onConfirm,
 }: TransferOwnershipSectionProps): React.ReactElement {
@@ -140,7 +182,7 @@ export function TransferOwnershipSection({
   function renderTarget(target: TransferTarget): React.ReactElement {
     if (target.children && target.children.length > 0) {
       return (
-        <DropdownMenuSub key={target.slug}>
+        <DropdownMenuSub key={targetKey(target)}>
           <DropdownMenuSubTrigger>{target.name}</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             {target.children.map((child) => renderTarget(child))}
@@ -148,10 +190,10 @@ export function TransferOwnershipSection({
         </DropdownMenuSub>
       );
     }
-    const isCurrent = target.slug === currentTargetSlug;
+    const isCurrent = isCurrentTarget(target, currentTarget);
     return (
       <DropdownMenuItem
-        key={target.slug}
+        key={targetKey(target)}
         disabled={isCurrent}
         onClick={isCurrent ? undefined : () => void choose(target)}
       >
