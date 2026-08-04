@@ -55549,6 +55549,8 @@ export interface components {
             addedAt: string;
         };
         ArchivedWorkspace: {
+            /** @description The organization id — what POST /organization/organizations/{id}/restore takes */
+            id: string;
             slug: string;
             name: string;
             /** @enum {string} */
