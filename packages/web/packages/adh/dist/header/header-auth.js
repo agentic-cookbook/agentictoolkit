@@ -6,8 +6,10 @@
 import { useAuth, beginLogin, isAdmin, ssoSwitchUrl } from "@agentic-toolkit/auth";
 import { siteHomePath } from "@agentic-toolkit/adh-registry";
 function toAvatarUser(u, fallback = "User") {
+  const fullName = u.name?.trim() || void 0;
   return {
-    name: u.name || u.email?.split("@")[0] || fallback,
+    name: fullName || u.label?.trim() || u.email?.split("@")[0] || fallback,
+    fullName,
     imageUrl: u.avatarUrl || void 0
   };
 }

@@ -1,9 +1,17 @@
 export type AvatarMenuUser = {
-    /** The resolved display name — an auth source picks the precedence (hub uses
-     *  `displayName || slug`, every source then falls back through the email
-     *  local-part to 'User'; see `toAvatarUser`). Never empty by contract, which is
-     *  why this menu can show it unconditionally. */
+    /** What this account is CALLED — the personal name when one is known, else the
+     *  handle a source falls back to (hub's slug, the email local-part, 'User'; see
+     *  `toAvatarUser`). Never empty by contract, which is why the trigger can use it
+     *  as its accessible name and the avatar can derive initials from it. */
     name: string;
+    /** The person's own name, when the backend actually holds one. Present ⇒ the menu
+     *  GREETS by its first word; absent ⇒ it prints `name` plainly.
+     *
+     *  Two fields rather than one because a handle is not a name, and only the source
+     *  knows which it handed over: greeting "Welcome mikefullerton!" is worse than
+     *  printing the handle. `name` still equals this whenever a name exists, so no
+     *  caller has to choose between them for a11y or initials. */
+    fullName?: string;
     imageUrl?: string;
 };
 export type AvatarMenuProps = {

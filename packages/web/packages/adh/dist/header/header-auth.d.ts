@@ -40,16 +40,23 @@ export interface HeaderAuthSourceOptions {
 export type HeaderAuthSource = (opts: HeaderAuthSourceOptions) => HeaderAuthState;
 /**
  * Map a backend auth user onto the header's avatar shape — the single home for the
- * `name || email-local-part || fallback` rule, so every source maps identically.
- * `name` is taken as-is when truthy (callers that need a different precedence, e.g.
- * hub's `displayName || slug`, pass the resolved name in); `fallback` lets admin
- * show 'Admin' rather than 'User'. The email local-part avoids leaking the full
- * address, which the menu no longer prints at all: the address itself is not
- * carried onto the avatar shape, so no header surface can grow a display of it
- * without coming back through here.
+ * `name || label || email-local-part || fallback` rule, so every source maps
+ * identically. `fallback` lets admin show 'Admin' rather than 'User'. The email
+ * local-part avoids leaking the full address, which the menu no longer prints at
+ * all: the address itself is not carried onto the avatar shape, so no header
+ * surface can grow a display of it without coming back through here.
+ *
+ * `name` is the PERSON'S NAME and nothing else — it is what the menu greets, so a
+ * source that only has a handle must pass it as `label` instead. That split is the
+ * whole point of the second field: hub used to resolve `displayName || slug` and
+ * hand the result in as `name`, which greeted a signed-in visitor by their slug
+ * ("mikefullerton") while their actual name sat unread in `AuthUser.name`.
  */
 export declare function toAvatarUser(u: Pick<AuthUser, 'email' | 'avatarUrl'> & {
+    /** The person's own name (`AuthUser.name`, or a profile override). */
     name?: string | null;
+    /** The handle to fall back to when there is no name — hub passes the slug. */
+    label?: string | null;
 }, fallback?: string): AvatarMenuUser;
 /**
  * The cross-site switch resolver every adh-SSO source uses. Signed in: route a site

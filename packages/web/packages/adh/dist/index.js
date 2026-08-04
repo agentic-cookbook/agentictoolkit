@@ -18,6 +18,9 @@ import {
   DropdownMenuSeparator
 } from "@agentic-toolkit/ui/components/dropdown-menu";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+function firstNameOf(name) {
+  return name.trim().split(/\s+/)[0] || name;
+}
 function initialsOf(name) {
   if (!name) return "";
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
@@ -51,7 +54,7 @@ function AvatarMenu({
       }
     ),
     /* @__PURE__ */ jsxs(DropdownMenuContent, { className: "adh-avatar-menu", align: "end", sideOffset: 8, children: [
-      /* @__PURE__ */ jsx("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsx("div", { className: "adh-avatar-menu__identity", children: /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__name", children: user.name }) }) }),
+      /* @__PURE__ */ jsx("div", { className: "adh-avatar-menu__header", children: /* @__PURE__ */ jsx("div", { className: "adh-avatar-menu__identity", children: /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__name", children: user.fullName ? `Welcome ${firstNameOf(user.fullName)}!` : user.name }) }) }),
       /* @__PURE__ */ jsx(DropdownMenuSeparator, {}),
       /* @__PURE__ */ jsxs(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: homeHref }), className: "adh-avatar-menu__item", children: [
         /* @__PURE__ */ jsx(Home, { className: "adh-avatar-menu__item-icon" }),

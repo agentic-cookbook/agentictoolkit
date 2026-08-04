@@ -13,11 +13,19 @@ import {
 } from '@agentic-toolkit/ui/components/dropdown-menu'
 
 export type AvatarMenuUser = {
-  /** The resolved display name — an auth source picks the precedence (hub uses
-   *  `displayName || slug`, every source then falls back through the email
-   *  local-part to 'User'; see `toAvatarUser`). Never empty by contract, which is
-   *  why this menu can show it unconditionally. */
+  /** What this account is CALLED — the personal name when one is known, else the
+   *  handle a source falls back to (hub's slug, the email local-part, 'User'; see
+   *  `toAvatarUser`). Never empty by contract, which is why the trigger can use it
+   *  as its accessible name and the avatar can derive initials from it. */
   name: string
+  /** The person's own name, when the backend actually holds one. Present ⇒ the menu
+   *  GREETS by its first word; absent ⇒ it prints `name` plainly.
+   *
+   *  Two fields rather than one because a handle is not a name, and only the source
+   *  knows which it handed over: greeting "Welcome mikefullerton!" is worse than
+   *  printing the handle. `name` still equals this whenever a name exists, so no
+   *  caller has to choose between them for a11y or initials. */
+  fullName?: string
   imageUrl?: string
 }
 
@@ -29,6 +37,13 @@ export type AvatarMenuProps = {
   onLogout?: () => void
   settingsHref?: string
   onSettings?: () => void
+}
+
+/** The first whitespace-delimited word of a name — "Mike" from "Mike Fullerton".
+ *  A greeting takes the first word, never the whole form: "Welcome Mike Fullerton!"
+ *  reads like a form letter. A single-word name is its own first word. */
+function firstNameOf(name: string): string {
+  return name.trim().split(/\s+/)[0] || name
 }
 
 function initialsOf(name: string | undefined | null): string {
@@ -97,9 +112,14 @@ export function AvatarMenu({
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="adh-avatar-menu" align="end" sideOffset={8}>
+        {/* A greeting when we know the person's name, the bare handle when we do
+            not. Same element and same class either way, so the row keeps its one
+            style and nothing has to reason about which shape is showing. */}
         <div className="adh-avatar-menu__header">
           <div className="adh-avatar-menu__identity">
-            <span className="adh-avatar-menu__name">{user.name}</span>
+            <span className="adh-avatar-menu__name">
+              {user.fullName ? `Welcome ${firstNameOf(user.fullName)}!` : user.name}
+            </span>
           </div>
         </div>
         <DropdownMenuSeparator />

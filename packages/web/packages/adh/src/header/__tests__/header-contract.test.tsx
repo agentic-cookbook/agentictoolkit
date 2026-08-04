@@ -230,6 +230,32 @@ describe('AdhHeader (registry-free)', () => {
     ).toEqual(['Home', 'Settings', 'Log out'])
   })
 
+  // `name` alone is what an account is CALLED, which may be a slug — so it is
+  // printed as-is. Only `fullName` asserts "this is a person's name", and only
+  // that turns the row into a greeting.
+  it('greets by first name when the source supplied one', async () => {
+    render(
+      <AdhHeader siteName="Hub" user={{ name: 'Mike Fullerton', fullName: 'Mike Fullerton' }} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Open Mike Fullerton menu' }))
+    await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument())
+    const name = screen.getByRole('menu').querySelector('.adh-avatar-menu__name')!
+    // The FIRST word only, and the whole row's text — `toContain('Welcome')` would
+    // pass on "Welcome Mike Fullerton!", which is the form-letter shape.
+    expect(name.textContent).toBe('Welcome Mike!')
+  })
+
+  it('prints the bare handle when there is no name to greet', async () => {
+    // What hub hands over for a user with a slug and no name: the slug labels the
+    // account, and nothing claims it is a name. Greeting "Welcome mikefullerton!"
+    // is the regression this asserts against.
+    render(<AdhHeader siteName="Hub" user={{ name: 'mikefullerton' }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open mikefullerton menu' }))
+    await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument())
+    const name = screen.getByRole('menu').querySelector('.adh-avatar-menu__name')!
+    expect(name.textContent).toBe('mikefullerton')
+  })
+
   // The trigger is the avatar ALONE. The name is still its accessible name (asserted by
   // the getByRole above), so this is about the printed copy, not about a11y.
   //
