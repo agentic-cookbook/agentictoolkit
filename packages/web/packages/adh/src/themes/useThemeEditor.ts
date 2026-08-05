@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { themes } from '@agentic-toolkit/themes/manifest'
 
-import { DEFAULT_ADH_THEME, DEFAULT_SITE_THEME, switcherThemeKeys } from './adh-themes'
+import { DEFAULT_ADH_THEME, DEFAULT_SITE_THEME } from './adh-themes'
+import { switcherThemeKeys } from './theme-keys'
 import { isSwitcherSeed, concatItemCss } from './resolve'
 import { applyThemeCss, clearThemeOverride } from './theme-overrides'
 import { applyBaseTheme, persistTheme, readStoredTheme } from './theme-preview'

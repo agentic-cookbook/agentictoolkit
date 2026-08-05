@@ -14,8 +14,8 @@ export {
   DEFAULT_SITE_THEME,
   FULL_PALETTE_THEMES,
   isFullPaletteTheme,
-  switcherThemeKeys,
 } from './adh-themes'
+export { switcherThemeKeys } from './theme-keys'
 export type {
   AdhThemeKey,
   AdhThemeOption,

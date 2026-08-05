@@ -1,5 +1,4 @@
 // src/themes/adh-themes.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
 var BASE_CUT_ALIASES = ["adh-iosevka"];
 var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
 var ADH_THEMES = [

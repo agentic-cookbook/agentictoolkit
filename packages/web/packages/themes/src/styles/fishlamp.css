@@ -27,7 +27,7 @@
  *   …[data-color-mode]:not(.dark)                                 (0,3,1) > color-mode-light.css:21          (0,3,0)
  *   …[data-color-mode]:not(.dark)[data-contrast=high]             (0,4,1) > color-mode-light.css:105         (0,4,0)
  *   …[data-color-mode]:not(.dark)[data-contrast=extra-high]       (0,4,1) > color-mode-light.css:113         (0,4,0)
- *   …[data-color-mode]:not(.dark):not([high]):not([extra-high])   (0,6,1) > color-mode-light.css:123         (0,5,0)
+ *   …[data-color-mode]:not(.dark):not([high]):not([extra-high])   (0,5,1) > color-mode-light.css:123         (0,5,0)
  *
  * The last three are not defensive padding. color-mode-light.css defines light
  * high-contrast text as near-BLACK (#141109 / #050402) and applies it on an explicit
@@ -38,10 +38,8 @@
  *
  * The last selector deliberately is NOT wrapped in @media (prefers-contrast: more) even
  * though the rule it beats is. It matches a superset of that rule's targets and declares
- * the same values as the rest of this list, so it is inert everywhere else — and a plain
- * selector stays visible to ThemeStyle's buildScopedCss rewriter, which only rewrites root
- * anchors at a line start or after a comma. An indented one inside @media would survive
- * unrewritten into a scoped preview and match nothing there, with no error.
+ * the same values as the rest of this list, so it is inert everywhere else, and staying
+ * out of the media block keeps all five in ONE selector list over ONE copy of the palette.
  *
  * One selector list, one copy of the palette: there is no second block to drift.
  *
@@ -252,10 +250,34 @@ html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-cont
  * 6.97 → 10.72 → 14.23. `--focus-ring-width` is set here for the same reason the light
  * rules set it — a user who asked for high contrast should get the thicker ring.
  *
- * The OS-driven "auto" case needs nothing: accessibility.css scopes it with
- * `html:not([data-contrast=high]):not([data-contrast=extra-high])` (0,2,1), which
- * already outranks the list's `html:root` and applies its dark values over this dark
- * palette correctly. */
+ * The OS-driven "auto" case — `prefers-contrast: more` with no explicit choice — needs
+ * answering too, and needs it in BOTH branches, for two different reasons:
+ *
+ *   html:root:not([high]):not([extra-high])                (0,3,1) > accessibility.css:63 (0,2,1)
+ *   …[data-color-mode]:not(.dark):not([high]):not([extra-high])
+ *                                                          (0,5,1) = the list's 5th selector — later wins
+ *                                                                  > color-mode-light.css:129   (0,5,0)
+ *
+ * In the dark branch accessibility.css does reach the document (0,2,1 beats the list's
+ * `html:root`), so leaving it alone was legible — but it paints COOL values (#f3f1ee text,
+ * #4a4a5a outlines) over a warm palette, and the explicit High choice above now paints warm
+ * ones. Same user intent, two different-coloured answers.
+ *
+ * The light branch was worse than inconsistent: the list's 5th selector (0,5,1) out-ranks
+ * accessibility.css:63 AND color-mode-light.css:129, so an OS "increase contrast" user in
+ * light mode got the base palette and NO boost at all — the same collateral that made an
+ * explicit High choice a no-op, one selector further along.
+ *
+ * The values are the `high` block's, restated: that is the shape color-mode-light.css:128
+ * uses for the identical case, and CSS has no way to add a media condition to a selector
+ * list.
+ *
+ * Every selector in this section is a qualified `html:root`, and adding them is what made
+ * ThemeStyle's buildScopedCss rewriter grow the two cases it now handles — a qualifier run
+ * other than `[data-color-mode]:not(.dark)`, and an anchor indented inside `@media`. Before
+ * that, these rules would have reached a scoped preview unrewritten and matched nothing
+ * there, silently. buildScopedCss.test.ts's last case asserts it against these very
+ * stylesheets, so the two files cannot drift apart without a red test. */
 
 html:root[data-contrast='high'],
 html:root[data-color-mode]:not(.dark)[data-contrast='high'] {
@@ -275,6 +297,19 @@ html:root[data-color-mode]:not(.dark)[data-contrast='extra-high'] {
   --color-outline-variant: rgba(245, 200, 119, 0.4);
   --color-outline-strong: var(--color-primary-bright);
   --focus-ring-width: 3px;
+}
+
+/* Follow the OS "increase contrast" setting when no explicit choice is stored. */
+@media (prefers-contrast: more) {
+  html:root:not([data-contrast='high']):not([data-contrast='extra-high']),
+  html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-contrast='extra-high']) {
+    --color-on-surface: #fbf5ea;
+    --color-on-surface-variant: #cdbcab;
+    --color-outline: rgba(232, 163, 61, 0.38);
+    --color-outline-variant: rgba(232, 163, 61, 0.24);
+    --color-outline-strong: rgba(232, 163, 61, 0.7);
+    --focus-ring-width: 3px;
+  }
 }
 
 /* === Site surface === */

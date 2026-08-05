@@ -52,7 +52,6 @@ import {
 } from "@agentic-toolkit/ui/components/dropdown-menu";
 
 // src/themes/adh-themes.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
 var ADH_THEME_COOKIE = "adh-theme";
 var BASE_CUT_ALIASES = ["adh-iosevka"];
 var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
@@ -118,7 +117,7 @@ import {
 import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var DEFAULT_VALUE = "__default";
 function ChatThemeSwitcher({
-  themes: themes2,
+  themes,
   current,
   onChange,
   label = "Chat theme"
@@ -135,7 +134,7 @@ function ChatThemeSwitcher({
         onValueChange: (value) => onChange(value === DEFAULT_VALUE ? null : value),
         children: [
           /* @__PURE__ */ jsx3(DropdownMenuRadioItem2, { value: DEFAULT_VALUE, children: "App default" }),
-          themes2.map((theme) => /* @__PURE__ */ jsx3(DropdownMenuRadioItem2, { value: theme.key, children: theme.label }, theme.key))
+          themes.map((theme) => /* @__PURE__ */ jsx3(DropdownMenuRadioItem2, { value: theme.key, children: theme.label }, theme.key))
         ]
       }
     ) })

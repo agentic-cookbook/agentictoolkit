@@ -1,7 +1,8 @@
 export { AdhThemeStyle } from './AdhThemeStyle';
 export { ThemeSwitcher } from './ThemeSwitcher';
 export type { ThemeSwitcherProps } from './ThemeSwitcher';
-export { ADH_THEME_COOKIE, ADH_THEMES, DEFAULT_ADH_THEME, DEFAULT_SITE_THEME, FULL_PALETTE_THEMES, isFullPaletteTheme, switcherThemeKeys, } from './adh-themes';
+export { ADH_THEME_COOKIE, ADH_THEMES, DEFAULT_ADH_THEME, DEFAULT_SITE_THEME, FULL_PALETTE_THEMES, isFullPaletteTheme, } from './adh-themes';
+export { switcherThemeKeys } from './theme-keys';
 export type { AdhThemeKey, AdhThemeOption, SwitcherThemeKey, FullPaletteThemeKey, } from './adh-themes';
 export { useThemeEditor } from './useThemeEditor';
 export type { ThemeEditorApi, ThemeSource, EditorTheme, CssMap } from './useThemeEditor';

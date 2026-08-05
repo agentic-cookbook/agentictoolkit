@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { themes } from '@agentic-toolkit/themes/manifest'
-import { ADH_THEMES, DEFAULT_ADH_THEME, adhThemeKeys, switcherThemeKeys } from '../themes/adh-themes'
+import { ADH_THEMES, DEFAULT_ADH_THEME } from '../themes/adh-themes'
+import { adhThemeKeys, switcherThemeKeys } from '../themes/theme-keys'
 
 // `adh` became the Iosevka cut in main's theme (#134), which left `adh-iosevka`
 // registered in the manifest but identical to the base — a second menu row that

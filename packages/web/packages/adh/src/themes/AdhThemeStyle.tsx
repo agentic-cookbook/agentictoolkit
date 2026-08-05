@@ -7,11 +7,11 @@ import { THEME_FONT_PRELOADS } from '@agentic-toolkit/themes/fonts'
 import {
   DEFAULT_ADH_THEME,
   DEFAULT_SITE_THEME,
-  switcherThemeKeys,
   isFullPaletteTheme,
   usesBaseThemeFonts,
   type SwitcherThemeKey,
 } from './adh-themes'
+import { switcherThemeKeys } from './theme-keys'
 import { themePrePaintScript } from './theme-preview'
 import { isDevDeploymentEnv } from '@agentic-toolkit/adh-registry/deployment-env'
 

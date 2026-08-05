@@ -1,10 +1,25 @@
-import { type ThemeKey } from '@agentic-toolkit/themes/manifest';
+/** TYPE-ONLY, and it has to stay that way. This module is reached by five of the
+ *  package's entries, and tsup builds them with `splitting: false` — a value import of
+ *  `@agentic-toolkit/themes/manifest` here survives into every one of those entries as a
+ *  live `import` statement (esbuild keeps an external package's import for side effects
+ *  even when tree-shaking leaves the binding unused), dragging ~39 whole stylesheets as
+ *  strings behind a file that only wanted a string constant. The two functions that
+ *  genuinely READ the manifest live in ./theme-keys for exactly this reason.
+ *
+ *  `import type { … }`, NOT `import { type … }`. The inline-modifier form leaves an
+ *  import STATEMENT with no specifiers once the types are stripped, and esbuild emits
+ *  that as a bare `import "@agentic-toolkit/themes/manifest"` — a side-effect import
+ *  that still evaluates the module and still ships all 39 stylesheets. Only the
+ *  type-only DECLARATION is erased outright. The two forms look interchangeable, and
+ *  the difference is visible nowhere but the emitted dist. */
+import type { ThemeKey } from '@agentic-toolkit/themes/manifest';
 export type AdhThemeKey = Extract<ThemeKey, `adh${string}`>;
 export declare const ADH_THEME_COOKIE = "adh-theme";
 export type AdhThemeOption = {
     key: AdhThemeKey;
     label: string;
 };
+export declare const isBaseCutAlias: (key: string) => boolean;
 /** The font-variant picker the cookie-driven ThemeSwitcher offers, and the key set
  *  `getAdhTheme` validates the stored cookie against. Filtered through
  *  BASE_CUT_ALIASES for the same reason `adhThemeKeys()` is — an alias row would be
@@ -72,11 +87,4 @@ export declare const DEFAULT_SITE_THEME: SwitcherThemeKey;
  *  font preloads are worth emitting for a page whose winning theme is `key`. */
 export declare const usesBaseThemeFonts: (key: string) => boolean;
 export declare const isFullPaletteTheme: (key: string) => key is FullPaletteThemeKey;
-/** Every adh* theme key the switcher offers — the delta-over-base font variants,
- *  minus the BASE_CUT_ALIASES declared at the top of this file. */
-export declare const adhThemeKeys: () => AdhThemeKey[];
-/** Every switchable theme key — the set the switcher menu offers and AdhThemeStyle
- *  emits alt-blocks for. adh family (emitted as `:root` deltas) + full-palette themes
- *  (emitted whole). Single source so the menu and the emitted blocks can't diverge. */
-export declare const switcherThemeKeys: () => SwitcherThemeKey[];
 //# sourceMappingURL=adh-themes.d.ts.map

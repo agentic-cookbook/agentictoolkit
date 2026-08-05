@@ -6,7 +6,6 @@
 import { useEffect } from "react";
 
 // src/themes/adh-themes.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
 var BASE_CUT_ALIASES = ["adh-iosevka"];
 var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
 var ADH_THEMES = [
@@ -67,13 +66,6 @@ var BASE_FACE_THEMES = [
   "charcoal",
   "fishlamp"
 ];
-var adhThemeKeys = () => Object.keys(themes).filter(
-  (k) => k.startsWith("adh") && !isBaseCutAlias(k)
-);
-var switcherThemeKeys = () => [
-  ...adhThemeKeys(),
-  ...FULL_PALETTE_THEMES
-];
 
 // src/themes/theme-preview.ts
 var THEME_STORAGE_KEY = "adh-theme";
@@ -93,6 +85,16 @@ function readStoredTheme() {
     return null;
   }
 }
+
+// src/themes/theme-keys.ts
+import { themes } from "@agentic-toolkit/themes/manifest";
+var adhThemeKeys = () => Object.keys(themes).filter(
+  (k) => k.startsWith("adh") && !isBaseCutAlias(k)
+);
+var switcherThemeKeys = () => [
+  ...adhThemeKeys(),
+  ...FULL_PALETTE_THEMES
+];
 
 // src/themes/resolve.ts
 function isSwitcherSeed(key) {

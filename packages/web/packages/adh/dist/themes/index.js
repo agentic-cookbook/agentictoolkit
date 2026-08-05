@@ -9,7 +9,6 @@ import { APPEARANCE_PREPAINT_SCRIPT } from "@agentic-toolkit/themes/appearance";
 import { THEME_FONT_PRELOADS } from "@agentic-toolkit/themes/fonts";
 
 // src/themes/adh-themes.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
 var ADH_THEME_COOKIE = "adh-theme";
 var BASE_CUT_ALIASES = ["adh-iosevka"];
 var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
@@ -74,6 +73,9 @@ var BASE_FACE_THEMES = [
 ];
 var usesBaseThemeFonts = (key) => BASE_FACE_THEMES.includes(key);
 var isFullPaletteTheme = (key) => FULL_PALETTE_THEMES.includes(key);
+
+// src/themes/theme-keys.ts
+import { themes } from "@agentic-toolkit/themes/manifest";
 var adhThemeKeys = () => Object.keys(themes).filter(
   (k) => k.startsWith("adh") && !isBaseCutAlias(k)
 );

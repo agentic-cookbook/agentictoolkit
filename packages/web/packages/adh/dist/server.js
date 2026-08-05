@@ -2,7 +2,6 @@
 import { cookies } from "next/headers";
 
 // src/themes/adh-themes.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
 var ADH_THEME_COOKIE = "adh-theme";
 var BASE_CUT_ALIASES = ["adh-iosevka"];
 var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);
@@ -67,13 +66,6 @@ var BASE_FACE_THEMES = [
 ];
 var usesBaseThemeFonts = (key) => BASE_FACE_THEMES.includes(key);
 var isFullPaletteTheme = (key) => FULL_PALETTE_THEMES.includes(key);
-var adhThemeKeys = () => Object.keys(themes).filter(
-  (k) => k.startsWith("adh") && !isBaseCutAlias(k)
-);
-var switcherThemeKeys = () => [
-  ...adhThemeKeys(),
-  ...FULL_PALETTE_THEMES
-];
 
 // src/themes/getAdhTheme.ts
 var VALID_KEYS = new Set(ADH_THEMES.map((t) => t.key));
@@ -91,6 +83,16 @@ import { themes as themes2 } from "@agentic-toolkit/themes/manifest";
 import { splitImports, parseRootProps } from "@agentic-toolkit/themes/tokens";
 import { APPEARANCE_PREPAINT_SCRIPT } from "@agentic-toolkit/themes/appearance";
 import { THEME_FONT_PRELOADS } from "@agentic-toolkit/themes/fonts";
+
+// src/themes/theme-keys.ts
+import { themes } from "@agentic-toolkit/themes/manifest";
+var adhThemeKeys = () => Object.keys(themes).filter(
+  (k) => k.startsWith("adh") && !isBaseCutAlias(k)
+);
+var switcherThemeKeys = () => [
+  ...adhThemeKeys(),
+  ...FULL_PALETTE_THEMES
+];
 
 // src/themes/theme-preview.ts
 var THEME_STORAGE_KEY = "adh-theme";

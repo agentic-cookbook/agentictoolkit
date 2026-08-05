@@ -884,7 +884,6 @@ function AdhFooter({ links = [], copyright, version, trailing }) {
 }
 
 // src/themes/adh-themes.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
 var ADH_THEME_COOKIE = "adh-theme";
 var BASE_CUT_ALIASES = ["adh-iosevka"];
 var isBaseCutAlias = (key) => BASE_CUT_ALIASES.includes(key);

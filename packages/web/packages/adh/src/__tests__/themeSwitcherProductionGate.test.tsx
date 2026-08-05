@@ -16,7 +16,8 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AdhThemeStyle } from '../themes/AdhThemeStyle'
-import { DEFAULT_ADH_THEME, switcherThemeKeys } from '../themes/adh-themes'
+import { DEFAULT_ADH_THEME } from '../themes/adh-themes'
+import { switcherThemeKeys } from '../themes/theme-keys'
 
 const ORIGINAL = process.env.DEPLOYMENT_ENV
 
