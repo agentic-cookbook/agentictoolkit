@@ -48,10 +48,12 @@ import {
   History,
   House,
   LayoutDashboard,
+  LayoutGrid,
   LayoutTemplate,
   Library,
   LifeBuoy,
   LogIn,
+  Mail,
   MonitorSmartphone,
   Network,
   Newspaper,
@@ -87,7 +89,13 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   'hub-help': CircleHelp, // the promoted family Help site (help.adh.com)
   news: Newspaper,
 
-  // --- In-hub destination rows (logged-in only), keyed by route path ---
+  // --- Destination rows keyed by route path ---
+  // The two that moved out of hub's header bar keep the glyph they wore there, so a
+  // visitor who knew them in the bar recognizes them in the menu. '/details' is
+  // resolved per-SITE rather than on the hub (see SiteMenu) — the key is still the
+  // route, because that is what the row points at on whichever site renders it.
+  '/contact': Mail,
+  '/details': LayoutGrid,
   '/products': Network, // matches FEATURE_META `products` (Products replaced /ecosystems)
   '/personas': UserCircle, // matches FEATURE_META `personas`
   '/organizations': Building, // matches WorkspaceShell's organization type icon

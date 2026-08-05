@@ -15,6 +15,13 @@ export type SiteNavEntriesOptions = {
    *  dropped. Dropping unconditionally is how a site whose own nav points at
    *  `/home` (community's "Forum") loses its board entirely on a signed-out phone. */
   homeHref?: string
+  /** The Details destination the menu renders below Help, on every site that ships its
+   *  own `/details`. Same contract as `homeHref` and for the same reason: hub's bar
+   *  still declares a `details` link when signed OUT (the one destination it kept), so
+   *  without this a signed-out phone opens the menu on two identical Details rows —
+   *  the canonical one and the bar's, folded in. Undefined on a site with no such row,
+   *  where nothing is dropped. */
+  detailsHref?: string
   /** The current route, for `current` marking. */
   pathname: string
 }
@@ -35,23 +42,26 @@ export type SiteNavEntriesOptions = {
  */
 export function buildSiteNavEntries(
   navLinks: NavLink[] | undefined,
-  { homeHref, pathname }: SiteNavEntriesOptions,
+  { homeHref, detailsHref, pathname }: SiteNavEntriesOptions,
 ): PopoverEntry[] {
   if (!navLinks?.length) return []
+  // The destinations this menu ALREADY renders above these rows. Each is optional and
+  // each is dropped only when its row actually exists — see the props' docs.
+  const alreadyAbove = [homeHref, detailsHref].filter((h): h is string => h !== undefined)
   return (
     navLinks
-      // `homeHref` is already the top section's first row, and hub's bar carries a
-      // `/home` link of its own — without this the phone menu opens on two Homes.
-      // Only when that row EXISTS, though: see the prop's docs.
+      // `homeHref` is the top section's first row and `detailsHref` sits below Help,
+      // while hub's bar carries links of its own to both — without this the phone menu
+      // opens on two Homes, or two Details.
       //
-      // Deliberately the ONLY thing dropped. The bar has a second filter — a link to
+      // Deliberately the ONLY things dropped. The bar has a second filter — a link to
       // `siteNameHref` (`/`), on the grounds that the brand text links there — but it
       // applies only when the brand text is actually rendered, i.e. when no
       // `siteSwitcher` was supplied. Every adh site supplies one, so on those sites the
       // brand is this menu's TRIGGER and nothing in the header goes to `/` at all.
       // Copying that filter here unconditionally would leave a declared destination
       // with no route to it on the one viewport that needs it.
-      .filter((link) => homeHref === undefined || link.href !== homeHref)
+      .filter((link) => !alreadyAbove.includes(link.href))
       .map((link) => ({
         kind: 'leaf' as const,
         section: SITE_NAV_SECTION,

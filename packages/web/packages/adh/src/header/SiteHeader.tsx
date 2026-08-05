@@ -62,6 +62,10 @@ export type SiteHeaderProps = Omit<
    *  site takes the default today; the prop exists so the strip's copy is reachable
    *  from this side of the boundary rather than sealed into the toolkit package. */
   previewNotice?: string
+  /** The sentence behind the strip's caret, forwarded verbatim to {@link AdhHeader}
+   *  (which defaults it to `DEFAULT_PREVIEW_DETAIL`) — same passthrough, and the same
+   *  reason, as `previewNotice` above. */
+  previewDetail?: string
   /** Curated route map, forwarded straight through to the site-menu's "Routes"
    *  flyout (see SiteMenu's devToolsSection) for quick in-app jumping. The flyout
    *  shows only in local/testing/staging or to a signed-in adh admin (any env); when
@@ -119,6 +123,7 @@ export function SiteHeader({
   navLinks,
   trailingNavLinks = [],
   previewNotice,
+  previewDetail,
   routes,
   personalSlug,
   clientId,
@@ -244,6 +249,7 @@ export function SiteHeader({
       // not forwarding at all. The point of the passthrough is that the words are
       // REACHABLE from here.
       previewNotice={previewNotice}
+      previewDetail={previewDetail}
       // The avatar menu's "Home" — THIS site's post-login landing (its /home, or root
       // when it has none), the same destination the default Login/Join links already
       // return to. A relative path, not `selfReturn`'s absolute URL: Home never leaves

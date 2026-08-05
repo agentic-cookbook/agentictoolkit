@@ -47,6 +47,41 @@ describe('buildSiteNavEntries', () => {
     expect(out.map((e) => leaf(e).item.href)).toEqual(['/home', '/details', '/contact'])
   })
 
+  it('drops the link that duplicates the menu’s own Details row', () => {
+    // Hub signed OUT keeps exactly one bar link — `details` — and the menu now renders a
+    // canonical Details row below Help. Below 768px the bar's links fold into that same
+    // menu, so without this the phone opens on two identical Details rows.
+    const out = buildSiteNavEntries(HUB_NAV, {
+      homeHref: undefined,
+      detailsHref: '/details',
+      pathname: '/details',
+    })
+
+    expect(out.map((e) => leaf(e).item.href)).toEqual(['/home', '/contact'])
+  })
+
+  it('drops Home and Details together when the menu renders both', () => {
+    const out = buildSiteNavEntries(HUB_NAV, {
+      homeHref: '/home',
+      detailsHref: '/details',
+      pathname: '/',
+    })
+
+    expect(out.map((e) => leaf(e).item.href)).toEqual(['/contact'])
+  })
+
+  it('keeps a details link on a site whose menu has no Details row', () => {
+    // The 11 sites with no `/details` page get no row to duplicate. A site that declares
+    // one in its bar anyway must keep it, exactly as with `homeHref`.
+    const out = buildSiteNavEntries(HUB_NAV, {
+      homeHref: undefined,
+      detailsHref: undefined,
+      pathname: '/',
+    })
+
+    expect(out.map((e) => leaf(e).item.href)).toEqual(['/home', '/details', '/contact'])
+  })
+
   it('keeps a link to `/`, which the BAR drops but nothing else offers', () => {
     // The bar filters out `siteNameHref` (`/`) when the brand text links there — which
     // it only does when no `siteSwitcher` was supplied, and every adh site supplies

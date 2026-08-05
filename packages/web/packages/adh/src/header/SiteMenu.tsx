@@ -31,6 +31,7 @@ import { buildDebugSiteGroups } from './debugSiteGroups'
 import { buildDevToolsEntries, DEV_TOOLS_BUILD_ENABLED } from './devToolsEntries'
 import { useEffectiveEnv, useEnvOverride } from './envOverride'
 import { menuIcon } from './menu-icons'
+import { buildBelowHelpEntries, siteDetailsHref } from './belowHelpEntries'
 // Package path (the external help entry) so no bundling cost — this pulls only the light
 // HelpContext hook, never the code-split window. Safe no-op outside a HelpProvider.
 //
@@ -218,7 +219,12 @@ export function SiteMenu({
   // The resolved Hub-core rows + navigation + the Home destination — env-aware,
   // SSO-wrapped, `current`-marked, via the shared {@link useSiteMenu} engine (single
   // source of truth for the link logic).
-  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug })
+  const { entries, navigate, homeHref, routeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug })
+
+  // This site's own `/details`, or undefined where there is no such page. Drives BOTH
+  // the Details row below Help (see `belowHelp`) and the phone fold-in's duplicate
+  // filter, which is why it is resolved up here rather than beside the row it describes.
+  const detailsHref = siteDetailsHref(currentSiteId)
 
   // The auth-conditional TOP section, above the shared Hub core (section 0, so one
   // divider falls between it and the Hub block at section 1). Signed out → Login +
@@ -293,10 +299,13 @@ export function SiteMenu({
             // regardless would delete community's "Forum" (`/home`) from the menu of
             // an anonymous phone visitor and leave the board unreachable.
             homeHref: authenticated ? homeHref : undefined,
+            // Unconditional, unlike homeHref: the Details row below Help is not
+            // auth-gated, so wherever it exists it exists in both states.
+            detailsHref,
             pathname,
           })
         : [],
-    [linksCollapsed, navLinks, authenticated, homeHref, pathname],
+    [linksCollapsed, navLinks, authenticated, homeHref, detailsHref, pathname],
   )
 
   // The Routes flyout's data: the site's curated `routes` prop when it passed one,
@@ -364,6 +373,14 @@ export function SiteMenu({
   // auth. Sits at the foot of the top section (section 0), just above the first divider.
   const openHelp = useHelp().open
 
+  // Contact + Details, the two destinations that left hub's header bar — rows in the
+  // pure {@link buildBelowHelpEntries}, which is where the asymmetry between them (a
+  // hub route vs. a site-relative one) and the `current` rules are explained.
+  const belowHelp = useMemo<PopoverEntry[]>(
+    () => buildBelowHelpEntries({ contactHref: routeHref('/contact'), detailsHref, pathname }),
+    [routeHref, detailsHref, pathname],
+  )
+
   // The full ordered list: the site's own nav (phone only — see navSection), the auth
   // top section, the shared Hub core (which already ends with the dev site-family
   // submenus), then Routes/Debug Options.
@@ -380,10 +397,11 @@ export function SiteMenu({
         section: 0,
         item: { key: 'help', label: 'Help', icon: menuIcon('help'), onSelect: () => openHelp() },
       },
+      ...belowHelp,
       ...entries,
       ...devToolsSection,
     ],
-    [navSection, topSection, entries, devToolsSection, openHelp],
+    [navSection, topSection, belowHelp, entries, devToolsSection, openHelp],
   )
 
   // Open the single shared sites-overview popover (rendered by the always-present

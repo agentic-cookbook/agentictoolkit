@@ -6,6 +6,7 @@ import { AuthButtons } from './AuthButtons'
 import { SiteSwitcher } from './SiteSwitcher'
 import { type SiteLink } from './SiteOptionsMenu'
 import { NavLinkItem, type NavLink } from './NavLink'
+import { PreviewNotice } from './PreviewNotice'
 import type { AdhThemeKey } from '../themes/adh-themes'
 import { Badge } from '@agentic-toolkit/ui/components/badge'
 
@@ -15,22 +16,10 @@ export type HeaderBadge = {
   tone?: 'neutral' | 'accent' | 'orange' | 'blue'
 }
 
-/** The whole family is a pre-launch preview, and every header says so in the strip
- *  above the bar. A DEFAULT, not a fixture — `previewNotice` overrides it, so the words
- *  are reachable from the host rather than sealed into this package.
- *
- *  The default earns its place under the same carve-out the package's default
- *  accessible names get: 46 sites all saying the same sentence should not each restate
- *  it, and a header that rendered nothing until every host was updated would ship 46
- *  sites with no notice at all. What must not happen is the words being UNREACHABLE
- *  from the host — the package owns the UI, the host owns the words.
- *
- *  This replaced a `Preview Release` BADGE under the site name. A badge sat inside
- *  the bar's lead slot, so it competed with the brand for the one part of the header
- *  that has to survive a 390px phone; a full-width strip above the bar costs the bar
- *  no horizontal room at all, and reads as a property of the site rather than of its
- *  name. */
-export const DEFAULT_PREVIEW_NOTICE = 'Developer Preview Release'
+// The strip's own module owns its markup, its defaults and its disclosure state; both
+// defaults are re-exported here because this is where they have always been imported
+// from.
+export { DEFAULT_PREVIEW_NOTICE, DEFAULT_PREVIEW_DETAIL } from './PreviewNotice'
 
 /** The auth-related slice of the header's props. An auth-aware wrapper in the
  *  consuming app supplies these from its auth source while the non-auth props are
@@ -127,6 +116,11 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
    *  that token going to `0` and this default going away together — one coordinated
    *  change, not a per-host switch. */
   previewNotice?: string
+  /** The sentence behind the strip's caret — what "preview" actually means for a
+   *  visitor. Defaults to {@link DEFAULT_PREVIEW_DETAIL}; same split as
+   *  `previewNotice`, for the same reason (the package draws the disclosure, the host
+   *  owns the words). */
+  previewDetail?: string
   /** The active theme key. Presentational hosts may key styling off it. */
   themeKey?: AdhThemeKey
 }
@@ -145,7 +139,8 @@ export function AdhHeader({
   trailingNavLinks = [],
   preAuthLinks,
   homeHref,
-  previewNotice = DEFAULT_PREVIEW_NOTICE,
+  previewNotice,
+  previewDetail,
   user,
   authLoading = false,
   loginHref,
@@ -187,12 +182,12 @@ export function AdhHeader({
           name is decoration that repeats what the page already says; "this is a
           preview release" is a fact about the product that a sighted visitor is told
           on every page, and hiding it from a screen reader would withhold it from the
-          one audience that cannot glance at the strip. It is static text rather than a
-          `role="status"` live region for the same reason — it never changes, and a
-          live region announces CHANGES. */}
-      <div className="adh-header__preview">
-        <span className="adh-header__preview-text">{previewNotice}</span>
-      </div>
+          one audience that cannot glance at the strip. Its headline is static text
+          rather than a `role="status"` live region for the same reason — it never
+          changes, and a live region announces CHANGES. Nor is the caret's panel one:
+          it appears because the reader asked for it, which is what `aria-expanded` on
+          the trigger already says. */}
+      <PreviewNotice notice={previewNotice} detail={previewDetail} />
       <div className="adh-header__container">
         <div className="adh-header__lead">
           {/* Exactly one switcher: the caller's if it supplied one, else the

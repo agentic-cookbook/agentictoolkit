@@ -54,7 +54,17 @@ export type UseSiteMenuOpts = {
 export function useSiteMenu(
   groups: MenuGroup[],
   { currentSiteId, resolveHref, personalSlug }: UseSiteMenuOpts,
-): { entries: PopoverEntry[]; navigate: (item: PopoverItem) => void; homeHref: string } {
+): {
+  entries: PopoverEntry[]
+  navigate: (item: PopoverItem) => void
+  homeHref: string
+  /** Resolve an arbitrary hub route to its href with the same env/SSO logic the
+   *  config-driven rows get. For the handful of rows SiteMenu builds by hand rather
+   *  than declaring as a {@link MenuGroup} — `homeHref` below is one such call, and
+   *  the Contact row is another. Exposed so those rows can't drift into resolving a
+   *  destination differently from every row beside them. */
+  routeHref: (route: string) => string
+} {
   const pathname = usePathname() ?? '/'
   const router = useRouter()
 
@@ -264,5 +274,5 @@ export function useSiteMenu(
   // (on the hub → `/<slug>/home`; a satellite → the hub's `/home`, SSO-wrapped).
   const homeHref = routeHref('/home')
 
-  return { entries, navigate, homeHref }
+  return { entries, navigate, homeHref, routeHref }
 }
