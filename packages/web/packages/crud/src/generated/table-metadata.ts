@@ -962,6 +962,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
       {"name": "isInfrastructure", "type": "boolean", "required": false, "nullable": false, "serverManaged": false},
       {"name": "namespaceId", "type": "string", "required": false, "nullable": true, "serverManaged": false, "maxLength": 36},
       {"name": "parentId", "type": "string", "required": false, "nullable": true, "serverManaged": false, "maxLength": 36},
+      {"name": "archivedAt", "type": "string", "required": false, "nullable": true, "serverManaged": false},
     ],
   },
   "integration/integration-audience-contacts": {

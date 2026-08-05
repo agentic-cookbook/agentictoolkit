@@ -10679,6 +10679,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/workspace-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's chosen workspace (empty object when never chosen)
+         * @description Every adh site's /home reads this so the workspace a user is working in follows them across the family (the sites span many registrable domains, so a browser-local copy cannot). A signed-out visitor never reaches /home at all.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The workspace preference */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspacePrefs"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Replace the caller's workspace preference (upsert; full representation) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description The workspace the user's /home chooser last landed on (a workspace slug) */
+                        slug?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description The saved workspace preference */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspacePrefs"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/gamification/levels": {
         parameters: {
             query?: never;
@@ -42036,6 +42129,7 @@ export interface paths {
                             isInfrastructure: boolean;
                             namespaceId: string | null;
                             parentId: string | null;
+                            archivedAt: string | null;
                         }[];
                     };
                 };
@@ -42073,6 +42167,7 @@ export interface paths {
                         isInfrastructure?: boolean;
                         namespaceId?: string | null;
                         parentId?: string | null;
+                        archivedAt?: string | null;
                         id?: string;
                     };
                 };
@@ -42100,6 +42195,7 @@ export interface paths {
                             isInfrastructure: boolean;
                             namespaceId: string | null;
                             parentId: string | null;
+                            archivedAt: string | null;
                         };
                     };
                 };
@@ -42172,6 +42268,7 @@ export interface paths {
                             isInfrastructure: boolean;
                             namespaceId: string | null;
                             parentId: string | null;
+                            archivedAt: string | null;
                         };
                     };
                 };
@@ -42219,6 +42316,7 @@ export interface paths {
                         isInfrastructure?: boolean;
                         namespaceId?: string | null;
                         parentId?: string | null;
+                        archivedAt?: string | null;
                     };
                 };
             };
@@ -42245,6 +42343,7 @@ export interface paths {
                             isInfrastructure: boolean;
                             namespaceId: string | null;
                             parentId: string | null;
+                            archivedAt: string | null;
                         };
                     };
                 };
@@ -53999,6 +54098,13 @@ export interface components {
                 spacing?: "compact" | "comfortable" | "spacious";
                 focusOutlines?: boolean;
                 underlineLinks?: boolean;
+            };
+        };
+        WorkspacePrefs: {
+            /** @description Empty object when the user has never chosen a workspace (the client falls back to their personal one) */
+            prefs: {
+                /** @description The workspace the user's /home chooser last landed on (a workspace slug) */
+                slug?: string;
             };
         };
         GamificationLevel: {
