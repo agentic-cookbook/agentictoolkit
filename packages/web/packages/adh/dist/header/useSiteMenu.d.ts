@@ -26,5 +26,11 @@ export declare function useSiteMenu(groups: MenuGroup[], { currentSiteId, resolv
     entries: PopoverEntry[];
     navigate: (item: PopoverItem) => void;
     homeHref: string;
+    /** Resolve an arbitrary hub route to its href with the same env/SSO logic the
+     *  config-driven rows get. For the handful of rows SiteMenu builds by hand rather
+     *  than declaring as a {@link MenuGroup} — `homeHref` below is one such call, and
+     *  the Contact row is another. Exposed so those rows can't drift into resolving a
+     *  destination differently from every row beside them. */
+    routeHref: (route: string) => string;
 };
 //# sourceMappingURL=useSiteMenu.d.ts.map

@@ -754,10 +754,60 @@ function SiteSwitcher({
   );
 }
 
-// src/header/AdhHeader.tsx
-import { Badge } from "@agentic-toolkit/ui/components/badge";
+// src/header/PreviewNotice.tsx
+import { useEffect as useEffect2, useId as useId2, useRef as useRef2, useState as useState2 } from "react";
+import { ChevronDown as ChevronDown3, TriangleAlert } from "lucide-react";
 import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
 var DEFAULT_PREVIEW_NOTICE = "Developer Preview Release";
+var DEFAULT_PREVIEW_DETAIL = "We are in very early stages, and are only taking requests to join.";
+function PreviewNotice({
+  notice = DEFAULT_PREVIEW_NOTICE,
+  detail = DEFAULT_PREVIEW_DETAIL
+}) {
+  const [open, setOpen] = useState2(false);
+  const panelId = useId2();
+  const triggerRef = useRef2(null);
+  useEffect2(() => {
+    if (!open) return;
+    const onClick = (e) => {
+      if (triggerRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+  return /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsxs5("span", { className: "adh-header__preview-disclosure", onMouseLeave: () => setOpen(false), children: [
+    /* @__PURE__ */ jsxs5(
+      "button",
+      {
+        ref: triggerRef,
+        type: "button",
+        className: "adh-header__preview-trigger",
+        "aria-expanded": open,
+        "aria-controls": open ? panelId : void 0,
+        onClick: () => setOpen((v) => !v),
+        children: [
+          /* @__PURE__ */ jsx8(TriangleAlert, { className: "adh-header__preview-icon", "aria-hidden": true }),
+          /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: notice }),
+          /* @__PURE__ */ jsx8(TriangleAlert, { className: "adh-header__preview-icon", "aria-hidden": true }),
+          /* @__PURE__ */ jsx8(ChevronDown3, { className: "adh-header__preview-caret", "aria-hidden": true })
+        ]
+      }
+    ),
+    open && /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-panel", id: panelId, children: detail })
+  ] }) });
+}
+
+// src/header/AdhHeader.tsx
+import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhHeader({
   siteName,
   siteNameHref = "/",
@@ -772,7 +822,8 @@ function AdhHeader({
   trailingNavLinks = [],
   preAuthLinks,
   homeHref,
-  previewNotice = DEFAULT_PREVIEW_NOTICE,
+  previewNotice,
+  previewDetail,
   user,
   authLoading = false,
   loginHref,
@@ -784,11 +835,11 @@ function AdhHeader({
   onSettings
 }) {
   const barLinks = siteSwitcher ? navLinks : navLinks.filter((l) => l.href !== siteNameHref);
-  return /* @__PURE__ */ jsxs5("header", { className: "adh-header", role: "banner", children: [
-    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: previewNotice }) }),
-    /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
-      /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
-        siteSwitcher ?? /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsxs6("header", { className: "adh-header", role: "banner", children: [
+    /* @__PURE__ */ jsx9(PreviewNotice, { notice: previewNotice, detail: previewDetail }),
+    /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
+      /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
+        siteSwitcher ?? /* @__PURE__ */ jsx9(
           SiteSwitcher,
           {
             siteName,
@@ -797,10 +848,10 @@ function AdhHeader({
             onSwitchSite
           }
         ),
-        badges.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
+        badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
           // The ui Badge owns the skin; the adh-header__badge* classes stay
           // as stable hooks — they're a theme-editor surface.
-          /* @__PURE__ */ jsx8(
+          /* @__PURE__ */ jsx9(
             Badge,
             {
               variant: badge.tone ?? "neutral",
@@ -811,19 +862,19 @@ function AdhHeader({
           )
         )) })
       ] }),
-      center ? /* @__PURE__ */ jsx8("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
-      /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
-        leadingActions && /* @__PURE__ */ jsx8("span", { className: "adh-header__actions", children: leadingActions }),
-        barLinks.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)) }),
+      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
+      /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
+        leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
+        barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
         preAuthLinks,
-        authLoading && !user ? /* @__PURE__ */ jsx8(
+        authLoading && !user ? /* @__PURE__ */ jsx9(
           "span",
           {
             className: "adh-header__auth-spinner",
             role: "status",
             "aria-label": "Checking sign-in"
           }
-        ) : user ? /* @__PURE__ */ jsx8(
+        ) : user ? /* @__PURE__ */ jsx9(
           AvatarMenu,
           {
             user,
@@ -832,7 +883,7 @@ function AdhHeader({
             settingsHref,
             onSettings
           }
-        ) : /* @__PURE__ */ jsx8(
+        ) : /* @__PURE__ */ jsx9(
           AuthButtons,
           {
             loginHref,
@@ -841,16 +892,16 @@ function AdhHeader({
             onSignup
           }
         ),
-        trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
+        trailingNavLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label))
       ] })
     ] })
   ] });
 }
 
 // src/header/HubMark.tsx
-import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
 function HubMark({ className }) {
-  return /* @__PURE__ */ jsxs6(
+  return /* @__PURE__ */ jsxs7(
     "svg",
     {
       viewBox: "0 0 1024 1024",
@@ -859,11 +910,11 @@ function HubMark({ className }) {
       "aria-hidden": true,
       focusable: "false",
       children: [
-        /* @__PURE__ */ jsx9("path", { d: "M816,58 Q816,208 966,208 Q816,208 816,358 Q816,208 666,208 Q816,208 816,58 Z" }),
-        /* @__PURE__ */ jsx9("path", { d: "M816,666 Q816,816 966,816 Q816,816 816,966 Q816,816 666,816 Q816,816 816,666 Z" }),
-        /* @__PURE__ */ jsx9("path", { d: "M208,666 Q208,816 358,816 Q208,816 208,966 Q208,816 58,816 Q208,816 208,666 Z" }),
-        /* @__PURE__ */ jsx9("path", { d: "M208,58 Q208,208 358,208 Q208,208 208,358 Q208,208 58,208 Q208,208 208,58 Z" }),
-        /* @__PURE__ */ jsx9("path", { d: "M512,72 Q512,512 952,512 Q512,512 512,952 Q512,512 72,512 Q512,512 512,72 Z" })
+        /* @__PURE__ */ jsx10("path", { d: "M816,58 Q816,208 966,208 Q816,208 816,358 Q816,208 666,208 Q816,208 816,58 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M816,666 Q816,816 966,816 Q816,816 816,966 Q816,816 666,816 Q816,816 816,666 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M208,666 Q208,816 358,816 Q208,816 208,966 Q208,816 58,816 Q208,816 208,666 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M208,58 Q208,208 358,208 Q208,208 208,358 Q208,208 58,208 Q208,208 208,58 Z" }),
+        /* @__PURE__ */ jsx10("path", { d: "M512,72 Q512,512 952,512 Q512,512 512,952 Q512,512 72,512 Q512,512 512,72 Z" })
       ]
     }
   );
@@ -900,22 +951,22 @@ function buildRouteItems(sections, pathname) {
 }
 
 // src/header/useClientHost.ts
-import { useEffect as useEffect2, useState as useState2 } from "react";
+import { useEffect as useEffect3, useState as useState3 } from "react";
 function useClientHost() {
-  const [host, setHost] = useState2(null);
-  useEffect2(() => setHost(window.location.host), []);
+  const [host, setHost] = useState3(null);
+  useEffect3(() => setHost(window.location.host), []);
   return host;
 }
 
 // src/header/workspaces-menu.tsx
 import { createContext, useContext } from "react";
-import { jsx as jsx10 } from "react/jsx-runtime";
+import { jsx as jsx11 } from "react/jsx-runtime";
 var WorkspacesMenuContext = createContext(null);
 function WorkspacesMenuProvider({
   value,
   children
 }) {
-  return /* @__PURE__ */ jsx10(WorkspacesMenuContext.Provider, { value, children });
+  return /* @__PURE__ */ jsx11(WorkspacesMenuContext.Provider, { value, children });
 }
 function useWorkspacesMenu() {
   return useContext(WorkspacesMenuContext);
@@ -929,21 +980,21 @@ import {
 } from "@agentic-toolkit/adh/header";
 import { useAnonymousHeaderAuth } from "@agentic-toolkit/adh/header-auth";
 import { getSite as getSite3, siteHeaderTitle as siteHeaderTitle2, siteHomePath, siteProdUrl as siteProdUrl2, siteUrl as siteUrl2 } from "@agentic-toolkit/adh-registry";
-import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
+import { isConceptSite as isConceptSite2 } from "@agentic-toolkit/adh/concepts/participating";
 
 // src/header/SiteMenuSwitcher.tsx
 import { Fragment as Fragment6 } from "react";
 import { usePathname as usePathname4 } from "next/navigation";
 
 // src/header/SiteMenu.tsx
-import { useEffect as useEffect3, useMemo as useMemo3, useState as useState3 } from "react";
+import { useEffect as useEffect4, useMemo as useMemo3, useState as useState4 } from "react";
 import { usePathname as usePathname3 } from "next/navigation";
 import dynamic from "next/dynamic";
 import { CircleHelp as CircleHelp2, Settings as Settings2 } from "lucide-react";
 
 // src/footer/SitesOverview.tsx
 import { FOOTER_SITES, groupSitesByCategory, siteProdUrl } from "@agentic-toolkit/adh-registry";
-import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
 var SITES_OVERVIEW_POPOVER_ID = "adh-sites-overview";
 
 // src/header/SiteMenu.tsx
@@ -1006,10 +1057,12 @@ import {
   History,
   House,
   LayoutDashboard,
+  LayoutGrid,
   LayoutTemplate,
   Library,
   LifeBuoy,
   LogIn,
+  Mail,
   MonitorSmartphone,
   Network,
   Newspaper,
@@ -1051,7 +1104,13 @@ var MENU_ICONS = {
   "hub-help": CircleHelp,
   // the promoted family Help site (help.adh.com)
   news: Newspaper,
-  // --- In-hub destination rows (logged-in only), keyed by route path ---
+  // --- Destination rows keyed by route path ---
+  // The two that moved out of hub's header bar keep the glyph they wore there, so a
+  // visitor who knew them in the bar recognizes them in the menu. '/details' is
+  // resolved per-SITE rather than on the hub (see SiteMenu) — the key is still the
+  // route, because that is what the row points at on whichever site renders it.
+  "/contact": Mail,
+  "/details": LayoutGrid,
   "/products": Network,
   // matches FEATURE_META `products` (Products replaced /ecosystems)
   "/personas": UserCircle,
@@ -1243,7 +1302,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
     [router]
   );
   const homeHref = routeHref("/home");
-  return { entries, navigate, homeHref };
+  return { entries, navigate, homeHref, routeHref };
 }
 
 // src/header/useHeaderLinksCollapsed.ts
@@ -1266,9 +1325,10 @@ function useHeaderLinksCollapsed() {
 
 // src/header/siteNavEntries.ts
 var SITE_NAV_SECTION = 3;
-function buildSiteNavEntries(navLinks, { homeHref, pathname }) {
+function buildSiteNavEntries(navLinks, { homeHref, detailsHref, pathname }) {
   if (!navLinks?.length) return [];
-  return navLinks.filter((link) => homeHref === void 0 || link.href !== homeHref).map((link) => ({
+  const alreadyAbove = [homeHref, detailsHref].filter((h) => h !== void 0);
+  return navLinks.filter((link) => !alreadyAbove.includes(link.href)).map((link) => ({
     kind: "leaf",
     section: SITE_NAV_SECTION,
     item: {
@@ -1406,9 +1466,95 @@ function useEffectiveEnv(hostname) {
   return resolveEffectiveEnv(override, hostname ? detectEnv2(hostname) : null);
 }
 
+// src/concepts/participating.ts
+var CONCEPT_SITE_IDS = /* @__PURE__ */ new Set([
+  "academy",
+  "authentication",
+  "billing",
+  "communities",
+  "community",
+  "consulting",
+  "customers",
+  "dashboards",
+  "devices",
+  "devteam",
+  "domains",
+  "ecosystems",
+  "education",
+  "knowledgebases",
+  "narratives",
+  "news",
+  "notifications",
+  "personas",
+  "products",
+  "projects",
+  "recipes",
+  "registries",
+  "sites",
+  "storage",
+  "support",
+  "tools",
+  "teamregistry",
+  "teambuilder",
+  "codereviews",
+  "personabuilder",
+  "research",
+  "consultants"
+]);
+function isConceptSite(siteId) {
+  return CONCEPT_SITE_IDS.has(siteId);
+}
+
+// src/header/belowHelpEntries.ts
+var BELOW_HELP_SECTION = 0;
+function siteDetailsHref(siteId) {
+  return isConceptSite(siteId) || siteId === "hub" ? "/details" : void 0;
+}
+function buildBelowHelpEntries({
+  contactHref,
+  detailsHref,
+  pathname
+}) {
+  const out = [
+    {
+      kind: "leaf",
+      section: BELOW_HELP_SECTION,
+      item: {
+        key: "route:/contact",
+        label: "Contact",
+        href: contactHref,
+        icon: menuIcon("/contact"),
+        // Only ever current on the hub, where the href is the bare path; elsewhere it is
+        // an absolute URL, which never starts with '/'. The same test the config-driven
+        // route rows apply in `useSiteMenu` — a destination must not highlight by one
+        // rule here and another there.
+        current: isSameOrigin(contactHref) && pathname === contactHref
+      }
+    }
+  ];
+  if (detailsHref)
+    out.push({
+      kind: "leaf",
+      section: BELOW_HELP_SECTION,
+      item: {
+        key: "route:/details",
+        label: "Details",
+        href: detailsHref,
+        icon: menuIcon("/details"),
+        // Prefix-matched, so a details CHILD route (`/details/acme`) keeps the row lit —
+        // matching how the bar's own `details` link behaved via `matchPaths`.
+        current: pathname === detailsHref || pathname.startsWith(`${detailsHref}/`)
+      }
+    });
+  return out;
+}
+function isSameOrigin(href) {
+  return href.startsWith("/") && !href.startsWith("//");
+}
+
 // src/header/SiteMenu.tsx
 import { useHelp } from "@agentic-toolkit/adh/help";
-import { Fragment as Fragment5, jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
+import { Fragment as Fragment5, jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
 var DebugConsoleWindow = dynamic(
   () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
 );
@@ -1436,7 +1582,8 @@ function SiteMenu({
     () => devToolsUnlocked ? [...groups, ...buildDebugSiteGroups()] : groups,
     [groups, devToolsUnlocked]
   );
-  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug });
+  const { entries, navigate, homeHref, routeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug });
+  const detailsHref = siteDetailsHref(currentSiteId);
   const pathname = usePathname3() ?? "/";
   const workspacesMenu = useWorkspacesMenu2();
   const recents = useRecents();
@@ -1496,13 +1643,16 @@ function SiteMenu({
       // regardless would delete community's "Forum" (`/home`) from the menu of
       // an anonymous phone visitor and leave the board unreachable.
       homeHref: authenticated ? homeHref : void 0,
+      // Unconditional, unlike homeHref: the Details row below Help is not
+      // auth-gated, so wherever it exists it exists in both states.
+      detailsHref,
       pathname
     }) : [],
-    [linksCollapsed, navLinks, authenticated, homeHref, pathname]
+    [linksCollapsed, navLinks, authenticated, homeHref, detailsHref, pathname]
   );
-  const [generated, setGenerated] = useState3();
+  const [generated, setGenerated] = useState4();
   const wantGeneratedRoutes = devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0);
-  useEffect3(() => {
+  useEffect4(() => {
     if (!wantGeneratedRoutes) return;
     let cancelled = false;
     void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES }) => {
@@ -1523,7 +1673,7 @@ function SiteMenu({
   const effectiveEnv = useEffectiveEnv(host);
   const realEnv = host ? detectEnv3(host) : null;
   const override = useEnvOverride();
-  const [debugOpen, setDebugOpen] = useState3(false);
+  const [debugOpen, setDebugOpen] = useState4(false);
   const devToolsSection = useMemo3(
     () => devToolsUnlocked && !suppressDevTools ? buildDevToolsEntries({
       routes: effectiveRoutes,
@@ -1537,6 +1687,10 @@ function SiteMenu({
     [devToolsUnlocked, suppressDevTools, effectiveRoutes, effectiveEnv, realEnv, userIsAdmin, override, pathname]
   );
   const openHelp = useHelp().open;
+  const belowHelp = useMemo3(
+    () => buildBelowHelpEntries({ contactHref: routeHref("/contact"), detailsHref, pathname }),
+    [routeHref, detailsHref, pathname]
+  );
   const allEntries = useMemo3(
     () => [
       ...navSection,
@@ -1546,10 +1700,11 @@ function SiteMenu({
         section: 0,
         item: { key: "help", label: "Help", icon: menuIcon("help"), onSelect: () => openHelp() }
       },
+      ...belowHelp,
       ...entries,
       ...devToolsSection
     ],
-    [navSection, topSection, entries, devToolsSection, openHelp]
+    [navSection, topSection, belowHelp, entries, devToolsSection, openHelp]
   );
   function showOverview() {
     requestAnimationFrame(() => {
@@ -1574,15 +1729,15 @@ function SiteMenu({
       el.addEventListener("toggle", onToggle);
     });
   }
-  return /* @__PURE__ */ jsxs8(Fragment5, { children: [
-    /* @__PURE__ */ jsx12(
+  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
+    /* @__PURE__ */ jsx13(
       NavigationPopover2,
       {
         entries: allEntries,
         onChoose: navigate,
         triggerLabel: `${label} \u2014 switch site`,
         triggerText: label,
-        triggerIcon: /* @__PURE__ */ jsx12(HubMark2, { className: "adh-nav-popover__mark" }),
+        triggerIcon: /* @__PURE__ */ jsx13(HubMark2, { className: "adh-nav-popover__mark" }),
         triggerContent,
         triggerClassName,
         placeholder: "Search sites, or browse topics",
@@ -1593,7 +1748,7 @@ function SiteMenu({
           shortcut: "overview",
           onSelect: showOverview
         },
-        commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx12(
+        commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx13(
           "button",
           {
             type: "button",
@@ -1603,13 +1758,13 @@ function SiteMenu({
               close({ restoreFocus: false });
               requestAnimationFrame(() => onSettings());
             },
-            children: /* @__PURE__ */ jsx12(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+            children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
           }
         ) : authenticated && settingsHref ? (
           // A real link so middle-click / new-tab work; native nav tears down the
           // page, so no explicit close needed.
-          /* @__PURE__ */ jsx12("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx12(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
-        ) : /* @__PURE__ */ jsx12(
+          /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
+        ) : /* @__PURE__ */ jsx13(
           "button",
           {
             type: "button",
@@ -1619,12 +1774,12 @@ function SiteMenu({
               close({ restoreFocus: false });
               showOverview();
             },
-            children: /* @__PURE__ */ jsx12(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+            children: /* @__PURE__ */ jsx13(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
           }
         )
       }
     ),
-    debugOpen && !suppressDevTools && /* @__PURE__ */ jsx12(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
+    debugOpen && !suppressDevTools && /* @__PURE__ */ jsx13(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
   ] });
 }
 
@@ -1670,18 +1825,18 @@ function hubCoreGroups(authenticated) {
 }
 
 // src/header/MarketingSiteMenu.tsx
-import { jsx as jsx13 } from "react/jsx-runtime";
+import { jsx as jsx14 } from "react/jsx-runtime";
 function MarketingSiteMenu(props) {
   const groups = useMemo4(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
-  return /* @__PURE__ */ jsx13(SiteMenu, { groups, ...props });
+  return /* @__PURE__ */ jsx14(SiteMenu, { groups, ...props });
 }
 
 // src/header/WorkspaceSiteMenu.tsx
 import { useMemo as useMemo5 } from "react";
-import { jsx as jsx14 } from "react/jsx-runtime";
+import { jsx as jsx15 } from "react/jsx-runtime";
 function WorkspaceSiteMenu(props) {
   const groups = useMemo5(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
-  return /* @__PURE__ */ jsx14(SiteMenu, { groups, ...props });
+  return /* @__PURE__ */ jsx15(SiteMenu, { groups, ...props });
 }
 
 // src/header/activeMenuGroups.ts
@@ -1691,10 +1846,10 @@ function isWorkspaceMenuRoute(currentSiteId, pathname) {
 }
 
 // src/header/PrefetchSiblingSites.tsx
-import { useEffect as useEffect4 } from "react";
+import { useEffect as useEffect5 } from "react";
 import { detectEnv as detectEnv4 } from "@agentic-toolkit/adh-registry";
 function PrefetchSiblingSites() {
-  useEffect4(() => {
+  useEffect5(() => {
     if (typeof window === "undefined") return;
     if (detectEnv4(window.location.hostname) !== "local") return;
     const hostPattern = window.location.host.replace(/^[^.]+/, "*");
@@ -1718,18 +1873,18 @@ function PrefetchSiblingSites() {
 }
 
 // src/header/SiteMenuSwitcher.tsx
-import { jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
 function SiteMenuSwitcher(props) {
   const pathname = usePathname4() ?? "/";
   const onWorkspaceRoute = isWorkspaceMenuRoute(props.currentSiteId, pathname);
-  return /* @__PURE__ */ jsxs9(Fragment6, { children: [
-    /* @__PURE__ */ jsx15(PrefetchSiblingSites, {}),
-    onWorkspaceRoute ? /* @__PURE__ */ jsx15(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx15(MarketingSiteMenu, { ...props })
+  return /* @__PURE__ */ jsxs10(Fragment6, { children: [
+    /* @__PURE__ */ jsx16(PrefetchSiblingSites, {}),
+    onWorkspaceRoute ? /* @__PURE__ */ jsx16(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx16(MarketingSiteMenu, { ...props })
   ] });
 }
 
 // src/header/SiteHeader.tsx
-import { jsx as jsx16 } from "react/jsx-runtime";
+import { jsx as jsx17 } from "react/jsx-runtime";
 function SiteHeader({
   siteId,
   pageTitle,
@@ -1739,6 +1894,7 @@ function SiteHeader({
   navLinks,
   trailingNavLinks = [],
   previewNotice,
+  previewDetail,
   routes,
   personalSlug,
   clientId,
@@ -1762,7 +1918,7 @@ function SiteHeader({
   } = { ...source, ...authOverrides };
   const resolvedNavLinks = (typeof navLinks === "function" ? navLinks(user != null) : navLinks) ?? [];
   const hostname = useClientHost4();
-  const conceptSite = isConceptSite(siteId);
+  const conceptSite = isConceptSite2(siteId);
   const site = getSite3(siteId);
   const siteName = site ? siteHeaderTitle2(site) : siteId;
   const resolveHubHref = (path) => hostname ? siteUrl2("hub", path, hostname) : siteProdUrl2("hub", path);
@@ -1771,11 +1927,11 @@ function SiteHeader({
   const resolvedLoginHref = loginHref ?? (onLogin ? void 0 : hubAuthHref("/login"));
   const resolvedSignupHref = signupHref ?? (onSignup ? void 0 : hubAuthHref("/signup"));
   const switcherSettingsHref = onSettings ? void 0 : settingsHref ?? resolveHubHref("/home/settings");
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx17(
     AdhHeader2,
     {
       siteName,
-      siteSwitcher: /* @__PURE__ */ jsx16(
+      siteSwitcher: /* @__PURE__ */ jsx17(
         SiteMenuSwitcher,
         {
           currentSiteId: siteId,
@@ -1798,8 +1954,9 @@ function SiteHeader({
       navLinks: resolvedNavLinks,
       trailingNavLinks,
       previewNotice,
+      previewDetail,
       homeHref: siteHomePath(siteId),
-      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx16("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx17("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
       user,
       authLoading,
       loginHref: resolvedLoginHref,

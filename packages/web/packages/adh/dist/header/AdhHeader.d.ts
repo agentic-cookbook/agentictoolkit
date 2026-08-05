@@ -8,22 +8,7 @@ export type HeaderBadge = {
     label: string;
     tone?: 'neutral' | 'accent' | 'orange' | 'blue';
 };
-/** The whole family is a pre-launch preview, and every header says so in the strip
- *  above the bar. A DEFAULT, not a fixture — `previewNotice` overrides it, so the words
- *  are reachable from the host rather than sealed into this package.
- *
- *  The default earns its place under the same carve-out the package's default
- *  accessible names get: 46 sites all saying the same sentence should not each restate
- *  it, and a header that rendered nothing until every host was updated would ship 46
- *  sites with no notice at all. What must not happen is the words being UNREACHABLE
- *  from the host — the package owns the UI, the host owns the words.
- *
- *  This replaced a `Preview Release` BADGE under the site name. A badge sat inside
- *  the bar's lead slot, so it competed with the brand for the one part of the header
- *  that has to survive a 390px phone; a full-width strip above the bar costs the bar
- *  no horizontal room at all, and reads as a property of the site rather than of its
- *  name. */
-export declare const DEFAULT_PREVIEW_NOTICE = "Developer Preview Release";
+export { DEFAULT_PREVIEW_NOTICE, DEFAULT_PREVIEW_DETAIL } from './PreviewNotice';
 /** The auth-related slice of the header's props. An auth-aware wrapper in the
  *  consuming app supplies these from its auth source while the non-auth props are
  *  passed straight through. Kept as a named type so the source contract and the
@@ -118,8 +103,13 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  that token going to `0` and this default going away together — one coordinated
      *  change, not a per-host switch. */
     previewNotice?: string;
+    /** The sentence behind the strip's caret — what "preview" actually means for a
+     *  visitor. Defaults to {@link DEFAULT_PREVIEW_DETAIL}; same split as
+     *  `previewNotice`, for the same reason (the package draws the disclosure, the host
+     *  owns the words). */
+    previewDetail?: string;
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, previewNotice, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

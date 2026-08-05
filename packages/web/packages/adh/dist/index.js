@@ -754,10 +754,60 @@ function SiteSwitcher({
   );
 }
 
-// src/header/AdhHeader.tsx
-import { Badge } from "@agentic-toolkit/ui/components/badge";
+// src/header/PreviewNotice.tsx
+import { useEffect as useEffect2, useId as useId2, useRef as useRef2, useState as useState2 } from "react";
+import { ChevronDown as ChevronDown3, TriangleAlert } from "lucide-react";
 import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
 var DEFAULT_PREVIEW_NOTICE = "Developer Preview Release";
+var DEFAULT_PREVIEW_DETAIL = "We are in very early stages, and are only taking requests to join.";
+function PreviewNotice({
+  notice = DEFAULT_PREVIEW_NOTICE,
+  detail = DEFAULT_PREVIEW_DETAIL
+}) {
+  const [open, setOpen] = useState2(false);
+  const panelId = useId2();
+  const triggerRef = useRef2(null);
+  useEffect2(() => {
+    if (!open) return;
+    const onClick = (e) => {
+      if (triggerRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+  return /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsxs5("span", { className: "adh-header__preview-disclosure", onMouseLeave: () => setOpen(false), children: [
+    /* @__PURE__ */ jsxs5(
+      "button",
+      {
+        ref: triggerRef,
+        type: "button",
+        className: "adh-header__preview-trigger",
+        "aria-expanded": open,
+        "aria-controls": open ? panelId : void 0,
+        onClick: () => setOpen((v) => !v),
+        children: [
+          /* @__PURE__ */ jsx8(TriangleAlert, { className: "adh-header__preview-icon", "aria-hidden": true }),
+          /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: notice }),
+          /* @__PURE__ */ jsx8(TriangleAlert, { className: "adh-header__preview-icon", "aria-hidden": true }),
+          /* @__PURE__ */ jsx8(ChevronDown3, { className: "adh-header__preview-caret", "aria-hidden": true })
+        ]
+      }
+    ),
+    open && /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-panel", id: panelId, children: detail })
+  ] }) });
+}
+
+// src/header/AdhHeader.tsx
+import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhHeader({
   siteName,
   siteNameHref = "/",
@@ -772,7 +822,8 @@ function AdhHeader({
   trailingNavLinks = [],
   preAuthLinks,
   homeHref,
-  previewNotice = DEFAULT_PREVIEW_NOTICE,
+  previewNotice,
+  previewDetail,
   user,
   authLoading = false,
   loginHref,
@@ -784,11 +835,11 @@ function AdhHeader({
   onSettings
 }) {
   const barLinks = siteSwitcher ? navLinks : navLinks.filter((l) => l.href !== siteNameHref);
-  return /* @__PURE__ */ jsxs5("header", { className: "adh-header", role: "banner", children: [
-    /* @__PURE__ */ jsx8("div", { className: "adh-header__preview", children: /* @__PURE__ */ jsx8("span", { className: "adh-header__preview-text", children: previewNotice }) }),
-    /* @__PURE__ */ jsxs5("div", { className: "adh-header__container", children: [
-      /* @__PURE__ */ jsxs5("div", { className: "adh-header__lead", children: [
-        siteSwitcher ?? /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsxs6("header", { className: "adh-header", role: "banner", children: [
+    /* @__PURE__ */ jsx9(PreviewNotice, { notice: previewNotice, detail: previewDetail }),
+    /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
+      /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
+        siteSwitcher ?? /* @__PURE__ */ jsx9(
           SiteSwitcher,
           {
             siteName,
@@ -797,10 +848,10 @@ function AdhHeader({
             onSwitchSite
           }
         ),
-        badges.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
+        badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
           // The ui Badge owns the skin; the adh-header__badge* classes stay
           // as stable hooks — they're a theme-editor surface.
-          /* @__PURE__ */ jsx8(
+          /* @__PURE__ */ jsx9(
             Badge,
             {
               variant: badge.tone ?? "neutral",
@@ -811,19 +862,19 @@ function AdhHeader({
           )
         )) })
       ] }),
-      center ? /* @__PURE__ */ jsx8("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx8("span", { className: "adh-header__page-title", children: pageTitle }),
-      /* @__PURE__ */ jsxs5("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
-        leadingActions && /* @__PURE__ */ jsx8("span", { className: "adh-header__actions", children: leadingActions }),
-        barLinks.length > 0 && /* @__PURE__ */ jsx8("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label)) }),
+      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
+      /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
+        leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
+        barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
         preAuthLinks,
-        authLoading && !user ? /* @__PURE__ */ jsx8(
+        authLoading && !user ? /* @__PURE__ */ jsx9(
           "span",
           {
             className: "adh-header__auth-spinner",
             role: "status",
             "aria-label": "Checking sign-in"
           }
-        ) : user ? /* @__PURE__ */ jsx8(
+        ) : user ? /* @__PURE__ */ jsx9(
           AvatarMenu,
           {
             user,
@@ -832,7 +883,7 @@ function AdhHeader({
             settingsHref,
             onSettings
           }
-        ) : /* @__PURE__ */ jsx8(
+        ) : /* @__PURE__ */ jsx9(
           AuthButtons,
           {
             loginHref,
@@ -841,7 +892,7 @@ function AdhHeader({
             onSignup
           }
         ),
-        trailingNavLinks.map((link) => /* @__PURE__ */ jsx8(NavLinkItem, { link }, link.href + link.label))
+        trailingNavLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label))
       ] })
     ] })
   ] });
@@ -849,14 +900,14 @@ function AdhHeader({
 
 // src/footer/AdhFooter.tsx
 import Link4 from "next/link";
-import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
 function AdhFooter({ links = [], copyright, version, trailing }) {
-  return /* @__PURE__ */ jsxs6("footer", { className: "adh-footer", role: "contentinfo", children: [
-    /* @__PURE__ */ jsxs6("div", { className: "adh-footer__container", children: [
-      copyright && /* @__PURE__ */ jsx9("span", { className: "adh-footer__copyright", children: copyright }),
-      version && /* @__PURE__ */ jsx9("span", { className: "adh-footer__version", children: version }),
-      links.length > 0 && /* @__PURE__ */ jsx9("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map(
-        (link) => "popoverTarget" in link ? /* @__PURE__ */ jsx9(
+  return /* @__PURE__ */ jsxs7("footer", { className: "adh-footer", role: "contentinfo", children: [
+    /* @__PURE__ */ jsxs7("div", { className: "adh-footer__container", children: [
+      copyright && /* @__PURE__ */ jsx10("span", { className: "adh-footer__copyright", children: copyright }),
+      version && /* @__PURE__ */ jsx10("span", { className: "adh-footer__version", children: version }),
+      links.length > 0 && /* @__PURE__ */ jsx10("nav", { className: "adh-footer__links", "aria-label": "Footer", children: links.map(
+        (link) => "popoverTarget" in link ? /* @__PURE__ */ jsx10(
           "button",
           {
             type: "button",
@@ -866,7 +917,7 @@ function AdhFooter({ links = [], copyright, version, trailing }) {
             children: link.label
           },
           `popover:${link.popoverTarget}`
-        ) : /* @__PURE__ */ jsx9(
+        ) : /* @__PURE__ */ jsx10(
           Link4,
           {
             href: link.href,
