@@ -19,10 +19,7 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
     pageTitle?: string;
     /** Optional interactive content centered in the bar (e.g. the status site's live
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
-     *  clickable. When set it occupies the centre slot in place of `pageTitle` — but
-     *  that suppression is this PROP's alone: a child portaled into the same slot via
-     *  `useHeaderCenter()` does NOT suppress `pageTitle` (see AdhHeader's `center` doc),
-     *  so a page passing `pageTitle` while something is portaled in gets both, stacked. */
+     *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
     center?: ReactNode;
     /** Badges shown under the site name. None by default — the family's preview
      *  notice is the strip the toolkit header draws above the bar, not a badge. */

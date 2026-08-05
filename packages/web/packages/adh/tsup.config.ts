@@ -8,12 +8,6 @@ export default defineConfig({
     'header/index': 'src/header/index.ts',
     // Its own entry so the preserved import below has something to resolve to.
     'header/recents': 'src/header/recents.ts',
-    // The header's centre PORTAL TARGET. Its own entry for the same reason recents has one: it
-    // holds module state (the React context object), and the provider is mounted from the
-    // `layout` entry while the consumer arrives through the `home` entry. Inlined, those would
-    // be two different contexts and the portal target would read null forever — in production
-    // only. Paired with the `external` line below and package-path specifiers everywhere.
-    'header/HeaderCenter': 'src/header/HeaderCenter.tsx',
     // The pluggable header AUTH SOURCES (Task 6.2) — the `HeaderAuthState`/
     // `HeaderAuthSource` contract plus the anonymous and smart-SSO sources. Its own
     // entry, published as the `./header-auth` subpath, rather than a member of
@@ -211,9 +205,6 @@ export default defineConfig({
     // path '@agentic-toolkit/adh/header/recents'. One surviving './recents' defeats
     // it. Enforced by frontend/tools/verify-bundle-boundaries.py.
     '@agentic-toolkit/adh/header/recents',
-    // Same rule, same three halves (entry + this line + package-path specifiers): see
-    // src/header/HeaderCenter.tsx's own note.
-    '@agentic-toolkit/adh/header/HeaderCenter',
     // The flags module holds the React context (FeatureFlagsProvider / FeatureFlagsContext).
     // With splitting:false, every entry that inlines it gets its OWN context instance — a consumer
     // entry in THIS package (`footer/AdhFooter`, which landed here in Task 5.7, is the nearest

@@ -1,9 +1,9 @@
 import { type ReactElement } from 'react';
 import type { Workspace } from '@agentic-toolkit/data';
 /**
- * The /home workspace switcher: a plain PopupMenu over the caller's owner-scopable workspaces.
- * Presentational and data-free — it takes a list and a callback, so the header mount, the
- * toolbar mount and the tests all get the same component and cannot drift apart.
+ * The workspace switcher in SiteHomeShell's bar: a plain PopupMenu over the caller's
+ * owner-scopable workspaces. Presentational and data-free — it takes a list and a callback, so
+ * the mounted one and the tested one cannot drift apart.
  *
  * A switcher, and nothing else: no "All" row (one workspace is always chosen), and no "New
  * Organization" — org creation is the hub's, where NewOrganizationModal lives.
@@ -16,13 +16,11 @@ import type { Workspace } from '@agentic-toolkit/data';
  * outlast the workspace list's own fetch. Without folding it into "Loading…" too, that window
  * renders a blank trigger — a real state loaded and non-empty, but nothing chosen yet.
  */
-export declare function WorkspacePicker({ workspaces, selected, onSelect, className, }: {
+export declare function WorkspacePicker({ workspaces, selected, onSelect, }: {
     /** The caller's workspaces, or null while the list is still loading. */
     workspaces: Workspace[] | null;
     /** The chosen workspace's slug, or null before resolution. */
     selected: string | null;
     onSelect: (slug: string) => void;
-    /** Extra classes for the trigger — the header mount sizes it to its content. */
-    className?: string;
 }): ReactElement;
 //# sourceMappingURL=WorkspacePicker.d.ts.map

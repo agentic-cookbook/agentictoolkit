@@ -36,11 +36,6 @@
       "development": "./src/header/recents.ts",
       "import": "./dist/header/recents.js"
     },
-    "./header/HeaderCenter": {
-      "types": "./dist/header/HeaderCenter.d.ts",
-      "development": "./src/header/HeaderCenter.tsx",
-      "import": "./dist/header/HeaderCenter.js"
-    },
     "./header-auth": {
       "types": "./dist/header/header-auth.d.ts",
       "development": "./src/header/header-auth.ts",

@@ -6,9 +6,9 @@ import { PopupMenu } from '@agentic-toolkit/ui/blocks'
 import type { Workspace } from '@agentic-toolkit/data'
 
 /**
- * The /home workspace switcher: a plain PopupMenu over the caller's owner-scopable workspaces.
- * Presentational and data-free — it takes a list and a callback, so the header mount, the
- * toolbar mount and the tests all get the same component and cannot drift apart.
+ * The workspace switcher in SiteHomeShell's bar: a plain PopupMenu over the caller's
+ * owner-scopable workspaces. Presentational and data-free — it takes a list and a callback, so
+ * the mounted one and the tested one cannot drift apart.
  *
  * A switcher, and nothing else: no "All" row (one workspace is always chosen), and no "New
  * Organization" — org creation is the hub's, where NewOrganizationModal lives.
@@ -25,15 +25,12 @@ export function WorkspacePicker({
   workspaces,
   selected,
   onSelect,
-  className,
 }: {
   /** The caller's workspaces, or null while the list is still loading. */
   workspaces: Workspace[] | null
   /** The chosen workspace's slug, or null before resolution. */
   selected: string | null
   onSelect: (slug: string) => void
-  /** Extra classes for the trigger — the header mount sizes it to its content. */
-  className?: string
 }): ReactElement {
   const allLabel =
     workspaces === null
@@ -60,7 +57,9 @@ export function WorkspacePicker({
       allLabel={allLabel}
       ariaLabel="Workspace"
       icon={<ChevronDown size={14} aria-hidden className="shrink-0 text-apt-text-muted" />}
-      className={className}
+      // Sized to its content rather than filling the bar: the bar also carries the "Workspace"
+      // label, and a full-width trigger would push it to the far edge on a wide viewport.
+      className="w-auto max-w-full"
     />
   )
 }

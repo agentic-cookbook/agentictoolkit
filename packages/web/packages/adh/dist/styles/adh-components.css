@@ -421,44 +421,34 @@
   }
 }
 
-/* ── /home's workspace chooser ───────────────────────────────────────────────────
-   TWO mounts, one visible, switched at the header's own 768px breakpoint (the
-   .adh-header__links rule directly above). No JS breakpoint and no `mounted` gate, so
-   nothing here depends on hydration order; both mounts read the same URL-derived state,
-   so they cannot disagree and the hidden one is inert. */
+/* ── The workspace chooser ───────────────────────────────────────────────────────
+   ONE mount at every width: a full-width bar under the header, carrying a "Workspace"
+   label and the picker. No breakpoint, no portal and no `mounted` gate, so nothing here
+   depends on hydration order and there is no second copy to keep in step.
 
-/* Wide: the picker sits in the header's centre slot (see .adh-header__center), portaled
-   there by SiteHomeShell. On a phone the bar has room for the brand and the auth cluster
-   and nothing else — the same reason the primary links collapse. */
-@media (max-width: 768px) {
-  .adh-home__header-picker {
-    display: none;
-  }
-}
-
-/* Narrow: a full-width bar under the header instead. Sticky BENEATH the sticky header
-   (.adh-header is `position: sticky; top: 0; z-index: 50`), so the chooser stays reachable
-   while the landing view scrolls, at a z-index below the header's and above the page. */
-/* One-sided, matching .adh-header__links at :279 — `display: none` by default with a
-   max-width override — rather than a separate min-width rule for the other mount. Two rules
-   pinned to different breakpoint numbers (768 / 769) both read false at any fractional viewport
-   width between them, which is routine under browser zoom, and show both mounts at once. */
+   Sticky BENEATH the sticky header (.adh-header is `position: sticky; top: 0; z-index: 50`),
+   so the chooser stays reachable while the landing view scrolls, at a z-index below the
+   header's and above the page. */
 .adh-home__toolbar {
-  display: none;
+  display: flex;
   position: sticky;
   top: var(--adh-header-height, 3.5rem);
   z-index: 40;
   align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--color-border);
   /* Solid, so content scrolling under it stays covered — same reason .adh-footer has one. */
   background: var(--color-surface);
 }
 
-@media (max-width: 768px) {
-  .adh-home__toolbar {
-    display: flex;
-  }
+/* The word beside the trigger. Muted and small: it names the control rather than competing
+   with it, and it is `aria-hidden` in the markup, so this is the only reader it has. */
+.adh-home__toolbar-label {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
 }
 
 .adh-footer {

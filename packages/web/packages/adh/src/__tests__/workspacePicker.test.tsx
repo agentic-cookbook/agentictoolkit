@@ -41,15 +41,12 @@ describe("WorkspacePicker", () => {
     },
   );
 
-  it("passes a trigger className through to PopupMenu", () => {
-    render(
-      <WorkspacePicker
-        workspaces={WORKSPACES}
-        selected="acme"
-        onSelect={vi.fn()}
-        className="w-auto"
-      />,
-    );
+  it("sizes its own trigger to its content, not to the bar", () => {
+    // The width is the picker's business, not a caller's: there is ONE mount, in a bar that also
+    // carries a "Workspace" label, and PopupMenu's trigger is `w-full` by default — which would
+    // push that label to the far edge on a wide viewport. This is the only caller of the trigger
+    // `className` PopupMenu grew for it, so nothing else asserts that the prop is wired through.
+    render(<WorkspacePicker workspaces={WORKSPACES} selected="acme" onSelect={vi.fn()} />);
     expect(screen.getByLabelText("Workspace").className).toContain("w-auto");
   });
 });

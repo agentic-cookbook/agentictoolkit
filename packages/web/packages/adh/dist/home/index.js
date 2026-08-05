@@ -14,7 +14,6 @@ import {
   useRef,
   useState
 } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import {
@@ -24,7 +23,6 @@ import {
   readCachedWorkspace,
   writeCachedWorkspace
 } from "@agentic-toolkit/data";
-import { useHeaderCenter, useHeaderCenterProvided } from "@agentic-toolkit/adh/header/HeaderCenter";
 
 // src/home/WorkspacePicker.tsx
 import "react";
@@ -34,8 +32,7 @@ import { jsx } from "react/jsx-runtime";
 function WorkspacePicker({
   workspaces,
   selected,
-  onSelect,
-  className
+  onSelect
 }) {
   const allLabel = workspaces === null ? "Loading\u2026" : workspaces.length === 0 ? "No workspaces" : selected === null ? "Loading\u2026" : null;
   return /* @__PURE__ */ jsx(
@@ -49,7 +46,7 @@ function WorkspacePicker({
       allLabel,
       ariaLabel: "Workspace",
       icon: /* @__PURE__ */ jsx(ChevronDown, { size: 14, "aria-hidden": true, className: "shrink-0 text-apt-text-muted" }),
-      className
+      className: "w-auto max-w-full"
     }
   );
 }
@@ -67,15 +64,6 @@ function SiteHomeShell({
     `${basePath}::workspaces`,
     loadWorkspaces
   );
-  const centerEl = useHeaderCenter();
-  const headerCenterProvided = useHeaderCenterProvided();
-  useEffect(() => {
-    if (!headerCenterProvided) {
-      console.warn(
-        "[SiteHomeShell] No HeaderCenterProvider found above this component \u2014 mount one (see AdhAppShell.tsx). Without it, the workspace chooser will not appear above 768px."
-      );
-    }
-  }, [headerCenterProvided]);
   const [stored, setStored] = useState(() => readCachedWorkspace());
   const [prefsSettled, setPrefsSettled] = useState(false);
   const [pendingWrite, setPendingWrite] = useState(() => workspaceSlug ?? null);
@@ -134,21 +122,11 @@ function SiteHomeShell({
     },
     [basePath, router]
   );
-  const picker = /* @__PURE__ */ jsx2(WorkspacePicker, { workspaces, selected: resolved ?? null, onSelect });
   return /* @__PURE__ */ jsxs(Fragment, { children: [
-    centerEl && createPortal(
-      /* @__PURE__ */ jsx2("div", { className: "adh-home__header-picker", children: /* @__PURE__ */ jsx2(
-        WorkspacePicker,
-        {
-          workspaces,
-          selected: resolved ?? null,
-          onSelect,
-          className: "w-auto max-w-full"
-        }
-      ) }),
-      centerEl
-    ),
-    /* @__PURE__ */ jsx2("div", { className: "adh-home__toolbar", children: picker }),
+    /* @__PURE__ */ jsxs("div", { className: "adh-home__toolbar", children: [
+      /* @__PURE__ */ jsx2("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
+      /* @__PURE__ */ jsx2(WorkspacePicker, { workspaces, selected: resolved ?? null, onSelect })
+    ] }),
     resolved === null && /* @__PURE__ */ jsx2(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
     resolved !== void 0 && resolved !== null && resolved === workspaceSlug && children({ workspaceSlug: resolved, scopedBase: `${basePath}/${resolved}` })
   ] });
@@ -157,9 +135,10 @@ function SiteHomeShell({
 // src/home/SiteHomeRoute.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
 function SiteHomeRoute({ model }) {
-  const raw = useParams()?.path;
-  const segments = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
-  const [workspaceSlug, ...rest] = segments;
+  const params = useParams();
+  const raw = params?.path;
+  const rest = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
+  const workspaceSlug = params?.workspace;
   return /* @__PURE__ */ jsx3(SiteHomeShell, { basePath: model.basePath, workspaceSlug, children: (scope) => model.render({ ...scope, view: model.parse(rest) }) });
 }
 

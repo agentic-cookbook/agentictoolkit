@@ -9,7 +9,6 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react'
-import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import {
@@ -20,10 +19,6 @@ import {
   writeCachedWorkspace,
   type Workspace,
 } from '@agentic-toolkit/data'
-// PRESERVED IMPORT — do not rewrite to '../header/HeaderCenter'. The PROVIDER is mounted from
-// the `layout` entry; a relative specifier here would inline a second context into the `home`
-// entry and this consumer would read null forever, in production only. See that file's note.
-import { useHeaderCenter, useHeaderCenterProvided } from '@agentic-toolkit/adh/header/HeaderCenter'
 import { WorkspacePicker } from './WorkspacePicker'
 import type { SiteHomeScope } from './SiteHomeModel'
 
@@ -32,45 +27,47 @@ import type { SiteHomeScope } from './SiteHomeModel'
 const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
 
 /**
- * The shared shell for a feature site's `/home`: one workspace chooser in the header, and below
- * it that site's own HTDV scoped to the chosen workspace.
+ * The shared shell for a feature site's workspace route: one labelled workspace chooser in a bar
+ * directly under the header, and below it that site's own HTDV scoped to the chosen workspace.
  *
  * Every site that scopes to a workspace used to grow its own chooser inside its HTDV stack —
  * eating the widest column, reimplemented per feature package, and the answer did not travel.
  * This owns all of it once:
  *
- *   - The ONE workspacesApi.list() fetch. Both picker mounts and the resolution read it.
+ *   - The ONE workspacesApi.list() fetch. The picker and the resolution read it.
  *   - Resolution: a slug already in the URL decides on its own. Otherwise the shell seeds one —
  *     but only once workspacePrefsApi.get() has settled, so a first visit with an empty
  *     localStorage cannot write a personal-workspace guess into the URL and permanently outrank
  *     the server's real answer. Once seeding is allowed: the stored preference → the personal
  *     workspace (workspacesApi.list() returns it first, so this costs no extra call) → nothing.
- *   - The URL as live truth: with no (or an unknown) slug, replace to `${basePath}/${slug}`.
+ *   - The URL as live truth: with no (or an unknown) slug, replace to `${basePath}/${slug}`. That
+ *     is also what makes the site's bare `/home` a redirect rather than a page of its own — it
+ *     mounts this shell with no segment, and the first thing the shell does is send the browser
+ *     to the resolved workspace's URL.
  *   - Holding `children` until resolution, so no feature mounts unscoped and fires a list
  *     request the backend would answer with the wrong reach. `children` is a FUNCTION for that
  *     reason: a node would be CONSTRUCTED on every render, including the ones before a workspace
  *     exists, so its props could only be built from the raw URL segment — which is `undefined`
  *     at `/home` and stale mid-redirect. Called instead, it runs once the answer is known and is
  *     handed that answer.
- *   - Rendering the picker twice from that one source — portaled into the header centre (wide)
- *     and in a full-width toolbar (narrow), switched by CSS at 768px. Both read the same
- *     URL-derived state, so they cannot disagree; the hidden one is inert.
+ *   - Rendering the chooser ONCE, in a labelled bar directly under the header, at every width.
  *
- * Signed-out visitors never reach here: `/home` sits behind HomeGate.
+ * The chooser used to be portaled into the header's centre slot above 768px, with this bar as the
+ * narrow-only fallback. That arrangement is gone: the header is built by the site's root layout,
+ * above the route, so reaching its centre from here took a context published by a provider the
+ * host had to remember to mount — and a host that forgot lost the chooser silently, above 768px
+ * only, in production only. One bar the route renders itself has no such precondition and no
+ * second copy to keep in step.
  *
- * PRECONDITION: a `HeaderCenterProvider` must be mounted somewhere above this component — in
- * production that's `AdhAppShell.tsx` (`packages/adh/src/layout/AdhAppShell.tsx`), which wraps
- * both the header and the page in one. Without it, `useHeaderCenter()` always reads `null`, the
- * header portal never renders, and the desktop (≥768px) chooser silently disappears — only the
- * narrow `.adh-home__toolbar` copy, hidden above 768px by CSS, remains. This mount silently loses
- * its own picker rather than throwing; see the dev-only warning below.
+ * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
  */
 export function SiteHomeShell({
   basePath,
   workspaceSlug,
   children,
 }: {
-  /** The route's base — `/home` for every site today. Drives the URL and the list cache key. */
+  /** The base ABOVE the workspace segment — `''` for a site whose workspace sits at its root,
+   *  so the URL is `/<workspace>`. Drives the URL and the list cache key. */
   basePath: string
   /** The workspace segment as it stands in the URL, if any. */
   workspaceSlug?: string
@@ -84,27 +81,6 @@ export function SiteHomeShell({
     `${basePath}::workspaces`,
     loadWorkspaces,
   )
-  const centerEl = useHeaderCenter()
-  const headerCenterProvided = useHeaderCenterProvided()
-
-  // Dev-only: a missing HeaderCenterProvider (see the PRECONDITION above) is silent in
-  // production — nothing throws, the desktop chooser just never appears — so this is the only
-  // signal a developer gets that it's missing. `headerCenterProvided` does not change once
-  // rendered (it comes from whichever context value — the module default or a mounted
-  // provider's — is in scope for this subtree), so the effect never RE-fires on a value change.
-  // It can still run twice per mount under React Strict Mode, which the App Router enables by
-  // default — i.e. in dev, the only build where this warning exists at all. Two identical lines in
-  // the console is the acceptable shape here; deduping would need module state, which is the very
-  // thing this file's neighbour exists to keep out of a second bundle.
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production' && !headerCenterProvided) {
-      console.warn(
-        '[SiteHomeShell] No HeaderCenterProvider found above this component — mount one ' +
-          '(see AdhAppShell.tsx). Without it, the workspace chooser will not appear above 768px.',
-      )
-    }
-  }, [headerCenterProvided])
-
   // The stored preference. The localStorage cache seeds it SYNCHRONOUSLY so the common case does
   // not wait on a round trip; the server's answer settles behind it and re-resolves if it
   // differs. Reading storage in a lazy initializer is hydration-safe here because this subtree is
@@ -122,9 +98,9 @@ export function SiteHomeShell({
   // the life of the mount, and it can still fire LATER. The effect's first two guards require it
   // to equal both `resolved` and `workspaceSlug`, so it can only ever write the workspace it
   // already names — but `stored` moves underneath it, so that write is NOT always a no-op. Deep
-  // link `/home/acme` with the cache agreeing, navigate to `beta`, a late GET answers `mine`,
+  // link `/acme` with the cache agreeing, navigate to `beta`, a late GET answers `mine`,
   // navigate back to `acme`: one PUT `{acme}` fires on the return. That is correct, not a leak.
-  // Arriving on `/home/acme` is an explicit act, this field is the record of it, and the deferred
+  // Arriving on `/acme` is an explicit act, this field is the record of it, and the deferred
   // write is allowed to land later than the arrival that earned it — the round-3 fix (clear AFTER
   // the `resolved === stored` skip, see the persistence effect) exists precisely so a late
   // `stored` can still act on that record. Round 2's shorthand "history navigations do not
@@ -230,7 +206,7 @@ export function SiteHomeShell({
   //
   // Clear `pendingWrite` AFTER the `resolved === stored` skip, not before. Clearing it first loses
   // an explicit deep link whenever the cache already agrees but the server does not: cache "acme",
-  // URL "/home/acme", server row "mine". If the list settles before the prefs GET, `resolved ===
+  // URL "/acme", server row "mine". If the list settles before the prefs GET, `resolved ===
   // stored ("acme")` short-circuits on this first pass — but a too-early clear has already thrown
   // `pendingWrite` away, so when the GET later answers "mine" and `stored` changes, there is
   // nothing left for the guard above to match and the PUT the user's own deep link asked for never
@@ -266,29 +242,18 @@ export function SiteHomeShell({
     [basePath, router],
   )
 
-  const picker = (
-    <WorkspacePicker workspaces={workspaces} selected={resolved ?? null} onSelect={onSelect} />
-  )
-
   return (
     <>
-      {/* Wide: into the header's centre. Null until the header's div registers, so this is a
-          post-hydration effect and the server HTML has an empty centre — correct for a route
-          whose content is gated anyway. */}
-      {centerEl &&
-        createPortal(
-          <div className="adh-home__header-picker">
-            <WorkspacePicker
-              workspaces={workspaces}
-              selected={resolved ?? null}
-              onSelect={onSelect}
-              className="w-auto max-w-full"
-            />
-          </div>,
-          centerEl,
-        )}
-      {/* Narrow: a full-width bar under the header. Hidden by CSS above 768px. */}
-      <div className="adh-home__toolbar">{picker}</div>
+      {/* A full-width bar under the header, at every width. The visible word is decorative to
+          assistive tech — `aria-hidden`, because the trigger it labels already carries
+          `ariaLabel="Workspace"` (see WorkspacePicker), and a <label> pointing at it would make
+          a screen reader say "Workspace" twice. */}
+      <div className="adh-home__toolbar">
+        <span className="adh-home__toolbar-label" aria-hidden>
+          Workspace
+        </span>
+        <WorkspacePicker workspaces={workspaces} selected={resolved ?? null} onSelect={onSelect} />
+      </div>
       {resolved === null && (
         <TopicSelectHint title="No workspaces yet — create one from the hub to get started." />
       )}

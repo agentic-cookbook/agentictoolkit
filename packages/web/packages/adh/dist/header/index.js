@@ -807,7 +807,6 @@ function PreviewNotice({
 
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { useHeaderCenterRegister } from "@agentic-toolkit/adh/header/HeaderCenter";
 import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhHeader({
   siteName,
@@ -836,7 +835,6 @@ function AdhHeader({
   onSettings
 }) {
   const barLinks = siteSwitcher ? navLinks : navLinks.filter((l) => l.href !== siteNameHref);
-  const registerCenter = useHeaderCenterRegister();
   return /* @__PURE__ */ jsxs6("header", { className: "adh-header", role: "banner", children: [
     /* @__PURE__ */ jsx9(PreviewNotice, { notice: previewNotice, detail: previewDetail }),
     /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
@@ -864,8 +862,7 @@ function AdhHeader({
           )
         )) })
       ] }),
-      !center && pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
-      /* @__PURE__ */ jsx9("div", { className: "adh-header__center", ref: registerCenter, children: center }),
+      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
       /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
         leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
         barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
@@ -1943,19 +1940,12 @@ import {
   recordRecent,
   useRecents as useRecents2
 } from "@agentic-toolkit/adh/header/recents";
-import {
-  HeaderCenterProvider,
-  useHeaderCenter,
-  useHeaderCenterRegister as useHeaderCenterRegister2,
-  useHeaderCenterProvided
-} from "@agentic-toolkit/adh/header/HeaderCenter";
 export {
   AdhHeader,
   AuthButtons,
   AvatarMenu,
   DEBUG_SECTION,
   DEV_TOOLS_BUILD_ENABLED,
-  HeaderCenterProvider,
   HubMark,
   MarketingSiteMenu,
   NavLinkItem,
@@ -1987,9 +1977,6 @@ export {
   useClientHost,
   useEffectiveEnv,
   useEnvOverride,
-  useHeaderCenter,
-  useHeaderCenterProvided,
-  useHeaderCenterRegister2 as useHeaderCenterRegister,
   useRecents2 as useRecents,
   useSiteMenu,
   useWorkspacesMenu

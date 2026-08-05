@@ -9,9 +9,6 @@ import { NavLinkItem, type NavLink } from './NavLink'
 import { PreviewNotice } from './PreviewNotice'
 import type { AdhThemeKey } from '../themes/adh-themes'
 import { Badge } from '@agentic-toolkit/ui/components/badge'
-// PRESERVED IMPORT — do not rewrite to './HeaderCenter'. See that file's module-state note and
-// tsup.config.ts: a relative specifier inlines a second context into this entry's bundle.
-import { useHeaderCenterRegister } from '@agentic-toolkit/adh/header/HeaderCenter'
 
 /** A small pill shown under the site name. `tone` selects its colour. */
 export type HeaderBadge = {
@@ -81,12 +78,7 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
   pageTitle?: string
   /** Optional interactive content centered in the bar (e.g. a live status
    *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
-   *  clickable. When set it occupies the centre slot in place of `pageTitle` — but
-   *  that suppression is this PROP's alone. A child portaled into the same slot via
-   *  `useHeaderCenter()` (see `HeaderCenter.tsx`) does NOT suppress `pageTitle`: both
-   *  are absolutely positioned on the same centre point, so a page that passes
-   *  `pageTitle` while something is portaled in renders the portaled content on top
-   *  of the title, not in place of it. */
+   *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
   center?: ReactNode
   /** Badges shown under the site name. Empty by default — the family-wide preview
    *  notice is the strip above the bar, not a badge. */
@@ -179,7 +171,6 @@ export function AdhHeader({
   const barLinks = siteSwitcher
     ? navLinks
     : navLinks.filter((l) => l.href !== siteNameHref)
-  const registerCenter = useHeaderCenterRegister()
 
   return (
     <header className="adh-header" role="banner">
@@ -229,16 +220,11 @@ export function AdhHeader({
             </span>
           )}
         </div>
-        {/* The page title and the centre slot are BOTH absolutely positioned against the
-            container, so the title stays a direct SIBLING of the slot — nesting it inside would
-            re-anchor its `position: absolute` to the slot and move it off centre. The slot is
-            now rendered unconditionally, because it is also the portal target a route below
-            registers through: with no `center` prop and nothing portaled it is an empty,
-            zero-content absolutely-positioned box and lays out as if it were not there. */}
-        {!center && pageTitle && <span className="adh-header__page-title">{pageTitle}</span>}
-        <div className="adh-header__center" ref={registerCenter}>
-          {center}
-        </div>
+        {center ? (
+          <div className="adh-header__center">{center}</div>
+        ) : (
+          pageTitle && <span className="adh-header__page-title">{pageTitle}</span>
+        )}
         <nav className="adh-header__nav" aria-label="Primary">
           {leadingActions && (
             <span className="adh-header__actions">{leadingActions}</span>

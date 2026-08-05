@@ -85,11 +85,3 @@ export {
   useRecents,
 } from '@agentic-toolkit/adh/header/recents'
 export type { RecentPlace } from '@agentic-toolkit/adh/header/recents'
-
-// PRESERVED IMPORT — same rule as recents above: package path, never './HeaderCenter'.
-export {
-  HeaderCenterProvider,
-  useHeaderCenter,
-  useHeaderCenterRegister,
-  useHeaderCenterProvided,
-} from '@agentic-toolkit/adh/header/HeaderCenter'

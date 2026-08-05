@@ -1,6 +1,7 @@
 'use client'
 
-// The shared /home shell: one workspace chooser in the header, the site's own HTDV below it.
+// The shared workspace-route shell: one workspace chooser in a bar under the header, the site's
+// own HTDV below it.
 // Its own entry (and hence its own export subpath) so only a page that imports it pays for the
 // package's @agentic-toolkit/data dependency — the header ships on every public page and must
 // not carry workspace vocabulary.

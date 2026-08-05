@@ -2,10 +2,10 @@
 
 import type { ReactNode } from 'react'
 
-// The contract a site implements to have a workspace landing view at /home.
+// The contract a site implements to have a workspace landing view at `/<workspace>`.
 //
 // Before this existed, every site's page.tsx hand-assembled the arrangement: parse the path,
-// construct `/home`, construct `/home/<slug>` a second time by hand, mount the shell, mount the
+// construct the base, construct `<base>/<slug>` a second time by hand, mount the shell, mount the
 // feature inside it. Four steps, one of them a template literal encoding a URL grammar that lives
 // in a shared package — so the grammar was really declared once per site, and the next site to be
 // rolled out declared it again. Nothing forces those copies to agree; nothing fails when one
@@ -35,16 +35,18 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
 }
 
 /**
- * One site's /home declaration. `View` is inferred from `parse`, so a site never names it.
+ * One site's workspace-route declaration. `View` is inferred from `parse`, so a site never names
+ * it.
  */
 export interface SiteHomeModel<View> {
-  /** The route's base. `/home` for every site today; it is declared rather than assumed because
-   *  it is the route's own property, and the shell keys its workspace-list cache on it. */
+  /** Whatever sits ABOVE the workspace segment — `''` for every site today, whose workspace is
+   *  its first path segment, so the URL is `/<workspace>`. It is declared rather than assumed
+   *  because it is the route's own property, and the shell keys its workspace-list cache on it. */
   basePath: string
   /**
    * The path segments BELOW the workspace → this site's view state.
    *
-   * `/home/acme/proj-1/notes` hands `['proj-1', 'notes']`. The workspace segment is already
+   * `/acme/proj-1/notes` hands `['proj-1', 'notes']`. The workspace segment is already
    * consumed — a site that reads it here is reading the wrong layer, and `scopedBase` /
    * `workspaceSlug` are how it gets that.
    *
@@ -57,7 +59,7 @@ export interface SiteHomeModel<View> {
 }
 
 /**
- * Declares a site's /home model.
+ * Declares a site's workspace-route model.
  *
  * An identity function, and worth its existence for one reason: it INFERS `View` from `parse`'s
  * return type, so a site writes neither a type parameter nor a type annotation and still gets

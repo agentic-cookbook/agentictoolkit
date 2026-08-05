@@ -17,16 +17,18 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
     view: View;
 }
 /**
- * One site's /home declaration. `View` is inferred from `parse`, so a site never names it.
+ * One site's workspace-route declaration. `View` is inferred from `parse`, so a site never names
+ * it.
  */
 export interface SiteHomeModel<View> {
-    /** The route's base. `/home` for every site today; it is declared rather than assumed because
-     *  it is the route's own property, and the shell keys its workspace-list cache on it. */
+    /** Whatever sits ABOVE the workspace segment — `''` for every site today, whose workspace is
+     *  its first path segment, so the URL is `/<workspace>`. It is declared rather than assumed
+     *  because it is the route's own property, and the shell keys its workspace-list cache on it. */
     basePath: string;
     /**
      * The path segments BELOW the workspace → this site's view state.
      *
-     * `/home/acme/proj-1/notes` hands `['proj-1', 'notes']`. The workspace segment is already
+     * `/acme/proj-1/notes` hands `['proj-1', 'notes']`. The workspace segment is already
      * consumed — a site that reads it here is reading the wrong layer, and `scopedBase` /
      * `workspaceSlug` are how it gets that.
      *
@@ -38,7 +40,7 @@ export interface SiteHomeModel<View> {
     render: (ctx: SiteHomeContext<View>) => ReactNode;
 }
 /**
- * Declares a site's /home model.
+ * Declares a site's workspace-route model.
  *
  * An identity function, and worth its existence for one reason: it INFERS `View` from `parse`'s
  * return type, so a site writes neither a type parameter nor a type annotation and still gets

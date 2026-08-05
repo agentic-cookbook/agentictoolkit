@@ -1,7 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
-import { render, screen, waitFor, cleanup, fireEvent, act, within } from "@testing-library/react";
-import { HeaderCenterProvider, useHeaderCenterRegister } from "../header/HeaderCenter";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  configure,
+  fireEvent,
+  act,
+  within,
+} from "@testing-library/react";
+
+// Every wait in this file is for a MICROTASK chain — the router double's deferred `liveSetSlug`,
+// then React's render and effects — so the real settle is sub-millisecond and the timeout is pure
+// headroom. testing-library's 1000ms default is not enough headroom here: `pnpm test` runs 59 jsdom
+// environments in parallel, and one full-suite run timed out at line ~1002 waiting for a write that
+// passes in 2ms standalone. Raising the ceiling costs a green run nothing (a satisfied wait returns
+// on its next 50ms poll either way) and only changes how long a genuinely broken one takes to fail.
+// Scoped to this file rather than the shared root setup, which every package's tests load.
+configure({ asyncUtilTimeout: 5000 });
 
 // A STATEFUL router double. `replace`/`push` both record the call (so assertions can still
 // check what was requested) AND move a live slug the way the App Router actually does — unlike
@@ -138,7 +155,7 @@ const WORKSPACES = [
  * recorded. The assignment happens in the render body (not an effect): Harness's function body
  * always runs before its child's, so by the time SiteHomeShell mounts and its effects can call
  * `replace`/`push`, `liveSetSlug` already points at this instance's setter. */
-function Shell({ workspaceSlug, basePath = "/home" }: { workspaceSlug?: string; basePath?: string }) {
+function Shell({ workspaceSlug, basePath = "" }: { workspaceSlug?: string; basePath?: string }) {
   const [slug, setSlug] = useState<string | undefined>(workspaceSlug);
   liveSetSlug = setSlug;
   return (
@@ -152,20 +169,6 @@ function Shell({ workspaceSlug, basePath = "/home" }: { workspaceSlug?: string; 
         </div>
       )}
     </SiteHomeShell>
-  );
-}
-
-/** Every other mount in this file: production always has a HeaderCenterProvider above
- * SiteHomeShell (AdhAppShell mounts one around the header AND the page), so a bare <Shell>
- * with nothing above it is not the scenario these tests are about — it would leave every one of
- * them silently exercising the no-provider path instead of the real one. That gap is what the
- * "renders ONE picker with no header slot to portal into" test below now covers on its own,
- * deliberately, as the one test in this file that renders WITHOUT this wrapper. */
-function ShellWithProvider(props: { workspaceSlug?: string; basePath?: string }) {
-  return (
-    <HeaderCenterProvider>
-      <Shell {...props} />
-    </HeaderCenterProvider>
   );
 }
 
@@ -188,7 +191,7 @@ describe("SiteHomeShell resolution", () => {
   it("holds children until a workspace is resolved, so no feature mounts unscoped", async () => {
     let settleList: (w: typeof WORKSPACES) => void = () => {};
     list.mockReturnValue(new Promise((r) => (settleList = r)));
-    render(<ShellWithProvider />);
+    render(<Shell />);
     expect(screen.queryByTestId("feature")).toBeNull();
     // [round 2, finding 3] an assertion used to sit here re-checking `feature` was still absent
     // in the same tick as `settleList` — but resolution happens on a microtask, so nothing could
@@ -205,7 +208,7 @@ describe("SiteHomeShell resolution", () => {
     let settlePrefs: (p: { slug?: string }) => void = () => {};
     prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-    render(<ShellWithProvider />);
+    render(<Shell />);
     settleList(WORKSPACES);
     // The list has landed but prefs have not — the shell must not have guessed yet. This is the
     // exact half-state the old code got wrong: it resolved to "mine" here, wrote it into the
@@ -215,7 +218,7 @@ describe("SiteHomeShell resolution", () => {
     expect(prefsPut).not.toHaveBeenCalled();
 
     settlePrefs({ slug: "acme" });
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
     expect(prefsPut).not.toHaveBeenCalled();
   });
 
@@ -224,14 +227,14 @@ describe("SiteHomeShell resolution", () => {
     let settlePrefs: (p: { slug?: string }) => void = () => {};
     prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-    render(<ShellWithProvider />);
+    render(<Shell />);
     await waitFor(() => expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument());
     // The warm cache alone must not be enough to commit while the server's answer is pending.
     expect(replace).not.toHaveBeenCalled();
     expect(prefsPut).not.toHaveBeenCalled();
 
     settlePrefs({ slug: "acme" });
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
     expect(replace).toHaveBeenCalledTimes(1);
     expect(prefsPut).not.toHaveBeenCalled();
   });
@@ -247,13 +250,13 @@ describe("SiteHomeShell resolution", () => {
     let settleList: (w: typeof WORKSPACES) => void = () => {};
     list.mockReturnValue(new Promise((r) => (settleList = r)));
 
-    render(<ShellWithProvider />);
+    render(<Shell />);
     // Give prefs a tick to settle before the list does — resolution still needs BOTH inputs.
     await new Promise((r) => setTimeout(r, 0));
     expect(replace).not.toHaveBeenCalled();
 
     settleList(WORKSPACES);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/mine", { scroll: false }));
     // Give the persistence effect a further tick to fire before asserting it stayed silent.
     await new Promise((r) => setTimeout(r, 0));
     expect(prefsPut).not.toHaveBeenCalled();
@@ -263,8 +266,8 @@ describe("SiteHomeShell resolution", () => {
   it("prefs GET rejects, warm cache says acme — lands on acme with zero PUTs", async () => {
     readCached.mockReturnValue("acme");
     prefsGet.mockRejectedValue(new Error("offline"));
-    render(<ShellWithProvider />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    render(<Shell />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
     expect(prefsPut).not.toHaveBeenCalled();
   });
 
@@ -279,7 +282,7 @@ describe("SiteHomeShell resolution", () => {
       // whatever workspace the user actually had chosen there.
       readCached.mockReturnValue(null);
       prefsGet.mockRejectedValue(new Error("offline"));
-      render(<ShellWithProvider />);
+      render(<Shell />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
       // Give the persistence effect a further tick to fire before asserting it stayed silent.
       await new Promise((r) => setTimeout(r, 0));
@@ -301,7 +304,7 @@ describe("SiteHomeShell resolution", () => {
       try {
         readCached.mockReturnValue(null);
         prefsGet.mockReturnValue(new Promise(() => {})); // never settles
-        render(<ShellWithProvider />);
+        render(<Shell />);
         expect(screen.queryByTestId("feature")).toBeNull();
 
         // Flushes the 5s bail timer; wrapped in `act` so the chain of renders it triggers
@@ -311,7 +314,7 @@ describe("SiteHomeShell resolution", () => {
           await vi.advanceTimersByTimeAsync(5000);
         });
 
-        expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false });
+        expect(replace).toHaveBeenCalledWith("/mine", { scroll: false });
         expect(screen.getByTestId("feature")).toBeInTheDocument();
         expect(prefsPut).not.toHaveBeenCalled();
         expect(writeCached).not.toHaveBeenCalled();
@@ -336,7 +339,7 @@ describe("SiteHomeShell resolution", () => {
       try {
         readCached.mockReturnValue(null);
         prefsGet.mockReturnValue(new Promise(() => {})); // never settles
-        render(<ShellWithProvider />);
+        render(<Shell />);
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(4999);
@@ -347,7 +350,7 @@ describe("SiteHomeShell resolution", () => {
         await act(async () => {
           await vi.advanceTimersByTimeAsync(1);
         });
-        expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false });
+        expect(replace).toHaveBeenCalledWith("/mine", { scroll: false });
         expect(screen.getByTestId("feature")).toBeInTheDocument();
       } finally {
         vi.useRealTimers();
@@ -369,7 +372,7 @@ describe("SiteHomeShell resolution", () => {
       try {
         readCached.mockReturnValue(null);
         prefsGet.mockResolvedValue({ slug: "acme" });
-        render(<ShellWithProvider />);
+        render(<Shell />);
 
         // The GET is already resolved; flushing by 0ms still drains the microtask queue that
         // its `.then` runs on, without needing to reach anywhere near the 5s mark.
@@ -400,7 +403,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      const { unmount } = render(<ShellWithProvider />);
+      const { unmount } = render(<Shell />);
       await waitFor(() => expect(screen.getByTestId("picker")).toBeInTheDocument());
       unmount();
 
@@ -426,7 +429,7 @@ describe("SiteHomeShell resolution", () => {
       try {
         readCached.mockReturnValue(null);
         prefsGet.mockReturnValue(new Promise(() => {})); // never settles
-        const { unmount } = render(<ShellWithProvider />);
+        const { unmount } = render(<Shell />);
         expect(vi.getTimerCount()).toBe(1);
 
         unmount();
@@ -454,7 +457,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider />);
+      render(<Shell />);
       await waitFor(() =>
         expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument(),
       );
@@ -474,7 +477,7 @@ describe("SiteHomeShell resolution", () => {
 
   it("deep link wins over the stored preference — lands on acme with exactly one PUT", async () => {
     readCached.mockReturnValue("mine");
-    render(<ShellWithProvider workspaceSlug="acme" />);
+    render(<Shell workspaceSlug="acme" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     expect(replace).not.toHaveBeenCalled();
     await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
@@ -496,7 +499,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider workspaceSlug="acme" />);
+      render(<Shell workspaceSlug="acme" />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
       expect(replace).not.toHaveBeenCalled();
       await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
@@ -548,7 +551,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider workspaceSlug="mine" />);
+      render(<Shell workspaceSlug="mine" />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
       // Arriving on the workspace the cache already names settles nothing on its own.
       expect(writeCached).not.toHaveBeenCalled();
@@ -583,7 +586,7 @@ describe("SiteHomeShell resolution", () => {
       // 4's tests green while changing where the user LANDS, which is the harm finding 1 exists
       // to prevent, arriving through the other door.
       //
-      // Cold cache, deep link `/home/acme`: the shell PUTs `{acme}`, caches it, and records the
+      // Cold cache, deep link `/acme`: the shell PUTs `{acme}`, caches it, and records the
       // write. The GET — issued at mount, before that write existed — answers the pre-PUT row
       // `mine`. Then Back lands on a URL carrying no workspace segment, so the shell has to seed
       // one, and `known(stored)` is the seed. `stored` must still be the slug the write put
@@ -593,7 +596,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider workspaceSlug="acme" />);
+      render(<Shell workspaceSlug="acme" />);
       await waitFor(() => expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" }));
       // The URL already named the resolution, so nothing has been replaced yet — the assertion
       // below is about the ONE replace the history navigation provokes.
@@ -610,7 +613,7 @@ describe("SiteHomeShell resolution", () => {
       });
 
       await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
-      expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false });
+      expect(replace).toHaveBeenCalledWith("/acme", { scroll: false });
       await waitFor(() =>
         expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "acme"),
       );
@@ -626,8 +629,8 @@ describe("SiteHomeShell resolution", () => {
       readCached.mockReturnValue(null);
       prefsGet.mockResolvedValue({ slug: "acme" });
 
-      render(<ShellWithProvider />);
-      await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+      render(<Shell />);
+      await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
 
       expect(writeCached).toHaveBeenCalledTimes(1);
       expect(writeCached).toHaveBeenCalledWith("acme");
@@ -649,12 +652,12 @@ describe("SiteHomeShell resolution", () => {
         readCached.mockReturnValue(null);
         let settlePrefs: (p: { slug?: string }) => void = () => {};
         prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
-        render(<ShellWithProvider />);
+        render(<Shell />);
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(5000);
         });
-        expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false });
+        expect(replace).toHaveBeenCalledWith("/mine", { scroll: false });
         expect(writeCached).not.toHaveBeenCalled();
 
         await act(async () => {
@@ -686,7 +689,7 @@ describe("SiteHomeShell resolution", () => {
       try {
         readCached.mockReturnValue(null);
         prefsGet.mockRejectedValue(new Error("offline"));
-        render(<ShellWithProvider />);
+        render(<Shell />);
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(0);
@@ -703,7 +706,7 @@ describe("SiteHomeShell resolution", () => {
     "[round 4, finding 3] a lingering pendingWrite still writes on a RETURN navigation, once a " +
       "late GET has moved `stored` out from under it",
     async () => {
-      // This pins the claim the `pendingWrite` comment now makes. Deep link `/home/acme` with the
+      // This pins the claim the `pendingWrite` comment now makes. Deep link `/acme` with the
       // cache already agreeing: the persistence effect skips on `resolved === stored` and — since
       // round 3 — clears `pendingWrite` only AFTER that skip, so it survives. Navigate away to
       // `beta` (nothing fires: `pendingWrite` names "acme"). A late GET answers "mine", moving
@@ -717,7 +720,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider workspaceSlug="acme" />);
+      render(<Shell workspaceSlug="acme" />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
       expect(prefsPut).not.toHaveBeenCalled();
 
@@ -745,7 +748,7 @@ describe("SiteHomeShell resolution", () => {
   );
 
   it(
-    "[round 3, finding 1 regression] warm cache acme, deep link /home/acme, server row mine, " +
+    "[round 3, finding 1 regression] warm cache acme, deep link /acme, server row mine, " +
       'the list settles before the GET — exactly one PUT, {slug: "acme"}',
     async () => {
       // The exact shape finding 1 named: the cache already agrees with the deep link, but the
@@ -760,7 +763,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider workspaceSlug="acme" />);
+      render(<Shell workspaceSlug="acme" />);
 
       // The list lands first — `resolved` becomes "acme" while `stored` still reads the cache's
       // own "acme", so the persistence effect's `resolved === stored` skip fires and nothing
@@ -783,7 +786,7 @@ describe("SiteHomeShell resolution", () => {
   );
 
   it(
-    "[round 3, finding 1 regression] warm cache acme, deep link /home/acme, server row mine, " +
+    "[round 3, finding 1 regression] warm cache acme, deep link /acme, server row mine, " +
       'the GET settles before the list — same outcome: exactly one PUT, {slug: "acme"}',
     async () => {
       // Mirror-image ordering of the case above, so together they pin the actual invariant:
@@ -795,7 +798,7 @@ describe("SiteHomeShell resolution", () => {
       let settlePrefs: (p: { slug?: string }) => void = () => {};
       prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
 
-      render(<ShellWithProvider workspaceSlug="acme" />);
+      render(<Shell workspaceSlug="acme" />);
 
       // The server answers first, while `resolved` is still undefined (the list hasn't loaded,
       // so the persistence effect's own `!resolved` guard keeps it from firing at all yet).
@@ -818,7 +821,7 @@ describe("SiteHomeShell resolution", () => {
 
   it("[round 2] deep link to the workspace already stored — zero PUTs", async () => {
     readCached.mockReturnValue("acme");
-    render(<ShellWithProvider workspaceSlug="acme" />);
+    render(<Shell workspaceSlug="acme" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     // Give the persistence effect a further tick to fire before asserting it stayed silent.
     await new Promise((r) => setTimeout(r, 0));
@@ -830,7 +833,7 @@ describe("SiteHomeShell resolution", () => {
     // The cache already agrees with the URL, so landing on "mine" settles nothing on its own —
     // the only write this test should see is the one caused by the pick below.
     readCached.mockReturnValue("mine");
-    render(<ShellWithProvider workspaceSlug="mine" />);
+    render(<Shell workspaceSlug="mine" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     expect(prefsPut).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Acme" }));
@@ -850,7 +853,7 @@ describe("SiteHomeShell resolution", () => {
       // transient "acme" render and only the final "beta" is ever written.
       readCached.mockReturnValue("mine");
       list.mockResolvedValue([...WORKSPACES, { slug: "beta", name: "Beta", kind: "organization" as const }]);
-      render(<ShellWithProvider workspaceSlug="mine" />);
+      render(<Shell workspaceSlug="mine" />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
 
       fireEvent.click(screen.getByRole("button", { name: "Acme" }));
@@ -865,8 +868,8 @@ describe("SiteHomeShell resolution", () => {
 
   it("an unknown URL slug is replaced with the stored preference, with zero PUTs", async () => {
     readCached.mockReturnValue("acme");
-    render(<ShellWithProvider workspaceSlug="zzz" />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    render(<Shell workspaceSlug="zzz" />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
     expect(prefsPut).not.toHaveBeenCalled();
   });
 
@@ -876,7 +879,7 @@ describe("SiteHomeShell resolution", () => {
     // the persistence effect stays inert. The spec's fallback is for arrival, not for reversal:
     // going back must not re-persist the workspace you're leaving.
     readCached.mockReturnValue("acme");
-    render(<ShellWithProvider workspaceSlug="acme" />);
+    render(<Shell workspaceSlug="acme" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     expect(prefsPut).not.toHaveBeenCalled();
 
@@ -894,23 +897,23 @@ describe("SiteHomeShell resolution", () => {
 
   it("with no slug, resolves to the stored preference over the personal workspace", async () => {
     readCached.mockReturnValue("acme");
-    render(<ShellWithProvider />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    render(<Shell />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
   });
 
   it("drops a stored slug that is no longer in the list", async () => {
     readCached.mockReturnValue("gone");
-    render(<ShellWithProvider />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false }));
+    render(<Shell />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/mine", { scroll: false }));
   });
 
   it("an unknown slug in the URL, with nothing stored, falls to the personal workspace", async () => {
-    render(<ShellWithProvider workspaceSlug="nope" />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false }));
+    render(<Shell workspaceSlug="nope" />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/mine", { scroll: false }));
   });
 
   it("mounts children once the URL matches the resolved workspace", async () => {
-    render(<ShellWithProvider workspaceSlug="mine" />);
+    render(<Shell workspaceSlug="mine" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
   });
 
@@ -930,8 +933,8 @@ describe("SiteHomeShell resolution", () => {
       readCached.mockReturnValue("acme");
       prefsGet.mockResolvedValue({ slug: "acme" });
 
-      render(<ShellWithProvider />);
-      await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+      render(<Shell />);
+      await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
       expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "acme");
       expect(screen.queryByTestId("feature")).toBeNull();
 
@@ -946,7 +949,7 @@ describe("SiteHomeShell resolution", () => {
 
   it("empty workspace list — the empty-state hint, no replace, no PUT", async () => {
     list.mockResolvedValue([]);
-    render(<ShellWithProvider />);
+    render(<Shell />);
     await waitFor(() => expect(screen.getByText(/no workspaces/i)).toBeInTheDocument());
     expect(screen.queryByTestId("feature")).toBeNull();
     expect(replace).not.toHaveBeenCalled();
@@ -954,13 +957,7 @@ describe("SiteHomeShell resolution", () => {
   });
 });
 
-describe("SiteHomeShell picker mounts", () => {
-  /** Stands in for AdhHeader: registers a div as the centre slot. */
-  function HeaderSlot() {
-    const register = useHeaderCenterRegister();
-    return <div data-testid="header-center" ref={register} />;
-  }
-
+describe("SiteHomeShell picker mount", () => {
   it(
     "[round 5, matrix row s03] a picked workspace navigates under the CURRENT basePath, not the " +
       "one captured at mount",
@@ -971,90 +968,55 @@ describe("SiteHomeShell picker mounts", () => {
       // green row in the matrix whose inertness rested on a CONVENTION (one shell per base
       // route) rather than something the types or the control flow forbid, so it gets an
       // assertion instead of a ruling.
-      const { rerender } = render(<ShellWithProvider workspaceSlug="mine" />);
+      const { rerender } = render(<Shell workspaceSlug="mine" />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
 
-      rerender(<ShellWithProvider workspaceSlug="mine" basePath="/work" />);
+      rerender(<Shell workspaceSlug="mine" basePath="/work" />);
       fireEvent.click(screen.getByRole("button", { name: "Acme" }));
 
       expect(push).toHaveBeenCalledWith("/work/acme", { scroll: false });
     },
   );
 
-  it(
-    "[final review, I-1] with no HeaderCenterProvider above it, mounts only the toolbar " +
-      "picker and warns in dev",
-    async () => {
-      // The ONE test in this file that deliberately renders <Shell> bare — every other mount
-      // goes through ShellWithProvider above, matching AdhAppShell's real wiring. This is the
-      // gap that wiring leaves uncovered: no provider at all, which useHeaderCenter() cannot
-      // tell apart from "provider mounted, nothing registered yet" without the `provided` flag
-      // SiteHomeShell now reads to decide whether to warn.
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      try {
-        const { container } = render(<Shell workspaceSlug="mine" />);
-        await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
-
-        // No provider ⇒ useHeaderCenter() reads null ⇒ the portal branch never renders at all —
-        // there is no `.adh-home__header-picker` anywhere, not merely an empty one.
-        expect(container.querySelector(".adh-home__header-picker")).toBeNull();
-        // The toolbar copy needs no provider, so it still mounts — and with the portal absent,
-        // it is the ONLY picker on the page.
-        const toolbar = container.querySelector(".adh-home__toolbar");
-        expect(toolbar).not.toBeNull();
-        expect(screen.getAllByTestId("picker")).toHaveLength(1);
-        expect(toolbar).toContainElement(screen.getByTestId("picker"));
-
-        // And the dev-only warning fired once, naming the missing provider and the consequence.
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        const [message] = warnSpy.mock.calls[0]!;
-        expect(String(message)).toContain("HeaderCenterProvider");
-        expect(String(message)).toContain("768px");
-      } finally {
-        warnSpy.mockRestore();
-      }
-    },
-  );
-
-  it("renders the picker TWICE from one list — portaled into the header, and in the toolbar", async () => {
-    render(
-      <HeaderCenterProvider>
-        <HeaderSlot />
-        <Shell workspaceSlug="mine" />
-      </HeaderCenterProvider>,
-    );
+  it("renders ONE picker, in a labelled bar, from one list", async () => {
+    const { container } = render(<Shell workspaceSlug="mine" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+    // One picker at every width — no portal, no second copy, so there is no arrangement in which
+    // a user sees two or (as the portal could) none. The count is the assertion: the shell used
+    // to render <WorkspacePicker> from two separate JSX expressions whose props could drift.
     const pickers = screen.getAllByTestId("picker");
-    expect(pickers).toHaveLength(2);
-    // One of them is INSIDE the header slot — that is the portal, not a second render path.
-    expect(screen.getByTestId("header-center")).toContainElement(pickers[0]!);
-    // Both came from a single fetch.
+    expect(pickers).toHaveLength(1);
     expect(list).toHaveBeenCalledTimes(1);
 
-    // The shell renders <WorkspacePicker> from TWO separate JSX expressions — the toolbar copy
-    // and the portaled one — so each of their props is independently mutable. The toolbar copy
-    // is `.adh-home__toolbar`, which CSS hides above 768px, making the PORTALED copy the one
-    // every desktop user sees and clicks. Assert its three props here: without this, dropping
-    // `selected`, `onSelect` or `workspaces` from the portal ships a header chooser that reads
-    // "no workspace", does nothing on click, or lists nothing — and the suite stays green,
-    // because every other test in this file asserts through the toolbar copy.
-    const portaled = pickers[0]!;
-    expect(portaled).toHaveAttribute("data-selected", "mine");
+    // It lives in the bar, beside the visible label the user reads it by.
+    const toolbar = container.querySelector(".adh-home__toolbar");
+    expect(toolbar).not.toBeNull();
+    expect(toolbar).toContainElement(pickers[0]!);
+    const label = toolbar!.querySelector(".adh-home__toolbar-label");
+    expect(label).not.toBeNull();
+    expect(label).toHaveTextContent("Workspace");
+    // Hidden from assistive tech: the trigger it labels carries its own `ariaLabel="Workspace"`,
+    // and announcing both would say the word twice.
+    expect(label).toHaveAttribute("aria-hidden");
+
+    // And it is wired: all three props reach the one mount.
+    expect(pickers[0]!).toHaveAttribute("data-selected", "mine");
     expect(
-      within(portaled)
+      within(pickers[0]!)
         .getAllByRole("button")
         .map((b) => b.textContent),
     ).toEqual(["My Workspace", "Acme"]);
-    fireEvent.click(within(portaled).getByRole("button", { name: "Acme" }));
-    expect(push).toHaveBeenCalledWith("/home/acme", { scroll: false });
+    fireEvent.click(within(pickers[0]!).getByRole("button", { name: "Acme" }));
+    expect(push).toHaveBeenCalledWith("/acme", { scroll: false });
   });
 
   it("selecting a workspace pushes the URL, and the settled effect writes the cache and the server", async () => {
-    render(<ShellWithProvider workspaceSlug="mine" />);
+    render(<Shell workspaceSlug="mine" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Acme" }));
     // onSelect itself does nothing but navigate — no synchronous write.
-    expect(push).toHaveBeenCalledWith("/home/acme", { scroll: false });
+    expect(push).toHaveBeenCalledWith("/acme", { scroll: false });
     await waitFor(() => expect(writeCached).toHaveBeenCalledWith("acme"));
     await waitFor(() => expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" }));
   });
@@ -1075,7 +1037,7 @@ describe("SiteHomeShell picker mounts", () => {
     const onUnhandled = (reason: unknown) => unhandled.push(reason);
     process.on("unhandledRejection", onUnhandled);
     try {
-      render(<ShellWithProvider workspaceSlug="mine" />);
+      render(<Shell workspaceSlug="mine" />);
       await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
       fireEvent.click(screen.getByRole("button", { name: "Acme" }));
       await waitFor(() => expect(writeCached).toHaveBeenCalledWith("acme"));
@@ -1099,11 +1061,11 @@ describe("SiteHomeShell child scope", () => {
   // testing is what surfaced it: the mutation the name described turned a DIFFERENT test red and
   // left this one green.
 
-  it("builds the scoped base from basePath, not from a hardcoded /home", async () => {
-    // The one assertion that fails if `scopedBase` is ever inlined as a literal. Nothing ships a
-    // basePath other than "/home" today, which is exactly why the concatenation needs pinning
-    // here rather than in the sites.
-    render(<ShellWithProvider basePath="/w" workspaceSlug="acme" />);
+  it("builds the scoped base from basePath, not from a hardcoded one", async () => {
+    // The one assertion that fails if `scopedBase` is ever inlined as a literal. Every site ships
+    // `basePath: ""` today, and an empty string is the value most easily mistaken for "no base at
+    // all" — which is exactly why a non-empty one needs pinning here rather than in the sites.
+    render(<Shell basePath="/w" workspaceSlug="acme" />);
 
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     expect(screen.getByTestId("feature")).toHaveAttribute("data-scoped-base", "/w/acme");
@@ -1119,11 +1081,9 @@ describe("SiteHomeShell child scope", () => {
     const child = vi.fn(() => <div data-testid="feature">the feature</div>);
 
     render(
-      <HeaderCenterProvider>
-        <SiteHomeShell basePath="/home" workspaceSlug="acme">
-          {child}
-        </SiteHomeShell>
-      </HeaderCenterProvider>,
+      <SiteHomeShell basePath="" workspaceSlug="acme">
+        {child}
+      </SiteHomeShell>,
     );
 
     // Several renders happen here — the prefs GET settles, state lands — with no workspace list.
@@ -1132,6 +1092,6 @@ describe("SiteHomeShell child scope", () => {
 
     settleList(WORKSPACES);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
-    expect(child).toHaveBeenCalledWith({ workspaceSlug: "acme", scopedBase: "/home/acme" });
+    expect(child).toHaveBeenCalledWith({ workspaceSlug: "acme", scopedBase: "/acme" });
   });
 });
