@@ -1,4 +1,8 @@
 import type { WorkspaceOption } from './WorkspaceOption';
+/** Reset the seed marker, i.e. simulate the fresh page load that resets it in a browser. Tests
+ *  only — a module variable outlives a test's unmount, so without this the seed one case wrote
+ *  would be read back by the next case's mount as if that case had seeded it. */
+export declare function __resetSeededWorkspace(): void;
 /**
  * Which workspace this URL means, and how picking another one is remembered.
  *
@@ -18,7 +22,8 @@ import type { WorkspaceOption } from './WorkspaceOption';
  *     what makes a site's bare `/home` a redirect rather than a page of its own — it mounts with
  *     no segment, and the first thing this does is send the browser to the resolved workspace.
  *   - Persistence, but only of an EXPLICIT act (see `pendingWrite`), and only of a slug the caller
- *     says may be persisted.
+ *     says may be persisted — and never of a slug it merely SEEDED (see `seededByUs`, which is
+ *     how the mount the seeding redirect lands on still knows the slug was a guess).
  *
  * `hrefFor` and `canPersist` are effect dependencies: pass stable identities (module scope, or
  * useCallback) or the effects re-run on every render. Re-running is guarded and harmless — the

@@ -65,6 +65,7 @@ function WorkspaceBar({
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { workspacePrefsApi, readCachedWorkspace, writeCachedWorkspace } from "@agentic-toolkit/data";
+var seededByUs = null;
 function useWorkspaceRoute({
   workspaces,
   workspaceSlug,
@@ -74,7 +75,13 @@ function useWorkspaceRoute({
   const router = useRouter();
   const [stored, setStored] = useState(() => readCachedWorkspace());
   const [prefsSettled, setPrefsSettled] = useState(false);
-  const [pendingWrite, setPendingWrite] = useState(() => workspaceSlug ?? null);
+  const arrivedOnOwnGuess = useRef(workspaceSlug !== void 0 && workspaceSlug === seededByUs);
+  const [pendingWrite, setPendingWrite] = useState(
+    () => arrivedOnOwnGuess.current ? null : workspaceSlug ?? null
+  );
+  useEffect(() => {
+    if (arrivedOnOwnGuess.current) seededByUs = null;
+  }, []);
   const wroteLocally = useRef(false);
   useEffect(() => {
     let alive = true;
@@ -110,6 +117,7 @@ function useWorkspaceRoute({
   }, [workspaces, workspaceSlug, stored, prefsSettled]);
   useEffect(() => {
     if (resolved && resolved !== workspaceSlug) {
+      seededByUs = resolved;
       router.replace(hrefFor(resolved), { scroll: false });
     }
   }, [resolved, workspaceSlug, hrefFor, router]);
@@ -126,6 +134,7 @@ function useWorkspaceRoute({
   }, [resolved, workspaceSlug, stored, pendingWrite, canPersist]);
   const onSelect = useCallback(
     (slug) => {
+      seededByUs = null;
       setPendingWrite(slug);
       router.push(hrefFor(slug), { scroll: false });
     },
@@ -142,7 +151,7 @@ function SiteHomeShell({
   workspaceSlug,
   children
 }) {
-  const { items: workspaces } = useResourceList(
+  const { items: workspaces, error } = useResourceList(
     `${basePath}::workspaces`,
     loadWorkspaces
   );
@@ -150,6 +159,7 @@ function SiteHomeShell({
   const { resolved, onSelect } = useWorkspaceRoute({ workspaces, workspaceSlug, hrefFor });
   return /* @__PURE__ */ jsxs2(Fragment, { children: [
     /* @__PURE__ */ jsx3(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
+    error !== null && workspaces === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
     resolved === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
     resolved !== void 0 && resolved !== null && resolved === workspaceSlug && children({ workspaceSlug: resolved, scopedBase: `${basePath}/${resolved}` })
   ] });

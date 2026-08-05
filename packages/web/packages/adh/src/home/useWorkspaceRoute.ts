@@ -6,6 +6,34 @@ import { workspacePrefsApi, readCachedWorkspace, writeCachedWorkspace } from '@a
 import type { WorkspaceOption } from './WorkspaceOption'
 
 /**
+ * The slug this hook last wrote into the URL itself, i.e. a SEED rather than anyone's instruction.
+ *
+ * Module scope, and that is the whole point: the write it records crosses a route boundary. A
+ * site's bare `/home` and its `/<workspace>` are two different Next routes, so the seeding replace
+ * below unmounts this hook and mounts a fresh one — every ref and every piece of state gone. The
+ * new mount then reads that seeded slug out of the URL, and with nothing surviving the boundary it
+ * would have no way to tell this hook's own guess apart from a link the user followed. A module
+ * variable is the one thing that does survive, because it lives in the client bundle rather than
+ * in the tree.
+ *
+ * ONE-SHOT: the mount that reads it clears it (see the consume effect below), so it can only ever
+ * excuse the single hop it was written for. Leaving it set would make it a standing claim about
+ * a slug rather than about one navigation — arriving on `/acme` from a link, later in the same
+ * page session, would then be mistaken for this hook's own old guess and never persisted. A full
+ * page load resets it too, which is the same rule from the other end: arriving at `/acme` from
+ * outside IS an arrival. Nothing else may set it — an explicit pick goes through `onSelect`,
+ * which clears it.
+ */
+let seededByUs: string | null = null
+
+/** Reset the seed marker, i.e. simulate the fresh page load that resets it in a browser. Tests
+ *  only — a module variable outlives a test's unmount, so without this the seed one case wrote
+ *  would be read back by the next case's mount as if that case had seeded it. */
+export function __resetSeededWorkspace(): void {
+  seededByUs = null
+}
+
+/**
  * Which workspace this URL means, and how picking another one is remembered.
  *
  * Extracted from SiteHomeShell so the hub can mount the same behaviour: the hub's workspace lives
@@ -24,7 +52,8 @@ import type { WorkspaceOption } from './WorkspaceOption'
  *     what makes a site's bare `/home` a redirect rather than a page of its own — it mounts with
  *     no segment, and the first thing this does is send the browser to the resolved workspace.
  *   - Persistence, but only of an EXPLICIT act (see `pendingWrite`), and only of a slug the caller
- *     says may be persisted.
+ *     says may be persisted — and never of a slug it merely SEEDED (see `seededByUs`, which is
+ *     how the mount the seeding redirect lands on still knows the slug was a guess).
  *
  * `hrefFor` and `canPersist` are effect dependencies: pass stable identities (module scope, or
  * useCallback) or the effects re-run on every render. Re-running is guarded and harmless — the
@@ -81,7 +110,24 @@ export function useWorkspaceRoute({
   // only ever "never persist a slug we GUESSED"; navigating back onto a slug the user themselves
   // arrived on still carries that record. Leave it — clearing it here too would need its own
   // guard against the exact race this field exists to prevent.
-  const [pendingWrite, setPendingWrite] = useState<string | null>(() => workspaceSlug ?? null)
+  //
+  // Seeded from the URL — but NOT when the slug in that URL is the one this hook just put there
+  // (`seededByUs`). Without that exclusion the guard above is defeated by the very redirect it is
+  // written around: `/home` seeds a workspace, replaces the URL, and the route change remounts this
+  // hook, which reads its own guess back as if the user had typed it. A cold localStorage plus a
+  // slow prefs GET would then PUT the personal-workspace fallback over the row the user actually
+  // chose — the exact destruction `pendingWrite` exists to prevent, arrived at one hop later.
+  const arrivedOnOwnGuess = useRef(workspaceSlug !== undefined && workspaceSlug === seededByUs)
+  const [pendingWrite, setPendingWrite] = useState<string | null>(() =>
+    arrivedOnOwnGuess.current ? null : (workspaceSlug ?? null),
+  )
+  // Consume the marker: it excuses the hop that just happened and nothing after it. Done in an
+  // effect, not in the render body, so a discarded render cannot spend it — and keyed on the ref
+  // rather than on the module variable, so a mount that did NOT arrive on a seed leaves a marker
+  // meant for someone else alone.
+  useEffect(() => {
+    if (arrivedOnOwnGuess.current) seededByUs = null
+  }, [])
   // Whether this mount has already recorded a choice locally. A read must never overwrite a
   // write: the GET below was issued before that choice existed, so its answer is older than what
   // is on disk, and rolling it back is only ever discovered later — when the cache is consulted
@@ -149,6 +195,11 @@ export function useWorkspaceRoute({
     // A slug in the URL is a live instruction — a deep link, a pick, the back button — and it
     // decides on its own.
     const fromUrl = known(workspaceSlug)
+    // Including a slug this hook itself seeded a hop ago: a guess that has reached the URL is what
+    // the user is looking at, and a late preference answer moving them off it would be a page that
+    // reshuffles itself under a cursor. `seededByUs` deliberately buys ONE thing only — the right
+    // not to PUT that guess back (see `pendingWrite`) — so the guess is displayed and never
+    // recorded, and the next visit reads the untouched server row.
     if (fromUrl) return fromUrl
     // Nothing usable in the URL, so one has to be seeded. It must NOT be seeded before the
     // preference request settles: the seed goes straight into the URL, where it outranks the
@@ -163,6 +214,11 @@ export function useWorkspaceRoute({
   // The URL is live truth. A stale or absent slug lands somewhere real rather than nowhere.
   useEffect(() => {
     if (resolved && resolved !== workspaceSlug) {
+      // Record the write BEFORE it happens: this replace may unmount the hook (a site's `/home` and
+      // its `/<workspace>` are two routes), so anything set afterwards would never run. Every
+      // replace from here is seed-driven — an explicit pick navigates through `onSelect`, which
+      // pushes — so marking unconditionally is the whole rule, with no case to get wrong.
+      seededByUs = resolved
       router.replace(hrefFor(resolved), { scroll: false })
     }
   }, [resolved, workspaceSlug, hrefFor, router])
@@ -207,7 +263,10 @@ export function useWorkspaceRoute({
   const onSelect = useCallback(
     (slug: string) => {
       // Record the explicit act before navigating, so the persistence effect above can tell this
-      // pick apart from a seeded guess once the URL catches up.
+      // pick apart from a seeded guess once the URL catches up. Clearing the seed marker is the
+      // same statement made to the NEXT mount: whatever this hook guessed earlier, the slug about
+      // to be in the URL is the user's own.
+      seededByUs = null
       setPendingWrite(slug)
       // Navigate only otherwise. The effect above persists once the URL lands. Persisting here as
       // well would double-write, and setting `stored` here would make `resolved` disagree with the

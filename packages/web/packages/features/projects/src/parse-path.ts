@@ -1,6 +1,7 @@
-// The /home Projects URL grammar — the ONE authoritative parse of a projects
-// route's path segments into ProjectsFeature's selection props. Both hosts (the
-// hub's /[slug]/projects/[[...path]] route and the projects site's /home route)
+// The Projects URL grammar below the workspace — the ONE authoritative parse of a
+// projects route's path segments into ProjectsFeature's selection props. Both hosts
+// (the hub's /[slug]/projects/[[...path]] route and the projects site's workspace
+// route, /[workspace]/[[...path]], which names this as its SiteHomeModel's `parse`)
 // call this instead of re-deriving the same `[first, second, third]` destructure,
 // so a grammar change can't drift the two hosts into parsing the same URL
 // differently.

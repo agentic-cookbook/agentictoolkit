@@ -23,10 +23,13 @@ import { type BadgeVariant } from "./helpers";
  * in the resource rail's leading slot; Delete arrives with the full Overview pane
  * (T3). Shared selection/URL wiring lives in ResourceExplorer; this file supplies the
  * project-specific topics, landing, and create dialog. Rendered by the hub's
- * /[slug]/projects/[[...path]] route and by a feature site's /home, where
- * @agentic-toolkit/adh/home's SiteHomeShell picks the workspace and mounts this at
- * /home/<slug>. Either way the workspace arrives as a prop — this feature does not know
- * that a workspace can live in a URL.
+ * /[slug]/projects/[[...path]] route and by the projects site's workspace route
+ * (app/[workspace]/[[...path]]), where @agentic-toolkit/adh/home's SiteHomeShell picks
+ * the workspace and mounts this at /<slug> — the site's SiteHomeModel declares
+ * `basePath: ""`, so the workspace IS its first path segment. (A site whose model names a
+ * prefix mounts its own feature under that prefix instead; the base is the model's to
+ * choose, not this file's to assume.) Either way the workspace arrives as a prop — this
+ * feature does not know that a workspace can live in a URL.
  *
  * Overview is the full ProjectOverviewPane (settings + participants, T3); Work
  * Items hosts the five interchangeable views (List / Board / Table / Timeline /
@@ -120,7 +123,8 @@ export function ProjectsFeature({
   renderTransferOwnership,
 }: {
   /** The feature's URL base (drives the routes + the list cache key), WORKSPACE INCLUDED: the
-   *  hub passes `/<slug>/projects`, a feature site passes `/home/<slug>`. Supplied by the host
+   *  hub passes `/<slug>/projects`; a feature site passes whatever SiteHomeShell built from its
+   *  model's `basePath` — `/<slug>` on the projects site, whose base is empty. Supplied by the host
    *  route rather than derived here, so the same feature mounts under either scheme — and so
    *  switching workspace can never show the previous one's projects, since the workspace is
    *  part of the cache key. */

@@ -94,16 +94,33 @@ vi.mock("@agentic-toolkit/data", async () => {
   return {
     useResourceList: (_cacheKey: string, load: () => Promise<unknown[]>) => {
       const [items, setItems] = useState<unknown[] | null>(null);
+      // The failure half of the contract, mirrored exactly (use-resource-list.ts:126-129): a
+      // rejection sets `error` and leaves `items` UNTOUCHED — null on a cold mount, the previous
+      // rows on a failed reload. A stub that nulled the rows instead would hide the only thing
+      // that makes the shell's error branch necessary: a null list and a failed list look
+      // identical from `items` alone.
+      const [error, setError] = useState<string | null>(null);
+      // `_cacheKey` is a dependency here for the same reason it is one in the real hook
+      // (use-resource-list.ts:133): a changed key is a different collection, and it refetches.
+      // That is what lets a test below reach the state the shell's error gate is written for —
+      // rows already on screen AND a failed request — without a `reload()` this shell never calls.
       useEffect(() => {
         let alive = true;
-        void load().then((rows) => {
-          if (alive) setItems(rows);
-        });
+        void load()
+          .then((rows) => {
+            if (alive) {
+              setError(null);
+              setItems(rows);
+            }
+          })
+          .catch((e: unknown) => {
+            if (alive) setError(e instanceof Error ? e.message : "Failed to load.");
+          });
         return () => {
           alive = false;
         };
-      }, [load]);
-      return { items, reload: vi.fn(), error: null, setItems };
+      }, [load, _cacheKey]);
+      return { items, reload: vi.fn(), error, setItems };
     },
     workspacesApi: { list: () => list() },
     workspacePrefsApi: {
@@ -143,6 +160,13 @@ vi.mock("../home/WorkspacePicker", () => ({
 }));
 
 const { SiteHomeShell } = await import("../home/SiteHomeShell");
+// The seed marker the shell's hook writes before redirecting is a MODULE variable — deliberately,
+// because the redirect it records crosses a route boundary and nothing inside the tree survives
+// that. A module variable also outlives a test's unmount, so the marker one case leaves behind
+// would be read by the next case's mount as if that case had seeded it (measured: it turned the
+// deep-link case's one PUT into zero). `beforeEach` resets it, which is the same thing a browser
+// does on a full page load.
+const { __resetSeededWorkspace } = await import("../home/useWorkspaceRoute");
 
 const WORKSPACES = [
   { slug: "mine", name: "My Workspace", kind: "individual" as const },
@@ -174,6 +198,7 @@ function Shell({ workspaceSlug, basePath = "" }: { workspaceSlug?: string; baseP
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetSeededWorkspace();
   liveSetSlug = () => {};
   routerFeedsBack = true;
   list.mockResolvedValue(WORKSPACES);
@@ -328,7 +353,8 @@ describe("SiteHomeShell resolution", () => {
     "[final review, parked p03] pins the bail at exactly 5000ms, not merely \"some finite " +
       "number\"",
     async () => {
-      // The Task 6 mutation matrix recorded p03 (the `5000` at SiteHomeShell.tsx:149-151) as
+      // The Task 6 mutation matrix recorded p03 (the `5000` bail, since extracted with the rest
+      // of the resolution into useWorkspaceRoute.ts:126-132, which this shell mounts) as
       // pinned only in the sense of "some finite number". Verified empirically against this
       // test in isolation: mutating 5000 → 30000 fails the AFTER assertion below (the bail
       // hasn't actually fired by the true 5000ms mark, so `replace` is never called); mutating
@@ -678,6 +704,98 @@ describe("SiteHomeShell resolution", () => {
   );
 
   it(
+    "[max review, finding 2 regression] the slug the shell SEEDED into the URL is still a guess " +
+      "to the mount the redirect lands on — zero PUTs",
+    async () => {
+      // Every other "a guess is never persisted" case above is measured on ONE mount, where
+      // `pendingWrite` remembers that nobody asked for this slug. The redirect crosses a route
+      // boundary — a site's `/home` and its `/<workspace>` are two Next routes — so the mount that
+      // reads the seeded URL is a different one, with that memory gone, and it used to read its own
+      // predecessor's guess back as a deep link and PUT it over the row the user actually chose.
+      // That is the whole failure this file exists to prevent, arrived at one hop later.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        // Mount A — bare `/home`, cold cache, a prefs GET that never answers. The 5s bail is what
+        // makes the seed a guess made against NO information at all.
+        prefsGet.mockReturnValueOnce(new Promise(() => {}));
+        const first = render(<Shell />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(replace).toHaveBeenCalledWith("/mine", { scroll: false });
+        expect(prefsPut).not.toHaveBeenCalled();
+
+        // The route change that redirect really is. Unmount, then mount afresh at the seeded URL:
+        // a prop update would keep the state that knows the slug was guessed, so only a remount
+        // can show the defect.
+        first.unmount();
+        // This mount's GET succeeds, and answers the workspace the user chose on another site.
+        prefsGet.mockReturnValueOnce(Promise.resolve({ slug: "acme" }));
+        render(<Shell workspaceSlug="mine" />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+
+        // The guess is displayed, never recorded: the server row is not overwritten with it...
+        expect(prefsPut).not.toHaveBeenCalled();
+        // ...and the row that was really there is what warms the cache, so the next visit — the
+        // one that reads the cache because its own request failed — lands on the user's choice.
+        expect(writeCached.mock.calls.flat()).toEqual(["acme"]);
+        // The URL still names the guess, and stays that way: it is what the user is looking at,
+        // and re-resolving underneath them would be a page that reshuffles itself.
+        expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "mine");
+        expect(replace).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[max review, finding 2] the seed marker excuses ONE hop — a later arrival on the same slug " +
+      "is the user's and is persisted",
+    async () => {
+      // The other half of the marker's contract. It is a fact about one redirect, not a standing
+      // claim about a slug: if it survived, then for the rest of the page's life every arrival on
+      // the workspace the shell once guessed would be silently un-persisted, and a user who
+      // reached `/mine` from a link would keep failing to have that choice remembered.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        prefsGet.mockReturnValueOnce(new Promise(() => {}));
+        const first = render(<Shell />); // `/home` → bail → seeds `/mine`
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        first.unmount();
+
+        prefsGet.mockReturnValueOnce(Promise.resolve({ slug: "acme" }));
+        const second = render(<Shell workspaceSlug="mine" />); // the hop the marker excuses
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(prefsPut).not.toHaveBeenCalled();
+        second.unmount();
+
+        // A third mount on the same URL, with nothing left to excuse it: the user followed a link
+        // (or reloaded) onto `/mine`, which is an explicit act like any other deep link. The cache
+        // now holds what the second mount's GET mirrored, so the PUT has something to disagree
+        // with — the same shape as the deep-link case above.
+        readCached.mockReturnValue("acme");
+        render(<Shell workspaceSlug="mine" />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(prefsPut).toHaveBeenCalledTimes(1);
+        expect(prefsPut).toHaveBeenCalledWith({ slug: "mine" });
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
     "[round 4, finding 2 regression] the bail timer is cleared when the GET REJECTS too — zero " +
       "armed timers",
     async () => {
@@ -954,6 +1072,54 @@ describe("SiteHomeShell resolution", () => {
     expect(screen.queryByTestId("feature")).toBeNull();
     expect(replace).not.toHaveBeenCalled();
     expect(prefsPut).not.toHaveBeenCalled();
+  });
+
+  it("[max review, finding 7] a FAILED workspace list says so, instead of a permanent blank", async () => {
+    // The failure has no other exit. A rejected list leaves `items` null, resolution never leaves
+    // `undefined`, the children never mount and the empty-state hint never fires — so without this
+    // branch the page is a chooser with nothing in it, above nothing, forever, on every one of the
+    // sites that mount this shell.
+    list.mockRejectedValue(new Error("offline"));
+    render(<Shell />);
+    await waitFor(() => expect(screen.getByText(/couldn't load your workspaces/i)).toBeInTheDocument());
+    // And it says the RIGHT thing: "no workspaces yet" is a claim about this user's account, which
+    // a failed request is in no position to make.
+    expect(screen.queryByText(/no workspaces yet/i)).toBeNull();
+    expect(screen.queryByTestId("feature")).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
+    expect(prefsPut).not.toHaveBeenCalled();
+  });
+
+  it("[max review, finding 7] a list still LOADING says nothing — the hint is not a spinner", async () => {
+    // `workspaces === null` alone would put the failure hint on screen for the whole of every
+    // normal load, since a list that has not arrived yet is null too. Both halves of the gate are
+    // load-bearing; this is the `error !== null` half.
+    list.mockReturnValue(new Promise(() => {}));
+    render(<Shell />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(screen.queryByText(/couldn't load your workspaces/i)).toBeNull();
+    expect(screen.queryByTestId("feature")).toBeNull();
+  });
+
+  it("[max review, finding 7] a failed REFETCH keeps its page — no error banner over live rows", async () => {
+    // The `workspaces === null` half. Rows are on screen, then a later request fails (here via a
+    // changed cache key, the same thing an account switch does to the real hook): the list the
+    // user is looking at is still good, and replacing it with an apology would be a worse answer
+    // than the slightly stale one it already has.
+    const view = render(<Shell workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+    list.mockRejectedValue(new Error("offline"));
+    view.rerender(<Shell workspaceSlug="acme" basePath="/elsewhere" />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(screen.queryByText(/couldn't load your workspaces/i)).toBeNull();
+    expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument();
+    expect(screen.getByTestId("feature")).toBeInTheDocument();
   });
 });
 

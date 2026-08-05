@@ -20,9 +20,10 @@ const caches = new Map<string, CacheBox<unknown>>();
 
 // NOTE — why there is no "skip the fetch if the cache is fresh" window here.
 //
-// Next 16 REMOUNTS the page subtree on a same-segment param navigation, and a feature's whole URL
-// grammar (`/home/<ws>/<project>/<topic>/<leaf>`) lives on ONE catch-all segment — so every click
-// tears the feature down and rebuilds it, and each mount re-reads. A staleness window would make
+// Next 16 REMOUNTS the page subtree on a same-segment param navigation, and everything a feature's
+// URL grammar names below the workspace (`/<ws>/<project>/<topic>/<leaf>` on the projects site)
+// lives on ONE catch-all segment — so every click tears the feature down and rebuilds it, and each
+// mount re-reads. A staleness window would make
 // those re-reads free, but it would also mean a list that STARTS failing keeps serving its last
 // good rows for the length of the window, so a broken backend shows no error. That trade is not
 // ours to make for every feature on the platform, and it is not needed for the flicker: the CACHE

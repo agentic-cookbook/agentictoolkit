@@ -48,7 +48,13 @@ export function SiteHomeShell({
    *  SiteHomeRoute does, from the site's SiteHomeModel. */
   children: (scope: SiteHomeScope) => ReactNode
 }): ReactElement {
-  const { items: workspaces } = useResourceList<Workspace>(
+  // `error` is not optional to read here. A failed list leaves `items` at its previous value —
+  // null on a cold mount (use-resource-list only calls setError on the catch path) — and a null
+  // list is indistinguishable from a list still loading: resolution stays `undefined` forever, so
+  // the children never mount, the empty-state hint never fires, and the page sits blank behind a
+  // chooser with nothing in it. Every one of the 35 sites' gated surface has that same failure, so
+  // the shell owns saying so.
+  const { items: workspaces, error } = useResourceList<Workspace>(
     `${basePath}::workspaces`,
     loadWorkspaces,
   )
@@ -62,6 +68,17 @@ export function SiteHomeShell({
   return (
     <>
       <WorkspaceBar workspaces={workspaces} selected={resolved ?? null} onSelect={onSelect} />
+      {/* Said only while the list is genuinely missing: a reload that fails AFTER a successful one
+          leaves the workspaces on screen, and replacing a working page with an error would be a
+          worse answer than the slightly stale one it already has. */}
+      {error !== null && workspaces === null && (
+        <TopicSelectHint title="Couldn't load your workspaces. Reload the page to try again." />
+      )}
+      {/* No error clause needed here, and one would be wrong: `resolved` is `null` only once the
+          list has ARRIVED and was empty (it stays `undefined` while `workspaces` is null), so a
+          failed request cannot reach this line. The one state that could — a successful empty list
+          followed by a failed refetch — is still a user with no workspaces, and saying so beats
+          replacing a true statement with an apology. */}
       {resolved === null && (
         <TopicSelectHint title="No workspaces yet — create one from the hub to get started." />
       )}
