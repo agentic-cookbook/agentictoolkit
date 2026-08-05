@@ -7,22 +7,12 @@ import "react";
 import { useParams } from "next/navigation";
 
 // src/home/SiteHomeShell.tsx
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from "react";
-import { useRouter } from "next/navigation";
+import { useCallback as useCallback2 } from "react";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import {
-  useResourceList,
-  workspacesApi,
-  workspacePrefsApi,
-  readCachedWorkspace,
-  writeCachedWorkspace
-} from "@agentic-toolkit/data";
+import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
+
+// src/home/WorkspaceBar.tsx
+import "react";
 
 // src/home/WorkspacePicker.tsx
 import "react";
@@ -51,19 +41,37 @@ function WorkspacePicker({
   );
 }
 
-// src/home/SiteHomeShell.tsx
-import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
-var loadWorkspaces = () => workspacesApi.list();
-function SiteHomeShell({
-  basePath,
+// src/home/WorkspaceBar.tsx
+import { jsx as jsx2, jsxs } from "react/jsx-runtime";
+function WorkspaceBar({
+  workspaces,
+  selected,
+  onSelect,
+  action
+}) {
+  return (
+    // The visible word is decorative to assistive tech — `aria-hidden`, because the trigger it
+    // labels already carries `ariaLabel="Workspace"` (see WorkspacePicker), and a <label> pointing
+    // at it would make a screen reader say "Workspace" twice.
+    /* @__PURE__ */ jsxs("div", { className: "adh-home__toolbar", children: [
+      /* @__PURE__ */ jsx2("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
+      /* @__PURE__ */ jsx2(WorkspacePicker, { workspaces, selected, onSelect }),
+      action
+    ] })
+  );
+}
+
+// src/home/useWorkspaceRoute.ts
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { workspacePrefsApi, readCachedWorkspace, writeCachedWorkspace } from "@agentic-toolkit/data";
+function useWorkspaceRoute({
+  workspaces,
   workspaceSlug,
-  children
+  hrefFor,
+  canPersist
 }) {
   const router = useRouter();
-  const { items: workspaces } = useResourceList(
-    `${basePath}::workspaces`,
-    loadWorkspaces
-  );
   const [stored, setStored] = useState(() => readCachedWorkspace());
   const [prefsSettled, setPrefsSettled] = useState(false);
   const [pendingWrite, setPendingWrite] = useState(() => workspaceSlug ?? null);
@@ -102,44 +110,59 @@ function SiteHomeShell({
   }, [workspaces, workspaceSlug, stored, prefsSettled]);
   useEffect(() => {
     if (resolved && resolved !== workspaceSlug) {
-      router.replace(`${basePath}/${resolved}`, { scroll: false });
+      router.replace(hrefFor(resolved), { scroll: false });
     }
-  }, [resolved, workspaceSlug, basePath, router]);
+  }, [resolved, workspaceSlug, hrefFor, router]);
   useEffect(() => {
     if (!resolved || resolved !== workspaceSlug || pendingWrite !== resolved) return;
     if (resolved === stored) return;
     setPendingWrite(null);
+    if (canPersist && !canPersist(resolved)) return;
     wroteLocally.current = true;
     writeCachedWorkspace(resolved);
     setStored(resolved);
     workspacePrefsApi.put({ slug: resolved }).catch(() => {
     });
-  }, [resolved, workspaceSlug, stored, pendingWrite]);
+  }, [resolved, workspaceSlug, stored, pendingWrite, canPersist]);
   const onSelect = useCallback(
     (slug) => {
       setPendingWrite(slug);
-      router.push(`${basePath}/${slug}`, { scroll: false });
+      router.push(hrefFor(slug), { scroll: false });
     },
-    [basePath, router]
+    [hrefFor, router]
   );
-  return /* @__PURE__ */ jsxs(Fragment, { children: [
-    /* @__PURE__ */ jsxs("div", { className: "adh-home__toolbar", children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
-      /* @__PURE__ */ jsx2(WorkspacePicker, { workspaces, selected: resolved ?? null, onSelect })
-    ] }),
-    resolved === null && /* @__PURE__ */ jsx2(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
+  return { resolved, onSelect };
+}
+
+// src/home/SiteHomeShell.tsx
+import { Fragment, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+var loadWorkspaces = () => workspacesApi.list();
+function SiteHomeShell({
+  basePath,
+  workspaceSlug,
+  children
+}) {
+  const { items: workspaces } = useResourceList(
+    `${basePath}::workspaces`,
+    loadWorkspaces
+  );
+  const hrefFor = useCallback2((slug) => `${basePath}/${slug}`, [basePath]);
+  const { resolved, onSelect } = useWorkspaceRoute({ workspaces, workspaceSlug, hrefFor });
+  return /* @__PURE__ */ jsxs2(Fragment, { children: [
+    /* @__PURE__ */ jsx3(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
+    resolved === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
     resolved !== void 0 && resolved !== null && resolved === workspaceSlug && children({ workspaceSlug: resolved, scopedBase: `${basePath}/${resolved}` })
   ] });
 }
 
 // src/home/SiteHomeRoute.tsx
-import { jsx as jsx3 } from "react/jsx-runtime";
+import { jsx as jsx4 } from "react/jsx-runtime";
 function SiteHomeRoute({ model }) {
   const params = useParams();
   const raw = params?.path;
   const rest = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
   const workspaceSlug = params?.workspace;
-  return /* @__PURE__ */ jsx3(SiteHomeShell, { basePath: model.basePath, workspaceSlug, children: (scope) => model.render({ ...scope, view: model.parse(rest) }) });
+  return /* @__PURE__ */ jsx4(SiteHomeShell, { basePath: model.basePath, workspaceSlug, children: (scope) => model.render({ ...scope, view: model.parse(rest) }) });
 }
 
 // src/home/SiteHomeModel.ts
@@ -149,7 +172,9 @@ function defineSiteHome(model) {
 export {
   SiteHomeRoute,
   SiteHomeShell,
+  WorkspaceBar,
   WorkspacePicker,
-  defineSiteHome
+  defineSiteHome,
+  useWorkspaceRoute
 };
 //# sourceMappingURL=index.js.map

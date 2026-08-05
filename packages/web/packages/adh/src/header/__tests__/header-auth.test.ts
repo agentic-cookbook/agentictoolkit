@@ -38,9 +38,13 @@ describe('defaultReturnTo', () => {
 
   // home-or-ROOT: a site with no gated landing has nowhere else to go, so its root
   // stays its root — the rule is one expression, not a /home special case.
+  // Asserted on `status`, not `support`: the shared workspace home landed on every
+  // brand site, so the sites left declaring no /home are the standalone apps (status,
+  // admin) and the .ai persona sites. Status is the durable one — a public board with
+  // no workspace to land in at all.
   it("resolves to the site's ROOT when it declares no /home", () => {
     at('/')
-    expect(defaultReturnTo('support')).toBe('/')
+    expect(defaultReturnTo('status')).toBe('/')
   })
 
   // A source built outside SiteHeader gets no siteId; guessing a landing there could
