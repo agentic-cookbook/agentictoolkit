@@ -25,13 +25,13 @@
  *
  *   html:root                                                     (0,1,1) > base adh.css `:root`             (0,1,0)
  *   …[data-color-mode]:not(.dark)                                 (0,3,1) > color-mode-light.css:21          (0,3,0)
- *   …[data-color-mode]:not(.dark)[data-contrast=high]             (0,4,1) > color-mode-light.css:105         (0,4,0)
- *   …[data-color-mode]:not(.dark)[data-contrast=extra-high]       (0,4,1) > color-mode-light.css:113         (0,4,0)
- *   …[data-color-mode]:not(.dark):not([high]):not([extra-high])   (0,5,1) > color-mode-light.css:123         (0,5,0)
+ *   …[data-color-mode]:not(.dark)[data-contrast=high]             (0,4,1) > color-mode-light.css:111         (0,4,0)
+ *   …[data-color-mode]:not(.dark)[data-contrast=extra-high]       (0,4,1) > color-mode-light.css:119         (0,4,0)
+ *   …[data-color-mode]:not(.dark):not([high]):not([extra-high])   (0,5,1) > color-mode-light.css:129         (0,5,0)
  *
  * The last three are not defensive padding. color-mode-light.css defines light
  * high-contrast text as near-BLACK (#141109 / #050402) and applies it on an explicit
- * contrast choice (:105, :113) or the OS "increase contrast" setting (:123). Ship only
+ * contrast choice (:111, :119) or the OS "increase contrast" setting (:129). Ship only
  * the first two selectors and a user on Light + High contrast gets near-black text on
  * this theme's near-black ground — unreadable, and invisible in any screenshot taken of
  * the default configuration.
