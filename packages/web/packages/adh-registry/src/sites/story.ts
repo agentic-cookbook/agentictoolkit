@@ -39,7 +39,15 @@ export interface SiteStory {
   /** The next site in this site's story — the logged-out landing's "next step"
    *  cross-link (e.g. the personas pipeline: personas → personabuilder →
    *  personaregistry → hub). Every chain converges on the hub (guarded by a
-   *  test): whatever door a visitor entered, the story leads to the platform. */
+   *  test): whatever door a visitor entered, the story leads to the platform.
+   *
+   *  NOT the guided tour's graph. `/tour` walks the family in one sequence
+   *  ending on a terminal site; this converges every branch on the hub. The
+   *  two are different edge sets with different shapes and different owners
+   *  — this one is hand-authored brand judgment, the tour's is derived from
+   *  the `next:` frontmatter in `frontend/content/landing/sites/` — and the
+   *  tour's lives in `SITE_TOUR_NEXT` below. They agree for many sites,
+   *  which is exactly why reading one for the other stays wrong quietly. */
   nextStep: SiteId
 }
 
@@ -107,6 +115,65 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   // --- registered but unlisted ---
   learntruefacts: { tier: 'proof', pillar: 'identity', funnelStage: 'discover', nextStep: 'hub' },
   messaging: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'hub' },
+}
+
+/** The guided tour's next-step graph: whose `/tour` this site's `/tour` hands
+ *  off to. Read `SITE_STORIES[id].nextStep` for the brand story instead — the
+ *  note on that field says why the two are not the same edge set.
+ *
+ *  GENERATED. The entries between the sentinels below come from the `next:`
+ *  frontmatter in `frontend/content/landing/sites/`, spliced by
+ *  `landing sites generate`; `landing sites check` fails if they drift. To
+ *  change the walk, edit the markdown — not this file. The declaration and
+ *  this comment are hand-written and outside the region, so the generator
+ *  owns the graph and nothing else.
+ *
+ *  `Partial` is load-bearing twice over, and is why this is a second const
+ *  rather than a field spliced into `SITE_STORIES`: the walk is being ported
+ *  a few sites at a time, so the region covers a SUBSET of `SiteId` and will
+ *  until every site has a markdown file; and the terminal site — where the
+ *  walk ends — never has a next step, so even a finished walk leaves one id
+ *  absent by construction. A site with no entry here is not on the tour yet;
+ *  that is a state to render, not an error. */
+export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
+  // <gen:tour> managed by landing — do not edit by hand
+  hub: 'narratives',
+  narratives: 'news',
+  news: 'academy',
+  academy: 'education',
+  education: 'recipes',
+  recipes: 'research',
+  research: 'authentication',
+  authentication: 'knowledgebases',
+  knowledgebases: 'personabuilder',
+  personabuilder: 'personas',
+  personas: 'projects',
+  projects: 'sites',
+  sites: 'storage',
+  storage: 'teambuilder',
+  teambuilder: 'toolkit',
+  toolkit: 'tools',
+  tools: 'billing',
+  billing: 'codereviews',
+  codereviews: 'communities',
+  communities: 'customers',
+  customers: 'dashboards',
+  dashboards: 'devices',
+  devices: 'domains',
+  domains: 'ecosystems',
+  ecosystems: 'notifications',
+  notifications: 'products',
+  products: 'registries',
+  registries: 'community',
+  community: 'consultants',
+  consultants: 'consulting',
+  consulting: 'myagenticteams',
+  myagenticteams: 'devteam',
+  devteam: 'cookbook',
+  cookbook: 'personaregistry',
+  personaregistry: 'support',
+  support: 'teamregistry',
+  // </gen:tour>
 }
 
 export function getSiteStory(id: SiteId): SiteStory {

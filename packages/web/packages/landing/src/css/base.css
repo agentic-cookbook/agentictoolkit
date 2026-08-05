@@ -1,4 +1,38 @@
-html {
+/* ---- EVERY DOCUMENT-LEVEL RULE IN THIS FILE IS GATED ON THE DECK ----
+ * `html`, `body`, `::selection` and the reduced-motion `*` reset below all
+ * address the DOCUMENT, and a host imports this sheet once, site-wide, from its
+ * `globals.css`. Ungated they therefore repaint every route the host has — a
+ * privacy page, a docs reader, a dashboard — in the deck's root size, face and
+ * leading, on sites where only `/` and `/tour` are decks. That shipped: the
+ * three pilot sites' non-landing routes went to 87.5% root size and the
+ * `--lp-font` stack while the host's own `<main>` left them at the browser
+ * default and the theme face.
+ *
+ * The gate is STRUCTURAL — `:has(.lp-deck)`, the class `Deck` puts on its own
+ * element — and not a class the host sets or a route it tests. A deck on
+ * screen means the rules apply; the deck leaving the DOM switches them off,
+ * client-side navigation included, with no effect to run and nothing to clean
+ * up. It also makes the one piece of state this package leaks inert:
+ * `ARM_SNAPPING` stamps `data-snap` on `<html>` and never removes it, so
+ * without the gate a reader who scrolled the deck and then navigated away would
+ * carry mandatory snapping onto a page with no snap points.
+ *
+ * SPECIFICITY IS PRESERVED EXACTLY, rule by rule, and that is why the two
+ * spellings below differ. `html:where(:has(.lp-deck))` keeps `html`'s (0,0,1)
+ * because `:where()` contributes nothing; `:where(html:has(.lp-deck)) body`
+ * keeps `body`'s (0,0,1) for the same reason, with the ancestor test costing
+ * zero. Written the obvious way — `html:has(.lp-deck)` — the html rules would
+ * RISE to (0,1,1) and start winning against host overrides they lose to today;
+ * written `:where(html:has(.lp-deck))` alone they would FALL to (0,0,0) and
+ * lose to rules they currently beat. Either is a cascade change disguised as a
+ * scoping change, and neither is visible to a test that only checks the rules
+ * still apply on the deck.
+ *
+ * `chrome.css` and `blocks.css` need no such gate: every selector in both is
+ * already `.lp-*`-prefixed. This file is the only one that addresses the
+ * document, which is why `cookbook` — the only other consumer — could import
+ * `chrome.css` alone and be unaffected either way. */
+html:where(:has(.lp-deck)) {
   /* Everything on the page is sized in rem, so the root size is the site's one
    * type dial: a touch under the browser's default takes ~2pt off every run of
    * text at once, and carries the rhythm (gaps, padding, the section column)
@@ -41,7 +75,7 @@ html {
  * this element was already at — body is where line-height 1.7 is declared. */
 @media (pointer: coarse) {
   @supports (font: -apple-system-subheadline) {
-    html {
+    html:where(:has(.lp-deck)) {
       font: -apple-system-subheadline;
       font-family: var(--lp-font, ui-monospace, "SF Mono", monospace);
     }
@@ -87,21 +121,21 @@ html {
  * `scroll-behavior: smooth` is what eases an in-page jump, so following a
  * drawer link needs no script of its own — the browser does it, and honours
  * `prefers-reduced-motion` through the override at the foot of this file. */
-html {
+html:where(:has(.lp-deck)) {
   scroll-snap-type: none;
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
 }
-html[data-snap] {
+html[data-snap]:where(:has(.lp-deck)) {
   scroll-snap-type: y mandatory;
 }
 
-html,
-body {
+html:where(:has(.lp-deck)),
+:where(html:has(.lp-deck)) body {
   overflow-x: clip;
 }
 
-body {
+:where(html:has(.lp-deck)) body {
   background: var(--lp-ground, #101010);
   color: var(--lp-ink, #ededed);
   font-family: var(--lp-font, ui-monospace, "SF Mono", monospace);
@@ -109,7 +143,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* <main> is just the flow parent of the sections — it does not scroll, so it
+/* The deck is just the flow parent of the sections — it does not scroll, so it
  * carries no height and no overflow. It stays focusable because a key press has
  * to land somewhere, and keys scroll the nearest scrollable ancestor of the
  * focused element, which is the document.
@@ -154,16 +188,22 @@ body {
  * still lands square on one. A host that wants the strict behaviour sets
  * `--lp-snap-stop: always`.
  *
- * Content parks in the TOP THIRD rather than centring. Two reasons: after a
- * snap the eye is already where the last section's heading was, and every
- * section's heading then sits at the same height, so flicking through reads as
- * one steady column rather than a row of blocks bobbing around the middle.
- * `flex-start` + a top offset rather than centring inside a fixed top band: a
- * band cannot know how tall its content is, so the tallest sections would
- * overflow back up under the fixed header. Starting the content high and
- * letting it run down puts every section in the top third and can't collide
- * with anything. The offset is proportional (`svh`) but clamped, so it clears
- * the header on a short viewport and doesn't drift to mid-page on a tall one.
+ * Content parks in the TOP THIRD rather than centring in the screen. Two
+ * reasons: after a snap the eye is already where the last section's heading
+ * was, and every section's heading then sits at the same height, so flicking
+ * through reads as one steady column rather than a row of blocks bobbing around
+ * the middle.
+ *
+ * This rule owns the top OFFSET — `flex-start` plus a proportional (`svh`) but
+ * clamped padding, so the content clears the fixed header on a short viewport
+ * and doesn't drift to mid-page on a tall one. Where the content then sits
+ * INSIDE the top third is `.lp-wrap`'s band below. The two were one decision
+ * here once, and the offset alone could only promise that a section starts in
+ * the top third: a short one hugged the header and a tall one filled the band.
+ * Splitting them is what let the band answer the objection that kept them
+ * merged — that a band cannot know how tall its content is, so a tall section
+ * would be pushed back up under the header. `align-content: safe center` is
+ * precisely that knowledge, and it degrades to this rule's behaviour.
  *
  * No `scroll-margin-top` any more, and it must not come back: `scroll-margin`
  * shrinks the SNAP AREA too, so a 4rem margin here would land every snap 4rem
@@ -208,7 +248,42 @@ body {
   margin-inline: auto;
 }
 
-::selection {
+/* Content sits CENTRED IN THE TOP THIRD, and the package decides that, not the
+ * host. `.lp-screen`'s `flex-start` + top padding above only guarantees the
+ * content STARTS in the top third; where it then sits inside it depends on how
+ * tall it is, so a two-line section hugged the header while a six-line one
+ * filled the band, and the same deck read as different layouts screen to
+ * screen. Nothing here is a per-site judgement — every deck wants its headings
+ * at one height — so it is not exposed as a token for a consumer to set,
+ * discover or forget.
+ *
+ * The band is the top third of the screen minus the offset that clears the
+ * fixed header, i.e. the part of the top third a reader can actually see. The
+ * `max(0px, …)` matters: a host that sets `--lp-screen-pad-top` past 33vh would
+ * otherwise compute a negative min-height, which is invalid and takes the whole
+ * declaration with it.
+ *
+ * `safe` is the entire reason this is an alignment and not a second padding: a
+ * section taller than the band overflows it, and unsafe centring would push its
+ * first line UP, back under the header, out of reach of scrolling. `safe` falls
+ * back to start alignment exactly there — which is what every screen does
+ * today, so a browser without block-container `align-content` (it dropped in
+ * Chrome/Firefox/Safari through 2024) simply keeps the current look rather than
+ * getting a broken one.
+ *
+ * The band restates `--lp-screen-pad-top`'s fallback, which `.lp-screen` and
+ * `.lp-glow` also carry: the three are one measurement — where a screen's
+ * content begins — and they must be changed together or not at all.
+ *
+ * The hero is excluded because it centres in the WHOLE screen by design
+ * (`.lp-screen--center`), and a band would fight that alignment rather than
+ * refine it. */
+.lp-screen:not(.lp-screen--center) > .lp-wrap {
+  min-height: max(0px, calc(100vh / 3 - var(--lp-screen-pad-top, clamp(5.5rem, 14svh, 9rem))));
+  align-content: safe center;
+}
+
+:where(html:has(.lp-deck)) ::selection {
   background: var(--lp-accent-dim, rgba(216, 216, 216, 0.14));
   color: var(--lp-accent-bright, #d8d8d8);
 }
@@ -226,8 +301,9 @@ body {
  * copied from one to the other is wrong by exactly the free space in the box. */
 .lp-glow {
   position: absolute;
-  /* A top-parked screen anchors its content to the top edge — `flex-start`
-   * plus the top padding — so the light anchors there too. This inverts the
+  /* A top-parked screen anchors its content near the top edge — `flex-start`
+   * plus the top padding, and then at most half the top-third band below that —
+   * so the light anchors there too. This inverts the
    * hero's reasoning below, and for the reason that makes that reasoning
    * right: a percentage tracks the box, and on this alignment the box grows
    * downward while the content stays put, so a percentage is what would drift
@@ -302,12 +378,16 @@ body {
    * this reader on a different page from everyone else. `auto` makes the
    * adjustment instant instead of a glide, which is the movement that actually
    * bothers a vestibular reader — and it takes the drawer jumps with it. */
-  html {
+  html:where(:has(.lp-deck)) {
     scroll-behavior: auto;
   }
-  *,
-  *::before,
-  *::after {
+  /* Gated for the same reason as everything above, and this one is the reason
+   * the gate cannot be "only the type rules": an ungated `!important` reset
+   * silences every animation and transition the HOST wrote, on every route it
+   * has, the moment it imports this sheet. */
+  :where(html:has(.lp-deck)) *,
+  :where(html:has(.lp-deck)) *::before,
+  :where(html:has(.lp-deck)) *::after {
     animation: none !important;
     transition: none !important;
   }

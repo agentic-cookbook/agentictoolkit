@@ -227,7 +227,8 @@
     "./debug.css": "./dist/styles/adh-debug.css",
     "./help.css": "./dist/styles/adh-help.css",
     "./docs.css": "./dist/styles/adh-docs.css",
-    "./concepts.css": "./dist/styles/adh-concepts.css"
+    "./concepts.css": "./dist/styles/adh-concepts.css",
+    "./landing-bridge.css": "./dist/styles/adh-landing-bridge.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",

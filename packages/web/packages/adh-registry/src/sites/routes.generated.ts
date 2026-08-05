@@ -19,6 +19,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   admin: [
     '/',
@@ -47,6 +48,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   billing: [
     '/',
@@ -57,6 +59,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   bitbag: [
     '/',
@@ -72,6 +75,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   communities: [
     '/',
@@ -82,6 +86,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   community: [
     '/',
@@ -102,6 +107,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/privacy',
     '/terms',
     '/topics/[slug]',
+    '/tour',
   ],
   consultants: [
     '/',
@@ -112,6 +118,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   consulting: [
     '/',
@@ -122,6 +129,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   cookbook: [
     '/',
@@ -131,6 +139,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home/[workspace]',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   customers: [
     '/',
@@ -141,6 +150,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   dashboards: [
     '/',
@@ -151,6 +161,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   devices: [
     '/',
@@ -161,6 +172,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   devteam: [
     '/',
@@ -170,6 +182,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   domains: [
     '/',
@@ -180,6 +193,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   ecosystems: [
     '/',
@@ -190,6 +204,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   education: [
     '/',
@@ -200,6 +215,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   help: [
     '/',
@@ -244,6 +260,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/contact',
     '/details',
     '/details/[topic]',
+    '/explore',
     '/home',
     '/home/settings/[[...topic]]',
     '/integrations/oauth-callback',
@@ -256,6 +273,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/privacy',
     '/signup',
     '/terms',
+    '/tour',
   ],
   'hub-help': [
     '/',
@@ -277,6 +295,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   learntruefacts: [
     '/',
@@ -288,6 +307,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   narratives: [
     '/',
@@ -298,6 +318,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   news: [
     '/',
@@ -306,9 +327,9 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/details',
     '/details/[topic]',
     '/home',
-    '/old-landing',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   notifications: [
     '/',
@@ -319,6 +340,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   personabuilder: [
     '/',
@@ -329,6 +351,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   personaregistry: [
     '/',
@@ -341,6 +364,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/org/[slug]',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   personas: [
     '/',
@@ -351,6 +375,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   products: [
     '/',
@@ -361,6 +386,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   projects: [
     '/',
@@ -371,6 +397,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   recipes: [
     '/',
@@ -381,6 +408,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   registries: [
     '/',
@@ -391,6 +419,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   research: [
     '/',
@@ -404,6 +433,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/privacy',
     '/search',
     '/terms',
+    '/tour',
   ],
   sites: [
     '/',
@@ -414,6 +444,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   status: [
     '/',
@@ -429,6 +460,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   support: [
     '/',
@@ -437,9 +469,9 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/details',
     '/details/[topic]',
     '/home',
-    '/old-landing',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   teambuilder: [
     '/',
@@ -450,6 +482,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   teamregistry: [
     '/',
@@ -460,6 +493,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   toolkit: [
     '/',
@@ -471,6 +505,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   tools: [
     '/',
@@ -481,5 +516,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
 }

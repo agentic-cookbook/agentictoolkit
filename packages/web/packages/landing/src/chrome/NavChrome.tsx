@@ -30,7 +30,7 @@ function fragmentId(href: string): string | null {
 }
 
 /**
- * Fixed header, burger, drawer and scrim. Burger and drawer share one `open`
+ * Fixed bar, burger, drawer and scrim. Burger and drawer share one `open`
  * boolean, so they live in one client component.
  *
  * Two hosts now: the landing site this was extracted from, whose own wordmark
@@ -168,7 +168,15 @@ export function NavChrome({
 
   return (
     <>
-      <header className="lp-bar">
+      {/* A plain div, not a <header>. It was one, and it read as a landmark
+          only by accident: a <header> is a `banner` unless it descends from
+          main/article/aside/nav/section, and what suppressed it was `Deck`
+          rendering a <main> — which it no longer does, since every host shell
+          already draws that landmark. Left as a <header> the bar would become a
+          SECOND banner beside the host's own site header on every generated
+          deck. It is a floating burger and an optional wordmark, so there is
+          nothing here a landmark would be announcing. */}
+      <div className="lp-bar">
         <button
           ref={burgerRef}
           type="button"
@@ -182,7 +190,7 @@ export function NavChrome({
           <span />
         </button>
         {brand !== undefined && <div className="lp-brand">{brand}</div>}
-      </header>
+      </div>
 
       {/* A scrim, not a control: it dismisses on click for a pointer user, and
           is neither focusable nor announced. It was a labelled <button> here

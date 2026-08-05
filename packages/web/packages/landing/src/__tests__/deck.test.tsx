@@ -68,11 +68,22 @@ describe('Screen', () => {
 })
 
 describe('Deck', () => {
-  it('is a focusable-but-untabbable <main>', () => {
+  it('is a focusable-but-untabbable div', () => {
     const { container } = render(<Deck><Screen>x</Screen></Deck>)
-    const el = container.querySelector('main')!
+    const el = container.firstElementChild!
+    expect(el.tagName).toBe('DIV')
     expect(el.getAttribute('tabindex')).toBe('-1')
     expect(el.className).toContain('lp-deck')
+  })
+
+  // It was a <main>, and every consumer renders it inside a host shell that
+  // already draws one — so the deck nested a second landmark inside the first,
+  // which is invalid and announces two "main"s to a screen reader. The class is
+  // what `base.css` and the chrome are written against, so the element is free
+  // to be the neutral one.
+  it('renders no landmark of its own, so a host shell keeps the only <main>', () => {
+    const { container } = render(<Deck><Screen>x</Screen></Deck>)
+    expect(container.querySelector('main')).toBeNull()
   })
 })
 

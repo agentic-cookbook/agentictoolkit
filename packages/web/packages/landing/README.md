@@ -206,9 +206,10 @@ site header of its own and wanted only the burger and drawer under it:
 | `--lp-bar-pad-y` / `--lp-bar-pad-x` | `1.1rem` / `1.25rem` | The corner the burger is inset into. A host aligns these with its own header's container padding so the two line up in the same column. The drawer's ✕ reads the same pair, so it stays on top of the ☰ it replaces — its `y` fallback is `1.15rem`, the reference site's optical nudge, which a host that sets the pair trades for exact concentricity. |
 | `--lp-drawer-pad-top` | `5.5rem` | Space above the drawer's first link. The default clears the bar the drawer opens under; a host that moved the chrome below its own header only has the close button to clear and sets this smaller. |
 | `--lp-checklist-mark` | `"✓"` | The mark before each checklist item. A CSS string, quotes included. It sits in a fixed `1.2rem` grid column, so a replacement wants to be about that wide. |
+| `--lp-checklist-mark-soon` | `"○"` | The mark before a checklist item flagged `soon` — one the reader cannot rely on yet. Same column, same rules; pick something a skim tells apart from the mark above. |
 | `--lp-versus-bullet` | `"· "` | The bullet before each wedge-panel point. A CSS string; set it to `""` for no bullet. |
 
-The last two are the only characters the package would otherwise put on the
+The last three are the only characters the package would otherwise put on the
 page itself. They are tokens for the same reason everything visible here is:
 the package owns the UI, the site owns the words. `content` accepts a `var()`
 with a string fallback, so they follow the same inline-default rule as the

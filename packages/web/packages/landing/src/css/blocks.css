@@ -275,6 +275,19 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Nine cards, three across. The same argument as `--pair` one count up: the
+ * shared floor lays nine out as 4 + 4 + 1 at the full measure, and a trailing
+ * row of one reads as something having gone wrong rather than as the ninth
+ * item. The breakpoint is wider than `--pair`'s because three columns need
+ * more room before each one stops being narrower than its own heading. */
+.lp-cards.lp-cards--trio {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 56rem) {
+  .lp-cards.lp-cards--trio {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 /* A card grid under a placeholder stands off it the same distance the
  * placeholder stands off whatever it follows. */
 .lp-shot + .lp-cards {
@@ -294,6 +307,18 @@
   border-color: var(--lp-card-hover-border, rgba(216, 216, 216, 0.4));
   background: var(--lp-card-hover-bg, rgba(28, 28, 28, 0.62));
 }
+/* The label above the heading, in the same small-mono treatment the eyebrow
+ * uses one level up — dim rather than accent, because a card is already inside
+ * a section whose eyebrow is the loud one, and two bright labels a few lines
+ * apart make neither of them a landmark. */
+.lp-card .lp-card__kicker {
+  display: block;
+  font: 0.62rem/1 var(--lp-font-mono, ui-monospace, "SF Mono", monospace);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lp-ink-dim, #a0a0a0);
+  margin-bottom: 0.55rem;
+}
 .lp-card h3 {
   font-size: 0.95rem;
   font-weight: 400;
@@ -307,9 +332,156 @@
   font-size: 0.92rem;
   line-height: 1.75;
 }
+/* A card whose body runs to more than one paragraph. Tighter than `.lp-lede +
+ * .lp-lede` because these are inside a box that already separates them from
+ * everything else — the gap only has to say "new paragraph", not "new block". */
+.lp-card p + p {
+  margin-top: 0.7rem;
+}
 .lp-card p em {
   color: var(--lp-ink, #ededed);
   font-style: normal;
+}
+
+/* ---- points ----
+ * A marked list of claims, each a sentence or three. Between `.lp-trust` (short
+ * enough to read as one strip) and `.lp-cards` (which boxes each item, and so
+ * says the items are parallel features rather than parts of one argument).
+ *
+ * Each row is a two-column grid — marker, then content — rather than a
+ * `list-style` marker, because a paragraph-length item has to hang its
+ * continuation lines off the text edge and not off the marker. That is also why
+ * `Points` wraps its content in a `span`: a bare lead-in element would land in
+ * the grid as a third item and wrap to a second row. */
+.lp-points {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  max-width: 76ch;
+}
+.lp-points li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  font-size: 0.94rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--lp-ink-dim, #a0a0a0);
+}
+/* A token for the same reason `--lp-checklist-mark` is one: a glyph in
+ * `content:` is copy the host cannot reach. */
+.lp-points li::before {
+  content: var(--lp-points-mark, "\2192");
+  color: var(--lp-accent, #9a9a9a);
+}
+.lp-points li b {
+  color: var(--lp-ink, #ededed);
+  font-weight: 500;
+}
+/* The numbered variant. The counter is on the list rather than the copy for
+ * the reason given in `Points`' own doc; `tabular-nums` keeps the tenth item's
+ * two digits on the same left edge as the first's one, and the column is wide
+ * enough to hold them without the sentence stepping right. The separator after
+ * the digit is a token for the same reason the arrow above is one — it is a
+ * character on the page that the host cannot otherwise reach. */
+.lp-points--ordered {
+  counter-reset: lp-point;
+}
+.lp-points--ordered li {
+  counter-increment: lp-point;
+  grid-template-columns: 1.9rem 1fr;
+}
+.lp-points--ordered li::before {
+  content: counter(lp-point) var(--lp-points-ordinal-suffix, ".");
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- code ----
+ * A literal block: a transcript, an invocation, a config fragment. It scrolls
+ * rather than wraps, because a wrapped command line is a different command
+ * line. */
+.lp-code {
+  background: var(--lp-card, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: var(--lp-radius, 14px);
+  padding: 1.1rem 1.25rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: var(--lp-font-mono, ui-monospace, "SF Mono", monospace);
+  font-size: 0.8rem;
+  line-height: 1.85;
+  color: var(--lp-ink, #ededed);
+}
+.lp-lede + .lp-code,
+.lp-code + .lp-lede {
+  margin-top: 1.6rem;
+}
+/* Inline code, wherever it appears in a screen's prose. Scoped to `.lp-screen`
+ * rather than written bare: this sheet is loaded site-wide by the host, so a
+ * bare `code` would restyle every route the host serves (see
+ * `__tests__/css-scope.test.ts`). */
+.lp-screen code {
+  font-family: var(--lp-font-mono, ui-monospace, "SF Mono", monospace);
+  font-size: 0.86em;
+  background: var(--lp-card, rgba(255, 255, 255, 0.04));
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--lp-accent-bright, #d8d8d8);
+}
+/* Inside a block that is already a frame, the inline chip treatment would be a
+ * box in a box. */
+.lp-code code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* ---- table ----
+ * Records, not a layout device. The scroller is the wrapper and not the table,
+ * so the rounded frame clips the overflow instead of being clipped by it, and
+ * the `min-width` is what forces the scroll rather than letting four columns
+ * crush to unreadable at a phone measure. */
+.lp-table-scroll {
+  overflow-x: auto;
+  border-radius: var(--lp-radius, 14px);
+}
+.lp-table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.lp-table th {
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  font-family: var(--lp-font-mono, ui-monospace, "SF Mono", monospace);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-accent, #9a9a9a);
+  border-bottom: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  white-space: nowrap;
+}
+.lp-table td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--lp-table-divider, rgba(216, 216, 216, 0.1));
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-weight: 300;
+  vertical-align: top;
+}
+/* A caption a screen reader reaches and a sighted reader does not. It says what
+ * the rows are a sample OF, which is a different claim from the rows alone, so
+ * it is never simply dropped — `showCaption` puts it back on the page. */
+.lp-table .lp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---- shot: a macOS window frame around a screenshot, or a placeholder ----
@@ -514,6 +686,18 @@
   color: var(--lp-accent-bright, #d8d8d8);
   font-weight: 400;
 }
+/* At a phone width the `max-content` label column starves the clause beside
+ * it — a two-word term leaves the detail wrapping every three words. Stack
+ * instead, and let the row gap say which detail belongs to which term. */
+@media (max-width: 34rem) {
+  .lp-rule {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.15rem;
+  }
+  .lp-rule dd {
+    margin-bottom: 0.6rem;
+  }
+}
 
 /* ---- stat strip ----
  * Three cells, and an explicit three across rather than an `auto-fit` floor:
@@ -568,6 +752,13 @@
 .lp-chips li.lp-chip--open {
   border-color: var(--lp-chip-open-border, rgba(216, 216, 216, 0.5));
   color: var(--lp-accent-bright, #d8d8d8);
+}
+/* A chip whose label leads with the thing being named and then qualifies it —
+ * `devteam — review, conformance, build`. The lead-in gets the accent so a row
+ * of chips can be scanned for names alone. */
+.lp-chips li b {
+  color: var(--lp-accent-bright, #d8d8d8);
+  font-weight: 500;
 }
 
 /* ---- the roadmap block ----
@@ -651,6 +842,16 @@
 .lp-checklist li::before {
   content: var(--lp-checklist-mark, "✓");
   color: var(--lp-accent, #9a9a9a);
+}
+/* The same list, one line the reader cannot rely on yet: a different mark, in
+ * the dimmer ink rather than the accent, so a skim separates the two without
+ * reading either. Written with the `li` in the selector to carry (0,2,1) —
+ * the rule above it is (0,1,1), and a modifier that only ties on specificity
+ * is winning on source order alone, which the next edit to this file can
+ * silently take away. */
+.lp-checklist li.lp-checklist__item--soon::before {
+  content: var(--lp-checklist-mark-soon, "○");
+  color: var(--lp-ink-dim, #a0a0a0);
 }
 
 /* ---- FAQ ----
@@ -806,4 +1007,67 @@
 .lp-contact .lp-colophon small {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
+}
+
+/* The tour's closing screen. The promise gets the one non-mono treatment in
+ * the deck: it is a claim about the whole family rather than this page, and
+ * the shift in face is what says so. */
+.lp-tour__promise {
+  font-family: var(--lp-font-serif, Georgia, serif);
+  font-style: italic;
+  font-size: clamp(1.5rem, 3.4vw, 2.4rem);
+  line-height: 1.25;
+  max-width: 24ch;
+  margin: 1.25rem 0 2.5rem;
+  color: var(--lp-ink, #ededed);
+}
+
+.lp-tour__pillars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.lp-tour__steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.lp-tour__step {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--lp-hairline, rgba(216, 216, 216, 0.18));
+  border-radius: var(--lp-radius, 14px);
+  background: var(--lp-card, rgba(255, 255, 255, 0.04));
+  color: var(--lp-ink, #ededed);
+  text-decoration: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.lp-tour__step:hover {
+  border-color: var(--lp-card-hover-border, rgba(216, 216, 216, 0.4));
+  background: var(--lp-card-hover-bg, rgba(28, 28, 28, 0.62));
+}
+
+.lp-tour__step--next {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.lp-tour__step b {
+  color: var(--lp-accent-bright, #d8d8d8);
+  font-weight: 600;
+}
+
+.lp-tour__step em {
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-style: normal;
+}
+
+.lp-tour__arrow {
+  color: var(--lp-accent, #9a9a9a);
 }

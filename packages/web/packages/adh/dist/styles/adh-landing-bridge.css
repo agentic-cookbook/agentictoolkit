@@ -1,0 +1,135 @@
+/* adh/src/styles/adh-landing-bridge.css
+ *
+ * Assigns @agentic-toolkit/landing's 54-token contract from the M3 role vars
+ * <AdhThemeStyle /> injects. It lives HERE and not in `landing` because that
+ * package depends on nothing and never assigns a :root — every token is read
+ * as var(--lp-x, fallback), so a host override always wins whatever the import
+ * order.
+ *
+ * Both halves must be set. The "minted" shades below have no devteam
+ * equivalent, and an unset one silently renders landing's neutral grey default
+ * on a border or hover state even once the base palette is themed — a
+ * half-finished-looking site rather than a visible bug. Each is landing's own
+ * fallback re-expressed against the role it was sampled from.
+ */
+:root {
+  /* Palette — same derivations as devteam's globals.css :root. */
+  --lp-ground: var(--color-surface);
+  --lp-raise: var(--color-surface-container-high);
+  --lp-accent: var(--color-primary);
+  --lp-accent-bright: var(--color-primary-bright);
+  --lp-accent-dim: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --lp-ink: var(--color-on-surface);
+  --lp-ink-dim: var(--color-on-surface-variant);
+  --lp-hairline: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --lp-card: color-mix(in srgb, var(--color-surface-container) 65%, transparent);
+  --lp-glow: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-primary) 13%, transparent),
+    transparent 65%
+  );
+
+  /* Minted shades — landing's fallbacks, re-sampled against the roles. */
+  --lp-burger-bg: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  --lp-scrim-bg: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  --lp-drawer-shadow: color-mix(in srgb, var(--color-shadow) 55%, transparent);
+  --lp-nav-divider: color-mix(in srgb, var(--color-on-surface) 7%, transparent);
+  --lp-card-hover-border: color-mix(in srgb, var(--color-primary-bright) 40%, transparent);
+  --lp-card-hover-bg: color-mix(in srgb, var(--color-surface-container-high) 62%, transparent);
+  --lp-shot-hover-border: color-mix(in srgb, var(--color-primary-bright) 45%, transparent);
+  --lp-shot-hover-glow: color-mix(in srgb, var(--color-primary-bright) 50%, transparent);
+  --lp-shot-bar-shade: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  --lp-shot-dot: color-mix(in srgb, var(--color-on-surface) 22%, transparent);
+  --lp-shot-hatch: color-mix(in srgb, var(--color-primary-bright) 5%, transparent);
+  --lp-versus-border: color-mix(in srgb, var(--color-on-surface) 9%, transparent);
+  --lp-versus-us-border: color-mix(in srgb, var(--color-primary-bright) 40%, transparent);
+  --lp-versus-us-glow: color-mix(in srgb, var(--color-primary-bright) 55%, transparent);
+  --lp-rule-bg: color-mix(in srgb, var(--color-surface) 65%, transparent);
+  --lp-chip-bg: color-mix(in srgb, var(--color-surface-container-high) 35%, transparent);
+  --lp-chip-open-border: color-mix(in srgb, var(--color-primary-bright) 50%, transparent);
+  --lp-chip-soon-border: color-mix(in srgb, var(--color-on-surface-variant) 28%, transparent);
+  --lp-status-free-border: color-mix(in srgb, var(--color-primary-bright) 50%, transparent);
+  --lp-btn-primary-ink: var(--color-on-primary);
+  --lp-faq-divider: color-mix(in srgb, var(--color-on-surface) 9%, transparent);
+  --lp-table-divider: color-mix(in srgb, var(--color-on-surface) 10%, transparent);
+
+  /* Type. The adh theme sets all three faces to Iosevka; the deck is mono.
+   *
+   * `--lp-font-serif` is assigned even though this theme resolves it to the
+   * same face as the other two. It is the tour's closing promise
+   * (`.lp-tour__promise`), the one non-mono line in the deck, and left
+   * unassigned it fell through to the package's own `Georgia, serif` fallback
+   * — a face from outside the family, on the one line that is a claim ABOUT
+   * the family. Every other `--lp-*` the deck reads is assigned here for
+   * exactly this reason; this one was missed, so the tour pages shipped
+   * carrying it. The theme's role var, not `--font-display`: the token names a
+   * serif and `--font-display` is a separate role that happens to alias it
+   * today. Same spelling adh-concepts.css:24 and adh-legal.css use. */
+  --lp-font: var(--font-mono);
+  --lp-font-mono: var(--font-mono);
+  --lp-font-serif: var(--font-serif, ui-serif, Georgia, serif);
+
+  /* Geometry. Measure follows devteam (72rem), not landing's 70rem default.
+   *
+   * So does the root size, and that one is an OVERRIDE: the package ships
+   * 87.5% — a type dial a touch under the browser's default, set for a site
+   * whose every route is a deck. An adh deck is the `/` of a site whose other
+   * routes are the app, and nothing in adh's stylesheets moves the root size,
+   * so 87.5% here shrinks the landing page's every word by an eighth relative
+   * to the rest of the same site — and relative to devteam, whose globals.css
+   * sets no root size either and is the layout this deck was drawn from. 100%
+   * is that measurement, not a preference: the deck's rem values ARE devteam's
+   * rem values, so they have to resolve against the same root. */
+  --lp-root-size: 100%;
+  --lp-measure: 72rem;
+  --lp-radius: 14px;
+  --lp-gap: clamp(3.75rem, 8vw, 6.5rem);
+  --lp-dock-clear: 0px;
+  --lp-screen-pad-top: clamp(5.5rem, 14svh, 9rem);
+  --lp-hero-pad-top: 6.5rem;
+  --lp-hero-pad-bottom: var(--lp-dock-clear, 0px);
+  --lp-snap-stop: normal;
+
+  /* ---- the deck index's chrome, under a header that is already there ----
+   * `NavChrome`'s own host is a site whose ONLY header is that bar: it floats
+   * over the page in the top-left corner, and the package's defaults draw it
+   * for that case. Every adh site has `.adh-header` instead — `position:
+   * sticky; top: 0; z-index: 50`, owning that strip on every route. The five
+   * values below are the whole of the difference, and each is a consequence of
+   * that header existing rather than a taste call.
+   *
+   * `--lp-chrome-top` is where the bar, the scrim and the drawer all start.
+   * Anything fixed at `inset: 0` over a sticky header either buries the burger
+   * that was just pressed or wins on nothing better than declaration order;
+   * starting below it makes the collision unrepresentable instead of merely
+   * resolved. One token for all three, so the scrim can never begin on a
+   * different line from the drawer it dims.
+   *
+   * `--lp-bar-bg: none` drops the package's gradient. It exists to lift a
+   * burger floating over the page off whatever is scrolling underneath it, and
+   * here the header directly above is already doing that job — kept, it draws a
+   * second fade hanging off the bottom of a real header.
+   *
+   * The gutter is a CORNER, so its two gaps are equal: 1.5rem in from the left
+   * edge and 1.5rem below the header — 1.5rem also being `.adh-header__container`'s
+   * own horizontal padding, so the burger sits directly under the site logo
+   * rather than near it. The drawer's ✕ reads the same pair, so it lands on the
+   * ☰ it replaces and the way out does not move the moment the menu opens.
+   *
+   * `--lp-drawer-pad-top` is the one value that SHRINKS. The package's 5.5rem
+   * clears the bar its drawer opens under; this drawer opens under nothing but
+   * its own close button — 1.5rem down, plus that button's 2rem, plus half a rem
+   * of air. */
+  --lp-chrome-top: var(--adh-header-height, 3.5rem);
+  --lp-bar-bg: none;
+  --lp-bar-pad-y: 1.5rem;
+  --lp-bar-pad-x: 1.5rem;
+  --lp-drawer-pad-top: 4rem;
+
+  /* Content strings — CSS `content`, so the quotes are part of the value. */
+  --lp-checklist-mark: "✓";
+  --lp-checklist-mark-soon: "○";
+  --lp-versus-bullet: "· ";
+  --lp-points-mark: "→";
+  --lp-points-ordinal-suffix: ".";
+}

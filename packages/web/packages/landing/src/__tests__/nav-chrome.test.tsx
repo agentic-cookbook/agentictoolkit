@@ -105,6 +105,19 @@ describe('NavChrome', () => {
     expect(getByRole('navigation', { name: 'Primary' })).toBeTruthy()
   })
 
+  // The bar was a <header>, which is a `banner` landmark unless it descends
+  // from main/article/aside/nav/section — and what suppressed it was `Deck`
+  // rendering a <main>, which it no longer does. Rendered where the host's site
+  // header already claims that landmark, a second banner is announced beside it
+  // with nothing to distinguish the two. Asserted through `getByRole` rather
+  // than the tag, because the defect is the ROLE, and a `role="banner"` on any
+  // element would bring it back.
+  it('claims no banner landmark, so the host keeps the only one', () => {
+    const { container, queryAllByRole } = render(<NavChrome brand="M" links={LINKS} />)
+    expect(queryAllByRole('banner')).toHaveLength(0)
+    expect(container.querySelector('.lp-bar')!.tagName).toBe('DIV')
+  })
+
   // A host with its own site header has no second wordmark to draw here, and an
   // empty .lp-brand would still sit centred in the bar.
   it('draws no brand element when the host gives no brand', () => {

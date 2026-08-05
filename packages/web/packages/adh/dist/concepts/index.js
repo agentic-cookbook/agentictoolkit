@@ -690,7 +690,7 @@ var en_default = {
         items: [
           "Group the features a product actually uses.",
           "Many applications can share one ecosystem.",
-          "Move a feature between ecosystems without breaking your tokens."
+          "Relocate data between ecosystems without stranding your identifiers."
         ]
       }
     ],
@@ -716,7 +716,7 @@ var en_default = {
         items: [
           "Ingest documents, get back searchable, citable knowledge.",
           "Project-scoped and token-gated.",
-          "Reachable from the REST API and the MCP server."
+          "Reachable from the MCP server."
         ]
       }
     ],
@@ -729,26 +729,26 @@ var en_default = {
   storage: {
     label: "Storage",
     kicker: "Manage storage",
-    blurb: "Manage the storage behind your ecosystems \u2014 buckets, files, and data, with usage and access in clear view.",
+    blurb: "Manage the storage behind your ecosystems \u2014 buckets, files, and data, with access in clear view.",
     detail: [
       {
         kind: "prose",
         heading: "What it does",
-        body: "Storage is the durable layer under everything you build: object buckets, files, and structured data, all addressable over the API."
+        body: "Storage is the durable layer under everything you build: buckets, files, and structured data, all addressable over the API."
       },
       {
         kind: "points",
         heading: "Key points",
         items: [
           "Buckets and files, project-scoped by default.",
-          "Usage and access visible at a glance.",
+          "Access visible at a glance.",
           "Same API surface as the rest of the Hub."
         ]
       }
     ],
     keyPoints: [
       "Buckets, files, and data behind your ecosystems",
-      "Usage and access always in clear view",
+      "Access always in clear view",
       "One storage layer shared by agents and apps alike"
     ]
   },
