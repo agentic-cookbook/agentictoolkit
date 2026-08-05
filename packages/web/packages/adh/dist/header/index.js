@@ -1469,46 +1469,8 @@ function useEffectiveEnv(hostname) {
   return resolveEffectiveEnv(override, hostname ? detectEnv2(hostname) : null);
 }
 
-// src/concepts/participating.ts
-var CONCEPT_SITE_IDS = /* @__PURE__ */ new Set([
-  "academy",
-  "authentication",
-  "billing",
-  "communities",
-  "community",
-  "consulting",
-  "customers",
-  "dashboards",
-  "devices",
-  "devteam",
-  "domains",
-  "ecosystems",
-  "education",
-  "knowledgebases",
-  "narratives",
-  "news",
-  "notifications",
-  "personas",
-  "products",
-  "projects",
-  "recipes",
-  "registries",
-  "sites",
-  "storage",
-  "support",
-  "tools",
-  "teamregistry",
-  "teambuilder",
-  "codereviews",
-  "personabuilder",
-  "research",
-  "consultants"
-]);
-function isConceptSite(siteId) {
-  return CONCEPT_SITE_IDS.has(siteId);
-}
-
 // src/header/belowHelpEntries.ts
+import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
 var BELOW_HELP_SECTION = 0;
 function siteDetailsHref(siteId) {
   return isConceptSite(siteId) || siteId === "hub" ? "/details" : void 0;

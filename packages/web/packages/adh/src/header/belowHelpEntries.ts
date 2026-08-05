@@ -1,6 +1,10 @@
 import type { SiteId } from '@agentic-toolkit/adh-registry'
 import type { PopoverEntry } from './NavigationPopover'
-import { isConceptSite } from '../concepts/participating'
+// PRESERVED IMPORT — the package path, never '../concepts/participating', for the same
+// reason SiteHeader.tsx spells it this way: this module is bundled into the header entry,
+// which under `bundle: true, splitting: false` would otherwise get its own copy of
+// participating's module-level Set alongside the one in dist/concepts/participating.js.
+import { isConceptSite } from '@agentic-toolkit/adh/concepts/participating'
 import { menuIcon } from './menu-icons'
 
 // Contact + Details: the two destinations that left hub's header bar, re-homed in the
