@@ -20,6 +20,7 @@ import { Select } from "@agentic-toolkit/ui/components/select";
 import {
   StackLevels,
   ToolbarPortal,
+  useRailExitGuard,
   useRailHost,
   useRecordAffordance,
   CreateResourceDialog,
@@ -598,6 +599,14 @@ function ServiceEditor({
   // Derive the initial draft from the service prop; keyed remount per id in the
   // parent gives each service a fresh editor, so seeding state here is safe.
   const { draft, patch, dirty, commit } = useDirtyDraft<ServiceDraft>(() => fromService(service));
+  // That same `dirty` gates Save (`canSave` below) — and until now gated NOTHING else, so every
+  // exit that does not go through Save discarded the draft in silence: a rail row switch, the
+  // breadcrumb up, an in-app link, a reload. Publishing it into the host's guard registry is what
+  // the sibling PersonaEditor does with its own dirt (via useExitGuardChannel), and it costs one
+  // line because `useDirtyDraft` already diffs against the baseline `commit()` re-seeds on save.
+  // Null while clean: registration is gated on dirt, never on "an editor is mounted", or browsing
+  // services would prompt on the way out of every one of them.
+  useRailExitGuard(dirty ? { isDirty: () => true } : null);
   // Live service state: updated after connect/refresh without a full remount.
   const [liveService, setLiveService] = useState<UserService>(service);
   const [saving, setSaving] = useState(false);

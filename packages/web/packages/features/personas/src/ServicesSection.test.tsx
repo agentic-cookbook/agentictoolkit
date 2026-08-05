@@ -31,6 +31,11 @@ vi.mock("@agentic-toolkit/data/personas", () => ({
 }));
 
 import { ServicesSection } from "./ServicesSection";
+import {
+  RailHostContext,
+  type PaneExitGuard,
+  type RailHostRegistry,
+} from "@agentic-toolkit/resource";
 import { api, type UserService } from "@agentic-toolkit/data/personas";
 
 const list = vi.mocked(api.services.list);
@@ -140,5 +145,87 @@ describe("ServicesSection save gate (service editor)", () => {
     const save = await screen.findByRole("button", { name: "Save" });
     expect(save).toBeDisabled();
     expect(screen.queryByText("A name is required.")).toBeNull();
+  });
+});
+
+// The SAME `dirty` the gate above reads used to gate nothing else, so every exit that does not go
+// through Save discarded the draft in silence — a rail row switch, the breadcrumb up, an in-app
+// link, a reload. Publishing it into the host's registry is what makes the enclosing exits see it,
+// exactly as the sibling PersonaEditor does with its own dirt.
+describe("ServicesSection unsaved-work guard (service editor)", () => {
+  /** A minimal rail host recording which ids currently hold a guard — the same stand-in
+   *  PersonaEditor.test.tsx and resource's railExitGuardDirtyRegistration.test.tsx use, so
+   *  "registered" means what it means to the real hub/standalone hosts. */
+  function makeHost() {
+    const live = new Map<string, PaneExitGuard>();
+    const registry: RailHostRegistry = {
+      registerLevels: vi.fn(),
+      unregisterLevels: vi.fn(),
+      registerExitGuard: vi.fn((id: string, g: PaneExitGuard | null) => {
+        if (g === null) live.delete(id);
+        else live.set(id, g);
+      }),
+      toolbarSlot: null,
+    };
+    return { live, registry };
+  }
+
+  function renderUnderHost(host: ReturnType<typeof makeHost>) {
+    render(
+      <RailHostContext.Provider value={host.registry}>
+        <ServicesSection urlSelection={{ serviceId: SERVICE.id, onSelectService: vi.fn() }} />
+      </RailHostContext.Provider>,
+    );
+  }
+
+  it("registers nothing while the open service is unmodified", async () => {
+    const host = makeHost();
+    renderUnderHost(host);
+    await screen.findByRole("button", { name: "Save" });
+    // The control for the tests below: presence IS the dirty signal the host's browser guard
+    // reads (`guards.size > 0`), so an always-registering editor would prompt on the way out of
+    // every service anyone merely looked at.
+    expect(host.live.size).toBe(0);
+  });
+
+  it("publishes a guard reporting dirty once the draft is edited", async () => {
+    const host = makeHost();
+    renderUnderHost(host);
+    await screen.findByRole("button", { name: "Save" });
+
+    await userEvent.type(screen.getByLabelText(/name/i), "!");
+
+    expect(host.live.size).toBe(1);
+    expect([...host.live.values()][0]!.isDirty()).toBe(true);
+  });
+
+  it("withdraws the guard when the edit is reverted", async () => {
+    const host = makeHost();
+    renderUnderHost(host);
+    await screen.findByRole("button", { name: "Save" });
+
+    const name = screen.getByLabelText(/name/i);
+    await userEvent.type(name, "!");
+    expect(host.live.size).toBe(1);
+
+    await userEvent.type(name, "{backspace}");
+    expect(host.live.size).toBe(0);
+  });
+
+  // Saving is the one exit that is not a loss, and `commit()` re-seeds the baseline — so the guard
+  // must come down on the same signal that re-disables Save, or the next navigation prompts about
+  // work that is already on the server.
+  it("withdraws the guard after a successful save", async () => {
+    const host = makeHost();
+    patchService.mockResolvedValue({ ...SERVICE, name: "Renamed" });
+    renderUnderHost(host);
+
+    const save = await screen.findByRole("button", { name: "Save" });
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: "Renamed" } });
+    expect(host.live.size).toBe(1);
+
+    fireEvent.click(save);
+    await waitFor(() => expect(patchService).toHaveBeenCalled());
+    await waitFor(() => expect(host.live.size).toBe(0));
   });
 });
