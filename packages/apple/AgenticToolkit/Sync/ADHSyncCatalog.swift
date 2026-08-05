@@ -10,7 +10,7 @@ import Foundation
 /// what actually syncs. `pullOnly` mirrors backend pushMode 'route' — resources
 /// whose writes stay on bespoke routes; /sync/push refuses a generic write.
 public enum ADHSyncCatalog {
-    /// Every catalog resource (73), each with its schemaVersion.
+    /// Every catalog resource (77), each with its schemaVersion.
     public static let all: [SyncResource] = [
         SyncResource(resource: "bucket.bucket_types", schemaVersion: 1),
         SyncResource(resource: "bucket.buckets", schemaVersion: 1),
@@ -54,8 +54,11 @@ public enum ADHSyncCatalog {
         SyncResource(resource: "document.operations", schemaVersion: 1),
         SyncResource(resource: "document.versions", schemaVersion: 1),
         SyncResource(resource: "ecosystem.applications", schemaVersion: 1),
+        SyncResource(resource: "integration.integration_audience_contacts", schemaVersion: 1),
+        SyncResource(resource: "integration.integration_audiences", schemaVersion: 1),
         SyncResource(resource: "integration.integration_bookmarks", schemaVersion: 1),
         SyncResource(resource: "integration.integration_calendar_events", schemaVersion: 1),
+        SyncResource(resource: "integration.integration_campaign_stats", schemaVersion: 1),
         SyncResource(resource: "integration.integration_email_messages", schemaVersion: 1),
         SyncResource(resource: "integration.integration_financial_transactions", schemaVersion: 1),
         SyncResource(resource: "integration.integration_items", schemaVersion: 1),
@@ -83,11 +86,12 @@ public enum ADHSyncCatalog {
         SyncResource(resource: "settings.appearance", schemaVersion: 1),
         SyncResource(resource: "settings.communication", schemaVersion: 1),
         SyncResource(resource: "settings.notifications", schemaVersion: 1),
+        SyncResource(resource: "settings.workspace", schemaVersion: 1),
         SyncResource(resource: "social.follows", schemaVersion: 1),
         SyncResource(resource: "social.user_blocks", schemaVersion: 1)
     ]
 
-    /// Pull-only resources (29): backend pushMode 'route'.
+    /// Pull-only resources (30): backend pushMode 'route'.
     public static let pullOnly: Set<String> = [
         "content.addresses",
         "content.attachments",
@@ -116,6 +120,7 @@ public enum ADHSyncCatalog {
         "project.work_items",
         "settings.appearance",
         "settings.communication",
+        "settings.workspace",
         "social.follows",
         "social.user_blocks"
     ]

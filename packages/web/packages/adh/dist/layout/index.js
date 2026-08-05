@@ -105,16 +105,17 @@ function HtdvLayoutLogSwitch() {
 }
 
 // src/layout/AdhAppShell.tsx
+import { HeaderCenterProvider } from "@agentic-toolkit/adh/header/HeaderCenter";
 import { Fragment, jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
 function AdhAppShell({ header, children, footer, devTools = false }) {
   return /* @__PURE__ */ jsxs2(Fragment, { children: [
     devTools && /* @__PURE__ */ jsx4(DevAnimScale, {}),
     devTools && /* @__PURE__ */ jsx4(HtdvLayoutLogSwitch, {}),
-    /* @__PURE__ */ jsx4(HierarchicalDetailViewFlag, { children: /* @__PURE__ */ jsxs2("div", { className: "adh-app-shell", children: [
+    /* @__PURE__ */ jsx4(HierarchicalDetailViewFlag, { children: /* @__PURE__ */ jsx4(HeaderCenterProvider, { children: /* @__PURE__ */ jsxs2("div", { className: "adh-app-shell", children: [
       header,
       /* @__PURE__ */ jsx4("main", { className: "adh-app-shell__main", children: /* @__PURE__ */ jsx4(AppErrorBoundary, { children }) }),
       footer
-    ] }) })
+    ] }) }) })
   ] });
 }
 

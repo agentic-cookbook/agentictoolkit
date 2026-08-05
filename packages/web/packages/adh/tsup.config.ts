@@ -8,6 +8,12 @@ export default defineConfig({
     'header/index': 'src/header/index.ts',
     // Its own entry so the preserved import below has something to resolve to.
     'header/recents': 'src/header/recents.ts',
+    // The header's centre PORTAL TARGET. Its own entry for the same reason recents has one: it
+    // holds module state (the React context object), and the provider is mounted from the
+    // `layout` entry while the consumer arrives through the `home` entry. Inlined, those would
+    // be two different contexts and the portal target would read null forever — in production
+    // only. Paired with the `external` line below and package-path specifiers everywhere.
+    'header/HeaderCenter': 'src/header/HeaderCenter.tsx',
     // The pluggable header AUTH SOURCES (Task 6.2) — the `HeaderAuthState`/
     // `HeaderAuthSource` contract plus the anonymous and smart-SSO sources. Its own
     // entry, published as the `./header-auth` subpath, rather than a member of
@@ -66,6 +72,12 @@ export default defineConfig({
     // trick as themes/DbThemeApplier. Kept un-inlined via the matching `external`.
     'help/surface': 'src/help/surface.ts',
     'help/HelpMasterDetail': 'src/help/HelpMasterDetail.tsx',
+    // The shared /home shell (SiteHomeShell + WorkspacePicker). Its OWN entry so only a page
+    // that imports `@agentic-toolkit/adh/home` pulls it — and with it this package's new
+    // @agentic-toolkit/data dependency. That edge is legal (data depends on auth + ui only, so
+    // no cycle) and it is confined to this entry: the header, which ships on every public page,
+    // still depends on neither data nor any workspace vocabulary.
+    'home/index': 'src/home/index.ts',
     // The ADH docs shell (server component: sidebar + article). No context/state, so it needs no
     // external self-entry like help — a plain entry the consumer resolves to dist/ in prod.
     'docs/index': 'src/docs/index.ts',
@@ -199,6 +211,9 @@ export default defineConfig({
     // path '@agentic-toolkit/adh/header/recents'. One surviving './recents' defeats
     // it. Enforced by frontend/tools/verify-bundle-boundaries.py.
     '@agentic-toolkit/adh/header/recents',
+    // Same rule, same three halves (entry + this line + package-path specifiers): see
+    // src/header/HeaderCenter.tsx's own note.
+    '@agentic-toolkit/adh/header/HeaderCenter',
     // The flags module holds the React context (FeatureFlagsProvider / FeatureFlagsContext).
     // With splitting:false, every entry that inlines it gets its OWN context instance — a consumer
     // entry in THIS package (`footer/AdhFooter`, which landed here in Task 5.7, is the nearest
@@ -282,6 +297,19 @@ export default defineConfig({
     // inlined by accident.
     '@agentic-toolkit/markdown',
     '@agentic-toolkit/markdown/*',
+    // ── Task 6: the shared /home shell's data dependency + self-reference ───────────
+    // The data layer holds module state: `dataConfig` (the API base URL every authed call
+    // resolves against, set once by the host's configureData) and useResourceList's `caches`
+    // Map. Inlined into this package's `home` entry, the shell would read an UNCONFIGURED
+    // config — a second copy the site's configureData never touched — and its list cache would
+    // be invisible to the feature's. Subpath form listed too: tsup's `external` matches
+    // specifiers, not packages.
+    '@agentic-toolkit/data',
+    '@agentic-toolkit/data/*',
+    // The `home` barrel, pre-listed the same way '@agentic-toolkit/auth/ui' is: nothing under
+    // src/ imports it today, but the day an entry here does it is already a boundary rather
+    // than a silently inlined second copy of the shell's state.
+    '@agentic-toolkit/adh/home',
     // ── Self-references from the merged adh vocabulary tier ─────────────────────────
     // Same rule as every entry above, and it applies to ALL of these without exception:
     // a package-path specifier that is NOT listed here is not a boundary — esbuild

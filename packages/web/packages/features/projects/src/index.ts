@@ -5,7 +5,7 @@
 // the hub's one-rail workspace shell (a rail host) and, standalone, on a feature
 // site's /home. The panes/views/editor are internal; the barrel exposes only the
 // feature entry (the host passes `basePath` — `/<slug>/projects` in the hub,
-// `/home` on the projects site).
+// `/home/<slug>` on the projects site).
 export { ProjectsFeature } from "./ProjectsFeature";
 
 // The "Project" topic of a product/persona: resolves the subject's auto-provisioned

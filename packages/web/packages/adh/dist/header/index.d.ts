@@ -37,4 +37,5 @@ export { useSiteMenu } from './useSiteMenu';
 export { getEnvOverride, parseEnvOverride, resolveEffectiveEnv, setEnvOverride, useEffectiveEnv, useEnvOverride, } from './envOverride';
 export { RECENTS_CAP, clearRecents, readRecents, recordRecent, useRecents, } from '@agentic-toolkit/adh/header/recents';
 export type { RecentPlace } from '@agentic-toolkit/adh/header/recents';
+export { HeaderCenterProvider, useHeaderCenter, useHeaderCenterRegister, useHeaderCenterProvided, } from '@agentic-toolkit/adh/header/HeaderCenter';
 //# sourceMappingURL=index.d.ts.map

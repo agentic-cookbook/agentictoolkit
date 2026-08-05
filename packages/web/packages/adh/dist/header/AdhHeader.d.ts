@@ -65,7 +65,12 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     pageTitle?: string;
     /** Optional interactive content centered in the bar (e.g. a live status
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
-     *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
+     *  clickable. When set it occupies the centre slot in place of `pageTitle` — but
+     *  that suppression is this PROP's alone. A child portaled into the same slot via
+     *  `useHeaderCenter()` (see `HeaderCenter.tsx`) does NOT suppress `pageTitle`: both
+     *  are absolutely positioned on the same centre point, so a page that passes
+     *  `pageTitle` while something is portaled in renders the portaled content on top
+     *  of the title, not in place of it. */
     center?: ReactNode;
     /** Badges shown under the site name. Empty by default — the family-wide preview
      *  notice is the strip above the bar, not a badge. */

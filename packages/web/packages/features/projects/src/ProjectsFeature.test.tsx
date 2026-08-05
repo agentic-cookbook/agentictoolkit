@@ -186,4 +186,59 @@ describe("ProjectsFeature", () => {
     expect((screen.getByLabelText("Status") as HTMLInputElement).value).toBe("active");
     await waitFor(() => expect(get).toHaveBeenCalledWith("p1"));
   });
+
+  it("scopes the list to the workspace prop, which is now the shell's to supply", async () => {
+    render(
+      <Harness>
+        <ProjectsFeature basePath="/home/mine" workspaceSlug="mine" all />
+      </Harness>,
+    );
+
+    // The site's shape after the refactor: basePath already carries the workspace, and the
+    // slug arrives as a prop — no leading Workspaces level, no waiting on a list the feature
+    // fetches itself. Previously this call was gated behind `scopePending`.
+    expect(await screen.findByText("Website relaunch")).not.toBeNull();
+    await waitFor(() => expect(list).toHaveBeenCalledWith({ workspace: "mine" }));
+  });
+
+  it("links a project at /home/<ws>/<id>, not just /home/<id>", async () => {
+    render(
+      <Harness>
+        <ProjectsFeature basePath="/home/mine" workspaceSlug="mine" all />
+      </Harness>,
+    );
+
+    // The landing card's href is built from `basePath` (ResourceExplorer's
+    // `cardHref`), so this pins that `basePath` is the FULL base — workspace
+    // included — rather than a bare `/home` a caller might pass by mistake. A
+    // wrong base here means a project click resolves to the wrong workspace
+    // segment and SiteHomeShell bounces the user back to their default workspace.
+    const link = (await screen.findByText("Website relaunch")).closest("a");
+    expect(link?.getAttribute("href")).toBe("/home/mine/p1");
+  });
+
+  it("creates a project scoped to the given workspace, not the creator", async () => {
+    render(
+      <Harness>
+        <ProjectsFeature basePath="/home/acme" workspaceSlug="acme" all />
+      </Harness>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "New Project" }));
+    const dialog = await screen.findByRole("dialog", { name: "New project" });
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Mobile app" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    // Distinct from the no-slug case above: an org workspace's create must carry
+    // that org's slug, or the project is created creator-owned and invisible to
+    // the rest of the org.
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        { name: "Mobile app", description: undefined },
+        { workspace: "acme" },
+      ),
+    );
+  });
 });

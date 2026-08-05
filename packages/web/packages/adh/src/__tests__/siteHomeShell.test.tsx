@@ -1,0 +1,1137 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { render, screen, waitFor, cleanup, fireEvent, act, within } from "@testing-library/react";
+import { HeaderCenterProvider, useHeaderCenterRegister } from "../header/HeaderCenter";
+
+// A STATEFUL router double. `replace`/`push` both record the call (so assertions can still
+// check what was requested) AND move a live slug the way the App Router actually does — unlike
+// a bare vi.fn(), which lets `workspaceSlug` stay frozen no matter how many times the shell
+// calls it. A frozen prop hides exactly the bug this file exists to catch: the shell writing its
+// own guess into the URL and then reading that guess back as top-priority truth. See
+// `liveSetSlug` below and review round 1, finding 3.
+//
+// The slug update is deferred a microtask rather than applied synchronously: the real App
+// Router updates the URL param on a LATER render than the one that called push/replace, not the
+// same one. That gap is exactly what finding 2 is about — a synchronous update would let
+// `setStored` (old code) and the URL change land in the same React batch and never expose the
+// half-state where the URL still names the old workspace while `stored` already names the new
+// one. `Promise.resolve().then(...)` reproduces that ordering without a real timer.
+let liveSetSlug: (slug: string | undefined) => void = () => {};
+const extractSlug = (href: string): string => href.split("/").pop()!;
+
+// Whether the double feeds its href back into `workspaceSlug` at all. Normally it does. A test
+// switches it off to hold the URL STILL after the shell has already resolved — the window the
+// real router leaves open between `replace()` being called and the route re-rendering with the
+// new param. One microtask is too short to observe from a test; this makes that window explicit.
+let routerFeedsBack = true;
+const replace = vi.fn((href: string) => {
+  if (!routerFeedsBack) return;
+  void Promise.resolve().then(() => liveSetSlug(extractSlug(href)));
+});
+const push = vi.fn((href: string) => {
+  if (!routerFeedsBack) return;
+  void Promise.resolve().then(() => liveSetSlug(extractSlug(href)));
+});
+// ONE router object for the whole file, not a fresh literal per `useRouter()` call. The real App
+// Router hands back a stable instance out of context; a per-render literal is a strictly WEAKER
+// double, because `router` is in the replace effect's dependency array — a new identity every
+// render re-runs that effect every render, which silently supplies the re-runs a missing
+// dependency should have cost. Measured: with a per-render literal, dropping `workspaceSlug`
+// from that array left the WHOLE file green (round 5 matrix, row v04; re-measured at the shipped
+// 37 tests); with this stable object the same mutation is red. Same reasoning as round 1's
+// frozen-prop finding — a double that is more generous than production certifies code production
+// would break. This is not merely "stable enough": in the Next this package resolves,
+// `useRouter()` is a bare `useContext(AppRouterContext)` whose provider value is a module-level
+// const, so production returns the SAME object across every render, mount and route change —
+// exactly what this object does. Neither more nor less generous.
+const routerDouble = { replace, push, prefetch: vi.fn() };
+vi.mock("next/navigation", () => ({
+  useRouter: () => routerDouble,
+}));
+
+const list = vi.fn();
+const prefsGet = vi.fn();
+const prefsPut = vi.fn();
+const readCached = vi.fn();
+const writeCached = vi.fn();
+
+// `put`'s RETURN VALUE is produced by this plain function, not by `prefsPut` itself. A vi.fn()
+// attaches its own `.then`/`.catch` to whatever promise it returns, to record the settled value
+// in `mock.results` — and that attachment counts as "handling" the rejection before Node's
+// microtask queue would otherwise call it unhandled. So a promise built with
+// `prefsPut.mockRejectedValue(...)` and left uncaught never reaches `process.on("unhandledRejection")`
+// — confirmed empirically with two standalone probes (a bare `Promise.reject` fires the event;
+// the identical rejection returned from ANY vi.fn(), via `mockRejectedValue` or
+// `mockImplementation`, does not). `prefsPut` still records every call for the `toHaveBeenCalledWith`
+// assertions below; only the settled promise itself is routed around it.
+let prefsPutResult: () => Promise<void> = () => Promise.resolve();
+
+// The whole data boundary is mocked, `useResourceList` INCLUDED. The real hook caches at MODULE
+// scope keyed by cacheKey, and every test here uses the same basePath — so the second test would
+// seed from the first one's rows and the "holds children" case could never observe a null list.
+// The stub is the hook's contract minus the cache: null until the fetch settles, refetch when
+// `load`'s identity changes. (Async factory because vi.mock is hoisted above the imports, so
+// React has to be pulled in here rather than referenced from module scope.)
+vi.mock("@agentic-toolkit/data", async () => {
+  const { useEffect, useState } = await import("react");
+  return {
+    useResourceList: (_cacheKey: string, load: () => Promise<unknown[]>) => {
+      const [items, setItems] = useState<unknown[] | null>(null);
+      useEffect(() => {
+        let alive = true;
+        void load().then((rows) => {
+          if (alive) setItems(rows);
+        });
+        return () => {
+          alive = false;
+        };
+      }, [load]);
+      return { items, reload: vi.fn(), error: null, setItems };
+    },
+    workspacesApi: { list: () => list() },
+    workspacePrefsApi: {
+      get: () => prefsGet(),
+      put: (p: unknown) => {
+        prefsPut(p);
+        return prefsPutResult();
+      },
+    },
+    readCachedWorkspace: () => readCached(),
+    writeCachedWorkspace: (s: string) => writeCached(s),
+  };
+});
+
+// The picker is stubbed too. This file is about WHICH workspace the shell resolves and WHEN it
+// mounts its children; the real picker's trigger is a Base UI menu whose open/close needs
+// pointer plumbing and @testing-library/user-event, which is not a devDependency here. The
+// picker's own props are covered by workspacePicker.test.tsx next door.
+vi.mock("../home/WorkspacePicker", () => ({
+  WorkspacePicker: ({
+    workspaces,
+    selected,
+    onSelect,
+  }: {
+    workspaces: { slug: string; name: string }[] | null;
+    selected: string | null;
+    onSelect: (slug: string) => void;
+  }) => (
+    <div data-testid="picker" data-selected={selected ?? "none"}>
+      {(workspaces ?? []).map((w) => (
+        <button key={w.slug} type="button" onClick={() => onSelect(w.slug)}>
+          {w.name}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
+const { SiteHomeShell } = await import("../home/SiteHomeShell");
+
+const WORKSPACES = [
+  { slug: "mine", name: "My Workspace", kind: "individual" as const },
+  { slug: "acme", name: "Acme", kind: "organization" as const },
+];
+
+/** Live-URL harness. Holds the slug the shell sees in state and feeds it back to
+ * `workspaceSlug` — `replace`/`push` above update that state, so a test can observe the shell's
+ * FINAL landing after a full async resolution + redirect cycle, not just the first call a mock
+ * recorded. The assignment happens in the render body (not an effect): Harness's function body
+ * always runs before its child's, so by the time SiteHomeShell mounts and its effects can call
+ * `replace`/`push`, `liveSetSlug` already points at this instance's setter. */
+function Shell({ workspaceSlug, basePath = "/home" }: { workspaceSlug?: string; basePath?: string }) {
+  const [slug, setSlug] = useState<string | undefined>(workspaceSlug);
+  liveSetSlug = setSlug;
+  return (
+    <SiteHomeShell basePath={basePath} workspaceSlug={slug}>
+      {/* The scope is rendered, not just consumed, so every test in this file that waits for
+          `feature` is also asserting the shell never calls its child with a half-resolved one:
+          `scopedBase` here is whatever the shell built, and the dedicated test below reads it. */}
+      {({ workspaceSlug: ws, scopedBase }) => (
+        <div data-testid="feature" data-workspace={ws} data-scoped-base={scopedBase}>
+          the feature
+        </div>
+      )}
+    </SiteHomeShell>
+  );
+}
+
+/** Every other mount in this file: production always has a HeaderCenterProvider above
+ * SiteHomeShell (AdhAppShell mounts one around the header AND the page), so a bare <Shell>
+ * with nothing above it is not the scenario these tests are about — it would leave every one of
+ * them silently exercising the no-provider path instead of the real one. That gap is what the
+ * "renders ONE picker with no header slot to portal into" test below now covers on its own,
+ * deliberately, as the one test in this file that renders WITHOUT this wrapper. */
+function ShellWithProvider(props: { workspaceSlug?: string; basePath?: string }) {
+  return (
+    <HeaderCenterProvider>
+      <Shell {...props} />
+    </HeaderCenterProvider>
+  );
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  liveSetSlug = () => {};
+  routerFeedsBack = true;
+  list.mockResolvedValue(WORKSPACES);
+  prefsGet.mockResolvedValue({});
+  prefsPutResult = () => Promise.resolve();
+  readCached.mockReturnValue(null);
+});
+afterEach(cleanup);
+
+// Every row below is a scenario from review round 1, finding 0's table. Two are the load-bearing
+// regression tests named in finding 3 — "list lands first, cold cache, server says acme" for
+// finding 1, and "user picks acme from mine" for finding 2 — proven red against the pre-fix file
+// and green against this one; see the fix report appended to task-6-report.md for that evidence.
+describe("SiteHomeShell resolution", () => {
+  it("holds children until a workspace is resolved, so no feature mounts unscoped", async () => {
+    let settleList: (w: typeof WORKSPACES) => void = () => {};
+    list.mockReturnValue(new Promise((r) => (settleList = r)));
+    render(<ShellWithProvider />);
+    expect(screen.queryByTestId("feature")).toBeNull();
+    // [round 2, finding 3] an assertion used to sit here re-checking `feature` was still absent
+    // in the same tick as `settleList` — but resolution happens on a microtask, so nothing could
+    // have rendered yet regardless of the code under test; the check could never fail. Dropped —
+    // the trailing `waitFor` below is what actually exercises the resolve-then-land path.
+    settleList(WORKSPACES);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+  });
+
+  it("[finding 1 regression] list lands first, cold cache, server says acme — lands on acme with zero PUTs", async () => {
+    readCached.mockReturnValue(null);
+    let settleList: (w: typeof WORKSPACES) => void = () => {};
+    list.mockReturnValue(new Promise((r) => (settleList = r)));
+    let settlePrefs: (p: { slug?: string }) => void = () => {};
+    prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+    render(<ShellWithProvider />);
+    settleList(WORKSPACES);
+    // The list has landed but prefs have not — the shell must not have guessed yet. This is the
+    // exact half-state the old code got wrong: it resolved to "mine" here, wrote it into the
+    // URL, and the server's answer below could never displace it again.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument());
+    expect(replace).not.toHaveBeenCalled();
+    expect(prefsPut).not.toHaveBeenCalled();
+
+    settlePrefs({ slug: "acme" });
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    expect(prefsPut).not.toHaveBeenCalled();
+  });
+
+  it("list lands first, warm cache says mine, server says acme — lands on acme with zero PUTs", async () => {
+    readCached.mockReturnValue("mine");
+    let settlePrefs: (p: { slug?: string }) => void = () => {};
+    prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+    render(<ShellWithProvider />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument());
+    // The warm cache alone must not be enough to commit while the server's answer is pending.
+    expect(replace).not.toHaveBeenCalled();
+    expect(prefsPut).not.toHaveBeenCalled();
+
+    settlePrefs({ slug: "acme" });
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(prefsPut).not.toHaveBeenCalled();
+  });
+
+  it("[round 2] prefs land first, nothing stored — lands on the personal workspace with zero PUTs", async () => {
+    // [round 2, finding 2] this used to assert exactly one PUT here — the shell wrote the
+    // personal-workspace SEED back to the server. That is the bug: a slug the shell only
+    // guessed must never be persisted, only displayed. The spec's "if there isn't a saved
+    // workspace default to the user's workspace" makes the personal workspace a fallback for
+    // DISPLAY, not something that becomes saved.
+    readCached.mockReturnValue(null);
+    prefsGet.mockResolvedValue({}); // settles almost immediately; nothing stored
+    let settleList: (w: typeof WORKSPACES) => void = () => {};
+    list.mockReturnValue(new Promise((r) => (settleList = r)));
+
+    render(<ShellWithProvider />);
+    // Give prefs a tick to settle before the list does — resolution still needs BOTH inputs.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(replace).not.toHaveBeenCalled();
+
+    settleList(WORKSPACES);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false }));
+    // Give the persistence effect a further tick to fire before asserting it stayed silent.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(prefsPut).not.toHaveBeenCalled();
+    expect(writeCached).not.toHaveBeenCalled();
+  });
+
+  it("prefs GET rejects, warm cache says acme — lands on acme with zero PUTs", async () => {
+    readCached.mockReturnValue("acme");
+    prefsGet.mockRejectedValue(new Error("offline"));
+    render(<ShellWithProvider />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    expect(prefsPut).not.toHaveBeenCalled();
+  });
+
+  it(
+    "[round 2, finding 2 regression] prefs GET rejects, cold cache — lands on the personal " +
+      "workspace for display, but the unread server row survives (zero PUTs)",
+    async () => {
+      // Nothing in localStorage, and the prefs GET fails — so the shell cannot know what the
+      // server actually holds. It still has to land somewhere (the personal workspace, for
+      // display), but it must NOT write that guess back: a server row a request merely failed to
+      // read is not the same as "nothing saved," and overwriting it would silently destroy
+      // whatever workspace the user actually had chosen there.
+      readCached.mockReturnValue(null);
+      prefsGet.mockRejectedValue(new Error("offline"));
+      render(<ShellWithProvider />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+      // Give the persistence effect a further tick to fire before asserting it stayed silent.
+      await new Promise((r) => setTimeout(r, 0));
+      expect(prefsPut).not.toHaveBeenCalled();
+      expect(writeCached).not.toHaveBeenCalled();
+    },
+  );
+
+  it(
+    "[round 2, finding 1 regression] prefs GET never settles — after the bail timeout, lands " +
+      "on the personal workspace with zero PUTs, and the route does not wedge",
+    async () => {
+      // A dropped connection or a proxy holding the socket resolves neither `.then` nor `.catch`
+      // — before the round-2 fix, `prefsSettled` never flipped and the route rendered nothing
+      // below the picker, forever. The bail timeout bounds that wait; the pendingWrite gate (the
+      // test above) is what makes bounding it SAFE, since the forced settle can only ever affect
+      // what's displayed, never what's written.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        prefsGet.mockReturnValue(new Promise(() => {})); // never settles
+        render(<ShellWithProvider />);
+        expect(screen.queryByTestId("feature")).toBeNull();
+
+        // Flushes the 5s bail timer; wrapped in `act` so the chain of renders it triggers
+        // (prefsSettled → resolved → replace → the harness's deferred liveSetSlug → another
+        // render) is flushed rather than left pending outside React's test instrumentation.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+
+        expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false });
+        expect(screen.getByTestId("feature")).toBeInTheDocument();
+        expect(prefsPut).not.toHaveBeenCalled();
+        expect(writeCached).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[final review, parked p03] pins the bail at exactly 5000ms, not merely \"some finite " +
+      "number\"",
+    async () => {
+      // The Task 6 mutation matrix recorded p03 (the `5000` at SiteHomeShell.tsx:149-151) as
+      // pinned only in the sense of "some finite number". Verified empirically against this
+      // test in isolation: mutating 5000 → 30000 fails the AFTER assertion below (the bail
+      // hasn't actually fired by the true 5000ms mark, so `replace` is never called); mutating
+      // 5000 → 3000 fails the BEFORE assertion (it has already fired by 4999ms). Each bound
+      // alone only proves an inequality — "no later than 5000ms" or "no earlier than 5000ms" —
+      // together they pin the exact number.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        prefsGet.mockReturnValue(new Promise(() => {})); // never settles
+        render(<ShellWithProvider />);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(4999);
+        });
+        expect(screen.queryByTestId("feature")).toBeNull();
+        expect(replace).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1);
+        });
+        expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false });
+        expect(screen.getByTestId("feature")).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[round 3, finding 2 regression] the bail timer is cleared once the GET settles normally " +
+      "— zero armed timers, not one left ticking for up to 5s",
+    async () => {
+      // `clearTimeout(bail)` used to run only in the unmount cleanup, so after a NORMAL settle
+      // the 5s timer stayed armed and fired a redundant `setPrefsSettled(true)` later. Harmless
+      // today because React bails out of the resulting no-op re-render, but a timer left armed
+      // after its reason has passed is real state a later change could trip over — so this
+      // asserts the timer itself, via the fake-timer queue, rather than an absence of behavior
+      // that would stay true for the wrong reason if some other effect changed shape.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        prefsGet.mockResolvedValue({ slug: "acme" });
+        render(<ShellWithProvider />);
+
+        // The GET is already resolved; flushing by 0ms still drains the microtask queue that
+        // its `.then` runs on, without needing to reach anywhere near the 5s mark.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[round 5, matrix rows t01/u01] a mount torn down before its prefs GET settles never " +
+      "mirrors that answer into the cache",
+    async () => {
+      // The `.then`'s `!alive` return and the cleanup's `alive = false` are two halves of one
+      // guard, and the matrix found both free: deleting either left 33 green. What they prevent
+      // is a DEAD mount writing localStorage. The mirror is gated on `wroteLocally`, which is a
+      // per-mount ref — so a mount whose GET is still in flight when the user navigates away
+      // knows nothing about a write made by the mount that replaced it, and its late answer
+      // would roll the cache back to the pre-write row. That rollback is invisible until the
+      // cache is next CONSULTED, which only happens when a later read fails: the one moment
+      // nothing can correct it. Nothing that outlives the mount may touch storage.
+      readCached.mockReturnValue(null);
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      const { unmount } = render(<ShellWithProvider />);
+      await waitFor(() => expect(screen.getByTestId("picker")).toBeInTheDocument());
+      unmount();
+
+      await act(async () => {
+        settlePrefs({ slug: "mine" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(writeCached.mock.calls.flat()).toEqual([]);
+    },
+  );
+
+  it(
+    "[round 5, matrix row u02] unmounting with the prefs GET still in flight leaves no armed " +
+      "bail timer",
+    async () => {
+      // The unmount half of `clearTimeout(bail)`. Round 3 pinned the settle-path clear and round
+      // 4 the reject-path clear; this is the third arm, and the matrix found it free. Same
+      // standard as those two: assert the timer QUEUE, not an absence of behaviour that would
+      // stay true for the wrong reason. `alive = false` already makes the late callback a no-op,
+      // so the only thing left to observe is the timer itself.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        prefsGet.mockReturnValue(new Promise(() => {})); // never settles
+        const { unmount } = render(<ShellWithProvider />);
+        expect(vi.getTimerCount()).toBe(1);
+
+        unmount();
+
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[round 3, finding 3 regression] a successful prefs GET warms the cache even though " +
+      "nothing else writes",
+    async () => {
+      // No URL slug, and the cache already agrees with the server, so the persistence effect has
+      // nothing to do: `pendingWrite` starts null here (there was no explicit act — no deep link,
+      // no pick), its guard never passes, and neither a PUT nor the persistence effect's OWN
+      // cache write ever happens for this render. Before finding 3, that left the cache cold
+      // forever for exactly the users the cache exists to serve: someone who reads their
+      // preference successfully and never switches workspace on this browser. The GET's own
+      // `.then` is now the one writing it, independent of whether the persistence effect ever
+      // fires.
+      readCached.mockReturnValue("acme");
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider />);
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument(),
+      );
+      expect(writeCached).not.toHaveBeenCalled();
+
+      await act(async () => {
+        settlePrefs({ slug: "acme" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(writeCached).toHaveBeenCalledWith("acme");
+      // And confirm it really is the GET's mirror doing the writing, not the persistence effect
+      // quietly doing its usual job too.
+      expect(prefsPut).not.toHaveBeenCalled();
+    },
+  );
+
+  it("deep link wins over the stored preference — lands on acme with exactly one PUT", async () => {
+    readCached.mockReturnValue("mine");
+    render(<ShellWithProvider workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    expect(replace).not.toHaveBeenCalled();
+    await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+    expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" });
+    expect(writeCached).toHaveBeenCalledWith("acme");
+  });
+
+  it(
+    "[round 2 + round 4, finding 1 regression] deep link acme, cold cache — one PUT, and a late " +
+      "GET answering a DIFFERENT workspace neither re-fires the persistence effect nor rolls " +
+      "the cache back to its pre-PUT row",
+    async () => {
+      // Round 1 left a milder version of finding 2's bug: a cold cache meant `stored` started
+      // null, and the late `setStored` from the prefs answer re-triggered the persistence effect
+      // a second time, emitting a duplicate identical PUT. `pendingWrite` fixes this the same way
+      // it fixes the destructive case: it is cleared the first time it is consumed, so a later
+      // `stored` update cannot re-fire the effect no matter what it names.
+      readCached.mockReturnValue(null);
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider workspaceSlug="acme" />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+      expect(replace).not.toHaveBeenCalled();
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+      expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" });
+      expect(writeCached).toHaveBeenCalledTimes(1);
+
+      // The late prefs answer must not re-trigger the PERSISTENCE EFFECT, even naming a
+      // DIFFERENT workspace than the one already landed on. Wrapped in `act` so the resulting
+      // `setStored` and any effect it schedules are fully flushed before we check — a bare tick
+      // left the re-fire pending past the assertion and produced a false pass against the buggy
+      // code.
+      await act(async () => {
+        settlePrefs({ slug: "mine" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      // [round 4, finding 1] round 3 mirrored the GET's answer to the cache UNCONDITIONALLY, so
+      // this test used to assert a second write naming "mine" — it was pinning a bug. That row
+      // predates the PUT this mount just issued: the GET was in flight before the deep link was
+      // even persisted, so writing it rolls the cache back to a workspace the user is no longer
+      // on. And nothing corrects it, because the cache is consulted ONLY when a later read fails
+      // — precisely when no successful read exists to fix it. So the gate: a read never
+      // overwrites a write. One cache write total, naming what was actually chosen.
+      //
+      // `prefsPut` staying at one call is still the round-2 assertion this test was written for
+      // (the persistence effect must not re-fire on the late `setStored`); `writeCached` at one
+      // call is now BOTH that and the finding-1 rollback guard.
+      expect(prefsPut).toHaveBeenCalledTimes(1);
+      // Asserted as the whole SEQUENCE, not a count plus a last-call: what went wrong here was a
+      // second write of a specific stale value, so a red should print the sequence that was
+      // actually observed. Against the round-3 blob this reads `["acme", "mine"]`.
+      expect(writeCached.mock.calls.flat()).toEqual(["acme"]);
+    },
+  );
+
+  it(
+    "[round 4, finding 1 regression] a pick made while the prefs GET is still in flight is not " +
+      "rolled back when that GET answers a different workspace",
+    async () => {
+      // The second interleaving finding 1 measured. The user is on "mine", picks "beta", and the
+      // GET — issued at mount, before that pick existed — answers "acme" afterwards. Round 3's
+      // unconditional mirror wrote "acme" into the cache on top of the just-PUT "beta", so the
+      // next session whose GET failed would fall back to the cache and `router.replace` the user
+      // onto a workspace they had explicitly navigated away from.
+      readCached.mockReturnValue("mine");
+      list.mockResolvedValue([
+        ...WORKSPACES,
+        { slug: "beta", name: "Beta", kind: "organization" as const },
+      ]);
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider workspaceSlug="mine" />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+      // Arriving on the workspace the cache already names settles nothing on its own.
+      expect(writeCached).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Beta" }));
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledWith({ slug: "beta" }));
+      expect(writeCached).toHaveBeenCalledTimes(1);
+      expect(writeCached).toHaveBeenCalledWith("beta");
+
+      // Now the in-flight GET lands with the row as it stood BEFORE that PUT.
+      await act(async () => {
+        settlePrefs({ slug: "acme" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      // Same whole-sequence assertion as the test above. Against the round-3 blob this reads
+      // `["beta", "acme"]` — the pick, then the pre-pick row rolled back over it.
+      expect(writeCached.mock.calls.flat()).toEqual(["beta"]);
+      // And the pick is not undone anywhere else either: the URL still names it, and no second
+      // PUT was provoked.
+      expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "beta");
+      expect(prefsPut).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it(
+    "[round 5, finding 1 regression] after a local write, a history navigation to a bare URL " +
+      "re-seeds from the LOCALLY-written slug, not the late GET's older row",
+    async () => {
+      // The `setStored` half of the `wroteLocally` gate — the half round 4 shipped unasserted.
+      // Gating only `writeCachedWorkspace` and leaving `setStored` ungated left all 32 of round
+      // 4's tests green while changing where the user LANDS, which is the harm finding 1 exists
+      // to prevent, arriving through the other door.
+      //
+      // Cold cache, deep link `/home/acme`: the shell PUTs `{acme}`, caches it, and records the
+      // write. The GET — issued at mount, before that write existed — answers the pre-PUT row
+      // `mine`. Then Back lands on a URL carrying no workspace segment, so the shell has to seed
+      // one, and `known(stored)` is the seed. `stored` must still be the slug the write put
+      // there. (An unknown slug takes the identical path: `known()` rejects it, `fromUrl` is
+      // null, and the same seed branch runs.)
+      readCached.mockReturnValue(null);
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider workspaceSlug="acme" />);
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" }));
+      // The URL already named the resolution, so nothing has been replaced yet — the assertion
+      // below is about the ONE replace the history navigation provokes.
+      expect(replace).not.toHaveBeenCalled();
+
+      await act(async () => {
+        settlePrefs({ slug: "mine" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await act(async () => {
+        liveSetSlug(undefined);
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
+      expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false });
+      await waitFor(() =>
+        expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "acme"),
+      );
+    },
+  );
+
+  it(
+    "[round 4, finding 1] the mirror still warms a COLD cache when no local write has happened",
+    async () => {
+      // The finding-3 behaviour the gate must not cost: nothing in localStorage, no URL slug, so
+      // `pendingWrite` is null and the persistence effect can never fire — the GET's own mirror is
+      // the only writer there is. `wroteLocally` is false throughout, so it writes.
+      readCached.mockReturnValue(null);
+      prefsGet.mockResolvedValue({ slug: "acme" });
+
+      render(<ShellWithProvider />);
+      await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+
+      expect(writeCached).toHaveBeenCalledTimes(1);
+      expect(writeCached).toHaveBeenCalledWith("acme");
+      expect(prefsPut).not.toHaveBeenCalled();
+    },
+  );
+
+  it(
+    "[round 4, finding 1] the bail path still warms the cache when the true row arrives after " +
+      "the timeout",
+    async () => {
+      // The other behaviour the gate must not cost. The GET outruns the 5s bail, so the shell
+      // seeds and lands on the personal workspace — a guess, which is never written (0 PUTs, and
+      // `wroteLocally` stays false). When the real row finally arrives it cannot displace the
+      // guess in the URL (deliberate: the URL is a live instruction), but it MUST still warm the
+      // cache, or the very users the bail exists for keep a cold one.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        let settlePrefs: (p: { slug?: string }) => void = () => {};
+        prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+        render(<ShellWithProvider />);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false });
+        expect(writeCached).not.toHaveBeenCalled();
+
+        await act(async () => {
+          settlePrefs({ slug: "acme" });
+          await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(writeCached).toHaveBeenCalledTimes(1);
+        expect(writeCached).toHaveBeenCalledWith("acme");
+        // The late answer warms the cache and nothing else: the guess in the URL stands, and the
+        // seed is still never persisted.
+        expect(replace).toHaveBeenCalledTimes(1);
+        expect(prefsPut).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[round 4, finding 2 regression] the bail timer is cleared when the GET REJECTS too — zero " +
+      "armed timers",
+    async () => {
+      // Round 3 cleared the bail in both `.then` and `.catch`, but only the `.then` half was
+      // asserted: deleting `clearTimeout(bail)` from the `.catch` left all 27 tests green. A
+      // rejection is the path where a leftover timer is most plausible to matter, since the
+      // rejection handler is also the one that opens the seed gate.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        prefsGet.mockRejectedValue(new Error("offline"));
+        render(<ShellWithProvider />);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[round 4, finding 3] a lingering pendingWrite still writes on a RETURN navigation, once a " +
+      "late GET has moved `stored` out from under it",
+    async () => {
+      // This pins the claim the `pendingWrite` comment now makes. Deep link `/home/acme` with the
+      // cache already agreeing: the persistence effect skips on `resolved === stored` and — since
+      // round 3 — clears `pendingWrite` only AFTER that skip, so it survives. Navigate away to
+      // `beta` (nothing fires: `pendingWrite` names "acme"). A late GET answers "mine", moving
+      // `stored`. Navigate back to `acme`: the record of the original arrival is still there and
+      // the PUT it earned finally fires — later than the arrival, which is the point.
+      readCached.mockReturnValue("acme");
+      list.mockResolvedValue([
+        ...WORKSPACES,
+        { slug: "beta", name: "Beta", kind: "organization" as const },
+      ]);
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider workspaceSlug="acme" />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+      expect(prefsPut).not.toHaveBeenCalled();
+
+      // A history navigation — the URL moves with no push/replace and no pick.
+      await act(async () => {
+        liveSetSlug("beta");
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(prefsPut).not.toHaveBeenCalled();
+
+      await act(async () => {
+        settlePrefs({ slug: "mine" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(prefsPut).not.toHaveBeenCalled();
+
+      await act(async () => {
+        liveSetSlug("acme");
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+      expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" });
+    },
+  );
+
+  it(
+    "[round 3, finding 1 regression] warm cache acme, deep link /home/acme, server row mine, " +
+      'the list settles before the GET — exactly one PUT, {slug: "acme"}',
+    async () => {
+      // The exact shape finding 1 named: the cache already agrees with the deep link, but the
+      // server row still names a DIFFERENT workspace. Before the fix, `pendingWrite` cleared
+      // BEFORE the `resolved === stored` skip — so on this first (list-only) pass, `resolved
+      // ("acme") === stored ("acme")` short-circuited, but the clear had already run, throwing
+      // `pendingWrite` away. When the server's late "mine" then changed `stored`, nothing was
+      // left for the guard to match, and the PUT the user's own deep link asked for never fired.
+      readCached.mockReturnValue("acme");
+      let settleList: (w: typeof WORKSPACES) => void = () => {};
+      list.mockReturnValue(new Promise((r) => (settleList = r)));
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider workspaceSlug="acme" />);
+
+      // The list lands first — `resolved` becomes "acme" while `stored` still reads the cache's
+      // own "acme", so the persistence effect's `resolved === stored` skip fires and nothing
+      // writes yet.
+      await act(async () => {
+        settleList(WORKSPACES);
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(prefsPut).not.toHaveBeenCalled();
+
+      // The server's answer arrives after, naming a DIFFERENT workspace than the deep link.
+      await act(async () => {
+        settlePrefs({ slug: "mine" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+      expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" });
+    },
+  );
+
+  it(
+    "[round 3, finding 1 regression] warm cache acme, deep link /home/acme, server row mine, " +
+      'the GET settles before the list — same outcome: exactly one PUT, {slug: "acme"}',
+    async () => {
+      // Mirror-image ordering of the case above, so together they pin the actual invariant:
+      // finding 1 was that the SAME user action produced opposite outcomes depending on which
+      // request won the race. Both orderings must land on exactly one PUT naming "acme".
+      readCached.mockReturnValue("acme");
+      let settleList: (w: typeof WORKSPACES) => void = () => {};
+      list.mockReturnValue(new Promise((r) => (settleList = r)));
+      let settlePrefs: (p: { slug?: string }) => void = () => {};
+      prefsGet.mockReturnValue(new Promise((r) => (settlePrefs = r)));
+
+      render(<ShellWithProvider workspaceSlug="acme" />);
+
+      // The server answers first, while `resolved` is still undefined (the list hasn't loaded,
+      // so the persistence effect's own `!resolved` guard keeps it from firing at all yet).
+      await act(async () => {
+        settlePrefs({ slug: "mine" });
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(prefsPut).not.toHaveBeenCalled();
+
+      // The list lands after — this is the pass where `resolved` first becomes "acme".
+      await act(async () => {
+        settleList(WORKSPACES);
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+      expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" });
+    },
+  );
+
+  it("[round 2] deep link to the workspace already stored — zero PUTs", async () => {
+    readCached.mockReturnValue("acme");
+    render(<ShellWithProvider workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    // Give the persistence effect a further tick to fire before asserting it stayed silent.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(prefsPut).not.toHaveBeenCalled();
+    expect(writeCached).not.toHaveBeenCalled();
+  });
+
+  it("[finding 2 regression] user picks acme from mine — exactly one cache write and one PUT, both acme, no intermediate mine", async () => {
+    // The cache already agrees with the URL, so landing on "mine" settles nothing on its own —
+    // the only write this test should see is the one caused by the pick below.
+    readCached.mockReturnValue("mine");
+    render(<ShellWithProvider workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    expect(prefsPut).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+    expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" });
+    expect(writeCached).toHaveBeenCalledTimes(1);
+    expect(writeCached).toHaveBeenCalledWith("acme");
+  });
+
+  it(
+    "[round 2] two picks in quick succession — only the second (beta) is written, with no " +
+      "intermediate acme",
+    async () => {
+      // Both clicks fire synchronously, before either router.push's deferred URL update lands.
+      // `pendingWrite` is overwritten by the second pick before the first's URL update ever
+      // renders, so the persistence effect's `pendingWrite !== resolved` guard rejects that
+      // transient "acme" render and only the final "beta" is ever written.
+      readCached.mockReturnValue("mine");
+      list.mockResolvedValue([...WORKSPACES, { slug: "beta", name: "Beta", kind: "organization" as const }]);
+      render(<ShellWithProvider workspaceSlug="mine" />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+      fireEvent.click(screen.getByRole("button", { name: "Beta" }));
+
+      await waitFor(() => expect(prefsPut).toHaveBeenCalledTimes(1));
+      expect(prefsPut).toHaveBeenCalledWith({ slug: "beta" });
+      expect(writeCached).toHaveBeenCalledTimes(1);
+      expect(writeCached).toHaveBeenCalledWith("beta");
+    },
+  );
+
+  it("an unknown URL slug is replaced with the stored preference, with zero PUTs", async () => {
+    readCached.mockReturnValue("acme");
+    render(<ShellWithProvider workspaceSlug="zzz" />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+    expect(prefsPut).not.toHaveBeenCalled();
+  });
+
+  it("[round 2] back button from acme to mine — zero PUTs", async () => {
+    // The URL changes (as the browser's back button does) with no pick and no push/replace call
+    // — `pendingWrite` was already cleared by acme's own landing, so it cannot match "mine" and
+    // the persistence effect stays inert. The spec's fallback is for arrival, not for reversal:
+    // going back must not re-persist the workspace you're leaving.
+    readCached.mockReturnValue("acme");
+    render(<ShellWithProvider workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    expect(prefsPut).not.toHaveBeenCalled();
+
+    act(() => {
+      liveSetSlug("mine");
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "mine"),
+    );
+    // Give the persistence effect a further tick to fire before asserting it stayed silent.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(prefsPut).not.toHaveBeenCalled();
+    expect(writeCached).not.toHaveBeenCalled();
+  });
+
+  it("with no slug, resolves to the stored preference over the personal workspace", async () => {
+    readCached.mockReturnValue("acme");
+    render(<ShellWithProvider />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+  });
+
+  it("drops a stored slug that is no longer in the list", async () => {
+    readCached.mockReturnValue("gone");
+    render(<ShellWithProvider />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false }));
+  });
+
+  it("an unknown slug in the URL, with nothing stored, falls to the personal workspace", async () => {
+    render(<ShellWithProvider workspaceSlug="nope" />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/mine", { scroll: false }));
+  });
+
+  it("mounts children once the URL matches the resolved workspace", async () => {
+    render(<ShellWithProvider workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+  });
+
+  it(
+    "[round 5, matrix row d06] children stay unmounted while the URL still disagrees with the " +
+      "resolution, not merely while it is undecided",
+    async () => {
+      // The children guard has three conjuncts and only the `resolved !== undefined` one was
+      // pinned: dropping `resolved === workspaceSlug` left 33 green, because every other test
+      // lets the harness's replace feed the URL back within a microtask, so the disagreement
+      // never lasts long enough to observe. The real router's does last — a navigation is not
+      // instantaneous — and the feature underneath reads its workspace from the route, so
+      // mounting it against a URL that names a different workspace (or none) scopes its first
+      // fetch to the wrong one. `resolved !== undefined` cannot cover this: `resolved` is a
+      // decided string here, and it is exactly the URL that has not caught up.
+      routerFeedsBack = false;
+      readCached.mockReturnValue("acme");
+      prefsGet.mockResolvedValue({ slug: "acme" });
+
+      render(<ShellWithProvider />);
+      await waitFor(() => expect(replace).toHaveBeenCalledWith("/home/acme", { scroll: false }));
+      expect(screen.getByTestId("picker")).toHaveAttribute("data-selected", "acme");
+      expect(screen.queryByTestId("feature")).toBeNull();
+
+      // Let the URL land. Same resolution, now agreed with — and only now does it mount.
+      await act(async () => {
+        liveSetSlug("acme");
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(screen.getByTestId("feature")).toBeInTheDocument();
+    },
+  );
+
+  it("empty workspace list — the empty-state hint, no replace, no PUT", async () => {
+    list.mockResolvedValue([]);
+    render(<ShellWithProvider />);
+    await waitFor(() => expect(screen.getByText(/no workspaces/i)).toBeInTheDocument());
+    expect(screen.queryByTestId("feature")).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
+    expect(prefsPut).not.toHaveBeenCalled();
+  });
+});
+
+describe("SiteHomeShell picker mounts", () => {
+  /** Stands in for AdhHeader: registers a div as the centre slot. */
+  function HeaderSlot() {
+    const register = useHeaderCenterRegister();
+    return <div data-testid="header-center" ref={register} />;
+  }
+
+  it(
+    "[round 5, matrix row s03] a picked workspace navigates under the CURRENT basePath, not the " +
+      "one captured at mount",
+    async () => {
+      // `basePath` is a documented prop — the shell is meant to be mounted under whatever base a
+      // site gives it — yet nothing pinned `onSelect`'s dependency on it: emptying that array
+      // left 36 green, because every other test mounts one shell at one base. This is the only
+      // green row in the matrix whose inertness rested on a CONVENTION (one shell per base
+      // route) rather than something the types or the control flow forbid, so it gets an
+      // assertion instead of a ruling.
+      const { rerender } = render(<ShellWithProvider workspaceSlug="mine" />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+      rerender(<ShellWithProvider workspaceSlug="mine" basePath="/work" />);
+      fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+
+      expect(push).toHaveBeenCalledWith("/work/acme", { scroll: false });
+    },
+  );
+
+  it(
+    "[final review, I-1] with no HeaderCenterProvider above it, mounts only the toolbar " +
+      "picker and warns in dev",
+    async () => {
+      // The ONE test in this file that deliberately renders <Shell> bare — every other mount
+      // goes through ShellWithProvider above, matching AdhAppShell's real wiring. This is the
+      // gap that wiring leaves uncovered: no provider at all, which useHeaderCenter() cannot
+      // tell apart from "provider mounted, nothing registered yet" without the `provided` flag
+      // SiteHomeShell now reads to decide whether to warn.
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const { container } = render(<Shell workspaceSlug="mine" />);
+        await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+        // No provider ⇒ useHeaderCenter() reads null ⇒ the portal branch never renders at all —
+        // there is no `.adh-home__header-picker` anywhere, not merely an empty one.
+        expect(container.querySelector(".adh-home__header-picker")).toBeNull();
+        // The toolbar copy needs no provider, so it still mounts — and with the portal absent,
+        // it is the ONLY picker on the page.
+        const toolbar = container.querySelector(".adh-home__toolbar");
+        expect(toolbar).not.toBeNull();
+        expect(screen.getAllByTestId("picker")).toHaveLength(1);
+        expect(toolbar).toContainElement(screen.getByTestId("picker"));
+
+        // And the dev-only warning fired once, naming the missing provider and the consequence.
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const [message] = warnSpy.mock.calls[0]!;
+        expect(String(message)).toContain("HeaderCenterProvider");
+        expect(String(message)).toContain("768px");
+      } finally {
+        warnSpy.mockRestore();
+      }
+    },
+  );
+
+  it("renders the picker TWICE from one list — portaled into the header, and in the toolbar", async () => {
+    render(
+      <HeaderCenterProvider>
+        <HeaderSlot />
+        <Shell workspaceSlug="mine" />
+      </HeaderCenterProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    const pickers = screen.getAllByTestId("picker");
+    expect(pickers).toHaveLength(2);
+    // One of them is INSIDE the header slot — that is the portal, not a second render path.
+    expect(screen.getByTestId("header-center")).toContainElement(pickers[0]!);
+    // Both came from a single fetch.
+    expect(list).toHaveBeenCalledTimes(1);
+
+    // The shell renders <WorkspacePicker> from TWO separate JSX expressions — the toolbar copy
+    // and the portaled one — so each of their props is independently mutable. The toolbar copy
+    // is `.adh-home__toolbar`, which CSS hides above 768px, making the PORTALED copy the one
+    // every desktop user sees and clicks. Assert its three props here: without this, dropping
+    // `selected`, `onSelect` or `workspaces` from the portal ships a header chooser that reads
+    // "no workspace", does nothing on click, or lists nothing — and the suite stays green,
+    // because every other test in this file asserts through the toolbar copy.
+    const portaled = pickers[0]!;
+    expect(portaled).toHaveAttribute("data-selected", "mine");
+    expect(
+      within(portaled)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["My Workspace", "Acme"]);
+    fireEvent.click(within(portaled).getByRole("button", { name: "Acme" }));
+    expect(push).toHaveBeenCalledWith("/home/acme", { scroll: false });
+  });
+
+  it("selecting a workspace pushes the URL, and the settled effect writes the cache and the server", async () => {
+    render(<ShellWithProvider workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    // onSelect itself does nothing but navigate — no synchronous write.
+    expect(push).toHaveBeenCalledWith("/home/acme", { scroll: false });
+    await waitFor(() => expect(writeCached).toHaveBeenCalledWith("acme"));
+    await waitFor(() => expect(prefsPut).toHaveBeenCalledWith({ slug: "acme" }));
+  });
+
+  // Finding 4: the old version of this test could only fail if `.catch(() => {})` were deleted
+  // from the OTHER test's subject (B3, now above) — its own three assertions duplicated B3's,
+  // and its comment ("an unhandled rejection here would fail the run") was false in this
+  // vitest/jsdom config. A `process.on("unhandledRejection")` listener is the review's suggested
+  // fix, but it only fires for a genuinely un-instrumented promise — a rejection produced by
+  // `prefsPut.mockRejectedValue(...)` (a vi.fn()) never reaches it, since vi.fn()'s own
+  // `mock.results` bookkeeping attaches a handler to whatever it returns before Node's microtask
+  // queue would otherwise call it unhandled. That's why `put`'s return value above comes from
+  // `prefsPutResult`, a plain function outside any vi.fn() — set here to a genuinely rejecting
+  // promise, so this listener is a real guard on the production `.catch()`, not a vacuous one.
+  it("a failed PUT is silent — the cache still carries the choice, and nothing throws unhandled", async () => {
+    prefsPutResult = () => Promise.reject(new Error("offline"));
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      render(<ShellWithProvider workspaceSlug="mine" />);
+      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+      await waitFor(() => expect(writeCached).toHaveBeenCalledWith("acme"));
+      // Flush the rejected PUT's microtask queue before checking for an unhandled rejection.
+      await new Promise((r) => setTimeout(r, 0));
+      expect(unhandled).toHaveLength(0);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+});
+
+// The child contract itself. `children` is a FUNCTION, and these are the two properties that
+// choice buys — neither of which a ReactNode child could have had.
+describe("SiteHomeShell child scope", () => {
+  // A third test lived here and was deleted before it ever shipped: "hands the RESOLVED
+  // workspace, not the segment that was in the URL". It could not fail for that reason. The gate
+  // above the call is `resolved === workspaceSlug`, so inside it the two are the same string and
+  // no mutation can tell them apart; dropping the gate — the only way to separate them — is
+  // already caught by "children stay unmounted while the URL still disagrees" above. Mutation
+  // testing is what surfaced it: the mutation the name described turned a DIFFERENT test red and
+  // left this one green.
+
+  it("builds the scoped base from basePath, not from a hardcoded /home", async () => {
+    // The one assertion that fails if `scopedBase` is ever inlined as a literal. Nothing ships a
+    // basePath other than "/home" today, which is exactly why the concatenation needs pinning
+    // here rather than in the sites.
+    render(<ShellWithProvider basePath="/w" workspaceSlug="acme" />);
+
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    expect(screen.getByTestId("feature")).toHaveAttribute("data-scoped-base", "/w/acme");
+  });
+
+  it("never CALLS children before a workspace resolves", async () => {
+    // The stronger form of "holds children until resolved" at the top of this file: that one can
+    // only observe that nothing reached the DOM, which a node child rendered inside a hidden
+    // branch would also satisfy. Counting calls proves the site's `render` — and therefore its
+    // `parse`, and any list request its feature fires on mount — never runs unscoped.
+    let settleList: (w: typeof WORKSPACES) => void = () => {};
+    list.mockReturnValue(new Promise((r) => (settleList = r)));
+    const child = vi.fn(() => <div data-testid="feature">the feature</div>);
+
+    render(
+      <HeaderCenterProvider>
+        <SiteHomeShell basePath="/home" workspaceSlug="acme">
+          {child}
+        </SiteHomeShell>
+      </HeaderCenterProvider>,
+    );
+
+    // Several renders happen here — the prefs GET settles, state lands — with no workspace list.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(child).not.toHaveBeenCalled();
+
+    settleList(WORKSPACES);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    expect(child).toHaveBeenCalledWith({ workspaceSlug: "acme", scopedBase: "/home/acme" });
+  });
+});

@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactElement } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { ChevronsUpDown, Plus } from "lucide-react"
 
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "../components/dropdown-menu"
+import { cn } from "../lib/utils"
 
 // Faithful port of the adh.com/home resource selector —
 // hub/src/components/home/resource/ResourcePopup.tsx (+ .ecosystem-popup__*
@@ -38,6 +39,8 @@ export function PopupMenu({
   onNew,
   newLabel = "New…",
   ariaLabel,
+  icon,
+  className,
 }: {
   items: PopupMenuItem[]
   /** The focused item id, or null for "All" (nothing focused). */
@@ -48,6 +51,12 @@ export function PopupMenu({
   onNew?: () => void
   newLabel?: string
   ariaLabel: string
+  /** The trigger's affordance glyph. Defaults to the up/down chevron pair — a plain
+   *  switcher (a header workspace picker) wants a downward caret instead. */
+  icon?: ReactNode
+  /** Extra classes for the TRIGGER. Merged through `cn`, so a `w-auto` here beats the
+   *  block's own `w-full` — which is what a trigger sized to its content needs. */
+  className?: string
 }): ReactElement {
   const ALL = "__all__"
   // Fail fast on a sentinel collision — an item id of "__all__" would be
@@ -65,10 +74,15 @@ export function PopupMenu({
         {/* .ecosystem-popup__trigger */}
         <DropdownMenuTrigger
           aria-label={ariaLabel}
-          className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-apt-border bg-apt-surface px-[0.6rem] py-[0.4rem] text-[0.8rem] text-apt-text hover:border-apt-border-strong focus-visible:border-apt-gold focus-visible:outline-none"
+          className={cn(
+            "flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-apt-border bg-apt-surface px-[0.6rem] py-[0.4rem] text-[0.8rem] text-apt-text hover:border-apt-border-strong focus-visible:border-apt-gold focus-visible:outline-none",
+            className,
+          )}
         >
           <span className="truncate">{label}</span>
-          <ChevronsUpDown size={13} aria-hidden className="shrink-0 text-apt-text-muted" />
+          {icon ?? (
+            <ChevronsUpDown size={13} aria-hidden className="shrink-0 text-apt-text-muted" />
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"

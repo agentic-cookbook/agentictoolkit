@@ -3,6 +3,9 @@ import { AppErrorBoundary } from './AppErrorBoundary'
 import { DevAnimScale } from './DevAnimScale'
 import { HierarchicalDetailViewFlag } from './HierarchicalDetailViewFlag'
 import { HtdvLayoutLogSwitch } from './HtdvLayoutLogSwitch'
+// PRESERVED IMPORT — do not rewrite to '../header/HeaderCenter'. This entry mounts the PROVIDER
+// whose context the `home` entry's consumer reads; a relative specifier would give each its own.
+import { HeaderCenterProvider } from '@agentic-toolkit/adh/header/HeaderCenter'
 
 export type AdhAppShellProps = {
   /** The site header (e.g. adh's <SiteHeader siteId=… />), supplied by the host so it can
@@ -59,16 +62,21 @@ export function AdhAppShell({ header, children, footer, devTools = false }: AdhA
           console's stack hangs off the header's site menu, so a provider around <main> alone
           would leave it on the other view. */}
       <HierarchicalDetailViewFlag>
-        <div className="adh-app-shell">
-          {header}
-          <main className="adh-app-shell__main">
-            {/* Catches client render crashes in the page and reports them while keeping the
-                header/footer intact. The host mounts its telemetry provider ABOVE this shell,
-                so the SDK is initialised before the boundary can catch anything. */}
-            <AppErrorBoundary>{children}</AppErrorBoundary>
-          </main>
-          {footer}
-        </div>
+        {/* Wraps the header AND `children`, because that is the whole point: the header
+            REGISTERS its centre element here and a route inside `children` PORTALS into it. A
+            provider around <main> alone would never see the div. */}
+        <HeaderCenterProvider>
+          <div className="adh-app-shell">
+            {header}
+            <main className="adh-app-shell__main">
+              {/* Catches client render crashes in the page and reports them while keeping the
+                  header/footer intact. The host mounts its telemetry provider ABOVE this shell,
+                  so the SDK is initialised before the boundary can catch anything. */}
+              <AppErrorBoundary>{children}</AppErrorBoundary>
+            </main>
+            {footer}
+          </div>
+        </HeaderCenterProvider>
       </HierarchicalDetailViewFlag>
     </>
   )

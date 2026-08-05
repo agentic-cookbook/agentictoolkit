@@ -36,6 +36,11 @@
       "development": "./src/header/recents.ts",
       "import": "./dist/header/recents.js"
     },
+    "./header/HeaderCenter": {
+      "types": "./dist/header/HeaderCenter.d.ts",
+      "development": "./src/header/HeaderCenter.tsx",
+      "import": "./dist/header/HeaderCenter.js"
+    },
     "./header-auth": {
       "types": "./dist/header/header-auth.d.ts",
       "development": "./src/header/header-auth.ts",
@@ -130,6 +135,11 @@
       "types": "./dist/help/HelpMasterDetail.d.ts",
       "development": "./src/help/HelpMasterDetail.tsx",
       "import": "./dist/help/HelpMasterDetail.js"
+    },
+    "./home": {
+      "types": "./dist/home/index.d.ts",
+      "development": "./src/home/index.ts",
+      "import": "./dist/home/index.js"
     },
     "./docs": {
       "types": "./dist/docs/index.d.ts",
@@ -239,6 +249,7 @@
     "@agentic-toolkit/api-explorer": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/bitbag": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
     "@agentic-toolkit/markdown": "workspace:*",
     "@agentic-toolkit/themes": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",

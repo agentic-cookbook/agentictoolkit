@@ -1,18 +1,15 @@
 "use client";
 
 import { useCallback, type ReactElement, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { FolderKanban, ListTodo, Activity, Building2, KeyRound, User } from "lucide-react";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { FolderKanban, ListTodo, Activity, KeyRound } from "lucide-react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
-import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { projectsApi } from "@agentic-toolkit/data/projects";
+import { useResourceList } from "@agentic-toolkit/data";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
@@ -25,8 +22,11 @@ import { type BadgeVariant } from "./helpers";
  * + the "All" landing, then the topics scoped to the selected project. New lives
  * in the resource rail's leading slot; Delete arrives with the full Overview pane
  * (T3). Shared selection/URL wiring lives in ResourceExplorer; this file supplies the
- * project-specific topics, landing, and create dialog. Rendered by the
- * /[slug]/projects/[[...path]] route and the /home workspace launcher.
+ * project-specific topics, landing, and create dialog. Rendered by the hub's
+ * /[slug]/projects/[[...path]] route and by a feature site's /home, where
+ * @agentic-toolkit/adh/home's SiteHomeShell picks the workspace and mounts this at
+ * /home/<slug>. Either way the workspace arrives as a prop — this feature does not know
+ * that a workspace can live in a URL.
  *
  * Overview is the full ProjectOverviewPane (settings + participants, T3); Work
  * Items hosts the five interchangeable views (List / Board / Table / Timeline /
@@ -117,86 +117,34 @@ export function ProjectsFeature({
   activeTopic,
   activeLeafId,
   workspaceSlug,
-  showWorkspaces = false,
   renderTransferOwnership,
 }: {
-  /** The feature's URL base (drives the routes + the list cache key): the hub passes
-   *  `/<slug>/projects`, the projects site passes `/home`. Supplied by the host route
-   *  rather than derived here, so the same feature mounts under either scheme. */
+  /** The feature's URL base (drives the routes + the list cache key), WORKSPACE INCLUDED: the
+   *  hub passes `/<slug>/projects`, a feature site passes `/home/<slug>`. Supplied by the host
+   *  route rather than derived here, so the same feature mounts under either scheme — and so
+   *  switching workspace can never show the previous one's projects, since the workspace is
+   *  part of the cache key. */
   basePath: string;
   all?: boolean;
   activeProjectId?: string;
   activeTopic?: string;
   activeLeafId?: string;
-  /** Pins list/create to the WORKSPACE'S owning principal (backend `?workspace=`),
-   *  so an org workspace shows the ORG'S projects and creates org-owned ones.
-   *  Omitted: the caller's ownership reach (owned + participating). */
+  /** Pins list/create to the WORKSPACE'S owning principal (backend `?workspace=`), so an org
+   *  workspace shows the ORG'S projects and creates org-owned ones. Omitted: the caller's
+   *  ownership reach (owned + participating). Choosing the workspace is the HOST's job —
+   *  the hub's route segment, or @agentic-toolkit/adh/home's SiteHomeShell. */
   workspaceSlug?: string;
-  /** Lead the stack with a WORKSPACES list (the caller's personal workspace + their orgs), which
-   *  scopes the project list under it. This is how a feature SITE gets the scope the hub gets from
-   *  its `/<slug>/…` route: there the workspace is a path segment and the shell already renders the
-   *  rail, so the hub leaves this false and passes `workspaceSlug` straight from the URL. With it
-   *  on, the workspace is the FIRST segment under `basePath` (`/home/<slug>/<project>/<topic>`). */
-  showWorkspaces?: boolean;
   /** Host-injected Transfer Ownership section for the OPEN project, forwarded to the Overview
    *  topic's pane (see {@link ProjectOverviewPane}'s own prop for what it is handed). Omit it and
    *  the pane renders no section — the host, not this feature, owns the workspace list and the
    *  mutation. */
   renderTransferOwnership?: (project: { id: string; name: string }) => ReactNode;
 }): ReactElement {
-  const router = useRouter();
-
-  // The workspaces list — only fetched by a host that shows it (the hub's shell already owns one,
-  // and would otherwise pay for a list it never renders). The `load` identity is what drives the
-  // fetch, so gating it here (rather than the hook call) keeps the hook order unconditional.
-  const loadWorkspaces = useCallback(
-    () => (showWorkspaces ? workspacesApi.list() : Promise.resolve([])),
-    [showWorkspaces],
-  );
-  const { items: workspaces } = useResourceList(`${basePath}::workspaces`, loadWorkspaces);
-
-  // An unknown workspace slug (a stale link, or the old `/home/all` grammar) falls back to NO
-  // selection once the list has loaded — the same `knownId` rule the resource list uses — rather
-  // than scoping the projects to a workspace the backend will 404. While the list is still loading
-  // the slug is taken at face value, so a deep link doesn't flash the "select a workspace" hint.
-  const knownWorkspace =
-    workspaces === null || workspaces.some((w) => w.slug === workspaceSlug);
-  const activeWorkspace = knownWorkspace ? workspaceSlug : undefined;
-
-  // The principal every project read/write is pinned to. On a workspaces-led site that is the
-  // SELECTED workspace (nothing is listed until one is chosen); on the hub it is the route's slug.
-  const scopeSlug = showWorkspaces ? activeWorkspace : workspaceSlug;
-  const scopePending = showWorkspaces && !scopeSlug;
-
   const loadProjects = useCallback(
-    () => (scopePending ? Promise.resolve([] as Project[]) : projectsApi.list({ workspace: scopeSlug })),
-    [scopeSlug, scopePending],
+    () => projectsApi.list({ workspace: workspaceSlug }),
+    [workspaceSlug],
   );
-  // The projects live UNDER the workspace, so the workspace is part of their URL base — and of the
-  // list's cache key, so switching workspace can never show the previous one's projects.
-  const projectsBase = showWorkspaces && scopeSlug ? `${basePath}/${scopeSlug}` : basePath;
-  const { items: projects, reload } = useResourceList(projectsBase, loadProjects);
-
-  const workspaceLevel: TopicLevel | null = showWorkspaces
-    ? {
-        id: "workspace",
-        title: "Workspaces",
-        items: (workspaces ?? []).map((w) => ({
-          id: w.slug,
-          label: w.name,
-          icon:
-            w.kind === "organization" ? (
-              <Building2 size={16} aria-hidden />
-            ) : (
-              <User size={16} aria-hidden />
-            ),
-        })),
-        selectedId: activeWorkspace ?? null,
-        onSelect: (slug) => router.push(`${basePath}/${slug}`, { scroll: false }),
-        onClear: () => router.push(basePath, { scroll: false }),
-        emptyLabel: workspaces === null ? "Loading…" : "No workspaces.",
-      }
-    : null;
+  const { items: projects, reload } = useResourceList(basePath, loadProjects);
 
   // Entity-first topics (FTD): the project Overview, then Work Items (the view
   // switcher) and Activity — all real panes.
@@ -249,12 +197,12 @@ export function ProjectsFeature({
       icon: <KeyRound size={16} aria-hidden />,
       // The per-item share panel (docs/workspace-roles-permissions.md): restriction
       // mode + item-scoped role assignments + the effective-permission explainer.
-      // Needs the owning workspace (scopeSlug) — on a workspaces-led site a project
-      // is only ever rendered under a selected workspace, so both are defined here.
+      // Needs the owning workspace — the host always supplies it under /home and
+      // under the hub's /<slug>/projects, so both are defined here.
       render: (projectId, titleFor) =>
-        projectId && scopeSlug ? (
+        projectId && workspaceSlug ? (
           <ItemAccessPanel
-            workspaceSlug={scopeSlug}
+            workspaceSlug={workspaceSlug}
             feature="projects"
             itemId={projectId}
             itemLabel={(projects ?? []).find((p) => p.id === projectId)?.name}
@@ -271,13 +219,9 @@ export function ProjectsFeature({
       activeId={activeProjectId}
       activeTopic={activeTopic}
       activeLeafId={activeLeafId}
-      basePath={projectsBase}
+      basePath={basePath}
       items={projects}
       reload={reload}
-      leadingLevels={workspaceLevel ? [workspaceLevel] : undefined}
-      leadingPlaceholder={
-        <TopicSelectHint title="Select a workspace to see its projects." />
-      }
       getId={(p) => p.id}
       getLabel={(p) => p.name}
       nameSuffix="Project"
@@ -303,7 +247,7 @@ export function ProjectsFeature({
                 name: d.name.trim(),
                 description: d.description.trim() || undefined,
               },
-              { workspace: scopeSlug },
+              { workspace: workspaceSlug },
             )
           }
           onClose={onClose}

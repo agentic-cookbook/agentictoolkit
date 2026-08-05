@@ -48,3 +48,12 @@ export { useResourceList, makeEntityDeleteHandler, type ResourceList } from "./u
 // The caller's owner-scopable workspaces (personal + orgs) — the root of a feature
 // site's stack, and what `?workspace=<slug>` pins a list/create to.
 export { workspacesApi, type Workspace } from "./workspaces";
+
+// Which of those workspaces the user last chose — the server row that makes the choice follow
+// them across the family's many domains, plus its per-browser localStorage cache.
+export {
+  workspacePrefsApi,
+  readCachedWorkspace,
+  writeCachedWorkspace,
+  type WorkspacePrefs,
+} from "./workspace-prefs";

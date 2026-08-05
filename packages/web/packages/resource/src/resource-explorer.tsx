@@ -98,8 +98,6 @@ export function ResourceExplorer<T>({
   landing,
   newLabel,
   renderDialog,
-  leadingLevels,
-  leadingPlaceholder,
   reload,
 }: {
   all?: boolean;
@@ -140,15 +138,6 @@ export function ResourceExplorer<T>({
    *  `promoteTopics` mode, where the "New" affordance lives on the promoted resource-list topic
    *  (which owns its own dialog) rather than on a top-level rail. */
   renderDialog?: (onClose: () => void, onCreated: (id: string) => void) => ReactNode;
-  /** Levels to prepend ABOVE the resource list — the scope the resource list is read in (a feature
-   *  site's Workspaces list). They are part of the SAME stack (one breadcrumb, one fit controller),
-   *  so the host must not render a competing rail. Each one's selection is the caller's to route.
-   *  On the hub these are absent: the workspace shell already owns those outer levels. */
-  leadingLevels?: TopicLevel[];
-  /** The detail shown while a leading level has no selection (e.g. "Select a workspace."). The
-   *  resource list can't be read until every leading level is chosen, so this — not the "All"
-   *  landing — is what the frontier's pane holds. */
-  leadingPlaceholder?: ReactNode;
   /** Re-fetch the resource list. Awaited after a CREATE, before routing to the new id: the list is
    *  fetched once per mount, so without this the new row isn't in `items`, `knownId` is false, and
    *  the fallback below would land the user on the "All" landing — the resource they just created
@@ -262,16 +251,7 @@ export function ResourceExplorer<T>({
     },
   };
   // promoteTopics (Ecosystem): the topics ARE the first rail — no resource list, no "All".
-  // Leading levels (a feature site's Workspaces list) sit ABOVE the resource list: they are the
-  // scope it is read in, so they lead the same one stack rather than being a rail of their own.
-  const levels: TopicLevel[] = [
-    ...(leadingLevels ?? []),
-    ...(promoteTopics ? [topicLevel] : [resourceLevel, topicLevel]),
-  ];
-  // Until every leading level is chosen there is no scope to list the resources in, so the frontier
-  // is a leading level and its pane holds the placeholder (not the "All" landing, which would claim
-  // to show "all" of an unscoped, unfetched list).
-  const leadingPending = (leadingLevels ?? []).some((l) => l.selectedId == null);
+  const levels: TopicLevel[] = promoteTopics ? [topicLevel] : [resourceLevel, topicLevel];
 
   // DUAL MODE: inside a rail host (the hub's one-rail workspace shell), PUBLISH the resource + topic
   // levels into the host's one merged HierarchicalTopicDetail (the breadcrumb tail — workspace ▸
@@ -314,9 +294,7 @@ export function ResourceExplorer<T>({
   // "pick a topic" placeholder once an entity is selected but no topic is, else the topic's pane
   // (keyed by scopedId so a resource switch remounts it).
   const content =
-    leadingPending ? (
-      (leadingPlaceholder ?? <TopicSelectHint title="Select a workspace." />)
-    ) : promoteTopics && !scopedId ? (
+    promoteTopics && !scopedId ? (
       // Default resource still resolving (or the tenant has none): hold the frontier.
       <EmptyState title="Loading…" />
     ) : isAll && landing ? (

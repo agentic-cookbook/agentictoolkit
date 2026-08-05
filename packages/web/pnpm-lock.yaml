@@ -41,6 +41,9 @@ importers:
       '@agentic-toolkit/bitbag':
         specifier: workspace:*
         version: link:../features/bitbag
+      '@agentic-toolkit/data':
+        specifier: workspace:*
+        version: link:../data
       '@agentic-toolkit/markdown':
         specifier: workspace:*
         version: link:../markdown
