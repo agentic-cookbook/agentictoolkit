@@ -7,8 +7,10 @@ import { cva, type VariantProps } from 'class-variance-authority'
  * rail (@agentic-toolkit/adh DetailsRail). A left-accent-border pill: muted by
  * default, with a left marker, a dim fill, and matching text when active.
  *
- * All three active parts read `apt-highlight`, the family's "this is the current
- * item" colour, so they can never drift apart. It defaults to --color-primary —
+ * Every part that marks the current item reads `apt-highlight`, the family's "this is
+ * the current item" colour, so they can never drift apart — the active row's marker,
+ * fill and text, and the left marker an inactive row shows on `focus-visible`, which is
+ * the same marker in the keyboard's version of the same state. It defaults to --color-primary —
  * the unambiguous brand gold, which on the details pages the M3 runtime also
  * resolves --color-accent to — so this still reproduces the rail's former
  * hand-rolled --cg-accent styling exactly and stays gold everywhere else (where
@@ -24,7 +26,7 @@ export const railLinkVariants = cva(
       active: {
         true: 'border-l-apt-highlight bg-apt-highlight/15 text-apt-highlight',
         false:
-          'text-apt-text-muted hover:bg-apt-surface-2 hover:text-apt-text focus-visible:border-l-apt-gold focus-visible:bg-apt-surface-2 focus-visible:text-apt-text',
+          'text-apt-text-muted hover:bg-apt-surface-2 hover:text-apt-text focus-visible:border-l-apt-highlight focus-visible:bg-apt-surface-2 focus-visible:text-apt-text',
       },
       /** A nested/child row — indented and slightly smaller (the details rail's
        *  leaf topics). Wrap the result in `cn()` so tailwind-merge collapses the

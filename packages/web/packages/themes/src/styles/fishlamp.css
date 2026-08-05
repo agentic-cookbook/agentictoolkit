@@ -43,14 +43,16 @@
  * anchors at a line start or after a comma. An indented one inside @media would survive
  * unrewritten into a scoped preview and match nothing there, with no error.
  *
- * `--focus-ring-width` is left alone on purpose: the light contrast rules set it to 3px,
- * and a user who asked for high contrast should keep the thicker ring. Only the colours
- * are overridden.
- *
  * One selector list, one copy of the palette: there is no second block to drift.
- * (Dark + high contrast is still left to accessibility.css's html[data-contrast=high],
- * (0,2,1), which outranks this list's dark selector and raises text contrast. That is the
- * a11y system working as designed, identically to every other theme, and it stays.) */
+ *
+ * Naming the contrast selectors here means this theme now OWNS the contrast axis and
+ * must answer it: see the `=== Contrast ===` rules below the palette. An earlier version
+ * of this comment claimed dark + high contrast could be left to accessibility.css's
+ * `html[data-contrast=high]` because that selector was "(0,2,1)". It is (0,1,1) — one
+ * type (`html`) and one attribute, with nothing to supply the second class-column unit —
+ * so it TIES this list's `html:root` rather than outranking it, and loses on source
+ * order. Reading the arithmetic off the shape rather than counting it made High Contrast
+ * a no-op under the family default. */
 
 html:root,
 html:root[data-color-mode]:not(.dark),
@@ -225,6 +227,54 @@ html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-cont
   --font-mono: 'Iosevka', 'Iosevka Fallback Menlo', 'Iosevka Fallback Courier', ui-monospace, monospace;
   --font-display: var(--font-serif);
   --pc-font: var(--font-sans);
+}
+
+/* === Contrast ===
+ *
+ * The list above NAMES `[data-contrast=high]` and `[data-contrast=extra-high]`, so
+ * without these two rules an explicit High Contrast choice would land on the base
+ * palette and change nothing. It is not enough to stay silent and let the a11y layer
+ * through: accessibility.css's explicit-choice rule is `html[data-contrast=high]`
+ * (0,1,1), which merely TIES this theme's `html:root` and loses on source order (the
+ * compiled stylesheet is linked before every theme block), and in light mode
+ * color-mode-light.css:105 (0,4,0) would win outright and paint near-BLACK contrast
+ * text on this theme's near-black ground. So the theme has to answer the contrast axis
+ * itself, in its own palette:
+ *
+ *   html:root[data-contrast=high]                          (0,2,1) > the list's html:root       (0,1,1)
+ *                                                                  > accessibility.css:44        (0,1,1)
+ *   …[data-color-mode]:not(.dark)[data-contrast=high]      (0,4,1) = the list's same selector — later wins
+ *                                                                  > color-mode-light.css:105    (0,4,0)
+ *
+ * Only the five text/outline roles move; every hue stays ember, so high contrast reads
+ * as the same theme turned up rather than a different one. Measured against
+ * --color-surface #0b0a09: on-surface 15.74 → 18.23 → 19.78, on-surface-variant
+ * 6.97 → 10.72 → 14.23. `--focus-ring-width` is set here for the same reason the light
+ * rules set it — a user who asked for high contrast should get the thicker ring.
+ *
+ * The OS-driven "auto" case needs nothing: accessibility.css scopes it with
+ * `html:not([data-contrast=high]):not([data-contrast=extra-high])` (0,2,1), which
+ * already outranks the list's `html:root` and applies its dark values over this dark
+ * palette correctly. */
+
+html:root[data-contrast='high'],
+html:root[data-color-mode]:not(.dark)[data-contrast='high'] {
+  --color-on-surface: #fbf5ea;
+  --color-on-surface-variant: #cdbcab;
+  --color-outline: rgba(232, 163, 61, 0.38);
+  --color-outline-variant: rgba(232, 163, 61, 0.24);
+  --color-outline-strong: rgba(232, 163, 61, 0.7);
+  --focus-ring-width: 3px;
+}
+
+html:root[data-contrast='extra-high'],
+html:root[data-color-mode]:not(.dark)[data-contrast='extra-high'] {
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #e6d9c6;
+  --color-outline: rgba(245, 200, 119, 0.6);
+  --color-outline-variant: rgba(245, 200, 119, 0.4);
+  --color-outline-strong: var(--color-primary-bright);
+  --focus-ring-width: 3px;
 }
 
 /* === Site surface === */

@@ -13,8 +13,24 @@ const REPORT_ONLY = process.argv.includes('--report')
 const ADH_THEMES = ['adh', 'adh-manrope']
 
 const STYLES_DIR = new URL('../src/styles/', import.meta.url)
-const DARK_BLOCK = 'html:root {'
-const LIGHT_BLOCK = 'html:root[data-color-mode]:not(.dark) {'
+const DARK_SELECTOR = 'html:root'
+const LIGHT_SELECTOR = 'html:root[data-color-mode]:not(.dark)'
+
+/**
+ * Index of the rule whose selector LIST contains `selector` as a whole entry, or -1.
+ *
+ * Matching the literal `<selector> {` instead is what let the family's own default ship
+ * ungated: a dark-ALWAYS theme deliberately points its dark and its light selectors at
+ * ONE rule (`html:root, html:root[data-color-mode]:not(.dark), … {`), so the substring
+ * `html:root {` never appears in it and discovery below skipped the file outright — the
+ * exact hand-maintained-roster failure the comment there warns about, arrived at through
+ * a selector's shape rather than a list. An entry must therefore END at a `,` or the `{`,
+ * or the bare `html:root` probe would also match the front of `html:root[data-…]`.
+ */
+function selectorAt(css, selector) {
+  const lit = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return css.search(new RegExp(String.raw`(?:^|,)\s*${lit}\s*(?:,|\{)`, 'm'))
+}
 
 // DISCOVERED, never listed. Carrying a second hand-maintained roster here is what let the
 // 13 converted legacy themes ship ungated: they were added to the manifest and to the
@@ -28,7 +44,8 @@ async function discoverFullPaletteThemes() {
     const theme = name.slice(0, -4)
     if (ADH_THEMES.includes(theme)) continue
     const css = await readFile(new URL(name, STYLES_DIR), 'utf8')
-    if (css.includes(DARK_BLOCK) || css.includes(LIGHT_BLOCK)) found.push(theme)
+    if (selectorAt(css, DARK_SELECTOR) >= 0 || selectorAt(css, LIGHT_SELECTOR) >= 0)
+      found.push(theme)
   }
   return found
 }
@@ -127,9 +144,11 @@ function ratio(fgColor, bgColor) {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-/** Body of the first `selector { … }` rule (token blocks have no nested braces). */
+/** Body of the first rule listing `selector` (token blocks have no nested braces). A
+ *  selector cannot contain a brace, so the next `{` still opens the rule even when the
+ *  matched entry is followed by more selectors in the list. */
 function blockBody(css, selector) {
-  const at = css.indexOf(`${selector} {`)
+  const at = selectorAt(css, selector)
   if (at < 0) return null
   const open = css.indexOf('{', at)
   const close = css.indexOf('}', open)
@@ -140,6 +159,8 @@ function blockBody(css, selector) {
 // whole file. Full-palette: a dark map (its `html:root` block) and a light map (dark with
 // the `html:root[data-color-mode]:not(.dark)` block layered on top — it overrides only the
 // colors that change between modes), so both modes are checked against the same M3 pairs.
+// A dark-ALWAYS theme lists both selectors on one rule, so the two maps come out equal and
+// it is gated twice on the same palette — which is the truth about it, not a redundancy.
 const targets = []
 for (const theme of ADH_THEMES) {
   const css = await readFile(new URL(`../src/styles/${theme}.css`, import.meta.url), 'utf8')
