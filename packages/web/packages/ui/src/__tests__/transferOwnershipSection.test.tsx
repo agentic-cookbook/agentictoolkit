@@ -67,8 +67,58 @@ describe('TransferOwnershipSection', () => {
     expect(screen.getByText(/2 API tokens/)).toBeTruthy()
     expect(onConfirm).not.toHaveBeenCalled()
 
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'persona.alice.charlie' } })
     fireEvent.click(screen.getByRole('button', { name: 'Transfer' }))
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(targets[1]))
+  })
+
+  it('arms Transfer only once the object\'s own identifier is typed back exactly', async () => {
+    /**
+     * The gate {@link DeleteEntitySection} already applies, for the same reason: the destination
+     * comes from a dropdown, so the whole transfer is otherwise two clicks away from a persona
+     * leaving the workspace. Exact match — case-sensitive, untrimmed — so a near-miss reads as a
+     * near-miss rather than quietly arming.
+     */
+    const onPreview = vi.fn().mockResolvedValue({ newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
+    const onConfirm = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <TransferOwnershipSection
+        entityNoun="Persona"
+        entityLabel="persona.alice.charlie"
+        targets={targets}
+        onPreview={onPreview}
+        onConfirm={onConfirm}
+      />,
+    )
+    openSection()
+    await openMenu('Transfer Persona')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
+
+    const input = await screen.findByRole('textbox')
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+
+    // A prefix does not count...
+    fireEvent.change(input, { target: { value: 'persona.alice' } })
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+    // ...nor does a case fold...
+    fireEvent.change(input, { target: { value: 'Persona.Alice.Charlie' } })
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+    // ...nor stray whitespace, which is NOT trimmed.
+    fireEvent.change(input, { target: { value: ' persona.alice.charlie ' } })
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+
+    fireEvent.change(input, { target: { value: 'persona.alice.charlie' } })
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled()
+
+    // Backing out and re-aiming at another workspace closes the gate again: the losses just
+    // read no longer describe the transfer the armed button would run.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await openMenu('Transfer Persona')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Alice' }))
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(''))
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+    expect(onConfirm).not.toHaveBeenCalled()
   })
 
   it('names a bucket access-group loss, including principals only that layer can produce', async () => {

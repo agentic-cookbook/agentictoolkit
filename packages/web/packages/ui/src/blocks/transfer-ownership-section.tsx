@@ -4,6 +4,8 @@ import * as React from "react";
 import { ArrowRightLeft, TriangleAlert } from "lucide-react";
 import { Button } from "../components/button";
 import { Disclosure } from "../components/disclosure";
+import { Input } from "../components/input";
+import { Label } from "../components/label";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -114,7 +116,8 @@ export interface TransferOwnershipSectionProps {
  * transferring admin is admin of BOTH workspaces and is therefore the one party entitled to see
  * both sides. Access is not carried across: the target's own roles apply on arrival. Sibling of
  * {@link DeleteEntitySection}, whose confirm vocabulary this follows so every surface behaves the
- * same way.
+ * same way — including its type-to-confirm gate: the Transfer button only arms once the object's
+ * own identifier has been typed back exactly.
  */
 export function TransferOwnershipSection({
   entityNoun,
@@ -124,14 +127,23 @@ export function TransferOwnershipSection({
   onPreview,
   onConfirm,
 }: TransferOwnershipSectionProps): React.ReactElement {
+  const inputId = React.useId();
   const [disclosed, setDisclosed] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [chosen, setChosen] = React.useState<TransferTarget | null>(null);
   const [preview, setPreview] = React.useState<TransferPreviewResult | null>(null);
+  const [typed, setTyped] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const noun = entityNoun.toLowerCase();
+
+  /**
+   * Exact match: case-sensitive, no normalization or trim — same rule as
+   * {@link DeleteEntitySection}. The empty guard matters because an empty `entityLabel` would
+   * match the untouched input and arm the button with nothing typed at all.
+   */
+  const confirmed = entityLabel.length > 0 && typed === entityLabel;
 
   /**
    * The dialog is sealed only while the TRANSFER is running — never while the preflight is.
@@ -154,6 +166,7 @@ export function TransferOwnershipSection({
     previewSeq.current += 1; // orphan any preflight still in flight
     setChosen(null);
     setPreview(null);
+    setTyped("");
     setBusy(false);
     setError(null);
   }
@@ -163,6 +176,9 @@ export function TransferOwnershipSection({
     setMenuOpen(false);
     setChosen(target);
     setPreview(null);
+    // Re-arming for a DIFFERENT destination is a different authorization: the losses the user
+    // just read no longer describe this transfer, so the gate closes with them.
+    setTyped("");
     setError(null);
     setBusy(true);
     try {
@@ -178,7 +194,7 @@ export function TransferOwnershipSection({
   }
 
   async function confirm(): Promise<void> {
-    if (!chosen || busy) return;
+    if (!chosen || busy || !preview || !confirmed) return;
     setBusy(true);
     setError(null);
     try {
@@ -249,7 +265,11 @@ export function TransferOwnershipSection({
       </Disclosure>
 
       <Dialog open={chosen !== null} onOpenChange={(next) => { if (!next && !confirming) reset(); }}>
-        <DialogContent showClose={!confirming}>
+        {/* Wider than the `max-w-md` default: every line of substance here is an rdid
+            (the object's address, its new address, the value to type back), and at the
+            default width a mid-length one wraps inside itself — `persona.user.temporal-`
+            / `today.mikefullerton.charlie` reads as two strings rather than one address. */}
+        <DialogContent showClose={!confirming} className="max-w-xl">
           <DialogHeader>
             <DialogTitle>
               Transfer this {entityNoun} to {chosen?.name}?
@@ -299,11 +319,41 @@ export function TransferOwnershipSection({
             {error && <p className={cn("text-sm", "text-apt-red")}>{error}</p>}
           </div>
 
+          {/* The gate, shown only once the preflight has answered: typing it out before the
+              losses are on screen would let the user arm the button against a transfer whose
+              consequences they have not been told yet. */}
+          {preview && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={inputId} className="text-sm text-apt-text-muted">
+                Type <span className="font-mono text-apt-text">{entityLabel}</span> below to
+                confirm.
+              </Label>
+              <Input
+                id={inputId}
+                autoFocus
+                autoComplete="off"
+                spellCheck={false}
+                value={typed}
+                placeholder={entityLabel}
+                disabled={confirming}
+                onChange={(e) => setTyped(e.target.value)}
+              />
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={reset} disabled={confirming}>
               Cancel
             </Button>
-            <Button variant="destructive" size="sm" onClick={confirm} disabled={busy || !preview}>
+            {/* `warning`, not `destructive`: a transfer moves the object and drops other
+                people's access to it, but nothing is destroyed and the move can be made
+                again in the other direction. Red is reserved for what cannot be undone. */}
+            <Button
+              variant="warning"
+              size="sm"
+              onClick={confirm}
+              disabled={busy || !preview || !confirmed}
+            >
               {confirming ? "Transferring…" : "Transfer"}
             </Button>
           </DialogFooter>

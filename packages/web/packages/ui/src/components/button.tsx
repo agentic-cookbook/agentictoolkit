@@ -36,6 +36,14 @@ const buttonVariants = cva(
           "hover:bg-muted/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
           "bg-destructive/15 text-destructive hover:bg-destructive/25 focus-visible:border-destructive/40 focus-visible:ring-destructive/40",
+        // The `destructive` treatment one step down the status spectrum, for a
+        // consequential-but-not-destructive action: an ownership transfer moves an
+        // object and drops other people's access, but destroys nothing. Reads the
+        // M3 `warning` role (exposed as apt-orange by @agentic-toolkit/themes) rather
+        // than minting a second alias for it — every theme defines that role, so this
+        // needs no new token and no per-theme work.
+        warning:
+          "bg-apt-orange/15 text-apt-orange hover:bg-apt-orange/25 focus-visible:border-apt-orange/40 focus-visible:ring-apt-orange/40",
         "destructive-ghost":
           "text-destructive hover:bg-destructive/10 hover:text-destructive aria-expanded:bg-destructive/10 focus-visible:border-destructive/40 focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
