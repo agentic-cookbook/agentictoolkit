@@ -49,6 +49,36 @@ describe('UnsavedChangesAlert', () => {
     expect(screen.getByRole('button', { name: 'Stay' })).toBeInTheDocument()
   })
 
+  // Reported from the org-rename settings pane: "the Stay button should not be Red."
+  // Stay is `variant="outline"`, so its only colour-bearing classes are the input
+  // border/background and the focus ring — and the ring is the one a theme can turn
+  // red, because `destructive` autofocuses Stay and the ring is the theme accent.
+  it('keeps every alarm colour on Discard, and none of it on Stay', () => {
+    render(<UnsavedChangesAlert open onDiscard={vi.fn()} onStay={vi.fn()} />)
+    const stay = screen.getByRole('button', { name: 'Stay' })
+    const discard = screen.getByRole('button', { name: 'Discard' })
+
+    // Stay is focused the moment the alert opens, so whatever its ring is, it is on
+    // screen unprompted.
+    expect(document.activeElement).toBe(stay)
+    // Not a blanket search for "destructive": every Button carries `aria-invalid:*`
+    // destructive classes that only fire on an invalid control. These are the classes
+    // that paint unconditionally.
+    for (const red of [
+      'bg-destructive/15',
+      'text-destructive',
+      'focus-visible:ring-destructive',
+      'apt-red',
+      'ring-ring/50',
+    ]) {
+      expect(stay.className).not.toContain(red)
+    }
+    expect(stay.className).toContain('focus-visible:ring-apt-text/40')
+
+    // The pair only carries a signal if exactly one side of it is loud.
+    expect(discard.className).toContain('bg-destructive/15')
+  })
+
   it('is destructive, so Escape cannot discard', () => {
     const onDiscard = vi.fn()
     const onStay = vi.fn()

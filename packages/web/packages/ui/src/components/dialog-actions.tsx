@@ -65,6 +65,24 @@ export interface DialogActionsProps {
  * Resolving the rule in CSS makes the first painted frame the final one, leaving no
  * window to click into.
  */
+// The focus ring for a cancel button that is focused BY US on mount.
+//
+// Button's ring is `--ring`, which the theme layer aliases to `--color-primary` —
+// the accent. That is right for a ring the user asked for by tabbing, and wrong for
+// this one: `initialFocus="cancel"` paints it the instant the dialog appears, before
+// the user has chosen anything, so the accent lands on the button that does nothing.
+// In three of the 39 themes the accent IS a red — `gruvbox` #af3a03, `monokai`
+// #f92672, `terminal-split` #a8362a — and a destructive dialog is the only kind that
+// focuses cancel, so on those themes the safe button comes up wearing the same alarm
+// colour as the button beside it that destroys work. That inverts the one signal the
+// pair exists to carry.
+//
+// `--apt-text` (the on-surface foreground) is the answer because of what it is, not
+// how it looks: it is the token guaranteed to contrast with the surface the dialog
+// paints, in every theme, and it is a colour no theme uses to mean danger. Verified
+// across all 39: none resolves it to a red.
+const QUIET_FOCUS_RING = "focus-visible:border-apt-text focus-visible:ring-apt-text/40"
+
 export function DialogActions({
   cancelLabel,
   onCancel,
@@ -139,7 +157,7 @@ export function DialogActions({
           variant="outline"
           size="sm"
           onClick={onCancel}
-          className={grow}
+          className={cn(initialFocus === "cancel" && QUIET_FOCUS_RING, grow)}
         >
           {cancelLabel}
         </Button>

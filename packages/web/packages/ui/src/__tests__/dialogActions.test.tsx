@@ -110,3 +110,74 @@ describe('DialogActions — initial focus with a disabled preferred target', () 
     expect(document.activeElement).toBe(document.body)
   })
 })
+
+/**
+ * The focus ring on a cancel button we focused ourselves.
+ *
+ * `initialFocus="cancel"` (which `destructive` forces) lands focus on Cancel as the
+ * dialog mounts, so its ring is painted before the user has chosen anything. Button's
+ * ring is `--ring` = the theme's accent, and three of the 39 themes make that accent a
+ * red — which would put the alarm colour on the button that does NOTHING, beside a
+ * confirm that is red because it destroys work.
+ *
+ * jsdom resolves no cascade, so the assertion is on the class the button carries, not
+ * on a computed colour. That is the whole surface of the fix: the ring utilities are
+ * the only colour-bearing classes on this button that a theme can turn red.
+ */
+describe('DialogActions — the cancel button we autofocus', () => {
+  const RING = 'focus-visible:ring-apt-text/40'
+  const BORDER = 'focus-visible:border-apt-text'
+
+  it('overrides the accent ring when it is the button taking initial focus', () => {
+    render(
+      <DialogActions
+        cancelLabel="Stay"
+        onCancel={vi.fn()}
+        confirmLabel="Discard"
+        onConfirm={vi.fn()}
+        destructive
+      />,
+    )
+    const stay = screen.getByRole('button', { name: 'Stay' })
+    expect(document.activeElement).toBe(stay)
+    expect(stay.className).toContain(RING)
+    expect(stay.className).toContain(BORDER)
+    // tailwind-merge keeps the last of a conflicting pair; the accent ring must be GONE
+    // from the class list, not merely losing to source order in the cascade.
+    expect(stay.className).not.toContain('ring-ring/50')
+    expect(stay.className).not.toContain('focus-visible:border-ring')
+  })
+
+  it('leaves the accent ring alone on a cancel button that is NOT autofocused', () => {
+    // Confirm takes focus here, so Cancel only ever rings because the user tabbed to it —
+    // the case the accent ring is for.
+    render(
+      <DialogActions
+        cancelLabel="Cancel"
+        onCancel={vi.fn()}
+        confirmLabel="Save"
+        onConfirm={vi.fn()}
+      />,
+    )
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    expect(cancel.className).toContain('ring-ring/50')
+    expect(cancel.className).not.toContain(RING)
+  })
+
+  it('never moves the confirm button off the destructive ring', () => {
+    // Discard is the one thing in the dialog that SHOULD read as danger.
+    render(
+      <DialogActions
+        cancelLabel="Stay"
+        onCancel={vi.fn()}
+        confirmLabel="Discard"
+        onConfirm={vi.fn()}
+        destructive
+      />,
+    )
+    const discard = screen.getByRole('button', { name: 'Discard' })
+    expect(discard.className).toContain('text-destructive')
+    expect(discard.className).toContain('focus-visible:ring-destructive/40')
+    expect(discard.className).not.toContain(RING)
+  })
+})
