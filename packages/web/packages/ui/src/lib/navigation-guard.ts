@@ -82,3 +82,43 @@ export async function confirmNavigation(): Promise<boolean> {
   if (first.done) return true
   return await first.value()
 }
+
+// THE SAVE-THEN-LEAVE HOLE. A guard reads one signal — "this surface is dirty" —
+// and infers from it the thing it actually cares about, "leaving now would lose
+// work". The two come apart in exactly one place: the instant a save resolves and
+// navigates. The draft still differs from the entity the form was handed (React
+// has not re-rendered, and on a slug rename it never will — the page is leaving),
+// so `when` is still true and the guard vetoes an exit that loses nothing. The
+// user is left on a URL that no longer resolves.
+//
+// Dirtiness cannot answer this on its own: "the draft differs from what I was
+// given" is true of an abandoned edit and a just-persisted one alike. Only the
+// code that awaited the write knows which, so it says so.
+//
+// Module-scoped because one navigation is one decision (see THE PRIMARY RULE) —
+// an approval has to reach the sibling guards whose beforeunload listeners would
+// otherwise coalesce into the same native prompt.
+
+/** Wall-clock ms until the current approval lapses, or 0 for none. */
+let approvedUntil = 0
+
+/**
+ * Declare that the navigation about to be started follows a COMPLETED save, so no
+ * guard should challenge it. Call it immediately before navigating — never on a
+ * write that might still fail, and never to silence a prompt that is telling the
+ * truth.
+ *
+ * Self-expiring, and deliberately not a token to be released: the two exits it
+ * covers (unload, popstate) both end this document, so nothing would run the
+ * release. `windowMs` need only outlive the synchronous hop to the browser's
+ * navigation; a client-side push leaves the page mounted and re-arms the guard as
+ * soon as it lapses.
+ */
+export function approveNavigation(windowMs = 1000): void {
+  approvedUntil = Date.now() + windowMs
+}
+
+/** True while an {@link approveNavigation} window is open. */
+export function isNavigationApproved(): boolean {
+  return Date.now() < approvedUntil
+}

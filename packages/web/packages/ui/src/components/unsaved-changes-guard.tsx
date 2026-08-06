@@ -5,6 +5,7 @@ import * as React from "react"
 import { UnsavedChangesAlert } from "./unsaved-changes-alert"
 import {
   GUARDED_NAV_ATTR,
+  isNavigationApproved,
   isPrimaryNavigationGuard,
   registerNavigationGuard,
   subscribeNavigationGuards,
@@ -58,6 +59,11 @@ export interface UnsavedChangesGuardProps {
  * their click listeners bail on `defaultPrevented` once the primary has
  * intercepted the anchor. Primary status is live, so if the primary disarms
  * while this one is still dirty, this one takes over and arms a sentinel.
+ *
+ * A surface that navigates as the LAST step of a successful save calls
+ * `approveNavigation()` (lib/navigation-guard) first: `when` is still true at
+ * that instant — the draft has been persisted, not re-rendered — and every armed
+ * guard, this one included, would otherwise veto an exit that loses nothing.
  */
 export function UnsavedChangesGuard({
   when,
@@ -102,7 +108,7 @@ export function UnsavedChangesGuard({
     approvedRef.current = false
 
     function onBeforeUnload(e: BeforeUnloadEvent): void {
-      if (approvedRef.current) return
+      if (approvedRef.current || isNavigationApproved()) return
       e.preventDefault()
       // Chromium < 119 and some WebKit builds only honour returnValue.
       e.returnValue = ""
@@ -140,7 +146,7 @@ export function UnsavedChangesGuard({
     }
 
     function onPopState(): void {
-      if (approvedRef.current) return
+      if (approvedRef.current || isNavigationApproved()) return
       // Only the primary interposes on Back — it is the only guard that armed a
       // sentinel, so it is the only one whose popstate is the sentinel's. Read
       // live rather than closing over it: the primary can change under us.

@@ -1,7 +1,11 @@
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { UnsavedChangesGuard } from '../components/unsaved-changes-guard'
-import { confirmNavigation, GUARDED_NAV_ATTR } from '../lib/navigation-guard'
+import {
+  approveNavigation,
+  confirmNavigation,
+  GUARDED_NAV_ATTR,
+} from '../lib/navigation-guard'
 
 afterEach(() => {
   cleanup() // no globals-driven auto-cleanup is guaranteed here; unmount so the
@@ -252,5 +256,63 @@ describe('UnsavedChangesGuard — one prompt per navigation, however many are ar
     render(<TwoGuards />)
     const unloads = add.mock.calls.filter(([type]) => type === 'beforeunload')
     expect(unloads).toHaveLength(2)
+  })
+})
+
+// A guard reads "this surface is dirty" and infers "leaving now would lose work". The two
+// come apart the instant a save resolves and navigates: the draft has been PERSISTED but
+// not re-rendered — and on a rename that moves the URL, never will be — so `when` is still
+// true and the guard vetoes an exit that loses nothing. approveNavigation() is how the code
+// that awaited the write tells the guards which of the two this is.
+describe('UnsavedChangesGuard — a navigation the save itself started', () => {
+  /** Fire a cancelable beforeunload and report whether a guard vetoed it. */
+  function unloadVetoed(): boolean {
+    const evt = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(evt)
+    return evt.defaultPrevented
+  }
+
+  // The approval is module-scoped and outlives any component, so close the window
+  // explicitly rather than leaking an open one into the next test.
+  afterEach(() => approveNavigation(0))
+
+  it('vetoes an unapproved unload while dirty', () => {
+    render(<UnsavedChangesGuard when />)
+    expect(unloadVetoed()).toBe(true)
+  })
+
+  it('stands down for an approved one', () => {
+    render(<UnsavedChangesGuard when />)
+    approveNavigation()
+    expect(unloadVetoed()).toBe(false)
+  })
+
+  it('re-arms once the approval lapses', () => {
+    render(<UnsavedChangesGuard when />)
+    approveNavigation(0)
+    // Still dirty, and this unload is NOT the one the save started — the page stayed put
+    // (a client-side push), so the draft is once again worth defending.
+    expect(unloadVetoed()).toBe(true)
+  })
+
+  // Why the approval is module-scoped rather than a per-instance ref: sibling guards each
+  // keep their own beforeunload listener, and any ONE of them vetoing is enough to put the
+  // browser's native prompt in front of a save that already succeeded.
+  it('reaches sibling guards, not just the primary', () => {
+    render(
+      <>
+        <UnsavedChangesGuard when />
+        <UnsavedChangesGuard when />
+      </>,
+    )
+    approveNavigation()
+    expect(unloadVetoed()).toBe(false)
+  })
+
+  it('does not raise the confirm on the popstate of an approved navigation', () => {
+    render(<UnsavedChangesGuard when />)
+    approveNavigation()
+    fireEvent.popState(window)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
