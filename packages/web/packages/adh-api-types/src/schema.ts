@@ -1575,15 +1575,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description The address the object would take, and who would lose access */
+                /** @description Who would lose access, and the address the object holds today */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            /** @description the rdid the object would take */
-                            newId?: string | null;
                             previousId?: string | null;
                             /** @description API tokens the transfer would revoke */
                             tokens?: number;

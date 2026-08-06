@@ -74,9 +74,14 @@ function isCurrentTarget(target: TransferTarget, current?: TransferTargetRef): b
   return target.kind === current.kind;
 }
 
-/** What the server says the transfer will do. Never reconstructed on the client. */
+/**
+ * What the server says the transfer will cost. Never reconstructed on the client.
+ *
+ * No new address, deliberately. The server computes one only by writing the move, so reporting it
+ * up front would mean performing the transfer to fill in a dialog the user has not agreed to yet.
+ * The address arrives after the confirm, with the object.
+ */
 export interface TransferPreviewResult {
-  newId: string | null;
   tokens: number;
   // `via` mirrors the server's `RevokedSubject['via']` (@agentic-toolkit/data ownership) — a
   // participant seat is its own provenance, not a flavour of "direct", and neither is a bucket
@@ -110,7 +115,7 @@ export interface TransferOwnershipSectionProps {
 /**
  * Transfer an object to another workspace, from its own settings pane. A disclosure (collapsed,
  * neutral) reveals a dropdown of destinations; picking one runs a SERVER preflight and opens an
- * "Are you sure?" dialog that names the object's new address and every principal who loses access.
+ * "Are you sure?" dialog naming every principal who loses access.
  *
  * The losses are named before the transfer runs, while it can still be cancelled, because the
  * transferring admin is admin of BOTH workspaces and is therefore the one party entitled to see
@@ -147,10 +152,10 @@ export function TransferOwnershipSection({
 
   /**
    * The dialog is sealed only while the TRANSFER is running — never while the preflight is.
-   * `onPreview` mutates nothing (the server runs the real transfer and rolls it back), so a slow
-   * or hung preflight has no correctness claim on the user's ability to back out; sealing it too
-   * would trap them behind "Checking…" with no exit. `confirm()` is the only path that sets `busy`
-   * with a preview already in hand, which is what makes this derived rather than a fourth flag.
+   * `onPreview` writes nothing on the server (it reads, and only reads), so a slow or hung
+   * preflight has no correctness claim on the user's ability to back out; sealing it too would trap
+   * them behind "Checking…" with no exit. `confirm()` is the only path that sets `busy` with a
+   * preview already in hand, which is what makes this derived rather than a fourth flag.
    */
   const confirming = busy && preview !== null;
 
@@ -266,9 +271,9 @@ export function TransferOwnershipSection({
 
       <Dialog open={chosen !== null} onOpenChange={(next) => { if (!next && !confirming) reset(); }}>
         {/* Wider than the `max-w-md` default: every line of substance here is an rdid
-            (the object's address, its new address, the value to type back), and at the
-            default width a mid-length one wraps inside itself — `persona.user.temporal-`
-            / `today.mikefullerton.charlie` reads as two strings rather than one address. */}
+            (the object's address, and the value to type back), and at the default width a
+            mid-length one wraps inside itself — `persona.user.temporal-` /
+            `today.mikefullerton.charlie` reads as two strings rather than one address. */}
         <DialogContent showClose={!confirming} className="max-w-xl">
           <DialogHeader>
             <DialogTitle>
@@ -284,12 +289,6 @@ export function TransferOwnershipSection({
             {busy && !preview && <p className="text-apt-text-muted">Checking…</p>}
             {preview && (
               <>
-                {preview.newId && (
-                  <p className="text-apt-text-muted">
-                    Its new address will be{" "}
-                    <span className="font-mono text-apt-text">{preview.newId}</span>.
-                  </p>
-                )}
                 {preview.tokens > 0 && (
                   <p className="inline-flex items-start gap-1.5 text-apt-text-muted">
                     <TriangleAlert className="mt-0.5 size-4 shrink-0 text-apt-gold" aria-hidden />

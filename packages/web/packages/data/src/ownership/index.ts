@@ -22,9 +22,17 @@ export interface RevokedSubject {
   via: "role" | "team" | "direct" | "participant" | "group";
 }
 
+/**
+ * What a transfer WOULD cost, computed without performing any of it.
+ *
+ * There is deliberately no `newId`. The address the object takes in the target workspace is read
+ * back out of rows the transfer writes, so the only way to report it in advance is to perform the
+ * move and undo it — which is what this endpoint used to do, meaning merely opening the
+ * confirmation dialog executed every write. {@link TransferResult.id} carries the new address, once
+ * the user has actually confirmed.
+ */
 export interface TransferPreview {
-  /** The rdid the object will take in the target workspace. */
-  newId: string | null;
+  /** The rdid the object holds TODAY — null when it is not rdid-addressed. */
   previousId: string | null;
   /** API tokens bound to the object that will be revoked. */
   tokens: number;
@@ -54,8 +62,8 @@ export interface TransferResult {
  * destination workspace is whichever one owns that Product, which the server resolves.
  *
  * `project` and `site-group` are not rdid-addressed — their plans carry `entityType: null`, so the
- * transfer repoints an owner and re-addresses nothing. {@link TransferPreview.newId} and
- * `previousId` therefore come back null for both, and the dialog simply omits the new-address line.
+ * transfer repoints an owner and re-addresses nothing. `previousId` and {@link TransferResult.id}
+ * therefore come back null for both, and the dialog simply omits the address line.
  */
 export type TransferEntityType =
   | "persona"
@@ -85,9 +93,11 @@ export interface TransferRequest {
 }
 
 /**
- * Ownership transfer. The revoked set has exactly ONE definition, on the server — never
- * reconstruct it here. `preview` runs the real transfer inside a rolled-back transaction, so what
- * it reports is what `transfer` will do.
+ * Ownership transfer. The revoked set has exactly ONE definition, on the server — never reconstruct
+ * it here. `preview` writes nothing: it shares the transfer's resolve/authorize prologue and its
+ * read-only revocation collector, so what it reports is what `transfer` will do, and the object
+ * moves exactly once — when `transfer` is called, in a single transaction that reverts entirely if
+ * any part of it fails.
  */
 export const ownershipApi = {
   preview: (req: TransferRequest): Promise<TransferPreview> => {

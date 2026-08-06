@@ -40,7 +40,6 @@ async function openMenu(triggerName: string): Promise<void> {
 describe('TransferOwnershipSection', () => {
   it('previews before confirming and names who loses access', async () => {
     const onPreview = vi.fn().mockResolvedValue({
-      newId: 'persona.bob.charlie',
       tokens: 2,
       revoking: [{ kind: 'user' as const, id: 'u1', name: 'Dana', via: 'team' as const }],
     })
@@ -62,9 +61,11 @@ describe('TransferOwnershipSection', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
 
     await waitFor(() => expect(onPreview).toHaveBeenCalledWith(targets[1]))
-    expect(await screen.findByText(/persona\.bob\.charlie/)).toBeTruthy()
-    expect(screen.getByText(/Dana/)).toBeTruthy()
+    expect(await screen.findByText(/Dana/)).toBeTruthy()
     expect(screen.getByText(/2 API tokens/)).toBeTruthy()
+    // The dialog reports the object's CURRENT address; there is no future one to show, because the
+    // server no longer performs the move to compute it.
+    expect(screen.getAllByText('persona.alice.charlie').length).toBeGreaterThan(0)
     expect(onConfirm).not.toHaveBeenCalled()
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'persona.alice.charlie' } })
@@ -79,7 +80,7 @@ describe('TransferOwnershipSection', () => {
      * leaving the workspace. Exact match — case-sensitive, untrimmed — so a near-miss reads as a
      * near-miss rather than quietly arming.
      */
-    const onPreview = vi.fn().mockResolvedValue({ newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
+    const onPreview = vi.fn().mockResolvedValue({ tokens: 0, revoking: [] })
     const onConfirm = vi.fn().mockResolvedValue(undefined)
 
     render(
@@ -133,7 +134,6 @@ describe('TransferOwnershipSection', () => {
      * spellings and `pnpm run lint` (tsc --noEmit) fails on this object, before any test runs.
      */
     const preview: TransferPreviewResult = {
-      newId: 'storage.bob.shop.assets',
       tokens: 0,
       revoking: [
         { kind: 'organization', id: 'o1', name: 'Northwind', via: 'group' },
@@ -188,7 +188,7 @@ describe('TransferOwnershipSection', () => {
      * Keyed by slug alone these were two React children with the same key, and BOTH read as the
      * current workspace — so the one destination the user actually wanted was the disabled one.
      */
-    const onPreview = vi.fn().mockResolvedValue({ newId: null, tokens: 0, revoking: [] })
+    const onPreview = vi.fn().mockResolvedValue({ tokens: 0, revoking: [] })
     const collision = [
       { slug: 'acme', kind: 'customer' as const, name: 'Acme (personal)' },
       { slug: 'acme', kind: 'organization' as const, name: 'Acme Inc' },
@@ -266,8 +266,8 @@ describe('TransferOwnershipSection', () => {
     // The orphaned preflight answers afterwards; it must not repopulate a dismissed dialog. (This
     // half holds for free — `reset()` nulls `chosen`, which unmounts DialogContent, so there is
     // nowhere for a late answer to land. The `previewSeq` guard is what the NEXT test pins.)
-    settle({ newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
-    await waitFor(() => expect(screen.queryByText(/persona\.bob\.charlie/)).toBeNull())
+    settle({ tokens: 4, revoking: [] })
+    await waitFor(() => expect(screen.queryByText(/4 API tokens/)).toBeNull())
   })
 
   it('never shows a stale preflight in the dialog for the workspace picked after it', async () => {
@@ -314,19 +314,19 @@ describe('TransferOwnershipSection', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
     expect(await screen.findByText('Checking…')).toBeInTheDocument()
 
-    // Alice's preflight answers now, into Bob's open dialog.
+    // Alice's preflight answers now, into Bob's open dialog. Distinct token counts are what tell
+    // the two answers apart on screen.
     await act(async () => {
-      settle('alice', { newId: 'persona.alice.charlie', tokens: 9, revoking: [] })
+      settle('alice', { tokens: 9, revoking: [] })
     })
 
-    expect(screen.queryByText(/persona\.alice\.charlie/)).toBeNull()
     expect(screen.queryByText(/9 API tokens/)).toBeNull()
     expect(screen.getByText('Checking…')).toBeInTheDocument()
 
     // Bob's own answer still lands — the guard orphans the stale preflight, not the live one.
     await act(async () => {
-      settle('bob', { newId: 'persona.bob.charlie', tokens: 0, revoking: [] })
+      settle('bob', { tokens: 3, revoking: [] })
     })
-    expect(screen.getByText(/persona\.bob\.charlie/)).toBeInTheDocument()
+    expect(screen.getByText(/3 API tokens/)).toBeInTheDocument()
   })
 })
