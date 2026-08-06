@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 
 // src/home/SiteHomeShell.tsx
 import { useCallback as useCallback2 } from "react";
+import { usePathname } from "next/navigation";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
 
@@ -70,6 +71,7 @@ function useWorkspaceRoute({
   workspaces,
   workspaceSlug,
   hrefFor,
+  switchHrefFor,
   canPersist
 }) {
   const router = useRouter();
@@ -136,11 +138,17 @@ function useWorkspaceRoute({
     (slug) => {
       seededByUs = null;
       setPendingWrite(slug);
-      router.push(hrefFor(slug), { scroll: false });
+      router.push((switchHrefFor ?? hrefFor)(slug), { scroll: false });
     },
-    [hrefFor, router]
+    [hrefFor, switchHrefFor, router]
   );
   return { resolved, onSelect };
+}
+
+// src/home/workspacePathTail.ts
+function workspacePathTail(pathname, basePath) {
+  const above = basePath.split("/").filter(Boolean).length;
+  return pathname.split("/").filter(Boolean).slice(above + 1);
 }
 
 // src/home/SiteHomeShell.tsx
@@ -156,7 +164,17 @@ function SiteHomeShell({
     loadWorkspaces
   );
   const hrefFor = useCallback2((slug) => `${basePath}/${slug}`, [basePath]);
-  const { resolved, onSelect } = useWorkspaceRoute({ workspaces, workspaceSlug, hrefFor });
+  const pathname = usePathname() ?? "";
+  const switchHrefFor = useCallback2(
+    (slug) => [basePath, slug, ...workspacePathTail(pathname, basePath)].join("/"),
+    [basePath, pathname]
+  );
+  const { resolved, onSelect } = useWorkspaceRoute({
+    workspaces,
+    workspaceSlug,
+    hrefFor,
+    switchHrefFor
+  });
   return /* @__PURE__ */ jsxs2(Fragment, { children: [
     /* @__PURE__ */ jsx3(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
     error !== null && workspaces === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
@@ -185,6 +203,7 @@ export {
   WorkspaceBar,
   WorkspacePicker,
   defineSiteHome,
-  useWorkspaceRoute
+  useWorkspaceRoute,
+  workspacePathTail
 };
 //# sourceMappingURL=index.js.map

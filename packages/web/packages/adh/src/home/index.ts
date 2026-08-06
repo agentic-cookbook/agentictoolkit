@@ -23,4 +23,7 @@ export { SiteHomeShell } from './SiteHomeShell'
 export { WorkspaceBar } from './WorkspaceBar'
 export { WorkspacePicker } from './WorkspacePicker'
 export { useWorkspaceRoute } from './useWorkspaceRoute'
+// Exported for the same one caller as the two above: the hub builds its own `switchHrefFor`, so it
+// needs the same answer to "which segments are the selection" that this shell uses.
+export { workspacePathTail } from './workspacePathTail'
 export type { WorkspaceOption } from './WorkspaceOption'

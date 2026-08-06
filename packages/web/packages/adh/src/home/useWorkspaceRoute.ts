@@ -63,6 +63,7 @@ export function useWorkspaceRoute({
   workspaces,
   workspaceSlug,
   hrefFor,
+  switchHrefFor,
   canPersist,
 }: {
   /** The caller's workspaces, or null while the list is still loading. */
@@ -71,6 +72,21 @@ export function useWorkspaceRoute({
   workspaceSlug?: string
   /** Where a workspace lives on this host. */
   hrefFor: (slug: string) => string
+  /** Where an EXPLICIT switch to `slug` should land — the hook's one hook for CARRYING the current
+   *  selection across the switch. Defaults to `hrefFor`, i.e. the bare workspace.
+   *
+   *  Separate from `hrefFor` rather than folded into it, because the two answer different
+   *  questions. `hrefFor` says where a workspace LIVES, and it is what the seeding replace above
+   *  uses: that replace repairs a URL that names no workspace (or an unreachable one), and nothing
+   *  about the path it is repairing is a selection the user made HERE. `switchHrefFor` says where
+   *  a user who is looking at something and picks another workspace should land, which is the only
+   *  case with a selection to preserve at all.
+   *
+   *  The trimming is the caller's, and has to be: what the destination can honour is a fact about
+   *  that host's URL grammar (which segments are features, which are entity ids) and about the
+   *  destination workspace itself, neither of which this hook knows. Effect-dependency rules match
+   *  `hrefFor` — pass a stable identity. */
+  switchHrefFor?: (slug: string) => string
   /** Whether a slug may be written as the CROSS-SITE preference. Defaults to "any of them".
    *  The hub passes one because its list includes teams, which no feature site can scope to:
    *  persisting a team would silently cost the user their real choice on every other site, since
@@ -272,10 +288,15 @@ export function useWorkspaceRoute({
       // well would double-write, and setting `stored` here would make `resolved` disagree with the
       // URL for a render — which is exactly how the old code wrote the OLD slug back over the new
       // one.
-      // Drops any deeper path — the same thing the workspaces TopicLevel did before this hook.
-      router.push(hrefFor(slug), { scroll: false })
+      //
+      // `switchHrefFor` is what CARRIES the current selection over (see its doc above): the
+      // selected path in this platform is the URL's own segments, so preserving it across a switch
+      // is preserving those segments under the new workspace. Without one this drops any deeper
+      // path and lands on the bare workspace — the behaviour every caller had before, and still
+      // the right answer for a host that cannot say what its destination honours.
+      router.push((switchHrefFor ?? hrefFor)(slug), { scroll: false })
     },
-    [hrefFor, router],
+    [hrefFor, switchHrefFor, router],
   )
 
   return { resolved, onSelect }

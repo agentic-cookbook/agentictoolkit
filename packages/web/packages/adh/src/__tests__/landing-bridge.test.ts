@@ -28,8 +28,10 @@ function landingTokens(): { read: string[]; assigned: string[] } {
   const assigned = new Set<string>()
   for (const name of readdirSync(LANDING_CSS).filter((f) => f.endsWith('.css'))) {
     const css = readFileSync(join(LANDING_CSS, name), 'utf8')
-    for (const [, t] of css.matchAll(/var\(\s*(--lp-[\w-]+)/g)) read.add(t)
-    for (const [, t] of css.matchAll(/^\s*(--lp-[\w-]+)\s*:/gm)) assigned.add(t)
+    // `!` on every group here: each pattern has ONE group and it is not optional, so a match
+    // implies it. `noUncheckedIndexedAccess` types it `string | undefined` regardless.
+    for (const [, t] of css.matchAll(/var\(\s*(--lp-[\w-]+)/g)) read.add(t!)
+    for (const [, t] of css.matchAll(/^\s*(--lp-[\w-]+)\s*:/gm)) assigned.add(t!)
   }
   return { read: [...read].sort(), assigned: [...assigned].sort() }
 }
@@ -58,7 +60,7 @@ describe('landing bridge', () => {
   it('assigns nothing the package does not read', () => {
     // The other direction, and not symmetric with it: a token assigned here
     // and read nowhere is dead weight that reads as coverage.
-    const names = [...CSS.matchAll(/^\s*(--lp-[\w-]+)\s*:/gm)].map((m) => m[1])
+    const names = [...CSS.matchAll(/^\s*(--lp-[\w-]+)\s*:/gm)].map((m) => m[1]!)
     expect(names.filter((n) => !TOKENS.includes(n))).toEqual([])
   })
 

@@ -1,10 +1,12 @@
 'use client'
 
 import { useCallback, type ReactElement, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
 import { WorkspaceBar } from './WorkspaceBar'
 import { useWorkspaceRoute } from './useWorkspaceRoute'
+import { workspacePathTail } from './workspacePathTail'
 import type { SiteHomeScope } from './SiteHomeModel'
 
 // Module scope, so its identity is stable: useResourceList takes `load` as a fetch dependency and
@@ -61,9 +63,33 @@ export function SiteHomeShell({
   // Memoized on `basePath` alone, because useWorkspaceRoute holds this in two effects' dependency
   // arrays — a fresh closure each render would re-run both on every render.
   const hrefFor = useCallback((slug: string) => `${basePath}/${slug}`, [basePath])
+  // Switching workspace KEEPS what you were looking at: the segments below the workspace are this
+  // site's own selected path (`model.parse` reads exactly these — see SiteHomeRoute), so moving
+  // them onto the new workspace is what makes the HTDV land on the same place rather than back at
+  // the site's root.
+  //
+  // Carried WHOLE and unvalidated, which is the honest answer here rather than a shortcut. Below
+  // the workspace a feature site's segments are entity ids, and whether one exists in the
+  // destination is a question only that workspace's own list can answer — a round trip this bar
+  // has not made and should not make to service a click. It does not need to: every deep-linkable
+  // pane on the platform already resolves its id against the rows it loads and treats an unknown
+  // one as "nothing open", showing the list instead (ServicesSection, PersonasSection,
+  // StackGroupDetail all say so in as many words). So an id the destination does not have settles
+  // by itself onto the parent level — which IS the fallback this feature is specified to have —
+  // and one it does have (the user-scoped lists, where the row is the same row) stays selected.
+  const pathname = usePathname() ?? ''
+  const switchHrefFor = useCallback(
+    (slug: string) => [basePath, slug, ...workspacePathTail(pathname, basePath)].join('/'),
+    [basePath, pathname],
+  )
   // No `canPersist`: every row this list carries is an owner-scopable workspace (workspacesApi
   // drops teams), so any of them is legitimate cross-site preference material.
-  const { resolved, onSelect } = useWorkspaceRoute({ workspaces, workspaceSlug, hrefFor })
+  const { resolved, onSelect } = useWorkspaceRoute({
+    workspaces,
+    workspaceSlug,
+    hrefFor,
+    switchHrefFor,
+  })
 
   return (
     <>

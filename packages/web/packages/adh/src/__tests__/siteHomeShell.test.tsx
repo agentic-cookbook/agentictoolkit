@@ -34,7 +34,20 @@ configure({ asyncUtilTimeout: 5000 });
 // half-state where the URL still names the old workspace while `stored` already names the new
 // one. `Promise.resolve().then(...)` reproduces that ordering without a real timer.
 let liveSetSlug: (slug: string | undefined) => void = () => {};
-const extractSlug = (href: string): string => href.split("/").pop()!;
+// The workspace segment sits at a FIXED position — one past whatever `basePath` occupies — which
+// is the only way to read it now that a switch carries the segments BELOW it (`/acme/services/s_1`).
+// The last segment used to be the slug and no longer is; taking `.pop()` here would have fed the
+// deepest entity id back as `workspaceSlug` and made a carrying test pass for the wrong reason.
+let routerBasePath = "";
+const extractSlug = (href: string): string =>
+  href.split("/").filter(Boolean)[routerBasePath.split("/").filter(Boolean).length]!;
+
+// What `usePathname()` answers. A module variable rather than state because nothing re-renders on
+// it alone: the shell reads it only when building the href for a click, and the render that follows
+// a `push` is driven by `liveSetSlug` in the same microtask. Defaults to "" (reset in `beforeEach`)
+// — the shell reads no segments below the workspace out of that, so every case that predates the
+// carry behaves exactly as it did. A case that IS about the carry sets it to the deep URL it means.
+let livePathname = "";
 
 // Whether the double feeds its href back into `workspaceSlug` at all. Normally it does. A test
 // switches it off to hold the URL STILL after the shell has already resolved — the window the
@@ -43,11 +56,17 @@ const extractSlug = (href: string): string => href.split("/").pop()!;
 let routerFeedsBack = true;
 const replace = vi.fn((href: string) => {
   if (!routerFeedsBack) return;
-  void Promise.resolve().then(() => liveSetSlug(extractSlug(href)));
+  void Promise.resolve().then(() => {
+    livePathname = href;
+    liveSetSlug(extractSlug(href));
+  });
 });
 const push = vi.fn((href: string) => {
   if (!routerFeedsBack) return;
-  void Promise.resolve().then(() => liveSetSlug(extractSlug(href)));
+  void Promise.resolve().then(() => {
+    livePathname = href;
+    liveSetSlug(extractSlug(href));
+  });
 });
 // ONE router object for the whole file, not a fresh literal per `useRouter()` call. The real App
 // Router hands back a stable instance out of context; a per-render literal is a strictly WEAKER
@@ -64,6 +83,7 @@ const push = vi.fn((href: string) => {
 const routerDouble = { replace, push, prefetch: vi.fn() };
 vi.mock("next/navigation", () => ({
   useRouter: () => routerDouble,
+  usePathname: () => livePathname,
 }));
 
 const list = vi.fn();
@@ -182,6 +202,9 @@ const WORKSPACES = [
 function Shell({ workspaceSlug, basePath = "" }: { workspaceSlug?: string; basePath?: string }) {
   const [slug, setSlug] = useState<string | undefined>(workspaceSlug);
   liveSetSlug = setSlug;
+  // Same reason the setter is assigned here: `extractSlug` needs the base to know which segment is
+  // the workspace, and this body runs before the shell's.
+  routerBasePath = basePath;
   return (
     <SiteHomeShell basePath={basePath} workspaceSlug={slug}>
       {/* The scope is rendered, not just consumed, so every test in this file that waits for
@@ -200,6 +223,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   __resetSeededWorkspace();
   liveSetSlug = () => {};
+  routerBasePath = "";
+  livePathname = "";
   routerFeedsBack = true;
   list.mockResolvedValue(WORKSPACES);
   prefsGet.mockResolvedValue({});
@@ -1213,6 +1238,66 @@ describe("SiteHomeShell picker mount", () => {
     } finally {
       process.off("unhandledRejection", onUnhandled);
     }
+  });
+});
+
+// Switching workspace KEEPS what you were looking at. A feature site's HTDV holds no selected
+// path of its own — the stack IS the segments below the workspace, which `model.parse` reads — so
+// these cases are the whole of that feature: which segments move, which do not, and which
+// navigation carries them at all.
+describe("SiteHomeShell workspace switch carries the selection", () => {
+  it("moves every segment below the workspace onto the new one", async () => {
+    livePathname = "/mine/services/svc_1";
+    render(<Shell workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    expect(push).toHaveBeenCalledWith("/acme/services/svc_1", { scroll: false });
+  });
+
+  it("keeps basePath above the workspace instead of carrying it as selection", async () => {
+    // `/w` is the site, not the user's place in it. Counting it as a carried segment would
+    // duplicate it (`/w/acme/w/services/...`); dropping it would leave the site entirely.
+    livePathname = "/w/mine/services/svc_1";
+    render(<Shell basePath="/w" workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    expect(push).toHaveBeenCalledWith("/w/acme/services/svc_1", { scroll: false });
+  });
+
+  it("finds the workspace by POSITION, so a deeper segment spelled like the slug is carried", async () => {
+    // The reason `workspacePathTail` counts basePath's segments rather than searching the path for
+    // the slug: an entity id, a feature or a sub-route may be spelled exactly like the workspace.
+    // A search finds the wrong one — here it would cut at the LAST "mine" and carry nothing.
+    livePathname = "/mine/services/mine";
+    render(<Shell workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    expect(push).toHaveBeenCalledWith("/acme/services/mine", { scroll: false });
+  });
+
+  it("carries nothing when the workspace IS the whole path", async () => {
+    livePathname = "/mine";
+    render(<Shell workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    expect(push).toHaveBeenCalledWith("/acme", { scroll: false });
+  });
+
+  it("does NOT carry on the resolving replace — only an explicit pick is a switch", async () => {
+    // The replace that repairs an unresolvable URL is not the user going anywhere; it is the shell
+    // saying which workspace this actually is. Carrying a tail that was addressed to a workspace
+    // the user never chose would deep-link them into a page they did not ask for, off a slug the
+    // list does not even contain. So the repair lands on the workspace itself.
+    readCached.mockReturnValue("acme");
+    livePathname = "/zzz/services/svc_1";
+    render(<Shell workspaceSlug="zzz" />);
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
+    expect(push).not.toHaveBeenCalled();
   });
 });
 

@@ -1905,7 +1905,7 @@ function MinimizedStack({
         ) : (
           backOnRail === -1 &&
           showBack && (
-            <div className="flex shrink-0 items-center border-b border-apt-border bg-apt-nav px-2 py-1.5">
+            <div className="flex min-h-[2.15rem] shrink-0 items-center border-b border-apt-border bg-apt-nav px-2">
               {backButton}
             </div>
           )
@@ -2388,9 +2388,10 @@ function CoveredStack({
         )}
       >
         {/* The frontier list is the detail's "parent": its cover toggle rides the detail's top-left.
-            WITH a detailTitle the strip matches the rails' titled-header height (2.15rem) and shows
-            the title so the top row aligns across all columns; WITHOUT one it keeps the original
-            compact toggle strip, so consumers that don't set detailTitle are unshifted. */}
+            The strip is the rails' titled-header height (2.15rem) EITHER WAY, so the top row aligns
+            across every column; a detailTitle only adds the title text beside the toggle. Without a
+            title this used to fall back to a compact `py-1.5` strip, which left the detail's header
+            visibly shorter than the list headers beside it — the one column that didn't line up. */}
         {rendered.length > 0 &&
           (detailTitle !== undefined ? (
             <div className="flex min-h-[2.15rem] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-nav pr-2">
@@ -2400,7 +2401,7 @@ function CoveredStack({
               </span>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center border-b border-apt-border bg-apt-nav px-1.5 py-1.5">
+            <div className="flex min-h-[2.15rem] shrink-0 items-center border-b border-apt-border bg-apt-nav px-1.5">
               {coverControl(rendered.length - 1)}
             </div>
           ))}
@@ -3524,7 +3525,7 @@ function CascadingStack({
               </span>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center border-b border-apt-border bg-apt-nav px-1.5 py-1.5">
+            <div className="flex min-h-[2.15rem] shrink-0 items-center border-b border-apt-border bg-apt-nav px-1.5">
               {immersionControl}
             </div>
           ))}
