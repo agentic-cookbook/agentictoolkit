@@ -224,6 +224,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
+    '/tour',
   ],
   hub: [
     '/',
@@ -303,6 +304,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   ],
   myagenticteams: [
     '/',
+    '/[workspace]',
     '/auth/callback',
     '/home',
     '/privacy',

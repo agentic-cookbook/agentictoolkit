@@ -214,6 +214,8 @@ import { jsx as jsx4, jsxs as jsxs4 } from "react/jsx-runtime";
 function MarketingRootHtml({
   siteId,
   navLinks,
+  trailingNavLinks,
+  footerLinks,
   silentSso = true,
   children
 }) {
@@ -224,7 +226,21 @@ function MarketingRootHtml({
     // differs from the server's here. Same contract next-themes has.
     /* @__PURE__ */ jsxs4("html", { lang: htmlLang(loc), dir: localeDir(loc), suppressHydrationWarning: true, children: [
       /* @__PURE__ */ jsx4("head", { children: /* @__PURE__ */ jsx4(AdhThemeStyle, {}) }),
-      /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(AppShell, { header: /* @__PURE__ */ jsx4(MarketingSiteHeader, { siteId, navLinks }), footer: { links: [] }, children }) }) })
+      /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(
+        AppShell,
+        {
+          header: /* @__PURE__ */ jsx4(
+            MarketingSiteHeader,
+            {
+              siteId,
+              navLinks,
+              trailingNavLinks
+            }
+          ),
+          footer: { links: footerLinks ?? [] },
+          children
+        }
+      ) }) })
     ] })
   );
 }

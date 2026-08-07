@@ -19,12 +19,25 @@ import { MarketingSiteHeader } from '@agentic-toolkit/adh/marketing/MarketingSit
 // the SiteHeader that Task 6.2 folded into the app tier's own header barrel; both barrels
 // are this one now.
 import type { NavLink } from '@agentic-toolkit/adh/header'
+import type { FooterLink } from '@agentic-toolkit/adh/footer'
+
+/** The serializable half of a link: what a server layout can hand across the
+ *  boundary. NavLink's `icon`/function form and FooterLink's `onSelect` cannot
+ *  cross it, and a site that needs either is not describing chrome any more.
+ *  Derived from FooterLink so it narrows when that type does. */
+type PlainLink = Pick<Extract<FooterLink, { href: string }>, 'label' | 'href'>
 
 export type MarketingRootHtmlProps = {
   /** Optional site-owned header nav items — the serializable subset of NavLink (this is
    *  a server component, so the function form and icon fields can't cross the boundary;
    *  matchPaths keeps active-link highlighting available to sites). */
   navLinks?: Pick<NavLink, 'label' | 'href' | 'matchPaths'>[]
+  /** Optional site-owned header items rendered OUTSIDE the collapsing nav, at the bar's
+   *  trailing edge — an off-site destination (`toolkit`'s GitHub) rather than a route. */
+  trailingNavLinks?: PlainLink[]
+  /** Optional site-owned footer links, added to the shared legal/sites row. The
+   *  copyright is the brand's, not the site's, and stays owned by SiteFooter. */
+  footerLinks?: PlainLink[]
   /** The marketing site this document chrome is for — drives the header brand. */
   siteId: SiteId
   /**
@@ -56,10 +69,15 @@ export type MarketingRootHtmlProps = {
  *    hint-cookie-gated + once-per-tab (`shouldSilentRestore`) and every deployed marketing origin
  *    is in the `adh` client's `ssoReturnOrigins` allow-list — but a hint cookie makes it fire on
  *    every non-landing route the cookie is readable from, local dev included, and any origin the
- *    allow-list is missing gets stranded on the central login page. A fully public site (help)
- *    passes `silentSso={false}` to opt the rest of its routes out too — see the prop doc above.
+ *    allow-list is missing gets stranded on the central login page. `silentSso={false}` opts the
+ *    rest of a site's routes out too — no site in the family does today, and
+ *    frontend/tools/verify-site-uniformity.py fails one that starts, so the escape hatch cannot
+ *    be taken quietly. See the prop doc above.
  *  • `<AppShell header={<MarketingSiteHeader siteId/>} footer={…}>` — the shared
- *    chrome with the smart auth widget (avatar / Login+Sign up via SSO returnTo)
+ *    chrome with the smart auth widget (avatar / Login+Sign up via SSO returnTo).
+ *    `navLinks`/`trailingNavLinks`/`footerLinks` are the only per-site seams in it: a
+ *    site with an off-site destination (toolkit's GitHub) declares it rather than
+ *    hand-rolling the document to get at AppShell.
  *
  * A server component: it renders the client `AuthProvider`/`SiteHeader` exactly as a
  * site layout would. Per-site `metadata` (the one genuinely per-site, SEO-bearing
@@ -76,6 +94,8 @@ export type MarketingRootHtmlProps = {
 export function MarketingRootHtml({
   siteId,
   navLinks,
+  trailingNavLinks,
+  footerLinks,
   silentSso = true,
   children,
 }: MarketingRootHtmlProps): ReactElement {
@@ -90,7 +110,16 @@ export function MarketingRootHtml({
       </head>
       <body>
         <AuthProvider clientId="adh" storageKey="auth_tokens" silentSso={silentSso}>
-          <AppShell header={<MarketingSiteHeader siteId={siteId} navLinks={navLinks} />} footer={{ links: [] }}>
+          <AppShell
+            header={
+              <MarketingSiteHeader
+                siteId={siteId}
+                navLinks={navLinks}
+                trailingNavLinks={trailingNavLinks}
+              />
+            }
+            footer={{ links: footerLinks ?? [] }}
+          >
             {children}
           </AppShell>
         </AuthProvider>

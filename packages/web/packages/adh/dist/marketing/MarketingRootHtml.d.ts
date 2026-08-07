@@ -1,16 +1,32 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
 import type { NavLink } from '@agentic-toolkit/adh/header';
+import type { FooterLink } from '@agentic-toolkit/adh/footer';
+/** The serializable half of a link: what a server layout can hand across the
+ *  boundary. NavLink's `icon`/function form and FooterLink's `onSelect` cannot
+ *  cross it, and a site that needs either is not describing chrome any more.
+ *  Derived from FooterLink so it narrows when that type does. */
+type PlainLink = Pick<Extract<FooterLink, {
+    href: string;
+}>, 'label' | 'href'>;
 export type MarketingRootHtmlProps = {
     /** Optional site-owned header nav items — the serializable subset of NavLink (this is
      *  a server component, so the function form and icon fields can't cross the boundary;
      *  matchPaths keeps active-link highlighting available to sites). */
     navLinks?: Pick<NavLink, 'label' | 'href' | 'matchPaths'>[];
+    /** Optional site-owned header items rendered OUTSIDE the collapsing nav, at the bar's
+     *  trailing edge — an off-site destination (`toolkit`'s GitHub) rather than a route. */
+    trailingNavLinks?: PlainLink[];
+    /** Optional site-owned footer links, added to the shared legal/sites row. The
+     *  copyright is the brand's, not the site's, and stays owned by SiteFooter. */
+    footerLinks?: PlainLink[];
     /** The marketing site this document chrome is for — drives the header brand. */
     siteId: SiteId;
     /**
      * Whether the AuthProvider runs the cross-site cold-load silent-SSO probe (default `true`,
-     * the feature-site behaviour). Set `false` for a FULLY PUBLIC site that must never redirect a
+     * the feature-site behaviour) on the site's NON-LANDING routes. The landing page (`/`) never
+     * probes whatever this says — `shouldSilentRestore` refuses there — so this prop is about the
+     * routes behind it. Set `false` for a FULLY PUBLIC site that must never redirect a
      * visitor on page load. The probe is a top-level `/authorize?prompt=none` navigation (the central
      * session cookie is host-only + SameSite=Lax, so it CANNOT be done silently in the background) —
      * and when the site's origin can't complete the silent bounce it strands the visitor on the
@@ -30,14 +46,19 @@ export type MarketingRootHtmlProps = {
  *  • `<head>` font preconnects + `<AdhThemeStyle/>` (the theme CSS variables)
  *  • an `<AuthProvider clientId="adh" silentSso={silentSso}>` — a feature site
  *    (docs/platform/feature-sites-redesign.md) leaves the probe ON (default): the header is
- *    session-aware and `/home` is the signed-in feature surface. The probe is hint-cookie-gated +
- *    once-per-tab (`shouldSilentRestore`) and every deployed marketing origin is in the `adh`
- *    client's `ssoReturnOrigins` allow-list — but a hint cookie makes it fire EVERYWHERE the cookie
- *    is readable, local dev included, and any origin the allow-list is missing gets stranded on the
- *    central login page. A fully public site (help) passes `silentSso={false}` to opt out — see the
- *    prop doc above.
+ *    session-aware and `/home` is the signed-in feature surface. The probe is landing-page-exempt,
+ *    hint-cookie-gated + once-per-tab (`shouldSilentRestore`) and every deployed marketing origin
+ *    is in the `adh` client's `ssoReturnOrigins` allow-list — but a hint cookie makes it fire on
+ *    every non-landing route the cookie is readable from, local dev included, and any origin the
+ *    allow-list is missing gets stranded on the central login page. `silentSso={false}` opts the
+ *    rest of a site's routes out too — no site in the family does today, and
+ *    frontend/tools/verify-site-uniformity.py fails one that starts, so the escape hatch cannot
+ *    be taken quietly. See the prop doc above.
  *  • `<AppShell header={<MarketingSiteHeader siteId/>} footer={…}>` — the shared
- *    chrome with the smart auth widget (avatar / Login+Sign up via SSO returnTo)
+ *    chrome with the smart auth widget (avatar / Login+Sign up via SSO returnTo).
+ *    `navLinks`/`trailingNavLinks`/`footerLinks` are the only per-site seams in it: a
+ *    site with an off-site destination (toolkit's GitHub) declares it rather than
+ *    hand-rolling the document to get at AppShell.
  *
  * A server component: it renders the client `AuthProvider`/`SiteHeader` exactly as a
  * site layout would. Per-site `metadata` (the one genuinely per-site, SEO-bearing
@@ -51,5 +72,6 @@ export type MarketingRootHtmlProps = {
  * paths (kept external by tsup) so their 'use client' boundaries survive bundling,
  * mirroring the graph subsystem.
  */
-export declare function MarketingRootHtml({ siteId, navLinks, silentSso, children, }: MarketingRootHtmlProps): ReactElement;
+export declare function MarketingRootHtml({ siteId, navLinks, trailingNavLinks, footerLinks, silentSso, children, }: MarketingRootHtmlProps): ReactElement;
+export {};
 //# sourceMappingURL=MarketingRootHtml.d.ts.map

@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
 import type { NavLink } from '@agentic-toolkit/adh/header';
 export type MarketingSiteHeaderProps = {
@@ -7,6 +7,13 @@ export type MarketingSiteHeaderProps = {
     /** Optional site-owned nav items (static + serializable — this crosses the
      *  server→client boundary from a site's layout via MarketingRootHtml). */
     navLinks?: NavLink[];
+    /** Optional site-owned items rendered OUTSIDE the collapsing nav, at the bar's
+     *  trailing edge (an off-site link like GitHub). Same serializable constraint. */
+    trailingNavLinks?: NavLink[];
+    /** Site-specific controls at the start of the right-hand cluster — cookbook's
+     *  reader toggles. Passed by a CLIENT caller (this component is the boundary),
+     *  which is why it is a node rather than the serializable link shape above. */
+    leadingActions?: ReactNode;
 };
 /**
  * The session-aware header for the marketing/feature-site family — SiteHeader
@@ -26,5 +33,5 @@ export type MarketingSiteHeaderProps = {
  * `bundle: true, splitting: false` an inlined `'use client'` leaf hoists its directive over
  * the WHOLE entry file. Same boundary trick as marketing/LandingHeroGate.
  */
-export declare function MarketingSiteHeader({ siteId, navLinks }: MarketingSiteHeaderProps): ReactElement;
+export declare function MarketingSiteHeader({ siteId, navLinks, trailingNavLinks, leadingActions, }: MarketingSiteHeaderProps): ReactElement;
 //# sourceMappingURL=MarketingSiteHeader.d.ts.map

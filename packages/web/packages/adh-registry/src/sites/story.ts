@@ -172,7 +172,8 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   devteam: 'cookbook',
   cookbook: 'personaregistry',
   personaregistry: 'support',
-  support: 'teamregistry',
+  support: 'help',
+  help: 'teamregistry',
   // </gen:tour>
 }
 
