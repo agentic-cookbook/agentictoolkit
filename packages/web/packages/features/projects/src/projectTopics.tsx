@@ -1,11 +1,12 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Activity, FolderKanban, KeyRound, ListTodo } from "lucide-react";
+import { Activity, FileStack, FolderKanban, KeyRound, ListTodo } from "lucide-react";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import { WorkItemsSurface } from "./WorkItemsSurface";
+import { ProjectContentsPane } from "./ProjectContentsPane";
 import { ProjectActivityPane } from "./ProjectActivityPane";
 
 /**
@@ -89,6 +90,14 @@ const WORK_ITEMS: ProjectTopicDef = {
   ),
 };
 
+const CONTENTS: ProjectTopicDef = {
+  id: "contents",
+  label: "Contents",
+  icon: <FileStack size={16} aria-hidden />,
+  description: "The material — documents and links this project works from and has produced.",
+  render: (ctx) => <ProjectContentsPane projectId={ctx.projectId} title={ctx.title} />,
+};
+
 const ACTIVITY: ProjectTopicDef = {
   id: "activity",
   label: "Activity",
@@ -122,11 +131,20 @@ const ACCESS: ProjectTopicDef = {
 /**
  * The topics a project publishes, in rail order.
  *
+ * The order is a sentence about the project: what it IS (Overview), what it is DOING (Work
+ * Items), what it HOLDS (Contents), what HAPPENED (Activity), and who may look (Access).
+ *
  * Access is present only when the host knows the owning workspace. Omitting the topic — rather
  * than listing it and rendering an empty pane — is the honest reading of "this surface cannot
  * show item-scoped roles": a rail row that opens onto nothing is a bug report waiting to be
  * filed. In practice every current host supplies one, so this is about what the next host sees.
  */
 export function projectTopics(opts: { workspaceSlug?: string }): ProjectTopicDef[] {
-  return [OVERVIEW, WORK_ITEMS, ACTIVITY, ...(opts.workspaceSlug ? [ACCESS] : [])];
+  return [
+    OVERVIEW,
+    WORK_ITEMS,
+    CONTENTS,
+    ACTIVITY,
+    ...(opts.workspaceSlug ? [ACCESS] : []),
+  ];
 }

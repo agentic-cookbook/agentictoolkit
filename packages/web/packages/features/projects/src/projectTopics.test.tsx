@@ -45,6 +45,11 @@ vi.mock("./WorkItemsSurface", () => ({
     <div data-testid="work-items" data-project={projectId} data-title={title} data-leaf={leaf.leafId} />
   ),
 }));
+vi.mock("./ProjectContentsPane", () => ({
+  ProjectContentsPane: ({ projectId, title }: { projectId: string; title: string }) => (
+    <div data-testid="contents" data-project={projectId} data-title={title} />
+  ),
+}));
 vi.mock("./ProjectActivityPane", () => ({
   ProjectActivityPane: ({ projectId, title }: { projectId: string; title: string }) => (
     <div data-testid="activity" data-project={projectId} data-title={title} />
@@ -88,9 +93,12 @@ const CONTEXT: ProjectTopicContext = {
 
 describe("projectTopics", () => {
   it("publishes a project's topics in rail order", () => {
+    // The order is a sentence about the project: what it is, what it is doing, what it holds,
+    // what happened, who may look.
     expect(projectTopics({ workspaceSlug: "acme" }).map((t) => t.id)).toEqual([
       "overview",
       "work-items",
+      "contents",
       "activity",
       "access",
     ]);
@@ -100,7 +108,12 @@ describe("projectTopics", () => {
     // Not a cosmetic choice: ItemAccessPanel resolves subjects IN a workspace, so without one
     // the topic could only ever render an empty pane. A rail row that opens onto nothing reads
     // as a bug; leaving the topic out says the true thing.
-    expect(projectTopics({}).map((t) => t.id)).toEqual(["overview", "work-items", "activity"]);
+    expect(projectTopics({}).map((t) => t.id)).toEqual([
+      "overview",
+      "work-items",
+      "contents",
+      "activity",
+    ]);
   });
 
   it("gives every topic a description, which is what earns both rails their overview cards", () => {
@@ -121,6 +134,7 @@ describe("projectTopics", () => {
     // The one topic with a deep-linkable inner selection: the surface's leaf has to reach it,
     // or the view switcher stops round-tripping through the URL.
     expect(screen.getByTestId("work-items").getAttribute("data-leaf")).toBe("board");
+    expect(screen.getByTestId("contents").getAttribute("data-project")).toBe("p1");
     expect(screen.getByTestId("activity").getAttribute("data-title")).toBe("Given title");
   });
 

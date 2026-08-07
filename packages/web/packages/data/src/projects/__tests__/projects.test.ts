@@ -17,6 +17,7 @@ vi.mock("../../http", async (importOriginal) => ({
 import { projectsApi } from "../projects";
 import { projectWorkItemsApi } from "../work-items";
 import { projectActivityApi } from "../activity";
+import { projectArtifactsApi } from "../artifacts";
 import { authedJson, authedRequest } from "../../http";
 
 const mockedJson = vi.mocked(authedJson);
@@ -287,5 +288,112 @@ describe("projectActivityApi", () => {
       body: JSON.stringify({ body: "hello" }),
     });
     expect(out.action).toBe("project.updated");
+  });
+});
+
+/* ── projectArtifactsApi ──────────────────────────────────────────────── */
+
+// The artifacts client's whole job is addressing: a link is identified by ITS id while the
+// thing it points at is identified by a (kind, id) pair, and the two are easy to confuse
+// because both are called "id" one level up. These pin which one reaches which URL, plus the
+// two envelope unwraps (`{ items }`) and the query the picker builds.
+describe("projectArtifactsApi", () => {
+  const descriptor = (id: string, kind = "content.markdown") => ({
+    kind,
+    id,
+    title: `Doc ${id}`,
+    subtitle: null,
+    url: null,
+  });
+
+  const artifactRow = (id: string) => ({
+    id,
+    projectId: "p1",
+    direction: "ingested" as const,
+    targetKind: "content.markdown",
+    targetId: "d1",
+    target: descriptor("d1"),
+    createdAt: "c",
+  });
+
+  it("list unwraps the items envelope and keeps the server's order", async () => {
+    mockedJson.mockResolvedValueOnce({ items: [artifactRow("a2"), artifactRow("a1")] });
+    const out = await projectArtifactsApi.list("p1");
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/projects/p1/artifacts");
+    // Not re-sorted: the endpoint returns newest-first and a client re-sort would silently
+    // disagree with the pagination the endpoint is built for.
+    expect(out.map((a) => a.id)).toEqual(["a2", "a1"]);
+  });
+
+  it("list narrows to one direction when asked", async () => {
+    mockedJson.mockResolvedValueOnce({ items: [] });
+    await projectArtifactsApi.list("p1", { direction: "produced" });
+    expect(mockedJson).toHaveBeenCalledWith(
+      "/api/project/projects/p1/artifacts?direction=produced",
+    );
+  });
+
+  it("list keeps an unresolvable pointer as a row with a null target", async () => {
+    mockedJson.mockResolvedValueOnce({
+      items: [{ ...artifactRow("a1"), target: null }],
+    });
+    const [row] = await projectArtifactsApi.list("p1");
+    expect(row?.target).toBeNull();
+    // The pointer itself survives, so a renderer can still say WHAT is missing.
+    expect(row?.targetKind).toBe("content.markdown");
+    expect(row?.targetId).toBe("d1");
+  });
+
+  it("attachable builds the picker query and unwraps the envelope", async () => {
+    mockedJson.mockResolvedValueOnce({ items: [descriptor("d1")] });
+    const out = await projectArtifactsApi.attachable("p1", {
+      kind: "content.urls",
+      query: "road map",
+      limit: 100,
+    });
+    expect(mockedJson).toHaveBeenCalledWith(
+      "/api/project/projects/p1/attachable?kind=content.urls&q=road+map&limit=100",
+    );
+    expect(out[0]?.id).toBe("d1");
+  });
+
+  it("attachable sends no query string when nothing narrows it", async () => {
+    mockedJson.mockResolvedValueOnce({ items: [] });
+    await projectArtifactsApi.attachable("p1");
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/projects/p1/attachable");
+  });
+
+  it("attachable defaults `url`/`subtitle` to null rather than leaving them undefined", async () => {
+    mockedJson.mockResolvedValueOnce({ items: [{ kind: "k", id: "i", title: "T" }] });
+    const [d] = await projectArtifactsApi.attachable("p1");
+    expect(d?.subtitle).toBeNull();
+    expect(d?.url).toBeNull();
+  });
+
+  it("link POSTs the (direction, kind, id) triple and maps the created row", async () => {
+    mockedJson.mockResolvedValueOnce(artifactRow("a1"));
+    const out = await projectArtifactsApi.link("p1", {
+      direction: "ingested",
+      targetKind: "content.markdown",
+      targetId: "d1",
+    });
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/projects/p1/artifacts", {
+      method: "POST",
+      body: JSON.stringify({
+        direction: "ingested",
+        targetKind: "content.markdown",
+        targetId: "d1",
+      }),
+    });
+    expect(out.target?.title).toBe("Doc d1");
+  });
+
+  it("unlink addresses the LINK's id, not the target's, and encodes both segments", async () => {
+    mockedRequest.mockResolvedValueOnce(undefined);
+    await projectArtifactsApi.unlink("p/1", "a/1");
+    expect(mockedRequest).toHaveBeenCalledWith(
+      "/api/project/projects/p%2F1/artifacts/a%2F1",
+      { method: "DELETE" },
+    );
   });
 });

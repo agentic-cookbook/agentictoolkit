@@ -187,6 +187,47 @@ export interface WorkItemDependencyAddBody {
   dependsOnId: string;
 }
 
+/* ── Artifacts (the things a project holds) ───────────────────────────── */
+
+/**
+ * A polymorphic `(kind, id)` pointer RESOLVED by the backend into something displayable.
+ *
+ * The client never learns which table a kind means. That knowledge lives in exactly one place
+ * (the backend's target registry), which is why this shape is deliberately uniform across every
+ * kind: a document and a saved URL arrive as the same four fields, so a list can render both
+ * without a per-kind branch — and a kind added later renders correctly in a bundle that predates
+ * it. `title` is never empty (a kind with no title of its own falls back to something a person
+ * recognises, e.g. the address a URL was saved as).
+ */
+export interface TargetDescriptorRow {
+  kind: string;
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  /** Set only when the target is a link OUT of the platform — a saved URL's address. */
+  url?: string | null;
+}
+
+/** Backend row for `GET /project/projects/{id}/artifacts`. */
+export interface ProjectArtifactRow {
+  id: string;
+  projectId: string;
+  direction: "ingested" | "produced";
+  targetKind: string;
+  targetId: string;
+  /** Null when the pointer no longer resolves: a target can be deleted (or put out of reach)
+   *  after it was linked, and nothing rewrites the links to it. */
+  target?: TargetDescriptorRow | null;
+  createdAt: string;
+}
+
+/** `POST /project/projects/{id}/artifacts` body. */
+export interface ProjectArtifactLinkBody {
+  direction: "ingested" | "produced";
+  targetKind: string;
+  targetId: string;
+}
+
 /* ── Activity ─────────────────────────────────────────────────────────── */
 
 /** Backend row for `GET /project/projects/{id}/activity` (and the work-item

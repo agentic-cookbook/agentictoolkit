@@ -7,3 +7,4 @@ export type { StatusCategory } from "./wire";
 export * from "./projects";
 export * from "./work-items";
 export * from "./activity";
+export * from "./artifacts";
