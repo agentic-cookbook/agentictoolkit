@@ -77,8 +77,9 @@ describe('TransferOwnershipSection', () => {
     /**
      * The gate {@link DeleteEntitySection} already applies, for the same reason: the destination
      * comes from a dropdown, so the whole transfer is otherwise two clicks away from a persona
-     * leaving the workspace. Exact match — case-sensitive, untrimmed — so a near-miss reads as a
-     * near-miss rather than quietly arming.
+     * leaving the workspace. Case-sensitive, so a near-miss reads as a near-miss rather than
+     * quietly arming — but edge whitespace is forgiven, because this label can be a display name
+     * (pinned in its own test below).
      */
     const onPreview = vi.fn().mockResolvedValue({ tokens: 0, revoking: [] })
     const onConfirm = vi.fn().mockResolvedValue(undefined)
@@ -105,11 +106,15 @@ describe('TransferOwnershipSection', () => {
     // ...nor does a case fold...
     fireEvent.change(input, { target: { value: 'Persona.Alice.Charlie' } })
     expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
-    // ...nor stray whitespace, which is NOT trimmed.
-    fireEvent.change(input, { target: { value: ' persona.alice.charlie ' } })
+    // ...nor an INTERIOR edit, even one made only of whitespace.
+    fireEvent.change(input, { target: { value: 'persona.alice. charlie' } })
     expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
 
     fireEvent.change(input, { target: { value: 'persona.alice.charlie' } })
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled()
+
+    // Edge whitespace IS forgiven — a paste that picked up a leading space still arms.
+    fireEvent.change(input, { target: { value: ' persona.alice.charlie ' } })
     expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled()
 
     // Backing out and re-aiming at another workspace closes the gate again: the losses just
@@ -118,6 +123,70 @@ describe('TransferOwnershipSection', () => {
     await openMenu('Transfer Persona')
     fireEvent.click(screen.getByRole('menuitem', { name: 'Alice' }))
     await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(''))
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('asks for the trimmed label when the label is a display name carrying edge whitespace', async () => {
+    /**
+     * `project` and `site-group` are not rdid-addressed, so their seams pass the row's own NAME as
+     * the confirm token (`browsed-workspace-transfer.tsx`) — a user-editable string that can carry
+     * whitespace nobody can see. Trimming the TARGET as well as what is typed is what keeps such a
+     * row transferable at all: an untrimmed target would demand a leading space the prompt cannot
+     * show, and the button would never arm no matter what the admin typed.
+     *
+     * The prompt and the placeholder therefore quote the trimmed form, because what the user is
+     * told to type has to be the thing that actually satisfies the gate.
+     */
+    const onPreview = vi.fn().mockResolvedValue({ tokens: 0, revoking: [] })
+    const onConfirm = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <TransferOwnershipSection
+        entityNoun="Project"
+        entityLabel="  Q3 Redesign  "
+        targets={targets}
+        onPreview={onPreview}
+        onConfirm={onConfirm}
+      />,
+    )
+    openSection()
+    await openMenu('Transfer Project')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
+
+    const input = await screen.findByRole('textbox')
+    expect(input).toHaveAttribute('placeholder', 'Q3 Redesign')
+
+    fireEvent.change(input, { target: { value: 'Q3 Redesign' } })
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled()
+  })
+
+  it('never arms when the label is empty, rather than arming on an empty box', async () => {
+    /**
+     * The gate compares two strings, so a blank label would make the UNTOUCHED input match it and
+     * hand back the two-click transfer the gate exists to prevent. A caller passing a blank label
+     * is a bug in the caller, but it fails CLOSED here — the section stays unusable rather than
+     * silently unguarded.
+     */
+    const onPreview = vi.fn().mockResolvedValue({ tokens: 0, revoking: [] })
+    const onConfirm = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <TransferOwnershipSection
+        entityNoun="Project"
+        entityLabel="   "
+        targets={targets}
+        onPreview={onPreview}
+        onConfirm={onConfirm}
+      />,
+    )
+    openSection()
+    await openMenu('Transfer Project')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bob' }))
+
+    const input = await screen.findByRole('textbox')
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
+    fireEvent.change(input, { target: { value: '   ' } })
     expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled()
     expect(onConfirm).not.toHaveBeenCalled()
   })

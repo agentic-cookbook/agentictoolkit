@@ -100,7 +100,12 @@ export interface TransferPreviewResult {
 export interface TransferOwnershipSectionProps {
   /** Singular entity noun, e.g. "Persona" — used in the button and copy. */
   entityNoun: string;
-  /** The object's own identifier, shown in the dialog. */
+  /**
+   * The object's own identifier, shown in the dialog AND retyped to arm the Transfer button. It is
+   * therefore not a free display string: pass the most stable thing that identifies the object —
+   * its rdid where it has one — because whatever is passed is what an admin has to reproduce
+   * character for character. Edge whitespace is forgiven; nothing else is.
+   */
   entityLabel: string;
   /** Candidate destinations. Team workspaces must already be filtered out by the caller. */
   targets: TransferTarget[];
@@ -144,11 +149,21 @@ export function TransferOwnershipSection({
   const noun = entityNoun.toLowerCase();
 
   /**
-   * Exact match: case-sensitive, no normalization or trim — same rule as
-   * {@link DeleteEntitySection}. The empty guard matters because an empty `entityLabel` would
-   * match the untouched input and arm the button with nothing typed at all.
+   * Case-sensitive, like {@link DeleteEntitySection} — but SURROUNDING WHITESPACE IS IGNORED, which
+   * that sibling does not do, because the two are handed different kinds of string. Its
+   * `confirmValue` is always a machine identifier, where a trailing space cannot occur; this
+   * component's `entityLabel` is the object's rdid for the four addressed entity types and a
+   * user-editable display NAME for the two that have none (`project`, `site-group` — see
+   * `TransferEntityType` in @agentic-toolkit/data). A name ending in a space renders identically to
+   * one that does not, so a strict compare would leave the button dead with nothing on screen
+   * explaining why. Trimming costs no safety: it can only accept input that is visually identical
+   * to the label already shown.
+   *
+   * The empty guard reads the TRIMMED label, not the raw one — an all-whitespace label would
+   * otherwise match the untouched input and arm the button with nothing typed at all.
    */
-  const confirmed = entityLabel.length > 0 && typed === entityLabel;
+  const confirmTarget = entityLabel.trim();
+  const confirmed = confirmTarget.length > 0 && typed.trim() === confirmTarget;
 
   /**
    * The dialog is sealed only while the TRANSFER is running — never while the preflight is.
@@ -323,8 +338,11 @@ export function TransferOwnershipSection({
               consequences they have not been told yet. */}
           {preview && (
             <div className="flex flex-col gap-2">
+              {/* `confirmTarget`, not `entityLabel`: what the user is TOLD to type has to be
+                  exactly what arms the button, and the raw label may carry edge whitespace the
+                  gate ignores (see `confirmed` above). */}
               <Label htmlFor={inputId} className="text-sm text-apt-text-muted">
-                Type <span className="font-mono text-apt-text">{entityLabel}</span> below to
+                Type <span className="font-mono text-apt-text">{confirmTarget}</span> below to
                 confirm.
               </Label>
               <Input
@@ -333,7 +351,7 @@ export function TransferOwnershipSection({
                 autoComplete="off"
                 spellCheck={false}
                 value={typed}
-                placeholder={entityLabel}
+                placeholder={confirmTarget}
                 disabled={confirming}
                 onChange={(e) => setTyped(e.target.value)}
               />

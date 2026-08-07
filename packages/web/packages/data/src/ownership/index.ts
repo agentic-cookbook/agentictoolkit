@@ -63,7 +63,9 @@ export interface TransferResult {
  *
  * `project` and `site-group` are not rdid-addressed — their plans carry `entityType: null`, so the
  * transfer repoints an owner and re-addresses nothing. `previousId` and {@link TransferResult.id}
- * therefore come back null for both, and the dialog simply omits the address line.
+ * therefore come back null for both. The dialog shows no address for ANY of the six (it stopped
+ * naming one when the preview stopped writing — see {@link TransferPreview}); what these two lack
+ * is a stable identifier to gate the confirm on, so their callers pass the row's display name.
  */
 export type TransferEntityType =
   | "persona"
