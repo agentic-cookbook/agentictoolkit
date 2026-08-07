@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { useTenantId } from "./tenant";
 import { readLastId, clearLastId } from "./ftd-storage";
@@ -33,7 +33,10 @@ const caches = new Map<string, CacheBox<unknown>>();
 export interface ResourceList<T> {
   /** The rows (null = still loading), seeded from the tenant-scoped cache. */
   items: T[] | null;
-  /** Re-fetch the list (e.g. after a create/delete) and update the cache. Always hits the network. */
+  /** Re-fetch the list (e.g. after a create/delete) and update the cache. Always hits the
+   *  network. Safe to have several in flight: only the most recently ISSUED request may write
+   *  the rows, so an overtaken response cannot revert the list (see the order guard below). The
+   *  returned promise still rejects for its own caller either way. */
   reload: () => Promise<void>;
   /** The last load error, or null. */
   error: string | null;
@@ -93,44 +96,61 @@ export function useResourceList<T>(
     [cacheKey, tenantId, cached],
   );
 
-  const fetchRows = useCallback(async () => {
-    const rows = await load();
-    store(rows);
-    return rows;
-  }, [load, store]);
+  // ORDER GUARD. A reload-after-write pattern (add a row, then `reload()`; remove a row, then
+  // `reload()` again) puts two GETs in flight at once, and nothing makes an earlier request
+  // resolve first. Without this, the stale response is simply the last writer to `setItemsState`
+  // and the list reverts to a state the server has already moved past — visibly, and only
+  // sometimes, which is the worst kind of only-sometimes. So every fetch takes a ticket and only
+  // the LATEST one may write state; an overtaken response is dropped.
+  //
+  // It guards the STATE WRITE, not the call: `reload()` still rejects for its own caller, so a
+  // failed write's error handling is unaffected by a newer request having been issued.
+  const seq = useRef(0);
+
+  // Deliberately does NOT write the cache: a losing response must not leave its rows behind for
+  // the next mount to seed from, which would resurrect the stale list one navigation later —
+  // the same defect, just deferred to where nobody would connect it to a double write. The
+  // winner stores, below.
+  const fetchRows = useCallback(async () => load(), [load]);
 
   const reload = useCallback(async () => {
+    const ticket = ++seq.current;
     try {
       const rows = await fetchRows();
+      if (ticket !== seq.current) return;
+      store(rows);
       setError(null);
       setItemsState(rows);
     } catch (e) {
       reportUnexpectedAuthError(e, { feature: "resource-list", step: "reload", basePath: cacheKey });
-      setError(e instanceof Error ? e.message : "Failed to load.");
+      if (ticket === seq.current) setError(e instanceof Error ? e.message : "Failed to load.");
       throw e;
     }
-  }, [fetchRows, cacheKey]);
+  }, [fetchRows, store, cacheKey]);
 
   // Refetch on mount and whenever the tenant changes (so an account switch can't leave another
   // tenant's rows on screen). The cache seeds the first paint (see the note above — that seed is
   // what stops the remount flicker); this is the authoritative read that settles behind it.
   useEffect(() => {
+    const ticket = ++seq.current;
     let alive = true;
     fetchRows()
       .then((rows) => {
-        if (alive) {
-          setError(null);
-          setItemsState(rows);
-        }
+        if (!alive || ticket !== seq.current) return;
+        store(rows);
+        setError(null);
+        setItemsState(rows);
       })
       .catch((e) => {
         reportUnexpectedAuthError(e, { feature: "resource-list", step: "load", basePath: cacheKey });
-        if (alive) setError(e instanceof Error ? e.message : "Failed to load.");
+        if (alive && ticket === seq.current) {
+          setError(e instanceof Error ? e.message : "Failed to load.");
+        }
       });
     return () => {
       alive = false;
     };
-  }, [fetchRows, cacheKey]);
+  }, [fetchRows, store, cacheKey]);
 
   return { items, reload, error, setItems };
 }
