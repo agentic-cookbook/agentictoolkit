@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { Activity, FolderKanban, KeyRound, ListTodo } from "lucide-react";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
 import { StackGroupDetail, type GroupTopicItem, type TopicLeaf } from "@agentic-toolkit/resource";
-import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
-import { ProjectOverviewPane } from "./ProjectOverviewPane";
-import { WorkItemsSurface } from "./WorkItemsSurface";
-import { ProjectActivityPane } from "./ProjectActivityPane";
+import { projectTopics } from "./projectTopics";
 
 /**
  * The "Project" topic of a product (ecosystem) or persona: resolves the subject's
@@ -86,53 +82,23 @@ export function SubjectProjectPane({
     );
   }
 
-  // The project's topic set — the same panes the standalone Projects feature renders,
-  // published as a group rail in the one stack (never a detached sub-rail).
-  const members: GroupTopicItem[] = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: <FolderKanban size={16} aria-hidden />,
-      description: "The project's own record — name, status, color, and participants.",
-      render: () => <ProjectOverviewPane projectId={project.id} title="Overview" />,
-    },
-    {
-      id: "work-items",
-      label: "Work Items",
-      icon: <ListTodo size={16} aria-hidden />,
-      description: "The work — list, board, table, timeline, and calendar views.",
-      render: () => (
-        <WorkItemsSurface projectId={project.id} title="Work Items" leaf={localViewLeaf} />
-      ),
-    },
-    {
-      id: "activity",
-      label: "Activity",
-      icon: <Activity size={16} aria-hidden />,
-      description: "The audit trail — everything that happened in this project.",
-      render: () => <ProjectActivityPane projectId={project.id} title="Activity" />,
-    },
-    ...(workspaceSlug
-      ? [
-          {
-            id: "access",
-            label: "Access",
-            icon: <KeyRound size={16} aria-hidden />,
-            description: "Who can see and change this project.",
-            render: () => (
-              <ItemAccessPanel
-                workspaceSlug={workspaceSlug}
-                feature="projects"
-                itemId={project.id}
-                itemLabel={project.name}
-                title="Access"
-                subjectsDirectory={workspaceSubjectsDirectory}
-              />
-            ),
-          } satisfies GroupTopicItem,
-        ]
-      : []),
-  ];
+  // The project's topic set — literally the same declaration the standalone Projects feature
+  // adapts (projectTopics.tsx), published here as a group rail in the one stack (never a
+  // detached sub-rail). This adapter supplies what the embedded context has instead of a URL:
+  // the plain label as the title (the stack already shows the project's name above it) and a
+  // LOCAL leaf, so Work Items' view switcher still works where the host's URL grammar has
+  // already ended at the member segment.
+  const members: GroupTopicItem[] = projectTopics({ workspaceSlug }).map((topic) => ({
+    ...topic,
+    render: () =>
+      topic.render({
+        projectId: project.id,
+        title: topic.label,
+        leaf: localViewLeaf,
+        workspaceSlug,
+        projectName: project.name,
+      }),
+  }));
 
   return (
     <StackGroupDetail

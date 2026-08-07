@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, type ReactElement, type ReactNode } from "react";
-import { FolderKanban, ListTodo, Activity, KeyRound } from "lucide-react";
+import { FolderKanban } from "lucide-react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
@@ -11,10 +11,7 @@ import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { projectsApi } from "@agentic-toolkit/data/projects";
 import { useResourceList } from "@agentic-toolkit/data";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
-import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
-import { ProjectOverviewPane } from "./ProjectOverviewPane";
-import { WorkItemsSurface } from "./WorkItemsSurface";
-import { ProjectActivityPane } from "./ProjectActivityPane";
+import { projectTopics } from "./projectTopics";
 import { type BadgeVariant } from "./helpers";
 
 /**
@@ -150,72 +147,25 @@ export function ProjectsFeature({
   );
   const { items: projects, reload } = useResourceList(basePath, loadProjects);
 
-  // Entity-first topics (FTD): the project Overview, then Work Items (the view
-  // switcher) and Activity — all real panes.
-  const topics: ResourceTopic[] = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: <FolderKanban size={16} aria-hidden />,
-      // ResourceExplorer only renders a topic pane once a project is selected, so
-      // `projectId` is defined here; guard keeps the type honest.
-      render: (projectId, titleFor) =>
-        projectId ? (
-          <ProjectOverviewPane
-            projectId={projectId}
-            title={titleFor("Overview")}
-            renderTransferOwnership={renderTransferOwnership}
-          />
-        ) : null,
-    },
-    {
-      id: "work-items",
-      label: "Work Items",
-      icon: <ListTodo size={16} aria-hidden />,
-      // ResourceExplorer only renders a topic pane once a project is selected, so
-      // `projectId` is defined here; guard keeps the type honest. `leaf` carries
-      // the deep-linkable active view (list / board / table / timeline / calendar).
-      render: (projectId, titleFor, leaf) =>
-        projectId ? (
-          <WorkItemsSurface
-            projectId={projectId}
-            title={titleFor("Work Items")}
-            leaf={leaf}
-          />
-        ) : null,
-    },
-    {
-      id: "activity",
-      label: "Activity",
-      icon: <Activity size={16} aria-hidden />,
-      // ResourceExplorer only renders a topic pane once a project is selected, so
-      // `projectId` is defined here; guard keeps the type honest.
-      render: (projectId, titleFor) =>
-        projectId ? (
-          <ProjectActivityPane projectId={projectId} title={titleFor("Activity")} />
-        ) : null,
-    },
-    {
-      id: "access",
-      label: "Access",
-      icon: <KeyRound size={16} aria-hidden />,
-      // The per-item share panel (docs/workspace-roles-permissions.md): restriction
-      // mode + item-scoped role assignments + the effective-permission explainer.
-      // Needs the owning workspace — the host always supplies it under /home and
-      // under the hub's /<slug>/projects, so both are defined here.
-      render: (projectId, titleFor) =>
-        projectId && workspaceSlug ? (
-          <ItemAccessPanel
-            workspaceSlug={workspaceSlug}
-            feature="projects"
-            itemId={projectId}
-            itemLabel={(projects ?? []).find((p) => p.id === projectId)?.name}
-            title={titleFor("Access")}
-            subjectsDirectory={workspaceSubjectsDirectory}
-          />
-        ) : null,
-    },
-  ];
+  // Entity-first topics (FTD), adapted from the shared declaration in projectTopics.tsx —
+  // which is also what SubjectProjectPane publishes, so the two doors into a project can't
+  // drift apart. All this adapter adds is the explorer's own vocabulary: the breadcrumbed
+  // title, the URL-backed leaf, and the fact that a topic pane is only ever rendered with a
+  // project selected (`projectId` is defined here; the guard keeps the type honest).
+  const topics: ResourceTopic[] = projectTopics({ workspaceSlug }).map((topic) => ({
+    ...topic,
+    render: (projectId, titleFor, leaf) =>
+      projectId
+        ? topic.render({
+            projectId,
+            title: titleFor(topic.label),
+            leaf,
+            workspaceSlug,
+            projectName: (projects ?? []).find((p) => p.id === projectId)?.name,
+            renderTransferOwnership,
+          })
+        : null,
+  }));
 
   return (
     <ResourceExplorer
