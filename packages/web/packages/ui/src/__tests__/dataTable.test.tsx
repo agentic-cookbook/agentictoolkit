@@ -197,3 +197,61 @@ describe('DataTable without selection (action-list mode)', () => {
     expect(fireEvent.keyDown(input, { key: 'ArrowUp' })).toBe(true)
   })
 })
+
+// OPENING a row, which is a different act from selecting it. Without `onRowActivate` a table has
+// to choose: multi-select, or open on click. These pin that both work at once.
+describe('DataTable row activation', () => {
+  const row = (name: string): HTMLElement =>
+    screen.getByText(name).closest('[role="row"]') as HTMLElement
+
+  it('double-click activates the row; a single click only selects', () => {
+    const onSel = vi.fn()
+    const onActivate = vi.fn()
+    render(<DataTable<Row> columns={COLS} rows={ROWS} getRowId={(r) => r.id} selectedIds={new Set()} onSelectionChange={onSel} onRowActivate={onActivate} ariaLabel="People" />)
+
+    fireEvent.click(row('Babbage'))
+    expect(onActivate).not.toHaveBeenCalled()
+    expect(ids(onSel.mock.calls.at(-1)![0])).toBe('b')
+
+    fireEvent.doubleClick(row('Babbage'))
+    expect(onActivate).toHaveBeenCalledWith('b')
+  })
+
+  it('Enter activates the focused row', () => {
+    const onActivate = vi.fn()
+    render(<DataTable<Row> columns={COLS} rows={ROWS} getRowId={(r) => r.id} selectedIds={new Set()} onSelectionChange={vi.fn()} onRowActivate={onActivate} ariaLabel="People" />)
+
+    fireEvent.click(row('Curie'))
+    fireEvent.keyDown(screen.getByRole('grid'), { key: 'Enter' })
+    expect(onActivate).toHaveBeenCalledWith('c')
+  })
+
+  it('leaves Enter alone when no consumer asked for activation', () => {
+    render(<DataTable<Row> columns={COLS} rows={ROWS} getRowId={(r) => r.id} selectedIds={new Set()} onSelectionChange={vi.fn()} ariaLabel="People" />)
+    fireEvent.click(row('Curie'))
+    // Uncancelled ⇒ the key reaches whatever encloses the grid (a form's submit, a dialog).
+    expect(fireEvent.keyDown(screen.getByRole('grid'), { key: 'Enter' })).toBe(true)
+  })
+
+  it('does not activate on a double-click that belongs to an in-cell control', () => {
+    const onActivate = vi.fn()
+    const cols: DataTableColumn<Row>[] = [
+      { key: 'name', header: 'Name', render: (r) => <input aria-label={`edit ${r.name}`} defaultValue={r.name} /> },
+    ]
+    render(<DataTable<Row> columns={cols} rows={ROWS} getRowId={(r) => r.id} selectedIds={new Set()} onSelectionChange={vi.fn()} onRowActivate={onActivate} ariaLabel="People" />)
+
+    // Double-clicking a word inside an inline editor selects that word — it must not open the row.
+    fireEvent.doubleClick(screen.getByLabelText('edit Ada'))
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+
+  it('activates on double-click even in action-list mode (no selection)', () => {
+    const onActivate = vi.fn()
+    render(<DataTable<Row> columns={COLS} rows={ROWS} getRowId={(r) => r.id} onRowActivate={onActivate} ariaLabel="People" />)
+
+    fireEvent.doubleClick(row('Dirac'))
+    expect(onActivate).toHaveBeenCalledWith('d')
+    // …and the rows say so: an openable row is a pointer target even with nothing to select.
+    expect(row('Dirac').className).toContain('cursor-pointer')
+  })
+})

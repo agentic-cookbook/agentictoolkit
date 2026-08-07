@@ -27,6 +27,19 @@ export interface DataTableProps<T> {
    *  aria-selected, so in-cell controls own the interaction. */
   selectedIds?: Set<string>
   onSelectionChange?: (ids: Set<string>) => void
+  /** OPEN this row — double-click, or Enter on the focused row.
+   *
+   *  Selecting and opening are different acts, and without this prop a table has to pick one:
+   *  either it wires `onSelectionChange` and can multi-select but never open anything, or it
+   *  repurposes `onSelectionChange` as "the user clicked a row, go open it" — which works, but
+   *  costs it selection entirely, so bulk actions and a details pane become unreachable. Wire
+   *  both and the table behaves the way every other dense list on the platform does: click
+   *  selects, double-click opens.
+   *
+   *  Enter is the keyboard twin, and it is not optional garnish — a double-click-only affordance
+   *  is unreachable without a mouse. It rides the grid's own key handler, so it applies when the
+   *  table is SELECTABLE; an action-list table (no selection) claims no keys at all. */
+  onRowActivate?: (id: string) => void
   sort?: { key: string; dir: "asc" | "desc" }
   onSortChange?: (sort: { key: string; dir: "asc" | "desc" }) => void
   emptyLabel?: string
@@ -65,7 +78,7 @@ function readWidths(key: string | undefined): ColumnWidths {
 }
 
 export function DataTable<T>({
-  columns, rows, getRowId, selectedIds = NO_SELECTION, onSelectionChange,
+  columns, rows, getRowId, selectedIds = NO_SELECTION, onSelectionChange, onRowActivate,
   sort, onSortChange, emptyLabel = "No items.", loading = false, ariaLabel, className,
   autoSizeColumns = false, columnWidthsKey,
 }: DataTableProps<T>): React.ReactElement {
@@ -170,6 +183,12 @@ export function DataTable<T>({
     else if (e.key === " ") {
       const cur = focusedId ?? anchorRef.current
       if (cur != null) { e.preventDefault(); toggle(cur) }
+    }
+    else if (e.key === "Enter" && onRowActivate) {
+      // The keyboard twin of the double-click. Claimed only when a consumer asked for activation,
+      // so a table without it leaves Enter to whatever encloses the grid (a form, a dialog).
+      const cur = focusedId ?? anchorRef.current
+      if (cur != null) { e.preventDefault(); onRowActivate(cur) }
     }
   }
 
@@ -321,8 +340,15 @@ export function DataTable<T>({
             // editor you cannot click into is no editor at all).
             onMouseDown={selectable ? (e) => { if (!fromCellControl(e.target)) e.preventDefault() } : undefined}
             onClick={selectable ? (e) => onRowClick(e, id) : undefined}
+            // Same carve-out as the click: a double-click that lands on an in-cell control belongs
+            // to the control (double-clicking a word in an inline editor selects it), not to the row.
+            onDoubleClick={
+              onRowActivate
+                ? (e) => { if (!fromCellControl(e.target)) onRowActivate(id) }
+                : undefined
+            }
             className={cn(inlineCommitHoverScopeClass, "grid border-t border-apt-border text-sm text-apt-text",
-              selectable && "cursor-pointer",
+              (selectable || onRowActivate) && "cursor-pointer",
               selected ? "bg-apt-highlight/15" : "hover:bg-apt-surface-2")}
             style={{ gridTemplateColumns: template }}>
             {columns.map((col) => (

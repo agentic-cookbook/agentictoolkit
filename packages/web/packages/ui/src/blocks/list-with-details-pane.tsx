@@ -2,22 +2,15 @@
 
 import * as React from "react"
 
-import { Trash2 } from "lucide-react"
 import { DataTable, type DataTableColumn } from "../components/data-table"
 import { ResizableSplit } from "../components/resizable-split"
-import { AlertModal } from "../components/alert-modal"
-import { Button } from "../components/button"
 import { ListHeader } from "./list-header"
+import { SelectionActions, type ListAction } from "./selection-actions"
 import { cn } from "../lib/utils"
 
-export interface ListAction {
-  id: string
-  label: React.ReactNode
-  onClick: (selectedIds: string[]) => void
-  requiresSelection?: boolean
-  dividerBefore?: boolean
-  variant?: React.ComponentProps<typeof Button>["variant"]
-}
+// `ListAction` was born here and is imported from here across the platform, so it keeps being
+// exported from here — it now DESCRIBES the shared strip rather than owning it.
+export type { ListAction }
 
 export interface ListWithDetailsPaneProps<T> {
   columns: DataTableColumn<T>[]
@@ -80,7 +73,6 @@ export function ListWithDetailsPane<T>({
 }: ListWithDetailsPaneProps<T>): React.ReactElement {
   const [internalFilter, setInternalFilter] = React.useState("")
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
-  const [confirming, setConfirming] = React.useState(false)
 
   // Opt-in URL selection (deep-linkable row): mirror the SINGLE selected row into
   // `?<paramKey>=<id>` and seed the initial selection from it on mount. When `paramKey`
@@ -154,9 +146,11 @@ export function ListWithDetailsPane<T>({
       ? (rows.find((r) => getRowId(r) === selectedArr[0]) ?? null)
       : null
 
-  function handleConfirmDelete(): void {
-    setConfirming(false)
-    onDelete?.(selectedArr)
+  // Post-confirmation: the strip owns the modal, so by the time this runs the user has said yes.
+  // The selection is emptied because the rows it named are gone — leaving it would arm the next
+  // action against ids that no longer exist.
+  function handleConfirmDelete(ids: string[]): void {
+    onDelete?.(ids)
     updateSelection(new Set())
   }
 
@@ -169,40 +163,12 @@ export function ListWithDetailsPane<T>({
         ariaLabel={`${ariaLabel} actions`}
         search={{ value: filterValue, onChange: setQuery, placeholder: filterPlaceholder }}
         actions={
-          <>
-            {actions.map((action) => (
-              <React.Fragment key={action.id}>
-                {action.dividerBefore && (
-                  // A real toolbar separator (ARIA toolbar pattern) so AT users
-                  // perceive the grouping the divider marks, not a decorative rule.
-                  <div
-                    role="separator"
-                    aria-orientation="vertical"
-                    className="mx-1 h-5 w-px bg-apt-border"
-                  />
-                )}
-                <Button
-                  size="sm"
-                  variant={action.variant ?? "ghost"}
-                  disabled={action.requiresSelection === true && selectedArr.length === 0}
-                  onClick={() => action.onClick(selectedArr)}
-                >
-                  {action.label}
-                </Button>
-              </React.Fragment>
-            ))}
-            {onDelete && (
-              <Button
-                size="sm"
-                variant="destructive-ghost"
-                disabled={selectedArr.length === 0}
-                onClick={() => setConfirming(true)}
-              >
-                <Trash2 data-icon="inline-start" />
-                Delete
-              </Button>
-            )}
-          </>
+          <SelectionActions
+            selectedIds={selectedArr}
+            actions={actions}
+            onDelete={onDelete && handleConfirmDelete}
+            deleteConfirm={deleteConfirm}
+          />
         }
       />
 
@@ -241,20 +207,6 @@ export function ListWithDetailsPane<T>({
           </div>
         }
       />
-
-      {/* Delete confirm modal */}
-      {onDelete && (
-        <AlertModal
-          open={confirming}
-          destructive
-          title={deleteConfirm?.title ?? "Delete selected?"}
-          description={deleteConfirm?.description}
-          cancelLabel="Cancel"
-          onCancel={() => setConfirming(false)}
-          confirmLabel="Delete"
-          onConfirm={handleConfirmDelete}
-        />
-      )}
     </div>
   )
 }

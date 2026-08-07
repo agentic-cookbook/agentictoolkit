@@ -125,6 +125,7 @@ export { DeleteEntitySection, type DeleteEntitySectionProps } from "./delete-ent
 export { TransferOwnershipSection, type TransferOwnershipSectionProps, type TransferTarget, type TransferPreviewResult } from "./transfer-ownership-section"
 export { ListHeader, type ListHeaderProps, type ListHeaderSearch } from "./list-header"
 export { ListWithDetailsPane, type ListWithDetailsPaneProps, type ListAction } from "./list-with-details-pane"
+export { SelectionActions, type SelectionActionsProps } from "./selection-actions"
 export { SendInvitationModal, type SendInvitationModalProps, type SendInvitationPayload } from "./send-invitation-modal"
 export { AddUsersModal, type AddUsersModalProps, type DraftUser } from "./add-users-modal"
 export { CreateResourceDialog, type CreateResourceDialogProps } from "./create-resource-dialog"
