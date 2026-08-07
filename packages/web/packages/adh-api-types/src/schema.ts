@@ -21603,8 +21603,11 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         direction: "ingested" | "produced";
-                        /** @description the target's registry, e.g. 'content.markdown'. Must be a kind the target registry knows (400 otherwise), and the target itself must exist within the PROJECT owner's reach (404 otherwise) — an unreachable id is indistinguishable from an absent one. */
-                        targetKind: string;
+                        /**
+                         * @description the target's registry, e.g. 'content.markdown'. Must be a kind the target registry knows (400 otherwise), and the target itself must exist within the PROJECT owner's reach (404 otherwise) — an unreachable id is indistinguishable from an absent one. GET /project/projects/{id}/attachable lists the ids that will be accepted.
+                         * @enum {string}
+                         */
+                        targetKind: "content.markdown" | "content.urls";
                         targetId: string;
                     };
                 };
@@ -21648,6 +21651,85 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/project/projects/{id}/attachable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Targets this project could attach — the candidate list an attach picker reads
+         * @description Everything the project OWNER can reach, of every registered target kind (or one, via `kind`), most recently touched first. Returned through the same owner scope the link write checks against, so every row here is one POST /artifacts will accept. Requires the project 'C' verb — the same gate as the attach itself, so this is not a read-only route for enumerating a workspace.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Restrict to one target kind. Omit for every registered kind — which is how a client builds the picker without hard-coding the vocabulary. An unregistered value is a 400 naming the known set. */
+                    kind?: "content.markdown" | "content.urls";
+                    /** @description Free-text narrowing. Matches a document title, and for a saved URL either its title or the address it was saved as (so a not-yet-unfurled URL is still findable). */
+                    q?: string;
+                    /** @description Max rows PER KIND (not per response), so no one kind can crowd the others out of the picker. Default 20, max 100; a non-numeric or out-of-range value is clamped. */
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Attachable targets */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["TargetDescriptor"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
