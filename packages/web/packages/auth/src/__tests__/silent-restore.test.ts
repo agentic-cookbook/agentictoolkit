@@ -48,11 +48,16 @@ describe('ssoHintPresent', () => {
 describe('shouldSilentRestore', () => {
   it('true only with a hint, no mid-flow fragment, and not yet checked', () => {
     setHint(true)
+    // An ordinary in-app route: every case below is about the hint / apex / tab
+    // rules, so none of them may sit on the landing page, where the answer is
+    // always no (see the landing-page block).
+    stubLocation('https://status.example.com')
     expect(shouldSilentRestore('')).toBe(true)
   })
 
   it('false without the hint on a same-apex site (anonymous — never redirect)', () => {
     // No AS host configured ⇒ not cross-apex ⇒ hint-gated ⇒ no probe.
+    stubLocation('https://status.example.com')
     expect(shouldSilentRestore('')).toBe(false)
   })
 
@@ -93,6 +98,7 @@ describe('shouldSilentRestore', () => {
 
   it('false mid-flow on the callback (#code / #error present)', () => {
     setHint(true)
+    stubLocation('https://status.example.com')
     expect(shouldSilentRestore('#code=abc')).toBe(false)
     expect(shouldSilentRestore('#error=login_required')).toBe(false)
   })
@@ -105,6 +111,45 @@ describe('shouldSilentRestore', () => {
     beginSilentLogin({ clientId: 'adh' })
     expect(shouldSilentRestore('')).toBe(false)
     clearSsoChecked()
+    expect(shouldSilentRestore('')).toBe(true)
+  })
+})
+
+// The landing page is the one route where the probe is never worth it, whatever
+// the hint and apex rules say. It is a PUBLIC marketing deck the visitor asked
+// for by name, and the probe is a top-level navigation OFF it: when the bounce
+// can't complete — an origin the AS doesn't allow-list, an AS that isn't up yet —
+// they are left looking at a login page (or an error page) having asked for a
+// marketing page. An avatar in the header does not buy that risk. Nothing is
+// lost: the probe still runs on the app routes behind the landing page, which is
+// where a session actually changes what the visitor sees.
+describe('shouldSilentRestore on a landing page', () => {
+  it('false on the site root even when the hint cookie says a session exists', () => {
+    setHint(true)
+    stubLocation('https://cookbook.com', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('false on the site root for a deployed cross-apex blind probe', () => {
+    // The other half of the rule: cross-apex sites probe without a hint at all,
+    // and that guess must not be made from the landing page either.
+    stubLocation('https://cookbook.com', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('false on a root path written with a trailing slash', () => {
+    // Static hosts serve the deck as `/` or `` depending on the export; the rule
+    // is about the ROUTE, so it can't turn on which spelling arrived.
+    setHint(true)
+    stubLocation('https://cookbook.com', '')
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('true one route in — the probe moves to the app surfaces, it is not lost', () => {
+    setHint(true)
+    stubLocation('https://cookbook.com', '/home')
     expect(shouldSilentRestore('')).toBe(true)
   })
 })

@@ -198,10 +198,23 @@ function isCrossApex(): boolean {
   }
 }
 
+/** True on a site's LANDING page — its root route, the public marketing deck.
+ *  Both spellings of the root count (`/`, and the empty pathname some static
+ *  exports produce): the rule is about the route, not how the path was written. */
+function onLandingPage(pathname: string): boolean {
+  return pathname.replace(/\/+$/, '') === ''
+}
+
 /** Whether the AuthProvider should run a silent cold-load SSO check now. Never
- *  when we're mid-flow on the callback (`initialHash` captured at render) or have
+ *  when we're mid-flow on the callback (`initialHash` captured at render), have
  *  already checked this tab (which also breaks the login_required → home → re-check
- *  loop). Otherwise:
+ *  loop), or are on the site's LANDING page — the probe is a top-level navigation
+ *  away from a public page the visitor asked for by name, and when the bounce
+ *  can't complete (an origin missing from the AS allow-list, an AS that is down or
+ *  still booting) it leaves them looking at the central login page instead. An
+ *  avatar in the header is not worth that: the probe still runs on every app route
+ *  behind the landing page, which is where a session changes what is rendered.
+ *  Otherwise:
  *   - a readable HINT cookie is positive evidence a central session exists (the site
  *     shares the AS's apex) ⇒ restore, wherever we're served. The dev.local suite is
  *     same-apex with its AS, so a suite satellite restores exactly like prod — without
@@ -220,6 +233,11 @@ function isCrossApex(): boolean {
 export function shouldSilentRestore(initialHash: string): boolean {
   if (typeof window === 'undefined') return false
   if (isMidAuthFlow(initialHash) || ssoCheckedThisTab()) return false
+  // Deliberately BEFORE the hint/apex rules, and deliberately without
+  // markSsoChecked(): a landing page suppresses this probe, it does not spend the
+  // tab's one check. The visitor who clicks through to an app route still gets
+  // their session restored there.
+  if (onLandingPage(window.location.pathname)) return false
   if (ssoHintPresent()) return true
   return !isLocalHostname(window.location.hostname) && isCrossApex()
 }

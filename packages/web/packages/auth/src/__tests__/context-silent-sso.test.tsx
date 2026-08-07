@@ -12,13 +12,17 @@ function stubLocation(
   // status.example.com shares the registrable domain (example.com) with the AS host
   // api.example.com below, so these are SAME-apex (hint-gated, no anonymous probe).
   origin = 'https://status.example.com',
+  // An in-app route by default. The probe never fires from a landing page, so a
+  // test about the hint/apex rules stated on `/` would be testing the landing
+  // rule instead — see the landing-page case at the bottom of this file.
+  pathname = '/dashboard',
 ): { origin: string; href: string; hash: string; pathname: string } {
   const loc = {
     origin,
     hostname: new URL(origin).hostname,
     href: '',
     hash: '',
-    pathname: '/',
+    pathname,
     search: '',
   }
   savedLocation = Object.getOwnPropertyDescriptor(window, 'location')
@@ -130,6 +134,24 @@ describe('AuthProvider cold-load silent SSO', () => {
 
     const { getByText } = render(
       <AuthProvider clientId="adh" silentSso={false}>
+        <Probe />
+      </AuthProvider>,
+    )
+
+    await waitFor(() => getByText('anon'))
+    expect(loc.href).toBe('')
+  })
+
+  // The bug this guards: a cold load of a site's landing page yanked the visitor
+  // to the AS, and when the bounce couldn't complete it left them on the central
+  // login page — or, with the AS still booting, on a dev-server error page. A
+  // landing page is what the visitor asked for; it never navigates on its own.
+  it('does NOT redirect from the landing page, hint or no hint', async () => {
+    setHint(true)
+    const loc = stubLocation('https://status.example.com', '/')
+
+    const { getByText } = render(
+      <AuthProvider clientId="adh">
         <Probe />
       </AuthProvider>,
     )

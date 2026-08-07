@@ -274,9 +274,10 @@ export function AuthProvider<U extends AuthUser = AuthUser>({
           // No per-site session. If a central session likely exists and we haven't
           // checked this tab, silently restore it so the header reflects the login
           // with no click. shouldSilentRestore owns the whole "is a probe worth it"
-          // rule (hint cookie / cross-apex / local host / loop guard) — one home for
-          // it, so the decision can't drift between here and the site switcher. The
-          // bounced #code returns to THIS page and is exchanged in place above.
+          // rule (landing page / hint cookie / cross-apex / local host / loop guard)
+          // — one home for it, so the decision can't drift between here and the site
+          // switcher. The bounced #code returns to THIS page and is exchanged in
+          // place above.
           //
           // This restore is a TOP-LEVEL navigation to the AS (the central session
           // cookie is host-only + SameSite=Lax, so a background fetch/iframe can't

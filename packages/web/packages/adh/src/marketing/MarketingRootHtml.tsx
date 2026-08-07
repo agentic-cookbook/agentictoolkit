@@ -29,7 +29,9 @@ export type MarketingRootHtmlProps = {
   siteId: SiteId
   /**
    * Whether the AuthProvider runs the cross-site cold-load silent-SSO probe (default `true`,
-   * the feature-site behaviour). Set `false` for a FULLY PUBLIC site that must never redirect a
+   * the feature-site behaviour) on the site's NON-LANDING routes. The landing page (`/`) never
+   * probes whatever this says — `shouldSilentRestore` refuses there — so this prop is about the
+   * routes behind it. Set `false` for a FULLY PUBLIC site that must never redirect a
    * visitor on page load. The probe is a top-level `/authorize?prompt=none` navigation (the central
    * session cookie is host-only + SameSite=Lax, so it CANNOT be done silently in the background) —
    * and when the site's origin can't complete the silent bounce it strands the visitor on the
@@ -50,12 +52,12 @@ export type MarketingRootHtmlProps = {
  *  • `<head>` font preconnects + `<AdhThemeStyle/>` (the theme CSS variables)
  *  • an `<AuthProvider clientId="adh" silentSso={silentSso}>` — a feature site
  *    (docs/platform/feature-sites-redesign.md) leaves the probe ON (default): the header is
- *    session-aware and `/home` is the signed-in feature surface. The probe is hint-cookie-gated +
- *    once-per-tab (`shouldSilentRestore`) and every deployed marketing origin is in the `adh`
- *    client's `ssoReturnOrigins` allow-list — but a hint cookie makes it fire EVERYWHERE the cookie
- *    is readable, local dev included, and any origin the allow-list is missing gets stranded on the
- *    central login page. A fully public site (help) passes `silentSso={false}` to opt out — see the
- *    prop doc above.
+ *    session-aware and `/home` is the signed-in feature surface. The probe is landing-page-exempt,
+ *    hint-cookie-gated + once-per-tab (`shouldSilentRestore`) and every deployed marketing origin
+ *    is in the `adh` client's `ssoReturnOrigins` allow-list — but a hint cookie makes it fire on
+ *    every non-landing route the cookie is readable from, local dev included, and any origin the
+ *    allow-list is missing gets stranded on the central login page. A fully public site (help)
+ *    passes `silentSso={false}` to opt the rest of its routes out too — see the prop doc above.
  *  • `<AppShell header={<MarketingSiteHeader siteId/>} footer={…}>` — the shared
  *    chrome with the smart auth widget (avatar / Login+Sign up via SSO returnTo)
  *
