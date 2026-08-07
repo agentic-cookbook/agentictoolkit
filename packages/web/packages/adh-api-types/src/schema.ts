@@ -16710,9 +16710,11 @@ export interface paths {
                     "application/json": {
                         preferences: {
                             /** @enum {string} */
-                            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
+                            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status";
                             email: boolean;
                             sms: boolean;
+                            /** @default true */
+                            inApp?: boolean;
                         }[];
                     };
                 };
@@ -16761,9 +16763,11 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
+                        category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status";
                         email: boolean;
                         sms: boolean;
+                        /** @default true */
+                        inApp?: boolean;
                     };
                 };
             };
@@ -54807,9 +54811,10 @@ export interface components {
         };
         NotificationPreference: {
             /** @enum {string} */
-            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
+            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status";
             email: boolean;
             sms: boolean;
+            inApp: boolean;
         };
         Friendship: {
             id: string;

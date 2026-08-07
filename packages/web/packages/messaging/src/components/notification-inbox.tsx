@@ -56,6 +56,13 @@ const CATEGORY_META: Record<string, { label: string; variant: BadgeVariant }> = 
   community_reply: { label: 'Reply', variant: 'success' }, // green
   community_mention: { label: 'Mention', variant: 'orange' },
   account: { label: 'Account', variant: 'neutral' },
+  // Projects. `Assigned` borrows the accent tone an announcement uses because it is the
+  // one row in this list that is a request rather than news; the other three sit at the
+  // weight of the community signals they mirror.
+  project_assigned: { label: 'Assigned', variant: 'accent' },
+  project_mention: { label: 'Mention', variant: 'orange' },
+  project_comment: { label: 'Comment', variant: 'success' },
+  project_status: { label: 'Status', variant: 'blue' },
 }
 
 /** Categories offered in the multi-select filter, in a stable display order. */
