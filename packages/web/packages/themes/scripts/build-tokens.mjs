@@ -5,7 +5,8 @@
 // as var(), semantic->primitive refs inline their value (outputReferencesFilter).
 //
 // Output is AUTO-GENERATED — never hand-edit src/styles/adh*.css. Edit tokens/ instead.
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync, utimesSync } from 'node:fs'
+import { join } from 'node:path'
 import StyleDictionary from 'style-dictionary'
 import { formattedVariables, outputReferencesFilter } from 'style-dictionary/utils'
 
@@ -200,6 +201,30 @@ StyleDictionary.registerFormat({
 
 const isPrimitive = (token) => token.filePath.replace(/\\/g, '/').endsWith('tokens/primitives.json')
 
+// Style Dictionary rewrites its destination unconditionally, so a run that changes NOTHING
+// still stamps a fresh mtime on every src/styles/*.css. That is not cosmetic. Those files
+// are inputs to this package's bundle, and `dist_staleness()` in adh's tools/shared_vendor.py
+// reads "a source file newer than the newest thing in dist/" as "this dist is a rollback" —
+// the guard that caught b892a088a shipping a status container that died on an ESM
+// SyntaxError. adh's ci.yml runs this script (via `check:drift`) AFTER build_shared_deps.py
+// has built dist/, so an unconditional rewrite made both backends' vendored-freshness
+// checks fail on a tree where not one byte had drifted.
+//
+// So: snapshot the outputs, and hand back the original mtime to any file the build
+// reproduced byte-for-byte. Content behaviour is unchanged — `check:drift`'s
+// `git diff --exit-code` still fires on a real change, because a real change is written.
+// Paths are cwd-relative to match `buildPath` below; both must name the same files.
+const OUT_DIR = 'src/styles'
+const snapshot = new Map()
+for (const key of Object.keys(THEMES)) {
+  const file = join(OUT_DIR, `${key}.css`)
+  try {
+    snapshot.set(file, { text: readFileSync(file, 'utf8'), stat: statSync(file) })
+  } catch {
+    // A theme with no output yet is a first build — nothing to preserve.
+  }
+}
+
 let count = 0
 for (const [key, meta] of Object.entries(THEMES)) {
   const sd = new StyleDictionary({
@@ -235,4 +260,14 @@ for (const [key, meta] of Object.entries(THEMES)) {
   count += 1
 }
 
-console.log(`build-tokens: ${count} theme${count === 1 ? '' : 's'} → src/styles/`)
+let unchanged = 0
+for (const [file, was] of snapshot) {
+  if (readFileSync(file, 'utf8') !== was.text) continue
+  utimesSync(file, was.stat.atime, was.stat.mtime)
+  unchanged += 1
+}
+
+console.log(
+  `build-tokens: ${count} theme${count === 1 ? '' : 's'} → src/styles/` +
+    (unchanged ? ` (${unchanged} unchanged, mtime preserved)` : ''),
+)
