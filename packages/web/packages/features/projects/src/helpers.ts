@@ -1,6 +1,6 @@
 import { type ComponentProps } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
-import type { WorkItem } from "@agentic-toolkit/data/projects";
+import type { ProjectActivity, WorkItem } from "@agentic-toolkit/data/projects";
 import type { ProjectStatus, ProjectParticipant, StatusCategory } from "@agentic-toolkit/data/projects";
 import { participantLabel } from "./AssigneePicker";
 
@@ -44,6 +44,17 @@ export function dayIndex(date: string): number | null {
     return null; // an out-of-range day rolled over to another date — reject it
   }
   return Math.floor(Date.UTC(y, mo - 1, d) / MS_PER_DAY);
+}
+
+/** The viewer's LOCAL calendar day as a day index, matching what {@link dayIndex} returns for a
+ *  date-only string. Read from the wall-clock parts — NOT `Date.now()`'s UTC instant — so a
+ *  viewer whose local day differs from UTC near a day boundary gets their own day, which is what
+ *  makes "overdue" and the Calendar's Today ring agree with the date on their wall. Shared by the
+ *  Calendar view (which highlights it) and Overview (which counts what is past it) so the two can
+ *  never disagree about which day it is. Fake clocks in tests pin the underlying `new Date()`. */
+export function todayIndex(): number {
+  const now = new Date();
+  return Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / MS_PER_DAY);
 }
 
 /**
@@ -95,4 +106,84 @@ export function assigneeLabel(item: WorkItem, participants: ProjectParticipant[]
     (x) => x.participantKind === item.assigneeKind && x.participantId === item.assigneeId,
   );
   return p ? participantLabel(p) : item.assigneeId;
+}
+
+/* ── Activity phrasing ─────────────────────────────────────────────────────
+ * How a raw activity row reads as a sentence. Shared by the full ActivityFeed and by
+ * Overview's recent-activity summary, because the same event must not be worded two
+ * different ways depending on which pane you happen to be looking at. */
+
+/** The actor's display name: the label if present, else a phrasing of kind/id. */
+export function actorText(a: ProjectActivity): string {
+  if (a.actorLabel) return a.actorLabel;
+  if (a.actorKind && a.actorId) return `${a.actorKind} · ${a.actorId}`;
+  return a.actorKind ?? a.actorId ?? "Someone";
+}
+
+/** Human phrasing of an `action` string; the raw value is the fallback.
+ *
+ *  A switch with a `default` rather than a total Record (unlike CATEGORY_VARIANT above) because
+ *  the action set is OPEN — the backend appends new action strings as features land, and a bundle
+ *  older than the backend must render the raw string rather than blank the row. */
+export function actionPhrase(action: string): string {
+  switch (action) {
+    case "project.created":
+      return "created the project";
+    case "project.updated":
+      return "updated the project";
+    case "project.archived":
+      return "archived the project";
+    case "work_item.created":
+      return "created a work item";
+    case "work_item.updated":
+      return "updated a work item";
+    case "work_item.status_changed":
+      return "changed status";
+    case "work_item.assigned":
+      return "assigned";
+    case "work_item.unassigned":
+      return "unassigned";
+    case "work_item.reparented":
+      return "moved";
+    case "work_item.deleted":
+      return "deleted a work item";
+    case "comment.added":
+      return "commented";
+    case "field.created":
+      return "added a field";
+    case "field.updated":
+      return "updated a field";
+    case "field.deleted":
+      return "removed a field";
+    case "participant.added":
+      return "added a participant";
+    case "participant.removed":
+      return "removed a participant";
+    default:
+      return action;
+  }
+}
+
+/** A comment row's body from its detail payload, when present. */
+export function commentBody(a: ProjectActivity): string | null {
+  const body = a.detail?.body;
+  return typeof body === "string" && body.trim() ? body : null;
+}
+
+/** A relative "3 minutes ago" phrasing via the platform's Intl formatter. */
+export function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const sec = Math.round((Date.now() - then) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  if (Math.abs(sec) < 60) return rtf.format(-sec, "second");
+  const min = Math.round(sec / 60);
+  if (Math.abs(min) < 60) return rtf.format(-min, "minute");
+  const hr = Math.round(min / 60);
+  if (Math.abs(hr) < 24) return rtf.format(-hr, "hour");
+  const day = Math.round(hr / 24);
+  if (Math.abs(day) < 30) return rtf.format(-day, "day");
+  const month = Math.round(day / 30);
+  if (Math.abs(month) < 12) return rtf.format(-month, "month");
+  return rtf.format(-Math.round(month / 12), "year");
 }

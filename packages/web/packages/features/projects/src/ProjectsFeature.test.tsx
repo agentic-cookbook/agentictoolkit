@@ -40,10 +40,16 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
     list: vi.fn(),
     get: vi.fn(),
     create: vi.fn(),
-    // The Overview topic renders ProjectOverviewPane, which also reads the project's
-    // board statuses + participants — stub them so the Overview render doesn't throw.
+    // The Overview topic renders ProjectOverviewPane, which summarises five lists it does not
+    // own — stub every one, or the pane's reads reject on an undefined client and the topic
+    // renders its zero states for a reason that has nothing to do with this file.
     statuses: { list: vi.fn().mockResolvedValue([]) },
     participants: { list: vi.fn().mockResolvedValue([]) },
+  },
+  projectWorkItemsApi: { listForProject: vi.fn().mockResolvedValue([]) },
+  projectArtifactsApi: { list: vi.fn().mockResolvedValue([]) },
+  projectActivityApi: {
+    projectActivity: vi.fn().mockResolvedValue({ rows: [], nextBefore: null }),
   },
 }));
 
@@ -172,18 +178,18 @@ describe("ProjectsFeature", () => {
     );
   });
 
-  it("renders the Overview topic (name + status) for the selected project", async () => {
+  it("renders the Overview topic for the selected project", async () => {
     render(
       <Harness>
         <ProjectsFeature basePath="/w1/projects" activeProjectId="p1" activeTopic="overview" />
       </Harness>,
     );
 
-    // Overview fetches the single project and seeds its editable name field + status
-    // input (T3's ProjectOverviewPane renders these as form controls, not plain text;
-    // status is the free-form lifecycle varchar, a text input — not a board-column select).
-    expect(await screen.findByDisplayValue("Website relaunch")).not.toBeNull();
-    expect((screen.getByLabelText("Status") as HTMLInputElement).value).toBe("active");
+    // Overview fetches the single project and leads with what it IS — its description and its
+    // lifecycle status, read-only. (The editable name/status fields are still there, but behind
+    // a closed "Project settings" disclosure; ProjectOverviewPane.test.tsx owns that form.)
+    expect(await screen.findByText("Rework the marketing site.")).not.toBeNull();
+    expect(screen.getByText("active")).not.toBeNull();
     await waitFor(() => expect(get).toHaveBeenCalledWith("p1"));
   });
 

@@ -176,3 +176,93 @@ describe("ListView (list with details)", () => {
     expect(screen.getByText("No work items yet.")).not.toBeNull();
   });
 });
+
+/* ── The sub-item tree ────────────────────────────────────────────────────── */
+
+// `parentId` is a real field on every work item and this is the ONLY view that shows it, so these
+// pin the two things the flattener can't: that the hierarchy reaches the screen, and that it
+// stands down when the list is filtered.
+describe("ListView sub-item tree", () => {
+  const CHILD: WorkItem = {
+    ...ITEM,
+    id: "w2",
+    title: "Write the hero copy",
+    description: "",
+    parentId: "w1",
+    position: 0,
+  };
+  const SIBLING: WorkItem = {
+    ...ITEM,
+    id: "w3",
+    title: "Pick the pricing table",
+    description: "",
+    parentId: "w1",
+    position: 1,
+  };
+  /** A root that sorts AFTER the parent, so "the child follows its parent" is a claim about the
+   *  tree rather than a coincidence of the input order. */
+  const OTHER_ROOT: WorkItem = {
+    ...ITEM,
+    id: "w4",
+    title: "Ship it",
+    description: "",
+    parentId: null,
+    position: 1,
+  };
+
+  /** The titles in the order the table renders them. Reads the inputs, since every title cell in
+   *  this view is an editor rather than text. */
+  function titleOrder(): string[] {
+    return screen
+      .getAllByRole("textbox", { name: /^Title —/ })
+      .map((el) => (el as HTMLInputElement).value);
+  }
+
+  it("puts a child under its parent, before the next root", () => {
+    // Deliberately shuffled: the order on screen must come from parentId + position, not from
+    // the order the API happened to return.
+    renderList([OTHER_ROOT, SIBLING, ITEM, CHILD]);
+
+    expect(titleOrder()).toEqual([
+      "Design the landing page",
+      "Write the hero copy",
+      "Pick the pricing table",
+      "Ship it",
+    ]);
+  });
+
+  it("hides a subtree when its parent is collapsed, and brings it back", () => {
+    renderList([ITEM, CHILD]);
+
+    // Expanded by default — nothing a project contains is hidden until someone hides it.
+    expect(titleOrder()).toContain("Write the hero copy");
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Design the landing page" }));
+    expect(titleOrder()).toEqual(["Design the landing page"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand Design the landing page" }));
+    expect(titleOrder()).toContain("Write the hero copy");
+  });
+
+  it("gives a leaf no toggle at all", () => {
+    renderList([ITEM, CHILD]);
+
+    // The parent has one; the childless row does not — a leaf gets the width, not a dead control.
+    expect(screen.getByRole("button", { name: "Collapse Design the landing page" })).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^(Expand|Collapse) Write the hero copy$/ }),
+    ).toBeNull();
+  });
+
+  it("goes flat while a filter is on, so a match is never indented under a hidden parent", () => {
+    renderList([ITEM, CHILD]);
+
+    fireEvent.change(screen.getByPlaceholderText("Filter work items…"), {
+      target: { value: "hero" },
+    });
+
+    expect(titleOrder()).toEqual(["Write the hero copy"]);
+    // No toggles anywhere: a filtered list is a list of matches, not a hierarchy.
+    expect(screen.queryByRole("button", { name: /^(Expand|Collapse) / })).toBeNull();
+  });
+});

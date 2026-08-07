@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
-import { MS_PER_DAY, dayIndex, type BadgeVariant } from "../helpers";
+import { MS_PER_DAY, dayIndex, todayIndex, type BadgeVariant } from "../helpers";
 
 /**
  * The Calendar VIEW of the work-items surface: a month grid (weekday header +
@@ -48,16 +48,6 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 /** A calendar month, identified by its UTC year + 0-based month. */
 type Month = { year: number; month: number };
-
-/** The viewer's LOCAL calendar day as a day index (matching `dayIndex`, which parses
- *  date-only strings on the local calendar). Read from the wall-clock parts — NOT
- *  `Date.now()`'s UTC instant — so a viewer whose local day differs from UTC near a
- *  day boundary gets the Today ring / default month on their own wall-clock day. Fake
- *  clocks in tests pin the underlying `new Date()`. */
-function todayIndex(): number {
-  const now = new Date();
-  return Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / MS_PER_DAY);
-}
 
 /** The UTC month a day index falls in. */
 function monthOfDay(day: number): Month {

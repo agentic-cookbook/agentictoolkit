@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { ListWithDetailsPane } from "@agentic-toolkit/ui/blocks/list-with-details-pane";
 import type { DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
+import { TreeRowLabel, flattenTree, type TreeRow } from "@agentic-toolkit/ui/components/tree-rows";
 import {
   InlineCommitControl,
   InlineEditableText,
@@ -36,6 +37,12 @@ import { WorkItemDetail } from "../WorkItemDetail";
  *  - **Content-sized, resizable columns.** Each column is as wide as its widest cell, and dragging a
  *    column's trailing border overrides that (double-click springs it back). Widths persist per
  *    project.
+ *  - **The SUB-ITEM TREE.** `parentId` is a real field on every work item, and this is the one view
+ *    that shows it: children sit under their parent, indented, behind a chevron. It lives here and
+ *    not in Table because a tree is carried by ROW ORDER — and Table's whole affordance is
+ *    re-ordering the rows by any column, which would scatter a hierarchy the first time anyone
+ *    used it. Board, Calendar and Timeline place an item by a field, not by a position in a list,
+ *    so there is nowhere for a child to be "under" its parent at all.
  *
  * Selecting a row shows its whole record below — including the fields that are NOT columns
  * (description, labels, parent, timestamps). The row edits; the details pane reads.
@@ -107,6 +114,43 @@ export function ListView({
   const rows = useInlineDrafts<string, WorkItemDraft>(errorMessage);
   const [filter, setFilter] = useState("");
 
+  // COLLAPSED, not expanded: a project's items are mostly flat, so the useful default is that
+  // everything a project contains is on screen — and a set of collapsed ids stays correct as
+  // items arrive, whereas a set of expanded ids would have to be topped up on every load to keep
+  // new parents open. Ids of items that have since vanished are harmless (nothing looks them up).
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleCollapsed = useCallback((id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }, []);
+
+  // A FILTERED list is not the hierarchy: hiding a parent whose child matches would either drop
+  // the match or indent it under nothing. So while the filter is on, the rows go flat — every
+  // match on one line, at depth 0 — and the tree comes back when it is cleared.
+  const filtering = filter.trim().length > 0;
+  const tree = useMemo<TreeRow<WorkItem>[] | null>(
+    () =>
+      filtering
+        ? null
+        : flattenTree(items, {
+            id: (w) => w.id,
+            parentId: (w) => w.parentId,
+            expanded: new Set(items.map((w) => w.id).filter((id) => !collapsed.has(id))),
+            // Siblings in board order, so a child's place among its siblings reads the same here
+            // as it does on the Board.
+            compare: (a, b) => a.position - b.position,
+          }),
+    [items, collapsed, filtering],
+  );
+  const visibleItems = useMemo(() => tree?.map((t) => t.row) ?? items, [tree, items]);
+  const treeMeta = useMemo(
+    () => new Map(tree?.map((t) => [t.row.id, t] as const) ?? []),
+    [tree],
+  );
+
   function commitRow(w: WorkItem) {
     // The ✓ commits whichever pending state the row is in: an armed delete destroys it, otherwise
     // the touched fields are PATCHed.
@@ -145,19 +189,37 @@ export function ListView({
       {
         key: "title",
         header: "Title",
-        render: (w) => (
-          <InlineEditableText
-            value={draft(w).title}
-            onChange={(title) => rows.edit(w.id, { title })}
-            {...editKeys(w)}
-            aria-label={`Title — ${w.title}`}
-            disabled={rows.isArmed(w.id)}
-            // `size` comes from the SAVED title, not the draft: the column is then as wide as the
-            // longest title in the DATA, and typing into one cell doesn't reflow the whole table.
-            size={Math.max(TITLE_MIN_CHARS, w.title.length)}
-            className={cn("w-auto", armed(w))}
-          />
-        ),
+        render: (w) => {
+          const field = (
+            <InlineEditableText
+              value={draft(w).title}
+              onChange={(title) => rows.edit(w.id, { title })}
+              {...editKeys(w)}
+              aria-label={`Title — ${w.title}`}
+              disabled={rows.isArmed(w.id)}
+              // `size` comes from the SAVED title, not the draft: the column is then as wide as
+              // the longest title in the DATA, and typing into one cell doesn't reflow the whole
+              // table.
+              size={Math.max(TITLE_MIN_CHARS, w.title.length)}
+              className={cn("w-auto", armed(w))}
+            />
+          );
+          // No entry ⇒ the filter is on and the list is flat: the bare field, with no indent to
+          // suggest a parent that isn't on screen.
+          const node = treeMeta.get(w.id);
+          if (!node) return field;
+          return (
+            <TreeRowLabel
+              depth={node.depth}
+              hasChildren={node.hasChildren}
+              expanded={!collapsed.has(w.id)}
+              onToggle={() => toggleCollapsed(w.id)}
+              label={w.title}
+            >
+              {field}
+            </TreeRowLabel>
+          );
+        },
       },
       {
         key: "status",
@@ -260,7 +322,7 @@ export function ListView({
     ];
     // `commitRow` closes over `rows` + `onChanged`, both stable enough for the row controls.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, statuses, participants]);
+  }, [rows, statuses, participants, treeMeta, collapsed, toggleCollapsed]);
 
   // Leaving with an uncommitted row edit (or an armed delete) would silently lose it.
   const pending = items.some((w) => rows.isDirty(w.id, draftFrom(w)) || rows.isArmed(w.id));
@@ -276,7 +338,7 @@ export function ListView({
         ariaLabel="Work items"
         className="min-h-0 flex-1"
         columns={columns}
-        rows={items}
+        rows={visibleItems}
         getRowId={(w) => w.id}
         emptyLabel="No work items yet."
         detailsLabel="Work item"

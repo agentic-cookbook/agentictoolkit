@@ -12,6 +12,12 @@
 //   2. A pointer that no longer resolves still counts. The backend hands back `target: null`
 //      for a deleted or unreachable target, and the row must survive it — dropping the row
 //      would quietly shrink a project's history.
+//
+// @agentic-toolkit/data is deliberately NOT mocked: the attached list runs through the REAL
+// useResourceList, including its module-scope cache. That cache is keyed `project:<id>:artifacts`
+// and OUTLIVES cleanup(), so rows carry between tests that use the same project id. Harmless
+// while they all stub the same four rows; a test that stubs a DIFFERENT list uses its own id, or
+// it would seed the next one's first paint with rows that test never asked for.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 
@@ -245,12 +251,26 @@ describe("ProjectContentsPane", () => {
     expect(screen.queryByText("nope")).toBeNull();
   });
 
+  // Its own project id: this is the one test that stubs a DIFFERENT list, and the shared cache
+  // is keyed by project (see the docblock).
   it("says which side is empty rather than showing one empty box for both", async () => {
     list.mockResolvedValue([structuredClone(DOC)]);
-    render(<ProjectContentsPane projectId="p1" title="Contents" />);
+    render(<ProjectContentsPane projectId="one-sided" title="Contents" />);
 
     expect(await screen.findByText("Competitor teardown")).not.toBeNull();
-    expect(screen.getByText("Nothing produced yet.")).not.toBeNull();
+    await waitFor(() => expect(screen.getByText("Nothing produced yet.")).not.toBeNull());
     expect(screen.queryByText("Nothing ingested yet.")).toBeNull();
+  });
+
+  // A read that fails leaves the rows unknown, and "Loading…" would be a promise the pane is
+  // not keeping — as would either empty state, each of which asserts a fact it does not have.
+  it("says what went wrong instead of loading forever", async () => {
+    list.mockRejectedValue(new Error("Contents unavailable"));
+    render(<ProjectContentsPane projectId="unreadable" title="Contents" />);
+
+    expect(await screen.findByText("Contents unavailable")).not.toBeNull();
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(screen.queryByText("Nothing ingested yet.")).toBeNull();
+    expect(screen.queryByText("Nothing produced yet.")).toBeNull();
   });
 });

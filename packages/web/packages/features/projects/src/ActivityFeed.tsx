@@ -6,6 +6,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import type { ActivityPage, ProjectActivity } from "@agentic-toolkit/data/projects";
+import { actorText, actionPhrase, commentBody, relativeTime } from "./helpers";
 
 /**
  * A reusable keyset-paginated activity feed — the hub's first cursor-paginated UI.
@@ -27,78 +28,9 @@ import type { ActivityPage, ProjectActivity } from "@agentic-toolkit/data/projec
 /** Page size for a keyset request — one authoritative value both callers pass. */
 export const ACTIVITY_PAGE_SIZE = 20;
 
-/* ── Row phrasing ───────────────────────────────────────────────────────────── */
-
-/** The actor's display name: the label if present, else a phrasing of kind/id. */
-function actorText(a: ProjectActivity): string {
-  if (a.actorLabel) return a.actorLabel;
-  if (a.actorKind && a.actorId) return `${a.actorKind} · ${a.actorId}`;
-  return a.actorKind ?? a.actorId ?? "Someone";
-}
-
-/** Human phrasing of an `action` string; the raw value is the fallback. */
-function actionPhrase(action: string): string {
-  switch (action) {
-    case "project.created":
-      return "created the project";
-    case "project.updated":
-      return "updated the project";
-    case "project.archived":
-      return "archived the project";
-    case "work_item.created":
-      return "created a work item";
-    case "work_item.updated":
-      return "updated a work item";
-    case "work_item.status_changed":
-      return "changed status";
-    case "work_item.assigned":
-      return "assigned";
-    case "work_item.unassigned":
-      return "unassigned";
-    case "work_item.reparented":
-      return "moved";
-    case "work_item.deleted":
-      return "deleted a work item";
-    case "comment.added":
-      return "commented";
-    case "field.created":
-      return "added a field";
-    case "field.updated":
-      return "updated a field";
-    case "field.deleted":
-      return "removed a field";
-    case "participant.added":
-      return "added a participant";
-    case "participant.removed":
-      return "removed a participant";
-    default:
-      return action;
-  }
-}
-
-/** A comment row's body from its detail payload, when present. */
-function commentBody(a: ProjectActivity): string | null {
-  const body = a.detail?.body;
-  return typeof body === "string" && body.trim() ? body : null;
-}
-
-/** A relative "3 minutes ago" phrasing via the platform's Intl formatter. */
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "";
-  const sec = Math.round((Date.now() - then) / 1000);
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-  if (Math.abs(sec) < 60) return rtf.format(-sec, "second");
-  const min = Math.round(sec / 60);
-  if (Math.abs(min) < 60) return rtf.format(-min, "minute");
-  const hr = Math.round(min / 60);
-  if (Math.abs(hr) < 24) return rtf.format(-hr, "hour");
-  const day = Math.round(hr / 24);
-  if (Math.abs(day) < 30) return rtf.format(-day, "day");
-  const month = Math.round(day / 30);
-  if (Math.abs(month) < 12) return rtf.format(-month, "month");
-  return rtf.format(-Math.round(month / 12), "year");
-}
+/* ── Row phrasing ─────────────────────────────────────────────────────────────
+ * The phrasing itself lives in ./helpers, shared with Overview's recent-activity
+ * summary; this file owns the row's LAYOUT. */
 
 function ActivityRow({ row }: { row: ProjectActivity }): ReactElement {
   const body = commentBody(row);
