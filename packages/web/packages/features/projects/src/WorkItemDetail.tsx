@@ -2,9 +2,11 @@
 
 import type { ReactElement, ReactNode } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
 import type { ProjectParticipant, ProjectStatus, WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "./WorkItemEditor";
-import { assigneeLabel, statusMeta } from "./helpers";
+import { ItemKey } from "./ItemKey";
+import { assigneeLabel, itemLabel, statusMeta } from "./helpers";
 
 /**
  * The full record of ONE work item — the details pane of the list-with-details List view.
@@ -49,6 +51,18 @@ export function WorkItemDetail({
 
   return (
     <dl className="flex min-w-0 flex-col gap-3">
+      {/* First, and with a copy button: this pane is where someone lands to WRITE the key
+          somewhere else — a branch name, a commit message, a PR title — so the useful act here
+          is taking it away, not reading it. Rows are skipped entirely when the project has no
+          prefix; an empty "Key —" row would advertise a field with nothing behind it. */}
+      {item.itemKey ? (
+        <Row label="Key">
+          <span className="flex items-center gap-2">
+            <ItemKey itemKey={item.itemKey} className="text-sm text-apt-text" />
+            <CopyButton getText={() => item.itemKey} label={`Copy ${item.itemKey}`} />
+          </span>
+        </Row>
+      ) : null}
       <Row label="Title">
         <span className="font-medium">{item.title}</span>
       </Row>
@@ -81,7 +95,9 @@ export function WorkItemDetail({
           orDash(null)
         )}
       </Row>
-      <Row label="Parent">{parent ? parent.title : orDash(item.parentId)}</Row>
+      {/* Named by key AND title — a parent is the one cross-reference on this pane, and a
+          cross-reference is exactly what a key is for. */}
+      <Row label="Parent">{parent ? itemLabel(parent) : orDash(item.parentId)}</Row>
       <Row label="Created">{item.createdAt}</Row>
       <Row label="Updated">{item.updatedAt}</Row>
     </dl>

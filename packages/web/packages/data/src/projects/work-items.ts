@@ -34,6 +34,10 @@ const ITEMS = "/api/project/work-items";
 export interface WorkItem {
   id: string;
   projectId: string;
+  /** the card's short human name (`ADH-42`), derived by the backend from its project's prefix
+   *  and this card's permanent number. '' when the project has no prefix yet — render nothing
+   *  in that case rather than a lone dash. Read-only: it is never sent back on a patch. */
+  itemKey: string;
   title: string;
   description: string;
   /** the board column this card sits in. */
@@ -57,6 +61,7 @@ export function toWorkItem(r: WorkItemRow): WorkItem {
   return {
     id: r.id,
     projectId: r.projectId,
+    itemKey: r.itemKey ?? "",
     title: r.title,
     description: r.description,
     statusId: r.statusId,

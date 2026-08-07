@@ -10,7 +10,8 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
-import { assigneeLabel, statusMeta } from "../helpers";
+import { ItemKey } from "../ItemKey";
+import { assigneeLabel, itemKeyNumber, statusMeta } from "../helpers";
 import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
 
 /**
@@ -58,6 +59,10 @@ function sortValue(
   participants: ProjectParticipant[],
 ): string | number {
   switch (key) {
+    case "itemKey":
+      // The NUMBER, not the text: sorting `ADH-42` as a string puts it before `ADH-7`, which
+      // is the one thing a reader would never expect from a column of numbered keys.
+      return itemKeyNumber(w.itemKey);
     case "priority":
       return w.priority;
     case "status":
@@ -105,6 +110,15 @@ export function TableView({
 
   const columns: DataTableColumn<WorkItem>[] = useMemo(
     () => [
+      {
+        // First and narrow, like a row number — except it is a NAME, stable across every sort
+        // and every view, which is what makes it the thing to quote elsewhere.
+        key: "itemKey",
+        header: "Key",
+        width: "0.6fr",
+        sortable: true,
+        render: (w) => <ItemKey itemKey={w.itemKey} />,
+      },
       {
         key: "title",
         header: "Title",

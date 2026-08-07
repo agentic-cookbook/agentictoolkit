@@ -28,6 +28,32 @@ import type {
 
 const BASE = "/api/project/projects";
 
+/* ── Work-item key prefixes ───────────────────────────────────────────── */
+
+/**
+ * The shape of a project's work-item key prefix (`ADH` in `ADH-42`): 2-8 characters, a letter
+ * then letters or digits, upper case.
+ *
+ * A client-side MIRROR of the backend's one spelling (`src/project/keys.ts::KEY_PREFIX_RE`) —
+ * the same arrangement `validateSlug` has with the backend's slug rules, and for the same
+ * reason: the server stays the authority (it 400s a bad prefix regardless), but a form that can
+ * only learn a rule by breaking against it is a bad form. If the two ever disagree, the backend
+ * wins and this is the copy to fix.
+ */
+export const KEY_PREFIX_REGEX = /^[A-Z][A-Z0-9]{1,7}$/;
+
+/** A human-readable reason the prefix is unusable, or `null` when it is fine. An EMPTY prefix
+ *  is refused rather than treated as "clear it": there is no way to un-name a project's cards
+ *  once they are named, and a blank field is far more likely to be a mistake than an intent. */
+export function validateKeyPrefix(prefix: string): string | null {
+  const value = prefix.trim().toUpperCase();
+  if (!value) return "A key prefix is required.";
+  if (!KEY_PREFIX_REGEX.test(value)) {
+    return "Use 2-8 characters: a letter, then letters or digits.";
+  }
+  return null;
+}
+
 /* ── Projects ─────────────────────────────────────────────────────────── */
 
 export interface Project {
@@ -38,6 +64,9 @@ export interface Project {
   status: string;
   /** hex board accent (DB default #007AFF). */
   color: string;
+  /** the prefix this project's work-item keys are rendered from (`ADH` in `ADH-42`).
+   *  '' means no prefix is assigned yet, and the project's cards therefore have no keys. */
+  keyPrefix: string;
   /** the owning ecosystem (tenant scope). */
   ecosystemId: string;
   /** ISO timestamp when archived; null when not archived. */
@@ -53,6 +82,7 @@ export function toProject(r: ProjectRow): Project {
     description: r.description,
     status: r.status,
     color: r.color,
+    keyPrefix: r.keyPrefix ?? "",
     ecosystemId: r.ecosystemId,
     archivedAt: r.archivedAt ?? null,
     createdAt: r.createdAt,

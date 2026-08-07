@@ -22,6 +22,7 @@ import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/da
 import { PRIORITIES } from "../WorkItemEditor";
 import { participantLabel, toOptionValue, fromOptionValue } from "../AssigneePicker";
 import { WorkItemDetail } from "../WorkItemDetail";
+import { ItemKey } from "../ItemKey";
 import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
 
 /**
@@ -198,6 +199,13 @@ export function ListView({
 
     return [
       {
+        // Read-only, and FIRST: the key is the card's name, so it belongs where a name goes —
+        // and there is nothing to edit here, since both halves are the backend's to assign.
+        key: "itemKey",
+        header: "Key",
+        render: (w) => <ItemKey itemKey={w.itemKey} />,
+      },
+      {
         key: "title",
         header: "Title",
         render: (w) => {
@@ -360,7 +368,14 @@ export function ListView({
         filterText={filter}
         onFilterTextChange={setFilter}
         filterPlaceholder="Filter work items…"
-        filterRow={(w, q) => w.title.toLowerCase().includes(q.toLowerCase())}
+        // The key filters as readily as the title: pasting `ADH-42` out of a branch name is the
+        // most direct way anyone will look for one card, and it is case-insensitive like the title.
+        filterRow={(w, q) => {
+          const needle = q.toLowerCase();
+          return (
+            w.title.toLowerCase().includes(needle) || w.itemKey.toLowerCase().includes(needle)
+          );
+        }}
         // Content-sized columns the user can drag; remembered per project.
         autoSizeColumns
         columnWidthsKey={`work-items:${projectId}`}

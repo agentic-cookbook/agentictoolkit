@@ -36,6 +36,7 @@ const PARTICIPANT: ProjectParticipant = {
 function makeItem(over: Partial<WorkItem> & Pick<WorkItem, "id" | "title">): WorkItem {
   return {
     projectId: "p1",
+    itemKey: "",
     description: "",
     statusId: "s1",
     assigneeKind: null,
@@ -63,12 +64,13 @@ const FULL: WorkItem = makeItem({
   labels: ["ui", "urgent"],
 });
 
-/** Data-row titles in DOM order (row 0 is the header row — dropped). */
+/** Data-row titles in DOM order (row 0 is the header row — dropped). Cell 0 is the
+ *  Key column, so the title is cell 1. */
 function titlesInOrder(): string[] {
   return screen
     .getAllByRole("row")
     .slice(1)
-    .map((r) => within(r).getAllByRole("gridcell")[0]?.textContent ?? "");
+    .map((r) => within(r).getAllByRole("gridcell")[1]?.textContent ?? "");
 }
 
 // The hub vitest config has no global afterEach — tear down each render explicitly.
@@ -202,6 +204,60 @@ describe("TableView", () => {
 
     expect(update().disabled).toBe(false);
     expect(del().disabled).toBe(false);
+  });
+
+  // The Key column. It is the one column whose comparable is NOT its own text — see
+  // `itemKeyNumber` — so its ordering is worth pinning at the view level too.
+  it("shows each item's key in the first column", () => {
+    render(
+      <TableView
+        items={[makeItem({ id: "w1", title: "Design the landing page", itemKey: "WEB-42" })]}
+        statuses={[STATUS]}
+        participants={[]}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("WEB-42")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Key" })).not.toBeNull();
+  });
+
+  it("renders nothing in the key cell for a project with no prefix", () => {
+    render(
+      <TableView
+        items={[makeItem({ id: "w1", title: "Design the landing page", itemKey: "" })]}
+        statuses={[STATUS]}
+        participants={[]}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    // Empty, not a dash: a dash reads like a key whose value is "—".
+    const [keyCell] = screen.getAllByRole("gridcell");
+    expect(keyCell?.textContent).toBe("");
+  });
+
+  it("sorts the key column by NUMBER, so 7 lands before 42", () => {
+    render(
+      <TableView
+        items={[
+          makeItem({ id: "w1", title: "Forty-two", itemKey: "WEB-42" }),
+          makeItem({ id: "w2", title: "Seven", itemKey: "WEB-7" }),
+          makeItem({ id: "w3", title: "Nine", itemKey: "WEB-9" }),
+        ]}
+        statuses={[STATUS]}
+        participants={[]}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Key" }));
+    // A text sort would give 42, 7, 9 — the one order a reader would never expect.
+    expect(titlesInOrder()).toEqual(["Seven", "Nine", "Forty-two"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Key" }));
+    expect(titlesInOrder()).toEqual(["Forty-two", "Nine", "Seven"]);
   });
 
   it("renders the EmptyState when there are no items", () => {

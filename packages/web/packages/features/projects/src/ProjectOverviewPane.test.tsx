@@ -23,7 +23,11 @@ import { AuthHttpError } from "@agentic-toolkit/auth/client";
 
 // The Overview summarises four lists it does not own, so their clients are stubbed alongside the
 // two it does. Each defaults to empty in beforeEach — a test that cares about a figure says so.
-vi.mock("@agentic-toolkit/data/projects", () => ({
+// Only the CLIENTS are stubbed: `validateKeyPrefix` is a pure rule the module also exports, and
+// the point of the field's inline error is that the real rule decides it.
+vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
+  validateKeyPrefix: (await importOriginal<typeof import("@agentic-toolkit/data/projects")>())
+    .validateKeyPrefix,
   projectsApi: {
     get: vi.fn(),
     update: vi.fn(),
@@ -66,6 +70,7 @@ const PROJECT: Project = {
   status: "active",
   // A board-accent string; kept non-hex so the fixture doesn't trip the UI color gate.
   color: "blue",
+  keyPrefix: "WEB",
   ecosystemId: "eco1",
   archivedAt: null,
   createdAt: "2026-07-03T00:00:00Z",
@@ -99,6 +104,7 @@ function item(over: Partial<WorkItem>): WorkItem {
   return {
     id: "w",
     projectId: "p1",
+    itemKey: "",
     title: "T",
     description: "",
     statusId: "s",
@@ -226,6 +232,52 @@ describe("ProjectOverviewPane", () => {
     await waitFor(() =>
       expect(update).toHaveBeenCalledWith("p1", { status: "on hold" }),
     );
+  });
+
+  // The key prefix. It is the only field on this form whose value renames something OTHER
+  // than the row it sits in — every one of the project's cards — and the only one whose
+  // uniqueness is enforced across projects. Both of those are worth pinning.
+  it("saves an edited key prefix, upper-cased on the way out", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await screen.findByDisplayValue("Website relaunch");
+    fireEvent.change(screen.getByLabelText(/^Key prefix/), { target: { value: "mkt" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // `mkt` and `MKT` are the same claim; the backend stores only the upper form, so
+    // sending the raw text would leave the field looking dirty after a successful save.
+    await waitFor(() => expect(update).toHaveBeenCalledWith("p1", { keyPrefix: "MKT" }));
+  });
+
+  it("blocks the save and says why when the prefix cannot be a prefix", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await screen.findByDisplayValue("Website relaunch");
+    fireEvent.change(screen.getByLabelText(/^Key prefix/), { target: { value: "1AB" } });
+
+    expect(screen.getByText(/a letter, then letters or digits/i)).not.toBeNull();
+    expect(
+      (screen.getByRole("button", { name: "Save changes" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("names the prefix when the backend refuses it as already taken", async () => {
+    update.mockRejectedValueOnce(
+      new AuthHttpError(409, 'key prefix "MKT" is already used by another project'),
+    );
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await screen.findByDisplayValue("Website relaunch");
+    fireEvent.change(screen.getByLabelText(/^Key prefix/), { target: { value: "MKT" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // Not "conflicts with an existing value" — that leaves the reader guessing which of
+    // the five fields on this form they have to change.
+    expect(await screen.findByText(/already uses the key prefix MKT/)).not.toBeNull();
   });
 
   it("adds a participant with the chosen kind + id", async () => {

@@ -29,6 +29,7 @@ import {
   projectWorkItemsApi,
   projectArtifactsApi,
   projectActivityApi,
+  validateKeyPrefix,
   type Project,
   type ProjectActivity,
   type ProjectArtifact,
@@ -177,6 +178,7 @@ export function ProjectOverviewPane({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("");
   const [color, setColor] = useState("");
+  const [keyPrefix, setKeyPrefix] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -274,6 +276,7 @@ export function ProjectOverviewPane({
     setDescription(p.description ?? "");
     setStatus(p.status);
     setColor(p.color);
+    setKeyPrefix(p.keyPrefix);
   }, []);
 
   // Load the project. ResourceExplorer keys the topic pane by the project id, so a
@@ -300,16 +303,25 @@ export function ProjectOverviewPane({
       description?: string;
       status?: string;
       color?: string;
+      keyPrefix?: string;
     } = {};
     if (name.trim() !== project.name) next.name = name.trim();
     if (description !== (project.description ?? "")) next.description = description;
     if (status !== project.status) next.status = status;
     if (color.trim() !== project.color) next.color = color.trim();
+    // Upper-cased on the way out, because `adh` and `ADH` are the same claim and the backend
+    // stores only the upper form — sending the raw text would make the field look dirty forever.
+    const nextPrefix = keyPrefix.trim().toUpperCase();
+    if (nextPrefix !== project.keyPrefix) next.keyPrefix = nextPrefix;
     return next;
-  }, [project, name, description, status, color]);
+  }, [project, name, description, status, color, keyPrefix]);
+
+  // Shown (and blocking) only once the field has been TOUCHED into the patch — a project that
+  // arrives with no prefix yet must not open its settings already complaining.
+  const keyPrefixError = patch.keyPrefix === undefined ? null : validateKeyPrefix(patch.keyPrefix);
 
   const dirty = Object.keys(patch).length > 0;
-  const canSave = dirty && name.trim().length > 0 && !saving;
+  const canSave = dirty && name.trim().length > 0 && !keyPrefixError && !saving;
 
   async function save() {
     if (!project || !dirty) return;
@@ -328,8 +340,14 @@ export function ProjectOverviewPane({
     } catch (e) {
       if (mounted.current) {
         setSaveError(
+          // The prefix is the only field here whose uniqueness is enforced ACROSS
+          // projects, so a 409 on a patch carrying one is always about it — naming it
+          // beats "conflicts with an existing value", which leaves the reader to guess
+          // which of the five fields they have to change.
           isConflict(e)
-            ? "That change conflicts with an existing value."
+            ? patch.keyPrefix !== undefined
+              ? `Another project already uses the key prefix ${patch.keyPrefix}.`
+              : "That change conflicts with an existing value."
             : e instanceof Error
               ? e.message
               : "Failed to save changes.",
@@ -652,6 +670,25 @@ export function ProjectOverviewPane({
                       setColor(e.target.value);
                     }}
                     placeholder="Board accent color"
+                  />
+                </Field>
+                {/* Renaming this renames EVERY card's key at once — which is the point of
+                    storing the prefix on the project rather than on each card. The hint says so
+                    plainly, because it is the one field here whose blast radius is larger than
+                    the row it sits in. */}
+                <Field
+                  label="Key prefix"
+                  hint="Names this project's work items — ADH gives ADH-1, ADH-2, … Renaming it renames every key."
+                  error={keyPrefixError ?? undefined}
+                >
+                  <Input
+                    value={keyPrefix}
+                    onChange={(e) => {
+                      setSaveError(null);
+                      setKeyPrefix(e.target.value.toUpperCase());
+                    }}
+                    maxLength={8}
+                    placeholder="ADH"
                   />
                 </Field>
                 <ErrorText error={saveError} />

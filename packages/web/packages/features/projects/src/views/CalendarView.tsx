@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
-import { MS_PER_DAY, dayIndex, todayIndex, type BadgeVariant } from "../helpers";
+import { MS_PER_DAY, dayIndex, itemLabel, todayIndex, type BadgeVariant } from "../helpers";
 
 /**
  * The Calendar VIEW of the work-items surface: a month grid (weekday header +
@@ -250,8 +250,8 @@ export function CalendarView({
                         key={it.id}
                         type="button"
                         onClick={() => onOpenItem(it.id)}
-                        title={it.title}
-                        aria-label={`${it.title} — ${label} priority, due ${cell.label}`}
+                        title={itemLabel(it)}
+                        aria-label={`${itemLabel(it)} — ${label} priority, due ${cell.label}`}
                         className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-left hover:bg-apt-surface-2"
                       >
                         <span
@@ -288,8 +288,8 @@ export function CalendarView({
                   key={it.id}
                   type="button"
                   onClick={() => onOpenItem(it.id)}
-                  title={it.title}
-                  aria-label={`${it.title} — ${label} priority, no due date`}
+                  title={itemLabel(it)}
+                  aria-label={`${itemLabel(it)} — ${label} priority, no due date`}
                   className="flex items-center gap-1 rounded border border-apt-border px-2 py-0.5 text-left hover:bg-apt-surface-2"
                 >
                   <span

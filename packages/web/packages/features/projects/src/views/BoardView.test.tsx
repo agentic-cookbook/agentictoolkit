@@ -30,6 +30,7 @@ function item(over: Partial<WorkItem>): WorkItem {
   return {
     id: "w",
     projectId: "p1",
+    itemKey: "",
     title: "T",
     description: "",
     statusId: "s1",
@@ -115,6 +116,32 @@ describe("BoardView", () => {
     );
 
     within(screen.getByRole("listitem", { name: "No status" })).getByText("Orphaned card");
+  });
+
+  it("shows a card's key above its title", () => {
+    render(
+      <BoardView
+        items={[item({ id: "w1", title: "Design the landing page", itemKey: "WEB-42" })]}
+        statuses={[TODO]}
+        participants={[]}
+        onMove={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("WEB-42")).not.toBeNull();
+  });
+
+  it("omits the key line entirely for a project with no prefix", () => {
+    render(
+      <BoardView
+        items={[item({ id: "w1", title: "Design the landing page", itemKey: "" })]}
+        statuses={[TODO]}
+        participants={[]}
+        onMove={vi.fn()}
+      />,
+    );
+    // The card still renders — it just has no key line above the title.
+    expect(screen.getByText("Design the landing page")).not.toBeNull();
+    expect(screen.queryByText("—")).toBeNull();
   });
 
   it("renders an empty state when the project has no statuses (no columns)", () => {

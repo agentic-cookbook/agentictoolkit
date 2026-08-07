@@ -17,6 +17,7 @@ import { type WorkItem } from "@agentic-toolkit/data/projects";
 function makeItem(over: Partial<WorkItem> & Pick<WorkItem, "id" | "title">): WorkItem {
   return {
     projectId: "p1",
+    itemKey: "",
     description: "",
     statusId: "s1",
     assigneeKind: null,

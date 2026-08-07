@@ -8,6 +8,7 @@ import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
+import { ItemKey } from "../ItemKey";
 import { assigneeLabel, categoryVariant, type BadgeVariant } from "../helpers";
 
 /**
@@ -57,6 +58,10 @@ function BoardCard({
   return (
     <Card className="gap-2 rounded-lg py-3">
       <CardContent className="flex flex-col gap-2 px-3">
+        {/* The key sits ABOVE the title, the way a card is introduced out loud ("ADH-42, the
+            login bug") — and a board is where someone is most likely to be reading one off to
+            put in a branch name. */}
+        <ItemKey itemKey={item.itemKey} />
         <span className="text-sm font-medium text-apt-text">{item.title}</span>
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-xs text-apt-text-muted">

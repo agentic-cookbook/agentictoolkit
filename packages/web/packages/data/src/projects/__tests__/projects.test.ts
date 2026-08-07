@@ -14,7 +14,7 @@ vi.mock("../../http", async (importOriginal) => ({
   authedRequest: vi.fn(),
 }));
 
-import { projectsApi } from "../projects";
+import { projectsApi, validateKeyPrefix } from "../projects";
 import { projectWorkItemsApi } from "../work-items";
 import { projectActivityApi } from "../activity";
 import { projectArtifactsApi } from "../artifacts";
@@ -395,5 +395,72 @@ describe("projectArtifactsApi", () => {
       "/api/project/projects/p%2F1/artifacts/a%2F1",
       { method: "DELETE" },
     );
+  });
+});
+
+/* ── work-item keys ───────────────────────────────────────────────────── */
+
+// A key (`WEB-42`) is TWO stored halves — the project's prefix and the item's number —
+// rendered by the backend into one string. The client never assembles one; what it owes
+// is (a) a total field even when the backend omits it, so no view has to guard, and
+// (b) the same shape rule the backend enforces, so a doomed prefix is refused before a
+// round trip rather than after a 400.
+describe("work-item keys", () => {
+  it("defaults a project's keyPrefix to \"\" when the backend omits it", async () => {
+    // An older backend — or a project created before the column existed — sends no
+    // keyPrefix. `undefined` would reach an <Input value=…> and make it uncontrolled.
+    mockedJson.mockResolvedValueOnce({ id: "1", name: "P", description: "", status: "active", color: "#000", ecosystemId: "o", createdAt: "c", updatedAt: "u" });
+    const p = await projectsApi.get("1");
+    expect(p?.keyPrefix).toBe("");
+  });
+
+  it("carries the keyPrefix through when the backend sends one", async () => {
+    mockedJson.mockResolvedValueOnce({ id: "1", name: "P", description: "", status: "active", color: "#000", keyPrefix: "WEB", ecosystemId: "o", createdAt: "c", updatedAt: "u" });
+    const p = await projectsApi.get("1");
+    expect(p?.keyPrefix).toBe("WEB");
+  });
+
+  it("defaults a work item's itemKey to \"\" when the backend omits it", async () => {
+    mockedJson.mockResolvedValueOnce([WORK_ITEM]);
+    const [w] = await projectWorkItemsApi.listForProject("p1");
+    expect(w?.itemKey).toBe("");
+  });
+
+  it("carries the rendered itemKey through when the backend sends one", async () => {
+    mockedJson.mockResolvedValueOnce([{ ...WORK_ITEM, itemKey: "WEB-42" }]);
+    const [w] = await projectWorkItemsApi.listForProject("p1");
+    expect(w?.itemKey).toBe("WEB-42");
+  });
+
+  it("update PATCHes a keyPrefix like any other field", async () => {
+    mockedJson.mockResolvedValueOnce({ id: "1", name: "P", description: "", status: "active", color: "#000", keyPrefix: "WEB", ecosystemId: "o", createdAt: "c", updatedAt: "u" });
+    await projectsApi.update("1", { keyPrefix: "WEB" });
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/projects/1", {
+      method: "PATCH",
+      body: JSON.stringify({ keyPrefix: "WEB" }),
+    });
+  });
+});
+
+describe("validateKeyPrefix", () => {
+  it("accepts 2–8 characters starting with a letter", () => {
+    for (const ok of ["AB", "WEB", "ADH2", "A1B2C3D4"]) {
+      expect(validateKeyPrefix(ok)).toBeNull();
+    }
+  });
+
+  it("accepts lower case and surrounding space — the caller upper-cases on the way out", () => {
+    expect(validateKeyPrefix(" web ")).toBeNull();
+  });
+
+  it("says a prefix is required rather than silently allowing an empty one", () => {
+    expect(validateKeyPrefix("")).toMatch(/required/i);
+    expect(validateKeyPrefix("   ")).toMatch(/required/i);
+  });
+
+  it("refuses a single character, a 9th character, a leading digit, and punctuation", () => {
+    for (const bad of ["A", "ABCDEFGHI", "1AB", "A-B", "A B", "AB!"]) {
+      expect(validateKeyPrefix(bad)).not.toBeNull();
+    }
   });
 });

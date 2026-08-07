@@ -44,7 +44,7 @@ const PARTICIPANT: ProjectParticipant = {
 
 function item(id: string, title: string): WorkItem {
   return {
-    id, projectId: "p1", title, description: "", statusId: "s1",
+    id, projectId: "p1", itemKey: "", title, description: "", statusId: "s1",
     assigneeKind: null, assigneeId: null, priority: 0,
     startDate: null, dueDate: null, labels: [], parentId: null, position: 0,
     createdAt: "2026-07-03T00:00:00Z", updatedAt: "2026-07-03T00:00:00Z",

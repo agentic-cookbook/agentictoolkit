@@ -29,6 +29,9 @@ export interface ProjectRow {
   status: string;
   /** hex board accent (DB default #007AFF). */
   color: string;
+  /** the prefix this project's work-item keys are rendered from (`ADH` in `ADH-42`);
+   *  '' on a project whose prefix has not been assigned yet, which has no keys. */
+  keyPrefix: string;
   /** the owning ecosystem (tenant scope). */
   ecosystemId: string;
   /** ISO timestamp when archived; absent/null when not archived. */
@@ -81,6 +84,9 @@ export interface ProjectPatchBody {
   description?: string;
   status?: string;
   color?: string;
+  /** rename the work-item key prefix — 2-8 chars, a letter then letters/digits, upper case.
+   *  Renames every one of this project's keys at once; 409 if the owner already uses it. */
+  keyPrefix?: string;
   archivedAt?: string | null;
 }
 
@@ -112,6 +118,11 @@ export interface ProjectParticipantAddBody {
 export interface WorkItemRow {
   id: string;
   projectId: string;
+  /** the card's short human name (`ADH-42`) — the project's prefix joined to this card's
+   *  permanent number. Derived by the backend, never sent back; '' when the project has no
+   *  prefix yet. This is what a person quotes in a branch name or a message, and it addresses
+   *  the card anywhere its id is accepted. */
+  itemKey: string;
   title: string;
   description: string;
   statusId: string;

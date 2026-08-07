@@ -42,6 +42,7 @@ const PARTICIPANT: ProjectParticipant = {
 const ITEM: WorkItem = {
   id: "w1",
   projectId: "p1",
+  itemKey: "",
   title: "Design the landing page",
   description: "Hero, pricing, footer.",
   statusId: "s1",
@@ -252,6 +253,29 @@ describe("ListView sub-item tree", () => {
     expect(
       screen.queryByRole("button", { name: /^(Expand|Collapse) Write the hero copy$/ }),
     ).toBeNull();
+  });
+
+  it("shows each row's key in its own read-only first column", () => {
+    renderList([{ ...ITEM, itemKey: "WEB-42" }]);
+    expect(screen.getByText("WEB-42")).not.toBeNull();
+    // Read-only: every other column in this view is an in-place editor, the key is not —
+    // renaming a card must never be a side effect of clicking its name.
+    expect(screen.queryByRole("textbox", { name: /WEB-42/ })).toBeNull();
+  });
+
+  it("filters on the KEY as well as the title", () => {
+    // Someone reading `WEB-42` in a commit message pastes it here; matching only titles
+    // would answer "no results" for a key that plainly exists.
+    renderList([
+      { ...ITEM, id: "w1", title: "Design the landing page", itemKey: "WEB-42" },
+      { ...ITEM, id: "w2", title: "Write the hero copy", itemKey: "WEB-7" },
+    ]);
+
+    fireEvent.change(screen.getByPlaceholderText("Filter work items…"), {
+      target: { value: "web-7" }, // lower case: a key is quoted however it is typed
+    });
+
+    expect(titleOrder()).toEqual(["Write the hero copy"]);
   });
 
   it("goes flat while a filter is on, so a match is never indented under a hidden parent", () => {

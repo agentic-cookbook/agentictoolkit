@@ -35,6 +35,7 @@ const update = vi.mocked(projectWorkItemsApi.update);
 const ITEM: WorkItem = {
   id: "w1",
   projectId: "p1",
+  itemKey: "WEB-1",
   title: "Design the landing page",
   description: "",
   statusId: "s1",

@@ -67,6 +67,7 @@ const PROJECT: Project = {
   status: "active",
   // A board-accent string; kept non-hex so the fixture doesn't trip the UI color gate.
   color: "blue",
+  keyPrefix: "WEB",
   ecosystemId: "eco1",
   archivedAt: null,
   createdAt: "2026-07-03T00:00:00Z",

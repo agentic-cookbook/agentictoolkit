@@ -66,6 +66,7 @@ function item(over: Partial<WorkItem>): WorkItem {
   return {
     id: "w",
     projectId: "p1",
+    itemKey: "",
     title: "T",
     description: "",
     statusId: "s1",

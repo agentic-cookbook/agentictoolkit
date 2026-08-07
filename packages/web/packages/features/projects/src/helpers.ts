@@ -98,6 +98,23 @@ export function statusMeta(
     : { label: "—", variant: "neutral" };
 }
 
+/** How a card names itself in TEXT — `ADH-42 — Fix the login redirect`, or just the title when
+ *  the card has no key yet. For the places a key cannot be shown as its own element: a tooltip,
+ *  an aria-label, a confirmation sentence. The dense date views (Calendar, Timeline) place a chip
+ *  by a DATE and size it to the space left over, so a monospace key inline would eat the title on
+ *  exactly the narrowest bars; naming it here keeps the key reachable there without that cost. */
+export function itemLabel(item: Pick<WorkItem, "itemKey" | "title">): string {
+  return item.itemKey ? `${item.itemKey} — ${item.title}` : item.title;
+}
+
+/** The NUMERIC half of a rendered key (`ADH-42` → 42), for ordering a column of keys — sorting
+ *  their text would put `ADH-42` above `ADH-7`. An unassigned or unparseable key sorts to 0, so
+ *  the keyless cluster together at one end rather than scattering. */
+export function itemKeyNumber(itemKey: string): number {
+  const n = Number(itemKey.slice(itemKey.lastIndexOf("-") + 1));
+  return Number.isFinite(n) ? n : 0;
+}
+
 /** Resolve a work item's assignee to a participant label; "Unassigned" when
  *  unset, or the raw id when the assignee is no longer a listed participant. */
 export function assigneeLabel(item: WorkItem, participants: ProjectParticipant[]): string {

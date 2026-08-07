@@ -15,7 +15,8 @@ import type { ProjectStatus, ProjectParticipant } from "@agentic-toolkit/data/pr
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { AssigneePicker, toOptionValue, fromOptionValue, type AssigneeValue } from "./AssigneePicker";
 import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
-import { type BadgeVariant } from "./helpers";
+import { ItemKey } from "./ItemKey";
+import { itemLabel, type BadgeVariant } from "./helpers";
 
 /**
  * The EDIT form over a single work item: title, description, status, assignee
@@ -317,7 +318,13 @@ export function WorkItemEditor({
   return (
     <div className="flex max-w-xl flex-col gap-5">
       {item && (
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-2">
+          {/* The key identifies WHICH card this form is editing — the one thing the form itself
+              never shows, since every field below is the card's content rather than its name.
+              Read-only here: neither half is a person's to type. `mr-auto` rather than
+              `justify-between` on the row, because the key renders NOTHING on a project with no
+              prefix and a two-child layout would then move the affordance. */}
+          <ItemKey itemKey={item.itemKey} className="mr-auto text-sm" />
           {renderRecordAffordance?.({
             path: "/project/work-items/{id}",
             pathValues: { id: item.id },
@@ -417,9 +424,11 @@ export function WorkItemEditor({
       <Field label="Parent" hint="An optional parent work item in this project.">
         <Select value={draft.parentId} onChange={(e) => set("parentId", e.target.value)}>
           <option value="">None</option>
+          {/* Named by key AND title, so a long list of similar titles is still tellable apart —
+              and so the option reads the same way the Parent row on the detail pane does. */}
           {parentOptions.map((w) => (
             <option key={w.id} value={w.id}>
-              {w.title}
+              {itemLabel(w)}
             </option>
           ))}
         </Select>

@@ -5,7 +5,7 @@ import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
-import { MS_PER_DAY, dayIndex, type BadgeVariant } from "../helpers";
+import { MS_PER_DAY, dayIndex, itemLabel, type BadgeVariant } from "../helpers";
 
 /**
  * The Timeline VIEW of the work-items surface: a Gantt-LITE — a horizontal date
@@ -185,10 +185,10 @@ export function TimelineView({
                   key={sp.item.id}
                   type="button"
                   onClick={() => onOpenItem(sp.item.id)}
-                  aria-label={`${sp.item.title} — ${label} priority, ${rangeText}`}
+                  aria-label={`${itemLabel(sp.item)} — ${label} priority, ${rangeText}`}
                   className={`${grid} w-full rounded py-1 text-left hover:bg-apt-surface-2`}
                 >
-                  <span className="truncate text-sm text-apt-text" title={sp.item.title}>
+                  <span className="truncate text-sm text-apt-text" title={itemLabel(sp.item)}>
                     {sp.item.title}
                   </span>
                   <span className="relative block h-5">
@@ -226,7 +226,7 @@ export function TimelineView({
                 key={it.id}
                 type="button"
                 onClick={() => onOpenItem(it.id)}
-                aria-label={`${it.title} — unscheduled`}
+                aria-label={`${itemLabel(it)} — unscheduled`}
                 className="flex w-full items-center gap-2 rounded py-1 text-left hover:bg-apt-surface-2"
               >
                 <span className="truncate text-sm text-apt-text">{it.title}</span>
