@@ -4,6 +4,20 @@
 // is adh product vocabulary a generic data client must not take on. Each interface carries exactly
 // the fields the `toX()` mappers and call sites touch — no more. Type-only file.
 
+/**
+ * A board column's category — the fixed bucket a client reads an UNFAMILIAR board through.
+ * Column labels are the project owner's to invent; this list is not, which is why anything
+ * that must reason about a board it did not configure (a tone, a rollup, a filter) keys off
+ * the category instead of the label.
+ *
+ * Named once and referenced, rather than restated at each of the six sites that mention it —
+ * the previous shape, where widening the vocabulary meant finding every copy. Ordered as a
+ * workflow runs, leading to terminal: `backlog` is what is not committed to yet, and
+ * `canceled` is terminal WITHOUT counting as finished (folding it into `done` is what makes
+ * a completion count overstate).
+ */
+export type StatusCategory = "backlog" | "todo" | "in_progress" | "done" | "canceled";
+
 /* ── Projects (GET rows) ──────────────────────────────────────────────── */
 
 /** Backend row for `GET /project/projects` (and a single project). */
@@ -29,7 +43,7 @@ export interface ProjectStatusRow {
   projectId: string;
   key: string;
   label: string;
-  category: "todo" | "in_progress" | "done";
+  category: StatusCategory;
   position: number;
   createdAt: string;
 }
@@ -67,14 +81,14 @@ export interface ProjectPatchBody {
 export interface ProjectStatusCreateBody {
   key: string;
   label: string;
-  category: "todo" | "in_progress" | "done";
+  category: StatusCategory;
   position?: number;
 }
 
 /** `PATCH /project/projects/{id}/statuses/{statusId}` body. */
 export interface ProjectStatusPatchBody {
   label?: string;
-  category?: "todo" | "in_progress" | "done";
+  category?: StatusCategory;
   position?: number;
 }
 

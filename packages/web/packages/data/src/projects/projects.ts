@@ -14,6 +14,7 @@
 import { authedJson, authedRequest } from "../http";
 import { compact, enc, sortByText, workspaceQuery } from "../client-helpers";
 import type {
+  StatusCategory,
   ProjectRow,
   ProjectStatusRow,
   ProjectParticipantRow,
@@ -66,7 +67,7 @@ export interface ProjectStatus {
   /** stable identifier, unique within the project. */
   key: string;
   label: string;
-  category: "todo" | "in_progress" | "done";
+  category: StatusCategory;
   /** column order (ascending). */
   position: number;
   createdAt: string;
@@ -205,7 +206,7 @@ export const projectsApi = {
       input: {
         key: string;
         label: string;
-        category: "todo" | "in_progress" | "done";
+        category: StatusCategory;
         position?: number;
       },
     ): Promise<ProjectStatus> {
@@ -228,7 +229,7 @@ export const projectsApi = {
       statusId: string,
       patch: {
         label?: string;
-        category?: "todo" | "in_progress" | "done";
+        category?: StatusCategory;
         position?: number;
       },
     ): Promise<ProjectStatus> {

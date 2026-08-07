@@ -20147,7 +20147,7 @@ export interface paths {
                         key: string;
                         label: string;
                         /** @enum {string} */
-                        category: "todo" | "in_progress" | "done";
+                        category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
                         /** @description explicit column order; defaults to append (max+1) */
                         position?: number;
                     };
@@ -20287,7 +20287,7 @@ export interface paths {
                     "application/json": {
                         label?: string;
                         /** @enum {string} */
-                        category?: "todo" | "in_progress" | "done";
+                        category?: "backlog" | "todo" | "in_progress" | "done" | "canceled";
                         position?: number;
                     };
                 };
@@ -54791,7 +54791,7 @@ export interface components {
             key: string;
             label: string;
             /** @enum {string} */
-            category: "todo" | "in_progress" | "done";
+            category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
             /** @description column order (ascending) */
             position: number;
             createdAt: string;

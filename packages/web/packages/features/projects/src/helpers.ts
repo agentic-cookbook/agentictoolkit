@@ -1,7 +1,7 @@
 import { type ComponentProps } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import type { WorkItem } from "@agentic-toolkit/data/projects";
-import type { ProjectStatus, ProjectParticipant } from "@agentic-toolkit/data/projects";
+import type { ProjectStatus, ProjectParticipant, StatusCategory } from "@agentic-toolkit/data/projects";
 import { participantLabel } from "./AssigneePicker";
 
 /**
@@ -46,16 +46,32 @@ export function dayIndex(date: string): number | null {
   return Math.floor(Date.UTC(y, mo - 1, d) / MS_PER_DAY);
 }
 
-/** A board status's category → Badge tone. */
+/**
+ * A board status's category → Badge tone.
+ *
+ * A total Record rather than a switch with a `default`, because the category set is closed and
+ * owned by the backend: written this way, ADDING a category is a type error here instead of
+ * silently falling through to "neutral" — which is how a new bucket would otherwise ship
+ * looking exactly like "not started".
+ *
+ * The tones carry the coarse reading — not started / in flight / finished / stopped — so
+ * `backlog` and `todo` deliberately share one: nothing in the palette is dimmer than neutral,
+ * and their labels already tell them apart. `canceled` takes "error" not because a cancellation
+ * is a failure but because it is the one tone that reads terminal-and-not-achieved; giving it
+ * "success" or "neutral" is exactly the conflation the category exists to prevent.
+ */
+const CATEGORY_VARIANT: Record<StatusCategory, BadgeVariant> = {
+  backlog: "neutral",
+  todo: "neutral",
+  in_progress: "blue",
+  done: "success",
+  canceled: "error",
+};
+
 export function categoryVariant(category: ProjectStatus["category"]): BadgeVariant {
-  switch (category) {
-    case "in_progress":
-      return "blue";
-    case "done":
-      return "success";
-    default:
-      return "neutral";
-  }
+  // A board row can arrive from an older/newer backend than this bundle, so an unrecognised
+  // category falls back rather than rendering `undefined` as a class.
+  return CATEGORY_VARIANT[category] ?? "neutral";
 }
 
 /** Resolve a work item's statusId to its board label + Badge tone (a stale/unknown
