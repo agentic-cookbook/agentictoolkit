@@ -1645,15 +1645,6 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Error */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
             };
         };
         put?: never;
@@ -21612,7 +21603,7 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         direction: "ingested" | "produced";
-                        /** @description the target's registry, e.g. 'content.markdown' */
+                        /** @description the target's registry, e.g. 'content.markdown'. Must be a kind the target registry knows (400 otherwise), and the target itself must exist within the PROJECT owner's reach (404 otherwise) — an unreachable id is indistinguishable from an absent one. */
                         targetKind: string;
                         targetId: string;
                     };
@@ -54897,6 +54888,18 @@ export interface components {
             } | null;
             createdAt: string;
         };
+        TargetDescriptor: {
+            /** @description the target's registry, e.g. 'content.markdown' */
+            kind: string;
+            /** @description the opaque target id */
+            id: string;
+            /** @description the row's display title; never empty */
+            title: string;
+            /** @description one supporting line, or null */
+            subtitle: string | null;
+            /** @description set only when the target is a link OUT of the platform (a saved URL) */
+            url: string | null;
+        };
         ProjectArtifact: {
             id: string;
             ecosystemId: string;
@@ -54914,6 +54917,7 @@ export interface components {
             deletedAt?: string | null;
             createdAt: string;
             updatedAt: string;
+            target: components["schemas"]["TargetDescriptor"] | null;
         };
         PersonaMemory: {
             id: string;
