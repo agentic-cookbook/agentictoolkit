@@ -115,7 +115,7 @@ describe('shouldSilentRestore', () => {
   })
 })
 
-// The landing page is the one route where the probe is never worth it, whatever
+// The landing routes are the ones where the probe is never worth it, whatever
 // the hint and apex rules say. It is a PUBLIC marketing deck the visitor asked
 // for by name, and the probe is a top-level navigation OFF it: when the bounce
 // can't complete — an origin the AS doesn't allow-list, an AS that isn't up yet —
@@ -145,6 +145,40 @@ describe('shouldSilentRestore on a landing page', () => {
     setHint(true)
     stubLocation('https://cookbook.com', '')
     expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('false on /tour — the same generated deck, one URL along', () => {
+    // `/` and `/tour` are both written by `landing sites generate`, from the same
+    // manifest, and the deck's own "Take the tour" link is how a visitor gets from
+    // one to the other. Exempting only `/` moves the redirect one click along
+    // rather than removing it.
+    setHint(true)
+    stubLocation('https://cookbook.com', '/tour')
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('false on /tour/ — the trailing slash is not a different route', () => {
+    setHint(true)
+    stubLocation('https://cookbook.com', '/tour/')
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('true on a route that merely STARTS with a landing path', () => {
+    // The exemption is a route set, not a prefix: `/tourists` and `/tour/x` are
+    // ordinary routes, and a prefix match would quietly widen the rule every time
+    // a site adds a segment under one of the deck's names.
+    setHint(true)
+    stubLocation('https://cookbook.com', '/tourists')
+    expect(shouldSilentRestore('')).toBe(true)
+  })
+
+  it('true on the public legal pages — they are not generated decks', () => {
+    // The deliberate edge of the rule. `/privacy` and `/terms` are public too, but
+    // they are not where a cold visit lands and not what the generator writes; a
+    // visitor there is one already inside the site.
+    setHint(true)
+    stubLocation('https://cookbook.com', '/privacy')
+    expect(shouldSilentRestore('')).toBe(true)
   })
 
   it('true one route in — the probe moves to the app surfaces, it is not lost', () => {
