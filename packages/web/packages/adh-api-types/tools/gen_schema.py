@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 
 from _spec_input import resolve_spec
+from _stable_output import keeping_mtime_if_unchanged
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 OUT_PATH = PACKAGE_DIR / "src" / "schema.ts"
@@ -34,10 +35,11 @@ OPENAPI_TYPESCRIPT = PACKAGE_DIR / "node_modules" / ".bin" / "openapi-typescript
 def main() -> None:
     spec = resolve_spec()
     binary = str(OPENAPI_TYPESCRIPT) if OPENAPI_TYPESCRIPT.is_file() else "openapi-typescript"
-    result = subprocess.run(
-        [binary, str(spec), "-o", str(OUT_PATH)],
-        cwd=PACKAGE_DIR,
-    )
+    with keeping_mtime_if_unchanged(OUT_PATH):
+        result = subprocess.run(
+            [binary, str(spec), "-o", str(OUT_PATH)],
+            cwd=PACKAGE_DIR,
+        )
     sys.exit(result.returncode)
 
 

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from _spec_input import resolve_spec
+from _stable_output import keeping_mtime_if_unchanged
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 #  This package now lives INSIDE agentictoolkit, so the package it writes into
@@ -398,7 +399,8 @@ def main() -> None:
         + f"export const API_ENDPOINTS: Record<string, EndpointMeta> = {emit_map(endpoints_map)}\n"
     )
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(body, encoding="utf-8")
+    with keeping_mtime_if_unchanged(OUT_PATH):
+        OUT_PATH.write_text(body, encoding="utf-8")
     print(
         f"wrote {OUT_PATH.relative_to(TOOLKIT_PACKAGES)}: "
         f"{len(metas)} operations, {len(schemas)} schemas"

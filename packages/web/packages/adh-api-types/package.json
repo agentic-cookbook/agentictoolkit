@@ -18,7 +18,7 @@
     "gen:crud-metadata": "python3 tools/gen_table_metadata.py",
     "gen:api-endpoints": "python3 tools/gen_endpoints.py",
     "lint": "tsc --noEmit",
-    "test": "tsc --noEmit && vitest run"
+    "test": "python3 tools/test_stable_output.py && tsc --noEmit && vitest run"
   },
   "devDependencies": {
     "@agentic-toolkit/api-explorer": "workspace:*",
