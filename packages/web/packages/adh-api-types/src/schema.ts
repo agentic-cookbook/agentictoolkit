@@ -20147,7 +20147,7 @@ export interface paths {
                         key: string;
                         label: string;
                         /** @enum {string} */
-                        category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+                        category: "todo" | "in_progress" | "done";
                         /** @description explicit column order; defaults to append (max+1) */
                         position?: number;
                     };
@@ -20287,7 +20287,7 @@ export interface paths {
                     "application/json": {
                         label?: string;
                         /** @enum {string} */
-                        category?: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+                        category?: "todo" | "in_progress" | "done";
                         position?: number;
                     };
                 };
@@ -20774,67 +20774,6 @@ export interface paths {
         };
         trace?: never;
     };
-    "/project/projects/{id}/labels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * The label vocabulary this project's cards draw on
-         * @description Every live label the project's OWNING principal has used — on a research document as readily as on a card, because both sides use the one tagging system (content.keywords). Distinct and alphabetical: the autocomplete/browse source for a card's labels field.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Distinct labels, sorted alphabetically */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StringList"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/project/projects/{id}/work-items": {
         parameters: {
             query?: never;
@@ -20912,7 +20851,6 @@ export interface paths {
                         startDate?: string;
                         /** @description date (YYYY-MM-DD) */
                         dueDate?: string;
-                        /** @description labels for the card; each is trimmed, blanks are dropped, and a repeat keeps its first position. A label not yet in the owner's vocabulary is created there. */
                         labels?: string[];
                         /** @description a live work item in the same project (not self) */
                         parentId?: string;
@@ -21082,7 +21020,6 @@ export interface paths {
                         priority?: number;
                         startDate?: string | null;
                         dueDate?: string | null;
-                        /** @description replaces the card's whole label set (an empty array clears it) */
                         labels?: string[];
                         /** @description null detaches the parent */
                         parentId?: string | null;
@@ -21666,11 +21603,8 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         direction: "ingested" | "produced";
-                        /**
-                         * @description the target's registry, e.g. 'content.markdown'. Must be a kind the target registry knows (400 otherwise), and the target itself must exist within the PROJECT owner's reach (404 otherwise) — an unreachable id is indistinguishable from an absent one. GET /project/projects/{id}/attachable lists the ids that will be accepted.
-                         * @enum {string}
-                         */
-                        targetKind: "content.markdown" | "content.urls";
+                        /** @description the target's registry, e.g. 'content.markdown' */
+                        targetKind: string;
                         targetId: string;
                     };
                 };
@@ -21714,85 +21648,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/attachable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * Targets this project could attach — the candidate list an attach picker reads
-         * @description Everything the project OWNER can reach, of every registered target kind (or one, via `kind`), most recently touched first. Returned through the same owner scope the link write checks against, so every row here is one POST /artifacts will accept. Requires the project 'C' verb — the same gate as the attach itself, so this is not a read-only route for enumerating a workspace.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Restrict to one target kind. Omit for every registered kind — which is how a client builds the picker without hard-coding the vocabulary. An unregistered value is a 400 naming the known set. */
-                    kind?: "content.markdown" | "content.urls";
-                    /** @description Free-text narrowing. Matches a document title, and for a saved URL either its title or the address it was saved as (so a not-yet-unfurled URL is still findable). */
-                    q?: string;
-                    /** @description Max rows PER KIND (not per response), so no one kind can crowd the others out of the picker. Default 20, max 100; a non-numeric or out-of-range value is clamped. */
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Attachable targets */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: components["schemas"]["TargetDescriptor"][];
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -54936,7 +54791,7 @@ export interface components {
             key: string;
             label: string;
             /** @enum {string} */
-            category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+            category: "todo" | "in_progress" | "done";
             /** @description column order (ascending) */
             position: number;
             createdAt: string;
@@ -54985,7 +54840,6 @@ export interface components {
             startDate?: string | null;
             /** @description date (YYYY-MM-DD) */
             dueDate?: string | null;
-            /** @description the card's labels, from the owner's shared tag vocabulary (the same one research documents draw on), in authored order */
             labels: string[];
             /** @description a parent work item in the same project */
             parentId?: string | null;
@@ -55034,18 +54888,6 @@ export interface components {
             } | null;
             createdAt: string;
         };
-        TargetDescriptor: {
-            /** @description the target's registry, e.g. 'content.markdown' */
-            kind: string;
-            /** @description the opaque target id */
-            id: string;
-            /** @description the row's display title; never empty */
-            title: string;
-            /** @description one supporting line, or null */
-            subtitle: string | null;
-            /** @description set only when the target is a link OUT of the platform (a saved URL) */
-            url: string | null;
-        };
         ProjectArtifact: {
             id: string;
             ecosystemId: string;
@@ -55063,7 +54905,6 @@ export interface components {
             deletedAt?: string | null;
             createdAt: string;
             updatedAt: string;
-            target: components["schemas"]["TargetDescriptor"] | null;
         };
         PersonaMemory: {
             id: string;
