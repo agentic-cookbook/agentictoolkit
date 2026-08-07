@@ -124,6 +124,13 @@ export function WorkItemsSurface({
     () => projectsApi.participants.list(projectId).catch(() => [] as ProjectParticipant[]),
     [projectId],
   );
+  // The label vocabulary the editor SUGGESTS. Like the pickers above it fails soft to an empty
+  // list: labels are typed as readily as they are browsed, so losing the suggestions costs
+  // convenience, never the ability to label a card.
+  const loadLabels = useCallback(
+    () => projectsApi.labels(projectId).catch(() => [] as string[]),
+    [projectId],
+  );
   const {
     items,
     setItems,
@@ -138,8 +145,13 @@ export function WorkItemsSurface({
     `project:${projectId}:participants`,
     loadParticipants,
   );
+  const { items: labelRows, reload: reloadLabels } = useResourceList<string>(
+    `project:${projectId}:labels`,
+    loadLabels,
+  );
   const statuses = statusRows ?? [];
   const participants = participantRows ?? [];
+  const labelOptions = labelRows ?? [];
 
   // Move a card to another status: optimistic (repaint immediately), then settle
   // per-item and GUARDED so overlapping moves on the SAME card never clobber each
@@ -205,10 +217,14 @@ export function WorkItemsSurface({
 
   // A saved edit reloads the shared items and returns to the active view. `reload()` always hits the
   // network, so the row just written is in the list rather than a pre-write snapshot.
+  //
+  // The label vocabulary reloads alongside it, because a save can GROW it: labelling a card with a
+  // name nobody had used mints the keyword, and without this the label the user just invented would
+  // be missing from the suggestions on the very next card they open.
   const onSaved = useCallback(async () => {
     setSelectedId(null);
-    await reload();
-  }, [reload]);
+    await Promise.all([reload(), reloadLabels()]);
+  }, [reload, reloadLabels]);
 
   // A create closes the modal, refreshes the views, and OPENS the new item's detail — the record now
   // exists, so it has a detail to show (the modal only asked for what places it).
@@ -309,6 +325,7 @@ export function WorkItemsSurface({
               statuses={statuses}
               participants={participants}
               workItems={items ?? []}
+              labelOptions={labelOptions}
               onSaved={() => void onSaved()}
               onCancel={closeEditor}
             />

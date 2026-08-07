@@ -23,6 +23,7 @@ import type {
   ProjectStatusCreateBody,
   ProjectStatusPatchBody,
   ProjectParticipantAddBody,
+  ProjectLabelsRow,
 } from "./wire";
 
 const BASE = "/api/project/projects";
@@ -248,6 +249,20 @@ export const projectsApi = {
         { method: "DELETE" },
       );
     },
+  },
+
+  /** The label VOCABULARY to offer when tagging this project's cards — every label the
+   *  project's owner has already used, ordered alphabetically by the server.
+   *
+   *  Read through the PROJECT even though the vocabulary is not the project's: a client holds a
+   *  project id, and the project is what decides whose vocabulary applies (an org project's
+   *  owner, not the caller). It spans content types by design — a label put on a research
+   *  document is offered on a card — so this is a suggestion list, never a closed set: a card
+   *  may carry a label that is not in it yet, which is exactly what typing a new one does.
+   *  Read-only: a label comes into existence by being used, not by being declared. */
+  async labels(projectId: string): Promise<string[]> {
+    const body = await authedJson<ProjectLabelsRow>(`${BASE}/${enc(projectId)}/labels`);
+    return body.items;
   },
 
   participants: {

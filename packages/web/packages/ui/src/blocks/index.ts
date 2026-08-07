@@ -3,6 +3,9 @@ export { EditorSection, type EditorSectionItem } from "./editor-section"
 export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor"
 export { Field } from "./field"
 export { FieldGroup } from "./field-group"
+// The tag-set row (autocomplete + browse/add chooser + chips) — one affordance for every
+// surface that edits a set of labels, so research tags and work-item labels behave alike.
+export { TagSetField } from "./tag-set-field"
 export { TopicDetail, type TopicDetailItem, type RailSlot } from "./topic-detail"
 // How to name the detail pane the user is actually looking at, rather than HTDV's outgoing
 // crossfade snapshot of the previous one. Re-exported here for app code that already imports from

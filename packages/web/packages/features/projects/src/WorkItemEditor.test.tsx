@@ -78,6 +78,7 @@ function renderEditor(item: WorkItem = ITEM) {
       statuses={[]}
       participants={[]}
       workItems={[ITEM]}
+      labelOptions={[]}
       onSaved={() => {}}
       onCancel={() => {}}
     />,
@@ -168,6 +169,7 @@ describe("WorkItemEditor save (edit mode)", () => {
         statuses={[]}
         participants={[]}
         workItems={[ITEM]}
+        labelOptions={[]}
         onSaved={onSaved}
         onCancel={() => {}}
       />,
@@ -222,6 +224,73 @@ describe("WorkItemEditor save (edit mode)", () => {
   });
 });
 
+// Labels are the shared tagging system (content.keywords) reached through the shared
+// `TagSetField` row, so what this file has to prove is the WIRING either side of that row:
+// the draft carries a set, and `buildPatch` sends it only when it actually differs. The row's
+// own affordances (autocomplete commit rule, the chooser's chips, minting a new label) are
+// covered where they live, in ui's tagSetField/entityChooser tests.
+describe("WorkItemEditor labels", () => {
+  const VOCABULARY = ["bug", "chore", "design"];
+
+  function renderWithLabels(item: WorkItem = ITEM) {
+    return render(
+      <WorkItemEditor
+        projectId="p1"
+        item={item}
+        statuses={[]}
+        participants={[]}
+        workItems={[item]}
+        labelOptions={VOCABULARY}
+        onSaved={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+  }
+
+  it("adds a label from the vocabulary and PATCHes the whole set", async () => {
+    update.mockResolvedValueOnce({ ...ITEM, labels: ["design"] });
+    renderWithLabels();
+
+    // Accepting a suggestion fires onValueChange with the WHOLE option string; TagSetField
+    // treats an exact vocabulary match as the commit.
+    fireEvent.change(screen.getByLabelText("Add a label"), { target: { value: "design" } });
+
+    const save = screen.getByRole("button", { name: "Save changes" });
+    await waitFor(() => expect(save).not.toBeDisabled());
+    fireEvent.click(save);
+
+    // The endpoint REPLACES the set rather than merging, so the patch carries every label the
+    // item should end up with — not just the one added.
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { labels: ["design"] });
+  });
+
+  it("keeps Save disabled when the labels are untouched", () => {
+    renderWithLabels({ ...ITEM, labels: ["bug", "chore"] });
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  });
+
+  // Order is DATA here — the backend stores it as `sort_order` on the link rows and hands it
+  // back in that order. A set-wise comparison would call a re-order "unchanged" and silently
+  // drop it, so the diff is order-sensitive.
+  it("treats a re-order as a change", async () => {
+    const item = { ...ITEM, labels: ["bug", "chore"] };
+    update.mockResolvedValueOnce({ ...item, labels: ["chore", "bug"] });
+    renderWithLabels(item);
+
+    // Removing the leading chip and re-adding it puts the same two labels back in the other order.
+    fireEvent.click(screen.getByRole("button", { name: "Remove bug" }));
+    fireEvent.change(screen.getByLabelText("Add a label"), { target: { value: "bug" } });
+
+    const save = screen.getByRole("button", { name: "Save changes" });
+    await waitFor(() => expect(save).not.toBeDisabled());
+    fireEvent.click(save);
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { labels: ["chore", "bug"] });
+  });
+});
+
 // Every other test in this file renders with `statuses={[]}`, so the status field's real
 // (populated) path was never exercised. An item with NO status used to load as `statuses[0].id`
 // — the SAME invented value on both the draft and the baseline — so the field displayed a status
@@ -242,6 +311,7 @@ describe("WorkItemEditor status field with a statusless item", () => {
         statuses={STATUSES}
         participants={[]}
         workItems={[NO_STATUS]}
+        labelOptions={[]}
         onSaved={() => {}}
         onCancel={() => {}}
       />,

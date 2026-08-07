@@ -7,6 +7,7 @@ import { Select } from "@agentic-toolkit/ui/components/select";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { Button } from "@agentic-toolkit/ui/components/button";
+import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
 import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import { projectActivityApi } from "@agentic-toolkit/data/projects";
@@ -47,6 +48,12 @@ export function priorityMeta(n: number): { label: string; variant: BadgeVariant 
   return PRIORITIES.find((p) => p.value === n) ?? { label: String(n), variant: "neutral" };
 }
 
+/** Two label sets are the same when they hold the same labels in the same ORDER. Position is
+ *  stored server-side (it round-trips), so a re-order is a change like any other. */
+function sameLabels(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 /** The item's stored assignee as the picker's value ({kind,id} | null). */
 function assigneeOf(item: WorkItem | null): AssigneeValue | null {
   if (!item || !item.assigneeKind || !item.assigneeId) return null;
@@ -76,6 +83,10 @@ type WorkItemDraft = {
   priority: number;
   startDate: string;
   dueDate: string;
+  /** The card's label set, in order. An ARRAY is safe here where the assignee object was not:
+   *  `useDirtyDraft` compares arrays by CONTENT, so a fresh array from the chooser with the same
+   *  labels in it does not read as dirty. */
+  labels: string[];
   parentId: string;
 };
 
@@ -97,6 +108,7 @@ function draftFromItem(item: WorkItem): WorkItemDraft {
     priority: item.priority,
     startDate: item.startDate ?? "",
     dueDate: item.dueDate ?? "",
+    labels: item.labels,
     parentId: item.parentId ?? "",
   };
 }
@@ -180,6 +192,7 @@ export function WorkItemEditor({
   statuses,
   participants,
   workItems,
+  labelOptions,
   onSaved,
   onCancel,
 }: {
@@ -190,6 +203,10 @@ export function WorkItemEditor({
   participants: ProjectParticipant[];
   /** the project's work items, for the parent picker (the edited item is excluded). */
   workItems: WorkItem[];
+  /** The label vocabulary to SUGGEST — every label the project's owner has already used,
+   *  anywhere (a research document's tags are the same keywords). Never a closed set: the
+   *  chooser mints a new one, and a card may already carry a label absent from this list. */
+  labelOptions: string[];
   onSaved: (saved: WorkItem) => void;
   onCancel: () => void;
 }): ReactElement {
@@ -287,6 +304,10 @@ export function WorkItemEditor({
     if (newStart !== (baseline.startDate || null)) patch.startDate = newStart;
     const newDue = draft.dueDate || null;
     if (newDue !== (baseline.dueDate || null)) patch.dueDate = newDue;
+    // Labels go out as a WHOLE SET (the PATCH replaces, it does not append), so the diff is
+    // "is this the same list in the same order" — ORDER included, because the order is stored
+    // and read back, so re-arranging the chips is a real edit and must reach the server.
+    if (!sameLabels(draft.labels, baseline.labels)) patch.labels = draft.labels;
     const newParent = draft.parentId || null;
     if (newParent !== (baseline.parentId || null)) patch.parentId = newParent;
 
@@ -364,6 +385,17 @@ export function WorkItemEditor({
           ))}
         </Select>
       </Field>
+
+      {/* The same tag-set row a research document's tags use — deliberately, because they are the
+          same tagging system underneath: a label put on a paper is offered here, and vice versa. */}
+      <TagSetField
+        label="Labels"
+        noun="label"
+        hint="Shared with everything else this owner tags. Type to autocomplete, or Choose to browse."
+        options={labelOptions}
+        value={draft.labels}
+        onChange={(labels) => set("labels", labels)}
+      />
 
       <div className="flex flex-wrap gap-4">
         <Field label="Start date" className="min-w-40 flex-1">

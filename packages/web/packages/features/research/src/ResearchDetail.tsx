@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
-
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Combobox } from "@agentic-toolkit/ui/components/combobox";
 import { EntityChooser } from "@agentic-toolkit/ui/components/entity-chooser";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
+import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
 import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -28,7 +27,9 @@ function titleFromFilename(name: string): string {
  * the `Combobox` autocompletes from the account's existing categories/keywords
  * (`categoryOptions` / `tagOptions`, fetched from the backend), and the `Choose`
  * button (an `EntityChooser`) opens a browse/filter/select/add surface. Category is
- * a single value; tags are a multi-select set (the EntityChooser renders the chips).
+ * a single value, assembled here; tags are the shared {@link TagSetField}, which owns
+ * that whole arrangement for every surface that edits a label set (a work item's
+ * labels is the same tagging system and now renders the same row).
  */
 export function ResearchDetail({
   draft,
@@ -43,30 +44,6 @@ export function ResearchDetail({
   tagOptions: string[];
   error?: string | null;
 }) {
-  // Local text for the tag autocomplete. Selecting/typing an exact option commits it
-  // to the set and clears the field; partial text just narrows the suggestions.
-  const [tagText, setTagText] = useState("");
-
-  // Tags not already chosen — the autocomplete never re-offers a selected tag.
-  const tagSuggestions = tagOptions.filter((t) => !draft.tags.includes(t));
-
-  function commitTag(value: string): void {
-    if (draft.tags.includes(value)) return;
-    onChange({ ...draft, tags: [...draft.tags, value] });
-  }
-
-  // Base UI's Autocomplete fires onValueChange with the full option string when a
-  // suggestion is selected (click / Enter on a highlight); detect that exact match to
-  // ADD the tag and reset, otherwise keep narrowing.
-  function onTagInput(value: string): void {
-    if (value && tagOptions.includes(value)) {
-      commitTag(value);
-      setTagText("");
-    } else {
-      setTagText(value);
-    }
-  }
-
   return (
     <Card>
       <CardContent className="flex flex-col gap-5">
@@ -101,29 +78,14 @@ export function ResearchDetail({
           </div>
         </Field>
 
-        <Field label="Tags" hint="A set of labels. Type to autocomplete, or Choose to browse.">
-          <div className="flex flex-col gap-2">
-            <Combobox
-              items={tagSuggestions}
-              value={tagText}
-              onValueChange={onTagInput}
-              ariaLabel="Add a tag"
-              placeholder="Add a tag…"
-              className="w-full"
-            />
-            <EntityChooser
-              multiple
-              options={tagOptions}
-              value={draft.tags}
-              onChange={(tags) => onChange({ ...draft, tags })}
-              ariaLabel="Tags"
-              triggerLabel="Choose…"
-              inputLabel="Filter or add a tag"
-              placeholder="Filter or add a tag…"
-              emptySelectionLabel="No tags yet"
-            />
-          </div>
-        </Field>
+        <TagSetField
+          label="Tags"
+          noun="tag"
+          hint="A set of labels. Type to autocomplete, or Choose to browse."
+          options={tagOptions}
+          value={draft.tags}
+          onChange={(tags) => onChange({ ...draft, tags })}
+        />
 
         <MarkdownEditor
           label="Markdown body"

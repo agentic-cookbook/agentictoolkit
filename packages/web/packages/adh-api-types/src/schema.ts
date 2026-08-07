@@ -20774,6 +20774,67 @@ export interface paths {
         };
         trace?: never;
     };
+    "/project/projects/{id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The label vocabulary this project's cards draw on
+         * @description Every live label the project's OWNING principal has used — on a research document as readily as on a card, because both sides use the one tagging system (content.keywords). Distinct and alphabetical: the autocomplete/browse source for a card's labels field.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Distinct labels, sorted alphabetically */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StringList"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/project/projects/{id}/work-items": {
         parameters: {
             query?: never;
@@ -20851,6 +20912,7 @@ export interface paths {
                         startDate?: string;
                         /** @description date (YYYY-MM-DD) */
                         dueDate?: string;
+                        /** @description labels for the card; each is trimmed, blanks are dropped, and a repeat keeps its first position. A label not yet in the owner's vocabulary is created there. */
                         labels?: string[];
                         /** @description a live work item in the same project (not self) */
                         parentId?: string;
@@ -21020,6 +21082,7 @@ export interface paths {
                         priority?: number;
                         startDate?: string | null;
                         dueDate?: string | null;
+                        /** @description replaces the card's whole label set (an empty array clears it) */
                         labels?: string[];
                         /** @description null detaches the parent */
                         parentId?: string | null;
@@ -54922,6 +54985,7 @@ export interface components {
             startDate?: string | null;
             /** @description date (YYYY-MM-DD) */
             dueDate?: string | null;
+            /** @description the card's labels, from the owner's shared tag vocabulary (the same one research documents draw on), in authored order */
             labels: string[];
             /** @description a parent work item in the same project */
             parentId?: string | null;

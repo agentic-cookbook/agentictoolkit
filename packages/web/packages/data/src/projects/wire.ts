@@ -48,6 +48,13 @@ export interface ProjectStatusRow {
   createdAt: string;
 }
 
+/** Backend response for `GET /project/projects/{id}/labels` — the label VOCABULARY offered
+ *  when tagging this project's cards. Wrapped in `{items}` rather than a bare array because
+ *  it is the shared string-list envelope the backend uses for every vocabulary read. */
+export interface ProjectLabelsRow {
+  items: string[];
+}
+
 /** Backend row for `GET /project/projects/{id}/participants`. */
 export interface ProjectParticipantRow {
   id: string;
