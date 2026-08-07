@@ -1,22 +1,36 @@
 "use client";
 
-import { useMemo, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { DataTable, type DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
+import { ListHeader } from "@agentic-toolkit/ui/blocks/list-header";
+import { SelectionActions } from "@agentic-toolkit/ui/blocks/selection-actions";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import { assigneeLabel, statusMeta } from "../helpers";
+import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
 
 /**
  * The Table VIEW of the work-items surface: a DENSE spreadsheet — the List's
  * superset — laying every work item out across sortable columns (title, status,
  * assignee, priority, start / due dates, labels). PRESENTATIONAL, like its List
  * sibling: it loads no data and owns no editor; the WorkItemsSurface loads the
- * items ONCE and owns the shared editor. Selecting a row calls `onOpenItem(id)`,
- * which the surface turns into an open editor for that item (so a click opens the
- * shared editor from ANY view).
+ * items ONCE and owns the shared editor.
+ *
+ * CLICK SELECTS, DOUBLE-CLICK OPENS (Enter is the keyboard twin). It used to be that a single
+ * click opened the editor — which cost the table selection entirely, because a table has only one
+ * click and that click was spent. So this table, alone among the dense lists on the platform,
+ * could not select a range, and the multi-select `DataTable` already implements (shift-click,
+ * alt-click, shift-arrow) was unreachable here. `onRowActivate` separates the two acts, which is
+ * also the convention everywhere else a list opens something: selection is cheap and reversible,
+ * opening is the deliberate second act.
+ *
+ * A selection arms the header's Update… and Delete, shared with the List view through
+ * `useBulkWorkItemActions` so the two views offer the same verbs. That is the whole point of a
+ * dense table: seeing forty rows at once is only half of it, acting on twenty of them is the rest.
  *
  * Status + priority render as Badge variants (never raw colors), resolved via the
  * shared `../helpers` source that the List view reads too, so a status/assignee
@@ -32,10 +46,6 @@ import { assigneeLabel, statusMeta } from "../helpers";
  * field column would fan out into N fetches (one per row) — a perf anti-pattern.
  * Adding custom-field columns needs a batch field-values endpoint first (future).
  */
-
-// A row click never leaves the table selected (the surface swaps in the editor),
-// so a stable empty set keeps DataTable's selection controlled without churn.
-const NO_SELECTION: Set<string> = new Set();
 
 type SortState = { key: string; dir: "asc" | "desc" };
 
@@ -69,13 +79,29 @@ export function TableView({
   statuses,
   participants,
   onOpenItem,
+  onChanged,
 }: {
   items: WorkItem[];
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
   onOpenItem: (id: string) => void;
+  /** A bulk update or delete landed — the surface re-reads the shared items so every view
+   *  repaints together. */
+  onChanged: () => Promise<void>;
 }): ReactElement {
   const [sort, setSort] = useState<SortState | undefined>(undefined);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const bulk = useBulkWorkItemActions({ statuses, participants, onChanged });
+
+  // Ids of rows that have since left the table (deleted, or filtered out by a reload) are dropped
+  // before they reach an action, so a bulk verb never fires at something that is not on screen.
+  const selectedArr = useMemo(
+    () => items.filter((w) => selectedIds.has(w.id)).map((w) => w.id),
+    [items, selectedIds],
+  );
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const columns: DataTableColumn<WorkItem>[] = useMemo(
     () => [
@@ -167,21 +193,40 @@ export function TableView({
   }
 
   return (
-    <div className="min-h-0 min-w-0 flex-1 overflow-x-auto">
-      <DataTable<WorkItem>
-        ariaLabel="Work items table"
-        className="min-w-[64rem]"
-        columns={columns}
-        rows={sortedItems}
-        getRowId={(w) => w.id}
-        selectedIds={NO_SELECTION}
-        onSelectionChange={(ids) => {
-          const id = [...ids][0];
-          if (id) onOpenItem(id);
-        }}
-        sort={sort}
-        onSortChange={setSort}
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+      <ErrorText error={bulk.error} />
+      {/* The same recessed strip every list header uses — no filter field, because the Table's
+          affordance is sorting and the List owns filtering. */}
+      <ListHeader
+        ariaLabel="Work items table actions"
+        title={selectedArr.length > 0 ? `${selectedArr.length} selected` : undefined}
+        actions={
+          <SelectionActions
+            selectedIds={selectedArr}
+            actions={bulk.actions}
+            onDelete={(ids) => {
+              bulk.onDelete(ids);
+              clearSelection();
+            }}
+            deleteConfirm={bulk.deleteConfirm}
+          />
+        }
       />
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-auto">
+        <DataTable<WorkItem>
+          ariaLabel="Work items table"
+          className="min-w-[64rem]"
+          columns={columns}
+          rows={sortedItems}
+          getRowId={(w) => w.id}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onRowActivate={onOpenItem}
+          sort={sort}
+          onSortChange={setSort}
+        />
+      </div>
+      {bulk.dialog}
     </div>
   );
 }

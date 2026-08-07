@@ -22,12 +22,13 @@ import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/da
 import { PRIORITIES } from "../WorkItemEditor";
 import { participantLabel, toOptionValue, fromOptionValue } from "../AssigneePicker";
 import { WorkItemDetail } from "../WorkItemDetail";
+import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
 
 /**
  * The List VIEW of the work-items surface: a LIST WITH DETAILS — the items as a table on top, the
  * selected item's full record below.
  *
- * Two things it owns that the sibling views don't:
+ * Three things it owns that the sibling views don't:
  *
  *  - **In-place row editing.** Every column is a control over a per-row PATCH (`useInlineDrafts`),
  *    and the row's trailing `InlineCommitControl` commits (✓) or discards (✕) it; the same control
@@ -46,6 +47,12 @@ import { WorkItemDetail } from "../WorkItemDetail";
  *
  * Selecting a row shows its whole record below — including the fields that are NOT columns
  * (description, labels, parent, timestamps). The row edits; the details pane reads.
+ *
+ * Selecting SEVERAL (shift-click a range, alt-click to add, shift-arrow from the keyboard) shows
+ * no record — there is no one record to show — and instead arms the header's Update… and Delete,
+ * shared with the Table view via `useBulkWorkItemActions`. The per-row control and the header are
+ * not two ways to do one thing: the row acts on the item you are editing, the header on a set you
+ * chose, and neither can express the other.
  */
 
 /** A title cell never sizes below this many characters, so a short title still leaves a usable
@@ -113,6 +120,10 @@ export function ListView({
 }): ReactElement {
   const rows = useInlineDrafts<string, WorkItemDraft>(errorMessage);
   const [filter, setFilter] = useState("");
+
+  // What a multi-selection does. The row's own ✓/✕/trash still edits and deletes ONE item; these
+  // are the verbs that only make sense over many, and they are the same two the Table offers.
+  const bulk = useBulkWorkItemActions({ statuses, participants, onChanged });
 
   // COLLAPSED, not expanded: a project's items are mostly flat, so the useful default is that
   // everything a project contains is on screen — and a set of collapsed ids stays correct as
@@ -334,6 +345,7 @@ export function ListView({
       {rows.errors.map((e) => (
         <ErrorText key={e.id} error={e.message} />
       ))}
+      <ErrorText error={bulk.error} />
       <ListWithDetailsPane<WorkItem>
         ariaLabel="Work items"
         className="min-h-0 flex-1"
@@ -342,6 +354,9 @@ export function ListView({
         getRowId={(w) => w.id}
         emptyLabel="No work items yet."
         detailsLabel="Work item"
+        actions={bulk.actions}
+        onDelete={bulk.onDelete}
+        deleteConfirm={bulk.deleteConfirm}
         filterText={filter}
         onFilterTextChange={setFilter}
         filterPlaceholder="Filter work items…"
@@ -364,6 +379,7 @@ export function ListView({
           </p>
         }
       />
+      {bulk.dialog}
       <UnsavedChangesGuard when={pending} />
     </div>
   );

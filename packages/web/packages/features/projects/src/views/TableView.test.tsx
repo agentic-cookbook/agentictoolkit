@@ -2,9 +2,10 @@
 //
 // Component test for TableView — the dense Table (spreadsheet) VIEW of the work-
 // items surface. TableView is PRESENTATIONAL (no data load, no editor), so it takes
-// items/statuses/participants as props and reports a row selection via `onOpenItem`.
-// Covers: every column populated per row, client-side sort reorders the rows, a row
-// click opens the item, and the empty state.
+// items/statuses/participants as props and reports an OPENED row via `onOpenItem`.
+// Covers: every column populated per row, client-side sort reorders the rows, the
+// select/open grammar (click selects, double-click and Enter open), the bulk strip
+// arming on a selection, and the empty state.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 
@@ -81,6 +82,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
       />,
     );
 
@@ -106,6 +108,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
       />,
     );
 
@@ -118,7 +121,9 @@ describe("TableView", () => {
     expect(titlesInOrder()).toEqual(["Charlie", "Bravo", "Alpha"]); // desc
   });
 
-  it("calls onOpenItem with the row id when a row is selected", () => {
+  // The select/open grammar. A single click used to open the editor, which spent the table's only
+  // click and left it unable to select anything — these three tests pin the split.
+  it("selects the row on a single click, and does NOT open it", () => {
     const onOpenItem = vi.fn();
     render(
       <TableView
@@ -126,16 +131,88 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         onOpenItem={onOpenItem}
+        onChanged={vi.fn()}
       />,
     );
 
     fireEvent.click(screen.getByText("Design the landing page"));
+
+    expect(onOpenItem).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("row")[1]?.getAttribute("aria-selected")).toBe("true");
+    // The header counts what the actions will land on.
+    expect(screen.getByText("1 selected")).not.toBeNull();
+  });
+
+  it("opens the row on a double-click", () => {
+    const onOpenItem = vi.fn();
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[PARTICIPANT]}
+        onOpenItem={onOpenItem}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    fireEvent.doubleClick(screen.getByText("Design the landing page"));
     expect(onOpenItem).toHaveBeenCalledWith("w1");
+  });
+
+  it("opens the focused row on Enter", () => {
+    const onOpenItem = vi.fn();
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[PARTICIPANT]}
+        onOpenItem={onOpenItem}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    // Focusing the grid focuses its first row; Enter is the double-click's keyboard twin, so the
+    // editor is reachable without a mouse.
+    const grid = screen.getByRole("grid");
+    fireEvent.focus(grid);
+    fireEvent.keyDown(grid, { key: "Enter" });
+    expect(onOpenItem).toHaveBeenCalledWith("w1");
+  });
+
+  it("arms the bulk actions only once a row is selected", () => {
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[PARTICIPANT]}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    const update = (): HTMLButtonElement =>
+      screen.getByRole("button", { name: "Update…" }) as HTMLButtonElement;
+    const del = (): HTMLButtonElement =>
+      screen.getByRole("button", { name: /Delete/ }) as HTMLButtonElement;
+
+    expect(update().disabled).toBe(true);
+    expect(del().disabled).toBe(true);
+
+    fireEvent.click(screen.getByText("Design the landing page"));
+
+    expect(update().disabled).toBe(false);
+    expect(del().disabled).toBe(false);
   });
 
   it("renders the EmptyState when there are no items", () => {
     render(
-      <TableView items={[]} statuses={[STATUS]} participants={[]} onOpenItem={vi.fn()} />,
+      <TableView
+        items={[]}
+        statuses={[STATUS]}
+        participants={[]}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
     );
     expect(screen.getByText("No work items yet.")).not.toBeNull();
     // The empty branch is the EmptyState, not a DataTable grid.

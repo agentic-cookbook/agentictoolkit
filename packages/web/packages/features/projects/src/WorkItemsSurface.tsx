@@ -297,6 +297,7 @@ export function WorkItemsSurface({
             statuses={statuses}
             participants={participants}
             onOpenItem={onOpenItem}
+            onChanged={reload}
           />
         );
       case "timeline":
@@ -306,7 +307,7 @@ export function WorkItemsSurface({
       default:
         return null;
     }
-  }, [view, items, statuses, participants, onOpenItem, onMove]);
+  }, [view, items, statuses, participants, onOpenItem, onMove, reload]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
