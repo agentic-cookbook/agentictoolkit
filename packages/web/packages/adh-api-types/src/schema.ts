@@ -14921,6 +14921,8 @@ export interface paths {
                     tag?: string;
                     /** @description Restrict to documents whose frontmatter adh_source equals this value. Used by researchUpsert to look up an existing doc without scanning the full export. */
                     source?: string;
+                    /** @description Send true to restrict to NOTES — the documents filed in the owner's `notes` storage bucket (a live content.notes marker). A false value is the unfiltered list; there is no "not a note" filter. A value that is neither is a 400, not a silently unfiltered list. */
+                    noted?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -14985,6 +14987,8 @@ export interface paths {
                             /** @description Display label; ignored for customer/user (taken from the principal). */
                             name?: string;
                         };
+                        /** @description Send `true` to file the new document in the owner's `notes` storage bucket (mints its content.notes marker). It stays an ordinary markdown document in every other respect — same versions, same category/tags — and `?noted=true` is how you list them back. */
+                        note?: boolean;
                     };
                 };
             };
@@ -15026,31 +15030,37 @@ export interface paths {
     };
     "/content/markdown/categories": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to). Omitted: the caller’s own documents. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         /**
-         * List the caller's existing category names (autocomplete source)
-         * @description The account's full set of category names (content.categories), scoped to the caller and ecosystem, distinct and alphabetical — the autocomplete/browse source for the research classification UI.
+         * List the caller's existing categories (names + the category TREE)
+         * @description The account's full set of categories (content.categories), scoped to the workspace owner and ecosystem. `items` is the distinct, alphabetical NAME list — the autocomplete/browse source for the research classification UI. `nodes` is the same set with its structure kept (id + parentId), which is what a hierarchical browser folds into a tree.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to). Omitted: the caller’s own documents. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Distinct category names, sorted alphabetically */
+                /** @description Category names (alphabetical) and the category nodes */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["StringList"];
+                        "application/json": components["schemas"]["MarkdownCategoryTree"];
                     };
                 };
                 /** @description Error */
@@ -15065,7 +15075,87 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Create a category, optionally nested under another
+         * @description Mints a category for the workspace owner. Omit `parentId` (or send null) for a root. A category NAME is unique per owner across the whole tree — every other op addresses a category by name — so re-posting an existing name under the SAME parent returns it unchanged (idempotent), and under a DIFFERENT parent is a 409. This never MOVES a category. A `parentId` that isn't one of this owner's live categories is a 404.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to). Omitted: the caller’s own documents. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description The category name (unique per owner). */
+                        name: string;
+                        /** @description Id of the category this one sits under. Omit or null for a root category. */
+                        parentId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description The existing category with this name (already under this parent) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MarkdownCategoryNode"];
+                    };
+                };
+                /** @description The created category */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MarkdownCategoryNode"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -16710,10 +16800,10 @@ export interface paths {
                     "application/json": {
                         preferences: {
                             /** @enum {string} */
-                            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status" | "project_due";
+                            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
                             email: boolean;
                             sms: boolean;
-                            /** @default true */
+                            /** @description In-app (inbox) delivery for this category. Omitted means true — the PUT replaces the row wholesale, so a client that edits only email/sms must send back the value it read. */
                             inApp?: boolean;
                         }[];
                     };
@@ -16763,10 +16853,10 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status" | "project_due";
+                        category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
                         email: boolean;
                         sms: boolean;
-                        /** @default true */
+                        /** @description In-app (inbox) delivery for this category. Omitted means true — the PUT replaces the row wholesale, so a client that edits only email/sms must send back the value it read. */
                         inApp?: boolean;
                     };
                 };
@@ -18347,15 +18437,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all reactions on one target, or a batch of them (public within the ecosystem) */
+        /** List all reactions on a target (public within the ecosystem) */
         get: {
             parameters: {
                 query: {
                     targetKind: string;
-                    /** @description One subject. Supply this OR targetIds; one of the two is required. */
-                    targetId?: string;
-                    /** @description Up to 200 comma-separated subject ids, so a surface showing many subjects reads them in ONE request — each item carries its own targetId for grouping. Supply this OR targetId; one of the two is required. Over 200 is a 400. */
-                    targetIds?: string;
+                    targetId: string;
                 };
                 header?: never;
                 path?: never;
@@ -18363,7 +18450,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Reactions on the target(s) */
+                /** @description Reactions on the target */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -20024,10 +20111,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /**
-         * Update a project (+ a project.updated activity)
-         * @description Requires the project’s projects item U verb. A patch that changes nothing is a true no-op: no write, no updated_at bump, and no project.updated{changed:[]} row.
-         */
+        /** Update a project (+ a project.updated activity) */
         patch: {
             parameters: {
                 query?: never;
@@ -20046,34 +20130,6 @@ export interface paths {
                         color?: string;
                         /** @description an ISO timestamp archives; null un-archives */
                         archivedAt?: string | null;
-                        /**
-                         * @description which estimate vocabulary this board writes in. Changing it NEVER invalidates an estimate already stored — the column takes any non-negative integer whatever the scale is — so this is safe to switch mid-flight. 'none' turns estimating off.
-                         * @enum {string}
-                         */
-                        estimateScale?: "none" | "points" | "fibonacci" | "exponential" | "linear" | "tshirt";
-                        /**
-                         * @description whether this board ranks its work. Safe to switch for the same reason as the scale above: 'none' hides the priority control and the priority column and keeps every rank already recorded, so turning ranking back on restores the order rather than an empty one.
-                         * @enum {string}
-                         */
-                        priorityScale?: "standard" | "none";
-                        /** @description what this board calls ONE of its items, e.g. 'recipe'. Lower case by convention — the client capitalises where a sentence needs it, and a stored 'Recipe' would read as 'Delete 3 Recipes'. */
-                        itemNoun?: string;
-                        /** @description what this board calls MANY, e.g. 'recipes'. Accepted on its OWN, unlike in a template body: this patch edits words the board already has, so correcting a plural the client guessed ('storys') is a real request rather than half a rename. */
-                        itemNounPlural?: string;
-                        /** @description the prefix this board's keys render from. Upper-cased before it is checked, so `adh` and `ADH` are not two claims on the same prefix; 409 if another live board of the same owner already holds it. Renaming it re-renders every key at once — which is why the prefix is stored here and not on each card. */
-                        keyPrefix?: string;
-                        /** @description null clears it — a project that turns out to have no committed start must be able to say so again */
-                        startDate?: string | null;
-                        /** @description null clears it. The pair is checked as it WILL BE, not as it was sent, so moving one end of a dated project is an ordinary one-key edit; 400 if the target would precede the start. */
-                        targetDate?: string | null;
-                        /**
-                         * @description set WITH leadId, or send both as null to clear. A half — a kind naming nobody, or an id with no kind — is a 400 here rather than the projects_lead_kind_chk violation it would otherwise become.
-                         * @enum {string|null}
-                         */
-                        leadKind?: "customer" | "persona" | "team" | null;
-                        leadId?: string | null;
-                        /** @description a live program of this project's OWN workspace (400 otherwise — the same relational rule a card's iteration follows); null takes the board out of its program */
-                        programId?: string | null;
                     };
                 };
             };
@@ -20106,81 +20162,6 @@ export interface paths {
                     };
                 };
                 /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/iterations": {
-        parameters: {
-            query?: {
-                /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s iterations, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                workspace?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the time-boxes in the caller's reach (non-deleted, in calendar order)
-         * @description Every state is returned — upcoming, active and completed — because a cycle review needs the box that just closed as much as the one now open. The `state` on each row is derived against ONE `today` for the whole page, so a list can never straddle midnight and report two different instants.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s iterations, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Iterations */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectIteration"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -20191,1598 +20172,6 @@ export interface paths {
                 };
             };
         };
-        put?: never;
-        /** Create a time-box in the workspace */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s iterations, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description unique among the workspace’s live iterations (409 otherwise) */
-                        name: string;
-                        description?: string;
-                        /** @description date (YYYY-MM-DD) */
-                        startDate: string;
-                        /** @description date (YYYY-MM-DD); both ends are inclusive, so startDate === endDate is a legal one-day box */
-                        endDate: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created iteration */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectIteration"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/iterations/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Get a time-box + its derived state */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Iteration */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectIteration"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        /**
-         * Soft-delete a time-box, UN-ASSIGNING every card committed to it
-         * @description Unlike deleting a board column — which is refused while any card sits in it, because `statusId` is NOT NULL and there would be no answer to give — this always succeeds: `iterationId` is nullable and "no iteration" IS the backlog, an ordinary state. The cards are swept back there rather than deleted, and the response is the COUNT of them, never the cards themselves. Requires the workspace’s projects D verb.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted; the cards returned to the backlog */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @description how many cards were returned to the backlog */
-                            unassigned: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /** Rename a time-box or move either end of it */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        description?: string;
-                        startDate?: string;
-                        endDate?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Iteration */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectIteration"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/iterations/{id}/work-items": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * The cards committed to one time-box, across every board in the workspace
-         * @description The iteration board. UNLIKE the delete and rollover sweeps — which act on the box and report a count — this READS content, so it IS filtered by the caller’s project reach: a card in a board this caller cannot open does not appear here just because they can see the cycle it is in.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Work items (in board order) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["IterationWorkItem"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/iterations/{id}/rollover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Close a cycle: move what did not finish into the next box (or the backlog)
-         * @description "Did not finish" is read from each card’s status CATEGORY, never from a list of status keys — a board may call its terminal column anything, and `done`/`canceled` are the two categories that mean out of play. Everything else moves, `backlog` included: a card nobody started is exactly what rolls over. Both boxes are loaded through the same reach and U-verb gates, so a rollover can never push cards into an iteration the caller could not otherwise write to.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description where the unfinished cards go. An iteration in the SAME workspace (never this one), or null to send them back to the backlog — which is the honest destination when the next cycle does not exist yet. */
-                        toIterationId: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Rolled over */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @description how many unfinished cards were moved */
-                            moved: number;
-                            /** @description where they went; null = the backlog */
-                            toIterationId: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/programs": {
-        parameters: {
-            query?: {
-                /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s programs, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                workspace?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the programs in the caller's reach (non-deleted, by name)
-         * @description Ordered by name, case-folded — a program list is a picker, and a byte-wise sort would put "Zebra" before "apple". NOT by date: most programs have none.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s programs, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Programs */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectProgram"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /** Create a program in the workspace */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s programs, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description unique among the workspace’s live programs (409 otherwise) */
-                        name: string;
-                        description?: string;
-                        color?: string;
-                        /** @description date (YYYY-MM-DD); optional, UNLIKE an iteration — a program need not be a time-box */
-                        startDate?: string | null;
-                        /** @description date (YYYY-MM-DD); 400 if it precedes startDate */
-                        targetDate?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created program */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectProgram"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/programs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Get a program */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Program */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectProgram"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        /**
-         * Soft-delete a program, UN-ASSIGNING every project in it
-         * @description The iteration-delete rule, applied one level up: `programId` is nullable and "in no program" is an ordinary state, so removing the container has a defined outcome. Refusing instead would strand the workspace behind a program it had to empty by hand, one board at a time. The sweep is NOT reach-filtered — the authority is the workspace D verb, and half-emptying it would leave boards pointing at a container nothing can show — so the response is a COUNT, never the boards. Requires the workspace’s projects D verb.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted; the boards left the program */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @description how many boards were taken out of it */
-                            unassigned: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Rename a program, recolour it, or move either of its dates
-         * @description Requires the workspace’s projects U verb.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        description?: string;
-                        color?: string;
-                        startDate?: string | null;
-                        targetDate?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Program */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectProgram"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/programs/{id}/projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * The boards under one program, each with its derived health
-         * @description The roll-up the program exists to make answerable — and it is a LIST, not a verdict: a program spanning a green board and a red one is not "amber", and inventing that word here would hide the one board somebody needs to look at. UNLIKE the delete sweep this READS content, so it IS filtered by the caller’s project reach: a board this caller cannot open does not appear just because they can see its program.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Projects (by name) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Project"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/templates": {
-        parameters: {
-            query?: {
-                /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s templates, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                workspace?: string;
-                /** @description Only templates of this kind (`work_item` | `project`). A value outside the vocabulary is a 400, not an ignored param: the two kinds make different things, so answering "all templates" to a request for one of them hands a picker rows that will 400 the moment one is chosen. */
-                kind?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the templates in the caller's reach (non-deleted, by name)
-         * @description Ordered by name, case-folded — this list is a picker, like the programs list. Capped lower than the other pickers (200) because every row carries its BODY, which is the one thing a chooser has to preview and the one thing that makes a template row big.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s templates, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                    /** @description Only templates of this kind (`work_item` | `project`). A value outside the vocabulary is a 400, not an ignored param: the two kinds make different things, so answering "all templates" to a request for one of them hands a picker rows that will 400 the moment one is chosen. */
-                    kind?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Templates */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectTemplate"][];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Create a template in the workspace
-         * @description The body is validated against `kind` before it is stored, STRICTLY: an unrecognized key is a 400, because every key in a template body becomes something and silently dropping one would answer "your template is fine" and then build a board without the columns the author wrote. It is also what makes a kind mismatch detectable at all — a project body’s keys are all optional, so a work-item body sent under `kind: project` would otherwise be an empty-but-valid one. Requires the workspace’s projects C verb when creating into someone else’s workspace.
-         */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to): the list pins to that principal’s templates, and a create stamps it as the owner. Omitted: the caller’s reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                    /** @description Only templates of this kind (`work_item` | `project`). A value outside the vocabulary is a 400, not an ignored param: the two kinds make different things, so answering "all templates" to a request for one of them hands a picker rows that will 400 the moment one is chosen. */
-                    kind?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        kind: "work_item" | "project";
-                        /** @description unique among the workspace’s live templates OF THIS KIND (409 otherwise) */
-                        name: string;
-                        description?: string;
-                        /** @description must match `kind` (400 otherwise), and must serialize to at most 16384 bytes. Validated STRICTLY — unlike a saved view’s opaque `config`, every key here BECOMES something, so an unrecognized one is refused rather than silently dropped. */
-                        body: components["schemas"]["WorkItemTemplateBody"] | components["schemas"]["ProjectTemplateBody"];
-                    };
-                };
-            };
-            responses: {
-                /** @description Created template */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectTemplate"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/templates/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Get a template */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Template */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectTemplate"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        /**
-         * Soft-delete a template
-         * @description Nothing cascades. What a template MADE is ordinary rows that stopped being related to it the instant they were written — a board does not become invalid because the shape it was stamped from was retired. The soft delete exists so the name frees up for re-use. Requires the workspace’s projects D verb.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Rename a template, re-describe it, or replace its body
-         * @description Requires the workspace’s projects U verb. A replaced body is validated against the STORED kind, which no patch can change.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        description?: string;
-                        /** @description replaces the stored body outright; validated against the STORED kind */
-                        body?: components["schemas"]["WorkItemTemplateBody"] | components["schemas"]["ProjectTemplateBody"];
-                    };
-                };
-            };
-            responses: {
-                /** @description Template */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectTemplate"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/templates/{id}/work-items": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Build a card (and its sub-tasks) from a work_item template
-         * @description The template supplies the WORDS; the request supplies the PLACE. Each card written is an ordinary create — same row, same labels, same `work_item.created` activity, same assignment notification — and one extra `work_item.instantiated` row on the parent names the template, once, rather than under every child. The children inherit the parent’s column, plan point and cycle: a checklist’s steps belong to the same delivery as the thing they are steps of. Requires projects C (subitem) on the TARGET board; 400 if the template’s kind is `project`.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description the board to build on; the caller needs projects C (subitem) there */
-                        projectId: string;
-                        /** @description overrides the body’s title for THIS card only. The children are never re-titled — renaming a checklist’s steps at instantiation is editing the template, not using it. */
-                        title?: string;
-                        /** @description a status of this project; omitted uses the lowest-position column */
-                        statusId?: string;
-                        /** @description a live milestone of THIS project (400 otherwise) */
-                        milestoneId?: string;
-                        /** @description a live iteration of this project's OWNER (400 otherwise) */
-                        iterationId?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created card and its children */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            item: components["schemas"]["WorkItem"];
-                            children: components["schemas"]["WorkItem"][];
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/templates/{id}/projects": {
-        parameters: {
-            query?: {
-                /** @description The workspace the NEW BOARD is created in — which need not be the one the template lives in. Omitted: the caller’s own. Creating into someone else’s requires the projects C verb there. */
-                workspace?: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Build a board (columns, estimate scale, plan) from a project template
-         * @description The columns and estimate scale go THROUGH the one project writer, so the board is never observable holding columns it was not meant to have, and its milestones are inserted in the same transaction. A `project.instantiated` activity row names the template. 400 if the template’s kind is `work_item`.
-         */
-        post: {
-            parameters: {
-                query?: {
-                    /** @description The workspace the NEW BOARD is created in — which need not be the one the template lives in. Omitted: the caller’s own. Creating into someone else’s requires the projects C verb there. */
-                    workspace?: string;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description the new board’s name — the one thing a project template never stores. Its key prefix is ALLOCATED from it, exactly as a plain POST /project/projects does. */
-                        name: string;
-                        /** @description wins over the body’s description, which is the template author’s fallback */
-                        description?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created board and its seeded plan */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            project: components["schemas"]["Project"];
-                            milestones: components["schemas"]["ProjectMilestone"][];
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/triage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * One board's triage inbox (oldest first)
-         * @description Full cards, in arrival order — a queue is worked from the end that has been waiting longest. Same reach as the board’s own list: no extra verb, because a card in the inbox is still a card on a board the caller can open.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Untriaged cards */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkItem"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/triage": {
-        parameters: {
-            query?: {
-                /** @description Scope the queue to one WORKSPACE’s boards. Omitted: every board in the caller’s reach. */
-                workspace?: string;
-                /** @description Page size; out-of-range values are CLAMPED rather than rejected, as on the search route. Bigger than a search page and smaller than a board: an inbox is worked through, so a page is a sitting’s worth of decisions, and a queue long enough to need the second page is itself the finding. */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Every reachable board's untriaged cards, oldest first
-         * @description The surface someone clearing a queue actually wants, because an intake that spans boards is the case an inbox is for. Built on the same reachable-projects join the cross-project search uses, and carrying the same property: the bound IS the authorization, so there is no version of this query that reads a board the caller cannot open. Rows are thinner than a WorkItem — see TriageHit.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Scope the queue to one WORKSPACE’s boards. Omitted: every board in the caller’s reach. */
-                    workspace?: string;
-                    /** @description Page size; out-of-range values are CLAMPED rather than rejected, as on the search route. Bigger than a search page and smaller than a board: an inbox is worked through, so a page is a sitting’s worth of decisions, and a queue long enough to need the second page is itself the finding. */
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of the queue */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            results: components["schemas"]["TriageHit"][];
-                            limit: number;
-                            hasMore: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/work-items/{id}/triage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Accept a card out of the inbox (+ a work_item.triaged activity)
-         * @description Stamps `triagedAt` and applies any placement carried in the body. The placement goes through the same writer a PATCH uses — so it validates its ids and records its own activity identically — and the stamp is appended after it rather than folded in: `triagedAt` is not a patchable field, and nothing un-accepts a card. IDEMPOTENT on the stamp: accepting an already-accepted card applies the placement and leaves the original timestamp alone, because when a card left the queue has one answer and a double-click must not rewrite it. Requires projects U (subitem) on the board. Addressable by uuid OR rendered key (`ADH-42`).
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        statusId?: string;
-                        /** @enum {string} */
-                        assigneeKind?: "customer" | "persona" | "team";
-                        assigneeId?: string;
-                        milestoneId?: string;
-                        iterationId?: string;
-                        /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
-                        priority?: number;
-                        estimate?: number;
-                    };
-                };
-            };
-            responses: {
-                /** @description The accepted card */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkItem"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/project/projects/{id}/statuses": {
@@ -21852,7 +20241,7 @@ export interface paths {
                         key: string;
                         label: string;
                         /** @enum {string} */
-                        category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+                        category: "todo" | "in_progress" | "done";
                         /** @description explicit column order; defaults to append (max+1) */
                         position?: number;
                     };
@@ -21992,7 +20381,7 @@ export interface paths {
                     "application/json": {
                         label?: string;
                         /** @enum {string} */
-                        category?: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+                        category?: "todo" | "in_progress" | "done";
                         position?: number;
                     };
                 };
@@ -22018,828 +20407,6 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/projects/{id}/saved-views": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** List a project's saved views (by name) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Saved views */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectSavedView"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /** Save a view (+ a saved_view.created activity) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name: string;
-                        /** @description opaque client-defined view config (view id, filter, sort). Stored whole, never interpreted; must be a JSON object and serialize to at most 8192 bytes. */
-                        config: {
-                            [key: string]: unknown;
-                        };
-                    };
-                };
-            };
-            responses: {
-                /** @description Created saved view */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectSavedView"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/saved-views/{viewId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                viewId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete a saved view (+ a saved_view.deleted activity) */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    viewId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /** Rename a saved view / re-point it at the current filter (+ a saved_view.updated activity) */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    viewId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        /** @description opaque client-defined view config (view id, filter, sort). Stored whole, never interpreted; must be a JSON object and serialize to at most 8192 bytes. */
-                        config?: {
-                            [key: string]: unknown;
-                        };
-                    };
-                };
-            };
-            responses: {
-                /** @description Saved view */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectSavedView"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/projects/{id}/milestones": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * List a project's milestones, each with its live card counts
-         * @description Plan order — by targetDate ascending, with the UNDATED last. An undated milestone is the one a reader most needs to find at a predictable end of the list, so where it lands is part of the contract rather than a default anyone should have to discover.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Milestones */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectMilestone"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Add a milestone (+ a milestone.created activity)
-         * @description Requires the project’s projects sub-item C verb. The response carries `counts` as all-zeros rather than omitting it — the shape a create returns is the shape the list returns.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description unique among the project’s live milestones (409 otherwise) */
-                        name: string;
-                        description?: string;
-                        /** @description date (YYYY-MM-DD); omitted leaves the milestone undated, which is a real state and not a missing one */
-                        targetDate?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created milestone */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectMilestone"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/milestones/{milestoneId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                milestoneId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Soft-delete a milestone, UN-ASSIGNING its cards (+ a milestone.deleted activity)
-         * @description The iteration-delete rule at project scope: `milestoneId` is nullable and "counts toward no milestone" is an ordinary state, so this always succeeds and the cards are detached rather than deleted. The sweep is bounded to THIS project — a milestone’s cards cannot be anywhere else — which also keeps it from touching a row the caller’s D verb here does not cover. Requires the project’s projects sub-item D verb.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    milestoneId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted; the cards were detached */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @description how many cards were detached */
-                            unassigned: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Rename a milestone or move its date (+ a milestone.updated activity)
-         * @description Requires the project’s projects sub-item U verb. The milestone is looked up BY PROJECT as well as by id, so a milestoneId belonging to another board is a 404 rather than a silent cross-project edit.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    milestoneId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        description?: string;
-                        targetDate?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Milestone (without counts — the list recomputes them) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectMilestone"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/project/projects/{id}/status-updates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * A project's status reports, NEWEST FIRST (up to 100)
-         * @description The opposite order to a comment thread, and deliberately: a thread is read as a conversation from the start, whereas the only report anyone opens a project for is the current one. The tie-break on a same-instant pair is the same one the health derivation uses, so the row at the top of this list is always the row that decided `Project.health`.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Status updates */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectStatusUpdate"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Post a status update — this MOVES the project's health
-         * @description Requires the project’s projects sub-item C verb. The new report becomes the newest, so `Project.health` reads from it on the very next project fetch. The author is the acting principal (a persona’s report is the persona’s) and is never re-written afterwards.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /**
-                         * @description required WITH the prose: a health with no explanation is a colour nobody can act on
-                         * @enum {string}
-                         */
-                        health: "on_track" | "at_risk" | "off_track";
-                        /** @description required WITH the health: prose that moves no dashboard is a comment, not a report */
-                        body: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Posted */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectStatusUpdate"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/status-updates/{updateId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                updateId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Retract a status update (+ a status_update.deleted activity)
-         * @description The author may always retract their own report; anyone holding the project’s projects sub-item D verb may remove someone else’s — a removal is not a forgery. Retracting the NEWEST report moves the project’s health back to whatever the previous live update said, or to null. That is the honest outcome of withdrawing a claim, and the reason health is derived rather than stored: a column would still be asserting this row’s health with nothing left to explain it.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    updateId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Retracted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Revise a status update — AUTHOR ONLY (+ a status_update.edited activity)
-         * @description The comment rule, for the identical reason: a status update carries the reporter’s name, so rewriting someone else’s is a forgery — and this one would additionally move a dashboard. No verb grants otherwise; a platform admin is the sole exception, and only because they can already reach the row by other means. The activity records the PREVIOUS health, because an edit that flipped a board from on-track to off-track is a different event from a typo fix and only the old value can tell them apart.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    updateId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        health?: "on_track" | "at_risk" | "off_track";
-                        body?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Status update */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectStatusUpdate"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -23301,7 +20868,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/project/projects/{id}/labels": {
+    "/project/projects/{id}/work-items": {
         parameters: {
             query?: never;
             header?: never;
@@ -23310,157 +20877,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * The label vocabulary this project's cards draw on
-         * @description Every live label the project's OWNING principal has used — on a research document as readily as on a card, because both sides use the one tagging system (content.keywords). Distinct and alphabetical: the autocomplete/browse source for a card's labels field.
-         */
+        /** List a project's work items (non-deleted, by position) */
         get: {
             parameters: {
                 query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Distinct labels, sorted alphabetically */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StringList"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/search/work-items": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Search the caller's work items across every board they reach
-         * @description The cross-board read: given a phrase, the cards that match it anywhere in the caller’s reach, ranked. A query shaped like a rendered KEY (`ADH-42`) additionally matches that card by key and sorts it FIRST, because someone who typed a key named a row rather than described one. Reach is the same one the projects list uses (owned / owning-organization / participating), and it is what BOUNDS the query — a caller with no reach gets nothing, by construction rather than by filter. For text inside ONE board, filter the board’s own list client-side; this route exists for the question that list cannot be asked.
-         */
-        get: {
-            parameters: {
-                query: {
-                    q: string;
-                    /** @description Narrow to one WORKSPACE’s boards (the caller’s own customer slug, or an organization they belong to). Omitted: the caller’s whole reach. Unknown/foreign slug: 404. */
-                    workspace?: string;
-                    /** @description Out-of-range values are CLAMPED rather than rejected — a search that answers nothing because a caller asked for 500 is the wrong failure. Small on purpose: a result list is read, not scrolled. */
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Matching cards (ranked), with the board each is on */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            results: components["schemas"]["WorkItemSearchHit"][];
-                            /** @description the limit actually applied, after clamping */
-                            limit: number;
-                            hasMore: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/work-items": {
-        parameters: {
-            query?: {
-                /** @description Send `true` to include cards still sitting in the triage inbox (`triagedAt: null`), which the board list otherwise omits. Opt-in because the default has to be the one that cannot mislead: an untriaged card has had no column decision made about it, so listing it would show it in whatever column it happened to be filed into. Use it for an export or a count — for the queue itself, GET /project/projects/{id}/triage. */
-                includeUntriaged?: "true";
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * List a project's ACCEPTED work items (non-deleted, in board order)
-         * @description Cards awaiting triage are omitted unless `includeUntriaged=true`. On a board that has never used an intake queue this is every card, because a card created without `triage: true` is accepted at creation.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Send `true` to include cards still sitting in the triage inbox (`triagedAt: null`), which the board list otherwise omits. Opt-in because the default has to be the one that cannot mislead: an untriaged card has had no column decision made about it, so listing it would show it in whatever column it happened to be filed into. Use it for an export or a count — for the queue itself, GET /project/projects/{id}/triage. */
-                    includeUntriaged?: "true";
-                };
                 header?: never;
                 path: {
                     id: string;
@@ -23502,10 +20922,7 @@ export interface paths {
         /** Create a work item (refs validated in-project; + a work_item.created activity) */
         post: {
             parameters: {
-                query?: {
-                    /** @description Send `true` to include cards still sitting in the triage inbox (`triagedAt: null`), which the board list otherwise omits. Opt-in because the default has to be the one that cannot mislead: an untriaged card has had no column decision made about it, so listing it would show it in whatever column it happened to be filed into. Use it for an export or a count — for the queue itself, GET /project/projects/{id}/triage. */
-                    includeUntriaged?: "true";
-                };
+                query?: never;
                 header?: never;
                 path: {
                     id: string;
@@ -23523,24 +20940,14 @@ export interface paths {
                         assigneeKind?: "customer" | "persona" | "team";
                         /** @description set with assigneeKind (both or neither); must be a current participant */
                         assigneeId?: string;
-                        /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
                         priority?: number;
                         /** @description date (YYYY-MM-DD) */
                         startDate?: string;
                         /** @description date (YYYY-MM-DD) */
                         dueDate?: string;
-                        /** @description labels for the card; each is trimmed, blanks are dropped, and a repeat keeps its first position. A label not yet in the owner's vocabulary is created there. */
                         labels?: string[];
                         /** @description a live work item in the same project (not self) */
                         parentId?: string;
-                        /** @description a live iteration of this project's OWNER (400 otherwise); omitted leaves the card in the backlog */
-                        iterationId?: string;
-                        /** @description a live milestone of THIS project (400 otherwise — narrower than the iteration rule above, because a milestone is a point in one plan); omitted leaves the card counting toward none */
-                        milestoneId?: string;
-                        /** @description the card’s size; omitted leaves it unestimated */
-                        estimate?: number;
-                        /** @description file this card into the board’s TRIAGE INBOX instead of onto the board (`triagedAt` stays null and the board list omits it until someone accepts it). Defaults false, which is what keeps the inbox opt-in: an intake form or an integration sets it, and every other caller keeps the behaviour it has always had. */
-                        triage?: boolean;
                     };
                 };
             };
@@ -23682,7 +21089,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Update a work item (+ a work_item.status_changed | .assigned | .iteration_changed | .updated activity) */
+        /** Update a work item (+ a work_item.status_changed | .assigned | .updated activity) */
         patch: {
             parameters: {
                 query?: never;
@@ -23704,20 +21111,12 @@ export interface paths {
                          */
                         assigneeKind?: "customer" | "persona" | "team" | null;
                         assigneeId?: string | null;
-                        /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
                         priority?: number;
                         startDate?: string | null;
                         dueDate?: string | null;
-                        /** @description replaces the card's whole label set (an empty array clears it) */
                         labels?: string[];
                         /** @description null detaches the parent */
                         parentId?: string | null;
-                        /** @description commits the card to a live iteration of its project's OWNER (400 otherwise); null returns it to the backlog */
-                        iterationId?: string | null;
-                        /** @description points the card at a live milestone of ITS OWN project (400 otherwise); null detaches it from the plan */
-                        milestoneId?: string | null;
-                        /** @description null un-estimates the card — distinct from 0, which estimates it as trivial */
-                        estimate?: number | null;
                     };
                 };
             };
@@ -23762,82 +21161,6 @@ export interface paths {
         };
         trace?: never;
     };
-    "/project/work-items/{id}/move": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reorder a card among its siblings (+ a work_item.moved activity) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description the card this one goes below (id or key); null = nothing above it */
-                        afterId?: string | null;
-                        /** @description the card this one goes above (id or key); null = nothing below it */
-                        beforeId?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Work item (with its new rank) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkItem"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/project/work-items/{id}/children": {
         parameters: {
             query?: never;
@@ -23847,7 +21170,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** A work item's direct children (non-deleted, in board order) */
+        /** A work item's direct children (non-deleted, by position) */
         get: {
             parameters: {
                 query?: never;
@@ -24203,214 +21526,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/project/work-items/{id}/relations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Every live link touching this work item, both directions (by createdAt) */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Narrow to one relationship; omitted returns all. An unknown kind is a 400. */
-                    kind?: "depends_on" | "duplicates" | "relates_to";
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Relations */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkItemRelation"][];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /** Link this work item to another (+ a dependency.added activity) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description a live work item in the same project (not self; must not already be linked to this one) */
-                        relatedId: string;
-                        /**
-                         * @description which relationship this edge asserts; only depends_on is cycle-checked, because only it claims an order
-                         * @enum {string}
-                         */
-                        kind: "depends_on" | "duplicates" | "relates_to";
-                    };
-                };
-            };
-            responses: {
-                /** @description Created relation edge */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            ecosystemId: string;
-                            /** @description the subject item (the path {id}) */
-                            workItemId: string;
-                            /** @description the object item — read as a prerequisite only for kind depends_on */
-                            dependsOnId: string;
-                            /** @enum {string} */
-                            kind: "depends_on" | "duplicates" | "relates_to";
-                            createdAt: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/work-items/{id}/relations/{relatedId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                relatedId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Unlink two work items, from either end (+ a dependency.removed activity) */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    relatedId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/project/projects/{id}/research": {
         parameters: {
             query?: never;
@@ -24582,11 +21697,8 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         direction: "ingested" | "produced";
-                        /**
-                         * @description the target's registry, e.g. 'content.markdown'. Must be a kind the target registry knows (400 otherwise), and the target itself must exist within the PROJECT owner's reach (404 otherwise) — an unreachable id is indistinguishable from an absent one. GET /project/projects/{id}/attachable lists the ids that will be accepted.
-                         * @enum {string}
-                         */
-                        targetKind: "content.markdown" | "content.urls";
+                        /** @description the target's registry, e.g. 'content.markdown' */
+                        targetKind: string;
                         targetId: string;
                     };
                 };
@@ -24630,85 +21742,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/attachable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * Targets this project could attach — the candidate list an attach picker reads
-         * @description Everything the project OWNER can reach, of every registered target kind (or one, via `kind`), most recently touched first. Returned through the same owner scope the link write checks against, so every row here is one POST /artifacts will accept. Requires the project 'C' verb — the same gate as the attach itself, so this is not a read-only route for enumerating a workspace.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Restrict to one target kind. Omit for every registered kind — which is how a client builds the picker without hard-coding the vocabulary. An unregistered value is a 400 naming the known set. */
-                    kind?: "content.markdown" | "content.urls";
-                    /** @description Free-text narrowing. Matches a document title, and for a saved URL either its title or the address it was saved as (so a not-yet-unfurled URL is still findable). */
-                    q?: string;
-                    /** @description Max rows PER KIND (not per response), so no one kind can crowd the others out of the picker. Default 20, max 100; a non-numeric or out-of-range value is clamped. */
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Attachable targets */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: components["schemas"]["TargetDescriptor"][];
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -24906,49 +21939,9 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** A work item's comments, oldest first (the order a conversation is read in) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Comments */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectComment"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        get?: never;
         put?: never;
-        /** Add a comment to a work item (also appends a comment.added activity) */
+        /** Append a comment to a work item (a comment.added activity) */
         post: {
             parameters: {
                 query?: never;
@@ -24962,19 +21955,17 @@ export interface paths {
                 content: {
                     "application/json": {
                         body: string;
-                        /** @description reply to this comment. Must be a comment on the SAME work item (400 otherwise); a reply to a reply is stored against that reply's root, so threads stay one level deep */
-                        parentId?: string | null;
                     };
                 };
             };
             responses: {
-                /** @description Created comment */
+                /** @description Created comment (activity row) */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ProjectComment"];
+                        "application/json": components["schemas"]["ProjectActivity"];
                     };
                 };
                 /** @description Error */
@@ -24988,15 +21979,6 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -25019,135 +22001,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/project/comments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove a comment (soft delete; appends comment.deleted) */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Removed */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /** Rewrite a comment's body (author only) */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        body: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated comment */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectComment"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
         trace?: never;
     };
     "/persona-memory/global": {
@@ -57707,6 +54560,22 @@ export interface components {
             /** @description The string values. */
             items: string[];
         };
+        /** MarkdownCategoryNode */
+        MarkdownCategoryNode: {
+            id: string;
+            name: string;
+            /** @description The category this one sits under; null for a root. App-level convention — there is no FK, so a consumer folding the tree must tolerate a missing or cyclic parent. */
+            parentId: string | null;
+            /** @description Sibling order hint (0 unless set through the generic CRUD). */
+            sortOrder: number;
+        };
+        /** MarkdownCategoryTree */
+        MarkdownCategoryTree: {
+            /** @description Distinct category names, alphabetical. */
+            items: string[];
+            /** @description The category rows, by sortOrder then name. */
+            nodes: components["schemas"]["MarkdownCategoryNode"][];
+        };
         MarkdownDocument: {
             id: string;
             /** @description The CREATOR/author (public routes key on this). */
@@ -57903,9 +54772,10 @@ export interface components {
         };
         NotificationPreference: {
             /** @enum {string} */
-            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status" | "project_due";
+            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
             email: boolean;
             sms: boolean;
+            /** @description In-app (inbox) delivery for this category. */
             inApp: boolean;
         };
         Friendship: {
@@ -58006,20 +54876,6 @@ export interface components {
             status: string;
             /** @description hex board accent (DB default #007AFF) */
             color: string;
-            /**
-             * @description how this board writes estimates (DB default 'none' — the board does not estimate). Advisory: it tells a client which picker to render, and constrains nothing the API accepts.
-             * @enum {string}
-             */
-            estimateScale: "none" | "points" | "fibonacci" | "exponential" | "linear" | "tshirt";
-            /**
-             * @description whether this board ranks its work (DB default 'standard'). Advisory in the same way: 'none' means render no priority control and no priority column, and the API still accepts and returns the 0–4 integer every card already carries.
-             * @enum {string}
-             */
-            priorityScale: "standard" | "none";
-            /** @description what this board calls ONE of its items, lower-case (DB default 'work item') — the word a client puts in 'New …', in an empty state and in a bulk-action count */
-            itemNoun: string;
-            /** @description what this board calls MANY of its items (DB default 'work items'). Stored rather than derived from itemNoun: English pluralisation is not a rule this API can pretend to know ('story' → 'storys'), so the word is the author's. */
-            itemNounPlural: string;
             createdAt: string;
             updatedAt: string;
             isDeleted: boolean;
@@ -58038,28 +54894,6 @@ export interface components {
             ownerKind: "customer" | "organization";
             /** @description the owning principal (customer or organization id); server-stamped from the verified ?workspace= scope, else the creator */
             ownerId: string;
-            /** @description the prefix every card's key is rendered from (ADH-42) — 2–8 chars, a letter then letters or digits, stored upper-cased and unique among the OWNER's live boards. '' = unassigned (a project predating migration 0181, until the backfill reaches it); its cards render an empty key rather than a broken one. */
-            keyPrefix: string;
-            /** @description date (YYYY-MM-DD); null = no committed start */
-            startDate?: string | null;
-            /** @description date (YYYY-MM-DD); never before startDate; null = no committed target */
-            targetDate?: string | null;
-            /**
-             * @description the kind of principal that ANSWERS for the project. Whole or absent: a lead is always a kind AND an id, never half of one.
-             * @enum {string|null}
-             */
-            leadKind?: "customer" | "persona" | "team" | null;
-            /** @description set with leadKind (both or neither) */
-            leadId?: string | null;
-            /** @description the program this board rolls up into; null = it stands alone. The program belongs to the project's OWNER, so a workspace can group boards without a project ever naming a container another workspace runs. */
-            programId?: string | null;
-            /**
-             * @description DERIVED, never stored: the health on the NEWEST live status update (GET /project/projects/{id}/status-updates returns it first). null means no update has been posted — which is not "on track", and the distinction is the reason this is not a column with a default. Retracting the newest update moves it back to the previous one, or to null.
-             * @enum {string|null}
-             */
-            health: "on_track" | "at_risk" | "off_track" | null;
-            /** @description when the update that decided `health` was posted; null exactly when `health` is null. A dashboard needs this to say whether a green board is green or merely stale. */
-            healthUpdatedAt: string | null;
         };
         ProjectStatus: {
             id: string;
@@ -58069,25 +54903,10 @@ export interface components {
             key: string;
             label: string;
             /** @enum {string} */
-            category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+            category: "todo" | "in_progress" | "done";
             /** @description column order (ascending) */
             position: number;
             createdAt: string;
-        };
-        ProjectSavedView: {
-            id: string;
-            ecosystemId: string;
-            projectId: string;
-            /** @description unique among this project’s live views */
-            name: string;
-            /** @description opaque client-defined view config (view id, filter, sort). Stored whole, never interpreted; must be a JSON object and serialize to at most 8192 bytes. */
-            config: {
-                [key: string]: unknown;
-            };
-            /** @description who saved it; confers nothing */
-            createdBy?: string | null;
-            createdAt: string;
-            updatedAt: string;
         };
         ProjectParticipant: {
             id: string;
@@ -58117,216 +54936,6 @@ export interface components {
             position: number;
             createdAt: string;
         };
-        ProjectIteration: {
-            id: string;
-            ecosystemId: string;
-            /** @description the customer (user) who created the iteration */
-            customerId?: string;
-            /**
-             * @description the kind of principal that OWNS the time-box
-             * @enum {string}
-             */
-            ownerKind: "customer" | "organization";
-            /** @description the owning principal; server-stamped from the verified ?workspace= scope, else the creator */
-            ownerId: string;
-            /** @description unique among the workspace’s live iterations */
-            name: string;
-            description: string;
-            /** @description date (YYYY-MM-DD), inclusive */
-            startDate: string;
-            /** @description date (YYYY-MM-DD), inclusive; never before startDate */
-            endDate: string;
-            /**
-             * @description derived from startDate/endDate against today (UTC), inclusive at both ends: upcoming before the box opens, active within it, completed after
-             * @enum {string}
-             */
-            state: "upcoming" | "active" | "completed";
-            createdBy?: string | null;
-            createdAt: string;
-            updatedAt: string;
-            isDeleted: boolean;
-            deletedAt?: string | null;
-            syncVersion?: number;
-        };
-        ProjectProgram: {
-            id: string;
-            ecosystemId: string;
-            /** @description the customer (user) who created the program */
-            customerId?: string;
-            /**
-             * @description the kind of principal that OWNS the program
-             * @enum {string}
-             */
-            ownerKind: "customer" | "organization";
-            /** @description the owning principal; server-stamped from the verified ?workspace= scope, else the creator */
-            ownerId: string;
-            /** @description unique among the workspace’s live programs */
-            name: string;
-            description: string;
-            /** @description hex accent (DB default #007AFF) */
-            color: string;
-            /** @description date (YYYY-MM-DD); null is ordinary here, UNLIKE an iteration — a standing program ("Platform") has no start, and a delivery program usually knows its target long before one */
-            startDate?: string | null;
-            /** @description date (YYYY-MM-DD); never before startDate */
-            targetDate?: string | null;
-            createdBy?: string | null;
-            createdAt: string;
-            updatedAt: string;
-            isDeleted: boolean;
-            deletedAt?: string | null;
-            syncVersion?: number;
-        };
-        ProjectMilestone: {
-            id: string;
-            ecosystemId: string;
-            /** @description inherited from the owning project by trigger, never sent */
-            customerId?: string;
-            projectId: string;
-            /** @description unique among the project’s live milestones */
-            name: string;
-            description: string;
-            /** @description date (YYYY-MM-DD); null = undated, an ordinary state — an ordered-but-undated plan is a real thing, and requiring a date would only get one invented. Undated milestones sort LAST. */
-            targetDate?: string | null;
-            /** @description the milestone’s live cards counted by status CATEGORY, every category present (0 included) so a client never has to distinguish an absent key from an empty column. DERIVED on every read, never stored. The API deliberately reports no percentage: whether a `canceled` card belongs in the denominator is a product question, and answering it here would freeze one answer into the wire format. */
-            counts?: {
-                backlog: number;
-                todo: number;
-                in_progress: number;
-                done: number;
-                canceled: number;
-            };
-            createdBy?: string | null;
-            createdAt: string;
-            updatedAt: string;
-            deletedAt?: string | null;
-            syncVersion?: number;
-        };
-        ProjectStatusUpdate: {
-            id: string;
-            ecosystemId: string;
-            /** @description inherited from the owning project by trigger, never sent */
-            customerId?: string;
-            projectId: string;
-            /**
-             * @description the reported health. The NEWEST live update’s value is what `Project.health` returns.
-             * @enum {string}
-             */
-            health: "on_track" | "at_risk" | "off_track";
-            /** @description the report itself (1–10000 chars) */
-            body: string;
-            /** @description the AUTHOR, as the acting principal — a persona’s report is the persona’s. Never re-written: an edit revises the words, it does not change who signed them. */
-            createdBy?: string | null;
-            createdAt: string;
-            updatedAt: string;
-            deletedAt?: string | null;
-            syncVersion?: number;
-        };
-        ProjectTemplate: {
-            id: string;
-            ecosystemId: string;
-            /** @description the customer (user) who created the template */
-            customerId?: string;
-            /**
-             * @description the kind of principal that OWNS the template
-             * @enum {string}
-             */
-            ownerKind: "customer" | "organization";
-            /** @description the owning principal; server-stamped from the verified ?workspace= scope, else the creator */
-            ownerId: string;
-            /**
-             * @description what this template MAKES, and therefore which schema its `body` is read against. Immutable — a PATCH cannot re-kind a template, because that would silently re-interpret a stored body against a schema it was never written for.
-             * @enum {string}
-             */
-            kind: "work_item" | "project";
-            /** @description unique among the workspace’s live templates OF THIS KIND */
-            name: string;
-            description: string;
-            /** @description the stored shape, read against `kind` */
-            body: components["schemas"]["WorkItemTemplateBody"] | components["schemas"]["ProjectTemplateBody"];
-            createdBy?: string | null;
-            createdAt: string;
-            updatedAt: string;
-            isDeleted: boolean;
-            deletedAt?: string | null;
-            syncVersion?: number;
-        };
-        WorkItemTemplateBody: {
-            title: string;
-            description?: string;
-            /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
-            priority?: number;
-            estimate?: number;
-            labels?: string[];
-            /** @description the sub-tasks that always come with this card — ONE level deep, because a body that could nest arbitrarily would be a project template wearing the wrong noun. Each child inherits the parent’s column, plan point and cycle at instantiation. */
-            children?: {
-                title: string;
-                description?: string;
-                /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
-                priority?: number;
-                estimate?: number;
-                labels?: string[];
-            }[];
-        };
-        ProjectTemplateBody: {
-            description?: string;
-            color?: string;
-            /** @enum {string} */
-            estimateScale?: "none" | "points" | "fibonacci" | "exponential" | "linear" | "tshirt";
-            /** @enum {string} */
-            priorityScale?: "standard" | "none";
-            itemNoun?: string;
-            itemNounPlural?: string;
-            /** @description the board columns to open with, IN ORDER — the array IS the order, so no positions appear here to disagree with the list they sit in. Keys must be unique. Omitted opens the board with the usual three columns. */
-            statuses?: {
-                key: string;
-                label: string;
-                /** @enum {string} */
-                category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
-            }[];
-            /** @description the plan points to seed, undated. Names must be unique. */
-            milestones?: {
-                name: string;
-                description?: string;
-            }[];
-        };
-        TriageHit: {
-            id: string;
-            projectId: string;
-            /** @description the OWNING board’s name — a queue spanning boards is undecidable without it, and the client cannot join it itself. */
-            projectName: string;
-            /** @description the rendered key (`ADH-42`) */
-            itemKey: string;
-            itemNumber?: number;
-            title: string;
-            description: string;
-            /** @description the column the card was FILED into. It is not a decision anyone has made yet — that is precisely what triage withholds — but an intake form that files by category has already said something worth showing. */
-            statusId: string;
-            /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
-            priority: number;
-            /**
-             * @description whether the OWNING board ranks its work — 'none' means show no priority for this row. Carried per row for the same reason projectName is: the queue spans boards, so the client has no single project to read it off. The board's item NOUN is deliberately absent: a queue mixing recipes and stories has no single word for what it holds.
-             * @enum {string}
-             */
-            priorityScale: "standard" | "none";
-            createdBy?: string | null;
-            /** @description when it arrived; the queue is ordered by this, oldest first */
-            createdAt: string;
-        };
-        WorkItemSearchHit: {
-            id: string;
-            projectId: string;
-            /** @description the OWNING board’s name. A result list spanning boards is unreadable without it, and the client cannot join it itself — the boards a search reaches are exactly the ones it may not have loaded. */
-            projectName: string;
-            /** @description the rendered key (`ADH-42`) — already joined from the board’s prefix, because a hit crossing boards crosses prefixes too. */
-            itemKey: string;
-            title: string;
-            statusId: string;
-            updatedAt: string;
-            /** @description a plain-text excerpt of the DESCRIPTION (ts_headline, no markup). Empty-ish for a title-only or key hit, where the title is already the answer. */
-            snippet: string;
-            /** @description ts_rank over title (weight A) and description (weight B). */
-            rank: number;
-        };
         WorkItem: {
             id: string;
             ecosystemId: string;
@@ -58338,54 +54947,21 @@ export interface components {
             /** @enum {string|null} */
             assigneeKind?: "customer" | "persona" | "team" | null;
             assigneeId?: string | null;
-            /** @description rank, 0 (none) to 4 (urgent); higher is more urgent */
             priority: number;
             /** @description date (YYYY-MM-DD) */
             startDate?: string | null;
             /** @description date (YYYY-MM-DD) */
             dueDate?: string | null;
-            /** @description the card's labels, from the owner's shared tag vocabulary (the same one research documents draw on), in authored order */
             labels: string[];
             /** @description a parent work item in the same project */
             parentId?: string | null;
-            /** @description the time-box this card is committed to; null is the BACKLOG — a real state, not an absence. The iteration belongs to the project OWNER, not the project, so a workspace can run one cycle across several boards. */
-            iterationId?: string | null;
-            /** @description the milestone this card counts toward; null = it counts toward none. UNLIKE `iterationId` — which names a time-box the project's OWNER holds — this must be a milestone of the card's OWN project (400 otherwise): a milestone is a point in one plan, and a card counts toward the plan of the board it sits on. */
-            milestoneId?: string | null;
-            /** @description the card's size, in whatever unit the project's `estimateScale` names. A non-negative integer; null is UNESTIMATED, which is distinct from 0 (estimated as trivial). */
-            estimate?: number | null;
-            /** @description board order within the project — an opaque key that sorts ascending by BYTE, so a client compares two cards with `<` and never parses one. Set only by the server (a create appends; POST /project/work-items/{id}/move reorders), so there is no way — and no need — to send one. */
-            rank: string;
-            /** @description when this card was ACCEPTED onto the board. null = it is sitting in the triage inbox and the board’s list omits it (GET /project/projects/{id}/work-items?includeUntriaged=true shows it anyway). Every card created without `triage: true` is accepted at creation, so a board that never used an intake queue has none of these. Server-set: POST /project/work-items/{id}/triage stamps it once and nothing un-stamps it. */
-            triagedAt?: string | null;
+            /** @description board order within the project (ascending) */
+            position: number;
             createdBy?: string | null;
             createdAt: string;
             updatedAt: string;
             isDeleted: boolean;
             deletedAt?: string | null;
-        };
-        IterationWorkItem: components["schemas"]["WorkItem"] & {
-            /** @description the card's rendered key (ADH-42); '' when its project has no prefix */
-            itemKey: string;
-            /** @description the board this card belongs to */
-            projectName: string;
-            /** @description the column this card sits in, by NAME — `statusId` alone cannot be resolved here, because the ids come from as many status sets as there are boards in the box */
-            statusName: string;
-            /**
-             * @description that column’s category — what "left in this cycle" means, and the same field the rollover reads
-             * @enum {string}
-             */
-            statusCategory: "backlog" | "todo" | "in_progress" | "done" | "canceled";
-            /**
-             * @description the SCALE the board this card came from estimates in. Carried per row for the same reason as the two above: `estimate` is a number in its own project’s units, so a box whose boards disagree has no summable total, and only this field makes that detectable.
-             * @enum {string}
-             */
-            estimateScale: "none" | "points" | "fibonacci" | "exponential" | "linear" | "tshirt";
-            /**
-             * @description whether the board this card came from ranks its work — 'none' means render no priority for THIS row. Per row, because a cycle draws from boards that need not agree.
-             * @enum {string}
-             */
-            priorityScale: "standard" | "none";
         };
         WorkItemFieldValue: {
             fieldId: string;
@@ -58407,26 +54983,6 @@ export interface components {
             status: string;
             createdAt: string;
         };
-        WorkItemRelation: {
-            /** @description the relation edge id */
-            id: string;
-            /** @enum {string} */
-            kind: "depends_on" | "duplicates" | "relates_to";
-            /**
-             * @description outgoing = this item is the subject of the edge (it depends on / duplicates the other); incoming = the other item is
-             * @enum {string}
-             */
-            direction: "outgoing" | "incoming";
-            /** @description the work item at the far end */
-            relatedId: string;
-            /** @description the far item's rendered key (ADH-42); '' when the project has no prefix */
-            relatedKey: string;
-            /** @description the far item title (joined) */
-            title: string;
-            /** @description the far item statusId (joined) */
-            status: string;
-            createdAt: string;
-        };
         ProjectActivity: {
             id: string;
             ecosystemId: string;
@@ -58436,42 +54992,13 @@ export interface components {
             actorKind?: string | null;
             actorId?: string | null;
             actorLabel?: string | null;
-            /** @description the event, e.g. project.created/updated/deleted, status.*, participant.*, work_item.created/updated/status_changed/assigned/iteration_changed/deleted, comment.added/edited/deleted. Iteration CRUD itself appends nothing — this table is FK-bound to a project and an iteration has none — but committing a card to a box writes work_item.iteration_changed on that card's project, which is where the history is legible. */
+            /** @description the event, e.g. project.created/updated/deleted, status.*, participant.*, work_item.created/updated/status_changed/assigned/deleted, comment.added */
             action: string;
             /** @description action-specific payload (jsonb) */
             detail?: {
                 [key: string]: unknown;
             } | null;
             createdAt: string;
-        };
-        ProjectComment: {
-            id: string;
-            ecosystemId: string;
-            projectId: string;
-            workItemId: string;
-            /** @description the comment this one replies to; null for a top-level comment */
-            parentId?: string | null;
-            /** @enum {string|null} */
-            authorKind?: "customer" | "persona" | "team" | null;
-            authorId?: string | null;
-            authorLabel?: string | null;
-            body: string;
-            /** @description set the first time the body changes; the prior text is in the trail */
-            editedAt?: string | null;
-            createdAt: string;
-            updatedAt?: string;
-        };
-        TargetDescriptor: {
-            /** @description the target's registry, e.g. 'content.markdown' */
-            kind: string;
-            /** @description the opaque target id */
-            id: string;
-            /** @description the row's display title; never empty */
-            title: string;
-            /** @description one supporting line, or null */
-            subtitle: string | null;
-            /** @description set only when the target is a link OUT of the platform (a saved URL) */
-            url: string | null;
         };
         ProjectArtifact: {
             id: string;
@@ -58490,7 +55017,6 @@ export interface components {
             deletedAt?: string | null;
             createdAt: string;
             updatedAt: string;
-            target: components["schemas"]["TargetDescriptor"] | null;
         };
         PersonaMemory: {
             id: string;

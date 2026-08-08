@@ -22,7 +22,7 @@
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
     "test": "vitest run"
   },
-  "comment:peerDependencies": "drizzle-orm is OPTIONAL because only three of the nine entry points touch it — `.` (the barrel), `./schema` and `./conn`. `./canon`, `./engine`, `./util`, `./cooldown`, `./providers` and `./enumerate` are ORM-free and browser-safe, and the status monitor's web client imports exactly those. Left non-optional, pnpm's auto-install-peers (on by default, and recorded as such in both backends' lockfiles) drags the whole ORM into a frontend install that never executes a line of it. A server consumer declares drizzle-orm itself, so nothing that needs it goes without.",
+  "comment:peerDependencies": "drizzle-orm is OPTIONAL because only three of the nine entry points reach it — `./schema`, `./conn` and `./enumerate`. The other six, the root barrel included, are ORM-free: src/index.ts re-exports only the drizzle-free surfaces on purpose (its own first line says so), so a consumer that never names those three subpaths never loads a line of the ORM. Left non-optional, pnpm's auto-install-peers (on by default, and recorded as such in both backends' lockfiles) drags the whole ORM into a frontend install regardless. A server consumer declares drizzle-orm itself, so nothing that needs it goes without.",
   "peerDependencies": {
     "drizzle-orm": ">=0.36.0"
   },
