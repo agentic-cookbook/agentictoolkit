@@ -13,14 +13,22 @@ import { render, screen, cleanup } from "@testing-library/react";
 // would produce "acme" and "/acme" from the params below — which is exactly what the first
 // version of this file used here, and why its forwarding test could not fail. (Caught by
 // mutation: rewriting the route to recompute left all 7 green.)
-const SHELL_SCOPE = { workspaceSlug: "ws-from-shell", scopedBase: "/base-only-the-shell-knows" };
+const SHELL_SCOPE = {
+  workspaceSlug: "ws-from-shell",
+  scopedBase: "/base-only-the-shell-knows",
+  workspace: {
+    slug: "ws-from-shell",
+    name: "Only The Shell Knows",
+    kind: "organization" as const,
+  },
+};
 
 const shellProps = vi.fn();
 vi.mock("../home/SiteHomeShell", () => ({
   SiteHomeShell: (props: {
     basePath: string;
     workspaceSlug?: string;
-    children: (scope: { workspaceSlug: string; scopedBase: string }) => React.ReactNode;
+    children: (scope: typeof SHELL_SCOPE) => React.ReactNode;
   }) => {
     shellProps(props);
     return (
@@ -51,11 +59,12 @@ const parse = vi.fn((segments: string[]) => ({ depth: segments.length, segments 
 const model = defineSiteHome({
   basePath: "",
   parse,
-  render: ({ workspaceSlug, scopedBase, view }) => (
+  render: ({ workspaceSlug, scopedBase, workspace, view }) => (
     <div
       data-testid="view"
       data-workspace={workspaceSlug}
       data-scoped-base={scopedBase}
+      data-workspace-name={workspace.name}
       data-segments={view.segments.join(",")}
       data-depth={String(view.depth)}
     />
@@ -93,6 +102,9 @@ describe("SiteHomeRoute", () => {
     const view = screen.getByTestId("view");
     expect(view).toHaveAttribute("data-workspace", SHELL_SCOPE.workspaceSlug);
     expect(view).toHaveAttribute("data-scoped-base", SHELL_SCOPE.scopedBase);
+    // The resolved ROW travels the same way, and it is the one field the route could not fabricate
+    // even if it tried: a name lives only in the workspace list, which the route never fetches.
+    expect(view).toHaveAttribute("data-workspace-name", SHELL_SCOPE.workspace.name);
   });
 
   it("hands the shell NO workspace at the site's bare /home mount, which is what redirects", () => {

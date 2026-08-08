@@ -1,0 +1,476 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@agentic-toolkit/ui/components/card";
+import { Button } from "@agentic-toolkit/ui/components/button";
+import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Input } from "@agentic-toolkit/ui/components/input";
+import { Label } from "@agentic-toolkit/ui/components/label";
+import {
+  integrationsApi,
+  type DeliverabilityWebhook,
+  type MaskedProviderConfig,
+  type ProviderAuthMethod,
+  type ProviderCatalogEntry,
+} from "@agentic-toolkit/data/integrations";
+import { errMsg } from "@agentic-toolkit/data";
+import {
+  ApiKeyFields,
+  NonConfigurableNote,
+  OAuthFields,
+  hasConfigFields,
+  intBlank,
+  intDiffers,
+  intToBody,
+  intToCreateBody,
+  intToInput,
+  intValidate,
+  ownerConfigurable,
+  type IntegrationInput,
+} from "./IntegrationDetail";
+import { ProviderConnections } from "./ProviderConnections";
+import { IntegrationData, providerDataTables } from "./IntegrationData";
+import { DetailSection } from "@agentic-toolkit/resource";
+
+/**
+ * The shared 3-card provider view — one component behind both the Add-integration
+ * modal (`mode='add'`, D2) and the saved-instance detail (`mode='saved'`, E1). Card 1
+ * is provider info, Card 2 is the Name field + auth-method config + the create/save
+ * button, and Card 3 is a plain-language capability summary. Saved OAuth-family
+ * instances also surface `ProviderConnections` below the cards.
+ */
+export type IntegrationDetailViewProps = {
+  provider: ProviderCatalogEntry;
+  ecosystemId: string;
+  /** 'add' = create button; 'saved' = save button + connected-accounts section. */
+  mode: "add" | "saved";
+  /** Present in 'saved' mode: the existing instance (null while adding). */
+  config?: MaskedProviderConfig | null;
+  /** Draft state (lifted so the Add modal can persist it). `name` is part of the draft. */
+  draft: IntegrationInput;
+  onChange: (next: IntegrationInput) => void;
+  /** Called after a successful create ('add') or save ('saved') with the masked row. */
+  onSaved?: (row: MaskedProviderConfig) => void;
+  /**
+   * Called after a webhook-secret rotation with the updated masked row. Separate from `onSaved`
+   * on purpose: rotating a secret writes ONE server-managed field and touches nothing the
+   * operator has typed, so re-deriving the draft from the response (which `onSaved` does, to
+   * clear the just-typed secret) would silently discard unsaved edits to the config fields.
+   */
+  onRotated?: (row: MaskedProviderConfig) => void;
+};
+
+/** The one save-blocking rule `intValidate` doesn't cover (it validates provider fields, not the
+ *  instance label). Same wording as the toolkit service editor's, so the platform says one thing. */
+const NAME_REQUIRED_MESSAGE = "A name is required.";
+
+// Auth methods that connect real accounts (everything except ecosystem-only api_key),
+// so a saved instance shows the connected-accounts manager below its cards.
+const CONNECTION_METHODS: readonly ProviderAuthMethod[] = [
+  "oauth",
+  "oauth_instance",
+  "plaid_link",
+  "app_password",
+];
+
+/** A one-sentence, plain-language summary of what enabling this provider does. */
+function describeCapabilities(provider: ProviderCatalogEntry): string {
+  const name = provider.displayName;
+  const parts: string[] = [];
+  for (const cap of provider.capabilities) {
+    if (cap === "read") parts.push(`Syncs data from ${name} into your ecosystem.`);
+    else if (cap === "write") parts.push(`Lets your ecosystem post or send through ${name}.`);
+    else if (cap === "auth") parts.push(`Registers ${name} for account connections.`);
+  }
+  if (parts.length === 0) return `Connects ${name} to your ecosystem.`;
+  return parts.join(" ");
+}
+
+/**
+ * The deliverability webhook an operator has to register with the provider (Postmark today).
+ *
+ * This is the ONLY place the URL and its secret are ever shown. Until the webhook is registered
+ * the provider never reports a bounce — which leaves `delivery_status` a column nothing writes
+ * and every suppression filter reading a dead value. That failure is completely silent from the
+ * operator's side (mail keeps "sending"), so the block states the consequence rather than just
+ * offering a URL.
+ *
+ * The secret is THIS ECOSYSTEM's own, not a deployment-wide value: it is what makes an inbound
+ * webhook prove which tenant it speaks for. So it is rendered here beside the URL — the two are
+ * useless apart — with a rotate action for compromise response and for the configs created
+ * before per-config secrets existed, which arrive with `secret: null` and cannot authenticate
+ * anything until one is minted.
+ *
+ * Neither `null` case is rendered as nothing. A missing webhook (`webhook === null`) means the
+ * deployment has no public base URL, so there is no address to hand out; a missing secret means
+ * the URL exists but every call to it is refused. Both are operator-visible facts, and silence
+ * there is indistinguishable from "already handled".
+ */
+function DeliverabilityWebhookCard({
+  webhook,
+  ecosystemId,
+  configId,
+  onRotated,
+}: {
+  webhook: DeliverabilityWebhook | null;
+  ecosystemId: string;
+  configId: string;
+  onRotated?: (row: MaskedProviderConfig) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // A secret already in place makes this DESTRUCTIVE (the old one stops working the instant it
+  // returns); with none stored it is the only way to get a working webhook at all. Same action,
+  // two very different warnings — so the label and the confirmation both follow the state.
+  const hasSecret = webhook?.secret != null;
+
+  const doRotate = async () => {
+    if (
+      !confirm(
+        hasSecret
+          ? "Generate a new webhook secret? The current one stops working immediately, so " +
+              "the provider will reject every event — no bounce or complaint will be recorded — " +
+              "until you paste the new secret into its webhook settings."
+          : "Generate a webhook secret for this integration? You will need to paste it into " +
+              "the provider's webhook settings before any bounce or complaint is recorded.",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      // Rotate FIRST, then notify. `onRotated?.(await rotate(...))` reads the same but is not:
+      // optional-call short-circuits its own ARGUMENTS, so with no listener attached the request
+      // would never be sent and the button would do nothing at all.
+      const row = await integrationsApi.rotateWebhookSecret(ecosystemId, configId);
+      onRotated?.(row);
+    } catch (e) {
+      setError(errMsg(e, "Couldn't generate a new webhook secret."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Deliverability webhook</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {webhook === null ? (
+          <p className="text-sm text-apt-red">
+            This deployment has no public base URL configured, so there is no address to register
+            yet. Until an administrator sets one, bounced and complained addresses are never
+            suppressed and will be mailed again. (Set <code>AUDIENCE_PUBLIC_BASE_URL</code> on the
+            backend.)
+          </p>
+        ) : (
+          <>
+            {/* The instruction comes from the backend, alongside the URL, so the copy naming the
+                provider's own setting cannot drift away from the route that actually accepts it. */}
+            <p className="text-sm text-apt-text-muted">{webhook.instruction}</p>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-apt-border bg-apt-surface-2 p-2 text-xs text-apt-text">
+                {webhook.url}
+              </code>
+              <CopyButton label="Copy webhook URL" getText={() => webhook.url} />
+            </div>
+
+            <p className="text-xs text-apt-text-muted">
+              Send this secret in the <code>{webhook.secretHeader}</code> header. It belongs to
+              this ecosystem alone — an event that does not carry it is rejected.
+            </p>
+            {webhook.secret === null ? (
+              <p className="text-sm text-apt-red">
+                No secret is stored for this integration, so every event sent to the URL above is
+                rejected and no bounce or complaint is being recorded. Generate one below, then
+                paste it into the provider.
+              </p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-apt-border bg-apt-surface-2 p-2 text-xs text-apt-text">
+                  {webhook.secret}
+                </code>
+                <CopyButton label="Copy webhook secret" getText={() => webhook.secret ?? ""} />
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              {/* Same confirm() idiom as the list embed-key rotation and AccessTokensSection's
+                  revoke — the established destructive-action pattern here, not a bespoke modal. */}
+              <Button
+                type="button"
+                variant={hasSecret ? "destructive-ghost" : "default"}
+                size="sm"
+                disabled={busy}
+                onClick={() => void doRotate()}
+              >
+                {busy
+                  ? "Generating…"
+                  : hasSecret
+                    ? "Generate a new secret"
+                    : "Generate a secret"}
+              </Button>
+            </div>
+            {/* `ErrorText`, not this file's local raw-`<p>` idiom: this is the one error here
+                that appears LATE, in response to a click, so a screen reader has already read
+                past this point in the document and will never encounter it without the
+                `role="alert"` the shared component carries. (The two static warnings above are
+                present from first paint and are read in normal document order, which is why
+                they are left as they were.) */}
+            <ErrorText error={error} />
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Picks the extracted field block for the provider's auth method (mirrors the legacy
+ *  `IntegrationDetail` branching). The blocks read `config.hasSecret` themselves to show
+ *  the "leave blank to keep" secret placeholder, so no extra mode wiring is needed. */
+function FieldsForMethod({
+  provider,
+  draft,
+  onChange,
+  config,
+}: {
+  provider: ProviderCatalogEntry;
+  draft: IntegrationInput;
+  onChange: (next: IntegrationInput) => void;
+  config: MaskedProviderConfig | null;
+}) {
+  const props = { provider, draft, onChange, config };
+  // configFields FIRST (api_key + bluesky/mastodon), so an OAuth-family authMethod with a
+  // declared config spec still gets ApiKeyFields — see hasConfigFields in IntegrationDetail.
+  if (hasConfigFields(provider)) return <ApiKeyFields {...props} />;
+  if (!ownerConfigurable(provider.authMethod)) return <NonConfigurableNote {...props} />;
+  return <OAuthFields {...props} />;
+}
+
+export function IntegrationDetailView({
+  provider,
+  ecosystemId,
+  mode,
+  config,
+  draft,
+  onChange,
+  onSaved,
+  onRotated,
+}: IntegrationDetailViewProps) {
+  const [busy, setBusy] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // The loaded baseline for a 'saved' instance, captured once (this component is remounted
+  // per row via `key={cfg.rdid}` in IntegrationsPane) and re-set after our own successful save
+  // — so Save stays enabled the instant something changes but goes back to disabled right after
+  // persisting, without waiting on the pane's separate (async) config refetch to catch up.
+  // 'add' has no baseline; it's a genuine create-only view (see canSubmit below).
+  const [baseline, setBaseline] = useState<IntegrationInput | null>(() =>
+    mode === "saved" && config ? intToInput(config, provider) : null,
+  );
+
+  // Why the draft can't be submitted, or null — a REASON, not the boolean this used to be,
+  // because the gate disables the button and a disabled button that won't say why is the whole
+  // problem. `intValidate` already returns the exact sentence for a missing spec field or Client
+  // ID; the name rule gets the same wording the toolkit's service editor uses. Name first: it is
+  // the first field on the card.
+  const blockedReason =
+    draft.name.trim() === "" ? NAME_REQUIRED_MESSAGE : intValidate(draft, provider, config ?? null);
+  // 'add' has no baseline to diff against — any valid draft is submittable. 'saved' also
+  // requires an actual change vs. the loaded instance (name-inclusive: unlike the pane-exit
+  // guard, a name-only edit should still enable this view's own Save button).
+  const dirty = mode === "add" || baseline === null || intDiffers(draft, baseline, { includeName: true });
+  // `busy` is deliberately NOT folded in (that belongs at the button, per useDirtyDraft's note):
+  // canSave is a statement about the DRAFT, so the reason below can key off the same term.
+  const canSave = dirty && blockedReason === null;
+  // Whether to VOICE the reason. 'add' hard-codes `dirty` true, so it can't double as "the user
+  // has given us something to complain about" — an empty Add form must not open by scolding.
+  const touched =
+    mode === "add" ? intDiffers(draft, intBlank(provider.providerId), { includeName: true }) : dirty;
+
+  const doAdd = async () => {
+    setBusy(true);
+    setAdded(false);
+    setError(null);
+    try {
+      const row = await integrationsApi.createProviderConfig(
+        ecosystemId,
+        intToCreateBody(draft, provider),
+      );
+      setAdded(true);
+      // Clear the form but stay open so another instance can be added.
+      onChange({ ...intBlank(provider.providerId), name: "" });
+      onSaved?.(row);
+    } catch (e) {
+      setError(errMsg(e, "Couldn't add the integration."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doSave = async () => {
+    if (!config) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const row = await integrationsApi.updateProviderConfig(ecosystemId, config.id, {
+        name: draft.name.trim(),
+        ...intToBody(draft, provider),
+      });
+      setBaseline(intToInput(row, provider));
+      onSaved?.(row);
+    } catch (e) {
+      setError(errMsg(e, "Couldn't save the integration."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const showConnections = mode === "saved" && CONNECTION_METHODS.includes(provider.authMethod);
+  // Synced-row browsing (reddit / google-calendar today) belongs to a SAVED instance — there is
+  // nothing to browse while adding one. Empty for every other provider, which renders no section.
+  const showData = mode === "saved" && providerDataTables(provider.providerId).length > 0;
+  // Keyed off the field's PRESENCE, not off a `providerId === 'postmark'` test: the backend is the
+  // one that decides which providers feed suppression, and re-deciding that here would silently
+  // hide the block the day a second provider starts sending the field. `undefined` (this provider
+  // has no webhook, and the whole `mode === 'add'` case, where there is no saved config at all)
+  // renders nothing; `null` (no secret configured) renders the warning above.
+  const webhook = config?.deliverabilityWebhook;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Card 1 — provider info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{provider.displayName}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {provider.subtitle && (
+            <p className="text-xs uppercase tracking-wide text-apt-text-dim">{provider.subtitle}</p>
+          )}
+          {provider.description && <p className="text-sm text-apt-text">{provider.description}</p>}
+          {provider.links.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {provider.links.map((l) => (
+                <a
+                  key={l.url}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-apt-gold hover:underline"
+                >
+                  {l.label} ↗
+                </a>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Card 2 — config: name + auth fields + create/save */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="int-name">Name</Label>
+            <Input
+              id="int-name"
+              value={draft.name}
+              placeholder={provider.displayName}
+              onChange={(e) => onChange({ ...draft, name: e.target.value })}
+            />
+            <p className="text-xs text-apt-text-muted">
+              A label for this integration. You can rename it later.
+            </p>
+          </div>
+
+          <FieldsForMethod
+            provider={provider}
+            draft={draft}
+            onChange={onChange}
+            config={config ?? null}
+          />
+
+          {mode === "add" ? (
+            <div className="flex flex-col gap-2">
+              <div>
+                <Button variant="default" disabled={!canSave || busy} onClick={() => void doAdd()}>
+                  {busy ? "Adding…" : "Add Integration"}
+                </Button>
+              </div>
+              {added && <p className="text-sm text-apt-green">integration added</p>}
+              {error && <p className="text-sm text-apt-red">{error}</p>}
+              {!error && blockedReason && touched && (
+                <p className="text-sm text-apt-text-muted" role="status">
+                  {blockedReason}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div>
+                <Button variant="default" disabled={!canSave || busy} onClick={() => void doSave()}>
+                  {busy ? "Saving…" : "Save"}
+                </Button>
+              </div>
+              {error && <p className="text-sm text-apt-red">{error}</p>}
+              {!error && blockedReason && touched && (
+                <p className="text-sm text-apt-text-muted" role="status">
+                  {blockedReason}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Deliverability webhook — directly under Configuration, because registering it is the
+          other half of setting the provider up, and an operator who scrolls past it gets silent
+          suppression failures. */}
+      {webhook !== undefined && config && (
+        <DeliverabilityWebhookCard
+          webhook={webhook}
+          ecosystemId={ecosystemId}
+          configId={config.id}
+          // The host has to be told, not just the card: IntegrationsPane renders this view from
+          // `selectedInList ?? fetchedCfg`, so without a refresh the cached list row keeps showing
+          // the RETIRED secret — the one value an operator must not copy.
+          onRotated={onRotated}
+        />
+      )}
+
+      {/* Card 3 — what this does */}
+      <Card>
+        <CardHeader>
+          <CardTitle>What this does</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-apt-text-muted">{describeCapabilities(provider)}</p>
+        </CardContent>
+      </Card>
+
+      {showConnections && (
+        <ProviderConnections
+          provider={provider}
+          ecosystemId={ecosystemId}
+          providerConfig={config ?? null}
+        />
+      )}
+
+      {/* Synced data — the generic table views over this provider's rows in the VIEWED
+          ecosystem. Pre-rework this was a "Data" topic beside "Configuration"; the detail is
+          now one scrolling column, so it renders as the last section (a provider with several
+          browsable tables still publishes its own rail level from inside IntegrationData). */}
+      {showData && (
+        <DetailSection title="Synced data">
+          <IntegrationData providerId={provider.providerId} ecosystemId={ecosystemId} />
+        </DetailSection>
+      )}
+    </div>
+  );
+}

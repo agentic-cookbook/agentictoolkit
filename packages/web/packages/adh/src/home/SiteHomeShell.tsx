@@ -90,6 +90,14 @@ export function SiteHomeShell({
     hrefFor,
     switchHrefFor,
   })
+  // The resolved workspace's own row, for the scope below (see SiteHomeScope.workspace). `resolved`
+  // can only ever BE a member of this list — useWorkspaceRoute resolves through its `known()`
+  // check, which rejects any slug the list does not carry, and otherwise falls back to the list's
+  // own first row — so this lookup is total wherever the guard below has already passed. Written as
+  // a lookup rather than an assertion so a future change to that resolution cannot turn a wrong
+  // slug into a wrong ROW: a miss holds `children` exactly as an unresolved slug does, which is a
+  // state this shell already renders (the bar, and nothing under it).
+  const workspace = workspaces?.find((w) => w.slug === resolved) ?? null
 
   return (
     <>
@@ -115,7 +123,12 @@ export function SiteHomeShell({
       {resolved !== undefined &&
         resolved !== null &&
         resolved === workspaceSlug &&
-        children({ workspaceSlug: resolved, scopedBase: `${basePath}/${resolved}` })}
+        workspace !== null &&
+        children({
+          workspaceSlug: resolved,
+          scopedBase: `${basePath}/${resolved}`,
+          workspace,
+        })}
     </>
   )
 }

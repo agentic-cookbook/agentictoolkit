@@ -175,11 +175,16 @@ function SiteHomeShell({
     hrefFor,
     switchHrefFor
   });
+  const workspace = workspaces?.find((w) => w.slug === resolved) ?? null;
   return /* @__PURE__ */ jsxs2(Fragment, { children: [
     /* @__PURE__ */ jsx3(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
     error !== null && workspaces === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
     resolved === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
-    resolved !== void 0 && resolved !== null && resolved === workspaceSlug && children({ workspaceSlug: resolved, scopedBase: `${basePath}/${resolved}` })
+    resolved !== void 0 && resolved !== null && resolved === workspaceSlug && workspace !== null && children({
+      workspaceSlug: resolved,
+      scopedBase: `${basePath}/${resolved}`,
+      workspace
+    })
   ] });
 }
 

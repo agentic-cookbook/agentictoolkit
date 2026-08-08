@@ -210,8 +210,13 @@ function Shell({ workspaceSlug, basePath = "" }: { workspaceSlug?: string; baseP
       {/* The scope is rendered, not just consumed, so every test in this file that waits for
           `feature` is also asserting the shell never calls its child with a half-resolved one:
           `scopedBase` here is whatever the shell built, and the dedicated test below reads it. */}
-      {({ workspaceSlug: ws, scopedBase }) => (
-        <div data-testid="feature" data-workspace={ws} data-scoped-base={scopedBase}>
+      {({ workspaceSlug: ws, scopedBase, workspace }) => (
+        <div
+          data-testid="feature"
+          data-workspace={ws}
+          data-scoped-base={scopedBase}
+          data-kind={workspace.kind}
+        >
           the feature
         </div>
       )}
@@ -1343,6 +1348,22 @@ describe("SiteHomeShell child scope", () => {
 
     settleList(WORKSPACES);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
-    expect(child).toHaveBeenCalledWith({ workspaceSlug: "acme", scopedBase: "/acme" });
+    expect(child).toHaveBeenCalledWith({
+      workspaceSlug: "acme",
+      scopedBase: "/acme",
+      workspace: WORKSPACES[1],
+    });
+  });
+
+  it("hands over the resolved workspace's ROW, so a feature can read its kind without refetching", async () => {
+    // The reason `workspace` is on the scope at all: a surface whose wording differs between a
+    // personal workspace and an organization (integrations' "My" vs "Org" destination) reads
+    // `kind` here. Asserting the KIND rather than the identity is what makes this fail if the
+    // shell ever hands over the first row, or the row the URL segment named, instead of the row
+    // it actually resolved — `acme` is the second row and the only organization in the list.
+    render(<Shell workspaceSlug="acme" />);
+
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+    expect(screen.getByTestId("feature")).toHaveAttribute("data-kind", "organization");
   });
 });
