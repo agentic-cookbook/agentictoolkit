@@ -13,6 +13,7 @@ export default defineConfig({
     'src/personas/index.ts',
     'src/security/index.ts',
     'src/integrations/index.ts',
+    'src/gamification/index.ts',
     'src/invitations/index.ts',
     'src/access/index.ts',
     'src/ownership/index.ts',
