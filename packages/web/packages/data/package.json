@@ -10,7 +10,7 @@
     "dist"
   ],
   "sideEffects": false,
-  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist.",
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR); prod skips it \u2192 dist.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -91,6 +91,21 @@
       "types": "./dist/stream/index.d.ts",
       "development": "./src/stream/index.ts",
       "import": "./dist/stream/index.js"
+    },
+    "./organizations": {
+      "types": "./dist/organizations/index.d.ts",
+      "development": "./src/organizations/index.ts",
+      "import": "./dist/organizations/index.js"
+    },
+    "./ecosystem-config": {
+      "types": "./dist/ecosystem-config/index.d.ts",
+      "development": "./src/ecosystem-config/index.ts",
+      "import": "./dist/ecosystem-config/index.js"
+    },
+    "./profile": {
+      "types": "./dist/profile/index.d.ts",
+      "development": "./src/profile/index.ts",
+      "import": "./dist/profile/index.js"
     }
   },
   "scripts": {

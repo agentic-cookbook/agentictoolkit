@@ -1,0 +1,69 @@
+{
+  "name": "@agentic-toolkit/organizations",
+  "version": "0.1.0",
+  "description": "The Organizations feature: the caller's organizations as a rail, each with its Configuration / Members / Teams / Settings topics.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR); prod skips it \u2192 dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./sources.css": "./sources.css",
+    "./parse": {
+      "types": "./dist/parse-path.d.ts",
+      "development": "./src/parse-path.ts",
+      "import": "./dist/parse-path.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/crud": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/ecosystem-config": "workspace:*",
+    "@agentic-toolkit/profile": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/teams": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*",
+    "@tanstack/react-query": "^5.62.0",
+    "lucide-react": "^1.16.0"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

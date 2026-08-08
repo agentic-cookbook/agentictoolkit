@@ -66,6 +66,11 @@ export default defineConfig({
     // trick as themes/DbThemeApplier. Kept un-inlined via the matching `external`.
     'help/surface': 'src/help/surface.ts',
     'help/HelpMasterDetail': 'src/help/HelpMasterDetail.tsx',
+    // The ROUTE-keyed help store — one function over a JSON file, and nothing else in this
+    // directory. Its own entry because every host mounting a portable feature package passes it
+    // down as that package's `helpFor` seam, and a site that wants one blurb must not have to
+    // load the help window's client graph to get it.
+    'help/store': 'src/help/store.ts',
     // The shared /home shell (SiteHomeShell + WorkspacePicker). Its OWN entry so only a page
     // that imports `@agentic-toolkit/adh/home` pulls it — and with it this package's new
     // @agentic-toolkit/data dependency. That edge is legal (data depends on auth + ui only, so

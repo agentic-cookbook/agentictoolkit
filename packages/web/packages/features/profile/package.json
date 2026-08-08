@@ -1,0 +1,59 @@
+{
+  "name": "@agentic-toolkit/profile",
+  "version": "0.1.0",
+  "description": "A principal's PROFILE surface: social links, addresses, the per-row privacy tiers that publish them, and metered usage — the panels a user's settings and an organization's both render.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once. One entry only: every module here renders, so there is no server-safe half to keep off the `use client` chunk.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./sources.css": "./sources.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*",
+    "@tanstack/react-query": "^5.62.0",
+    "lucide-react": "^1.16.0"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

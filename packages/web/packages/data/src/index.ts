@@ -51,8 +51,16 @@ export {
 } from "./use-resource-list";
 
 // The caller's owner-scopable workspaces (personal + orgs) — the root of a feature
-// site's stack, and what `?workspace=<slug>` pins a list/create to.
-export { workspacesApi, type Workspace } from "./workspaces";
+// site's stack, and what `?workspace=<slug>` pins a list/create to. Its cache key ships too:
+// a rename invalidates the list from outside this module. `checkWorkspaceSlugAvailable` asks
+// whether a handle is free in the one URL namespace users and orgs share.
+export {
+  workspacesApi,
+  checkWorkspaceSlugAvailable,
+  WORKSPACES_QUERY_KEY,
+  type SlugAvailability,
+  type Workspace,
+} from "./workspaces";
 
 // Which of those workspaces the user last chose — the server row that makes the choice follow
 // them across the family's many domains, plus its per-browser localStorage cache.

@@ -23,6 +23,32 @@ export interface Workspace {
   kind: "individual" | "organization";
 }
 
+/**
+ * The react-query key for {@link workspacesApi.list} — exported because the list goes stale from
+ * OUTSIDE this module: renaming an organization moves its slug, and the workspace bar, the
+ * switcher and every feature rail read it. Published here so a host and a feature invalidate the
+ * same cache entry rather than each holding a private key for the same endpoint.
+ */
+export const WORKSPACES_QUERY_KEY = ["workspaces"] as const;
+
+/** `GET /auth/slug-available/:slug`, verbatim: `reason` says which test refused it. */
+export interface SlugAvailability {
+  available: boolean;
+  reason?: "format" | "taken";
+}
+
+/**
+ * Is `slug` free to claim in the workspace URL namespace?
+ *
+ * ONE namespace, deliberately: a user's handle and an organization's occupy the same URL space,
+ * so the endpoint answers about both and a form editing either must ask it. It excludes only the
+ * CALLER's own user row — an org editing its own handle must therefore skip the probe for its
+ * current slug, or its live row comes back "taken" and the form refuses the value it already has.
+ */
+export function checkWorkspaceSlugAvailable(slug: string): Promise<SlugAvailability> {
+  return authedJson<SlugAvailability>(`/api/auth/slug-available/${encodeURIComponent(slug)}`);
+}
+
 interface WorkspaceRow {
   slug: string;
   name: string;

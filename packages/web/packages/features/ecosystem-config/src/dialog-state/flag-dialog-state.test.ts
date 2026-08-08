@@ -7,7 +7,7 @@ import {
   isFlagFormDirty,
   type FlagFormContext,
   type FlagFormState,
-} from '../settings-dialogs'
+} from './index'
 
 const CREATE_CTX: FlagFormContext = { editingMode: false, existingKeys: ['existing_flag'] }
 const EDIT_CTX: FlagFormContext = { editingMode: true, existingKeys: ['existing_flag'] }
