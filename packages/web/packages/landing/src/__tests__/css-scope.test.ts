@@ -100,7 +100,12 @@ describe('the document-level rules are gated on the deck, at their original weig
     expect(gates.length).toBeGreaterThan(5)
     document.body.innerHTML =
       '<main><div class="lp-deck"><section class="lp-screen"></section></div></main>'
+    // Both flags DeckScript stamps on <html>, because a gate is only reachable once its flag is
+    // armed: `data-snap` by ARM_SNAPPING, `data-smooth` by ARM_SMOOTH on the first interaction.
+    // A gate whose flag is missing here would read as "spelled wrong" — the very defect the probe
+    // exists to catch — so the fixture has to be the armed document, not a half-armed one.
     document.documentElement.setAttribute('data-snap', '')
+    document.documentElement.setAttribute('data-smooth', '')
     for (const sel of gates) expect(document.querySelector(sel), sel).not.toBeNull()
   })
 
