@@ -1,6 +1,6 @@
 import { type ComponentProps } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
-import type { ProjectActivity, WorkItem } from "@agentic-toolkit/data/projects";
+import type { ProjectActivity, ProjectComment, WorkItem } from "@agentic-toolkit/data/projects";
 import type {
   ProjectStatus,
   ProjectParticipant,
@@ -168,11 +168,33 @@ export function assigneeLabel(item: WorkItem, participants: ProjectParticipant[]
  * Overview's recent-activity summary, because the same event must not be worded two
  * different ways depending on which pane you happen to be looking at. */
 
-/** The actor's display name: the label if present, else a phrasing of kind/id. */
+/**
+ * How a principal recorded on a row reads: the label captured at the time if there is one, else
+ * a phrasing of kind/id, else an admission that we do not know.
+ *
+ * The label is a SNAPSHOT — the email or handle as it stood when the row was written — so it is
+ * preferred over anything looked up now: a trail that silently re-attributes old events to a
+ * person's current name is a trail you cannot cite.
+ */
+export function principalText(
+  kind: string | null,
+  id: string | null,
+  label: string | null,
+): string {
+  if (label) return label;
+  if (kind && id) return `${kind} · ${id}`;
+  return kind ?? id ?? "Someone";
+}
+
+/** The actor's display name on an activity row. */
 export function actorText(a: ProjectActivity): string {
-  if (a.actorLabel) return a.actorLabel;
-  if (a.actorKind && a.actorId) return `${a.actorKind} · ${a.actorId}`;
-  return a.actorKind ?? a.actorId ?? "Someone";
+  return principalText(a.actorKind, a.actorId, a.actorLabel);
+}
+
+/** The author's display name on a comment — the same phrasing as the trail's actor, so one
+ *  person is not named two different ways depending on which pane you are looking at. */
+export function authorText(c: ProjectComment): string {
+  return principalText(c.authorKind, c.authorId, c.authorLabel);
 }
 
 /** Human phrasing of an `action` string; the raw value is the fallback.
@@ -227,6 +249,10 @@ export function actionPhrase(
       return "deleted a work item";
     case "comment.added":
       return "commented";
+    case "comment.edited":
+      return "edited a comment";
+    case "comment.deleted":
+      return "removed a comment";
     case "field.created":
       return "added a field";
     case "field.updated":

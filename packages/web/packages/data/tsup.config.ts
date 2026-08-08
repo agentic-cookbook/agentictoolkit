@@ -6,6 +6,7 @@ export default defineConfig({
     'src/index.ts',
     'src/query/index.tsx',
     'src/projects/index.ts',
+    'src/reactions/index.ts',
     'src/teams/index.ts',
     'src/ecosystems/index.ts',
     'src/monitored-sites/index.ts',

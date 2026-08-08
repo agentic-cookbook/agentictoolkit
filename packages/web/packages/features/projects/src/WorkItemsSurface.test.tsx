@@ -14,9 +14,12 @@ import { render, screen, fireEvent, waitFor, cleanup, within, act } from "@testi
 
 // The three former hub modules (@/api/{projects,project-work-items,project-activity}) now ship in
 // ONE domain barrel (@agentic-toolkit/data/projects), so their stubs merge into a single mock: the
-// work-items + projects clients the surface reads, plus the activity client the edit-mode editor's
-// Activity section loads on mount (an empty keyset page keeps it quiet without touching the network).
-vi.mock("@agentic-toolkit/data/projects", () => ({
+// work-items + projects clients the surface reads, plus the two clients the edit-mode editor's
+// lower sections load on mount — comments and the activity trail (empty replies keep them quiet
+// without touching the network). The mock is PARTIAL (importOriginal-spread) because those panes
+// also use pure folds from the same barrel — `threadOf` — which have nothing to stub.
+vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agentic-toolkit/data/projects")>()),
   projectWorkItemsApi: {
     listForProject: vi.fn(),
     create: vi.fn(),
@@ -29,8 +32,19 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
   },
   projectActivityApi: {
     workItemActivity: vi.fn().mockResolvedValue({ rows: [], nextBefore: null }),
-    addComment: vi.fn(),
   },
+  projectCommentsApi: {
+    list: vi.fn().mockResolvedValue([]),
+    add: vi.fn(),
+    edit: vi.fn(),
+    remove: vi.fn(),
+  },
+}));
+
+// The comments pane batches its thread's reactions on the same mount.
+vi.mock("@agentic-toolkit/data/reactions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agentic-toolkit/data/reactions")>()),
+  reactionsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), remove: vi.fn() },
 }));
 
 import { WorkItemsSurface } from "./WorkItemsSurface";

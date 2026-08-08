@@ -1,4 +1,4 @@
-// Project activity API client — the audit trail + comments side of `/api/project/*`.
+// Project activity API client — the audit trail side of `/api/project/*`.
 //
 // Both activity trails (project-scoped and work-item-scoped) are newest-first and
 // keyset-paginated on `{ limit?, before? }`: `before` is an OPAQUE composite cursor
@@ -8,12 +8,14 @@
 // is that token to pass as the NEXT `before` when a full `limit` page came back, else
 // null (no more pages, or the caller asked for no limit so there's nothing to page against).
 //
-// `addComment` POSTs to a work item and the backend answers with the created
-// `comment.added` activity row.
+// WRITING a comment is not here — `./comments` owns the conversation, because a comment is a
+// row of its own that its author can correct or withdraw. Every such act still shows up in this
+// trail as a `comment.added` / `.edited` / `.deleted` entry; the trail records the ACT, the
+// comment holds the WORDS.
 
 import { authedJson } from "../http";
 import { enc } from "../client-helpers";
-import type { ProjectActivityRow, CommentCreateBody } from "./wire";
+import type { ProjectActivityRow } from "./wire";
 
 const PROJECTS = "/api/project/projects";
 const ITEMS = "/api/project/work-items";
@@ -101,18 +103,6 @@ export const projectActivityApi = {
     return fetchActivityPage(
       `${ITEMS}/${enc(workItemId)}/activity${keysetQuery(opts)}`,
       opts.limit,
-    );
-  },
-
-  async addComment(workItemId: string, body: string): Promise<ProjectActivity> {
-    const payload: CommentCreateBody = {
-      body,
-    };
-    return toProjectActivity(
-      await authedJson<ProjectActivityRow>(
-        `${ITEMS}/${enc(workItemId)}/comments`,
-        { method: "POST", body: JSON.stringify(payload) },
-      ),
     );
   },
 };

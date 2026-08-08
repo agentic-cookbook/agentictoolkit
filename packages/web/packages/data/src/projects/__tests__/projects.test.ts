@@ -1,4 +1,4 @@
-// URL/method/body contract tests for the three Projects clients. Only the
+// URL/method/body contract tests for the Projects clients. Only the
 // transport (`authedJson`/`authedRequest`) is mocked — the mappers, `compact`,
 // and query-building run for real, so these pin the wire contract that the later
 // Projects UI is built on. Emphasis (per the task brief) on: a PATCH with a
@@ -18,6 +18,8 @@ import { projectsApi, validateKeyPrefix } from "../projects";
 import { projectWorkItemsApi } from "../work-items";
 import { projectActivityApi } from "../activity";
 import { projectArtifactsApi } from "../artifacts";
+import { projectCommentsApi, threadOf, type ProjectComment } from "../comments";
+import type { ProjectCommentRow } from "../wire";
 import { authedJson, authedRequest } from "../../http";
 
 const mockedJson = vi.mocked(authedJson);
@@ -280,14 +282,117 @@ describe("projectActivityApi", () => {
     expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1/activity?limit=1&before=cur");
   });
 
-  it("addComment POSTs the body and maps the returned activity row", async () => {
-    mockedJson.mockResolvedValueOnce(activityRow("a1", "t1"));
-    const out = await projectActivityApi.addComment("w1", "hello");
+});
+
+/* ── projectCommentsApi ───────────────────────────────────────────────── */
+
+// Writing a comment used to live on the activity client, back when a comment WAS an activity
+// row. These pin the two things that separation has to get right: a comment reads and writes
+// through its OWN stems (the card's for list/add, the comment's own for edit/remove), and
+// `threadOf` reconstructs a conversation from the flat list without ever losing a reply.
+describe("projectCommentsApi", () => {
+  const commentRow = (
+    id: string,
+    over: Partial<ProjectCommentRow> = {},
+  ): ProjectCommentRow => ({
+    id,
+    projectId: "p1",
+    workItemId: "w1",
+    parentId: null,
+    authorKind: "customer",
+    authorId: "cust-1",
+    authorLabel: "Ada",
+    body: `body ${id}`,
+    editedAt: null,
+    createdAt: `t-${id}`,
+    updatedAt: `t-${id}`,
+    ...over,
+  });
+
+  it("list GETs the CARD's comments stem and keeps the server's order", async () => {
+    // Oldest-first is the server's order and it is load-bearing — a conversation only reads
+    // correctly forward — so the client must not sort it into something else.
+    mockedJson.mockResolvedValueOnce([commentRow("c1"), commentRow("c2")]);
+    const out = await projectCommentsApi.list("w1");
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1/comments");
+    expect(out.map((c) => c.id)).toEqual(["c1", "c2"]);
+  });
+
+  it("add POSTs to the card, and omits parentId entirely when it is a top-level comment", async () => {
+    mockedJson.mockResolvedValueOnce(commentRow("c1"));
+    await projectCommentsApi.add("w1", "hello");
     expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1/comments", {
       method: "POST",
       body: JSON.stringify({ body: "hello" }),
     });
-    expect(out.action).toBe("project.updated");
+  });
+
+  it("add carries parentId when replying", async () => {
+    mockedJson.mockResolvedValueOnce(commentRow("c2", { parentId: "c1" }));
+    const out = await projectCommentsApi.add("w1", "me too", "c1");
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1/comments", {
+      method: "POST",
+      body: JSON.stringify({ body: "me too", parentId: "c1" }),
+    });
+    expect(out.parentId).toBe("c1");
+  });
+
+  it("edit and remove address the COMMENT, not the card that holds it", async () => {
+    // The card is how you find a comment; the comment is how you change one. Sending either of
+    // these to the work-item stem would edit nothing and report success.
+    mockedJson.mockResolvedValueOnce(commentRow("c1", { body: "fixed", editedAt: "t9" }));
+    const out = await projectCommentsApi.edit("c1", "fixed");
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/comments/c1", {
+      method: "PATCH",
+      body: JSON.stringify({ body: "fixed" }),
+    });
+    expect(out.editedAt).toBe("t9");
+
+    await projectCommentsApi.remove("c1");
+    expect(mockedRequest).toHaveBeenCalledWith("/api/project/comments/c1", { method: "DELETE" });
+  });
+
+  it("maps an unknown authorKind to `customer` rather than inventing a principal", async () => {
+    // A bundle older than the backend must not let an unrecognised kind pose as an agent —
+    // "a plain author with a label" is the reading that claims the least.
+    mockedJson.mockResolvedValueOnce([commentRow("c1", { authorKind: "martian" })]);
+    const [c] = await projectCommentsApi.list("w1");
+    expect(c?.authorKind).toBe("customer");
+  });
+});
+
+describe("threadOf", () => {
+  const comment = (id: string, parentId: string | null = null): ProjectComment => ({
+    id,
+    projectId: "p1",
+    workItemId: "w1",
+    parentId,
+    authorKind: "customer",
+    authorId: "cust-1",
+    authorLabel: "Ada",
+    body: `body ${id}`,
+    editedAt: null,
+    createdAt: `t-${id}`,
+    updatedAt: `t-${id}`,
+  });
+
+  it("files each reply under its root, keeping both orders", async () => {
+    const threads = threadOf([
+      comment("c1"),
+      comment("c2", "c1"),
+      comment("c3"),
+      comment("c4", "c1"),
+    ]);
+    expect(threads.map((t) => t.comment.id)).toEqual(["c1", "c3"]);
+    expect(threads[0]?.replies.map((r) => r.id)).toEqual(["c2", "c4"]);
+    expect(threads[1]?.replies).toEqual([]);
+  });
+
+  it("promotes a reply whose parent is missing instead of dropping it", async () => {
+    // Real case: the parent was withdrawn while this reply stands. Losing someone's words to a
+    // grouping detail is strictly worse than showing them a level too high.
+    const threads = threadOf([comment("c1"), comment("orphan", "gone")]);
+    expect(threads.map((t) => t.comment.id)).toEqual(["c1", "orphan"]);
   });
 });
 

@@ -6,6 +6,7 @@ import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
 import type { ProjectParticipant, ProjectStatus, WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "./WorkItemEditor";
 import { ItemKey } from "./ItemKey";
+import { WorkItemComments } from "./WorkItemComments";
 import { WorkItemRelations } from "./WorkItemRelations";
 import { assigneeLabel, itemLabel, statusMeta } from "./helpers";
 
@@ -17,9 +18,10 @@ import { assigneeLabel, itemLabel, statusMeta } from "./helpers";
  * NOT columns and would otherwise be invisible from the list: the description, the labels, the start
  * date, the parent, and the created/updated timestamps.
  *
- * Relations are the one exception to "it reads", and deliberately so: a link is a fact about a
- * PAIR of cards, so it has no cell in a row of one card's values and no column that could hold
- * it. If this pane did not own it, nothing in the feature would.
+ * Relations and Comments are the exceptions to "it reads", and for one reason: neither is a value
+ * the card HOLDS. A link is a fact about a PAIR of cards; a comment is something a person wrote
+ * ABOUT the card. Neither has a cell in a row of one card's values, and no column could ever hold
+ * one — so if this pane did not own them, nothing in the feature would.
  */
 
 function Row({ label, children }: { label: string; children: ReactNode }): ReactElement {
@@ -107,9 +109,12 @@ export function WorkItemDetail({
       <Row label="Created">{item.createdAt}</Row>
       <Row label="Updated">{item.updatedAt}</Row>
     </dl>
-      {/* Outside the <dl>, because it is not a term/description pair: it is a list of other
-          cards, with its own control for adding one. */}
+      {/* Outside the <dl>, because neither is a term/description pair: one is a list of other
+          cards and one is a conversation, each with its own controls. Comments come LAST because
+          they grow without bound — the card's own facts must not be pushed off the top of the
+          pane by a long thread. */}
       <WorkItemRelations item={item} statuses={statuses} workItems={workItems} />
+      <WorkItemComments workItemId={item.id} />
     </div>
   );
 }

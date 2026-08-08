@@ -1,27 +1,46 @@
 // @vitest-environment jsdom
 //
-// Component test for WorkItemEditor's per-item activity + comment composer (T6),
-// which renders only in edit mode. This package's vitest config is jsdom (see
-// vitest.config.ts). Both api boundaries are mocked in the single domain barrel
-// (@agentic-toolkit/data/projects) — the activity client for the feed + comment, the
-// work-items client so the editor's save path stays inert — so the composer →
-// addComment → refresh wiring is exercised, not the transport.
+// Component test for WorkItemEditor: its save gate/patch behaviour, and the two sections that
+// hang below the form in edit mode — the card's conversation and its activity trail. This
+// package's vitest config is jsdom (see vitest.config.ts).
+//
+// The api boundaries are mocked in the domain barrels (@agentic-toolkit/data/projects and
+// @agentic-toolkit/data/reactions), so the editor's own wiring is exercised, not the transport.
+// The mocks are PARTIAL (importOriginal-spread) because the panes below also use pure folds from
+// those barrels — `threadOf`, the reaction kind constant — which have nothing to stub.
+//
+// What this file no longer covers, deliberately: posting a comment. The trail used to carry a
+// one-line composer, from back when a comment WAS an activity row; comments are their own records
+// now, and their pane's behaviour is tested where it lives (WorkItemComments.test.tsx). What is
+// asserted here is only what this file owns — that the editor mounts both sections for the item
+// in front of it, and that the trail is the read-only one.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 
 // The former @/api/{project-activity,project-work-items} hub modules now ship in ONE domain
 // barrel, so their stubs merge into a single mock.
-vi.mock("@agentic-toolkit/data/projects", () => ({
+vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agentic-toolkit/data/projects")>()),
   projectActivityApi: {
     projectActivity: vi.fn(),
     workItemActivity: vi.fn(),
-    addComment: vi.fn(),
   },
   projectWorkItemsApi: { create: vi.fn(), update: vi.fn() },
+  projectCommentsApi: { list: vi.fn(), add: vi.fn(), edit: vi.fn(), remove: vi.fn() },
+}));
+
+vi.mock("@agentic-toolkit/data/reactions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agentic-toolkit/data/reactions")>()),
+  reactionsApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn() },
 }));
 
 import { WorkItemEditor } from "./WorkItemEditor";
-import { projectActivityApi, type ProjectActivity } from "@agentic-toolkit/data/projects";
+import {
+  projectActivityApi,
+  projectCommentsApi,
+  type ProjectActivity,
+} from "@agentic-toolkit/data/projects";
+import { reactionsApi } from "@agentic-toolkit/data/reactions";
 import {
   projectWorkItemsApi,
   type ProjectStatus,
@@ -29,7 +48,8 @@ import {
 } from "@agentic-toolkit/data/projects";
 
 const workItemActivity = vi.mocked(projectActivityApi.workItemActivity);
-const addComment = vi.mocked(projectActivityApi.addComment);
+const listComments = vi.mocked(projectCommentsApi.list);
+const listReactions = vi.mocked(reactionsApi.list);
 const update = vi.mocked(projectWorkItemsApi.update);
 
 const ITEM: WorkItem = {
@@ -66,7 +86,8 @@ const COMMENT: ProjectActivity = {
 beforeEach(() => {
   vi.clearAllMocks();
   workItemActivity.mockResolvedValue({ rows: [], nextBefore: null });
-  addComment.mockResolvedValue(structuredClone(COMMENT));
+  listComments.mockResolvedValue([]);
+  listReactions.mockResolvedValue([]);
 });
 
 afterEach(cleanup);
@@ -86,37 +107,39 @@ function renderEditor(item: WorkItem = ITEM) {
   );
 }
 
-describe("WorkItemEditor activity + comment composer (edit mode)", () => {
-  it("loads the item's activity and posts a trimmed comment, then refreshes the feed", async () => {
+describe("WorkItemEditor conversation + activity trail (edit mode)", () => {
+  it("mounts BOTH sections against the item in front of it", async () => {
     renderEditor();
 
-    // The feed loads the item's activity on mount.
+    // Each reads the same card, from its own endpoint: the trail is what happened, the thread is
+    // what was said. An editor that wired one of them to a different id would show one card's
+    // form over another card's discussion.
     await waitFor(() =>
       expect(workItemActivity).toHaveBeenCalledWith("w1", { limit: 20, before: undefined }),
     );
-    const loadsBefore = workItemActivity.mock.calls.length;
-
-    fireEvent.change(screen.getByLabelText("Comment"), {
-      target: { value: "  Nice work  " },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Comment" }));
-
-    // The composer posts the trimmed body to the work item…
-    await waitFor(() => expect(addComment).toHaveBeenCalledWith("w1", "Nice work"));
-    // …then the feed re-mounts and re-loads (a fresh workItemActivity call).
-    await waitFor(() =>
-      expect(workItemActivity.mock.calls.length).toBeGreaterThan(loadsBefore),
-    );
+    await waitFor(() => expect(listComments).toHaveBeenCalledWith("w1"));
+    expect(screen.getByRole("region", { name: "Comments" })).not.toBeNull();
   });
 
-  it("disables the Comment button until the composer has text", async () => {
+  it("puts the ONE composer in the conversation, not in the trail", async () => {
+    // A second composer under Activity would be two doors into one room — and the narrower one,
+    // with no reply, no edit and no way to take a comment back.
+    renderEditor();
+    await waitFor(() => expect(listComments).toHaveBeenCalledWith("w1"));
+
+    expect(screen.getByLabelText("Add a comment")).not.toBeNull();
+    expect(screen.queryByLabelText("Comment")).toBeNull();
+  });
+
+  it("still RECORDS a comment in the trail, even though it is no longer written there", async () => {
+    // The two surfaces are one story told twice: the trail says a comment was made and by whom,
+    // the thread holds the words. Losing the trail row when the composer moved would have made
+    // the audit record silently incomplete — and nothing on screen would have said so.
+    workItemActivity.mockResolvedValue({ rows: [structuredClone(COMMENT)], nextBefore: null });
     renderEditor();
 
-    const button = screen.getByRole("button", { name: "Comment" }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-
-    fireEvent.change(screen.getByLabelText("Comment"), { target: { value: "hi" } });
-    expect(button.disabled).toBe(false);
+    expect(await screen.findByText("commented")).not.toBeNull();
+    expect(screen.getByText("Ada")).not.toBeNull();
   });
 });
 

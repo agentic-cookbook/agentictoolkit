@@ -289,8 +289,7 @@ export interface ProjectArtifactLinkBody {
 
 /* ── Activity ─────────────────────────────────────────────────────────── */
 
-/** Backend row for `GET /project/projects/{id}/activity` (and the work-item
- *  trail); `addComment` returns the created row in the same shape. */
+/** Backend row for `GET /project/projects/{id}/activity` (and the work-item trail). */
 export interface ProjectActivityRow {
   id: string;
   projectId: string;
@@ -303,7 +302,41 @@ export interface ProjectActivityRow {
   createdAt: string;
 }
 
+/* ── Comments ─────────────────────────────────────────────────────────── */
+
+/**
+ * Backend row for the work-item conversation (`GET`/`POST
+ * /project/work-items/{id}/comments`, `PATCH /project/comments/{id}`).
+ *
+ * A comment is its OWN row, not an activity entry: an entry in an audit trail is a fact that
+ * happened and can never stop having happened, whereas a comment is a piece of writing its
+ * author may correct or withdraw. The trail still records every one of those acts — which is
+ * where `editedAt`'s prior text lives — but the words themselves are here.
+ */
+export interface ProjectCommentRow {
+  id: string;
+  projectId: string;
+  workItemId: string;
+  /** the comment this one replies to; null for a top-level comment. */
+  parentId?: string | null;
+  authorKind?: string | null;
+  authorId?: string | null;
+  authorLabel?: string | null;
+  body: string;
+  /** set the first time the body changes; null while the text is as first written. */
+  editedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** `POST /project/work-items/{id}/comments` body. */
 export interface CommentCreateBody {
+  body: string;
+  /** the comment being replied to; omitted for a top-level comment. */
+  parentId?: string;
+}
+
+/** `PATCH /project/comments/{id}` body. */
+export interface CommentUpdateBody {
   body: string;
 }

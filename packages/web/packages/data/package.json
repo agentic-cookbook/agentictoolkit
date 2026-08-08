@@ -27,6 +27,11 @@
       "development": "./src/projects/index.ts",
       "import": "./dist/projects/index.js"
     },
+    "./reactions": {
+      "types": "./dist/reactions/index.d.ts",
+      "development": "./src/reactions/index.ts",
+      "import": "./dist/reactions/index.js"
+    },
     "./teams": {
       "types": "./dist/teams/index.d.ts",
       "development": "./src/teams/index.ts",

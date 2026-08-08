@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -16,11 +16,13 @@ import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { AssigneePicker, toOptionValue, fromOptionValue, type AssigneeValue } from "./AssigneePicker";
 import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
 import { ItemKey } from "./ItemKey";
+import { WorkItemComments } from "./WorkItemComments";
 import { itemLabel, type BadgeVariant } from "./helpers";
 
 /**
  * The EDIT form over a single work item: title, description, status, assignee
- * (AssigneePicker), priority, start/due dates, an optional parent, and its activity.
+ * (AssigneePicker), priority, start/due dates, an optional parent, its conversation, and its
+ * activity trail.
  *
  * It only ever edits an EXISTING item — creating is a modal ({@link NewWorkItemDialog}), because
  * in the hierarchical stack the detail pane always shows a real, selected record. It PATCHes
@@ -114,24 +116,16 @@ function draftFromItem(item: WorkItem): WorkItemDraft {
   };
 }
 
-/* ── Per-item activity + comment composer (edit mode only) ──────────────────
- * The work item's own activity trail (a keyset ActivityFeed over
- * workItemActivity) plus a composer: a comment posts to the item, then the feed
- * refreshes by re-mounting via a bumped `key` — the ActivityFeed refresh idiom. */
+/* ── Per-item activity trail (edit mode only) ───────────────────────────────
+ * The work item's own trail: a keyset ActivityFeed over workItemActivity.
+ *
+ * Read-only, and that is the point. This section used to carry a one-line comment box, from back
+ * when a comment WAS an activity row and the trail was the only place it could be seen. Comments
+ * are their own records now, with their own pane above — so a second composer here would be two
+ * doors into one room, and the narrower one at that (a single-line Input for prose, no reply, no
+ * edit, no way to take a comment back). What is left is what a trail is for: the record of what
+ * happened, in the order it happened, which nothing types INTO. */
 function ItemActivitySection({ workItemId }: { workItemId: string }): ReactElement {
-  const [body, setBody] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
   const load = useCallback(
     (before?: string) =>
       projectActivityApi.workItemActivity(workItemId, {
@@ -141,48 +135,13 @@ function ItemActivitySection({ workItemId }: { workItemId: string }): ReactEleme
     [workItemId],
   );
 
-  async function submit() {
-    const trimmed = body.trim();
-    if (!trimmed || posting) return;
-    setPosting(true);
-    setError(null);
-    try {
-      await projectActivityApi.addComment(workItemId, trimmed);
-      if (!mounted.current) return;
-      setBody("");
-      // Re-mount the feed so it re-loads with the new comment at the top.
-      setRefreshKey((k) => k + 1);
-    } catch (e) {
-      if (mounted.current) {
-        setError(e instanceof Error ? e.message : "Failed to post comment.");
-      }
-    } finally {
-      if (mounted.current) setPosting(false);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-3 border-t border-apt-border pt-5">
-      <h3 className="text-sm font-semibold text-apt-text">Activity</h3>
-      <div className="flex items-start gap-2">
-        <Input
-          value={body}
-          aria-label="Comment"
-          placeholder="Add a comment…"
-          onChange={(e) => {
-            setError(null);
-            setBody(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void submit();
-          }}
-        />
-        <Button onClick={() => void submit()} disabled={posting || !body.trim()}>
-          {posting ? "Posting…" : "Comment"}
-        </Button>
-      </div>
-      <ErrorText error={error} />
-      <ActivityFeed key={refreshKey} load={load} />
+      {/* The same mono caption the Comments section above and the detail pane's Relations use —
+          two section headings stacked in one pane have to read as siblings, and the louder of the
+          two must not be the reference material. */}
+      <h3 className="font-mono text-xs tracking-[0.02em] text-apt-text-dim">Activity</h3>
+      <ActivityFeed load={load} />
     </div>
   );
 }
@@ -453,7 +412,11 @@ export function WorkItemEditor({
         )}
       </div>
 
-      {/* Activity + comments live only on a saved item (needs a real id). */}
+      {/* Both live only on a saved item (each needs a real id). Comments first: the conversation
+          is what someone came down here to join, and the trail below it is reference. */}
+      <div className="border-t border-apt-border pt-5">
+        <WorkItemComments workItemId={item.id} />
+      </div>
       <ItemActivitySection workItemId={item.id} />
     </div>
   );

@@ -18347,12 +18347,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all reactions on a target (public within the ecosystem) */
+        /** List all reactions on one target, or a batch of them (public within the ecosystem) */
         get: {
             parameters: {
                 query: {
                     targetKind: string;
-                    targetId: string;
+                    /** @description One subject. Supply this OR targetIds; one of the two is required. */
+                    targetId?: string;
+                    /** @description Up to 200 comma-separated subject ids, so a surface showing many subjects reads them in ONE request — each item carries its own targetId for grouping. Supply this OR targetId; one of the two is required. Over 200 is a 400. */
+                    targetIds?: string;
                 };
                 header?: never;
                 path?: never;
@@ -18360,7 +18363,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Reactions on the target */
+                /** @description Reactions on the target(s) */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -22202,10 +22205,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Append a comment to a work item (a comment.added activity) */
-        post: {
+        /** A work item's comments, oldest first (the order a conversation is read in) */
+        get: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -22214,30 +22215,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        body: string;
-                    };
-                };
-            };
+            requestBody?: never;
             responses: {
-                /** @description Created comment (activity row) */
-                201: {
+                /** @description Comments */
+                200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ProjectActivity"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
+                        "application/json": components["schemas"]["ProjectComment"][];
                     };
                 };
                 /** @description Error */
@@ -22260,10 +22246,207 @@ export interface paths {
                 };
             };
         };
+        put?: never;
+        /** Add a comment to a work item (also appends a comment.added activity) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        body: string;
+                        /** @description reply to this comment. Must be a comment on the SAME work item (400 otherwise); a reply to a reply is stored against that reply's root, so threads stay one level deep */
+                        parentId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created comment */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectComment"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/project/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a comment (soft delete; appends comment.deleted) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Rewrite a comment's body (author only) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated comment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectComment"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/persona-memory/global": {
@@ -55259,13 +55442,30 @@ export interface components {
             actorKind?: string | null;
             actorId?: string | null;
             actorLabel?: string | null;
-            /** @description the event, e.g. project.created/updated/deleted, status.*, participant.*, work_item.created/updated/status_changed/assigned/deleted, comment.added */
+            /** @description the event, e.g. project.created/updated/deleted, status.*, participant.*, work_item.created/updated/status_changed/assigned/deleted, comment.added/edited/deleted */
             action: string;
             /** @description action-specific payload (jsonb) */
             detail?: {
                 [key: string]: unknown;
             } | null;
             createdAt: string;
+        };
+        ProjectComment: {
+            id: string;
+            ecosystemId: string;
+            projectId: string;
+            workItemId: string;
+            /** @description the comment this one replies to; null for a top-level comment */
+            parentId?: string | null;
+            /** @enum {string|null} */
+            authorKind?: "customer" | "persona" | "team" | null;
+            authorId?: string | null;
+            authorLabel?: string | null;
+            body: string;
+            /** @description set the first time the body changes; the prior text is in the trail */
+            editedAt?: string | null;
+            createdAt: string;
+            updatedAt?: string;
         };
         TargetDescriptor: {
             /** @description the target's registry, e.g. 'content.markdown' */
