@@ -244,9 +244,10 @@ export interface WorkItemPatchBody {
  * - `{ afterId: null }`          → to the TOP (nothing sorts before it)
  * - `{ beforeId: null }`         → to the BOTTOM
  *
- * Naming neither is a 400: a move with no neighbour has not said where to. Indices are absent
- * on purpose — two clients sending "index 3" race, whereas two clients naming the same
- * neighbour both land beside it.
+ * Naming neither is a 400: a move with no neighbour has not said where to. So is nulling BOTH —
+ * "nothing above and nothing below" describes a list holding only this card, which is never the
+ * move anyone meant. Indices are absent on purpose — two clients sending "index 3" race, whereas
+ * two clients naming the same neighbour both land beside it.
  */
 export interface WorkItemMoveTarget {
   afterId?: string | null;
