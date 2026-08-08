@@ -68,7 +68,7 @@ function grid(): HTMLElement {
 
 describe("CalendarView", () => {
   it("defaults to the month of 'today' and places a due item in that month's cell", () => {
-    render(<CalendarView items={[JULY, AUGUST, FIRST, UNDATED]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[JULY, AUGUST, FIRST, UNDATED]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
 
     // The pinned clock → July 2026 is the default visible month.
     expect(screen.getByRole("grid").getAttribute("aria-label")).toContain("July 2026");
@@ -78,7 +78,7 @@ describe("CalendarView", () => {
   });
 
   it("places a 2026-07-01 due item on July 1 (UTC), not the trailing June 30 cell", () => {
-    render(<CalendarView items={[FIRST]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[FIRST]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
 
     // The July-1 chip sits inside the gridcell aria-labelled for July 1, 2026 —
     // proving the UTC parse didn't shift it back into the greyed June 30 spill cell.
@@ -88,14 +88,14 @@ describe("CalendarView", () => {
 
   it("calls onOpenItem with the item id when a chip is clicked", () => {
     const onOpenItem = vi.fn();
-    render(<CalendarView items={[JULY, UNDATED]} onOpenItem={onOpenItem} />);
+    render(<CalendarView items={[JULY, UNDATED]} onOpenItem={onOpenItem} onSetDueDate={vi.fn()} />);
 
     fireEvent.click(within(grid()).getByText("Design the landing page"));
     expect(onOpenItem).toHaveBeenCalledWith("w1");
   });
 
   it("changes the visible month with next: the July item leaves, the August item arrives", () => {
-    render(<CalendarView items={[JULY, AUGUST]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[JULY, AUGUST]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
 
     // July by default: July item present, August absent.
     expect(within(grid()).getByText("Design the landing page")).not.toBeNull();
@@ -110,7 +110,7 @@ describe("CalendarView", () => {
   });
 
   it("keeps an item with no due date off the grid", () => {
-    render(<CalendarView items={[JULY, UNDATED]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[JULY, UNDATED]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
 
     // The undated item never lands on a day cell…
     expect(within(grid()).queryByText("Backlog grooming")).toBeNull();
@@ -120,7 +120,7 @@ describe("CalendarView", () => {
   });
 
   it("marks today's cell (2026-07-15) when viewing the current month", () => {
-    render(<CalendarView items={[JULY]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[JULY]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
 
     const todayCell = screen.getByTestId("calendar-today");
     expect(todayCell.getAttribute("aria-label")).toContain("July 15, 2026");
@@ -132,7 +132,7 @@ describe("CalendarView", () => {
   });
 
   it("renders the EmptyState when there are no items", () => {
-    render(<CalendarView items={[]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
     expect(screen.getByText("No work items yet.")).not.toBeNull();
     expect(screen.queryByRole("grid")).toBeNull();
   });
@@ -142,7 +142,7 @@ describe("CalendarView", () => {
     // the viewer's wall clock reads July 31 while UTC has already crossed into August.
     // The old code (UTC day of the instant) would open August and ring Aug 1.
     vi.setSystemTime(new Date("2026-08-01T04:00:00Z"));
-    render(<CalendarView items={[JULY]} onOpenItem={vi.fn()} />);
+    render(<CalendarView items={[JULY]} onOpenItem={vi.fn()} onSetDueDate={vi.fn()} />);
 
     // The initially-selected month follows the LOCAL day → July 2026, not August.
     expect(screen.getByRole("grid").getAttribute("aria-label")).toContain("July 2026");

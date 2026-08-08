@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
+import {
+  projectWorkItemsApi,
+  type WorkItem,
+  type WorkItemMoveTarget,
+} from "@agentic-toolkit/data/projects";
 import {
   projectsApi,
   type ProjectStatus,
@@ -29,7 +33,7 @@ import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/re
 import { WorkItemEditor } from "./WorkItemEditor";
 import { NewWorkItemDialog } from "./NewWorkItemDialog";
 import { ListView } from "./views/ListView";
-import { BoardView } from "./views/BoardView";
+import { BoardView, type BoardCardDrop } from "./views/BoardView";
 import { TableView } from "./views/TableView";
 import { TimelineView } from "./views/TimelineView";
 import { CalendarView } from "./views/CalendarView";
@@ -45,7 +49,11 @@ import { CalendarView } from "./views/CalendarView";
  *    so List and Board repaint together;
  *  - the status move: `onMove(itemId, statusId)` does the optimistic-with-revert
  *    PATCH on the shared items (lifted from the old ProjectBoardPane), so a Board
- *    move is instantly reflected in the List too.
+ *    move is instantly reflected in the List too;
+ *  - the board DROP: `onCardDrop(itemId, drop)` is the drag's landing — a status
+ *    change (the same `onMove`) and/or a place among the card's siblings (`move`).
+ *    It composes the two rather than adding a third write path, so a drag that only
+ *    crosses columns behaves identically to picking the status from the card's Select.
  *
  * The views are a "Work Items" TOPIC LIST — a level of the one hierarchical stack,
  * published via {@link useStackLevel} — not a tab bar inside the leaf. A nested tab
@@ -166,10 +174,17 @@ export function WorkItemsSurface({
   // "newer move must not be clobbered" guard). The move lives here (not in
   // BoardView) so it mutates the shared items and the List repaints alongside
   // the Board.
+  //
+  // It answers whether the status was PERSISTED, because `onCardDrop` composes it:
+  // a drop's place-in-the-column is a claim about the column it landed in, and if
+  // the status write failed the card is not in that column, so there is no order
+  // left to write. (`true` for a no-op — the card is already where it was asked to
+  // be.) The Select ignores the answer; a callback returning more than its consumer
+  // reads is free, whereas a second copy of this write path would not be.
   const onMove = useCallback(
-    async (itemId: string, statusId: string): Promise<void> => {
+    async (itemId: string, statusId: string): Promise<boolean> => {
       const current = (items ?? []).find((i) => i.id === itemId);
-      if (!current || !statusId || statusId === current.statusId) return;
+      if (!current || !statusId || statusId === current.statusId) return true;
       setMoveError(null);
       setItems((cur) => cur?.map((i) => (i.id === itemId ? { ...i, statusId } : i)) ?? cur);
       try {
@@ -182,6 +197,7 @@ export function WorkItemsSurface({
               cur?.map((i) => (i.id === itemId && i.statusId === statusId ? saved : i)) ?? cur,
           );
         }
+        return true;
       } catch (e) {
         if (mounted.current) {
           setMoveError(e instanceof Error ? e.message : "Failed to move the card.");
@@ -204,6 +220,114 @@ export function WorkItemsSurface({
         } catch {
           // The reconcile GET itself failed — leave the optimistic value in place; a
           // future move or reload() will resync it with the server.
+        }
+        return false;
+      }
+    },
+    [items],
+  );
+
+  // A card was DROPPED on the board: it may have changed status, taken a new place
+  // among its siblings, or both. The two halves are two writes and stay two writes —
+  // status is a field on the card, order is a fractional rank the SERVER mints, and
+  // the ordering endpoint deliberately refuses to re-parent or re-status anything.
+  //
+  // Order of operations: status first (it is the half the user sees immediately, and
+  // the half that repaints optimistically), then the place. A failed status write
+  // abandons the place — the slot the user pointed at was a slot in THAT column, and
+  // it describes nothing in the column the card is still in.
+  //
+  // The rank half is NOT optimistic, and that is deliberate rather than lazy: a rank
+  // is a base-62 fractional index minted by the backend beside the neighbours it read
+  // under a lock, and a second implementation here would be a second source of truth
+  // for the same knowledge — the very thing that makes two clients' concurrent drops
+  // diverge. So the card returns to its old slot for one round-trip and settles into
+  // the new one when the server names its rank. This matches the List view's
+  // ReorderControl, which has always committed-then-reconciled for the same reason.
+  //
+  // Only `rank` is adopted from the response — never the whole row: a status move that
+  // started after this drop must not be clobbered by this reply's older statusId.
+  const onCardDrop = useCallback(
+    async (itemId: string, drop: BoardCardDrop): Promise<void> => {
+      const current = (items ?? []).find((i) => i.id === itemId);
+      if (!current) return;
+      setMoveError(null);
+
+      // Absent means "the column offered no sibling to name" — not "top of the list".
+      // `afterId: null` IS a real target (the top), which is why this tests presence.
+      const target: WorkItemMoveTarget | null =
+        drop.afterId !== undefined
+          ? { afterId: drop.afterId }
+          : drop.beforeId !== undefined
+            ? { beforeId: drop.beforeId }
+            : null;
+
+      // The synthetic "No status" column is not a status anyone can be moved INTO, so a
+      // drop there carries no status write (only a reorder among the orphans).
+      if (drop.statusId !== null && drop.statusId !== current.statusId) {
+        if (!(await onMove(itemId, drop.statusId))) return;
+      }
+      if (target === null) return;
+
+      try {
+        const saved = await projectWorkItemsApi.move(itemId, target);
+        if (mounted.current) {
+          setItems(
+            (cur) => cur?.map((i) => (i.id === itemId ? { ...i, rank: saved.rank } : i)) ?? cur,
+          );
+        }
+      } catch (e) {
+        if (mounted.current) {
+          setMoveError(e instanceof Error ? e.message : "Failed to reorder the card.");
+        }
+      }
+    },
+    [items, onMove],
+  );
+
+  // A chip or bar was DRAGGED onto new dates: the Calendar writes `dueDate` alone (a
+  // day cell is one date), the Timeline writes both edges together (dragging a bar
+  // MOVES the span, so its duration is preserved by construction). One writer for both
+  // because it is one fact — "this item's dates are now these" — and splitting it per
+  // view would put the same PATCH in two places.
+  //
+  // Unlike the board's rank, this one IS optimistic: a date is a value the client
+  // computed in full and the server only stores, so there is no second source of truth
+  // to diverge from. On failure the previous dates are put back from the snapshot taken
+  // before the write, rather than re-fetched — the row we are correcting is the one we
+  // changed, and a GET could answer with a newer edit we would then present as a revert.
+  const onSetDates = useCallback(
+    async (itemId: string, dates: { startDate?: string | null; dueDate?: string | null }) => {
+      const before = (items ?? []).find((i) => i.id === itemId);
+      if (!before) return;
+      setMoveError(null);
+      setItems((cur) => cur?.map((i) => (i.id === itemId ? { ...i, ...dates } : i)) ?? cur);
+      try {
+        const saved = await projectWorkItemsApi.update(itemId, dates);
+        if (mounted.current) {
+          // Only the dates are adopted, for the same reason the board adopts only `rank`:
+          // a status move or an edit that landed while this was in flight lives on the
+          // same row, and replacing the whole row would answer it with older values.
+          setItems(
+            (cur) =>
+              cur?.map((i) =>
+                i.id === itemId
+                  ? { ...i, startDate: saved.startDate, dueDate: saved.dueDate }
+                  : i,
+              ) ?? cur,
+          );
+        }
+      } catch (e) {
+        if (mounted.current) {
+          setMoveError(e instanceof Error ? e.message : "Failed to change the dates.");
+          setItems(
+            (cur) =>
+              cur?.map((i) =>
+                i.id === itemId
+                  ? { ...i, startDate: before.startDate, dueDate: before.dueDate }
+                  : i,
+              ) ?? cur,
+          );
         }
       }
     },
@@ -288,6 +412,7 @@ export function WorkItemsSurface({
             statuses={statuses}
             participants={participants}
             onMove={onMove}
+            onCardDrop={onCardDrop}
           />
         );
       case "table":
@@ -301,13 +426,25 @@ export function WorkItemsSurface({
           />
         );
       case "timeline":
-        return <TimelineView items={items} onOpenItem={onOpenItem} />;
+        return (
+          <TimelineView
+            items={items}
+            onOpenItem={onOpenItem}
+            onSetSpan={(id, startDate, dueDate) => onSetDates(id, { startDate, dueDate })}
+          />
+        );
       case "calendar":
-        return <CalendarView items={items} onOpenItem={onOpenItem} />;
+        return (
+          <CalendarView
+            items={items}
+            onOpenItem={onOpenItem}
+            onSetDueDate={(id, dueDate) => onSetDates(id, { dueDate })}
+          />
+        );
       default:
         return null;
     }
-  }, [view, items, statuses, participants, onOpenItem, onMove, reload]);
+  }, [view, items, statuses, participants, onOpenItem, onMove, onCardDrop, onSetDates, reload]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">

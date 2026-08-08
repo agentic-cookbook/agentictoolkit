@@ -66,7 +66,7 @@ afterEach(cleanup);
 
 describe("TimelineView", () => {
   it("renders one bar per dated item with its title label", () => {
-    render(<TimelineView items={[RANGED, POINT, UNDATED]} onOpenItem={vi.fn()} />);
+    render(<TimelineView items={[RANGED, POINT, UNDATED]} onOpenItem={vi.fn()} onSetSpan={vi.fn()} />);
 
     // Titles render for every item (dated rows + the "No dates" row).
     expect(screen.getByText("Design the landing page")).not.toBeNull();
@@ -80,7 +80,7 @@ describe("TimelineView", () => {
   it("gives an item with a known range a bar with a non-zero width", () => {
     // Two dated items so the range spans 2026-07-01 … 2026-07-31 (30 days) and the
     // ranged bar occupies a real, non-zero fraction of it.
-    render(<TimelineView items={[RANGED, POINT]} onOpenItem={vi.fn()} />);
+    render(<TimelineView items={[RANGED, POINT]} onOpenItem={vi.fn()} onSetSpan={vi.fn()} />);
 
     const bars = screen.getAllByTestId("timeline-bar");
     const ranged = bars.find((b) => b.getAttribute("data-item") === "w1");
@@ -90,7 +90,7 @@ describe("TimelineView", () => {
   });
 
   it("puts an item with no dates in the 'No dates' section, off the axis", () => {
-    render(<TimelineView items={[RANGED, UNDATED]} onOpenItem={vi.fn()} />);
+    render(<TimelineView items={[RANGED, UNDATED]} onOpenItem={vi.fn()} onSetSpan={vi.fn()} />);
 
     // The section header renders and the undated item is NOT drawn as a bar.
     expect(screen.getByText("No dates")).not.toBeNull();
@@ -101,7 +101,7 @@ describe("TimelineView", () => {
   });
 
   it("renders only the 'No dates' section when no item is dated (no axis crash)", () => {
-    render(<TimelineView items={[UNDATED]} onOpenItem={vi.fn()} />);
+    render(<TimelineView items={[UNDATED]} onOpenItem={vi.fn()} onSetSpan={vi.fn()} />);
 
     expect(screen.getByText("No dates")).not.toBeNull();
     expect(screen.getByText("Backlog grooming")).not.toBeNull();
@@ -111,7 +111,7 @@ describe("TimelineView", () => {
 
   it("calls onOpenItem with the item id when a row is clicked", () => {
     const onOpenItem = vi.fn();
-    render(<TimelineView items={[RANGED, UNDATED]} onOpenItem={onOpenItem} />);
+    render(<TimelineView items={[RANGED, UNDATED]} onOpenItem={onOpenItem} onSetSpan={vi.fn()} />);
 
     fireEvent.click(screen.getByText("Design the landing page"));
     expect(onOpenItem).toHaveBeenCalledWith("w1");
@@ -122,14 +122,14 @@ describe("TimelineView", () => {
   });
 
   it("renders the EmptyState when there are no items", () => {
-    render(<TimelineView items={[]} onOpenItem={vi.fn()} />);
+    render(<TimelineView items={[]} onOpenItem={vi.fn()} onSetSpan={vi.fn()} />);
     expect(screen.getByText("No work items yet.")).not.toBeNull();
     // The empty branch is the EmptyState, not the axis.
     expect(screen.queryAllByTestId("timeline-bar")).toHaveLength(0);
   });
 
   it("routes an item with a malformed date to 'No dates' without poisoning other bars", () => {
-    render(<TimelineView items={[RANGED, POINT, MALFORMED]} onOpenItem={vi.fn()} />);
+    render(<TimelineView items={[RANGED, POINT, MALFORMED]} onOpenItem={vi.fn()} onSetSpan={vi.fn()} />);
 
     // The bad-date item is listed under "No dates", never drawn as a bar…
     expect(screen.getByText("No dates")).not.toBeNull();

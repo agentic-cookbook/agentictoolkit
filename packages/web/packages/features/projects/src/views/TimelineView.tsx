@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, type ReactElement } from "react";
+import { useCallback, useMemo, useRef, type ReactElement } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { DragItem, DragSurface, type DragDropEvent } from "@agentic-toolkit/ui/components/dnd";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
-import { MS_PER_DAY, dayIndex, itemLabel, type BadgeVariant } from "../helpers";
+import { MS_PER_DAY, dayDate, dayIndex, itemLabel, type BadgeVariant } from "../helpers";
 
 /**
  * The Timeline VIEW of the work-items surface: a Gantt-LITE — a horizontal date
@@ -20,8 +21,29 @@ import { MS_PER_DAY, dayIndex, itemLabel, type BadgeVariant } from "../helpers";
  * Geometry is expressed as PERCENTAGES of the range via inline `style`
  * (`left`/`width`) — position/size are not colors, so the UI gate allows numeric
  * `style`; the bar's COLOR is an `apt-*` token keyed off the priority Badge tone
- * (never a raw hex). Foundation only: NO drag, NO zoom; the chart scrolls
- * horizontally when it outgrows its column.
+ * (never a raw hex). NO zoom; the chart scrolls horizontally when it outgrows its
+ * column.
+ *
+ * ## Dragging a bar MOVES the span; it does not resize it
+ *
+ * A bar has two edges, so unlike a calendar chip it carries a duration — and the whole
+ * bar is one drag target, so the gesture can only say "the same span, elsewhere". Both
+ * dates shift by the same number of days and the duration is preserved by construction;
+ * an item with only ONE date shifts that one and stays half-dated. Changing a duration
+ * means changing one edge, which is a second gesture on a target this view does not draw
+ * (an edge handle) — the editor's Start/Due fields are where a duration changes today.
+ *
+ * The drag is locked to the X axis (`axis="x"`), because vertical travel across a chart
+ * whose rows are items, not dates, means nothing. The distance is read against the
+ * MEASURED track width rather than the percentages the bars are drawn with: the track is
+ * a `1fr` column inside a horizontal scroller, so its pixel width is a runtime fact, and
+ * rounding `Δx ÷ px-per-day` is what turns a gesture into whole days. A drag too short to
+ * cross a day boundary rounds to 0 and is not a write.
+ *
+ * The bar sits inside the row's `<button>`, so it takes the drag's pointer listeners
+ * ALONE — no `role="button"` nested inside one — and the keyboard path to these dates is
+ * the editor that same button opens. `onSetSpan` is the surface's, like every other
+ * write in this feature; the view stays presentational.
  *
  * Dates that don't map onto the axis are still shown, never dropped:
  *  - an item with only ONE of start/due renders as a point marker at that date;
@@ -84,10 +106,20 @@ function spanOf(item: WorkItem): Span | null {
 export function TimelineView({
   items,
   onOpenItem,
+  onSetSpan,
 }: {
   items: WorkItem[];
   onOpenItem: (id: string) => void;
+  /** A bar was dragged: this item's whole span now starts/ends on these "YYYY-MM-DD"
+   *  dates. A date the item never had stays null — a shift can't invent an endpoint. */
+  onSetSpan: (itemId: string, startDate: string | null, dueDate: string | null) => void;
 }): ReactElement {
+  // The axis header's track, measured at DROP time to convert pixels into days. It is the
+  // same `1fr` grid column every row's track is, so one measurement serves them all — and
+  // reading it on demand means a resized window or a scrolled chart needs no observer to
+  // stay correct.
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
   // Split the items once into dated spans (drawn on the axis) + undated rows.
   const { spans, undated } = useMemo(() => {
     const spans: Span[] = [];
@@ -131,6 +163,37 @@ export function TimelineView({
     return out;
   }, [range]);
 
+  const byId = useMemo(() => new Map(items.map((i) => [i.id, i] as const)), [items]);
+
+  // A finished drag: turn the horizontal distance into whole days and shift every date
+  // the item HAS by that many. The dates are re-derived from the item's own strings
+  // rather than from its `Span`, because a Span normalises a reversed pair and forgets
+  // which endpoint was absent — and both of those are facts this write must preserve.
+  const onDrop = useCallback(
+    ({ itemId, delta }: DragDropEvent) => {
+      const width = trackRef.current?.getBoundingClientRect().width ?? 0;
+      if (!range || width <= 0) return;
+      const days = Math.round((delta.x / width) * range.total);
+      if (days === 0) return; // too short to cross a day boundary — not a write
+      const item = byId.get(itemId);
+      if (!item) return;
+
+      // `dayIndex` returns null for a malformed date. Such an item is never drawn on the
+      // axis (`spanOf` sends it to "No dates"), so this cannot normally fire — but a shift
+      // computed from a null would be NaN, and writing NaN dates is worse than not writing.
+      const shift = (date: string | null): string | null | undefined => {
+        if (date === null) return null;
+        const day = dayIndex(date);
+        return day === null ? undefined : dayDate(day + days);
+      };
+      const startDate = shift(item.startDate);
+      const dueDate = shift(item.dueDate);
+      if (startDate === undefined || dueDate === undefined) return;
+      onSetSpan(itemId, startDate, dueDate);
+    },
+    [byId, onSetSpan, range],
+  );
+
   if (items.length === 0) {
     return (
       <EmptyState
@@ -145,97 +208,131 @@ export function TimelineView({
   const grid = "grid grid-cols-[12rem_minmax(0,1fr)] items-center gap-3";
 
   return (
-    <div className="min-h-0 min-w-0 flex-1 overflow-x-auto">
-      <div className="min-w-[48rem] space-y-1">
-        {range && (
-          <>
-            <div className={`${grid} border-b border-apt-border pb-1`}>
-              <span className="text-xs font-medium text-apt-text-dim">Timeline</span>
-              <div className="relative h-5" aria-hidden>
-                {ticks.map((t) => (
-                  <span
-                    key={t.day}
-                    className="absolute top-0 whitespace-nowrap text-[0.65rem] text-apt-text-dim"
-                    style={{ left: `${t.leftPct}%` }}
-                  >
-                    {dayLabel(t.day)}
-                  </span>
-                ))}
+    <DragSurface
+      onDrop={onDrop}
+      axis="x"
+      describeItem={(id) => byId.get(id)?.title ?? id}
+    >
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-auto">
+        <div className="min-w-[48rem] space-y-1">
+          {range && (
+            <>
+              <div className={`${grid} border-b border-apt-border pb-1`}>
+                <span className="text-xs font-medium text-apt-text-dim">Timeline</span>
+                <div className="relative h-5" ref={trackRef} aria-hidden>
+                  {ticks.map((t) => (
+                    <span
+                      key={t.day}
+                      className="absolute top-0 whitespace-nowrap text-[0.65rem] text-apt-text-dim"
+                      style={{ left: `${t.leftPct}%` }}
+                    >
+                      {dayLabel(t.day)}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {spans.map((sp) => {
-              const { variant, label } = priorityMeta(sp.item.priority);
-              const tone = BAR_TONE[variant];
-              const rangeText = sp.point
-                ? dayLabel(sp.startDay)
-                : `${dayLabel(sp.startDay)} – ${dayLabel(sp.endDay)}`;
-              const leftPct = ((sp.startDay - range.min) / range.total) * 100;
-              // A one-day bar would collapse to 0% — floor the width so it stays
-              // visible; points skip this and draw a fixed marker instead.
-              const widthPct = Math.max(
-                ((sp.endDay - sp.startDay) / range.total) * 100,
-                1.5,
-              );
-              // The width floor can push a short bar's right edge past 100% —
-              // clamp its left so left + width never overhangs the range.
-              const barLeftPct = Math.max(Math.min(leftPct, 100 - widthPct), 0);
-              return (
+              {spans.map((sp) => {
+                const { variant, label } = priorityMeta(sp.item.priority);
+                const tone = BAR_TONE[variant];
+                const rangeText = sp.point
+                  ? dayLabel(sp.startDay)
+                  : `${dayLabel(sp.startDay)} – ${dayLabel(sp.endDay)}`;
+                const leftPct = ((sp.startDay - range.min) / range.total) * 100;
+                // A one-day bar would collapse to 0% — floor the width so it stays
+                // visible; points skip this and draw a fixed marker instead.
+                const widthPct = Math.max(
+                  ((sp.endDay - sp.startDay) / range.total) * 100,
+                  1.5,
+                );
+                // The width floor can push a short bar's right edge past 100% —
+                // clamp its left so left + width never overhangs the range.
+                const barLeftPct = Math.max(Math.min(leftPct, 100 - widthPct), 0);
+                return (
+                  <button
+                    key={sp.item.id}
+                    type="button"
+                    onClick={() => onOpenItem(sp.item.id)}
+                    aria-label={`${itemLabel(sp.item)} — ${label} priority, ${rangeText}`}
+                    className={`${grid} w-full rounded py-1 text-left hover:bg-apt-surface-2`}
+                  >
+                    <span className="truncate text-sm text-apt-text" title={itemLabel(sp.item)}>
+                      {sp.item.title}
+                    </span>
+                    <span className="relative block h-5">
+                      {/* Two things about the style here, both load-bearing.
+                          Only `transform` and `zIndex` are taken from the drag state, never
+                          the whole object: it also carries `position: relative` while
+                          dragging, and these marks are positioned ABSOLUTELY against the
+                          track — adopting it wholesale would drop every bar to the left edge
+                          the instant it was picked up. And the mark's OWN centering (and the
+                          point's 45° turn) moves out of Tailwind into that same inline
+                          transform, because a `style.transform` REPLACES a class one: leave
+                          them as classes and a picked-up bar silently un-centres itself. */}
+                      <DragItem id={sp.item.id}>
+                        {({ setNodeRef, style, handleProps, dragging }) => {
+                          const grab = dragging ? "cursor-grabbing" : "cursor-grab";
+                          const drag = style.transform ? `${style.transform} ` : "";
+                          return sp.point ? (
+                            <span
+                              ref={setNodeRef}
+                              data-testid="timeline-bar"
+                              data-item={sp.item.id}
+                              title={rangeText}
+                              {...handleProps}
+                              className={`absolute top-1/2 size-3 touch-none rounded-sm border ${tone} ${grab}`}
+                              style={{
+                                left: `${leftPct}%`,
+                                transform: `${drag}translate(-50%, -50%) rotate(45deg)`,
+                                zIndex: style.zIndex,
+                              }}
+                            />
+                          ) : (
+                            <span
+                              ref={setNodeRef}
+                              data-testid="timeline-bar"
+                              data-item={sp.item.id}
+                              title={rangeText}
+                              {...handleProps}
+                              className={`absolute top-1/2 h-3 touch-none rounded border ${tone} ${grab}`}
+                              style={{
+                                left: `${barLeftPct}%`,
+                                width: `${widthPct}%`,
+                                transform: `${drag}translateY(-50%)`,
+                                zIndex: style.zIndex,
+                              }}
+                            />
+                          );
+                        }}
+                      </DragItem>
+                    </span>
+                  </button>
+                );
+              })}
+            </>
+          )}
+
+          {undated.length > 0 && (
+            <div className="mt-4 space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-apt-text-dim">
+                No dates
+              </p>
+              {undated.map((it) => (
                 <button
-                  key={sp.item.id}
+                  key={it.id}
                   type="button"
-                  onClick={() => onOpenItem(sp.item.id)}
-                  aria-label={`${itemLabel(sp.item)} — ${label} priority, ${rangeText}`}
-                  className={`${grid} w-full rounded py-1 text-left hover:bg-apt-surface-2`}
+                  onClick={() => onOpenItem(it.id)}
+                  aria-label={`${itemLabel(it)} — unscheduled`}
+                  className="flex w-full items-center gap-2 rounded py-1 text-left hover:bg-apt-surface-2"
                 >
-                  <span className="truncate text-sm text-apt-text" title={itemLabel(sp.item)}>
-                    {sp.item.title}
-                  </span>
-                  <span className="relative block h-5">
-                    {sp.point ? (
-                      <span
-                        data-testid="timeline-bar"
-                        data-item={sp.item.id}
-                        title={rangeText}
-                        className={`absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-sm border ${tone}`}
-                        style={{ left: `${leftPct}%` }}
-                      />
-                    ) : (
-                      <span
-                        data-testid="timeline-bar"
-                        data-item={sp.item.id}
-                        title={rangeText}
-                        className={`absolute top-1/2 h-3 -translate-y-1/2 rounded border ${tone}`}
-                        style={{ left: `${barLeftPct}%`, width: `${widthPct}%` }}
-                      />
-                    )}
-                  </span>
+                  <span className="truncate text-sm text-apt-text">{it.title}</span>
+                  <Badge variant="neutral">Unscheduled</Badge>
                 </button>
-              );
-            })}
-          </>
-        )}
-
-        {undated.length > 0 && (
-          <div className="mt-4 space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-apt-text-dim">
-              No dates
-            </p>
-            {undated.map((it) => (
-              <button
-                key={it.id}
-                type="button"
-                onClick={() => onOpenItem(it.id)}
-                aria-label={`${itemLabel(it)} — unscheduled`}
-                className="flex w-full items-center gap-2 rounded py-1 text-left hover:bg-apt-surface-2"
-              >
-                <span className="truncate text-sm text-apt-text">{it.title}</span>
-                <Badge variant="neutral">Unscheduled</Badge>
-              </button>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </DragSurface>
   );
 }

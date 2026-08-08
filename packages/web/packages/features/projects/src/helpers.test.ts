@@ -3,7 +3,7 @@
 // sorted as text it misorders, shown as text-only it disappears from the dense views.
 import { describe, expect, it } from "vitest";
 
-import { actionPhrase, itemKeyNumber, itemLabel, relationLabel } from "./helpers";
+import { actionPhrase, dayDate, dayIndex, itemKeyNumber, itemLabel, relationLabel } from "./helpers";
 
 describe("itemLabel", () => {
   it("names an item by key and title", () => {
@@ -17,6 +17,31 @@ describe("itemLabel", () => {
     expect(itemLabel({ itemKey: "", title: "Fix the login redirect" })).toBe(
       "Fix the login redirect",
     );
+  });
+});
+
+// `dayDate` is the inverse `dayIndex` never had, and the drag surfaces depend on it being
+// EXACTLY that: Calendar drops a chip on a day index and has to write the date string back,
+// Timeline shifts an index by N days and does the same. A round trip that lands one day off
+// is invisible in the UI — the chip appears where it was dropped — and wrong in the database.
+describe("dayDate", () => {
+  it("round-trips every date through its day index", () => {
+    for (const date of ["2026-01-01", "2026-02-28", "2026-07-15", "2026-12-31", "2024-02-29"]) {
+      expect(dayDate(dayIndex(date)!)).toBe(date);
+    }
+  });
+
+  it("shifts across a month and a year boundary", () => {
+    expect(dayDate(dayIndex("2026-07-31")! + 1)).toBe("2026-08-01");
+    expect(dayDate(dayIndex("2026-12-31")! + 1)).toBe("2027-01-01");
+    expect(dayDate(dayIndex("2026-03-01")! - 1)).toBe("2026-02-28");
+  });
+
+  it("reads the date back from UTC, not the local calendar", () => {
+    // Day 0 is the UTC epoch. Read with LOCAL parts it is 1969-12-31 for everyone west of
+    // Greenwich — which is what makes this assertion a timezone check and not a tautology,
+    // whatever TZ the runner happens to be in.
+    expect(dayDate(0)).toBe("1970-01-01");
   });
 });
 

@@ -10,6 +10,7 @@ import {
   inlineCommitDeletingClass,
 } from "@agentic-toolkit/ui/components/inline-commit-control";
 import { ReorderControl } from "@agentic-toolkit/ui/components/reorder-control";
+import { DragGrip, type SortableDrop } from "@agentic-toolkit/ui/components/dnd";
 import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
 import { useInlineDrafts } from "@agentic-toolkit/ui/hooks/useInlineDrafts";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -46,10 +47,19 @@ import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
  *    re-ordering the rows by any column, which would scatter a hierarchy the first time anyone
  *    used it. Board, Calendar and Timeline place an item by a field, not by a position in a list,
  *    so there is nowhere for a child to be "under" its parent at all.
- *  - **REORDERING.** ↑/↓ on each row move a card among its SIBLINGS — the same reason as the
- *    tree: this is the only view whose order is the board order rather than a sort over some
- *    column, so it is the only one where moving a row means anything durable. A move names the
- *    neighbour it should land beside, so the server rewrites one card's `rank` and nobody else's.
+ *  - **REORDERING**, by grip or by ↑/↓ — the same reason as the tree: this is the only view whose
+ *    order is the board order rather than a sort over some column, so it is the only one where
+ *    moving a row means anything durable. Either way the move names the NEIGHBOUR it should land
+ *    beside, so the server rewrites one card's `rank` and nobody else's.
+ *
+ *    The two are not redundant. ↑/↓ move a card one place among its SIBLINGS and can never change
+ *    its parent — a small, exact, keyboard-reachable act. The grip drags a row anywhere in the
+ *    visible list, which in a TREE also answers "whose child is it now": a row dropped into the
+ *    gap directly under an expanded parent becomes that parent's first child, and every other gap
+ *    makes it a sibling of the row above (or of the row below, at the very top). That gap under a
+ *    parent's LAST child is genuinely ambiguous — sibling of the child, or sibling of the parent? —
+ *    and it resolves to the child, because that is the row the drop was adjacent to. Re-parenting
+ *    to something further away is the editor's Parent field, which says so in words.
  *
 
  * Selecting a row shows its whole record below — including the fields that are NOT columns
@@ -204,6 +214,78 @@ export function ListView({
         w.id,
         direction === "up" ? { beforeId: beside } : { afterId: beside },
       );
+      await onChanged();
+    });
+  }
+
+  const byId = useMemo(() => new Map(items.map((w) => [w.id, w] as const)), [items]);
+
+  // Every item's DESCENDANTS, for the one thing a drag can express that the arrows cannot: a
+  // re-parent. Dropping a row inside its own subtree would make it its own ancestor, and the tree
+  // it belongs to would vanish from the view — so the drop is refused here rather than sent for
+  // the backend to reject, because there is nothing to tell the user that they don't already see.
+  const descendants = useMemo(() => {
+    const children = new Map<string, string[]>();
+    for (const w of items) {
+      if (w.parentId === null) continue;
+      const kids = children.get(w.parentId);
+      if (kids) kids.push(w.id);
+      else children.set(w.parentId, [w.id]);
+    }
+    const under = new Map<string, Set<string>>();
+    const walk = (id: string): Set<string> => {
+      const cached = under.get(id);
+      if (cached) return cached;
+      const all = new Set<string>();
+      under.set(id, all); // seeded BEFORE recursing, so a cycle in the data cannot spin forever
+      for (const kid of children.get(id) ?? []) {
+        all.add(kid);
+        for (const deep of walk(kid)) all.add(deep);
+      }
+      return all;
+    };
+    for (const w of items) walk(w.id);
+    return under;
+  }, [items]);
+
+  // A row was DRAGGED. The drop names the two VISIBLE rows it landed between, which is a fact
+  // about the flattened tree — this turns it into the two facts the API takes: whose child the row
+  // now is, and which sibling it lands beside.
+  function dropRow(drop: SortableDrop) {
+    const moved = byId.get(drop.itemId);
+    if (!moved) return;
+    const prev = drop.afterId !== null ? byId.get(drop.afterId) ?? null : null;
+    const next = drop.beforeId !== null ? byId.get(drop.beforeId) ?? null : null;
+
+    let parentId: string | null;
+    let target: { afterId?: string | null; beforeId?: string | null };
+    if (prev && next && next.parentId === prev.id) {
+      // The gap between a parent and its first child is the one place on screen that means
+      // "inside": anywhere else, the row above is the row you are joining.
+      parentId = prev.id;
+      target = { beforeId: next.id };
+    } else if (prev) {
+      parentId = prev.parentId;
+      target = { afterId: prev.id };
+    } else if (next) {
+      parentId = next.parentId;
+      target = { beforeId: next.id };
+    } else {
+      return; // nothing above and nothing below: a list of one, with nowhere to move to
+    }
+
+    if (parentId !== null && (parentId === moved.id || descendants.get(moved.id)?.has(parentId))) {
+      return; // would make the row its own ancestor
+    }
+
+    void rows.runCommit(moved.id, async () => {
+      // Two requests, in this order, because they are two different claims: `parentId` is a field
+      // on the card, and the ordering endpoint deliberately refuses to re-parent anything — its
+      // neighbours must ALREADY be siblings, which after this PATCH they are.
+      if (parentId !== moved.parentId) {
+        await projectWorkItemsApi.update(moved.id, { parentId });
+      }
+      await projectWorkItemsApi.move(moved.id, target);
       await onChanged();
     });
   }
@@ -364,7 +446,8 @@ export function ListView({
       // Reorder — dropped entirely while FILTERING, because what is on screen is then a selection
       // rather than the list. "Up" would still move the card above its real sibling, but that
       // sibling may be filtered out, so the row would sit exactly where it was and read as a
-      // button that does nothing.
+      // button that does nothing. The grip goes in the SAME cell, not a column of its own: one act
+      // gets one place on the row, and the grip is the pointer half of what the arrows do by key.
       ...(filtering
         ? []
         : [
@@ -372,18 +455,21 @@ export function ListView({
               key: "order",
               header: "",
               align: "end",
-              // Fixed like the commit cell beside it: two fixed-size icons, nothing to size to.
-              width: "5rem",
+              // Fixed like the commit cell beside it: three fixed-size icons, nothing to size to.
+              width: "6.5rem",
               resizable: false,
-              render: (w: WorkItem) => (
-                <ReorderControl
-                  canMoveUp={neighbours.get(w.id)?.prev !== undefined}
-                  canMoveDown={neighbours.get(w.id)?.next !== undefined}
-                  onMoveUp={() => moveRow(w, "up")}
-                  onMoveDown={() => moveRow(w, "down")}
-                  busy={rows.isBusy(w.id)}
-                  subject={`work item ${w.title}`}
-                />
+              render: (w: WorkItem, ctx) => (
+                <div className="flex items-center justify-end gap-1">
+                  <DragGrip {...ctx.dragHandleProps} subject={`work item ${w.title}`} />
+                  <ReorderControl
+                    canMoveUp={neighbours.get(w.id)?.prev !== undefined}
+                    canMoveDown={neighbours.get(w.id)?.next !== undefined}
+                    onMoveUp={() => moveRow(w, "up")}
+                    onMoveDown={() => moveRow(w, "down")}
+                    busy={rows.isBusy(w.id)}
+                    subject={`work item ${w.title}`}
+                  />
+                </div>
               ),
             } satisfies DataTableColumn<WorkItem>,
           ]),
@@ -451,6 +537,19 @@ export function ListView({
         // Content-sized columns the user can drag; remembered per project.
         autoSizeColumns
         columnWidthsKey={`work-items:${projectId}`}
+        // Withheld while FILTERING, for the reason the ↑/↓ column is: the rows on screen are a
+        // selection, and the gap between two of them is not a gap in the list.
+        reorder={
+          filtering
+            ? undefined
+            : {
+                onDrop: dropRow,
+                describeRow: (id) => byId.get(id)?.title ?? id,
+                // A row already committing something must not also be moved — the two writes
+                // would race on the same card, and the grip would look live while doing nothing.
+                canDrag: (id) => !rows.isBusy(id),
+              }
+        }
         storageKey={`work-items-split:${projectId}`}
         renderDetail={(w) => (
           <WorkItemDetail

@@ -51,6 +51,19 @@ export function dayIndex(date: string): number | null {
   return Math.floor(Date.UTC(y, mo - 1, d) / MS_PER_DAY);
 }
 
+/** The inverse of {@link dayIndex}: a calendar-day index → the "YYYY-MM-DD" a date field stores.
+ *
+ *  Read back from the UTC parts, because the index IS `Date.UTC(...)` of the validated calendar
+ *  parts. Formatting it locally instead would hand anyone west of Greenwich the PREVIOUS day —
+ *  drop a card on the 3rd and it comes back due the 2nd — which is the kind of defect that only
+ *  shows up on someone else's machine. */
+export function dayDate(day: number): string {
+  const d = new Date(day * MS_PER_DAY);
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const date = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${month}-${date}`;
+}
+
 /** The viewer's LOCAL calendar day as a day index, matching what {@link dayIndex} returns for a
  *  date-only string. Read from the wall-clock parts — NOT `Date.now()`'s UTC instant — so a
  *  viewer whose local day differs from UTC near a day boundary gets their own day, which is what
