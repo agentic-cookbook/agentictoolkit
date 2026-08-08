@@ -229,6 +229,10 @@ describe('LISTED_SITES (switcher list)', () => {
       'personabuilder',
       'research',
       'consultants',
+      'orgs',
+      'notebook',
+      'integrations',
+      'gamification',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
@@ -469,6 +473,10 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
       'personabuilder',
       'research',
       'consultants',
+      'orgs',
+      'notebook',
+      'integrations',
+      'gamification',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',

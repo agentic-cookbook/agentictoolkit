@@ -52,6 +52,10 @@ export type SiteId =
   | 'personabuilder'
   | 'research'
   | 'consultants'
+  | 'orgs'
+  | 'notebook'
+  | 'integrations'
+  | 'gamification'
   // </gen:union>
   | 'learntruefacts'
   | 'narratives'
@@ -197,6 +201,10 @@ export const SITES: SiteDef[] = [
   { id: 'personabuilder', label: 'Persona Builder', fullLabel: 'Agentic Persona Builder', description: 'Configure personas', prodHost: 'agenticpersonabuilder.com', hasStaging: true, hasTesting: true, hasHome: true },
   { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true },
   { id: 'consultants', label: 'Consultants', fullLabel: 'Agentic Development Consultants', description: 'Find consultants', prodHost: 'agenticdeveloperconsultants.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'orgs', label: 'Organizations', fullLabel: 'Agentic Developer Organizations', description: 'Manage organizations', prodHost: 'agenticdeveloperorgs.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'notebook', label: 'Notebook', fullLabel: 'Agentic Developer Notebook', description: 'Notes & notebooks', prodHost: 'agenticdevelopernotebook.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'integrations', label: 'Integrations', fullLabel: 'Agentic Developer Integrations', description: 'Manage integrations', prodHost: 'agenticdeveloperintegrations.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'gamification', label: 'Gamification', fullLabel: 'Agentic Developer Gamification', description: 'Product gamification', prodHost: 'agenticdevelopergamification.com', hasStaging: true, hasTesting: true, hasHome: true },
   // </gen:sites>
   // --- consulting: FOLDED into the studio brand (brand-story-plan portfolio
   // pruning) — stays registered (its own header resolves, /details keep serving)

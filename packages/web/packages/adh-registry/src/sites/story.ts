@@ -101,6 +101,15 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   personabuilder: { tier: 'chapter', pillar: 'identity', funnelStage: 'build', nextStep: 'personaregistry' },
   research: { tier: 'chapter', pillar: 'build', funnelStage: 'learn', nextStep: 'knowledgebases' },
   consultants: { tier: 'chapter', pillar: 'build', funnelStage: 'adopt', nextStep: 'fishlamp' },
+  // Organizations is the account-shape chapter: who your org is, who is in it, how it
+  // is configured. Its teams topic is what hands the story to teambuilder.
+  orgs: { tier: 'chapter', pillar: 'backend', funnelStage: 'adopt', nextStep: 'teambuilder' },
+  // Notebook sits beside research — the same markdown surface, kept private. It hands
+  // off to research, which is where a note becomes something you publish.
+  notebook: { tier: 'chapter', pillar: 'build', funnelStage: 'learn', nextStep: 'research' },
+  integrations: { tier: 'chapter', pillar: 'backend', funnelStage: 'build', nextStep: 'hub' },
+  // Gamification is a property OF a product, so its story continues into products.
+  gamification: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'products' },
   // --- studio & consulting. FishLamp Design is the studio the family sits under
   // (it replaced Agentic Developer Studio, whose site is gone); consulting points
   // at it as the absorbing site. fishlampdesign is the same site on its second
@@ -145,7 +154,8 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   recipes: 'research',
   research: 'authentication',
   authentication: 'knowledgebases',
-  knowledgebases: 'personabuilder',
+  knowledgebases: 'notebook',
+  notebook: 'personabuilder',
   personabuilder: 'personas',
   personas: 'projects',
   projects: 'sites',
@@ -161,8 +171,11 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   dashboards: 'devices',
   devices: 'domains',
   domains: 'ecosystems',
-  ecosystems: 'notifications',
-  notifications: 'products',
+  ecosystems: 'gamification',
+  gamification: 'integrations',
+  integrations: 'notifications',
+  notifications: 'orgs',
+  orgs: 'products',
   products: 'registries',
   registries: 'community',
   community: 'consultants',
