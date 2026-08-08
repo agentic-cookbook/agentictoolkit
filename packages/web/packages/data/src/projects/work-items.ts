@@ -55,6 +55,13 @@ export interface WorkItem {
   labels: string[];
   /** a parent work item in the same project. */
   parentId: string | null;
+  /** the time-box this card is committed to; null is the BACKLOG — a destination, not a gap.
+   *  The box belongs to the project's WORKSPACE, so it is not addressable under the project:
+   *  read the candidates from {@link projectIterationsApi.list}. */
+  iterationId: string | null;
+  /** the card's size in the units its project's `estimateScale` names; null is UN-estimated,
+   *  which is distinct from a card estimated at 0. */
+  estimate: number | null;
   /** where the card sits among its siblings, as an OPAQUE key: compare two with `<`, never
    *  subtract. Ascending is board order. Server-set — reorder with {@link projectWorkItemsApi.move}. */
   rank: string;
@@ -77,6 +84,8 @@ export function toWorkItem(r: WorkItemRow): WorkItem {
     dueDate: r.dueDate ?? null,
     labels: r.labels,
     parentId: r.parentId ?? null,
+    iterationId: r.iterationId ?? null,
+    estimate: r.estimate ?? null,
     rank: r.rank,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -211,6 +220,8 @@ export const projectWorkItemsApi = {
       dueDate?: string;
       labels?: string[];
       parentId?: string;
+      iterationId?: string;
+      estimate?: number;
     },
   ): Promise<WorkItem> {
     const body: WorkItemCreateBody = {
@@ -225,6 +236,8 @@ export const projectWorkItemsApi = {
         dueDate: input.dueDate,
         labels: input.labels,
         parentId: input.parentId,
+        iterationId: input.iterationId,
+        estimate: input.estimate,
       }),
     };
     return toWorkItem(
@@ -250,6 +263,10 @@ export const projectWorkItemsApi = {
       labels?: string[];
       /** null detaches the parent. */
       parentId?: string | null;
+      /** null sends the card back to the backlog. */
+      iterationId?: string | null;
+      /** null un-estimates the card — not the same as `0`. */
+      estimate?: number | null;
     },
   ): Promise<WorkItem> {
     // `compact` drops only undefined and KEEPS explicit null, so a clear

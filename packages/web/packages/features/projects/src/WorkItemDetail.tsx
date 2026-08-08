@@ -3,12 +3,25 @@
 import type { ReactElement, ReactNode } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
-import type { ProjectParticipant, ProjectStatus, WorkItem } from "@agentic-toolkit/data/projects";
+import type {
+  EstimateScale,
+  Iteration,
+  ProjectParticipant,
+  ProjectStatus,
+  WorkItem,
+} from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "./WorkItemEditor";
 import { ItemKey } from "./ItemKey";
 import { WorkItemComments } from "./WorkItemComments";
 import { WorkItemRelations } from "./WorkItemRelations";
-import { assigneeLabel, itemLabel, statusMeta } from "./helpers";
+import {
+  assigneeLabel,
+  estimateLabel,
+  iterationDateRange,
+  iterationStateMeta,
+  itemLabel,
+  statusMeta,
+} from "./helpers";
 
 /**
  * The full record of ONE work item — the details pane of the list-with-details List view.
@@ -45,16 +58,27 @@ export function WorkItemDetail({
   statuses,
   participants,
   workItems,
+  iterations,
+  estimateScale,
 }: {
   item: WorkItem;
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
   /** The project's items, so a parent id resolves to its title rather than an opaque id. */
   workItems: WorkItem[];
+  /** The WORKSPACE's time-boxes, so the card's iteration id resolves to its name and dates. */
+  iterations: Iteration[];
+  /** The owning project's scale, which is what an estimate's digits MEAN (`2` is "M" on a
+   *  t-shirt board). No scale, no row — see below. */
+  estimateScale: EstimateScale;
 }): ReactElement {
   const status = statusMeta(item.statusId, statuses);
   const priority = priorityMeta(item.priority);
   const parent = item.parentId ? workItems.find((w) => w.id === item.parentId) : null;
+  const iteration = item.iterationId
+    ? (iterations.find((i) => i.id === item.iterationId) ?? null)
+    : null;
+  const estimate = estimateLabel(item.estimate, estimateScale);
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -88,6 +112,30 @@ export function WorkItemDetail({
       <Row label="Priority">
         <Badge variant={priority.variant}>{priority.label}</Badge>
       </Row>
+      {/* "Backlog" rather than a dash: a card with no iteration is not missing a value, it is in
+          the one place the board puts work nobody has committed to yet. An id that resolves to
+          nothing falls back to the id, the same way Parent does — better an opaque reference than
+          a silent claim that the card is uncommitted. */}
+      <Row label="Iteration">
+        {iteration ? (
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{iteration.name}</span>
+            <Badge variant={iterationStateMeta(iteration.state).variant}>
+              {iterationStateMeta(iteration.state).label}
+            </Badge>
+            <span className="text-apt-text-muted">
+              {iterationDateRange(iteration.startDate, iteration.endDate)}
+            </span>
+          </span>
+        ) : item.iterationId ? (
+          item.iterationId
+        ) : (
+          <span className="text-apt-text-dim">Backlog</span>
+        )}
+      </Row>
+      {/* Omitted entirely on a project that does not estimate — an "Estimate —" row on such a
+          board advertises a field that has no picker anywhere and can never be filled in. */}
+      {estimateScale !== "none" ? <Row label="Estimate">{orDash(estimate)}</Row> : null}
       <Row label="Start">{orDash(item.startDate)}</Row>
       <Row label="Due">{orDash(item.dueDate)}</Row>
       <Row label="Labels">

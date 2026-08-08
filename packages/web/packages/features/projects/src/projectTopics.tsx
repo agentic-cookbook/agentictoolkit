@@ -1,11 +1,12 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Activity, FileStack, FolderKanban, KeyRound, ListTodo } from "lucide-react";
+import { Activity, CalendarRange, FileStack, FolderKanban, KeyRound, ListTodo } from "lucide-react";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import { WorkItemsSurface } from "./WorkItemsSurface";
+import { IterationsPane } from "./IterationsPane";
 import { ProjectContentsPane } from "./ProjectContentsPane";
 import { ProjectActivityPane } from "./ProjectActivityPane";
 
@@ -86,7 +87,22 @@ const WORK_ITEMS: ProjectTopicDef = {
   icon: <ListTodo size={16} aria-hidden />,
   description: "The work — list, board, table, timeline, and calendar views.",
   render: (ctx) => (
-    <WorkItemsSurface projectId={ctx.projectId} title={ctx.title} leaf={ctx.leaf} />
+    <WorkItemsSurface
+      projectId={ctx.projectId}
+      title={ctx.title}
+      leaf={ctx.leaf}
+      workspaceSlug={ctx.workspaceSlug}
+    />
+  ),
+};
+
+const ITERATIONS: ProjectTopicDef = {
+  id: "iterations",
+  label: "Iterations",
+  icon: <CalendarRange size={16} aria-hidden />,
+  description: "The time-boxes the workspace runs its work in — sprints and cycles.",
+  render: (ctx) => (
+    <IterationsPane title={ctx.title} leaf={ctx.leaf} workspaceSlug={ctx.workspaceSlug} />
   ),
 };
 
@@ -132,17 +148,26 @@ const ACCESS: ProjectTopicDef = {
  * The topics a project publishes, in rail order.
  *
  * The order is a sentence about the project: what it IS (Overview), what it is DOING (Work
- * Items), what it HOLDS (Contents), what HAPPENED (Activity), and who may look (Access).
+ * Items), WHEN it is doing it (Iterations), what it HOLDS (Contents), what HAPPENED (Activity),
+ * and who may look (Access). Iterations sits directly under Work Items because the two are read
+ * together — a cycle is a lens on the same cards — and above Contents because both are about the
+ * work rather than the material around it.
  *
  * Access is present only when the host knows the owning workspace. Omitting the topic — rather
  * than listing it and rendering an empty pane — is the honest reading of "this surface cannot
  * show item-scoped roles": a rail row that opens onto nothing is a bug report waiting to be
  * filed. In practice every current host supplies one, so this is about what the next host sees.
+ *
+ * Iterations is listed UNCONDITIONALLY even though its boxes belong to the workspace rather than
+ * the project. Without a `workspaceSlug` the API answers from the caller's own reach — the same
+ * fallback the project list itself uses — so the pane still has something true to show, which is
+ * the test Access fails and this passes.
  */
 export function projectTopics(opts: { workspaceSlug?: string }): ProjectTopicDef[] {
   return [
     OVERVIEW,
     WORK_ITEMS,
+    ITERATIONS,
     CONTENTS,
     ACTIVITY,
     ...(opts.workspaceSlug ? [ACCESS] : []),

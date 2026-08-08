@@ -29,7 +29,12 @@ vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
   projectsApi: {
     statuses: { list: vi.fn() },
     participants: { list: vi.fn() },
+    labels: vi.fn(),
+    // The surface reads the project's OWN record for one field — its estimate scale.
+    get: vi.fn(),
   },
+  // The workspace's time-boxes, which the editor's iteration picker offers.
+  projectIterationsApi: { list: vi.fn() },
   projectActivityApi: {
     workItemActivity: vi.fn().mockResolvedValue({ rows: [], nextBefore: null }),
   },
@@ -50,7 +55,10 @@ vi.mock("@agentic-toolkit/data/reactions", async (importOriginal) => ({
 import { WorkItemsSurface } from "./WorkItemsSurface";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
+  projectIterationsApi,
   projectsApi,
+  type Iteration,
+  type Project,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
@@ -62,6 +70,9 @@ const update = vi.mocked(projectWorkItemsApi.update);
 const get = vi.mocked(projectWorkItemsApi.get);
 const statusesList = vi.mocked(projectsApi.statuses.list);
 const participantsList = vi.mocked(projectsApi.participants.list);
+const labelsList = vi.mocked(projectsApi.labels);
+const projectGet = vi.mocked(projectsApi.get);
+const iterationsList = vi.mocked(projectIterationsApi.list);
 
 function status(over: Partial<ProjectStatus>): ProjectStatus {
   return {
@@ -91,6 +102,8 @@ function item(over: Partial<WorkItem>): WorkItem {
     dueDate: null,
     labels: [],
     parentId: null,
+    iterationId: null,
+    estimate: null,
     rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
     updatedAt: "2026-07-03T00:00:00Z",
@@ -101,6 +114,36 @@ function item(over: Partial<WorkItem>): WorkItem {
 const TODO_COL = status({ id: "s1", key: "todo", label: "To do", category: "todo", position: 0 });
 const DOING = status({ id: "s2", key: "doing", label: "In progress", category: "in_progress", position: 1 });
 const DONE = status({ id: "s3", key: "done", label: "Done", category: "done", position: 2 });
+
+/** The project's own record. Only `estimateScale` is read here — the rest is what a Project is. */
+const PROJECT: Project = {
+  id: "p1",
+  name: "Website",
+  description: "",
+  status: "active",
+  color: "#007AFF",
+  keyPrefix: "",
+  ecosystemId: "eco-1",
+  archivedAt: null,
+  estimateScale: "none",
+  createdAt: "2026-07-03T00:00:00Z",
+  updatedAt: "2026-07-03T00:00:00Z",
+};
+
+/** A workspace cycle. `state` is DERIVED by the backend from the dates, so a fixture states it. */
+const CYCLE: Iteration = {
+  id: "it1",
+  name: "Sprint 7",
+  description: "",
+  startDate: "2026-07-01",
+  endDate: "2026-07-14",
+  state: "active",
+  ownerKind: "customer",
+  ownerId: "cust-1",
+  ecosystemId: "eco-1",
+  createdAt: "2026-06-30T00:00:00Z",
+  updatedAt: "2026-06-30T00:00:00Z",
+};
 
 const PARTICIPANT: ProjectParticipant = {
   id: "pp1",
@@ -129,6 +172,9 @@ beforeEach(() => {
   listForProject.mockResolvedValue([structuredClone(W1), structuredClone(W2)]);
   statusesList.mockResolvedValue([DONE, TODO_COL, DOING].map((s) => structuredClone(s))); // unsorted
   participantsList.mockResolvedValue([structuredClone(PARTICIPANT)]);
+  labelsList.mockResolvedValue([]);
+  projectGet.mockResolvedValue(structuredClone(PROJECT));
+  iterationsList.mockResolvedValue([]);
   create.mockImplementation((_projectId, input) =>
     Promise.resolve({ ...structuredClone(W1), ...input, id: "w3" } as WorkItem),
   );
@@ -163,9 +209,12 @@ const listLoaded = () => screen.findByDisplayValue("Design the landing page");
 function Harness({
   onSelectSpy,
   view = "list",
+  workspaceSlug,
 }: {
   onSelectSpy?: (leafId: string | null, opts?: { replace?: boolean }) => void;
   view?: string | null;
+  /** The workspace whose ITERATIONS the surface offers; the hosts always supply one. */
+  workspaceSlug?: string;
 }) {
   const [leafId, setLeafId] = useState<string | null>(view);
   const leaf: TopicLeaf = {
@@ -179,7 +228,12 @@ function Harness({
   };
   return (
     <RailHostBoundary>
-      <WorkItemsSurface projectId="p1" title="Work Items" leaf={leaf} />
+      <WorkItemsSurface
+        projectId="p1"
+        title="Work Items"
+        leaf={leaf}
+        workspaceSlug={workspaceSlug}
+      />
     </RailHostBoundary>
   );
 }
@@ -243,6 +297,41 @@ describe("WorkItemsSurface", () => {
     // re-fetch: exactly one listForProject across the switch.
     expect(listForProject).toHaveBeenCalledTimes(1);
     expect(listForProject).toHaveBeenCalledWith("p1");
+  });
+
+  // The two PLANNING values the surface loads for its views: the WORKSPACE's cycles (one list
+  // answers every board its owner runs) and the PROJECT's estimate scale (what a size means here).
+  it("asks for the WORKSPACE's iterations, not the project's", async () => {
+    render(<Harness workspaceSlug="acme" />);
+    await listLoaded();
+
+    await waitFor(() => expect(iterationsList).toHaveBeenCalledWith({ workspace: "acme" }));
+  });
+
+  it("offers the workspace's cycles and the project's scale in the editor", async () => {
+    iterationsList.mockResolvedValue([structuredClone(CYCLE)]);
+    projectGet.mockResolvedValue({ ...structuredClone(PROJECT), estimateScale: "fibonacci" });
+
+    render(<Harness view="table" workspaceSlug="acme" />);
+    // Table opens the editor on a double-click (a single click selects).
+    fireEvent.doubleClick(await screen.findByText("Design the landing page"));
+    await screen.findByRole("button", { name: "Save changes" });
+
+    const iteration = (await screen.findByLabelText("Iteration")) as HTMLSelectElement;
+    expect(within(iteration).getByRole("option", { name: /Sprint 7/ })).not.toBeNull();
+    // The card is uncommitted, so the picker sits on the backlog rather than inventing a cycle.
+    expect(iteration.value).toBe("");
+
+    // The scale came from the project's own record — a `none` project has no such field at all.
+    expect(await screen.findByLabelText("Estimate")).not.toBeNull();
+  });
+
+  it("has no estimate field on a project that does not estimate", async () => {
+    render(<Harness view="table" workspaceSlug="acme" />);
+    fireEvent.doubleClick(await screen.findByText("Design the landing page"));
+    await screen.findByRole("button", { name: "Save changes" });
+
+    expect(screen.queryByLabelText("Estimate")).toBeNull();
   });
 
   it("creates via a MODAL from the list header's +, then opens the new item's detail", async () => {

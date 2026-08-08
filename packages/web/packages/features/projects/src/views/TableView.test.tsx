@@ -11,7 +11,11 @@ import { render, screen, fireEvent, cleanup, within } from "@testing-library/rea
 
 import { TableView } from "./TableView";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
-import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
+import {
+  type Iteration,
+  type ProjectStatus,
+  type ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
 
 const STATUS: ProjectStatus = {
   id: "s1",
@@ -46,12 +50,29 @@ function makeItem(over: Partial<WorkItem> & Pick<WorkItem, "id" | "title">): Wor
     dueDate: null,
     labels: [],
     parentId: null,
+    iterationId: null,
+    estimate: null,
     rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
     updatedAt: "2026-07-03T00:00:00Z",
     ...over,
   };
 }
+
+/** One workspace cycle; `state` is derived by the backend, so a fixture just states it. */
+const CYCLE: Iteration = {
+  id: "it1",
+  name: "Sprint 7",
+  description: "",
+  startDate: "2026-07-01",
+  endDate: "2026-07-14",
+  state: "active",
+  ownerKind: "customer",
+  ownerId: "cust-1",
+  ecosystemId: "eco-1",
+  createdAt: "2026-06-30T00:00:00Z",
+  updatedAt: "2026-06-30T00:00:00Z",
+};
 
 const FULL: WorkItem = makeItem({
   id: "w1",
@@ -83,6 +104,8 @@ describe("TableView", () => {
         items={[FULL]}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -109,6 +132,8 @@ describe("TableView", () => {
         items={items}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -132,6 +157,8 @@ describe("TableView", () => {
         items={[FULL]}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={onOpenItem}
         onChanged={vi.fn()}
       />,
@@ -152,6 +179,8 @@ describe("TableView", () => {
         items={[FULL]}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={onOpenItem}
         onChanged={vi.fn()}
       />,
@@ -168,6 +197,8 @@ describe("TableView", () => {
         items={[FULL]}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={onOpenItem}
         onChanged={vi.fn()}
       />,
@@ -187,6 +218,8 @@ describe("TableView", () => {
         items={[FULL]}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -214,6 +247,8 @@ describe("TableView", () => {
         items={[makeItem({ id: "w1", title: "Design the landing page", itemKey: "WEB-42" })]}
         statuses={[STATUS]}
         participants={[]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -228,6 +263,8 @@ describe("TableView", () => {
         items={[makeItem({ id: "w1", title: "Design the landing page", itemKey: "" })]}
         statuses={[STATUS]}
         participants={[]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -247,6 +284,8 @@ describe("TableView", () => {
         ]}
         statuses={[STATUS]}
         participants={[]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -260,12 +299,85 @@ describe("TableView", () => {
     expect(titlesInOrder()).toEqual(["Forty-two", "Nine", "Seven"]);
   });
 
+  // The two PLANNING columns. Each is conditional on there being an answer to show — a workspace
+  // that runs no cycles, or a project that does not estimate, gets a column of dashes otherwise.
+  it("has no Iteration or Estimate column when there are no cycles and no scale", () => {
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[PARTICIPANT]}
+        iterations={[]}
+        estimateScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Iteration" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Estimate" })).toBeNull();
+  });
+
+  it("names each card's cycle, and sorts the column by the cycle's START", () => {
+    // Named so a TEXT sort would order them "Sprint 10, Sprint 2" — the trap this column's
+    // comparable exists to avoid.
+    const late: Iteration = { ...CYCLE, id: "it2", name: "Sprint 10", startDate: "2026-09-01", endDate: "2026-09-14" };
+    render(
+      <TableView
+        items={[
+          makeItem({ id: "w1", title: "Later", iterationId: "it2" }),
+          makeItem({ id: "w2", title: "Sooner", iterationId: "it1" }),
+          makeItem({ id: "w3", title: "Backlog" }),
+        ]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[CYCLE, late]}
+        estimateScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Sprint 7")).not.toBeNull();
+    expect(screen.getByText("Sprint 10")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Iteration" }));
+    // Backlog first (no start at all), then July, then September.
+    expect(titlesInOrder()).toEqual(["Backlog", "Sooner", "Later"]);
+  });
+
+  it("shows an estimate in the project's own scale, and sorts unestimated below every size", () => {
+    render(
+      <TableView
+        items={[
+          makeItem({ id: "w1", title: "Large", estimate: 3 }),
+          makeItem({ id: "w2", title: "Unsized" }),
+          makeItem({ id: "w3", title: "Free", estimate: 0 }),
+        ]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[]}
+        estimateScale="tshirt"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    // 3 on the t-shirt scale is "L" — the digits are an index into the scale, never the size.
+    expect(screen.getByText("L")).not.toBeNull();
+    expect(screen.getByText("XS")).not.toBeNull(); // the 0-sized card
+
+    fireEvent.click(screen.getByRole("button", { name: "Estimate" }));
+    expect(titlesInOrder()).toEqual(["Unsized", "Free", "Large"]);
+  });
+
   it("renders the EmptyState when there are no items", () => {
     render(
       <TableView
         items={[]}
         statuses={[STATUS]}
         participants={[]}
+        iterations={[]}
+        estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,

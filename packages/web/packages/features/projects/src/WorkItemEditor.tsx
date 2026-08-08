@@ -11,9 +11,16 @@ import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
 import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import { projectActivityApi } from "@agentic-toolkit/data/projects";
-import type { ProjectStatus, ProjectParticipant } from "@agentic-toolkit/data/projects";
+import type {
+  EstimateScale,
+  Iteration,
+  ProjectStatus,
+  ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { AssigneePicker, toOptionValue, fromOptionValue, type AssigneeValue } from "./AssigneePicker";
+import { IterationPicker, NO_ITERATION } from "./IterationPicker";
+import { EstimatePicker, fromEstimateValue, toEstimateValue } from "./EstimatePicker";
 import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
 import { ItemKey } from "./ItemKey";
 import { WorkItemComments } from "./WorkItemComments";
@@ -91,6 +98,13 @@ type WorkItemDraft = {
    *  labels in it does not read as dirty. */
   labels: string[];
   parentId: string;
+  /** the committed iteration's id, or "" for the backlog — a string for the same reason the
+   *  assignee is one, and because "" is already how this form spells "no reference". */
+  iterationId: string;
+  /** the estimate as the picker's string ("" = unestimated). A string rather than
+   *  `number | null` so the two "empty" spellings stay one: `Object.is(null, undefined)` is
+   *  false, and a Select hands back "" whatever the field means. */
+  estimate: string;
 };
 
 /** Load a work item into the editor's draft shape — the ONE place "what a work item's editable
@@ -113,6 +127,8 @@ function draftFromItem(item: WorkItem): WorkItemDraft {
     dueDate: item.dueDate ?? "",
     labels: item.labels,
     parentId: item.parentId ?? "",
+    iterationId: item.iterationId ?? NO_ITERATION,
+    estimate: toEstimateValue(item.estimate),
   };
 }
 
@@ -153,6 +169,8 @@ export function WorkItemEditor({
   participants,
   workItems,
   labelOptions,
+  iterations,
+  estimateScale,
   onSaved,
   onCancel,
 }: {
@@ -167,6 +185,10 @@ export function WorkItemEditor({
    *  anywhere (a research document's tags are the same keywords). Never a closed set: the
    *  chooser mints a new one, and a card may already carry a label absent from this list. */
   labelOptions: string[];
+  /** the WORKSPACE's time-boxes — not the project's, because a cycle spans boards. */
+  iterations: Iteration[];
+  /** the owning project's estimate scale; `none` renders no estimate field at all. */
+  estimateScale: EstimateScale;
   onSaved: (saved: WorkItem) => void;
   onCancel: () => void;
 }): ReactElement {
@@ -270,6 +292,16 @@ export function WorkItemEditor({
     if (!sameLabels(draft.labels, baseline.labels)) patch.labels = draft.labels;
     const newParent = draft.parentId || null;
     if (newParent !== (baseline.parentId || null)) patch.parentId = newParent;
+    // "" is the BACKLOG, so this clears with an explicit null exactly as the assignee does —
+    // dropping the key instead would leave the card in the cycle the user just took it out of.
+    if (draft.iterationId !== baseline.iterationId) {
+      patch.iterationId = draft.iterationId || null;
+    }
+    // Likewise for the size: "" un-estimates, which the server distinguishes from 0. Both sides
+    // go through the picker's codec, so `null` and `""` can never be two different answers here.
+    if (draft.estimate !== baseline.estimate) {
+      patch.estimate = fromEstimateValue(draft.estimate);
+    }
 
     return patch;
   }
@@ -351,6 +383,23 @@ export function WorkItemEditor({
           ))}
         </Select>
       </Field>
+
+      {/* Which cycle the card is committed to, and how big it is — the two planning answers, kept
+          next to Priority rather than beside the dates below. A start date is a fact about one
+          card; an iteration is a promise about a fortnight, and the estimate is what makes that
+          promise measurable. */}
+      <IterationPicker
+        iterations={iterations}
+        value={draft.iterationId}
+        onChange={(id) => set("iterationId", id)}
+      />
+
+      {/* Renders nothing when the project's scale is `none` — see EstimatePicker. */}
+      <EstimatePicker
+        scale={estimateScale}
+        value={draft.estimate}
+        onChange={(v) => set("estimate", v)}
+      />
 
       {/* The same tag-set row a research document's tags use — deliberately, because they are the
           same tagging system underneath: a label put on a paper is offered here, and vice versa. */}

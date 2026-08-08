@@ -20,7 +20,12 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
 import { cn } from "@agentic-toolkit/ui/lib/utils";
 import { compareRank, projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
-import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
+import {
+  type EstimateScale,
+  type Iteration,
+  type ProjectStatus,
+  type ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
 import { PRIORITIES } from "../WorkItemEditor";
 import { participantLabel, toOptionValue, fromOptionValue } from "../AssigneePicker";
 import { WorkItemDetail } from "../WorkItemDetail";
@@ -125,12 +130,18 @@ export function ListView({
   items,
   statuses,
   participants,
+  iterations,
+  estimateScale,
   onChanged,
 }: {
   projectId: string;
   items: WorkItem[];
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
+  /** The workspace's time-boxes, so the details pane names the card's cycle rather than its id. */
+  iterations: Iteration[];
+  /** The project's estimate scale, which is what an estimate's digits mean. */
+  estimateScale: EstimateScale;
   /** A row committed an edit or a delete — the surface re-reads the shared items so every view
    *  repaints together. */
   onChanged: () => Promise<void>;
@@ -557,6 +568,8 @@ export function ListView({
             statuses={statuses}
             participants={participants}
             workItems={items}
+            iterations={iterations}
+            estimateScale={estimateScale}
           />
         )}
         emptyDetail={

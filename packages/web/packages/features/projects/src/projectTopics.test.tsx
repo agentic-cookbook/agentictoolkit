@@ -37,12 +37,38 @@ vi.mock("./WorkItemsSurface", () => ({
     projectId,
     title,
     leaf,
+    workspaceSlug,
   }: {
     projectId: string;
     title: string;
     leaf: { leafId: string | null };
+    workspaceSlug?: string;
   }) => (
-    <div data-testid="work-items" data-project={projectId} data-title={title} data-leaf={leaf.leafId} />
+    <div
+      data-testid="work-items"
+      data-project={projectId}
+      data-title={title}
+      data-leaf={leaf.leafId}
+      data-workspace={workspaceSlug ?? ""}
+    />
+  ),
+}));
+vi.mock("./IterationsPane", () => ({
+  IterationsPane: ({
+    title,
+    leaf,
+    workspaceSlug,
+  }: {
+    title: string;
+    leaf: { leafId: string | null };
+    workspaceSlug?: string;
+  }) => (
+    <div
+      data-testid="iterations"
+      data-title={title}
+      data-leaf={leaf.leafId}
+      data-workspace={workspaceSlug ?? ""}
+    />
   ),
 }));
 vi.mock("./ProjectContentsPane", () => ({
@@ -93,11 +119,12 @@ const CONTEXT: ProjectTopicContext = {
 
 describe("projectTopics", () => {
   it("publishes a project's topics in rail order", () => {
-    // The order is a sentence about the project: what it is, what it is doing, what it holds,
-    // what happened, who may look.
+    // The order is a sentence about the project: what it is, what it is doing, when it is doing
+    // it, what it holds, what happened, who may look.
     expect(projectTopics({ workspaceSlug: "acme" }).map((t) => t.id)).toEqual([
       "overview",
       "work-items",
+      "iterations",
       "contents",
       "activity",
       "access",
@@ -108,9 +135,14 @@ describe("projectTopics", () => {
     // Not a cosmetic choice: ItemAccessPanel resolves subjects IN a workspace, so without one
     // the topic could only ever render an empty pane. A rail row that opens onto nothing reads
     // as a bug; leaving the topic out says the true thing.
+    //
+    // Iterations survives the same condition on purpose, and the difference is what it can still
+    // show: without a workspace the boxes list falls back to the caller's own reach, exactly as
+    // the project list does, so the pane has something true to render.
     expect(projectTopics({}).map((t) => t.id)).toEqual([
       "overview",
       "work-items",
+      "iterations",
       "contents",
       "activity",
     ]);
@@ -131,11 +163,23 @@ describe("projectTopics", () => {
     }
     expect(screen.getByTestId("overview").getAttribute("data-title")).toBe("Given title");
     expect(screen.getByTestId("overview").getAttribute("data-project")).toBe("p1");
-    // The one topic with a deep-linkable inner selection: the surface's leaf has to reach it,
-    // or the view switcher stops round-tripping through the URL.
+    // The two topics with a deep-linkable inner selection: each surface's leaf has to reach it,
+    // or the view switcher / the open iteration stops round-tripping through the URL.
     expect(screen.getByTestId("work-items").getAttribute("data-leaf")).toBe("board");
+    expect(screen.getByTestId("iterations").getAttribute("data-leaf")).toBe("board");
     expect(screen.getByTestId("contents").getAttribute("data-project")).toBe("p1");
     expect(screen.getByTestId("activity").getAttribute("data-title")).toBe("Given title");
+  });
+
+  it("hands the owning workspace to both panes whose data is the WORKSPACE's, not the project's", () => {
+    // An iteration belongs to a workspace, so both the pane that lists boxes and the surface
+    // whose cards commit to one must be told which workspace — a topic wired without it reads
+    // from the caller's whole reach and silently offers cycles from somewhere else.
+    for (const topic of projectTopics({ workspaceSlug: "acme" })) {
+      render(<>{topic.render(CONTEXT)}</>);
+    }
+    expect(screen.getByTestId("iterations").getAttribute("data-workspace")).toBe("acme");
+    expect(screen.getByTestId("work-items").getAttribute("data-workspace")).toBe("acme");
   });
 
   it("forwards the host's Transfer Ownership section to Overview, and nothing when there is none", () => {

@@ -43,6 +43,8 @@ import {
 import { reactionsApi } from "@agentic-toolkit/data/reactions";
 import {
   projectWorkItemsApi,
+  type EstimateScale,
+  type Iteration,
   type ProjectStatus,
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
@@ -66,9 +68,27 @@ const ITEM: WorkItem = {
   dueDate: null,
   labels: [],
   parentId: null,
+  iterationId: null,
+  estimate: null,
   rank: "V0",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
+};
+
+/** One workspace cycle, so the iteration picker has something to offer. `state` is DERIVED by
+ *  the backend from the dates — the client never computes it, so a fixture states it. */
+const CYCLE: Iteration = {
+  id: "it1",
+  name: "Sprint 7",
+  description: "",
+  startDate: "2026-07-01",
+  endDate: "2026-07-14",
+  state: "active",
+  ownerKind: "customer",
+  ownerId: "cust-1",
+  ecosystemId: "eco-1",
+  createdAt: "2026-06-30T00:00:00Z",
+  updatedAt: "2026-06-30T00:00:00Z",
 };
 
 const COMMENT: ProjectActivity = {
@@ -92,7 +112,10 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderEditor(item: WorkItem = ITEM) {
+function renderEditor(
+  item: WorkItem = ITEM,
+  planning: { iterations?: Iteration[]; estimateScale?: EstimateScale } = {},
+) {
   return render(
     <WorkItemEditor
       projectId="p1"
@@ -101,6 +124,8 @@ function renderEditor(item: WorkItem = ITEM) {
       participants={[]}
       workItems={[ITEM]}
       labelOptions={[]}
+      iterations={planning.iterations ?? []}
+      estimateScale={planning.estimateScale ?? "none"}
       onSaved={() => {}}
       onCancel={() => {}}
     />,
@@ -194,6 +219,8 @@ describe("WorkItemEditor save (edit mode)", () => {
         participants={[]}
         workItems={[ITEM]}
         labelOptions={[]}
+        iterations={[]}
+        estimateScale="none"
         onSaved={onSaved}
         onCancel={() => {}}
       />,
@@ -265,6 +292,8 @@ describe("WorkItemEditor labels", () => {
         participants={[]}
         workItems={[item]}
         labelOptions={VOCABULARY}
+        iterations={[]}
+        estimateScale="none"
         onSaved={() => {}}
         onCancel={() => {}}
       />,
@@ -315,6 +344,78 @@ describe("WorkItemEditor labels", () => {
   });
 });
 
+// The two PLANNING fields — which cycle a card is committed to, and how big it is. Both are
+// draft STRINGS over nullable API values, which is where the interesting cases are: "" is a real
+// answer (the backlog / unestimated) and has to PATCH as an explicit `null`, and `0` is a real
+// size that must not collapse into "no estimate".
+describe("WorkItemEditor iteration + estimate", () => {
+  it("commits a backlog card to a cycle", async () => {
+    update.mockResolvedValueOnce({ ...ITEM, iterationId: "it1" });
+    renderEditor(ITEM, { iterations: [CYCLE] });
+
+    fireEvent.change(screen.getByLabelText("Iteration"), { target: { value: "it1" } });
+    const save = screen.getByRole("button", { name: "Save changes" });
+    await waitFor(() => expect(save).not.toBeDisabled());
+    fireEvent.click(save);
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { iterationId: "it1" });
+  });
+
+  // Sending the cycle back to the backlog is a CLEAR, and the only way to say that is an explicit
+  // null: an omitted field would leave the card in the cycle it was being taken out of.
+  it("sends a committed card back to the backlog as an explicit null", async () => {
+    const committed = { ...ITEM, iterationId: "it1" };
+    update.mockResolvedValueOnce({ ...committed, iterationId: null });
+    renderEditor(committed, { iterations: [CYCLE] });
+
+    fireEvent.change(screen.getByLabelText("Iteration"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { iterationId: null });
+  });
+
+  it("has no estimate field at all on a project that does not estimate", () => {
+    renderEditor(ITEM, { estimateScale: "none" });
+    expect(screen.queryByLabelText("Estimate")).toBeNull();
+  });
+
+  // Zero is a SIZE — a card someone looked at and judged free — so it has to reach the API as 0
+  // rather than as the "" that means nobody has sized it.
+  it("PATCHes an estimate of zero as 0, not as unestimated", async () => {
+    update.mockResolvedValueOnce({ ...ITEM, estimate: 0 });
+    renderEditor(ITEM, { estimateScale: "fibonacci" });
+
+    fireEvent.change(screen.getByLabelText("Estimate"), { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { estimate: 0 });
+  });
+
+  it("clears a size back to unestimated as an explicit null", async () => {
+    const sized = { ...ITEM, estimate: 5 };
+    update.mockResolvedValueOnce({ ...sized, estimate: null });
+    renderEditor(sized, { estimateScale: "fibonacci" });
+
+    fireEvent.change(screen.getByLabelText("Estimate"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { estimate: null });
+  });
+
+  // A card sized under a scale the board has since changed keeps its size selectable, or opening
+  // the editor and saving anything else would silently re-size it.
+  it("keeps a size the current scale no longer offers", () => {
+    renderEditor({ ...ITEM, estimate: 13 }, { estimateScale: "linear" });
+    const select = screen.getByLabelText("Estimate") as HTMLSelectElement;
+    expect(select.value).toBe("13");
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  });
+});
+
 // Every other test in this file renders with `statuses={[]}`, so the status field's real
 // (populated) path was never exercised. An item with NO status used to load as `statuses[0].id`
 // — the SAME invented value on both the draft and the baseline — so the field displayed a status
@@ -336,6 +437,8 @@ describe("WorkItemEditor status field with a statusless item", () => {
         participants={[]}
         workItems={[NO_STATUS]}
         labelOptions={[]}
+        iterations={[]}
+        estimateScale="none"
         onSaved={() => {}}
         onCancel={() => {}}
       />,

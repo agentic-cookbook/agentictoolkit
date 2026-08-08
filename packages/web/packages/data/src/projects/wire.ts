@@ -18,6 +18,35 @@
  */
 export type StatusCategory = "backlog" | "todo" | "in_progress" | "done" | "canceled";
 
+/**
+ * How a project SPELLS an estimate — which numbers its picker offers, and whether it offers one
+ * at all. The backend's vocabulary, spelled the same way here because the string travels on the
+ * wire unmodified.
+ *
+ * `"none"` is a real answer, not a missing one: a project that has not opted in does not
+ * estimate, and no estimate UI appears on it. The VALUES behind each key (1/2/3/5/8…, XS/S/M/L)
+ * are deliberately not here and not in the database either — which numbers a scale offers is
+ * presentation, owned by whatever renders the picker.
+ *
+ * The scale is ADVISORY: `WorkItemRow.estimate` accepts any non-negative integer whatever the
+ * project's scale says, so switching a board from fibonacci to linear never invalidates the
+ * estimates already on its cards.
+ */
+export type EstimateScale =
+  | "none"
+  | "points"
+  | "fibonacci"
+  | "exponential"
+  | "linear"
+  | "tshirt";
+
+/**
+ * Where an iteration sits relative to today — DERIVED by the backend from `startDate`/`endDate`
+ * (UTC, inclusive at both ends), never stored. It arrives on every iteration row, so a client
+ * neither computes it nor has to agree with the server about what day it is.
+ */
+export type IterationState = "upcoming" | "active" | "completed";
+
 /* ── Projects (GET rows) ──────────────────────────────────────────────── */
 
 /** Backend row for `GET /project/projects` (and a single project). */
@@ -36,6 +65,9 @@ export interface ProjectRow {
   ecosystemId: string;
   /** ISO timestamp when archived; absent/null when not archived. */
   archivedAt?: string | null;
+  /** which numbers this project's estimate picker offers, or `none` to not estimate at all
+   *  (the DB default). Absent on a bundle read from a backend that predates estimates. */
+  estimateScale?: EstimateScale;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +120,10 @@ export interface ProjectPatchBody {
    *  Renames every one of this project's keys at once; 409 if the owner already uses it. */
   keyPrefix?: string;
   archivedAt?: string | null;
+  /** switch which numbers the picker offers, or `none` to stop estimating. Never touches the
+   *  estimates already stored — a project that turns estimation off keeps them for the day it
+   *  turns it back on. */
+  estimateScale?: EstimateScale;
 }
 
 /** `POST /project/projects/{id}/statuses` body. */
@@ -133,6 +169,14 @@ export interface WorkItemRow {
   dueDate?: string | null;
   labels: string[];
   parentId?: string | null;
+  /** the time-box this card is committed to; null is the BACKLOG — a real destination, not a
+   *  missing answer. The box belongs to the project's WORKSPACE, so two cards on two boards can
+   *  share one. */
+  iterationId?: string | null;
+  /** the card's size in whatever units its project's scale names; null is UN-estimated, which
+   *  is distinct from estimated at 0. Any non-negative integer is accepted whatever the scale
+   *  says, so changing a project's scale never invalidates a card. */
+  estimate?: number | null;
   /** the card's place in its sibling list, as an OPAQUE sort key — compare two of them with
    *  `<`, never subtract them. It is a fractional index, so a card moved between two others
    *  gets a key strictly between theirs and nothing else is rewritten; the backend sorts by
@@ -216,6 +260,9 @@ export interface WorkItemCreateBody {
   dueDate?: string;
   labels?: string[];
   parentId?: string;
+  /** commit the new card straight to a time-box; omitted leaves it in the backlog. */
+  iterationId?: string;
+  estimate?: number;
 }
 
 /** `PATCH /project/work-items/{id}` body (explicit null clears the column). */
@@ -230,6 +277,11 @@ export interface WorkItemPatchBody {
   dueDate?: string | null;
   labels?: string[];
   parentId?: string | null;
+  /** `null` sends the card back to the backlog — the same explicit-null idiom the assignee and
+   *  the dates use. */
+  iterationId?: string | null;
+  /** `null` un-estimates the card, which is DISTINCT from estimating it at 0. */
+  estimate?: number | null;
 }
 
 /**
@@ -272,6 +324,70 @@ export interface WorkItemDependencyAddBody {
 export interface WorkItemRelationAddBody {
   relatedId: string;
   kind: RelationKind;
+}
+
+/* ── Iterations (the time-boxes work is committed to) ─────────────────── */
+
+/**
+ * Backend row for `GET /project/iterations` — the row PLUS its derived `state`.
+ *
+ * An iteration hangs off the WORKSPACE, not off a project: there is no `projectId` here, and
+ * that is the point. A cycle is a fortnight the whole workspace shares, so one box holds cards
+ * from every board its owner runs, and the same list answers for every project in it.
+ */
+export interface IterationRow {
+  id: string;
+  name: string;
+  description: string;
+  /** inclusive first day, `YYYY-MM-DD`. Both ends are required: a box with an open end is not
+   *  a time-box, and the derived state needs both to exist. */
+  startDate: string;
+  /** inclusive last day, `YYYY-MM-DD`. */
+  endDate: string;
+  /** where the box sits relative to today — computed by the backend from the two dates. */
+  state: IterationState;
+  /** the workspace that owns the box; a card may only be committed to a box whose owner
+   *  matches its project's. */
+  ownerKind: string;
+  ownerId: string;
+  ecosystemId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Backend row for `GET /project/iterations/{id}/work-items` — one box's cards, which SPAN
+ *  projects, so each carries the name of the board it came from (there is no single project
+ *  header to read it off). */
+export interface IterationWorkItemRow extends WorkItemRow {
+  projectName: string;
+  statusName: string;
+  statusCategory: StatusCategory;
+  estimateScale: EstimateScale;
+}
+
+/** `POST /project/iterations` body — created against a `?workspace=` slug, not under a
+ *  project. Both dates required (see {@link IterationRow}). */
+export interface IterationCreateBody {
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+}
+
+/** `PATCH /project/iterations/{id}` body. Either end may move alone: the backend validates the
+ *  pair it WILL be, so extending a live box by pushing its end out is one key. */
+export interface IterationPatchBody {
+  name?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+/** `POST /project/iterations/{id}/rollover` body — where the cards that did not finish go.
+ *  `null` is the backlog, and is the honest answer when the next cycle is not planned yet,
+ *  which is why the key is nullable rather than the route refusing. */
+export interface IterationRolloverBody {
+  toIterationId: string | null;
 }
 
 /* ── Artifacts (the things a project holds) ───────────────────────────── */

@@ -13,10 +13,14 @@ import {
 } from "@agentic-toolkit/ui/components/dnd";
 import { cn } from "@agentic-toolkit/ui/lib/utils";
 import { compareRank, type WorkItem } from "@agentic-toolkit/data/projects";
-import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
+import {
+  type EstimateScale,
+  type ProjectStatus,
+  type ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import { ItemKey } from "../ItemKey";
-import { assigneeLabel, categoryVariant, type BadgeVariant } from "../helpers";
+import { assigneeLabel, categoryVariant, estimateLabel, type BadgeVariant } from "../helpers";
 
 /**
  * The Board VIEW of the work-items surface: the work items laid out as a
@@ -80,6 +84,7 @@ function BoardCard({
   participants,
   statuses,
   known,
+  estimateScale,
   onMove,
 }: {
   item: WorkItem;
@@ -88,10 +93,15 @@ function BoardCard({
   statuses: ProjectStatus[];
   /** the set of live status ids (a card whose statusId is stale renders "No status"). */
   known: Set<string>;
+  /** the project's scale — what the size chip's digits mean. */
+  estimateScale: EstimateScale;
   onMove: (itemId: string, statusId: string) => void;
 }): ReactElement {
   const priority = priorityMeta(item.priority);
   const isKnown = known.has(item.statusId);
+  // An unsized card shows NO chip rather than a dash: a board is read by scanning down a column
+  // for the sizes, and a column of "—" is a row of noise between the real numbers.
+  const estimate = estimateLabel(item.estimate, estimateScale);
   return (
     <SortableItem id={item.id}>
       {({ setNodeRef, style, handleProps, dragging }) => (
@@ -118,7 +128,14 @@ function BoardCard({
               <span className="truncate text-xs text-apt-text-muted">
                 {assigneeLabel(item, participants)}
               </span>
-              <Badge variant={priority.variant}>{priority.label}</Badge>
+              <span className="flex shrink-0 items-center gap-1">
+                {estimate ? (
+                  <Badge variant="neutral" aria-label={`Estimate ${estimate}`}>
+                    {estimate}
+                  </Badge>
+                ) : null}
+                <Badge variant={priority.variant}>{priority.label}</Badge>
+              </span>
             </div>
             <Select
               aria-label={`Move ${item.title}`}
@@ -155,12 +172,15 @@ export function BoardView({
   items,
   statuses,
   participants,
+  estimateScale,
   onMove,
   onCardDrop,
 }: {
   items: WorkItem[];
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
+  /** The project's estimate scale; `none` means no card carries a size chip. */
+  estimateScale: EstimateScale;
   /** The Select's status-only move. */
   onMove: (itemId: string, statusId: string) => void;
   /** A drag landed. `statusId` may be unchanged (a reorder within one column). */
@@ -309,6 +329,7 @@ export function BoardView({
                         participants={participants}
                         statuses={sortedStatuses}
                         known={known}
+                        estimateScale={estimateScale}
                         onMove={onMove}
                       />
                     ))

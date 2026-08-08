@@ -24,7 +24,10 @@ import {
   type WorkItemMoveTarget,
 } from "@agentic-toolkit/data/projects";
 import {
+  projectIterationsApi,
   projectsApi,
+  type EstimateScale,
+  type Iteration,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
@@ -95,10 +98,15 @@ export function WorkItemsSurface({
   projectId,
   title,
   leaf,
+  workspaceSlug,
 }: {
   projectId: string;
   title: string;
   leaf: TopicLeaf;
+  /** The owning workspace, because ITERATIONS are the workspace's, not the project's — one
+   *  sprint holds work from every board its owner runs. Absent, the API answers with the
+   *  caller's own scope, exactly as the project list does. */
+  workspaceSlug?: string;
 }): ReactElement {
   const [moveError, setMoveError] = useState<string | null>(null);
   // The open editor is internal state (the leaf carries the VIEW): `selectedId` is the item being
@@ -139,6 +147,17 @@ export function WorkItemsSurface({
     () => projectsApi.labels(projectId).catch(() => [] as string[]),
     [projectId],
   );
+  // The WORKSPACE's time-boxes, cached under the workspace rather than the project: the same list
+  // answers every board its owner runs, so navigating between two projects in one workspace must
+  // not re-read it. It fails soft like the pickers above — a card can always be saved without
+  // being committed to a cycle.
+  const loadIterations = useCallback(
+    () =>
+      projectIterationsApi
+        .list({ workspace: workspaceSlug })
+        .catch(() => [] as Iteration[]),
+    [workspaceSlug],
+  );
   const {
     items,
     setItems,
@@ -157,9 +176,32 @@ export function WorkItemsSurface({
     `project:${projectId}:labels`,
     loadLabels,
   );
+  const { items: iterationRows } = useResourceList<Iteration>(
+    `workspace:${workspaceSlug ?? ""}:iterations`,
+    loadIterations,
+  );
   const statuses = statusRows ?? [];
   const participants = participantRows ?? [];
   const labelOptions = labelRows ?? [];
+  const iterations = iterationRows ?? [];
+
+  // The project's OWN estimate scale — what an estimate's digits mean here. Read from the record
+  // rather than passed in by the host, because both hosts would otherwise have to carry it and the
+  // one that forgot would silently render an unestimatable board. It is a single record, so it is
+  // the plain get-with-an-alive-flag the Overview pane uses, not the list cache.
+  //
+  // `none` until the record answers, which is the safe way round: the pickers and columns appear
+  // when the project is known to estimate, rather than flashing on a project that does not.
+  const [estimateScale, setEstimateScale] = useState<EstimateScale>("none");
+  useEffect(() => {
+    let alive = true;
+    void projectsApi.get(projectId).then((p) => {
+      if (alive && p) setEstimateScale(p.estimateScale);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
 
   // Move a card to another status: optimistic (repaint immediately), then settle
   // per-item and GUARDED so overlapping moves on the SAME card never clobber each
@@ -402,6 +444,8 @@ export function WorkItemsSurface({
             items={items}
             statuses={statuses}
             participants={participants}
+            iterations={iterations}
+            estimateScale={estimateScale}
             onChanged={reload}
           />
         );
@@ -411,6 +455,7 @@ export function WorkItemsSurface({
             items={items}
             statuses={statuses}
             participants={participants}
+            estimateScale={estimateScale}
             onMove={onMove}
             onCardDrop={onCardDrop}
           />
@@ -421,6 +466,8 @@ export function WorkItemsSurface({
             items={items}
             statuses={statuses}
             participants={participants}
+            iterations={iterations}
+            estimateScale={estimateScale}
             onOpenItem={onOpenItem}
             onChanged={reload}
           />
@@ -444,7 +491,19 @@ export function WorkItemsSurface({
       default:
         return null;
     }
-  }, [view, items, statuses, participants, onOpenItem, onMove, onCardDrop, onSetDates, reload]);
+  }, [
+    view,
+    items,
+    statuses,
+    participants,
+    iterations,
+    estimateScale,
+    onOpenItem,
+    onMove,
+    onCardDrop,
+    onSetDates,
+    reload,
+  ]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -464,6 +523,8 @@ export function WorkItemsSurface({
               participants={participants}
               workItems={items ?? []}
               labelOptions={labelOptions}
+              iterations={iterations}
+              estimateScale={estimateScale}
               onSaved={() => void onSaved()}
               onCancel={closeEditor}
             />

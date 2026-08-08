@@ -41,6 +41,8 @@ function item(over: Partial<WorkItem>): WorkItem {
     dueDate: null,
     labels: [],
     parentId: null,
+    iterationId: null,
+    estimate: null,
     rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
     updatedAt: "2026-07-03T00:00:00Z",
@@ -63,7 +65,7 @@ afterEach(cleanup);
 describe("BoardView", () => {
   it("renders one column per status in position order, items grouped under each", () => {
     render(
-      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} onMove={vi.fn()} />,
+      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} estimateScale="none" onMove={vi.fn()} />,
     );
 
     const cols = screen.getAllByRole("listitem");
@@ -79,7 +81,7 @@ describe("BoardView", () => {
 
   it("shows a card's title and priority Badge", () => {
     render(
-      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} onMove={vi.fn()} />,
+      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} estimateScale="none" onMove={vi.fn()} />,
     );
 
     const todo = screen.getByRole("listitem", { name: "To do" });
@@ -89,7 +91,7 @@ describe("BoardView", () => {
 
   it("renders an empty state for a column with no items", () => {
     render(
-      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} onMove={vi.fn()} />,
+      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} estimateScale="none" onMove={vi.fn()} />,
     );
 
     const done = screen.getByRole("listitem", { name: "Done" });
@@ -99,7 +101,7 @@ describe("BoardView", () => {
   it("calls onMove(itemId, statusId) when a card's Move select changes", () => {
     const onMove = vi.fn();
     render(
-      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} onMove={onMove} />,
+      <BoardView items={[W1, W2]} statuses={[DONE, TODO, DOING]} participants={[]} estimateScale="none" onMove={onMove} />,
     );
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Design the landing page" }), {
@@ -112,7 +114,7 @@ describe("BoardView", () => {
   it("shows a trailing No status column for cards whose status is stale", () => {
     const orphan = item({ id: "w3", title: "Orphaned card", statusId: "gone" });
     render(
-      <BoardView items={[orphan]} statuses={[TODO, DOING, DONE]} participants={[]} onMove={vi.fn()} />,
+      <BoardView items={[orphan]} statuses={[TODO, DOING, DONE]} participants={[]} estimateScale="none" onMove={vi.fn()} />,
     );
 
     within(screen.getByRole("listitem", { name: "No status" })).getByText("Orphaned card");
@@ -124,6 +126,7 @@ describe("BoardView", () => {
         items={[item({ id: "w1", title: "Design the landing page", itemKey: "WEB-42" })]}
         statuses={[TODO]}
         participants={[]}
+        estimateScale="none"
         onMove={vi.fn()}
       />,
     );
@@ -136,7 +139,7 @@ describe("BoardView", () => {
         items={[item({ id: "w1", title: "Design the landing page", itemKey: "" })]}
         statuses={[TODO]}
         participants={[]}
-        onMove={vi.fn()}
+        estimateScale="none" onMove={vi.fn()}
       />,
     );
     // The card still renders — it just has no key line above the title.
@@ -145,7 +148,7 @@ describe("BoardView", () => {
   });
 
   it("renders an empty state when the project has no statuses (no columns)", () => {
-    render(<BoardView items={[]} statuses={[]} participants={[]} onMove={vi.fn()} />);
+    render(<BoardView items={[]} statuses={[]} participants={[]} estimateScale="none" onMove={vi.fn()} />);
     expect(screen.getByText("No board columns yet.")).not.toBeNull();
   });
 });

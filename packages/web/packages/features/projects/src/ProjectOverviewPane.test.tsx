@@ -73,6 +73,8 @@ const PROJECT: Project = {
   keyPrefix: "WEB",
   ecosystemId: "eco1",
   archivedAt: null,
+  // The DB default: a project does not estimate until someone says it does.
+  estimateScale: "none",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
 };
@@ -248,6 +250,33 @@ describe("ProjectOverviewPane", () => {
     // `mkt` and `MKT` are the same claim; the backend stores only the upper form, so
     // sending the raw text would leave the field looking dirty after a successful save.
     await waitFor(() => expect(update).toHaveBeenCalledWith("p1", { keyPrefix: "MKT" }));
+  });
+
+  // The estimate scale. This is the setting that turns the whole size field on: the column
+  // defaults to `none`, so without a control here a project could never be estimated at all —
+  // the picker, the chips and the iteration rollup would all be unreachable code.
+  it("turns estimation on by patching the project's estimate scale", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await screen.findByDisplayValue("Website relaunch");
+    const scale = screen.getByLabelText(/^Estimate scale/) as HTMLSelectElement;
+    // It opens on what the project actually is, not on a hopeful default.
+    expect(scale.value).toBe("none");
+    // Each option says what picking it offers, so the choice does not require opening a card.
+    expect(
+      within(scale).getByRole("option", { name: "Fibonacci (0, 1, 2, 3, 5, 8, 13)" }),
+    ).not.toBeNull();
+    expect(
+      within(scale).getByRole("option", { name: "Don't estimate (no size field on this project's cards)" }),
+    ).not.toBeNull();
+
+    fireEvent.change(scale, { target: { value: "fibonacci" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith("p1", { estimateScale: "fibonacci" }),
+    );
   });
 
   it("blocks the save and says why when the prefix cannot be a prefix", async () => {

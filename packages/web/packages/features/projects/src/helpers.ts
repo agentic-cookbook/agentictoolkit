@@ -2,6 +2,8 @@ import { type ComponentProps } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import type { ProjectActivity, ProjectComment, WorkItem } from "@agentic-toolkit/data/projects";
 import type {
+  EstimateScale,
+  IterationState,
   ProjectStatus,
   ProjectParticipant,
   RelationKind,
@@ -114,6 +116,150 @@ export function statusMeta(
   return s
     ? { label: s.label, variant: categoryVariant(s.category) }
     : { label: "—", variant: "neutral" };
+}
+
+/* ── Estimates ─────────────────────────────────────────────────────────────
+ * A project's `estimateScale` names WHICH numbers its picker offers; the numbers themselves
+ * live here and nowhere else. That split is the backend's, stated in the schema: the column is
+ * a vocabulary key, and what a key means to a reader — that 3 is "3", that 2 is "M" — is
+ * presentation. So a scale can be re-spelled without a migration, and the database never has to
+ * hold a copy of a t-shirt size.
+ *
+ * Every scale stores a plain non-negative integer, which is what makes the scale ADVISORY: a
+ * project that switches from fibonacci to linear keeps its 8s, and they still render as 8 — just
+ * no longer offered in the picker. Nothing rewrites a card because its board changed its mind. */
+
+/** The values one scale offers, in the order a picker lists them. `none` offers nothing, which
+ *  is what makes "this project does not estimate" a state a renderer can act on rather than a
+ *  special case it has to know about: an empty list means no picker and no chip. */
+const ESTIMATE_OPTIONS: Record<EstimateScale, { value: number; label: string }[]> = {
+  none: [],
+  // A plain count of points, 0-10 — the scale for a team that wants arithmetic rather than a
+  // ladder, and the one that has no gaps.
+  points: Array.from({ length: 11 }, (_, n) => ({ value: n, label: String(n) })),
+  // The classic planning-poker ladder. The gaps are the point: they refuse the false precision
+  // of choosing between 6 and 7 on work nobody has started.
+  fibonacci: [0, 1, 2, 3, 5, 8, 13].map((n) => ({ value: n, label: String(n) })),
+  // Doubling — for teams who size by order of magnitude and want "twice as big" to be the only
+  // question asked.
+  exponential: [0, 1, 2, 4, 8, 16].map((n) => ({ value: n, label: String(n) })),
+  // Even steps, for a team that wants the ladder to be a straight line.
+  linear: [0, 1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) })),
+  // Sizes, stored as their POSITION on the ladder — the stored column is an integer for every
+  // scale, so a board that switches to t-shirts keeps its numbers and simply reads them as
+  // letters. `XS` is 0, matching the other scales' floor.
+  tshirt: ["XS", "S", "M", "L", "XL", "XXL"].map((label, value) => ({ value, label })),
+};
+
+/** The values `scale` offers, in picker order (empty for `none`). */
+export function estimateOptions(scale: EstimateScale): { value: number; label: string }[] {
+  return ESTIMATE_OPTIONS[scale] ?? [];
+}
+
+/** How a scale READS to someone choosing one — the scale's own name, plus what picking it does.
+ *  A total Record over the closed set for the same reason the options table is one: a scale the
+ *  backend adds later is a type error here, not an option that silently goes unnamed. */
+const ESTIMATE_SCALE_META: Record<EstimateScale, { label: string; hint: string }> = {
+  none: { label: "Don't estimate", hint: "no size field on this project's cards" },
+  points: { label: "Points", hint: "0–10" },
+  fibonacci: { label: "Fibonacci", hint: "0, 1, 2, 3, 5, 8, 13" },
+  exponential: { label: "Exponential", hint: "0, 1, 2, 4, 8, 16" },
+  linear: { label: "Linear", hint: "0–5" },
+  tshirt: { label: "T-shirt sizes", hint: "XS – XXL" },
+};
+
+/** Every scale, in the order a chooser lists them: `none` first because it is the DB default and
+ *  therefore the state most projects are already in, then the numeric ladders from finest to
+ *  coarsest, then the one that is not a quantity at all. */
+export const ESTIMATE_SCALES: EstimateScale[] = [
+  "none",
+  "points",
+  "fibonacci",
+  "exponential",
+  "linear",
+  "tshirt",
+];
+
+/** A scale's name on its own — for a chooser's option, or a sentence naming which scale a board
+ *  estimates in. */
+export function estimateScaleLabel(scale: EstimateScale): string {
+  return ESTIMATE_SCALE_META[scale].label;
+}
+
+/** A scale's name with the values it offers, e.g. `Fibonacci (0, 1, 2, 3, 5, 8, 13)` — what an
+ *  option in a chooser says, so picking one never requires opening a card to find out what it
+ *  did. */
+export function estimateScaleOptionLabel(scale: EstimateScale): string {
+  const meta = ESTIMATE_SCALE_META[scale];
+  return `${meta.label} (${meta.hint})`;
+}
+
+/**
+ * Whether sizes on `scale` may be ADDED UP.
+ *
+ * True for every numeric ladder and false for t-shirts, because a t-shirt size is stored as its
+ * POSITION on the ladder (XS is 0) — so summing them says three XS cards are no work at all, and
+ * the total of a mixed box is a number with no unit. The distinction exists here rather than at
+ * each call site so a rollup cannot forget it: `estimateLabel` renders a t-shirt honestly, and
+ * this is the matching answer for arithmetic.
+ */
+export function estimateScaleIsSummable(scale: EstimateScale): boolean {
+  return scale !== "none" && scale !== "tshirt";
+}
+
+/**
+ * How an estimate READS on a card, or `null` when there is nothing to show — the card is
+ * unestimated, or its project does not estimate at all.
+ *
+ * `null` rather than a dash so a caller renders no chip instead of an empty one: on a board
+ * where nothing is estimated, a column of dashes is noise that looks like missing data.
+ *
+ * A value the scale no longer offers still renders — as itself for a numeric scale, and as the
+ * bare number for t-shirts, since there is no letter to give it. That is the honest reading of a
+ * card sized under a scale the board has since changed, and it is why this never blanks.
+ */
+export function estimateLabel(estimate: number | null, scale: EstimateScale): string | null {
+  if (estimate === null || scale === "none") return null;
+  const opt = estimateOptions(scale).find((o) => o.value === estimate);
+  return opt ? opt.label : String(estimate);
+}
+
+/* ── Iterations ────────────────────────────────────────────────────────── */
+
+/** An iteration's derived state → its label and Badge tone. A total Record for the same reason
+ *  CATEGORY_VARIANT is one: the set is closed and the backend owns it, so a state added later is
+ *  a type error here rather than an unlabelled badge. `active` takes the one tone that reads
+ *  "happening now"; `completed` is finished, not successful, but success is the palette's only
+ *  terminal-and-done tone and a cycle that ended IS done. */
+const ITERATION_STATE_META: Record<IterationState, { label: string; variant: BadgeVariant }> = {
+  upcoming: { label: "Upcoming", variant: "neutral" },
+  active: { label: "Active", variant: "blue" },
+  completed: { label: "Completed", variant: "success" },
+};
+
+export function iterationStateMeta(state: IterationState): {
+  label: string;
+  variant: BadgeVariant;
+} {
+  // A row can arrive from a backend newer than this bundle, so an unrecognised state falls back
+  // to its own raw string rather than rendering `undefined` as a class.
+  return ITERATION_STATE_META[state] ?? { label: String(state), variant: "neutral" };
+}
+
+/** An iteration's dates as one phrase — `3 Feb – 16 Feb 2026`. Both ends are inclusive, so this
+ *  is the span a person can hold a card against. The year is stated once, on the end, unless the
+ *  box straddles two. Formatted through `Intl`, so the viewer's own locale orders the parts. */
+export function iterationDateRange(startDate: string, endDate: string): string {
+  const start = dayIndex(startDate);
+  const end = dayIndex(endDate);
+  if (start === null || end === null) return `${startDate} – ${endDate}`;
+  const at = (day: number) => new Date(day * MS_PER_DAY);
+  const sameYear = at(start).getUTCFullYear() === at(end).getUTCFullYear();
+  const dayMonth: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", timeZone: "UTC" };
+  const full: Intl.DateTimeFormatOptions = { ...dayMonth, year: "numeric" };
+  const fmt = (day: number, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(undefined, opts).format(at(day));
+  return `${fmt(start, sameYear ? dayMonth : full)} – ${fmt(end, full)}`;
 }
 
 /** How a card names itself in TEXT — `ADH-42 — Fix the login redirect`, or just the title when
@@ -258,6 +404,10 @@ export function actionPhrase(
       return "unassigned";
     case "work_item.reparented":
       return "moved";
+    // The trail carries `{ from, to }` iteration ids, and `to: null` is the backlog — a real
+    // destination, so it gets its own sentence rather than being read as an absent one.
+    case "work_item.iteration_changed":
+      return detail?.to === null ? "moved to the backlog" : "committed to an iteration";
     case "work_item.deleted":
       return "deleted a work item";
     case "comment.added":

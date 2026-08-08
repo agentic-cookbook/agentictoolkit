@@ -14,6 +14,7 @@
 import { authedJson, authedRequest } from "../http";
 import { compact, enc, sortByText, workspaceQuery } from "../client-helpers";
 import type {
+  EstimateScale,
   StatusCategory,
   ProjectRow,
   ProjectStatusRow,
@@ -71,6 +72,10 @@ export interface Project {
   ecosystemId: string;
   /** ISO timestamp when archived; null when not archived. */
   archivedAt: string | null;
+  /** which numbers this project's estimate picker offers. `'none'` — the DB default — means
+   *  this project does not estimate, and is why the field is never optional here: "no scale"
+   *  is an answer a renderer can act on, whereas `undefined` is one it has to guess about. */
+  estimateScale: EstimateScale;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +90,7 @@ export function toProject(r: ProjectRow): Project {
     keyPrefix: r.keyPrefix ?? "",
     ecosystemId: r.ecosystemId,
     archivedAt: r.archivedAt ?? null,
+    estimateScale: r.estimateScale ?? "none",
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   };

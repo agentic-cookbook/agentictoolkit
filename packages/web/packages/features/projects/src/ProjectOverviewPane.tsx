@@ -34,6 +34,7 @@ import {
   type ProjectActivity,
   type ProjectArtifact,
   type ProjectParticipant,
+  type EstimateScale,
   type ProjectStatus,
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
@@ -46,6 +47,8 @@ import {
   dayIndex,
   relativeTime,
   todayIndex,
+  ESTIMATE_SCALES,
+  estimateScaleOptionLabel,
   type BadgeVariant,
 } from "./helpers";
 
@@ -179,6 +182,7 @@ export function ProjectOverviewPane({
   const [status, setStatus] = useState("");
   const [color, setColor] = useState("");
   const [keyPrefix, setKeyPrefix] = useState("");
+  const [estimateScale, setEstimateScale] = useState<EstimateScale>("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -277,6 +281,7 @@ export function ProjectOverviewPane({
     setStatus(p.status);
     setColor(p.color);
     setKeyPrefix(p.keyPrefix);
+    setEstimateScale(p.estimateScale);
   }, []);
 
   // Load the project. ResourceExplorer keys the topic pane by the project id, so a
@@ -304,17 +309,19 @@ export function ProjectOverviewPane({
       status?: string;
       color?: string;
       keyPrefix?: string;
+      estimateScale?: EstimateScale;
     } = {};
     if (name.trim() !== project.name) next.name = name.trim();
     if (description !== (project.description ?? "")) next.description = description;
     if (status !== project.status) next.status = status;
     if (color.trim() !== project.color) next.color = color.trim();
+    if (estimateScale !== project.estimateScale) next.estimateScale = estimateScale;
     // Upper-cased on the way out, because `adh` and `ADH` are the same claim and the backend
     // stores only the upper form — sending the raw text would make the field look dirty forever.
     const nextPrefix = keyPrefix.trim().toUpperCase();
     if (nextPrefix !== project.keyPrefix) next.keyPrefix = nextPrefix;
     return next;
-  }, [project, name, description, status, color, keyPrefix]);
+  }, [project, name, description, status, color, keyPrefix, estimateScale]);
 
   // Shown (and blocking) only once the field has been TOUCHED into the patch — a project that
   // arrives with no prefix yet must not open its settings already complaining.
@@ -627,7 +634,7 @@ export function ProjectOverviewPane({
             {/* ── Its own record ───────────────────────────────────────── */}
             <Disclosure
               title="Project settings"
-              subtitle="Name, description, lifecycle status, and board accent."
+              subtitle="Name, description, lifecycle status, board accent, key prefix, and estimate scale."
               className="max-w-3xl"
             >
               <div className="flex max-w-xl flex-col gap-5">
@@ -690,6 +697,29 @@ export function ProjectOverviewPane({
                     maxLength={8}
                     placeholder="ADH"
                   />
+                </Field>
+                {/* The one setting that turns a whole field on and off: `none` — the default
+                    every project starts on — means no size picker and no size chip anywhere in
+                    this project. Switching away NEVER rewrites a card: the numbers already
+                    stored stay exactly as they are and simply stop being offered, which is what
+                    makes this cheap to change your mind about. */}
+                <Field
+                  label="Estimate scale"
+                  hint="Which sizes this project's cards can be given. Changing it leaves sizes already set alone."
+                >
+                  <Select
+                    value={estimateScale}
+                    onChange={(e) => {
+                      setSaveError(null);
+                      setEstimateScale(e.target.value as EstimateScale);
+                    }}
+                  >
+                    {ESTIMATE_SCALES.map((s) => (
+                      <option key={s} value={s}>
+                        {estimateScaleOptionLabel(s)}
+                      </option>
+                    ))}
+                  </Select>
                 </Field>
                 <ErrorText error={saveError} />
                 <div className="flex items-center gap-2">

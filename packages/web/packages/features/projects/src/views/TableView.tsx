@@ -8,18 +8,23 @@ import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
-import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
+import {
+  type EstimateScale,
+  type Iteration,
+  type ProjectStatus,
+  type ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import { ItemKey } from "../ItemKey";
-import { assigneeLabel, itemKeyNumber, statusMeta } from "../helpers";
+import { assigneeLabel, estimateLabel, itemKeyNumber, statusMeta } from "../helpers";
 import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
 
 /**
  * The Table VIEW of the work-items surface: a DENSE spreadsheet — the List's
  * superset — laying every work item out across sortable columns (title, status,
- * assignee, priority, start / due dates, labels). PRESENTATIONAL, like its List
- * sibling: it loads no data and owns no editor; the WorkItemsSurface loads the
- * items ONCE and owns the shared editor.
+ * assignee, priority, iteration, estimate, start / due dates, labels). PRESENTATIONAL,
+ * like its List sibling: it loads no data and owns no editor; the WorkItemsSurface loads
+ * the items ONCE and owns the shared editor.
  *
  * CLICK SELECTS, DOUBLE-CLICK OPENS (Enter is the keyboard twin). It used to be that a single
  * click opened the editor — which cost the table selection entirely, because a table has only one
@@ -57,6 +62,7 @@ function sortValue(
   key: string,
   statuses: ProjectStatus[],
   participants: ProjectParticipant[],
+  iterations: Iteration[],
 ): string | number {
   switch (key) {
     case "itemKey":
@@ -65,6 +71,15 @@ function sortValue(
       return itemKeyNumber(w.itemKey);
     case "priority":
       return w.priority;
+    case "iteration":
+      // By the cycle's START, not its name: "Sprint 10" sorts before "Sprint 2" as text, and
+      // nobody ordering by iteration means anything other than chronologically. Backlog cards
+      // collapse to "" and cluster together, the same way the nullable dates below do.
+      return iterations.find((i) => i.id === w.iterationId)?.startDate ?? "";
+    case "estimate":
+      // Unestimated sorts below every real size (0 included — a card judged free HAS been
+      // looked at), so ascending puts "nobody has sized these" first.
+      return w.estimate ?? -1;
     case "status":
       return statusMeta(w.statusId, statuses).label.toLowerCase();
     case "assignee":
@@ -83,12 +98,19 @@ export function TableView({
   items,
   statuses,
   participants,
+  iterations,
+  estimateScale,
   onOpenItem,
   onChanged,
 }: {
   items: WorkItem[];
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
+  /** The workspace's time-boxes. An EMPTY list removes the Iteration column — a workspace that
+   *  runs no cycles would otherwise get a column of dashes it can never fill. */
+  iterations: Iteration[];
+  /** The project's estimate scale; `none` removes the Estimate column for the same reason. */
+  estimateScale: EstimateScale;
   onOpenItem: (id: string) => void;
   /** A bulk update or delete landed — the surface re-reads the shared items so every view
    *  repaints together. */
@@ -155,6 +177,41 @@ export function TableView({
           return <Badge variant={m.variant}>{m.label}</Badge>;
         },
       },
+      // The two PLANNING columns sit between the card's own facts and its dates, and each is
+      // present only where it has an answer: a workspace with no cycles has no iteration to show,
+      // and a project that does not estimate has no scale to show one in.
+      ...(iterations.length > 0
+        ? [
+            {
+              key: "iteration",
+              header: "Iteration",
+              width: "1.2fr",
+              sortable: true,
+              // The name alone — the dates are what the picker and the Iterations pane are for,
+              // and a date range in a dense cell truncates to noise.
+              render: (w: WorkItem) => (
+                <span className="truncate text-apt-text-muted">
+                  {iterations.find((i) => i.id === w.iterationId)?.name ?? "—"}
+                </span>
+              ),
+            } satisfies DataTableColumn<WorkItem>,
+          ]
+        : []),
+      ...(estimateScale !== "none"
+        ? [
+            {
+              key: "estimate",
+              header: "Estimate",
+              width: "0.6fr",
+              sortable: true,
+              render: (w: WorkItem) => (
+                <span className="text-apt-text-muted">
+                  {estimateLabel(w.estimate, estimateScale) ?? "—"}
+                </span>
+              ),
+            } satisfies DataTableColumn<WorkItem>,
+          ]
+        : []),
       {
         key: "startDate",
         header: "Start",
@@ -179,7 +236,7 @@ export function TableView({
         ),
       },
     ],
-    [statuses, participants],
+    [statuses, participants, iterations, estimateScale],
   );
 
   // DataTable renders `rows` in the order given — sort here (client-side) from the
@@ -189,13 +246,13 @@ export function TableView({
     const { key, dir } = sort;
     const factor = dir === "asc" ? 1 : -1;
     return [...items].sort((a, b) => {
-      const av = sortValue(a, key, statuses, participants);
-      const bv = sortValue(b, key, statuses, participants);
+      const av = sortValue(a, key, statuses, participants, iterations);
+      const bv = sortValue(b, key, statuses, participants, iterations);
       if (av < bv) return -factor;
       if (av > bv) return factor;
       return 0;
     });
-  }, [items, sort, statuses, participants]);
+  }, [items, sort, statuses, participants, iterations]);
 
   if (items.length === 0) {
     return (

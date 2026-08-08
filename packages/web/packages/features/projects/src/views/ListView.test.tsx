@@ -60,6 +60,8 @@ const ITEM: WorkItem = {
   dueDate: "2026-08-01",
   labels: ["design"],
   parentId: null,
+  iterationId: null,
+  estimate: null,
   rank: "V0",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
@@ -72,6 +74,8 @@ function renderList(items: WorkItem[] = [ITEM], onChanged = vi.fn().mockResolved
       items={items}
       statuses={[TODO, DOING]}
       participants={[PARTICIPANT]}
+      iterations={[]}
+      estimateScale="none"
       onChanged={onChanged}
     />,
   );
