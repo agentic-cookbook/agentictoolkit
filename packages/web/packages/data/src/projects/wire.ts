@@ -90,6 +90,39 @@ export interface ProjectLabelsRow {
   items: string[];
 }
 
+/**
+ * Backend row for `GET /project/projects/{id}/saved-views` — a named narrowing of a board.
+ *
+ * `config` is deliberately `unknown`: the backend stores it as opaque jsonb and neither reads
+ * nor validates inside it, so the only honest type here is "whatever was stored". The FEATURE
+ * that writes it owns its shape and decodes it tolerantly, which is what lets a filter grow an
+ * axis without a migration, a spec change, or a stale row.
+ */
+export interface SavedViewRow {
+  id: string;
+  projectId: string;
+  name: string;
+  config: unknown;
+  /** the customer who saved it, when the backend knew one. Recorded, not enforced: a saved
+   *  view belongs to the project, and anyone who can read the board can open it. */
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /project/projects/{id}/saved-views` body. */
+export interface SavedViewCreateBody {
+  name: string;
+  config: unknown;
+}
+
+/** `PATCH /project/projects/{id}/saved-views/{viewId}` body — rename, re-point at the current
+ *  filter, or both. */
+export interface SavedViewPatchBody {
+  name?: string;
+  config?: unknown;
+}
+
 /** Backend row for `GET /project/projects/{id}/participants`. */
 export interface ProjectParticipantRow {
   id: string;

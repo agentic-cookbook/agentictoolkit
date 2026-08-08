@@ -47,13 +47,22 @@ import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
  * pre-sorted items. The whole table sits in an `overflow-x-auto` wrapper with a
  * `min-w`, so a wide dense table scrolls horizontally instead of breaking the page.
  *
+ * The sort is UNCONTROLLED with a seed (`defaultSort`) and a report (`onSortChange`),
+ * rather than owned by the surface the way the filter is. The difference is real: a filter
+ * describes all five views and has to survive a switch between them, while a column sort
+ * describes THIS table and no other view can express one. So the surface only needs to
+ * OBSERVE it — to write it into a saved view — and to SEED it when a saved view is applied,
+ * which it does by remounting on the applied view's key. That keeps the sort where the
+ * control is instead of routing every header click through the surface and back.
+ *
  * OUT OF SCOPE — custom-field columns: the backend exposes only a PER-ITEM field
  * values endpoint (`projectWorkItemsApi.getValues`), no batch/list variant, so a
  * field column would fan out into N fetches (one per row) — a perf anti-pattern.
  * Adding custom-field columns needs a batch field-values endpoint first (future).
  */
 
-type SortState = { key: string; dir: "asc" | "desc" };
+/** A column sort: which column, which way. Exported because a saved view stores one. */
+export type SortState = { key: string; dir: "asc" | "desc" };
 
 /** The comparable a column sorts on — a number for priority, a lowercased string
  *  for everything else (nullable dates collapse to "" so they cluster together). */
@@ -102,6 +111,8 @@ export function TableView({
   estimateScale,
   onOpenItem,
   onChanged,
+  defaultSort,
+  onSortChange,
 }: {
   items: WorkItem[];
   statuses: ProjectStatus[];
@@ -115,8 +126,19 @@ export function TableView({
   /** A bulk update or delete landed — the surface re-reads the shared items so every view
    *  repaints together. */
   onChanged: () => Promise<void>;
+  /** The sort to open with — a saved view's. Read once, at mount. */
+  defaultSort?: SortState | null;
+  /** Reports each header click, so the surface can save the sort someone arrived at. */
+  onSortChange?: (sort: SortState) => void;
 }): ReactElement {
-  const [sort, setSort] = useState<SortState | undefined>(undefined);
+  const [sort, setSort] = useState<SortState | undefined>(defaultSort ?? undefined);
+  const applySort = useCallback(
+    (next: SortState) => {
+      setSort(next);
+      onSortChange?.(next);
+    },
+    [onSortChange],
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const bulk = useBulkWorkItemActions({ statuses, participants, onChanged });
@@ -294,7 +316,7 @@ export function TableView({
           onSelectionChange={setSelectedIds}
           onRowActivate={onOpenItem}
           sort={sort}
-          onSortChange={setSort}
+          onSortChange={applySort}
         />
       </div>
       {bulk.dialog}

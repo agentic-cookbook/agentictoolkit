@@ -25,6 +25,9 @@ import type {
   ProjectStatusPatchBody,
   ProjectParticipantAddBody,
   ProjectLabelsRow,
+  SavedViewRow,
+  SavedViewCreateBody,
+  SavedViewPatchBody,
 } from "./wire";
 
 const BASE = "/api/project/projects";
@@ -145,6 +148,36 @@ export function toProjectParticipant(r: ProjectParticipantRow): ProjectParticipa
     role: r.role,
     addedBy: r.addedBy ?? null,
     addedAt: r.addedAt,
+  };
+}
+
+/* ── Saved views ──────────────────────────────────────────────────────── */
+
+export interface SavedView {
+  id: string;
+  projectId: string;
+  name: string;
+  /** The view's stored shape, OPAQUE on the wire and here: which view to open in, which filter
+   *  to apply, which column sort. The backend stores it as one jsonb blob and never reads
+   *  inside it, and this client doesn't either — the feature package that owns the filter
+   *  vocabulary decodes it (`decodeViewConfig`). That is what keeps a new filter axis from
+   *  being a schema change. */
+  config: unknown;
+  /** The customer who saved it, when the backend knew one. Recorded, not enforced. */
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function toSavedView(r: SavedViewRow): SavedView {
+  return {
+    id: r.id,
+    projectId: r.projectId,
+    name: r.name,
+    config: r.config,
+    createdBy: r.createdBy ?? null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
   };
 }
 
@@ -330,6 +363,52 @@ export const projectsApi = {
     ): Promise<void> {
       return authedRequest(
         `${BASE}/${enc(projectId)}/participants/${enc(participantId)}?kind=${enc(kind)}`,
+        { method: "DELETE" },
+      );
+    },
+  },
+
+  /** A project's saved views — a named filter + view + sort, shared by everyone who can read
+   *  the project (there are no private views: a board is a shared artefact, and a view nobody
+   *  else can open is a bookmark, which the address bar already is). */
+  savedViews: {
+    async list(projectId: string): Promise<SavedView[]> {
+      const rows = await authedJson<SavedViewRow[]>(
+        `${BASE}/${enc(projectId)}/saved-views`,
+      );
+      return rows.map(toSavedView); // server orders by name
+    },
+
+    async create(
+      projectId: string,
+      input: { name: string; config: unknown },
+    ): Promise<SavedView> {
+      const body: SavedViewCreateBody = { name: input.name, config: input.config };
+      return toSavedView(
+        await authedJson<SavedViewRow>(`${BASE}/${enc(projectId)}/saved-views`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        }),
+      );
+    },
+
+    async update(
+      projectId: string,
+      viewId: string,
+      patch: { name?: string; config?: unknown },
+    ): Promise<SavedView> {
+      const body: SavedViewPatchBody = compact(patch);
+      return toSavedView(
+        await authedJson<SavedViewRow>(
+          `${BASE}/${enc(projectId)}/saved-views/${enc(viewId)}`,
+          { method: "PATCH", body: JSON.stringify(body) },
+        ),
+      );
+    },
+
+    remove(projectId: string, viewId: string): Promise<void> {
+      return authedRequest(
+        `${BASE}/${enc(projectId)}/saved-views/${enc(viewId)}`,
         { method: "DELETE" },
       );
     },

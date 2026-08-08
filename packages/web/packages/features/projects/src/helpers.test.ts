@@ -116,3 +116,82 @@ describe("actionPhrase for link events", () => {
     expect(actionPhrase("sprint.started")).toBe("sprint.started");
   });
 });
+
+describe("actionPhrase for the rest of the trail", () => {
+  // Every action string the backend appends to a project's trail today. The fallback makes an
+  // unphrased action INVISIBLE — the feed renders `work_item.fields_updated` and looks like it
+  // works — so the coverage has to be asserted rather than noticed. Kept as a literal list
+  // because it is the backend's vocabulary, not this package's: when a new action lands, this
+  // test is the thing that has to be told about it.
+  const EMITTED = [
+    "project.created",
+    "project.updated",
+    "project.archived",
+    "project.deleted",
+    "work_item.created",
+    "work_item.updated",
+    "work_item.status_changed",
+    "work_item.assigned",
+    "work_item.unassigned",
+    "work_item.reparented",
+    "work_item.iteration_changed",
+    "work_item.moved",
+    "work_item.fields_updated",
+    "work_item.deleted",
+    "comment.added",
+    "comment.edited",
+    "comment.deleted",
+    "field.created",
+    "field.updated",
+    "field.deleted",
+    "participant.added",
+    "participant.removed",
+    "dependency.added",
+    "dependency.removed",
+    "status.created",
+    "status.updated",
+    "status.deleted",
+    "saved_view.created",
+    "saved_view.updated",
+    "saved_view.deleted",
+  ];
+
+  it("phrases every action the backend can write", () => {
+    for (const action of EMITTED) expect(actionPhrase(action)).not.toBe(action);
+  });
+
+  it("names the two ends of a reorder, because they are the placements people mean", () => {
+    // The server reads a side stated as `null` as a destination: nothing above it is the top,
+    // nothing below it is the bottom. Landing between two named cards has no such name.
+    expect(actionPhrase("work_item.moved", { after: null })).toBe("moved a work item to the top");
+    expect(actionPhrase("work_item.moved", { before: null })).toBe(
+      "moved a work item to the bottom",
+    );
+    expect(actionPhrase("work_item.moved", { after: "wi_1", before: "wi_2" })).toBe(
+      "reordered a work item",
+    );
+  });
+
+  it("counts a batch of field values", () => {
+    expect(actionPhrase("work_item.fields_updated", { fieldIds: ["f1"] })).toBe(
+      "updated a field value",
+    );
+    expect(actionPhrase("work_item.fields_updated", { fieldIds: ["f1", "f2"] })).toBe(
+      "updated field values",
+    );
+    // No list at all is an older row, not a row that changed nothing.
+    expect(actionPhrase("work_item.fields_updated")).toBe("updated field values");
+  });
+
+  it("separates a saved view's rename from a re-point", () => {
+    // One action covers both, and `changed` is the only place the difference is written down.
+    expect(actionPhrase("saved_view.updated", { changed: ["name"] })).toBe("renamed a saved view");
+    expect(actionPhrase("saved_view.updated", { changed: ["config"] })).toBe(
+      "updated a saved view",
+    );
+    expect(actionPhrase("saved_view.updated", { changed: ["name", "config"] })).toBe(
+      "updated a saved view",
+    );
+    expect(actionPhrase("saved_view.updated")).toBe("updated a saved view");
+  });
+});

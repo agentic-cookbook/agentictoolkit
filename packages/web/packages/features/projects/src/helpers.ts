@@ -356,16 +356,27 @@ export function authorText(c: ProjectComment): string {
   return principalText(c.authorKind, c.authorId, c.authorLabel);
 }
 
+/** True when a trail row's `changed` list holds the name and nothing else. Written positively —
+ *  a row from before `changed` existed has no list at all, and "we do not know what changed" must
+ *  not read as "only the name did". */
+function isRenameOnly(detail?: Record<string, unknown> | null): boolean {
+  const changed = detail?.changed;
+  return Array.isArray(changed) && changed.length === 1 && changed[0] === "name";
+}
+
 /** Human phrasing of an `action` string; the raw value is the fallback.
  *
  *  A switch with a `default` rather than a total Record (unlike CATEGORY_VARIANT above) because
  *  the action set is OPEN — the backend appends new action strings as features land, and a bundle
  *  older than the backend must render the raw string rather than blank the row.
  *
- *  `detail` is optional because most actions say everything in their name. The link events are
- *  the exception: one action covers three relationships, and "linked an item" throws away the
- *  only fact that distinguishes a prerequisite from a duplicate. A caller with the row in hand
- *  passes it; one without still gets a sentence. */
+ *  `detail` is optional because most actions say everything in their name. The exceptions are the
+ *  actions the backend deliberately writes ONE of where a person would see several — a link
+ *  (`dependency.added` covers three relationships, and "linked an item" throws away the only fact
+ *  that separates a prerequisite from a duplicate), a reorder, a batch of field values, and a
+ *  saved-view edit that may be a rename or a re-point. Each of those reads its distinguishing fact
+ *  out of `detail`, so a caller with the row in hand passes it; one without still gets a sentence,
+ *  just the more general one. */
 export function actionPhrase(
   action: string,
   detail?: Record<string, unknown> | null,
@@ -392,6 +403,8 @@ export function actionPhrase(
       return "updated the project";
     case "project.archived":
       return "archived the project";
+    case "project.deleted":
+      return "deleted the project";
     case "work_item.created":
       return "created a work item";
     case "work_item.updated":
@@ -404,6 +417,20 @@ export function actionPhrase(
       return "unassigned";
     case "work_item.reparented":
       return "moved";
+    // Reordering among siblings, which the backend records as the NEIGHBOURS the card landed
+    // between. A side stated as `null` is not an absent neighbour but a named destination — the
+    // server reads `{ after: null }` as the top of the list and `{ before: null }` as the bottom —
+    // and those two are the only placements worth a sentence of their own.
+    case "work_item.moved":
+      if (detail?.after === null) return "moved a work item to the top";
+      if (detail?.before === null) return "moved a work item to the bottom";
+      return "reordered a work item";
+    // One row covers a whole batch of set-or-cleared values, so the count is the only thing that
+    // distinguishes them and `detail.fieldIds` is the only place it is written down.
+    case "work_item.fields_updated":
+      return Array.isArray(detail?.fieldIds) && detail.fieldIds.length === 1
+        ? "updated a field value"
+        : "updated field values";
     // The trail carries `{ from, to }` iteration ids, and `to: null` is the backlog — a real
     // destination, so it gets its own sentence rather than being read as an absent one.
     case "work_item.iteration_changed":
@@ -426,6 +453,21 @@ export function actionPhrase(
       return "added a participant";
     case "participant.removed":
       return "removed a participant";
+    case "status.created":
+      return "added a status";
+    case "status.updated":
+      return "updated a status";
+    case "status.deleted":
+      return "removed a status";
+    case "saved_view.created":
+      return "saved a view";
+    // `detail.changed` names the columns the PATCH actually wrote — the route drops a no-op set
+    // before recording anything — so a lone `name` is a rename and everything else re-points the
+    // view at a different board. Two very different events under one action string.
+    case "saved_view.updated":
+      return isRenameOnly(detail) ? "renamed a saved view" : "updated a saved view";
+    case "saved_view.deleted":
+      return "deleted a saved view";
     default:
       return action;
   }

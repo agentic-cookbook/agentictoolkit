@@ -32,6 +32,7 @@ vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
     labels: vi.fn(),
     // The surface reads the project's OWN record for one field — its estimate scale.
     get: vi.fn(),
+    savedViews: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   },
   // The workspace's time-boxes, which the editor's iteration picker offers.
   projectIterationsApi: { list: vi.fn() },
@@ -53,6 +54,7 @@ vi.mock("@agentic-toolkit/data/reactions", async (importOriginal) => ({
 }));
 
 import { WorkItemsSurface } from "./WorkItemsSurface";
+import { resetViewMemory } from "./view-memory";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   projectIterationsApi,
@@ -61,6 +63,7 @@ import {
   type Project,
   type ProjectStatus,
   type ProjectParticipant,
+  type SavedView,
 } from "@agentic-toolkit/data/projects";
 import { RailHostBoundary, type TopicLeaf } from "@agentic-toolkit/resource";
 
@@ -73,6 +76,10 @@ const participantsList = vi.mocked(projectsApi.participants.list);
 const labelsList = vi.mocked(projectsApi.labels);
 const projectGet = vi.mocked(projectsApi.get);
 const iterationsList = vi.mocked(projectIterationsApi.list);
+const savedViewsList = vi.mocked(projectsApi.savedViews.list);
+const savedViewsCreate = vi.mocked(projectsApi.savedViews.create);
+const savedViewsUpdate = vi.mocked(projectsApi.savedViews.update);
+const savedViewsRemove = vi.mocked(projectsApi.savedViews.remove);
 
 function status(over: Partial<ProjectStatus>): ProjectStatus {
   return {
@@ -169,6 +176,11 @@ const W2 = item({ id: "w2", title: "Write the copy", statusId: "s2", priority: 1
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The surface's narrowing lives at MODULE scope so it survives the remount a view switch
+  // performs (see `useViewMemory`). Module scope also outlives `cleanup()`, so a filter one case
+  // sets would still be narrowing the board in the next one.
+  resetViewMemory();
+  savedViewsList.mockResolvedValue([]);
   listForProject.mockResolvedValue([structuredClone(W1), structuredClone(W2)]);
   statusesList.mockResolvedValue([DONE, TODO_COL, DOING].map((s) => structuredClone(s))); // unsorted
   participantsList.mockResolvedValue([structuredClone(PARTICIPANT)]);
@@ -677,5 +689,217 @@ describe("WorkItemsSurface", () => {
         "Design the landing page",
       ),
     ).toBeNull();
+  });
+
+  /* ── Saved views ──────────────────────────────────────────────────────────
+   * The bar is the surface's, not a view's: what it saves is the whole configuration — the
+   * narrowing, the Table's column sort, and WHICH view — so every case below goes through the
+   * real hook and the real chooser rather than a stubbed controller. */
+  describe("saved views", () => {
+    /** A stored view as the API answers it: `config` is opaque jsonb, so it comes back as the
+     *  sparse object `encodeViewConfig` wrote — not a full `WorkItemViewConfig`. */
+    function savedView(over: Partial<SavedView> & { config: unknown }): SavedView {
+      return {
+        id: "v1",
+        projectId: "p1",
+        name: "My view",
+        createdBy: "cust-1",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        updatedAt: "2026-08-01T00:00:00.000Z",
+        ...over,
+      };
+    }
+
+    /** The bar, scoped: the List view below it has a "Delete" of its own, aimed at work items. */
+    const bar = () => within(screen.getByRole("group", { name: "Saved views" }));
+
+    /** Open the chooser and type into its one field. */
+    async function openChooser(text?: string): Promise<HTMLInputElement> {
+      fireEvent.click(screen.getByRole("button", { name: "Saved view" }));
+      const input = (await screen.findByRole("combobox", {
+        name: "Find a view, or name this one",
+      })) as HTMLInputElement;
+      if (text !== undefined) fireEvent.change(input, { target: { value: text } });
+      return input;
+    }
+
+    it("saves what the board is showing under a name typed into the chooser", async () => {
+      savedViewsCreate.mockResolvedValue(
+        savedView({ name: "Copy work", config: { view: "list", filter: { text: "copy" } } }),
+      );
+      render(<Harness />);
+      await listLoaded();
+
+      fireEvent.change(screen.getByRole("searchbox", { name: "Search work items" }), {
+        target: { value: "copy" },
+      });
+      await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+
+      await openChooser("Copy work");
+      fireEvent.click(await screen.findByRole("option", { name: /Save this view as/ }));
+
+      // The stored config is the SPARSE encoding: the view, and only the axes actually set.
+      await waitFor(() =>
+        expect(savedViewsCreate).toHaveBeenCalledWith("p1", {
+          name: "Copy work",
+          config: { view: "list", filter: { text: "copy" } },
+        }),
+      );
+      // Saving names what is already on screen — it must not re-narrow or repaint anything.
+      expect(screen.getByText("1 of 2 work items")).not.toBeNull();
+    });
+
+    it("applies a view's narrowing AND opens the view it was saved on", async () => {
+      savedViewsList.mockResolvedValue([
+        savedView({ name: "Copy on the board", config: { view: "board", filter: { text: "copy" } } }),
+      ]);
+      const onSelectSpy = vi.fn();
+      render(<Harness onSelectSpy={onSelectSpy} />);
+      await listLoaded();
+
+      await openChooser();
+      fireEvent.click(await screen.findByRole("option", { name: "Copy on the board" }));
+
+      // Which of the five views to open in is part of what a saved view saves, so applying one
+      // routes — the same call the rail's own row makes, so history and the URL agree.
+      await waitFor(() => expect(onSelectSpy).toHaveBeenCalledWith("board", undefined));
+      await screen.findByRole("list", { name: "Board columns" });
+      expect(screen.getByText("1 of 2 work items")).not.toBeNull();
+      expect(
+        (screen.getByRole("searchbox", { name: "Search work items" }) as HTMLInputElement).value,
+      ).toBe("copy");
+    });
+
+    it("says MODIFIED once the board drifts, and Save re-points the view at it", async () => {
+      savedViewsList.mockResolvedValue([
+        savedView({ name: "Copy work", config: { view: "list", filter: { text: "copy" } } }),
+      ]);
+      savedViewsUpdate.mockImplementation((_p, _v, patch) =>
+        Promise.resolve(savedView({ name: "Copy work", config: {}, ...patch })),
+      );
+      render(<Harness />);
+      await listLoaded();
+
+      await openChooser();
+      fireEvent.click(await screen.findByRole("option", { name: "Copy work" }));
+      await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+      // Applied and matching: nothing has drifted, so there is nothing to save.
+      expect(screen.queryByText("Modified")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+
+      fireEvent.change(screen.getByRole("searchbox", { name: "Search work items" }), {
+        target: { value: "landing" },
+      });
+      expect(await screen.findByText("Modified")).not.toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(savedViewsUpdate).toHaveBeenCalledWith("p1", "v1", {
+          config: { view: "list", filter: { text: "landing" } },
+        }),
+      );
+    });
+
+    it("carries the Table's column sort into the view, and back out of it", async () => {
+      savedViewsCreate.mockResolvedValue(savedView({ config: {} }));
+      render(<Harness view="table" />);
+      await screen.findByRole("button", { name: /^Title/ });
+
+      fireEvent.click(screen.getByRole("button", { name: /^Title/ }));
+
+      await openChooser("By title");
+      fireEvent.click(await screen.findByRole("option", { name: /Save this view as/ }));
+
+      // The sort is the Table's, but it is the SURFACE that stores it — a sort locked inside the
+      // view could not be saved, and a saved view that forgot it would open in a different order
+      // than the one that was named.
+      await waitFor(() =>
+        expect(savedViewsCreate).toHaveBeenCalledWith("p1", {
+          name: "By title",
+          config: { view: "table", sort: { key: "title", dir: "asc" } },
+        }),
+      );
+    });
+
+    it("widens to everything through the all-pass row, without changing view", async () => {
+      savedViewsList.mockResolvedValue([
+        savedView({ name: "Copy work", config: { view: "list", filter: { text: "copy" } } }),
+      ]);
+      const onSelectSpy = vi.fn();
+      render(<Harness onSelectSpy={onSelectSpy} />);
+      await listLoaded();
+
+      await openChooser();
+      fireEvent.click(await screen.findByRole("option", { name: "Copy work" }));
+      await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+      onSelectSpy.mockClear();
+
+      await openChooser();
+      fireEvent.click(await screen.findByRole("option", { name: "All work items" }));
+
+      // Widened, and still on the List: the all-pass answers "stop narrowing", which is not the
+      // same request as "take me somewhere else".
+      await waitFor(() => expect(screen.getByText("2 work items")).not.toBeNull());
+      expect(onSelectSpy).not.toHaveBeenCalled();
+      expect(bar().queryByRole("button", { name: "Delete" })).toBeNull();
+    });
+
+    it("deletes the applied view behind a confirm, leaving the board exactly as it is", async () => {
+      savedViewsList.mockResolvedValue([
+        savedView({ name: "Copy work", config: { view: "list", filter: { text: "copy" } } }),
+      ]);
+      savedViewsRemove.mockResolvedValue(undefined);
+      render(<Harness />);
+      await listLoaded();
+
+      await openChooser();
+      fireEvent.click(await screen.findByRole("option", { name: "Copy work" }));
+      await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+
+      savedViewsList.mockResolvedValue([]);
+      fireEvent.click(bar().getByRole("button", { name: "Delete" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Delete view" }));
+
+      await waitFor(() => expect(savedViewsRemove).toHaveBeenCalledWith("p1", "v1"));
+      // Deleting a name is not an instruction to change the subject: the narrowing stands, and
+      // only the affordances that need a view to act on go away.
+      await waitFor(() => expect(bar().queryByRole("button", { name: "Rename…" })).toBeNull());
+      expect(screen.getByText("1 of 2 work items")).not.toBeNull();
+    });
+
+    it("renames the applied view from the dialog, and refuses an unchanged name", async () => {
+      savedViewsList.mockResolvedValue([savedView({ name: "Copy work", config: {} })]);
+      savedViewsUpdate.mockResolvedValue(savedView({ name: "Copy, everywhere", config: {} }));
+      render(<Harness />);
+      await listLoaded();
+
+      await openChooser();
+      fireEvent.click(await screen.findByRole("option", { name: "Copy work" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Rename…" }));
+
+      const field = (await screen.findByRole("textbox", { name: "View name" })) as HTMLInputElement;
+      expect(field.value).toBe("Copy work");
+      // A rename to the same name is a write that says nothing.
+      expect(screen.getByRole("button", { name: "Rename" })).toHaveProperty("disabled", true);
+
+      fireEvent.change(field, { target: { value: "Copy, everywhere" } });
+      fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+
+      await waitFor(() =>
+        expect(savedViewsUpdate).toHaveBeenCalledWith("p1", "v1", { name: "Copy, everywhere" }),
+      );
+      await waitFor(() => expect(screen.queryByRole("textbox", { name: "View name" })).toBeNull());
+    });
+
+    it("shows the failure rather than pretending the view was saved", async () => {
+      savedViewsCreate.mockRejectedValue(new Error("A view named that already exists."));
+      render(<Harness />);
+      await listLoaded();
+
+      await openChooser("Copy work");
+      fireEvent.click(await screen.findByRole("option", { name: /Save this view as/ }));
+
+      expect(await screen.findByText("A view named that already exists.")).not.toBeNull();
+    });
   });
 });

@@ -36,10 +36,14 @@ import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/re
 import { WorkItemEditor } from "./WorkItemEditor";
 import { NewWorkItemDialog } from "./NewWorkItemDialog";
 import { WorkItemFilterBar } from "./WorkItemFilterBar";
-import { EMPTY_FILTER, applyWorkItemFilter, isFilterActive, type WorkItemFilter } from "./filters";
+import { SavedViewBar } from "./SavedViewBar";
+import { useSavedViews } from "./useSavedViews";
+import { useViewMemory } from "./view-memory";
+import { EMPTY_VIEW_CONFIG, type WorkItemViewConfig } from "./saved-views";
+import { applyWorkItemFilter, isFilterActive, type WorkItemFilter } from "./filters";
 import { ListView } from "./views/ListView";
 import { BoardView, type BoardCardDrop } from "./views/BoardView";
-import { TableView } from "./views/TableView";
+import { TableView, type SortState } from "./views/TableView";
 import { TimelineView } from "./views/TimelineView";
 import { CalendarView } from "./views/CalendarView";
 
@@ -94,6 +98,11 @@ function asViewId(value: string | null): ViewId | null {
   return value !== null && VIEW_IDS.includes(value) ? (value as ViewId) : null;
 }
 
+/** Two column sorts are the same when both halves are. */
+function sameSort(a: SortState | null, b: SortState | null): boolean {
+  return a === b || (a !== null && b !== null && a.key === b.key && a.dir === b.dir);
+}
+
 /* ── Surface ──────────────────────────────────────────────────────────────── */
 
 export function WorkItemsSurface({
@@ -119,9 +128,19 @@ export function WorkItemsSurface({
   // The narrowing, held HERE rather than in the bar, for the same reason the items are: every
   // view renders the same subset, so a filter owned by one of them would be a different list per
   // tab. It also survives switching views, which is what makes "the same 12 cards, seen five
-  // ways" true — the frame remounts the pane on that navigation, so the state has to sit above
-  // the view, and a filter re-typed per view would be no filter at all.
-  const [filter, setFilter] = useState<WorkItemFilter>(EMPTY_FILTER);
+  // ways" true — and since that switch is a NAVIGATION that remounts this pane, surviving it
+  // takes more than `useState`: see `useViewMemory`, which is where the filter, the Table's sort
+  // and the applied saved view actually live.
+  const [remembered, remember] = useViewMemory(projectId);
+  const { filter, sort, savedViewId } = remembered;
+  const setFilter = useCallback(
+    (next: WorkItemFilter) => remember({ filter: next }),
+    [remember],
+  );
+
+  // The active view is the URL's leaf segment — read up here because a saved view carries one,
+  // so both the config the bar compares against and the navigation applying one performs need it.
+  const view = asViewId(leaf.leafId);
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -423,7 +442,36 @@ export function WorkItemsSurface({
   const selected = selectedId ? (items ?? []).find((i) => i.id === selectedId) ?? null : null;
   const showEditor = selected !== null;
 
-  const view = asViewId(leaf.leafId);
+  // What the board is showing, as the thing a saved view stores. `view` stands in as "list" only
+  // while none is chosen, which is the one moment the bar is not on screen anyway.
+  const viewConfig = useMemo<WorkItemViewConfig>(
+    () => ({ view: view ?? EMPTY_VIEW_CONFIG.view, filter, sort }),
+    [view, filter, sort],
+  );
+
+  // The Table seeds its column sort ONCE, so a saved view applied while the Table is already open
+  // has to remount it. Keyed on a counter rather than on the sort itself: the Table reports every
+  // header click back up here, and a key that moved with it would tear the table down — losing
+  // its selection — every time someone re-ordered a column.
+  const [sortSeed, setSortSeed] = useState(0);
+
+  const onApplyView = useCallback(
+    (next: WorkItemViewConfig, appliedId: string | null) => {
+      remember({ filter: next.filter, sort: next.sort, savedViewId: appliedId });
+      if (!sameSort(next.sort, sort)) setSortSeed((n) => n + 1);
+      // A view saved on the Board OPENS the Board. That navigation remounts this pane, which is
+      // precisely why the three values above go somewhere that outlives it before we ask for it.
+      if (asViewId(next.view) !== null && next.view !== view) leaf.onSelect(next.view);
+    },
+    [remember, sort, view, leaf],
+  );
+
+  const savedViews = useSavedViews({
+    projectId,
+    config: viewConfig,
+    appliedId: savedViewId,
+    onApply: onApplyView,
+  });
 
   // The views ARE a topic list — one level of the enclosing hierarchical stack, published here so
   // the frame renders it as a rail alongside its siblings. Selecting a row re-routes to that view's
@@ -481,6 +529,9 @@ export function WorkItemsSurface({
       case "table":
         return (
           <TableView
+            // Remount when a saved view brings a different column sort, so the seed below is
+            // read again rather than left behind by the Table's own first mount.
+            key={`sort-${sortSeed}`}
             items={items}
             statuses={statuses}
             participants={participants}
@@ -488,6 +539,8 @@ export function WorkItemsSurface({
             estimateScale={estimateScale}
             onOpenItem={onOpenItem}
             onChanged={reload}
+            defaultSort={sort}
+            onSortChange={(next) => remember({ sort: next })}
           />
         );
       case "timeline":
@@ -521,6 +574,9 @@ export function WorkItemsSurface({
     onCardDrop,
     onSetDates,
     reload,
+    sort,
+    sortSeed,
+    remember,
   ]);
 
   return (
@@ -553,6 +609,9 @@ export function WorkItemsSurface({
           <TopicSelectHint title="Select a view to see this project's work items." />
         ) : (
           <>
+            {/* Above the filter bar, because it is the coarser choice: a saved view SETS the
+                controls below it, and a control that rearranges the one above it reads backwards. */}
+            <SavedViewBar controller={savedViews} />
             <WorkItemFilterBar
               filter={filter}
               onChange={setFilter}
