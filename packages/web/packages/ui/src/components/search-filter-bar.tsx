@@ -23,6 +23,22 @@ export interface SearchFieldConfig {
 }
 
 /**
+ * One option of a {@link FilterSelectConfig}, when what is stored differs from what
+ * is read — an axis over RECORDS (a status, an iteration, an owner) filters by id and
+ * shows a name. A bare string is the shorthand for the case where they coincide.
+ *
+ * The pair exists so a caller filtering by id does not have to keep a label↔id codec
+ * of its own: two ids can share a display name and two names can share an id, so any
+ * such codec is a lossy guess about data the caller already has correctly.
+ */
+export interface FilterSelectOption {
+  /** What the axis stores and reports through `onChange`. */
+  value: string;
+  /** What the option reads as. */
+  label: string;
+}
+
+/**
  * One filter `<select>` axis in a {@link SearchFilterBar}. An empty `value`
  * selects the leading all-pass option (no filter on this axis).
  */
@@ -33,12 +49,18 @@ export interface FilterSelectConfig {
   label: string;
   /** Selected option value; `""` selects the all-pass entry. */
   value: string;
-  /** Option values (each is both the value and the visible text). */
-  options: string[];
+  /** The options: a bare string is both the value and the visible text; a
+   *  {@link FilterSelectOption} separates them. The two may be mixed. */
+  options: readonly (string | FilterSelectOption)[];
   /** Label for the leading all-pass option, e.g. `"All categories"`. */
   allLabel: string;
   /** Called with the newly selected value (`""` for the all-pass entry). */
   onChange: (value: string) => void;
+}
+
+/** A filter option in its full form, whichever shorthand the caller used. */
+function asOption(option: string | FilterSelectOption): FilterSelectOption {
+  return typeof option === "string" ? { value: option, label: option } : option;
 }
 
 /**
@@ -136,9 +158,9 @@ export function SearchFilterBar({
               onChange={(e) => f.onChange(e.target.value)}
             >
               <option value="">{f.allLabel}</option>
-              {f.options.map((o) => (
-                <option key={o} value={o}>
-                  {o}
+              {f.options.map(asOption).map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </Select>

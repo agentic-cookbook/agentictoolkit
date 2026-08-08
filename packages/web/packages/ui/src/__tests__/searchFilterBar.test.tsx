@@ -64,6 +64,58 @@ describe('SearchFilterBar', () => {
     expect(within(tag).getByRole('option', { name: 'All tags' })).toBeInTheDocument()
   })
 
+  it('shows an option pair by its label and reports its value', () => {
+    // An axis over RECORDS filters by id and reads as a name — so the option the user
+    // sees ("Todo") and the value the host gets back ("st-1") are different strings.
+    const onChange = vi.fn()
+    render(
+      <SearchFilterBar
+        search={baseSearch()}
+        filters={[
+          {
+            name: 'status',
+            label: 'Filter by status',
+            value: '',
+            options: [
+              { value: 'st-1', label: 'Todo' },
+              { value: 'st-2', label: 'Done' },
+            ],
+            allLabel: 'All statuses',
+            onChange,
+          },
+        ]}
+      />,
+    )
+    const status = screen.getByRole('combobox', { name: 'Filter by status' })
+    expect(within(status).getByRole('option', { name: 'Todo' })).toBeInTheDocument()
+    expect(within(status).queryByRole('option', { name: 'st-1' })).toBeNull()
+    fireEvent.change(status, { target: { value: 'st-2' } })
+    expect(onChange).toHaveBeenCalledWith('st-2')
+  })
+
+  it('mixes bare strings and option pairs on one axis', () => {
+    render(
+      <SearchFilterBar
+        search={baseSearch()}
+        filters={[
+          {
+            name: 'iteration',
+            label: 'Filter by iteration',
+            value: '',
+            options: ['Backlog', { value: 'it-1', label: 'Sprint 3' }],
+            allLabel: 'All iterations',
+            onChange: vi.fn(),
+          },
+        ]}
+      />,
+    )
+    const axis = screen.getByRole('combobox', { name: 'Filter by iteration' })
+    const backlog = within(axis).getByRole('option', { name: 'Backlog' }) as HTMLOptionElement
+    const sprint = within(axis).getByRole('option', { name: 'Sprint 3' }) as HTMLOptionElement
+    expect(backlog.value).toBe('Backlog')
+    expect(sprint.value).toBe('it-1')
+  })
+
   it('reflects the controlled value and reports a filter change', () => {
     const onChange = vi.fn()
     render(

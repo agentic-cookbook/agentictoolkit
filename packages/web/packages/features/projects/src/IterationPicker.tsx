@@ -8,9 +8,10 @@ import { iterationDateRange } from "./helpers";
 
 /**
  * Which time-box a card is committed to: a Field + native Select over the WORKSPACE's
- * iterations, plus a "Backlog" option (→ null). The AssigneePicker idiom, deliberately — the
- * two sit next to each other in the editor and there is no reason for them to be different
- * shapes of control.
+ * iterations, plus a "Backlog" option (→ null). It stays a native select where AssigneePicker
+ * became a typeahead, and the reason is the only one that should ever move a control across
+ * that line: a workspace runs a handful of time-boxes at once and old ones stop being offered,
+ * so the list is BOUNDED and reading it whole is faster than typing. Participants are not.
  *
  * Two things about the list are worth stating rather than leaving to be discovered:
  *

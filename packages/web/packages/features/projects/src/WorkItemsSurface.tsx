@@ -35,6 +35,8 @@ import { useResourceList } from "@agentic-toolkit/data";
 import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 import { WorkItemEditor } from "./WorkItemEditor";
 import { NewWorkItemDialog } from "./NewWorkItemDialog";
+import { WorkItemFilterBar } from "./WorkItemFilterBar";
+import { EMPTY_FILTER, applyWorkItemFilter, isFilterActive, type WorkItemFilter } from "./filters";
 import { ListView } from "./views/ListView";
 import { BoardView, type BoardCardDrop } from "./views/BoardView";
 import { TableView } from "./views/TableView";
@@ -114,6 +116,12 @@ export function WorkItemsSurface({
   // selected record (see NewWorkItemDialog and the recipe's `must-create-in-modal`).
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  // The narrowing, held HERE rather than in the bar, for the same reason the items are: every
+  // view renders the same subset, so a filter owned by one of them would be a different list per
+  // tab. It also survives switching views, which is what makes "the same 12 cards, seen five
+  // ways" true — the frame remounts the pane on that navigation, so the state has to sit above
+  // the view, and a filter re-typed per view would be no filter at all.
+  const [filter, setFilter] = useState<WorkItemFilter>(EMPTY_FILTER);
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -403,6 +411,15 @@ export function WorkItemsSurface({
     [reload],
   );
 
+  // What the views render. The WRITES above all still address the full set — a card can be moved
+  // or re-dated while a filter hides its neighbours, and the editor's parent/relation pickers
+  // must offer the whole board, not the slice someone happens to be looking at. Only the five
+  // views see the subset.
+  const visibleItems = useMemo(
+    () => (items === null ? null : applyWorkItemFilter(items, filter)),
+    [items, filter],
+  );
+
   const selected = selectedId ? (items ?? []).find((i) => i.id === selectedId) ?? null : null;
   const showEditor = selected !== null;
 
@@ -431,9 +448,10 @@ export function WorkItemsSurface({
   });
 
   const activeView: ReactNode = useMemo(() => {
-    if (items === null) {
+    if (visibleItems === null) {
       return <p className="text-sm text-apt-text-muted">Loading…</p>;
     }
+    const items = visibleItems;
     switch (view) {
       case "list":
         // The List view is a LIST WITH DETAILS: it edits rows in place and shows the selected
@@ -493,7 +511,7 @@ export function WorkItemsSurface({
     }
   }, [
     view,
-    items,
+    visibleItems,
     statuses,
     participants,
     iterations,
@@ -535,9 +553,26 @@ export function WorkItemsSurface({
           <TopicSelectHint title="Select a view to see this project's work items." />
         ) : (
           <>
+            <WorkItemFilterBar
+              filter={filter}
+              onChange={setFilter}
+              statuses={statuses}
+              participants={participants}
+              iterations={iterations}
+              labelOptions={labelOptions}
+            />
             <div className="flex items-center justify-end">
               <span className="text-sm text-apt-text-muted">
-                {items === null ? "" : `${items.length} work item${items.length === 1 ? "" : "s"}`}
+                {/* Narrowed, the count says so with BOTH numbers: "3 work items" over a board of
+                    forty is indistinguishable from a board of three, and a filter someone forgot
+                    they set is exactly when that matters. */}
+                {items === null || visibleItems === null
+                  ? ""
+                  : isFilterActive(filter)
+                    ? `${visibleItems.length} of ${items.length} work item${
+                        items.length === 1 ? "" : "s"
+                      }`
+                    : `${items.length} work item${items.length === 1 ? "" : "s"}`}
               </span>
             </div>
             {activeView}

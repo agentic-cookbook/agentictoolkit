@@ -1,19 +1,27 @@
 "use client";
 
-import { type ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { ListChooser } from "@agentic-toolkit/ui/components/list-chooser";
 import type { ProjectParticipant } from "@agentic-toolkit/data/projects";
 
 /**
- * The work-item assignment UI: a Field + native Select over the project's
- * participants, plus an "Unassigned" option (→ null). There is no existing
- * entity picker, so this is built fresh, mirroring the TeamMembersPane
- * add-an-agent Field+Select idiom.
+ * The work-item assignment UI: a Field + the shared {@link ListChooser} typeahead over the
+ * project's participants, plus an "Unassigned" entry (→ null).
  *
- * A native <select> can only carry string option values, so each participant is
- * VALUED by a composite `${kind}:${id}` key that maps back to the {assigneeKind,
- * assigneeId} pair a work item stores; "" is the Unassigned sentinel (→ null).
+ * It began as a native `<Select>`, which is the right control for a bounded list and the wrong
+ * one here: a project's participant list grows without bound, and past a dozen entries a
+ * dropdown is a scroll rather than a choice — you cannot find a name you already know without
+ * reading every name you don't. `ListChooser` is the toolkit's answer (type to filter, arrow
+ * keys to move, Enter to accept), so this is a composition rather than a new control.
+ * `allowCreate` is off: you can only assign someone who is on this project, and inventing a
+ * name here would produce an assignee id nothing can resolve.
+ *
+ * The composite `${kind}:${id}` VALUE codec is unchanged and still exported — the list view's
+ * inline assignee cell is a native select (a typeahead popover inside a dense grid row would
+ * fight the row), and both encode an assignee identically. "" is the Unassigned sentinel
+ * (→ null), carried as a real ITEM rather than as the absence of one: an unassigned card is an
+ * answer people pick deliberately, and a chooser with no way back to it is a trap.
  */
 
 /** The (kind, id) reference an assignee resolves to — the assignable subset of a
@@ -55,25 +63,32 @@ export function AssigneePicker({
   value: AssigneeValue | null;
   onChange: (v: AssigneeValue | null) => void;
 }): ReactElement {
+  const items = useMemo(
+    () => [
+      { value: "", label: "Unassigned" },
+      ...participants.map((p) => ({
+        value: toOptionValue({
+          assigneeKind: p.participantKind,
+          assigneeId: p.participantId,
+        }),
+        label: participantLabel(p),
+      })),
+    ],
+    [participants],
+  );
+
   return (
     <Field label="Assignee">
-      <Select
+      <ListChooser
+        items={items}
         value={toOptionValue(value)}
-        onChange={(e) => onChange(fromOptionValue(e.target.value))}
-      >
-        <option value="">Unassigned</option>
-        {participants.map((p) => (
-          <option
-            key={p.id}
-            value={toOptionValue({
-              assigneeKind: p.participantKind,
-              assigneeId: p.participantId,
-            })}
-          >
-            {participantLabel(p)}
-          </option>
-        ))}
-      </Select>
+        onChange={(v) => onChange(fromOptionValue(v))}
+        allowCreate={false}
+        ariaLabel="Assignee"
+        inputLabel="Find a participant"
+        placeholder="Type a name…"
+        emptyLabel="No matching participant"
+      />
     </Field>
   );
 }

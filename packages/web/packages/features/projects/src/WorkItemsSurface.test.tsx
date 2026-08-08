@@ -286,6 +286,115 @@ describe("WorkItemsSurface", () => {
     expect(screen.queryByRole("grid", { name: "Work items" })).toBeNull();
   });
 
+  // ── The filter ──────────────────────────────────────────────────────────────
+  // The bar's own axes are unit-tested against the filter model (filters.test.ts). What only a
+  // surface test can show is the WIRING: that the narrowing reaches every view, that it survives
+  // a view switch, that the count says so, and — the one that would be silently wrong — that the
+  // writes still address the whole board rather than the slice on screen.
+  it("narrows every view from one filter, and says so in the count", async () => {
+    render(<Harness />);
+    await listLoaded();
+    expect(screen.getByText("2 work items")).not.toBeNull();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search work items" }), {
+      target: { value: "copy" },
+    });
+
+    // The List no longer holds w1…
+    await waitFor(() => expect(screen.queryByDisplayValue("Design the landing page")).toBeNull());
+    expect(screen.getByDisplayValue("Write the copy")).not.toBeNull();
+    // …and the count reports BOTH numbers, so a board of two is not mistaken for a board of ten.
+    expect(screen.getByText("1 of 2 work items")).not.toBeNull();
+
+    // The same subset on the Board — one filter, five views.
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    const board = await screen.findByRole("list", { name: "Board columns" });
+    expect(within(board).getByText("Write the copy")).not.toBeNull();
+    expect(within(board).queryByText("Design the landing page")).toBeNull();
+  });
+
+  it("keeps the filter across a view switch, and clears it on demand", async () => {
+    render(<Harness />);
+    await listLoaded();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search work items" }), {
+      target: { value: "copy" },
+    });
+    await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+
+    // Switching views remounts the pane's children; the filter lives above them, so it holds.
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    await screen.findByRole("list", { name: "Board columns" });
+    expect(screen.getByText("1 of 2 work items")).not.toBeNull();
+    expect((screen.getByRole("searchbox", { name: "Search work items" }) as HTMLInputElement).value).toBe(
+      "copy",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => expect(screen.getByText("2 work items")).not.toBeNull());
+  });
+
+  it("filters by status through the column's NAME while storing its id", async () => {
+    render(<Harness />);
+    await listLoaded();
+
+    const axis = screen.getByRole("combobox", { name: "Filter by status" });
+    // The option a user picks reads as the column; what the filter stores is the status id.
+    expect((within(axis).getByRole("option", { name: "In progress" }) as HTMLOptionElement).value).toBe(
+      "s2",
+    );
+    fireEvent.change(axis, { target: { value: "s2" } });
+
+    await waitFor(() => expect(screen.queryByDisplayValue("Design the landing page")).toBeNull());
+    expect(screen.getByDisplayValue("Write the copy")).not.toBeNull();
+  });
+
+  it("offers 'Unassigned' as an answer, not as the absence of one", async () => {
+    render(<Harness />);
+    await listLoaded();
+
+    // Scoped to the typeahead's own listbox: the List view's inline assignee column has an
+    // "Unassigned" option too, and it is a different control answering a different question.
+    fireEvent.click(screen.getByRole("button", { name: "Filter by assignee" }));
+    const options = () => within(screen.getByRole("listbox", { name: "Filter by assignee" }));
+    fireEvent.click(await options().findByRole("option", { name: "Unassigned" }));
+
+    // w1 has an assignee, w2 does not — "Unassigned" keeps w2 alone, where "Anyone" keeps both.
+    await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+    expect(screen.getByDisplayValue("Write the copy")).not.toBeNull();
+    expect(screen.queryByDisplayValue("Design the landing page")).toBeNull();
+
+    // "Anyone" is an entry in the same list — a typeahead with no way back to "all" is a trap.
+    fireEvent.click(screen.getByRole("button", { name: "Filter by assignee" }));
+    fireEvent.click(await options().findByRole("option", { name: "Anyone" }));
+    await waitFor(() => expect(screen.getByText("2 work items")).not.toBeNull());
+  });
+
+  it("still edits a card that the filter is hiding the rest of the board from", async () => {
+    // The trap this guards: if the surface handed the FILTERED list to its writers and its
+    // editor, a narrowed board would lose its parent/relation candidates and a move would look
+    // up a card that is no longer in the list it searches. The views see the subset; the writes
+    // see the board.
+    render(<Harness view="table" />);
+    await screen.findByText("Design the landing page");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search work items" }), {
+      target: { value: "landing" },
+    });
+    await waitFor(() => expect(screen.getByText("1 of 2 work items")).not.toBeNull());
+    expect(screen.queryByText("Write the copy")).toBeNull();
+
+    // Table opens the editor on a double-click (a single click selects).
+    fireEvent.doubleClick(screen.getByText("Design the landing page"));
+    await screen.findByRole("button", { name: "Save changes" });
+
+    // The editor opened on the still-visible card, and its parent picker still offers the card
+    // the filter is hiding — the board's candidates are the board's, not the view's. The option
+    // is unambiguous precisely because the filter removed that card from everywhere else.
+    const parentOption = await screen.findByRole("option", { name: /Write the copy/ });
+    expect((parentOption as HTMLOptionElement).value).toBe("w2");
+  });
+
   it("loads the shared query only ONCE across a view switch", async () => {
     render(<Harness />);
     await listLoaded();
