@@ -63,9 +63,12 @@ export function OrganizationsFeature({
     ? orgsQuery.data.filter((w) => w.kind === "organization")
     : null;
 
+  // Keyed on `refetch`, not on the query object: react-query hands back a NEW result object every
+  // render, so depending on it would rebuild this callback every render while looking stable —
+  // and every memo'd child and effect downstream would re-run with it. `refetch` is stable.
   const reload = useCallback(async () => {
     await orgsQuery.refetch();
-  }, [orgsQuery]);
+  }, [orgsQuery.refetch]);
 
   // Where a rename or an archive lands the browser, expressed in THIS host's URL space. Both are
   // full reloads rather than router pushes: a rename moves the org's segment out from under the

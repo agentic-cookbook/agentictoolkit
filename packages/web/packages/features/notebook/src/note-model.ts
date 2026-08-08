@@ -88,11 +88,14 @@ export function toCreateBody(input: NoteInput): CreateNoteBody {
 
 /** Map a normalized draft to the update payload. A blank category is sent as `null` to
  *  CLEAR it (the backend distinguishes null = clear from omitted = unchanged); we always
- *  send the full draft, so blank means clear here. */
+ *  send the full draft, so blank means clear here. A blank TITLE is sent as `""` for the
+ *  same reason — omitting it would read as "unchanged" and the cleared field would come
+ *  back filled in on the save's own response; sent empty, the backend re-derives one from
+ *  the content, which is what a create with no title already does. */
 export function toUpdateBody(input: NoteInput): UpdateNoteBody {
   return {
     content: input.content,
-    title: input.title || undefined,
+    title: input.title,
     category: input.category || null,
     tags: input.tags,
   };
