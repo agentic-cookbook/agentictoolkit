@@ -233,6 +233,10 @@ describe('LISTED_SITES (the family roster)', () => {
       'personabuilder',
       'research',
       'consultants',
+      'orgs',
+      'notebook',
+      'integrations',
+      'gamification',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
@@ -602,6 +606,10 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
       'personabuilder',
       'research',
       'consultants',
+      'orgs',
+      'notebook',
+      'integrations',
+      'gamification',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
