@@ -255,3 +255,58 @@ describe('DataTable row activation', () => {
     expect(row('Dirac').className).toContain('cursor-pointer')
   })
 })
+
+// Dragging rows into a new ORDER. Where the row lands is dnd-kit's job and jsdom cannot measure
+// it (every rect is 0×0 here), so these pin the part that is ours: who gets the handle.
+describe('DataTable reorder', () => {
+  // The table does NOT render the grip. A consumer that reorders already has a column for
+  // moving a row — a pair of arrow buttons, say — and a grip in its own cell would be two
+  // widgets for one act sitting in two adjacent boxes. So the handle props go to the CELL
+  // RENDERER and the consumer puts them where the row's other move controls already live.
+  const GRIP_COLS: DataTableColumn<Row>[] = [
+    { key: 'name', header: 'Name' },
+    {
+      key: 'move',
+      header: '',
+      render: (r, ctx) => (
+        <span {...ctx.dragHandleProps} data-testid={`grip-${r.id}`} data-dragging={ctx.dragging}>
+          ⠿
+        </span>
+      ),
+    },
+  ]
+
+  it('hands the cell renderer a live handle when the row may be dragged', () => {
+    render(<DataTable<Row> columns={GRIP_COLS} rows={ROWS} getRowId={(r) => r.id} ariaLabel="People" reorder={{ onDrop: vi.fn(), describeRow: (id) => id }} />)
+    // dnd-kit's `attributes` carry the role, and their presence is how a keyboard user reaches
+    // the drag at all — so this asserts the handle is REAL, not an empty object spread.
+    expect(screen.getByTestId('grip-a')).toHaveAttribute('role', 'button')
+    expect(screen.getByTestId('grip-a')).toHaveAttribute('data-dragging', 'false')
+    expect(screen.getAllByRole('row')).toHaveLength(ROWS.length + 1) // + the header row
+  })
+
+  it('hands an inert handle to a row `canDrag` refuses', () => {
+    render(<DataTable<Row> columns={GRIP_COLS} rows={ROWS} getRowId={(r) => r.id} ariaLabel="People" reorder={{ onDrop: vi.fn(), canDrag: (id) => id !== 'b' }} />)
+    expect(screen.getByTestId('grip-a')).toHaveAttribute('role', 'button')
+    expect(screen.getByTestId('grip-b')).not.toHaveAttribute('role')
+  })
+
+  it('renders the same rows with no reorder prop, and no handle', () => {
+    render(<DataTable<Row> columns={GRIP_COLS} rows={ROWS} getRowId={(r) => r.id} ariaLabel="People" />)
+    expect(screen.getByTestId('grip-a')).not.toHaveAttribute('role')
+    expect(screen.getByText('Curie')).toBeInTheDocument()
+  })
+
+  it('leaves a grid keystroke to the grid, and a handle keystroke to the handle', () => {
+    // The handle is a `role="button"` INSIDE the grid. While it holds focus every Space and
+    // Arrow belongs to the drag, so the grid's own key handling has to stand down — which is
+    // what the `[role='button']` clause in `fromCellControl` is for.
+    const onSel = vi.fn()
+    render(<DataTable<Row> columns={GRIP_COLS} rows={ROWS} getRowId={(r) => r.id} selectedIds={new Set(['a'])} onSelectionChange={onSel} ariaLabel="People" reorder={{ onDrop: vi.fn() }} />)
+    const grid = screen.getByRole('grid')
+    fireEvent.keyDown(screen.getByTestId('grip-a'), { key: 'ArrowDown' })
+    expect(onSel).not.toHaveBeenCalled()
+    fireEvent.keyDown(grid, { key: 'ArrowDown' })
+    expect(ids(onSel.mock.calls.at(-1)![0])).toBe('b')
+  })
+})

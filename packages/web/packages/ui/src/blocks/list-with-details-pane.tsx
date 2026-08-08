@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { DataTable, type DataTableColumn } from "../components/data-table"
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableReorder,
+} from "../components/data-table"
 import { ResizableSplit } from "../components/resizable-split"
 import { ListHeader } from "./list-header"
 import { SelectionActions, type ListAction } from "./selection-actions"
@@ -42,6 +46,10 @@ export interface ListWithDetailsPaneProps<T> {
   /** Persist the user's dragged column widths under this key (forwarded to {@link DataTable}).
    *  Distinct from `storageKey`, which persists only the split-bar position. */
   columnWidthsKey?: string
+  /** Let rows be dragged into a new order (forwarded to {@link DataTable}). The list filters
+   *  itself, so a caller that reorders should withhold this while its filter is non-empty — what
+   *  is on screen is then a selection, and a position in it is not a position in the list. */
+  reorder?: DataTableReorder
   /** Title on the details pane's header bar (and the disclosure's a11y label). */
   detailsLabel?: string
   ariaLabel: string
@@ -67,6 +75,7 @@ export function ListWithDetailsPane<T>({
   emptyLabel,
   autoSizeColumns,
   columnWidthsKey,
+  reorder,
   detailsLabel = "Details",
   ariaLabel,
   className,
@@ -190,6 +199,7 @@ export function ListWithDetailsPane<T>({
             ariaLabel={ariaLabel}
             autoSizeColumns={autoSizeColumns}
             columnWidthsKey={columnWidthsKey}
+            reorder={reorder}
             className="border-0 rounded-none"
           />
         }

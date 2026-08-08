@@ -5,11 +5,50 @@ import { ChevronUp, ChevronDown } from "lucide-react"
 
 import { cn } from "../lib/utils"
 import { inlineCommitHoverScopeClass } from "./inline-commit-control"
+import {
+  SortableItem,
+  SortableSurface,
+  SortableZone,
+  type DragRenderState,
+  type SortableDrop,
+} from "./dnd"
+
+/** What a cell's `render` is told about its row's drag — inert unless {@link DataTableProps.reorder}. */
+export interface DataTableRowContext {
+  /** Spread on the element that PICKS THE ROW UP (a {@link DragGrip}). Empty when reordering is off. */
+  dragHandleProps: React.HTMLAttributes<HTMLElement>
+  /** This row is the one being dragged right now. */
+  dragging: boolean
+}
+
+/** The row context every table hands a cell when reordering is off — module scope, so it is one object. */
+const NO_DRAG: DataTableRowContext = { dragHandleProps: {}, dragging: false }
+
+/** A table is ONE ordered zone; the id is internal and never leaves this module. */
+const ROWS_ZONE = "rows"
+
+/**
+ * Reordering, opted into per table.
+ *
+ * The table does NOT render the grip itself. A grip has to sit in a cell, and which cell is the
+ * consumer's decision — the List view already has a column for moving a row (its `ReorderControl`
+ * arrows), and putting the grip anywhere else would give one act two widgets in two places. So
+ * the table makes each row draggable and hands the handle to the cells via
+ * {@link DataTableRowContext}; the column that wants it spreads it.
+ */
+export interface DataTableReorder {
+  /** Where the row landed, in the ordering endpoint's own vocabulary (neighbours, not an index). */
+  onDrop: (drop: SortableDrop) => void
+  /** The row's name for the drag announcements ("Picked up <name>"). */
+  describeRow?: (id: string) => string
+  /** False for a row that must not move right now (a write in flight, a row the sort forbids). */
+  canDrag?: (id: string) => boolean
+}
 
 export interface DataTableColumn<T> {
   key: string
   header: React.ReactNode
-  render?: (row: T) => React.ReactNode
+  render?: (row: T, ctx: DataTableRowContext) => React.ReactNode
   sortable?: boolean
   /** A FIXED CSS grid track for this column (e.g. `"8rem"`, `"1fr"`). Omit and the column sizes
    *  itself to its widest cell (`max-content`) — see {@link DataTableProps.autoSizeColumns}. */
@@ -57,6 +96,10 @@ export interface DataTableProps<T> {
   /** Persist the user's dragged column widths under this key (localStorage), so a table remembers
    *  its layout across visits. Omit to keep them for the life of the component. */
   columnWidthsKey?: string
+  /** Let rows be DRAGGED into a new order. Omit for a table whose order is not the user's to set —
+   *  and omit it while a sort or a filter is in force, where a dragged position would describe the
+   *  view rather than the list underneath it. See {@link DataTableReorder}. */
+  reorder?: DataTableReorder
 }
 
 const NO_SELECTION: Set<string> = new Set()
@@ -80,7 +123,7 @@ function readWidths(key: string | undefined): ColumnWidths {
 export function DataTable<T>({
   columns, rows, getRowId, selectedIds = NO_SELECTION, onSelectionChange, onRowActivate,
   sort, onSortChange, emptyLabel = "No items.", loading = false, ariaLabel, className,
-  autoSizeColumns = false, columnWidthsKey,
+  autoSizeColumns = false, columnWidthsKey, reorder,
 }: DataTableProps<T>): React.ReactElement {
   const selectable = onSelectionChange != null
   const baseId = React.useId()
@@ -172,7 +215,12 @@ export function DataTable<T>({
   function fromCellControl(target: EventTarget | null): boolean {
     return (
       target instanceof Element &&
-      target.closest("input, textarea, select, button, a, [contenteditable='true']") != null
+      target.closest(
+        // `[role='button']` is not padding: a drag handle is a SPAN carrying dnd-kit's attributes
+        // (a `<button>` there would nest one role="button" inside another), and while it holds
+        // focus during a keyboard drag every Arrow and Space belongs to the drag, not to the grid.
+        "input, textarea, select, button, a, [role='button'], [contenteditable='true']",
+      ) != null
     )
   }
 
@@ -291,8 +339,79 @@ export function DataTable<T>({
       }
     : { role: "table" as const }
 
-  return (
-    <div {...gridProps} ref={gridRef} aria-label={ariaLabel}
+  // A table is ONE ordered zone — there is no such thing as dragging a row into another table —
+  // so the zone id is a constant and the model is just the rendered ids.
+  const zones = React.useMemo(() => [{ id: ROWS_ZONE, itemIds: ids }], [ids])
+
+  /** One row. `drag` is null in a table that does not reorder, and the cells are told so. */
+  const renderRow = (row: T, drag: DragRenderState | null): React.ReactElement => {
+    const id = getRowId(row)
+    const selected = selectable && selectedIds.has(id)
+    const focused = focusedId === id
+    const ctx: DataTableRowContext = drag
+      ? { dragHandleProps: drag.handleProps, dragging: drag.dragging }
+      : NO_DRAG
+    return (
+      <div key={id} id={rowDomId(id)} role="row"
+        ref={drag?.setNodeRef}
+        aria-selected={selectable ? selected : undefined}
+        data-selected={selected || undefined}
+        data-focused={focused || undefined}
+        // The preventDefault keeps a row click from stealing focus into the grid — but NOT when
+        // the click is on an in-cell control, which must be allowed to focus itself (an inline
+        // editor you cannot click into is no editor at all).
+        onMouseDown={selectable ? (e) => { if (!fromCellControl(e.target)) e.preventDefault() } : undefined}
+        onClick={selectable ? (e) => onRowClick(e, id) : undefined}
+        // Same carve-out as the click: a double-click that lands on an in-cell control belongs
+        // to the control (double-clicking a word in an inline editor selects it), not to the row.
+        onDoubleClick={
+          onRowActivate
+            ? (e) => { if (!fromCellControl(e.target)) onRowActivate(id) }
+            : undefined
+        }
+        className={cn(inlineCommitHoverScopeClass, "grid border-t border-apt-border text-sm text-apt-text",
+          (selectable || onRowActivate) && "cursor-pointer",
+          selected ? "bg-apt-highlight/15" : "hover:bg-apt-surface-2")}
+        // The drag's transform comes LAST: while a row is being dragged its position is the
+        // pointer's, not the layout's.
+        style={{ gridTemplateColumns: template, ...drag?.style }}>
+        {columns.map((col) => (
+          // `truncate` (with min-w-0) matters even when a column sizes to its content: the moment
+          // the user DRAGS it narrower than that, the cell must ellipsise rather than reflow and
+          // knock every row out of alignment.
+          <div key={col.key} role={selectable ? "gridcell" : "cell"} data-col={col.key} className={cn("min-w-0 truncate px-3 py-1.5", col.align === "end" && "text-right")}>
+            {col.render ? col.render(row, ctx) : String((row as Record<string, unknown>)[col.key] ?? "")}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const body = loading ? (
+    <div role="status" className="px-3 py-6 text-sm text-apt-text-muted">Loading…</div>
+  ) : rows.length === 0 ? (
+    <div className="px-3 py-6 text-sm text-apt-text-muted">{emptyLabel}</div>
+  ) : reorder ? (
+    rows.map((row) => {
+      const id = getRowId(row)
+      return (
+        <SortableItem key={id} id={id} enabled={reorder.canDrag?.(id) ?? true}>
+          {(drag) => renderRow(row, drag)}
+        </SortableItem>
+      )
+    })
+  ) : (
+    rows.map((row) => renderRow(row, null))
+  )
+
+  // `dropRef` is the zone's droppable, and it goes on the SCROLLER rather than a wrapper around the
+  // rows: a `role="grid"` may only hold rows and rowgroups, so an extra div would have to be given
+  // a role to stay valid, and the zone exists to catch a drop over EMPTY space — which is exactly
+  // the space the scroller has and a tight wrapper does not.
+  const table = (dropRef?: (node: HTMLElement | null) => void): React.ReactElement => (
+    <div {...gridProps}
+      ref={(node) => { gridRef.current = node; dropRef?.(node) }}
+      aria-label={ariaLabel}
       className={cn("overflow-auto rounded-lg border border-apt-border outline-none",
         selectable && "focus-visible:ring-2 focus-visible:ring-apt-gold/25", className)}>
       <div role="row" className="sticky top-0 z-10 grid bg-apt-surface-2 text-xs font-medium text-apt-text-muted"
@@ -322,46 +441,21 @@ export function DataTable<T>({
           </div>
         ))}
       </div>
-      {loading ? (
-        <div role="status" className="px-3 py-6 text-sm text-apt-text-muted">Loading…</div>
-      ) : rows.length === 0 ? (
-        <div className="px-3 py-6 text-sm text-apt-text-muted">{emptyLabel}</div>
-      ) : rows.map((row) => {
-        const id = getRowId(row)
-        const selected = selectable && selectedIds.has(id)
-        const focused = focusedId === id
-        return (
-          <div key={id} id={rowDomId(id)} role="row"
-            aria-selected={selectable ? selected : undefined}
-            data-selected={selected || undefined}
-            data-focused={focused || undefined}
-            // The preventDefault keeps a row click from stealing focus into the grid — but NOT when
-            // the click is on an in-cell control, which must be allowed to focus itself (an inline
-            // editor you cannot click into is no editor at all).
-            onMouseDown={selectable ? (e) => { if (!fromCellControl(e.target)) e.preventDefault() } : undefined}
-            onClick={selectable ? (e) => onRowClick(e, id) : undefined}
-            // Same carve-out as the click: a double-click that lands on an in-cell control belongs
-            // to the control (double-clicking a word in an inline editor selects it), not to the row.
-            onDoubleClick={
-              onRowActivate
-                ? (e) => { if (!fromCellControl(e.target)) onRowActivate(id) }
-                : undefined
-            }
-            className={cn(inlineCommitHoverScopeClass, "grid border-t border-apt-border text-sm text-apt-text",
-              (selectable || onRowActivate) && "cursor-pointer",
-              selected ? "bg-apt-highlight/15" : "hover:bg-apt-surface-2")}
-            style={{ gridTemplateColumns: template }}>
-            {columns.map((col) => (
-              // `truncate` (with min-w-0) matters even when a column sizes to its content: the moment
-              // the user DRAGS it narrower than that, the cell must ellipsise rather than reflow and
-              // knock every row out of alignment.
-              <div key={col.key} role={selectable ? "gridcell" : "cell"} data-col={col.key} className={cn("min-w-0 truncate px-3 py-1.5", col.align === "end" && "text-right")}>
-                {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? "")}
-              </div>
-            ))}
-          </div>
-        )
-      })}
+      {body}
     </div>
+  )
+
+  if (!reorder) return table()
+  return (
+    <SortableSurface
+      zones={zones}
+      onDrop={reorder.onDrop}
+      describeItem={reorder.describeRow}
+      describeZone={() => ariaLabel}
+    >
+      <SortableZone id={ROWS_ZONE} itemIds={ids}>
+        {({ setNodeRef }) => table(setNodeRef)}
+      </SortableZone>
+    </SortableSurface>
   )
 }

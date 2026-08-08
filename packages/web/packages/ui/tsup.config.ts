@@ -39,6 +39,14 @@ export default defineConfig({
     '@base-ui/react',
     '@base-ui/react/*',
     'lucide-react',
+    // dnd-kit keeps module-scope state (the sensor/collision registries live in
+    // React context created at import time), so two bundled copies would put a
+    // DndContext and its useSortable in different registries and every drag
+    // would silently find no droppables. External = one copy, resolved by the
+    // consumer, same as @base-ui/react.
+    '@dnd-kit/core',
+    '@dnd-kit/sortable',
+    '@dnd-kit/utilities',
     // harper.js (markdown-spellcheck) is dynamically imported and ships a multi-MB
     // WASM worker. Keep it external so dist re-emits the `import('harper.js')`
     // verbatim and the CONSUMER's bundler (Next) code-splits + lazy-loads it,
