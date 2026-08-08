@@ -162,6 +162,37 @@ export interface DependencyEdge {
   id: string;
   workItemId: string;
   dependsOnId: string;
+  /** which relationship the edge records — absent on a bundle built before kinds existed. */
+  kind?: RelationKind;
+  createdAt: string;
+}
+
+/**
+ * How two cards are linked. The backend's vocabulary, spelled the same way here because the
+ * string travels on the wire unmodified.
+ *
+ * `depends_on` is the only kind with arithmetic behind it — it claims an ORDER, so it is the
+ * only one the backend cycle-checks. `duplicates` points from the copy to the original and
+ * claims no order. `relates_to` is symmetric: stored once, true from both ends, which is why
+ * the reverse of one is not a second row.
+ */
+export type RelationKind = "depends_on" | "duplicates" | "relates_to";
+
+/** Backend row for `GET /project/work-items/{id}/relations` (joined).
+ *
+ *  One row per link TOUCHING the card, not per link it filed: `direction` says which end of the
+ *  stored edge this card sits on, and every other field describes the card at the FAR end. That
+ *  is what lets one list show "blocked by" and "blocks" without a second request. */
+export interface WorkItemRelationRow {
+  id: string;
+  kind: RelationKind;
+  /** `outgoing` = this card is the edge's subject; `incoming` = it is the object. */
+  direction: "outgoing" | "incoming";
+  relatedId: string;
+  /** the far card's short human name (`ADH-42`); '' when its project has no prefix. */
+  relatedKey: string;
+  title: string;
+  status: string;
   createdAt: string;
 }
 
@@ -203,6 +234,16 @@ export interface WorkItemFieldValuesPutBody {
 /** `POST /project/work-items/{id}/dependencies` body. */
 export interface WorkItemDependencyAddBody {
   dependsOnId: string;
+}
+
+/** `POST /project/work-items/{id}/relations` body.
+ *
+ *  `kind` is REQUIRED — the route that leaves it unsaid is `/dependencies`, where the path
+ *  already says which one it means. A caller here who has not chosen has not decided, and
+ *  defaulting would invent a scheduling constraint nobody asked for. */
+export interface WorkItemRelationAddBody {
+  relatedId: string;
+  kind: RelationKind;
 }
 
 /* ── Artifacts (the things a project holds) ───────────────────────────── */

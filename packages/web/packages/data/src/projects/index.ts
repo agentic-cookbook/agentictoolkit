@@ -4,6 +4,9 @@
 // switch on exhaustively — reaching it as `ProjectStatus["category"]` works but cannot be named
 // in a signature that does not already hold a status.
 export type { StatusCategory } from "./wire";
+// Likewise the link vocabulary: a consumer switching on how two cards are related needs to name
+// the set in a signature, not only reach it through a relation it already holds.
+export type { RelationKind } from "./wire";
 export * from "./projects";
 export * from "./work-items";
 export * from "./activity";

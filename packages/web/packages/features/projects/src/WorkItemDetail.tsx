@@ -6,6 +6,7 @@ import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
 import type { ProjectParticipant, ProjectStatus, WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "./WorkItemEditor";
 import { ItemKey } from "./ItemKey";
+import { WorkItemRelations } from "./WorkItemRelations";
 import { assigneeLabel, itemLabel, statusMeta } from "./helpers";
 
 /**
@@ -15,6 +16,10 @@ import { assigneeLabel, itemLabel, statusMeta } from "./helpers";
  * priority, due), so this pane's job is to show everything at once — including the fields that are
  * NOT columns and would otherwise be invisible from the list: the description, the labels, the start
  * date, the parent, and the created/updated timestamps.
+ *
+ * Relations are the one exception to "it reads", and deliberately so: a link is a fact about a
+ * PAIR of cards, so it has no cell in a row of one card's values and no column that could hold
+ * it. If this pane did not own it, nothing in the feature would.
  */
 
 function Row({ label, children }: { label: string; children: ReactNode }): ReactElement {
@@ -50,6 +55,7 @@ export function WorkItemDetail({
   const parent = item.parentId ? workItems.find((w) => w.id === item.parentId) : null;
 
   return (
+    <div className="flex min-w-0 flex-col gap-5">
     <dl className="flex min-w-0 flex-col gap-3">
       {/* First, and with a copy button: this pane is where someone lands to WRITE the key
           somewhere else — a branch name, a commit message, a PR title — so the useful act here
@@ -101,5 +107,9 @@ export function WorkItemDetail({
       <Row label="Created">{item.createdAt}</Row>
       <Row label="Updated">{item.updatedAt}</Row>
     </dl>
+      {/* Outside the <dl>, because it is not a term/description pair: it is a list of other
+          cards, with its own control for adding one. */}
+      <WorkItemRelations item={item} statuses={statuses} workItems={workItems} />
+    </div>
   );
 }

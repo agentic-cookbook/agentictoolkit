@@ -517,9 +517,9 @@ export function ProjectOverviewPane({
                         // A comment's own words say more than "commented" does, so when there
                         // is a body it IS the line — same precedence the full feed uses.
                         label={`${actorText(row)} ${
-                          commentBody(row) ?? actionPhrase(row.action)
+                          commentBody(row) ?? actionPhrase(row.action, row.detail)
                         }`}
-                        labelTitle={`${actorText(row)} ${actionPhrase(row.action)}`}
+                        labelTitle={`${actorText(row)} ${actionPhrase(row.action, row.detail)}`}
                         trailing={
                           <time dateTime={row.createdAt} className="text-apt-text-dim">
                             {relativeTime(row.createdAt)}

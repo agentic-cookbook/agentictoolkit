@@ -14,6 +14,10 @@ vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => {
     projectWorkItemsApi: {
       update: vi.fn(),
       remove: vi.fn(),
+      // The details pane reads a card's links. Stubbed rather than left off: without it the
+      // relations section renders its error state in every test that opens a detail, which
+      // would make a genuine failure there indistinguishable from the wiring being absent.
+      relations: { list: vi.fn(), add: vi.fn(), remove: vi.fn() },
     },
   };
 });
@@ -24,6 +28,7 @@ import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/da
 
 const update = vi.mocked(projectWorkItemsApi.update);
 const remove = vi.mocked(projectWorkItemsApi.remove);
+const listRelations = vi.mocked(projectWorkItemsApi.relations.list);
 
 const TODO: ProjectStatus = {
   id: "s1", projectId: "p1", key: "todo", label: "To do", category: "todo", position: 0,
@@ -75,6 +80,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   update.mockImplementation((id, patch) => Promise.resolve({ ...ITEM, id, ...patch } as WorkItem));
   remove.mockResolvedValue(undefined);
+  listRelations.mockResolvedValue([]);
 });
 
 afterEach(cleanup);

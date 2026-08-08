@@ -39,7 +39,7 @@ function ActivityRow({ row }: { row: ProjectActivity }): ReactElement {
       <div className="flex w-full items-baseline justify-between gap-2">
         <span className="min-w-0 truncate text-sm text-apt-text">
           <span className="font-medium">{actorText(row)}</span>{" "}
-          <span className="text-apt-text-muted">{actionPhrase(row.action)}</span>
+          <span className="text-apt-text-muted">{actionPhrase(row.action, row.detail)}</span>
         </span>
         <time
           dateTime={row.createdAt}

@@ -17,11 +17,14 @@ import type {
   WorkItemRow,
   WorkItemFieldValueRow,
   WorkItemDependencyRow,
+  WorkItemRelationRow,
+  RelationKind,
   DependencyEdge,
   WorkItemCreateBody,
   WorkItemPatchBody,
   WorkItemFieldValuesPutBody,
   WorkItemDependencyAddBody,
+  WorkItemRelationAddBody,
 } from "./wire";
 
 /** Per-project stem (list + create). */
@@ -117,6 +120,45 @@ export function toWorkItemDependency(r: WorkItemDependencyRow): WorkItemDependen
   return {
     id: r.id,
     dependsOnId: r.dependsOnId,
+    title: r.title,
+    status: r.status,
+    createdAt: r.createdAt,
+  };
+}
+
+/* ── Relations ────────────────────────────────────────────────────────── */
+
+/**
+ * One link touching this card, described from THIS card's end.
+ *
+ * A relation is stored once, as a directed edge, and read from both sides — so `direction` is
+ * not a property of the link, it is where the card you asked about sits on it. Everything else
+ * names the card at the far end. A renderer therefore needs no second fetch and no branch on
+ * "did I file this or did they": it phrases `(kind, direction)` and shows `relatedKey` + `title`.
+ */
+export interface WorkItemRelation {
+  /** the edge id. */
+  id: string;
+  kind: RelationKind;
+  direction: "outgoing" | "incoming";
+  /** the card at the other end. */
+  relatedId: string;
+  /** that card's short human name (`ADH-42`); '' when its project has no prefix. */
+  relatedKey: string;
+  /** that card's title (joined). */
+  title: string;
+  /** that card's statusId (joined). */
+  status: string;
+  createdAt: string;
+}
+
+export function toWorkItemRelation(r: WorkItemRelationRow): WorkItemRelation {
+  return {
+    id: r.id,
+    kind: r.kind,
+    direction: r.direction,
+    relatedId: r.relatedId,
+    relatedKey: r.relatedKey ?? "",
     title: r.title,
     status: r.status,
     createdAt: r.createdAt,
@@ -261,6 +303,38 @@ export const projectWorkItemsApi = {
         `${ITEMS}/${enc(id)}/dependencies/${enc(dependsOnId)}`,
         { method: "DELETE" },
       );
+    },
+  },
+
+  // Every link touching a card, of every kind, in both directions. `dependencies` above is the
+  // `depends_on` slice of the same table, kept because a scheduler wants exactly that slice
+  // pointing exactly one way; a card's detail pane wants all of it and uses these.
+  relations: {
+    async list(id: string, kind?: RelationKind): Promise<WorkItemRelation[]> {
+      const rows = await authedJson<WorkItemRelationRow[]>(
+        `${ITEMS}/${enc(id)}/relations${kind ? `?kind=${enc(kind)}` : ""}`,
+      );
+      return rows.map(toWorkItemRelation); // server orders by createdAt
+    },
+
+    add(
+      id: string,
+      relatedId: string,
+      kind: RelationKind,
+    ): Promise<DependencyEdge> {
+      const body: WorkItemRelationAddBody = { relatedId, kind };
+      return authedJson<DependencyEdge>(`${ITEMS}/${enc(id)}/relations`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    // No kind argument: a pair carries one relation, so naming the far card names the link.
+    // Works from either end — the caller need not know which card filed it.
+    remove(id: string, relatedId: string): Promise<void> {
+      return authedRequest(`${ITEMS}/${enc(id)}/relations/${enc(relatedId)}`, {
+        method: "DELETE",
+      });
     },
   },
 };

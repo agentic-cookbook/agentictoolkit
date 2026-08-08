@@ -1,7 +1,12 @@
 import { type ComponentProps } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import type { ProjectActivity, WorkItem } from "@agentic-toolkit/data/projects";
-import type { ProjectStatus, ProjectParticipant, StatusCategory } from "@agentic-toolkit/data/projects";
+import type {
+  ProjectStatus,
+  ProjectParticipant,
+  RelationKind,
+  StatusCategory,
+} from "@agentic-toolkit/data/projects";
 import { participantLabel } from "./AssigneePicker";
 
 /**
@@ -107,6 +112,39 @@ export function itemLabel(item: Pick<WorkItem, "itemKey" | "title">): string {
   return item.itemKey ? `${item.itemKey} — ${item.title}` : item.title;
 }
 
+/* ── Relation phrasing ─────────────────────────────────────────────────────
+ * A link between two cards is stored ONCE, as a directed edge, and read from both ends. So the
+ * word for it is a function of the kind AND of which end you are standing on — the same row is
+ * "Blocked by" to one card and "Blocks" to the other. Naming that here, rather than in the pane,
+ * is what lets a list of relations read as sentences about the card in front of you. */
+
+/** How a relation reads FROM the card that asked for it. `depends_on` inverts across the two
+ *  directions because it is the only kind that claims an order; `relates_to` reads the same from
+ *  both ends because it is symmetric — the edge's direction is storage, not meaning. */
+export function relationLabel(
+  kind: RelationKind,
+  direction: "outgoing" | "incoming",
+): string {
+  const outgoing = direction === "outgoing";
+  switch (kind) {
+    case "depends_on":
+      return outgoing ? "Blocked by" : "Blocks";
+    case "duplicates":
+      return outgoing ? "Duplicates" : "Duplicated by";
+    case "relates_to":
+      return "Related to";
+  }
+}
+
+/** The kinds a person can FILE from a card, in the order they are offered. Outgoing by
+ *  construction — the new edge leaves the card you are on — so each label is the outgoing
+ *  phrasing above, and the inverse appears by itself on the other card. */
+export const RELATION_CHOICES: { value: RelationKind; label: string }[] = [
+  { value: "depends_on", label: relationLabel("depends_on", "outgoing") },
+  { value: "relates_to", label: relationLabel("relates_to", "outgoing") },
+  { value: "duplicates", label: relationLabel("duplicates", "outgoing") },
+];
+
 /** The NUMERIC half of a rendered key (`ADH-42` → 42), for ordering a column of keys — sorting
  *  their text would put `ADH-42` above `ADH-7`. An unassigned or unparseable key sorts to 0, so
  *  the keyless cluster together at one end rather than scattering. */
@@ -141,8 +179,31 @@ export function actorText(a: ProjectActivity): string {
  *
  *  A switch with a `default` rather than a total Record (unlike CATEGORY_VARIANT above) because
  *  the action set is OPEN — the backend appends new action strings as features land, and a bundle
- *  older than the backend must render the raw string rather than blank the row. */
-export function actionPhrase(action: string): string {
+ *  older than the backend must render the raw string rather than blank the row.
+ *
+ *  `detail` is optional because most actions say everything in their name. The link events are
+ *  the exception: one action covers three relationships, and "linked an item" throws away the
+ *  only fact that distinguishes a prerequisite from a duplicate. A caller with the row in hand
+ *  passes it; one without still gets a sentence. */
+export function actionPhrase(
+  action: string,
+  detail?: Record<string, unknown> | null,
+): string {
+  // The link kinds, phrased from the acting card's side — the activity row hangs off the card
+  // that filed the link, so "added a dependency" is read from the end that now waits.
+  if (action === "dependency.added" || action === "dependency.removed") {
+    const added = action === "dependency.added";
+    switch (detail?.kind) {
+      case "relates_to":
+        return added ? "linked a related item" : "unlinked a related item";
+      case "duplicates":
+        return added ? "marked an item as a duplicate" : "removed a duplicate mark";
+      // `depends_on` explicitly AND as the fallback: every row written before `kind` existed is
+      // a dependency, so a missing kind is not unknown — it is the original meaning.
+      default:
+        return added ? "added a dependency" : "removed a dependency";
+    }
+  }
   switch (action) {
     case "project.created":
       return "created the project";

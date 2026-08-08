@@ -21499,6 +21499,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/project/work-items/{id}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Every live link touching this work item, both directions (by createdAt) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Narrow to one relationship; omitted returns all. An unknown kind is a 400. */
+                    kind?: "depends_on" | "duplicates" | "relates_to";
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Relations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkItemRelation"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Link this work item to another (+ a dependency.added activity) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description a live work item in the same project (not self; must not already be linked to this one) */
+                        relatedId: string;
+                        /**
+                         * @description which relationship this edge asserts; only depends_on is cycle-checked, because only it claims an order
+                         * @enum {string}
+                         */
+                        kind: "depends_on" | "duplicates" | "relates_to";
+                    };
+                };
+            };
+            responses: {
+                /** @description Created relation edge */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            /** @description the subject item (the path {id}) */
+                            workItemId: string;
+                            /** @description the object item — read as a prerequisite only for kind depends_on */
+                            dependsOnId: string;
+                            /** @enum {string} */
+                            kind: "depends_on" | "duplicates" | "relates_to";
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/project/work-items/{id}/relations/{relatedId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                relatedId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink two work items, from either end (+ a dependency.removed activity) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    relatedId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/project/projects/{id}/research": {
         parameters: {
             query?: never;
@@ -55019,6 +55227,26 @@ export interface components {
             /** @description the depended-on item title (joined) */
             title: string;
             /** @description the depended-on item statusId (joined) */
+            status: string;
+            createdAt: string;
+        };
+        WorkItemRelation: {
+            /** @description the relation edge id */
+            id: string;
+            /** @enum {string} */
+            kind: "depends_on" | "duplicates" | "relates_to";
+            /**
+             * @description outgoing = this item is the subject of the edge (it depends on / duplicates the other); incoming = the other item is
+             * @enum {string}
+             */
+            direction: "outgoing" | "incoming";
+            /** @description the work item at the far end */
+            relatedId: string;
+            /** @description the far item's rendered key (ADH-42); '' when the project has no prefix */
+            relatedKey: string;
+            /** @description the far item title (joined) */
+            title: string;
+            /** @description the far item statusId (joined) */
             status: string;
             createdAt: string;
         };
