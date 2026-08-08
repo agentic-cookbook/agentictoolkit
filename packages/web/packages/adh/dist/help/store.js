@@ -1,0 +1,52 @@
+// ../adh-site-config/content/help.en.json
+var help_en_default = {
+  _comment: "Unified help store for the hierarchical topic/detail views. Key = the route to the details page + ui element: `<feature>` for a feature's breadcrumb/landing help, `<feature>/<topic>` for a topic's detail pane. See recipe agenticdeveloperhub://recipes/hierarchical-topic-detail (must-source-help-from-config).",
+  ecosystems: "Ecosystems group your applications, buckets, users, and access. Pick an ecosystem to configure it.",
+  "ecosystems/settings": "The selected ecosystem's identifier, name, region, and domain.",
+  "ecosystems/applications": "Applications access your ADH data via schema permissions and access tokens.",
+  "ecosystems/auth": "Control who can sign up and sign in to this ecosystem's customer accounts \u2014 sign-up mode (open, invite-only, or closed) and whether sign-in is allowed.",
+  "ecosystems/feature-flags": "Per-product feature flags \u2014 named on/off toggles this product's apps can read.",
+  "ecosystems/server-bags": "Per-product server bags \u2014 arbitrary key \u2192 JSON config values for this product.",
+  "ecosystems/signin-apps": "Sign-in apps are the clients your site uses to sign its own customers in with GitHub, brokered through ADH. Each has a client id your app sends, the return origins where sign-in may finish, and a GitHub toggle.",
+  "ecosystems/schemas": "Reusable, composable collections of ADH tables. Applications grant permissions on these.",
+  "ecosystems/access": "Access lists for your buckets: who can read or write each bucket, type, or row.",
+  "ecosystems/users": "End-users who authenticate to this ecosystem (its customer identities).",
+  teams: "Teams group people and the permissions they share. Pick a team to manage it.",
+  "teams/settings": "The team's identifier and display name.",
+  "teams/members": "The people in this team.",
+  "teams/permissions": "What this team can access.",
+  personas: "Public-facing agents under your account. Define a persona once and reuse it across your apps.",
+  "personas/services": "The persona-services (model providers) your personas run on.",
+  "persona-services": "Persona services are the model providers your personas run on.",
+  "persona-services/settings": "The selected service's name, provider, base URL, and API key.",
+  "persona-services/models": "The models this service exposes.",
+  settings: "This workspace's own record \u2014 name, slug, and description.",
+  storage: "Buckets and files in the workspace's default ecosystem.",
+  integrations: "Outbound service connections \u2014 email, SMS, webhooks \u2014 for this workspace.",
+  tokens: "API token principals the workspace owns \u2014 mint, list, and revoke.",
+  products: "The products this workspace owns. Each product is its own ecosystem.",
+  projects: "Plan and track work across the workspace.",
+  members: "Everyone in this organization, across its teams.",
+  "ecosystems/storage": "Buckets, access lists, and raw data for this product.",
+  "ecosystems/integrations": "Service connections scoped to this product.",
+  "ecosystems/messaging": "Send email or SMS to this product's customers through its own connected Postmark/Twilio integration. Each channel is available once you connect its provider on the Integrations tab.",
+  "ecosystems/tokens": "API tokens bound to this product's ecosystem.",
+  "ecosystems/dashboards": "Monitor this product's sites and endpoints.",
+  "ecosystems/invitations": "The product's users \u2014 requests, pending users, and invites.",
+  "ecosystems/communities": "Discussion spaces for this product.",
+  "ecosystems/gamification": "The product's gamification realm \u2014 enable awards and UI, pick a skin (RPG or plain), and choose which surfaces (badges, leaderboards, streaks, recaps) members see. Enabling backfills existing members.",
+  "ecosystems/billing": "Plans and payment for this product.",
+  "ecosystems/child-ecosystems": "The ecosystems this product owns.",
+  "ecosystems/project": "The product's own project \u2014 plan and track its work."
+};
+
+// src/help/store.ts
+var help = help_en_default;
+function helpFor(key) {
+  if (!key) return void 0;
+  return help[key];
+}
+export {
+  helpFor
+};
+//# sourceMappingURL=store.js.map

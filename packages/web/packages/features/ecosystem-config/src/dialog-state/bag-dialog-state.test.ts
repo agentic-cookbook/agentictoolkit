@@ -7,7 +7,7 @@ import {
   isBagFormDirty,
   type BagFormContext,
   type BagFormState,
-} from '../settings-dialogs'
+} from './index'
 
 const INITIAL: BagFormState = { key: '', valueText: '', description: '' }
 const CREATE_CTX: BagFormContext = { editingMode: false, existingKeys: ['existing_key'] }
