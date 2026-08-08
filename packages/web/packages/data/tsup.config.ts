@@ -11,6 +11,7 @@ export default defineConfig({
     'src/ecosystems/index.ts',
     'src/monitored-sites/index.ts',
     'src/markdown/index.ts',
+    'src/notes/index.ts',
     'src/personas/index.ts',
     'src/security/index.ts',
     'src/integrations/index.ts',

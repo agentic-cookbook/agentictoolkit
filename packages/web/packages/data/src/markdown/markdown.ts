@@ -16,6 +16,9 @@ import type {
   MarkdownUpdateBody,
   MarkdownPublishBody,
   StringListBody,
+  MarkdownCategoryNode,
+  MarkdownCategoryTreeBody,
+  MarkdownCategoryCreateBody,
 } from "./wire";
 
 /** A full document, body included (GET /content/markdown/:id, and the create /
@@ -26,6 +29,11 @@ export type ResearchSummary = MarkdownDocumentSummaryRow;
 
 export type CreateMarkdownBody = MarkdownCreateBody;
 export type UpdateMarkdownBody = MarkdownUpdateBody;
+
+/** One category as this surface exposes it — id, name, and the parent pointer that
+ *  makes the set a tree. Re-exported (not aliased) because a hierarchical consumer
+ *  passes these rows around, not just their names. */
+export type { MarkdownCategoryNode, MarkdownCategoryCreateBody } from "./wire";
 
 /** Caller-scoped list filters, all wired to the backend's query params: `q`
  *  (free-text across title/body/category/tags), `category` (exact), `tag` (set
@@ -41,7 +49,15 @@ const BASE = "/api/content/markdown";
 // shows everything at once (no pagination UI). 200 is the backend's page cap.
 const PAGE_SIZE = 200;
 
-function listQuery(filters: ResearchFilters, opts?: { workspace?: string }): string {
+/** List options: the workspace to scope to, and `noted` to narrow to the owner's NOTES
+ *  (the documents in their `notes` storage bucket). `noted: false` is NOT "everything
+ *  except notes" — the backend offers no such set — it is simply the unfiltered list. */
+export interface MarkdownListOptions {
+  workspace?: string;
+  noted?: boolean;
+}
+
+function listQuery(filters: ResearchFilters, opts?: MarkdownListOptions): string {
   const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
   const q = filters.q?.trim();
   if (q) params.set("q", q);
@@ -49,6 +65,7 @@ function listQuery(filters: ResearchFilters, opts?: { workspace?: string }): str
   if (category) params.set("category", category);
   const tag = filters.tag?.trim();
   if (tag) params.set("tag", tag);
+  if (opts?.noted) params.set("noted", "true");
   if (opts?.workspace) params.set("workspace", opts.workspace);
   return params.toString();
 }
@@ -72,7 +89,7 @@ export const markdownApi = {
   /** List/search the workspace's documents (metadata only), most-recent first. */
   async list(
     filters: ResearchFilters = {},
-    opts?: { workspace?: string },
+    opts?: MarkdownListOptions,
   ): Promise<ResearchSummary[]> {
     const res = await authedJson<MarkdownListResponse>(
       `${BASE}?${listQuery(filters, opts)}`,
@@ -152,16 +169,51 @@ export const markdownApi = {
     );
   },
 
-  /** The caller's existing category NAMES — the autocomplete/browse source for the
-   *  category field. The account's full set (content.categories), caller-scoped,
-   *  distinct + alphabetical (GET /content/markdown/categories). */
-  async categories(): Promise<string[]> {
-    return (await authedJson<StringListBody>(`${BASE}/categories`)).items;
+  /** The workspace's existing category NAMES — the autocomplete/browse source for the
+   *  category field. The owner's full set (content.categories), distinct + alphabetical
+   *  (GET /content/markdown/categories). `workspace` matters: the backend scopes the
+   *  vocabulary to the same owner it scopes the documents to, so an org workspace's
+   *  autocomplete must ask for the ORG's names, not the caller's own. */
+  async categories(opts?: { workspace?: string }): Promise<string[]> {
+    return (await authedJson<StringListBody>(`${BASE}/categories${workspaceQuery(opts)}`)).items;
   },
 
-  /** The caller's existing tag LABELS — the autocomplete/browse source for the tag
+  /** The same categories WITH their structure — `parentId` makes them a tree. The flat
+   *  `categories()` above is the autocomplete's view of this one set; a hierarchical
+   *  browser needs the ids and parents, which names alone cannot carry. */
+  async categoryTree(opts?: { workspace?: string }): Promise<MarkdownCategoryNode[]> {
+    const res = await authedJson<MarkdownCategoryTreeBody>(
+      `${BASE}/categories${workspaceQuery(opts)}`,
+    );
+    // A backend older than this client answers with `items` alone; an unguarded `.nodes`
+    // would then crash the rail rather than degrade to a flat list.
+    return Array.isArray(res.nodes) ? res.nodes : [];
+  },
+
+  /** Create a category, optionally under another (POST /content/markdown/categories).
+   *  Re-creating an existing name under the SAME parent returns it unchanged; under a
+   *  different one the backend refuses with a 409 — a name is unique per owner, and this
+   *  call never moves an existing category. */
+  async createCategory(
+    body: MarkdownCategoryCreateBody,
+    opts?: { workspace?: string },
+  ): Promise<MarkdownCategoryNode> {
+    try {
+      return await authedJson<MarkdownCategoryNode>(`${BASE}/categories${workspaceQuery(opts)}`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      if (isConflict(err)) {
+        throw new Error(`A category named “${body.name}” already exists somewhere else.`);
+      }
+      throw err;
+    }
+  },
+
+  /** The workspace's existing tag LABELS — the autocomplete/browse source for the tag
    *  field (GET /content/markdown/tags), same shape + scoping as `categories`. */
-  async tags(): Promise<string[]> {
-    return (await authedJson<StringListBody>(`${BASE}/tags`)).items;
+  async tags(opts?: { workspace?: string }): Promise<string[]> {
+    return (await authedJson<StringListBody>(`${BASE}/tags${workspaceQuery(opts)}`)).items;
   },
 };
