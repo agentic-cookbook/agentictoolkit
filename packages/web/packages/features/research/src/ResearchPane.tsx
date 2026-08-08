@@ -128,13 +128,19 @@ export function ResearchPane({
   const [accountTags, setAccountTags] = useState<string[]>([]);
   const loadTaxonomy = useCallback(async () => {
     try {
-      const [categories, tags] = await Promise.all([markdownApi.categories(), markdownApi.tags()]);
+      // Workspace-scoped like the documents themselves: the backend scopes the category/tag
+      // vocabulary to the same owner it scopes the docs to, so omitting the workspace here
+      // suggested the CALLER's own labels while the list showed the ORG's documents.
+      const [categories, tags] = await Promise.all([
+        markdownApi.categories({ workspace: workspaceSlug }),
+        markdownApi.tags({ workspace: workspaceSlug }),
+      ]);
       setAccountCategories(categories);
       setAccountTags(tags);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "research-pane", step: "taxonomy" });
     }
-  }, []);
+  }, [workspaceSlug]);
 
   useEffect(() => {
     void loadTaxonomy();

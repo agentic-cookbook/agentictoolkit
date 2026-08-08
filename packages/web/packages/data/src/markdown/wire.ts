@@ -41,12 +41,15 @@ export interface MarkdownListResponse {
 }
 
 /** `POST /content/markdown` body. `author` exists on the backend but no hub
- *  call site ever sets it, so it's omitted. */
+ *  call site ever sets it, so it's omitted. `note: true` files the new document in
+ *  the owner's `notes` storage bucket — the ONLY thing that distinguishes a note
+ *  from any other markdown document (see the notes client). */
 export interface MarkdownCreateBody {
   content: string;
   title?: string;
   category?: string;
   tags?: string[];
+  note?: boolean;
 }
 
 /** `PUT /content/markdown/{id}` body — `category` may be explicitly nulled to
@@ -66,6 +69,31 @@ export interface MarkdownPublishBody {
 /** `{ items: string[] }` — shared shape of the categories/tags list responses. */
 export interface StringListBody {
   items: string[];
+}
+
+/** One row of `GET /content/markdown/categories`'s `nodes`. `parentId` is what makes
+ *  the category set a TREE; it is an app-level convention with no FK behind it, so a
+ *  consumer folding the tree must tolerate a parent that is missing or cyclic. */
+export interface MarkdownCategoryNode {
+  id: string;
+  name: string;
+  parentId: string | null;
+  sortOrder: number;
+}
+
+/** `GET /content/markdown/categories` — the flat NAME list every existing consumer
+ *  reads, plus the same set with its structure kept. */
+export interface MarkdownCategoryTreeBody {
+  items: string[];
+  nodes: MarkdownCategoryNode[];
+}
+
+/** `POST /content/markdown/categories` body. Omit `parentId` (or send null) for a root.
+ *  A name is unique per owner across the whole tree, so this never MOVES a category:
+ *  re-posting a name under a different parent is a 409. */
+export interface MarkdownCategoryCreateBody {
+  name: string;
+  parentId?: string | null;
 }
 
 /* ── Buckets (bucket.buckets + bucket.bucket_types) ──────────────────────

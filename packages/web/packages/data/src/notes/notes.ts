@@ -1,0 +1,87 @@
+// Notes API client — a LENS on the markdown-document surface, not a second surface.
+//
+// A note IS a markdown document: same head, same version history, same relational
+// category + tags. What makes it a note is a content.notes MARKER, which is exactly
+// what files it in the owner's `notes` storage bucket (bucket_types maps that bucket
+// to content.notes). So this client is `markdownApi` with the marker baked in — `noted`
+// on the way out, `note: true` on the way in — and nothing else. The alternative, a
+// parallel `/content/notes` route set, would have had to re-derive the version-snapshot
+// and classification invariants markdownDocuments.ts already owns, and would have drifted.
+//
+// (`/content/notes` DOES exist on the backend. It is the device-SYNC marker surface —
+// content only, no title/category/tags, no workspace — and it has no web consumer. It is
+// deliberately not what this client talks to.)
+import { markdownApi } from "../markdown/markdown";
+import type {
+  ResearchDocument,
+  ResearchSummary,
+  ResearchFilters,
+  CreateMarkdownBody,
+  UpdateMarkdownBody,
+} from "../markdown/markdown";
+import type { MarkdownCategoryNode, MarkdownCategoryCreateBody } from "../markdown/wire";
+
+/** A note WITH its body (the detail pane). Structurally a markdown document — the
+ *  alias names the role, so a notebook never has to say "research" for its own rows. */
+export type Note = ResearchDocument;
+/** Note metadata only — no body (the list rows). */
+export type NoteSummary = ResearchSummary;
+/** The same three axes the research list filters on: free text, category, tag. */
+export type NoteFilters = ResearchFilters;
+/** One category, with the parent pointer that makes the set a tree. */
+export type NoteCategory = MarkdownCategoryNode;
+
+/** Create body. `note: true` is this client's to add — a caller cannot forget it and
+ *  quietly mint a document that never lands in the notes bucket. */
+export type CreateNoteBody = Omit<CreateMarkdownBody, "note">;
+export type UpdateNoteBody = UpdateMarkdownBody;
+
+export const notesApi = {
+  // `workspace` pins every op to that workspace's owning principal, exactly as it does
+  // for research: list returns the notes that principal OWNS, create stamps it as owner.
+  // For an ORG workspace this is the whole of the ownership story today — org-SHARED note
+  // semantics are still undesigned, so an org note is simply an org-owned document, and
+  // the marker carries only its creator stamp.
+  /** The workspace's notes (metadata only), most-recently-updated first. */
+  list(filters: NoteFilters = {}, opts?: { workspace?: string }): Promise<NoteSummary[]> {
+    return markdownApi.list(filters, { ...opts, noted: true });
+  },
+
+  /** One note WITH its body. */
+  get(id: string, opts?: { workspace?: string }): Promise<Note> {
+    return markdownApi.get(id, opts);
+  },
+
+  create(body: CreateNoteBody, opts?: { workspace?: string }): Promise<Note> {
+    return markdownApi.create({ ...body, note: true }, opts);
+  },
+
+  update(id: string, body: UpdateNoteBody, opts?: { workspace?: string }): Promise<Note> {
+    return markdownApi.update(id, body, opts);
+  },
+
+  /** Soft-delete; the backend tombstones the note marker with the document. */
+  remove(id: string, opts?: { workspace?: string }): Promise<void> {
+    return markdownApi.remove(id, opts);
+  },
+
+  /** The workspace's category TREE — the notebook's rail is these rows folded by
+   *  `parentId`. Shared with research's flat category vocabulary by construction:
+   *  one owner has one set of categories, seen two ways. */
+  categories(opts?: { workspace?: string }): Promise<NoteCategory[]> {
+    return markdownApi.categoryTree(opts);
+  },
+
+  /** Create a category, optionally under another. */
+  createCategory(
+    body: MarkdownCategoryCreateBody,
+    opts?: { workspace?: string },
+  ): Promise<NoteCategory> {
+    return markdownApi.createCategory(body, opts);
+  },
+
+  /** The workspace's tag labels (the tag field's autocomplete source). */
+  tags(opts?: { workspace?: string }): Promise<string[]> {
+    return markdownApi.tags(opts);
+  },
+};
