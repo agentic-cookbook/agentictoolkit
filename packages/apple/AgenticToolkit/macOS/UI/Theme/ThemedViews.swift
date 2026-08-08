@@ -231,6 +231,36 @@ public final class ThemedScrollView: NSScrollView, Themeable {
     }
 }
 
+/// A table whose backdrop tracks a semantic role. A plain `NSTableView` fills
+/// itself with the system `controlBackgroundColor`, painting over whatever
+/// themed scroll view hosts it — so a list stays system-grey inside an otherwise
+/// themed window. Defaults to `surface` so a list reads as its own plane against
+/// `windowBackground`; pass `.windowBackground` to make it disappear into the
+/// window instead.
+///
+/// Alternating row colors are off because they come from a system color pair the
+/// palette has no say in; a themed list gets its banding, if any, from row views.
+@MainActor
+public final class ThemedTableView: NSTableView, Themeable {
+    public let role: ThemeRole
+    private var observer: ThemePaletteObserver?
+
+    public init(role: ThemeRole = .surface) {
+        self.role = role
+        super.init(frame: .zero)
+        self.usesAlternatingRowBackgroundColors = false
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        backgroundColor = palette.nsColor(role)
+        gridColor = palette.nsColor(.divider)
+    }
+}
+
 /// A table row view whose selection fill uses the `selection` role. Observes the
 /// theme so reused row instances repaint live; without this, an AppKit-pooled row
 /// keeps the palette captured at creation and draws stale selection after a swap.

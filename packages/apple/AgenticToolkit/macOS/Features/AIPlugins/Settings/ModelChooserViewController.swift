@@ -61,7 +61,7 @@ public final class ModelChooserViewController: NSViewController {
     /// this box mean anything — elsewhere it isn't built (see `configureFilterBar`).
     private static let fitFilterTitle = "Fits this Mac"
     private let fitCheckbox = NSButton(checkboxWithTitle: fitFilterTitle, target: nil, action: nil)
-    private let tableView = NSTableView()
+    private let tableView = ThemedTableView()
     private let tableScroll = NSScrollView()
     /// Canonical composable-settings scroll host: top-anchored, width pinned to
     /// the viewport so rebuilt detail content can never tug the split divider.
@@ -213,7 +213,6 @@ public final class ModelChooserViewController: NSViewController {
     private func configureTable() {
         tableView.headerView = nil
         tableView.rowHeight = 24
-        tableView.usesAlternatingRowBackgroundColors = false
         tableView.allowsEmptySelection = false
         tableView.allowsMultipleSelection = false
         tableView.selectionHighlightStyle = .regular
@@ -457,7 +456,8 @@ public final class ModelChooserViewController: NSViewController {
 
     private func applyTheme(_ palette: SemanticPalette) {
         view.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
-        tableView.backgroundColor = palette.surfaceColor
+        // The table is a `ThemedTableView` and paints its own `.surface`; only
+        // its scroll host needs matching here.
         tableScroll.backgroundColor = palette.surfaceColor
         // Cancel is painted explicitly: AppKit's stock bezel composites away to
         // nothing in this window (see `applySecondaryActionTheme`).
